@@ -692,6 +692,12 @@ bool CVTFTexture::LoadLowResData( CUtlBuffer &buf )
 //-----------------------------------------------------------------------------
 bool CVTFTexture::LoadImageData( CUtlBuffer &buf, const VTFFileHeader_t &header, int nSkipMipLevels )
 {
+	if ( IsCubeMap() && header.version[1] == VTF_MINOR_VERSION )
+	{
+		Warning( "*** VTF 7.5 is currently not supported on cubemaps!\n" );
+		return false;
+	}
+
 	// Fix up the mip count + size based on how many mip levels we skip...
 	if (nSkipMipLevels > 0)
 	{
