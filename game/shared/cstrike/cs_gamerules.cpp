@@ -140,7 +140,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropBool( RECVINFO( m_bBombDropped ) ),
 		RecvPropBool( RECVINFO( m_bBombPlanted ) ),
 		RecvPropInt( RECVINFO( m_iRoundWinStatus ) ),
-		RecvPropInt( RECVINFO( m_iCurrentGamemode ) )
+		RecvPropInt( RECVINFO( m_iCurrentGamemode ) ),
 	#else
 		SendPropBool( SENDINFO( m_bFreezePeriod ) ),
 		SendPropBool( SENDINFO( m_bMatchWaitingForResume ) ),
@@ -160,7 +160,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropBool( SENDINFO( m_bBombDropped ) ),
 		SendPropBool( SENDINFO( m_bBombPlanted ) ),
 		SendPropInt( SENDINFO( m_iRoundWinStatus ) ),
-		SendPropInt( SENDINFO( m_iCurrentGamemode ) )
+		SendPropInt( SENDINFO( m_iCurrentGamemode ) ),
 	#endif
 END_NETWORK_TABLE()
 
@@ -1111,7 +1111,9 @@ ConVar snd_music_selection(
 		m_bFirstConnected = false;
 		m_bCompleteReset = false;
 		m_iNumCTWins = 0;
+		m_iNumCTWinsThisPhase = 0;
 		m_iNumTerroristWins = 0;
+		m_iNumTerroristWinsThisPhase = 0;
 		m_iNumConsecutiveCTLoses = 0;
 		m_iNumConsecutiveTerroristLoses = 0;
 		m_bTargetBombed = false;
@@ -1293,6 +1295,14 @@ ConVar snd_music_selection(
 		// When going to overtime halftime pause the timer if requested
 		if ( (m_gamePhase == GAMEPHASE_HALFTIME) && m_nOvertimePlaying && mp_overtime_halftime_pausetimer.GetInt() )
 			mp_halftime_pausetimer.SetValue( mp_overtime_halftime_pausetimer.GetInt() );
+		
+		// not in halftime because it will change before player's eyes right as the scoreboard pops up
+		if ( GetPhase() != GAMEPHASE_HALFTIME && GetPhase() != GAMEPHASE_MATCH_ENDED )
+		{
+			// reset phase wins counter
+			m_iNumTerroristWinsThisPhase = m_iNumCTWinsThisPhase = 0;
+			UpdateTeamScores();
+		}
     }
 
 	void CCSGameRules::LoadMapProperties()
@@ -2613,6 +2623,7 @@ ConVar snd_music_selection(
 				if ( !bNeededPlayers )
 				{
 					m_iNumCTWins++;
+					m_iNumCTWinsThisPhase;
 					// Update the clients team score
 					UpdateTeamScores();
 				}
@@ -2654,6 +2665,7 @@ ConVar snd_music_selection(
 				if ( !bNeededPlayers )
 				{
 					m_iNumTerroristWins ++;
+					m_iNumTerroristWinsThisPhase++;
 					// Update the clients team score
 					UpdateTeamScores();
 				}
@@ -2669,6 +2681,7 @@ ConVar snd_music_selection(
 				if ( !bNeededPlayers )
 				{
 					m_iNumCTWins++;
+					m_iNumCTWinsThisPhase++;
 					// Update the clients team score
 					UpdateTeamScores();
 				}
@@ -2685,6 +2698,7 @@ ConVar snd_music_selection(
 				if ( !bNeededPlayers )
 				{
 					m_iNumCTWins++;
+					m_iNumCTWinsThisPhase++;
 					// Update the clients team score
 					UpdateTeamScores();
 				}
@@ -2715,6 +2729,7 @@ ConVar snd_music_selection(
 			if ( !bNeededPlayers )
 			{
 				m_iNumCTWins ++;
+				m_iNumCTWinsThisPhase++;
 				// Update the clients team score
 				UpdateTeamScores();
 			}
@@ -2760,6 +2775,7 @@ ConVar snd_music_selection(
 			if ( !bNeededPlayers )
 			{
 				m_iNumTerroristWins ++;
+				m_iNumTerroristWinsThisPhase++;
 				// Update the clients team score
 				UpdateTeamScores();
 			}
@@ -2789,6 +2805,7 @@ ConVar snd_music_selection(
 			if ( !bNeededPlayers )
 			{
 				m_iNumTerroristWins ++;
+				m_iNumTerroristWinsThisPhase++;
 				// Update the clients team score
 				UpdateTeamScores();
 			}
@@ -2805,6 +2822,7 @@ ConVar snd_music_selection(
 			if ( !bNeededPlayers )
 			{
 				m_iNumCTWins++;
+				m_iNumCTWinsThisPhase++;
 				// Update the clients team score
 				UpdateTeamScores();
 			}
@@ -2841,6 +2859,7 @@ ConVar snd_music_selection(
 				if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && !bTsRespawn && NumAliveCT == 1 )
 				{
 					m_iNumCTWins++;
+					m_iNumCTWinsThisPhase++;
 					// Update the clients team score
 					UpdateTeamScores();
 					TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
@@ -2850,6 +2869,7 @@ ConVar snd_music_selection(
 				if ( NumAliveCT == 0 && NumDeadCT != 0 && !bCTsRespawn && NumAliveTerrorist == 1 )
 				{
 					m_iNumTerroristWins++;
+					m_iNumTerroristWinsThisPhase++;
 					// Update the clients team score
 					UpdateTeamScores();
 					TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
@@ -2887,6 +2907,7 @@ ConVar snd_music_selection(
 						if ( !bNeededPlayers )
 						{
 							m_iNumCTWins++;
+							m_iNumCTWinsThisPhase++;
 							// Update the clients team score
 							UpdateTeamScores();
 						}
@@ -2907,6 +2928,7 @@ ConVar snd_music_selection(
 					if ( !bNeededPlayers )
 					{
 						m_iNumTerroristWins++;
+						m_iNumTerroristWinsThisPhase++;
 						// Update the clients team score
 						UpdateTeamScores();
 					}
@@ -3269,7 +3291,9 @@ ConVar snd_music_selection(
 
 			// Reset score info
 			m_iNumTerroristWins				= 0;
+			m_iNumTerroristWinsThisPhase	= 0;
 			m_iNumCTWins					= 0;
+			m_iNumCTWinsThisPhase			= 0;
 			m_iNumConsecutiveTerroristLoses	= mp_starting_losses.GetInt();
 			m_iNumConsecutiveCTLoses		= mp_starting_losses.GetInt();
 
@@ -3496,8 +3520,10 @@ ConVar snd_music_selection(
 		if ( m_bCompleteReset )
 		{
 			//We are starting fresh. So it's like no one has ever won or lost.
-			m_iNumTerroristWins				= 0; 
+			m_iNumTerroristWins				= 0;
+			m_iNumTerroristWinsThisPhase	= 0;
 			m_iNumCTWins					= 0;
+			m_iNumCTWinsThisPhase			= 0;
 			m_iNumConsecutiveTerroristLoses	= mp_starting_losses.GetInt();
 			m_iNumConsecutiveCTLoses		= mp_starting_losses.GetInt();
 			m_iLoserBonus					= TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
@@ -4635,6 +4661,7 @@ ConVar snd_music_selection(
 				AddTeamAccount( TEAM_CT, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_BOMB );
 				
 				m_iNumCTWins++;
+				m_iNumCTWinsThisPhase++;
 				TerminateRound( mp_round_restart_delay.GetFloat(), Target_Saved );
 				UpdateTeamScores();
 				MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound(TEAM_TERRORIST);
@@ -4645,6 +4672,7 @@ ConVar snd_music_selection(
 			AddTeamAccount( TEAM_TERRORIST, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_HOSTAGE );
 			
 			m_iNumTerroristWins++;
+			m_iNumTerroristWinsThisPhase++;
 			TerminateRound( mp_round_restart_delay.GetFloat(), Hostages_Not_Rescued );
 			UpdateTeamScores();
 			MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound(TEAM_CT);
@@ -4652,6 +4680,7 @@ ConVar snd_music_selection(
 		else if ( m_bMapHasEscapeZone )
 		{
 			m_iNumCTWins++;
+			m_iNumCTWinsThisPhase++;
 			TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Not_Escaped );
 			UpdateTeamScores();
 		}
@@ -4659,6 +4688,7 @@ ConVar snd_music_selection(
 		{
 			//m_iAccountTerrorist += 3250;
 			m_iNumTerroristWins++;
+			m_iNumTerroristWinsThisPhase++;
 
 			TerminateRound( mp_round_restart_delay.GetFloat(), VIP_Not_Escaped );
 			UpdateTeamScores();
@@ -5937,16 +5967,22 @@ ConVar snd_music_selection(
 
 	void CCSGameRules::UpdateTeamScores()
 	{
-		CTeam *pTerrorists = GetGlobalTeam( TEAM_TERRORIST );
-		CTeam *pCTs = GetGlobalTeam( TEAM_CT );
+		CCSTeam *pTerrorists = GetGlobalCSTeam( TEAM_TERRORIST );
+		CCSTeam *pCTs = GetGlobalCSTeam( TEAM_CT );
 
 		Assert( pTerrorists && pCTs );
 
-		if( pTerrorists )
+		if ( pTerrorists )
+		{
 			pTerrorists->SetScore( m_iNumTerroristWins );
+			pTerrorists->SetScoreThisPhase( m_iNumTerroristWinsThisPhase );
+		}
 
-		if( pCTs )
+		if ( pCTs )
+		{
 			pCTs->SetScore( m_iNumCTWins );
+			pCTs->SetScoreThisPhase( m_iNumCTWinsThisPhase );
+		}
 	}
 
 
