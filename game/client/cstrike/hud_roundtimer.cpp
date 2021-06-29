@@ -16,6 +16,8 @@
 
 #include <vgui_controls/AnimationController.h>
 
+ConVar hud_roundtimer_pos( "hud_roundtimer_pos", "0", FCVAR_ARCHIVE, "0 = default (bottom), 1 = top" );
+
 class CHudRoundTimer : public CHudElement, public vgui::Panel
 {
 public:
@@ -36,6 +38,9 @@ private:
 	float m_flNextToggle;
 	CHudTexture *m_pTimerIcon;
 	bool m_bFlash;
+
+	int m_iOriginalXPos;
+	int m_iOriginalYPos;
 
 	int m_iAdditiveWhiteID;
 
@@ -67,6 +72,11 @@ CHudRoundTimer::CHudRoundTimer( const char *pName ) :
 
 	vgui::Panel *pParent = g_pClientMode->GetViewport();
 	SetParent( pParent );
+
+	m_iTimer = -1;
+
+	m_iOriginalXPos = -1;
+	m_iOriginalYPos = -1;
 }
 
 void CHudRoundTimer::ApplySchemeSettings(vgui::IScheme *pScheme)
@@ -83,6 +93,8 @@ void CHudRoundTimer::ApplySchemeSettings(vgui::IScheme *pScheme)
 	SetFgColor( m_TextColor );
 
 	BaseClass::ApplySchemeSettings( pScheme );
+
+	GetPos( m_iOriginalXPos, m_iOriginalYPos );
 }
 
 bool CHudRoundTimer::ShouldDraw()
@@ -103,6 +115,16 @@ bool CHudRoundTimer::ShouldDraw()
 
 void CHudRoundTimer::Think()
 {
+	if ( hud_roundtimer_pos.GetInt() == 1 )
+	{
+		int ypos = ScreenHeight() - m_iOriginalYPos - GetTall(); // inverse its Y pos
+		SetPos( m_iOriginalXPos, ypos );
+	}
+	else
+	{
+		SetPos( m_iOriginalXPos, m_iOriginalYPos );
+	}
+
 	C_CSGameRules *pRules = CSGameRules();
 	if ( !pRules )
 		return;
