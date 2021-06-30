@@ -1791,8 +1791,11 @@ void CBasePanel::PerformLayout()
 		m_iGameMenuPos.x = posx;
 	}
 	m_pGameMenu->SetPos(m_iGameMenuPos.x, idealMenuY);
-	if ( m_iGameMenuWidth > 0 )
-		m_pGameMenu->SetFixedWidth( m_iGameMenuWidth );
+
+	if ( m_iGameMenuWidth < m_pGameMenu->GetHighestItemWidth() )
+		m_iGameMenuWidth = m_pGameMenu->GetHighestItemWidth();
+
+	m_pGameMenu->SetFixedWidth( m_iGameMenuWidth );
 
 	UpdateGameMenus();
 }
@@ -1836,9 +1839,6 @@ void CBasePanel::ApplySchemeSettings(IScheme *pScheme)
 		m_iGameMenuPos.y = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.Menu.Y")) );
 
 		m_iGameMenuWidth = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.Menu.Width")), true );
-		if ( m_iGameMenuWidth < m_pGameMenu->GetHighestItemWidth() )
-			m_iGameMenuWidth = m_pGameMenu->GetHighestItemWidth();
-
 		m_iGameMenuInset = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.BottomBorder")) );
 
 		m_pGameMenu->SetFont( pClientScheme->GetFont( "GameMenuFont", IsProportional() ) );
