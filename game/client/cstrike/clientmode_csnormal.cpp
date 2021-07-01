@@ -407,8 +407,7 @@ void ClientModeCSNormal::Update()
 //--------------------------------------------------------------------------------------------------------
 void ClientModeCSNormal::UpdateColorCorrectionWeights( void )
 {
-	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
-	C_CSPlayer* pPlayer = ToCSPlayer(pLocalPlayer);
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
 
 	if ( !pPlayer )
 	{
@@ -426,6 +425,17 @@ void ClientModeCSNormal::UpdateColorCorrectionWeights( void )
 
 	m_CCDeathPercent = clamp( m_CCDeathPercent + ((isDying) ? 0.1f : -0.1f), 0.0f, 1.0f );
 
+	// apply CT and T CCs from spectated players as well
+	// no need for that with death CC
+	pPlayer = GetHudPlayer();
+	if ( !pPlayer )
+	{
+		m_CCDeathPercent = 0.0f;
+		m_CCFreezePeriodPercent_CT = 0.0f;
+		m_CCFreezePeriodPercent_T = 0.0f;
+		return;
+	}
+	
 	float flTimer = 0;
 
 	bool bFreezePeriod = CSGameRules()->IsFreezePeriod();
@@ -458,10 +468,15 @@ void ClientModeCSNormal::UpdateColorCorrectionWeights( void )
 				m_CCFreezePeriodPercent_CT = 1.0f;
 				m_CCFreezePeriodPercent_T = 0.0f;
 			}
-			else
+			else if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST )
 			{
 				m_CCFreezePeriodPercent_CT = 0.0f;
 				m_CCFreezePeriodPercent_T = 1.0f;
+			}
+			else
+			{
+				m_CCFreezePeriodPercent_CT = 0.0f;
+				m_CCFreezePeriodPercent_T = 0.0f;
 			}
 		}
 		else
@@ -471,11 +486,16 @@ void ClientModeCSNormal::UpdateColorCorrectionWeights( void )
 				m_CCFreezePeriodPercent_CT = clamp( flTimer / flFadeBegin, 0.05f, 1.0f );
 				m_CCFreezePeriodPercent_T = 0;
 			}
-			else
+			else if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST )
 			{
 				m_CCFreezePeriodPercent_T = clamp( flTimer / flFadeBegin, 0.05f, 1.0f );
 				m_CCFreezePeriodPercent_CT = 0;
-			}	
+			}
+			else
+			{
+				m_CCFreezePeriodPercent_CT = 0.0f;
+				m_CCFreezePeriodPercent_T = 0.0f;
+			}
 		}
 	}
 	else
