@@ -101,6 +101,7 @@ def build(bld):
 		'ModOptionsSubKnives.cpp',
 		'ModOptionsSubAgents.cpp',
 		'ModOptionsSubGloves.cpp',
+		'ModOptionsSubHUD.cpp',
 	]
 
 	if bld.env.DEST_OS == 'win32':
