@@ -1335,20 +1335,22 @@ void CStaticPropMgr::UnserializeModels( CUtlBuffer& buf )
 		StaticPropLump_t lump;
 		switch ( nLumpVersion )
 		{
-			case 4: UnserializeLump<StaticPropLumpV4_t>(&lump, buf); break;
-			case 5: UnserializeLump<StaticPropLumpV5_t>(&lump, buf); break;
-			case 6: UnserializeLump<StaticPropLumpV6_t>(&lump, buf); break;
-			case 7: // Falls down to version 10. We promoted TF to version 10 to deal with SFM. 
-			case 10:
-			{
-				if( s_MapVersion == 21 )
-					UnserializeLump<StaticPropLumpV10_21_t>(&lump, buf);
-				else
-					UnserializeLump<StaticPropLumpV10_t>(&lump, buf);
+			case 4:
+				UnserializeLump<StaticPropLumpV4_t>(&lump, buf);
 				break;
-			}
-			case 9: UnserializeLump<StaticPropLumpV9_t>(&lump, buf); break;
-			case 11: UnserializeLump<StaticPropLumpV11_t>(&lump, buf); break;
+			case 5:
+				UnserializeLump<StaticPropLumpV5_t>(&lump, buf);
+				break;
+			case 6:
+				UnserializeLump<StaticPropLumpV6_t>(&lump, buf);
+				break;
+			case 7: // Falls down to version 10. We promoted TF to version 10 to deal with SFM; PiMoN: thanks for giving me a headache!
+			case 10:
+				UnserializeLump<StaticPropLumpV10_t>(&lump, buf);
+				break;
+			case 11:
+				UnserializeLump<StaticPropLump_t>( &lump, buf );
+				break;
 			default:
 				Assert("Unexpected version while deserializing lumps.");
 		}
