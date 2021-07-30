@@ -33,6 +33,7 @@
 #include "vphysicsupdateai.h"
 #include "tier0/vcrmode.h"
 #include "pushentity.h"
+#include "basecsgrenade_projectile.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -63,6 +64,26 @@ static void Physics_TraceEntity( CBaseEntity* pBaseEntity, const Vector &vecAbsS
 	else
 	{
 		UTIL_TraceEntity( pBaseEntity, vecAbsStart, vecAbsEnd, mask, ptr );
+
+		// perform an additional trace if this is a grenade projectile hitting a player
+		CBaseCSGrenadeProjectile* pGrenadeProjectile = dynamic_cast<CBaseCSGrenadeProjectile*>( pBaseEntity );
+
+		if ( pGrenadeProjectile && ptr->startsolid && ptr->contents & CONTENTS_GRENADECLIP )
+		{
+			// HACK HACK: players don't collide with CONTENTS_GRENADECLIP, so it's possible (but very inadvisable) for maps to contain
+			// CONTENTS_GRENADECLIP brushes that are big enough for the player to throw a grenade from INSIDE one. To account for this
+			// in the simplest and most straightforward way, I'm just running the trace again to let grenades fly OUT of CONTENTS_GRENADECLIP
+			// volumes, just not INTO them.
+			UTIL_ClearTrace( *ptr );
+			UTIL_TraceEntity( pBaseEntity, vecAbsStart, vecAbsEnd, mask & ~CONTENTS_GRENADECLIP, ptr );
+		}
+
+		if ( pGrenadeProjectile && ptr->DidHit() && ptr->m_pEnt && ptr->m_pEnt->IsPlayer() )
+		{
+			UTIL_ClearTrace( *ptr );
+			//why does traceline respect hitmoxes in the mask param but traceentity and tracehull do not?
+			UTIL_TraceLine( vecAbsStart, vecAbsEnd, mask, pBaseEntity, pBaseEntity->GetCollisionGroup(), ptr );
+		}
 	}
 }
 

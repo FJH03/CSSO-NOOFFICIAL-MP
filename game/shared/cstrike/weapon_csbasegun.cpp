@@ -63,7 +63,7 @@ void CWeaponCSBaseGun::ItemBusyFrame()
 		return;
 
 	// if we're scoped during a reload, pull us out of the scope for the duration (and set resumezoom so we'll re-zoom when reloading is done)
-	if ( IsKindOf( WEAPONTYPE_SNIPER_RIFLE ) && pPlayer->m_bIsScoped && m_bInReload )
+	if (pPlayer->m_bIsScoped && m_bInReload )
 	{
 		//m_zoomLevel = 0; //don't affect zoom level, so it'll restore when reloading is done
 		pPlayer->m_bIsScoped = false;

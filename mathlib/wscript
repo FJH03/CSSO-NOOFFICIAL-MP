@@ -37,6 +37,8 @@ def build(bld):
 		'simdvectormatrix.cpp',
 		'vector.cpp',
 		'vmatrix.cpp',
+		'capsule.cpp',
+		'sphere.cpp',
 		'almostequal.cpp'
 	]
 

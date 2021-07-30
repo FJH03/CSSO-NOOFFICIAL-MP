@@ -151,6 +151,7 @@ void CWeaponSSG08::PrimaryAttack( void )
 		}
 		
 // 		#ifndef CLIENT_DLL
+			pPlayer->m_bIsScoped = false;
 			pPlayer->m_bResumeZoom = true;
 			pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.05f );
 			m_weaponMode = Primary_Mode;

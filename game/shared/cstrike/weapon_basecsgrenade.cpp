@@ -494,7 +494,7 @@ void CBaseCSGrenade::ItemPostFrame()
 		trace_t trace;
 		Vector mins( -2, -2, -2 );
 		Vector maxs(  2,  2,  2 );
-		UTIL_TraceHull( vecSrc, vecSrc + vForward * 16, mins, maxs, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &trace );
+		UTIL_TraceHull( vecSrc, vecSrc + vForward * 16, mins, maxs, MASK_SOLID | CONTENTS_GRENADECLIP, pPlayer, COLLISION_GROUP_NONE, &trace );
 		vecSrc = trace.endpos;
 
 		Vector vecThrow = vForward * flVel + (pPlayer->GetAbsVelocity() * 1.25);

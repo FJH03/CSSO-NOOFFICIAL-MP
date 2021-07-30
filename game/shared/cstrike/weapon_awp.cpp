@@ -133,6 +133,7 @@ void CWeaponAWP::SecondaryAttack()
 		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), kZoomTime );
 		m_weaponMode = Primary_Mode;
 		pPlayer->m_bIsScoped = false;
+		pPlayer->m_bIsScoped = false;
 	}
 
 
@@ -193,7 +194,7 @@ void CWeaponAWP::PrimaryAttack()
 		#else
 			pPlayer->m_bIsScoped = true;
 			pPlayer->m_bResumeZoom = true;
-			pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.1f );
+			pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.05f );
 			m_weaponMode = Primary_Mode;
 		#endif
 	}

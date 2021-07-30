@@ -1621,7 +1621,7 @@ bool ClientModeCSNormal::ShouldDrawViewModel( void )
 {
 	C_CSPlayer *pPlayer = GetHudPlayer();
 	
-	if( pPlayer && pPlayer->GetFOV() != CSGameRules()->DefaultFOV() )
+	if( pPlayer && pPlayer->GetFOV() != CSGameRules()->DefaultFOV() && pPlayer->m_bIsScoped )
 	{
 		CWeaponCSBase *pWpn = pPlayer->GetActiveCSWeapon();
 

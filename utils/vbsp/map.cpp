@@ -2708,7 +2708,7 @@ ChunkFileResult_t CMapFile::LoadSideCallback(CChunkFile *pFile, LoadSide_t *pSid
 		side->surf |= pSideInfo->nBaseFlags;
 		pSideInfo->td.flags |= pSideInfo->nBaseFlags;
 
-		if (side->contents & (CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP) )
+		if (side->contents & (CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP|CONTENTS_GRENADECLIP) )
 		{
 			side->contents |= CONTENTS_DETAIL;
 		}
@@ -2718,11 +2718,10 @@ ChunkFileResult_t CMapFile::LoadSideCallback(CChunkFile *pFile, LoadSide_t *pSid
 			side->contents &= ~CONTENTS_DETAIL;
 		}
 		
-		if (!(side->contents & (ALL_VISIBLE_CONTENTS | CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP)  ) )
+		if (!(side->contents & (ALL_VISIBLE_CONTENTS | CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP|CONTENTS_GRENADECLIP)  ) )
 		{
 			side->contents |= CONTENTS_SOLID;
 		}
-
 		// hints and skips are never detail, and have no content
 		if (side->surf & (SURF_HINT|SURF_SKIP) )
 		{

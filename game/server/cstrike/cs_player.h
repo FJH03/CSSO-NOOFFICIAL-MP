@@ -17,7 +17,7 @@
 #include "cs_autobuy.h"
 #include "utldict.h"
 #include "cs_player_shared.h"
-
+#include "csgo_playeranimstate.h"
 
 class CWeaponCSBase;
 class CMenu;
@@ -321,6 +321,7 @@ public:
 	virtual CBaseEntity* FindNextObserverTarget( bool bReverse );
 
 	virtual int 		GetNextObserverSearchStartPoint( bool bReverse );
+	virtual bool UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence ) OVERRIDE;
 // In shared code.
 public:
 
@@ -390,7 +391,6 @@ public:
 	void MakeVIP( bool isVIP );
 
 	virtual void SetAnimation( PLAYER_ANIM playerAnim );
-	IPlayerAnimState *GetPlayerAnimState() { return m_PlayerAnimState; }
 
 	virtual bool StartReplayMode( float fDelay, float fDuration, int iEntity );
 	virtual void StopReplayMode();
@@ -670,6 +670,7 @@ public:
 
 	void				SetDeathPose( const int &iDeathPose ) { m_iDeathPose = iDeathPose; }
 	void				SetDeathPoseFrame( const int &iDeathPoseFrame ) { m_iDeathFrame = iDeathPoseFrame; }
+	void				SetDeathPoseYaw( const float &flDeathPoseYaw ) { m_flDeathYaw = flDeathPoseYaw; }
 
 	virtual void		IncrementFragCount( int nCount );
 	virtual void		IncrementDeathCount( int nCount );
@@ -683,6 +684,7 @@ public:
 private:
 	int	m_iDeathPose;
 	int	m_iDeathFrame;
+	float m_flDeathYaw;
 	
 	bool m_switchTeamsOnNextRoundReset;
 
@@ -818,6 +820,11 @@ public:
 
 	CNetworkVar( int, m_iMoveState );		// Is the player trying to run?  Used for state transitioning after a player lands from a jump etc.
 
+	bool m_bUseNewAnimstate;
+	virtual void SetModel( const char *szModelName );
+
+	virtual Vector Weapon_ShootPosition();
+
 	bool IsInBuyZone();
 	bool IsInBuyPeriod();
 	bool CanPlayerBuy( bool display );
@@ -851,6 +858,9 @@ public:
 	CNetworkVar( float, m_flProgressBarStartTime );
 	CNetworkVar( int, m_iProgressBarDuration );
 	CNetworkVar( int, m_iThrowGrenadeCounter );	// used to trigger grenade throw animations.
+
+	CNetworkVar( float, m_flLowerBodyYawTarget );
+	CNetworkVar( bool, m_bStrafing );
 	
 	// Tracks our ragdoll entity.
 	CNetworkHandle( CBaseEntity, m_hRagdoll );	// networked entity handle 
@@ -950,6 +960,7 @@ protected:
 private:
 
 	IPlayerAnimState *m_PlayerAnimState;
+	CCSGOPlayerAnimState *m_PlayerAnimStateCSGO;
 
 	// Aiming heuristics code
 	float						m_flIdleTime;		//Amount of time we've been motionless
@@ -980,6 +991,9 @@ private:
 	QAngle m_storedSpawnAngle;
 
 	bool m_bVCollisionInitted;
+
+public:
+	CNetworkVar( float, m_flThirdpersonRecoil );
 
 // AutoBuy functions.
 public:
@@ -1298,6 +1312,12 @@ public:
 
 	PreControlData	m_PreControlData;
 
+private:
+	// override for weapon driving animations
+	bool UpdateLayerWeaponDispatch( CAnimationLayer *pLayer, int iSequence );
+public:
+	virtual float	GetLayerSequenceCycleRate( CAnimationLayer *pLayer, int iSequence );
+	
 #endif // #if CS_CONTROLLABLE_BOTS_ENABLED
 };
 

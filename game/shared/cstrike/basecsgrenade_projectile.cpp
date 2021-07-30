@@ -151,6 +151,18 @@ END_NETWORK_TABLE()
 		m_flDetonateTime = gpGlobals->curtime + timer;
 	}
 
+	unsigned int CBaseCSGrenadeProjectile::PhysicsSolidMaskForEntity( void ) const
+	{
+		if ( GetCollisionGroup() == COLLISION_GROUP_DEBRIS )
+		{
+			return ((CONTENTS_GRENADECLIP | MASK_SOLID) & ~CONTENTS_MONSTER);
+		}
+		else
+		{
+			return (CONTENTS_GRENADECLIP|MASK_SOLID|MASK_VISIBLE_AND_NPCS|CONTENTS_HITBOX) & ~(CONTENTS_DEBRIS);
+		}
+	}
+
 	void CBaseCSGrenadeProjectile::ResolveFlyCollisionCustom( trace_t &trace, Vector &vecVelocity )
 	{
 		//Assume all surfaces have the same elasticity
