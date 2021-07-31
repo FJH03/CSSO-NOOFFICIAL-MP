@@ -220,6 +220,7 @@ private:
 public:
 	
 	virtual void	OnRestore();
+	virtual void	SetModel( const char *szModelName );
 
 	virtual void	StudioFrameAdvance();
 	virtual	void	DispatchAnimEvents ( CBaseAnimating *eventHandler );
