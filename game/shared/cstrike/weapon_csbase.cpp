@@ -1629,7 +1629,6 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 	SetGravity(1.0);
 	m_iState = WEAPON_NOT_CARRIED;
 	RemoveEffects( EF_NODRAW );
-	FallInit();
 	SetGroundEntity( NULL );
 
 	m_bInReload = false; // stop reloading
@@ -1641,6 +1640,13 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 	// The m_nextOwnerTouchTime delay fixes that.
 	m_nextOwnerTouchTime = gpGlobals->curtime + 0.1f;
 	m_prevOwner = GetPlayerOwner();
+
+	SetOwnerEntity( NULL );
+	SetOwner( NULL );
+
+	VerifyAndSetContextSensitiveWeaponModel();
+
+	FallInit();
 
 	SetTouch(&CWeaponCSBase::DefaultTouch);
 
@@ -1656,11 +1662,6 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 	}
 
 	SetNextThink( gpGlobals->curtime );
-
-	SetOwnerEntity( NULL );
-	SetOwner( NULL );
-
-	VerifyAndSetContextSensitiveWeaponModel();
 
 	m_bReloadVisuallyComplete = false;
 
