@@ -669,6 +669,9 @@ public:
 	void								InterpolateObserverView( Vector& vOrigin, QAngle& vAngles );
 	Vector								GetObserverInterpolatedOffsetVector( void ) { return m_vecObserverInterpolateOffset; }
 
+public:
+
+	virtual bool	GetAttachment( int number, matrix3x4_t &matrix );
 	virtual bool	GetAttachment( int number, Vector &origin );
 	virtual	bool	GetAttachment( int number, Vector &origin, QAngle &angles );
 
