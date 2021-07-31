@@ -1458,7 +1458,10 @@ void C_CSPlayer::CreateAddonModel( int i )
 		}
 		if ( weaponInfo->m_szAddonModel[0] == 0 )
 		{
-			pEnt->InitializeAsClientEntity( weaponInfo->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
+			if ( weaponInfo->szWorldDroppedModel[0] != 0 )
+				pEnt->InitializeAsClientEntity( weaponInfo->szWorldDroppedModel, RENDER_GROUP_OPAQUE_ENTITY );
+			else
+				pEnt->InitializeAsClientEntity( weaponInfo->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
 		}
 		else
 		{
@@ -1501,9 +1504,16 @@ void C_CSPlayer::CreateAddonModel( int i )
 		if ( pWeaponInfo )
 		{
 			if ( pWeaponInfo->m_szAddonModel[0] == 0 )
-				pEnt->InitializeAsClientEntity( pWeaponInfo->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
+			{
+				if ( pWeaponInfo->szWorldDroppedModel[0] != 0 )
+					pEnt->InitializeAsClientEntity( pWeaponInfo->szWorldDroppedModel, RENDER_GROUP_OPAQUE_ENTITY );
+				else
+					pEnt->InitializeAsClientEntity( pWeaponInfo->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
+			}
 			else
+			{
 				pEnt->InitializeAsClientEntity( pWeaponInfo->m_szAddonModel, RENDER_GROUP_OPAQUE_ENTITY );
+			}
 		}
 		else
 		{

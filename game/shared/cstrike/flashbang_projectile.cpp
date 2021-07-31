@@ -16,7 +16,7 @@
 #include "particle_smokegrenade.h"
 #include "smoke_fog_overlay_shared.h"
 
-#define GRENADE_MODEL "models/Weapons/w_eq_flashbang_thrown.mdl"
+#define GRENADE_MODEL "models/Weapons/w_eq_flashbang_dropped.mdl"
 
 
 LINK_ENTITY_TO_CLASS( flashbang_projectile, CFlashbangProjectile );
