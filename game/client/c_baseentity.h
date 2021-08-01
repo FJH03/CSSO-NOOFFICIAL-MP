@@ -187,8 +187,12 @@ public:
 	DECLARE_PREDICTABLE();
 
 									C_BaseEntity();
+
+protected:
+	// Use UTIL_Remove to delete!
 	virtual							~C_BaseEntity();
 
+public:
 	static C_BaseEntity				*CreatePredictedEntityByName( const char *classname, const char *module, int line, bool persist = false );
 	
 	// FireBullets uses shared code for prediction.
@@ -2207,6 +2211,16 @@ inline bool C_BaseEntity::IsEnabledInToolView() const
 	return false;
 #endif
 }
+
+
+//-----------------------------------------------------------------------------
+// Client version of UTIL_Remove
+//-----------------------------------------------------------------------------
+inline void UTIL_Remove( C_BaseEntity *pEntity )
+{
+	pEntity->Remove();
+}
+
 
 //-----------------------------------------------------------------------------
 // Purpose: 
