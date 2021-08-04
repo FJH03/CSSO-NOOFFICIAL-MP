@@ -988,7 +988,7 @@ private:
 	int m_iLastWeaponFireUsercmd;
 
 	// Copyed from EyeAngles() so we can send it to the client.
-	CNetworkQAngle( m_angEyeAngles );
+	CNetworkVectorXYZ( m_angEyeAngles );
 
 	Vector m_storedSpawnPosition;
 	QAngle m_storedSpawnAngle;
