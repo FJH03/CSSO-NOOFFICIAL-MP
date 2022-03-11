@@ -1196,6 +1196,19 @@ bool ClientModeCSNormal::CanRecordDemo( char *errorMsg, int length ) const
 	return true;
 }
 
+void ClientModeCSNormal::DoPostScreenSpaceEffects( const CViewSetup *pSetup ) 
+{
+	CMatRenderContextPtr pRenderContext( materials );
+
+	int xl, yl, dest_width, dest_height;
+	pRenderContext->GetViewport( xl, yl, dest_width, dest_height );
+
+	IViewPortPanel* pBuyMenu = gViewPortInterface->FindPanelByName( PANEL_BUY );
+	IViewPortPanel* pTeamMenu = gViewPortInterface->FindPanelByName( PANEL_TEAM );
+	if ( (pBuyMenu && pBuyMenu->IsVisible()) || (pTeamMenu && pTeamMenu->IsVisible()) )
+		DoBlurFade( xl, yl, dest_width, dest_height );
+}
+
 //=============================================================================
 // HPE_BEGIN:
 // [menglish] Save server information shown to the client in a persistent place

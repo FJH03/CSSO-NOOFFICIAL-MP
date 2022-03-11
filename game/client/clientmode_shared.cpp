@@ -747,21 +747,6 @@ int ClientModeShared::HudElementKeyInput( int down, ButtonCode_t keynum, const c
 
 //-----------------------------------------------------------------------------
 // Purpose: 
-//-----------------------------------------------------------------------------
-bool ClientModeShared::DoPostScreenSpaceEffects( const CViewSetup *pSetup )
-{
-#if defined( REPLAY_ENABLED )
-	if ( engine->IsPlayingDemo() )
-	{
-		if ( !replay_rendersetting_renderglow.GetBool() )
-			return false;
-	}
-#endif 
-	return true;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
 // Output : vgui::Panel
 //-----------------------------------------------------------------------------
 vgui::Panel *ClientModeShared::GetMessagePanel()
