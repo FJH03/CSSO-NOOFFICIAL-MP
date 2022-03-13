@@ -408,7 +408,8 @@ CCSTeamMenu::CCSTeamMenu( IViewPort* pViewPort ): Frame( NULL, PANEL_TEAM )
 	SetSizeable( false );
 
 	SetProportional( true );
-	SetPaintBackgroundEnabled( false );
+	SetPaintBackgroundEnabled( engine->GetDXSupportLevel() < 90 );
+	SetBgColor( Color( 0, 0, 0, 192 ) );
 
 	// initialize elements
 	m_pAgentModelT = new CCSTeamMenuAgentImage( this, "AgentModelT", TEAM_TERRORIST );

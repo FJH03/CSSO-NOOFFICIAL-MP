@@ -1000,7 +1000,8 @@ CCSBuyMenu::CCSBuyMenu( IViewPort* pViewPort ): Frame( NULL, PANEL_BUY )
 	SetSizeable( false );
 
 	SetProportional( true );
-	SetPaintBackgroundEnabled( false );
+	SetPaintBackgroundEnabled( engine->GetDXSupportLevel() < 90 );
+	SetBgColor( Color( 0, 0, 0, 192 ) );
 
 	// initialize variables
 	m_bShowingCategory = false;
