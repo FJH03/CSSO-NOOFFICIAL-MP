@@ -1196,8 +1196,8 @@ bool ClientModeCSNormal::CanRecordDemo( char *errorMsg, int length ) const
 	return true;
 }
 
-ConVar mat_blur_strength( "mat_blur_strength", "1.0" );
-ConVar mat_blur_desaturate( "mat_blur_desaturate", "0.5" );
+ConVar mat_blur_strength( "mat_blur_strength", "1.0", FCVAR_ARCHIVE );
+ConVar mat_blur_desaturate( "mat_blur_desaturate", "0.5", FCVAR_ARCHIVE );
 void ClientModeCSNormal::DoPostScreenSpaceEffects( const CViewSetup *pSetup ) 
 {
 	CMatRenderContextPtr pRenderContext( materials );

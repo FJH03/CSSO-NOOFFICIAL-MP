@@ -94,9 +94,9 @@ ConVar mat_tonemap_percent_bright_pixels( "mat_tonemap_percent_bright_pixels", "
 ConVar mat_tonemap_min_avglum( "mat_tonemap_min_avglum", "3.0", FCVAR_CHEAT );
 ConVar mat_fullbright( "mat_fullbright", "0", FCVAR_CHEAT );
 
-ConVar mat_blur_r( "mat_blur_r", "0.7" );
-ConVar mat_blur_g( "mat_blur_g", "0.7" );
-ConVar mat_blur_b( "mat_blur_b", "0.7" );
+ConVar mat_blur_r( "mat_blur_r", "0.7", FCVAR_ARCHIVE );
+ConVar mat_blur_g( "mat_blur_g", "0.7", FCVAR_ARCHIVE );
+ConVar mat_blur_b( "mat_blur_b", "0.7", FCVAR_ARCHIVE );
 
 extern ConVar localplayer_visionflags;
 
