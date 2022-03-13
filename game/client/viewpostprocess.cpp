@@ -27,6 +27,12 @@
 
 #include "proxyentity.h"
 
+// PiMoN: I just don't want to precache the entire post processing
+// material table for only one texture
+CLIENTEFFECT_REGISTER_BEGIN( PrecachePostProcessingEffectsDX80 )
+	CLIENTEFFECT_MATERIAL( "dev/engine_post" )
+CLIENTEFFECT_REGISTER_END_CONDITIONAL( engine->GetDXSupportLevel() < 90 )
+
 //-----------------------------------------------------------------------------
 // Globals
 //-----------------------------------------------------------------------------
@@ -2744,7 +2750,7 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 
 void DoBlurFade( float flStrength, float flDesaturate, int x, int y, int w, int h )
 {
-	if ( flStrength < 0.0001f )
+	if ( flStrength < 0.0001f && engine->GetDXSupportLevel() < 90 )
 	{
 		return;
 	}
