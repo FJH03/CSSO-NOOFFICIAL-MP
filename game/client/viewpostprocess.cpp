@@ -2750,7 +2750,7 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 
 void DoBlurFade( float flStrength, float flDesaturate, int x, int y, int w, int h )
 {
-	if ( flStrength < 0.0001f && engine->GetDXSupportLevel() < 90 )
+	if ( flStrength < 0.0001f || engine->GetDXSupportLevel() < 90 )
 	{
 		return;
 	}
