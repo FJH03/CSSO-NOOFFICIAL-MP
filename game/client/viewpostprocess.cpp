@@ -40,6 +40,9 @@ float g_flCustomAutoExposureMax = 0;
 float g_flCustomBloomScale = 0.0f;
 float g_flCustomBloomScaleMinimum = 0.0f;
 
+float g_flBloomExponent = 2.5f;
+float g_flBloomSaturation = 1.0f;
+
 bool g_bFlashlightIsOn = false;
 
 // hdr parameters
@@ -91,10 +94,9 @@ ConVar mat_tonemap_percent_bright_pixels( "mat_tonemap_percent_bright_pixels", "
 ConVar mat_tonemap_min_avglum( "mat_tonemap_min_avglum", "3.0", FCVAR_CHEAT );
 ConVar mat_fullbright( "mat_fullbright", "0", FCVAR_CHEAT );
 
-ConVar mat_blur_r( "mat_blur_r", "1.0" );
-ConVar mat_blur_g( "mat_blur_g", "1.0" );
-ConVar mat_blur_b( "mat_blur_b", "1.0" );
-ConVar mat_blur_fade_bloom( "mat_blur_fade_bloom", "1.0" );
+ConVar mat_blur_r( "mat_blur_r", "0.7" );
+ConVar mat_blur_g( "mat_blur_g", "0.7" );
+ConVar mat_blur_b( "mat_blur_b", "0.7" );
 
 extern ConVar localplayer_visionflags;
 
@@ -1531,31 +1533,46 @@ void DumpTGAofRenderTarget( const int width, const int height, const char *pFile
 
 static bool s_bScreenEffectTextureIsUpdated = false;
 
-static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext, float flBloomScale,
-										int x, int y, int w, int h )
+// WARNING: This function sets rendertarget and viewport. Save and restore is left to the caller.
+static void DownsampleFBQuarterSize( IMatRenderContext *pRenderContext, int nSrcWidth, int nSrcHeight, ITexture* pDest,
+									 bool bFloatHDR = false )
 {
-	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
-
-	pRenderContext->PushRenderTargetAndViewport();
-	ITexture *pSrc = materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
-	int nSrcWidth = pSrc->GetActualWidth();
-	int nSrcHeight = pSrc->GetActualHeight(); //,dest_height;
-
-	IMaterial *downsample_mat = materials->FindMaterial( "dev/downsample_non_hdr", TEXTURE_GROUP_OTHER, true);
-
-	IMaterial *xblur_mat = materials->FindMaterial( "dev/blurfilterx_nohdr", TEXTURE_GROUP_OTHER, true );
-	IMaterial *yblur_mat = materials->FindMaterial( "dev/blurfiltery_nohdr", TEXTURE_GROUP_OTHER, true );
-	ITexture *dest_rt0 = materials->FindTexture( "_rt_SmallFB0", TEXTURE_GROUP_RENDER_TARGET );
-	ITexture *dest_rt1 = materials->FindTexture( "_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET );
+	Assert( pRenderContext );
+	Assert( pDest );
 
 	// *Everything* in here relies on the small RTs being exactly 1/4 the full FB res
-	Assert( dest_rt0->GetActualWidth()  == pSrc->GetActualWidth()  / 4 );
-	Assert( dest_rt0->GetActualHeight() == pSrc->GetActualHeight() / 4 );
-	Assert( dest_rt1->GetActualWidth()  == pSrc->GetActualWidth()  / 4 );
-	Assert( dest_rt1->GetActualHeight() == pSrc->GetActualHeight() / 4 );
+	Assert( pDest->GetActualWidth()  == nSrcWidth  / 4 );
+	Assert( pDest->GetActualHeight() == nSrcHeight / 4 );
 
-	// Downsample fb to rt0
-	SetRenderTargetAndViewPort( dest_rt0 );
+	IMaterial *downsample_mat;
+#if defined(_PS3)
+	if( mat_PS3_findpostvarsfast.GetInt() )
+	{
+		downsample_mat = CDownsampleMaterialProxy::GetDownsampleMaterial( materials );
+		CDownsampleMaterialProxy::SetupDownsampleMaterial( g_flBloomExponent, g_flBloomSaturation );
+	}
+	else
+#endif
+	{
+		downsample_mat = materials->FindMaterial( bFloatHDR ? "dev/downsample" : "dev/downsample_non_hdr", TEXTURE_GROUP_OTHER, true );
+
+		bool bFound;
+		IMaterialVar *pbloomexpvar = downsample_mat->FindVar( "$bloomexp", &bFound, false );
+		if ( bFound )
+		{
+			pbloomexpvar->SetFloatValue( g_flBloomExponent );
+		}
+
+		IMaterialVar *pbloomsaturationvar = downsample_mat->FindVar( "$bloomsaturation", &bFound, false );
+		if ( bFound )
+		{
+			pbloomsaturationvar->SetFloatValue( g_flBloomSaturation );
+		}
+	}
+
+
+	// downsample fb to rt0
+	SetRenderTargetAndViewPort( pDest );
 	// note the -2's below. Thats because we are downsampling on each axis and the shader
 	// accesses pixels on both sides of the source coord
 	pRenderContext->DrawScreenSpaceRectangle(	downsample_mat, 0, 0, nSrcWidth/4, nSrcHeight/4,
@@ -1564,11 +1581,80 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext, float f
 
 	if ( IsX360() )
 	{
-		pRenderContext->CopyRenderTargetToTextureEx( dest_rt0, 0, NULL, NULL );
+		pRenderContext->CopyRenderTargetToTextureEx( pDest, 0, NULL, NULL );
 	}
 	else if ( g_bDumpRenderTargets )
 	{
 		DumpTGAofRenderTarget( nSrcWidth/4, nSrcHeight/4, "QuarterSizeFB" );
+	}
+}
+
+static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext, 
+										int x, int y, int w, int h, bool bExtractBloomRange, bool bClearRGB = true )
+{
+	pRenderContext->PushRenderTargetAndViewport();
+
+
+
+	ITexture *pSrc;
+	IMaterial *xblur_mat;
+	IMaterial *yblur_mat;
+	ITexture *dest_rt0;
+	ITexture *dest_rt1;
+
+#if defined(_PS3)
+	if( mat_PS3_findpostvarsfast.GetInt() )
+	{
+		pSrc = CEnginePostMaterialProxy::GetSrcTexture( materials );
+
+		// FIXME: assumes bClearRGB = false here
+
+		xblur_mat = CXBlurMaterialProxy::GetXBlurMaterial( materials );
+		yblur_mat = CYBlurMaterialProxy::GetYBlurMaterial( materials );
+
+		dest_rt0 = CEnginePostMaterialProxy::GetDstRT0Texture( materials );
+		dest_rt1 = CEnginePostMaterialProxy::GetDstRT1Texture( materials );
+	}
+	else
+#endif
+	{
+		pSrc = materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
+
+		xblur_mat = materials->FindMaterial( "dev/blurfilterx_nohdr", TEXTURE_GROUP_OTHER, true );
+		yblur_mat = NULL;
+		if ( bClearRGB )
+		{
+			yblur_mat = materials->FindMaterial( "dev/blurfiltery_nohdr_clear", TEXTURE_GROUP_OTHER, true );
+		}
+		else
+		{
+			yblur_mat = materials->FindMaterial( "dev/blurfiltery_nohdr", TEXTURE_GROUP_OTHER, true );
+		}
+
+		dest_rt0 = materials->FindTexture( "_rt_SmallFB0", TEXTURE_GROUP_RENDER_TARGET );
+		dest_rt1 = materials->FindTexture( "_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET );
+	}
+
+
+	int nSrcWidth = pSrc->GetActualWidth();
+	int nSrcHeight = pSrc->GetActualHeight(); //,nViewportHeight;
+
+
+	// *Everything* in here relies on the small RTs being exactly 1/4 the full FB res
+	Assert( dest_rt0->GetActualWidth()  == pSrc->GetActualWidth()  / 4 );
+	Assert( dest_rt0->GetActualHeight() == pSrc->GetActualHeight() / 4 );
+	Assert( dest_rt1->GetActualWidth()  == pSrc->GetActualWidth()  / 4 );
+	Assert( dest_rt1->GetActualHeight() == pSrc->GetActualHeight() / 4 );
+
+	// downsample fb to rt0
+	if ( bExtractBloomRange )
+	{
+		DownsampleFBQuarterSize( pRenderContext, nSrcWidth, nSrcHeight, dest_rt0 );
+	}
+	else
+	{
+		// just downsample, don't apply bloom extraction math
+		DownsampleFBQuarterSize( pRenderContext, nSrcWidth, nSrcHeight, dest_rt0, true );
 	}
 
 	// Gaussian blur x rt0 to rt1
@@ -1588,10 +1674,11 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext, float f
 	// Gaussian blur y rt1 to rt0
 	SetRenderTargetAndViewPort( dest_rt0 );
 	IMaterialVar *pBloomAmountVar = yblur_mat->FindVar( "$bloomamount", NULL );
-	pBloomAmountVar->SetFloatValue( flBloomScale );
+	pBloomAmountVar->SetFloatValue( 1.0f );	// the bloom amount is now applied in engine_post or bloomadd materials
 	pRenderContext->DrawScreenSpaceRectangle(	yblur_mat, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
 												0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
 												nSrcWidth / 4, nSrcHeight / 4 );
+
 	if ( IsX360() )
 	{
 		pRenderContext->CopyRenderTargetToTextureEx( dest_rt0, 0, NULL, NULL );
@@ -2375,7 +2462,7 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 
 				if ( bPerformBloom )
 				{
-					Generate8BitBloomTexture( pRenderContext, flBloomScale, x, y, w, h );
+					Generate8BitBloomTexture( pRenderContext, x, y, w, h, true, false );
 				}
 
 				// Now add bloom (dest_rt0) to the framebuffer and perform software anti-aliasing and
@@ -2655,9 +2742,9 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 #endif
 }
 
-void DoBlurFade( int x, int y, int w, int h )
+void DoBlurFade( float flStrength, float flDesaturate, int x, int y, int w, int h )
 {
-	if ( engine->GetDXSupportLevel() < 90 )
+	if ( flStrength < 0.0001f )
 	{
 		return;
 	}
@@ -2665,7 +2752,7 @@ void DoBlurFade( int x, int y, int w, int h )
 	UpdateScreenEffectTexture();
 
 	CMatRenderContextPtr pRenderContext( materials );
-	Generate8BitBloomTexture( pRenderContext, mat_blur_fade_bloom.GetFloat(), x, y, w, h );
+	Generate8BitBloomTexture( pRenderContext, x, y, w, h, false, false );
 
 	int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
 	pRenderContext->GetViewport( nViewportX, nViewportY, nViewportWidth, nViewportHeight );
@@ -2675,20 +2762,33 @@ void DoBlurFade( int x, int y, int w, int h )
 
 	IMaterial* pMat = materials->FindMaterial( "dev/fade_blur", TEXTURE_GROUP_OTHER, true );
 	bool bFound = false;
-	// Color fade
 	IMaterialVar* pVar = pMat->FindVar( "$c0_x", &bFound );
+	if ( pVar && bFound )
+	{
+		pVar->SetFloatValue( flStrength );
+	}
+
+	// Desaturate strength
+	pVar = pMat->FindVar( "$c1_x", &bFound );
+	if ( pVar && bFound )
+	{
+		pVar->SetFloatValue( flDesaturate );
+	}
+
+	// Color fade
+	pVar = pMat->FindVar( "$c2_x", &bFound );
 	if ( pVar && bFound )
 	{
 		pVar->SetFloatValue( mat_blur_r.GetFloat() );
 	}
 
-	pVar = pMat->FindVar( "$c0_y", &bFound );
+	pVar = pMat->FindVar( "$c2_y", &bFound );
 	if ( pVar && bFound )
 	{
 		pVar->SetFloatValue( mat_blur_g.GetFloat() );
 	}
 
-	pVar = pMat->FindVar( "$c0_z", &bFound );
+	pVar = pMat->FindVar( "$c2_z", &bFound );
 	if ( pVar && bFound )
 	{
 		pVar->SetFloatValue( mat_blur_b.GetFloat() );

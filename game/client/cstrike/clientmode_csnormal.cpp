@@ -1196,6 +1196,8 @@ bool ClientModeCSNormal::CanRecordDemo( char *errorMsg, int length ) const
 	return true;
 }
 
+ConVar mat_blur_strength( "mat_blur_strength", "1.0" );
+ConVar mat_blur_desaturate( "mat_blur_desaturate", "0.5" );
 void ClientModeCSNormal::DoPostScreenSpaceEffects( const CViewSetup *pSetup ) 
 {
 	CMatRenderContextPtr pRenderContext( materials );
@@ -1206,7 +1208,7 @@ void ClientModeCSNormal::DoPostScreenSpaceEffects( const CViewSetup *pSetup )
 	IViewPortPanel* pBuyMenu = gViewPortInterface->FindPanelByName( PANEL_BUY );
 	IViewPortPanel* pTeamMenu = gViewPortInterface->FindPanelByName( PANEL_TEAM );
 	if ( (pBuyMenu && pBuyMenu->IsVisible()) || (pTeamMenu && pTeamMenu->IsVisible()) )
-		DoBlurFade( xl, yl, dest_width, dest_height );
+		DoBlurFade( mat_blur_strength.GetFloat(), mat_blur_desaturate.GetFloat(), xl, yl, dest_width, dest_height );
 }
 
 //=============================================================================

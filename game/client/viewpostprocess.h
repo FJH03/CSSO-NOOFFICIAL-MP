@@ -19,7 +19,7 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 void DoImageSpaceMotionBlur( const CViewSetup &view, int x, int y, int w, int h );
 void DumpTGAofRenderTarget( const int width, const int height, const char *pFilename );
 
-void DoBlurFade( int x, int y, int w, int h );
+void DoBlurFade( float flStrength, float flDesaturate, int x, int y, int w, int h );
 
 void ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *viewSetup );
 
