@@ -33,6 +33,7 @@ ConVar cam_idealdistright( "cam_idealdistright", "0", FCVAR_ARCHIVE | FCVAR_CHEA
 ConVar cam_idealdistup( "cam_idealdistup", "0", FCVAR_ARCHIVE | FCVAR_CHEAT );	 // thirdperson distance
 static ConVar cam_collision( "cam_collision", "1", FCVAR_ARCHIVE | FCVAR_CHEAT, "When in thirdperson and cam_collision is set to 1, an attempt is made to keep the camera from passing though walls." );
 static ConVar cam_showangles( "cam_showangles", "0", FCVAR_CHEAT, "When in thirdperson, print viewangles/idealangles/cameraoffsets to the console." );
+static ConVar cam_recoil( "cam_recoil", "1", FCVAR_CHEAT, "When in thirdperson and cam_recoil is set to 1, view punch will be applied to third person perspective." );
 static ConVar c_maxpitch( "c_maxpitch", "90", FCVAR_ARCHIVE| FCVAR_CHEAT );
 static ConVar c_minpitch( "c_minpitch", "0", FCVAR_ARCHIVE| FCVAR_CHEAT );
 static ConVar c_maxyaw( "c_maxyaw",   "135", FCVAR_ARCHIVE | FCVAR_CHEAT);
@@ -46,6 +47,7 @@ static kbutton_t cam_pitchup, cam_pitchdown, cam_yawleft, cam_yawright;
 static kbutton_t cam_in, cam_out; // -- "cam_move" is unused
 
 extern ConVar cl_thirdperson;
+extern ConVar view_recoil_tracking;
 
 
 // API Wrappers
@@ -478,6 +480,20 @@ void CInput::CAM_Think( void )
 	// Obtain engine view angles and if they popped while the camera was static,
 	// fix the camera angles as well
 	engine->GetViewAngles( viewangles );
+
+	CBasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	
+	// PiMoN: apply view punch separately for third person,
+	// for whatever reason engine->GetViewAngles returns raw angles
+	if ( pPlayer && cam_recoil.GetBool() )
+	{
+		// Apply punch angles
+		VectorAdd( viewangles, pPlayer->m_Local.m_viewPunchAngle, viewangles );
+
+		// TODO[pmf]: apply a scaling factor to this
+		VectorAdd( viewangles, pPlayer->GetAimPunchAngle() * view_recoil_tracking.GetFloat(), viewangles );
+	}
+
 	static QAngle s_oldAngles = viewangles;
 	if ( Is_CAM_ThirdPerson_MayaMode() && ( s_oldAngles != viewangles ) )
 	{
