@@ -633,8 +633,6 @@ bool CWeaponCSBaseGun::Reload()
 	if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 )
 		return false;
 
-	pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.0f );
-
 	int iResult = DefaultReload( GetMaxClip1(), GetMaxClip2(), m_iReloadActivityIndex );
 	if ( !iResult )
 		return false;
@@ -656,8 +654,9 @@ bool CWeaponCSBaseGun::Reload()
 	}
 
 	pPlayer->m_iShotsFired = 0;
+	m_flRecoilIndex += 1.0f;
 
-	return true;
+	return BaseClass::Reload();
 }
 
 void CWeaponCSBaseGun::WeaponIdle()
