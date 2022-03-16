@@ -998,7 +998,7 @@ CCSBuyMenu::CCSBuyMenu( IViewPort* pViewPort ): Frame( NULL, PANEL_BUY )
 
 	// initialize variables
 	m_bShowingCategory = false;
-	m_iBuyMenuKey = BUTTON_CODE_INVALID;
+	m_iBuyMenuKey = m_iReBuyKey = m_iAutoBuyKey = BUTTON_CODE_INVALID;
 	m_iAccount = -1;
 	m_bDropBuy = false;
 	m_nMessageType = InvalidMessage;
@@ -1034,6 +1034,8 @@ void CCSBuyMenu::ShowPanel( bool bShow )
 		SetMouseInputEnabled( true );
 
 		m_iBuyMenuKey = gameuifuncs->GetButtonCodeForBind( "buymenu" );
+		m_iReBuyKey = gameuifuncs->GetButtonCodeForBind( "rebuy" );
+		m_iAutoBuyKey = gameuifuncs->GetButtonCodeForBind( "autobuy" );
 		m_iAccount = -1;
 
 		const char* pszPlayerModel = modelinfo->GetModelName( pPlayer->GetModel() );
@@ -1201,29 +1203,30 @@ void CCSBuyMenu::OnCommand( const char* command )
 		}
 		else
 		{
-			if ( m_bDropBuy )
-			{
-				char szCommand[128];
-				Q_snprintf( szCommand, sizeof( szCommand ), "%s drop", command );
-				engine->ClientCmd( szCommand );
-			}
-			else
-			{
-				engine->ClientCmd( command );
-			}
-
 			if ( !V_strncmp( command, "buy ", 4 ) )
 			{
 				if ( closeonbuy.GetBool() )
 				{
 					ShowPanel( false );
 				}
-				else if ( !m_bDropBuy )
+
+				if ( m_bDropBuy )
 				{
+					char szCommand[128];
+					Q_snprintf( szCommand, sizeof( szCommand ), "%s drop", command );
+					engine->ClientCmd( szCommand );
+				}
+				else
+				{
+					engine->ClientCmd( command );
 					CSWeaponID nWeaponID = AliasToWeaponID( command + 4 );
 					if ( nWeaponID < WEAPON_LAST ) // it is a firearm
 						HideCategory();
 				}
+			}
+			else
+			{
+				engine->ClientCmd( command );
 			}
 		}
 	}
@@ -1262,6 +1265,14 @@ void CCSBuyMenu::OnKeyCodeTyped( KeyCode code )
 	else if ( m_iBuyMenuKey != BUTTON_CODE_INVALID && m_iBuyMenuKey == code )
 	{
 		HideCategory();
+	}
+	else if ( m_iReBuyKey != BUTTON_CODE_INVALID && m_iReBuyKey == code )
+	{
+		OnCommand( "rebuy" );
+	}
+	else if ( m_iAutoBuyKey != BUTTON_CODE_INVALID && m_iAutoBuyKey == code )
+	{
+		OnCommand( "autobuy" );
 	}
 	else
 	{

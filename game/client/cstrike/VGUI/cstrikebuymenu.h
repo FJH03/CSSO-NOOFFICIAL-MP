@@ -257,6 +257,8 @@ private:
 	IViewPort* m_pViewPort;
 
 	ButtonCode_t m_iBuyMenuKey;
+	ButtonCode_t m_iReBuyKey;
+	ButtonCode_t m_iAutoBuyKey;
 	bool m_bShowingCategory;
 	int m_iAccount;
 	bool m_bDropBuy;
