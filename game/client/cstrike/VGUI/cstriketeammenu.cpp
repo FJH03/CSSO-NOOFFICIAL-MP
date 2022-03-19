@@ -17,6 +17,7 @@
 #include <vgui/ILocalize.h>
 #include "c_playerresource.h"
 #include "engine/IEngineSound.h"
+#include "viewpostprocess.h"
 
 CCSTeamMenuAgentImage::CCSTeamMenuAgentImage( Panel* parent, const char* panelName, int nTeamNumber ): Button( parent, panelName, L"" )
 {
@@ -408,8 +409,7 @@ CCSTeamMenu::CCSTeamMenu( IViewPort* pViewPort ): Frame( NULL, PANEL_TEAM )
 	SetSizeable( false );
 
 	SetProportional( true );
-	SetPaintBackgroundEnabled( engine->GetDXSupportLevel() < 90 );
-	SetBgColor( Color( 0, 0, 0, 192 ) );
+	SetPaintBackgroundEnabled( true );
 
 	// initialize elements
 	m_pAgentModelT = new CCSTeamMenuAgentImage( this, "AgentModelT", TEAM_TERRORIST );
@@ -476,6 +476,21 @@ void CCSTeamMenu::ShowPanel( bool bShow )
 	}
 
 	m_pViewPort->ShowBackGround( bShow );
+}
+
+extern ConVar mat_blur_strength;
+extern ConVar mat_blur_desaturate;
+void CCSTeamMenu::PaintBackground()
+{
+	if ( engine->GetDXSupportLevel() < 90 )
+		BaseClass::PaintBackground();
+	else
+	{
+		// do the blur here instead of clientmode because it needs to render over VGUI elements
+		int x, y, w, h;
+		GetBounds( x, y, w, h );
+		DoBlurFade( mat_blur_strength.GetFloat(), mat_blur_desaturate.GetFloat(), x, y, w, h );
+	}
 }
 
 void CCSTeamMenu::OnClose()

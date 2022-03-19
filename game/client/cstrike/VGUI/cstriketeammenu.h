@@ -77,6 +77,7 @@ public:
 	virtual void ShowPanel( bool bShow );
 
 	// vgui overrides
+	virtual void PaintBackground();
 	virtual void OnClose();
 	virtual void OnCommand( const char* command );
 	virtual void OnKeyCodeTyped( KeyCode code );

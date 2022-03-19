@@ -1202,18 +1202,6 @@ bool ClientModeCSNormal::CanRecordDemo( char *errorMsg, int length ) const
 
 void ClientModeCSNormal::DoPostScreenSpaceEffects( const CViewSetup *pSetup ) 
 {
-	if ( enginevgui->IsGameUIVisible() )
-		return;
-
-	CMatRenderContextPtr pRenderContext( materials );
-
-	int xl, yl, dest_width, dest_height;
-	pRenderContext->GetViewport( xl, yl, dest_width, dest_height );
-
-	IViewPortPanel* pBuyMenu = gViewPortInterface->FindPanelByName( PANEL_BUY );
-	IViewPortPanel* pTeamMenu = gViewPortInterface->FindPanelByName( PANEL_TEAM );
-	if ( (pBuyMenu && pBuyMenu->IsVisible()) || (pTeamMenu && pTeamMenu->IsVisible()) )
-		DoBlurFade( mat_blur_strength.GetFloat(), mat_blur_desaturate.GetFloat(), xl, yl, dest_width, dest_height );
 }
 
 //=============================================================================

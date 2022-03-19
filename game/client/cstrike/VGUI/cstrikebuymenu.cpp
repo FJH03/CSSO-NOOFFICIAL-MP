@@ -21,7 +21,8 @@
 #include "model_types.h"
 #include "vgui_avatarimage.h"
 #include "cs_hud_weaponselection.h"
-#include "cs_gamerules.h"
+#include "cs_gamerules.h"#include "viewpostprocess.h"
+
 #include "c_cs_player.h"
 #include "cs_loadout.h"
 #include "c_breakableprop.h"
@@ -1000,8 +1001,7 @@ CCSBuyMenu::CCSBuyMenu( IViewPort* pViewPort ): Frame( NULL, PANEL_BUY )
 	SetSizeable( false );
 
 	SetProportional( true );
-	SetPaintBackgroundEnabled( engine->GetDXSupportLevel() < 90 );
-	SetBgColor( Color( 0, 0, 0, 192 ) );
+	SetPaintBackgroundEnabled( true );
 
 	// initialize variables
 	m_bShowingCategory = false;
@@ -1190,6 +1190,21 @@ void CCSBuyMenu::Update()
 			g_pVGuiLocalize->ConstructString( wszString, sizeof( wszString ), g_pVGuiLocalize->Find( "BuyMenu_TimerText" ), 1, wszTimer );
 
 		m_pBuyTimeLeftLabel->SetText( wszString );
+	}
+}
+
+extern ConVar mat_blur_strength;
+extern ConVar mat_blur_desaturate;
+void CCSBuyMenu::PaintBackground()
+{
+	if ( engine->GetDXSupportLevel() < 90 )
+		BaseClass::PaintBackground();
+	else
+	{
+		// do the blur here instead of clientmode because it needs to render over VGUI elements
+		int x, y, w, h;
+		GetBounds( x, y, w, h );
+		DoBlurFade( mat_blur_strength.GetFloat(), mat_blur_desaturate.GetFloat(), x, y, w, h );
 	}
 }
 
