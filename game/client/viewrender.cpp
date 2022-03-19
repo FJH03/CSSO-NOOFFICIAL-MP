@@ -6122,7 +6122,7 @@ void CUnderWaterView::CRefractionView::Draw()
 	// Optionally write the rendered image to a debug texture
 	if ( g_bDumpRenderTargets )
 	{
-		DumpTGAofRenderTarget( width, height, "WaterRefract" );
+		DumpTGAofRenderTarget( x, y, width, height, "WaterRefract" );
 	}
 
 	ITexture *pTexture = GetWaterRefractionTexture();

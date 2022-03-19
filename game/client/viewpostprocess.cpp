@@ -1494,7 +1494,7 @@ bool g_bDumpRenderTargets = false;
 
 
 // Dump a rendertarget to a TGA.  Useful for looking at intermediate render target results.
-void DumpTGAofRenderTarget( const int width, const int height, const char *pFilename )
+void DumpTGAofRenderTarget( const int x, const int y, const int width, const int height, const char *pFilename )
 {
 	// Ensure that mat_queue_mode is zero
 	static ConVarRef mat_queue_mode( "mat_queue_mode" );
@@ -1511,7 +1511,7 @@ void DumpTGAofRenderTarget( const int width, const int height, const char *pFile
 	unsigned char *pImage = ( unsigned char * )malloc( width * 4 * height );
 
 	// Get Bits from the material system
-	pRenderContext->ReadPixels( 0, 0, width, height, pImage, IMAGE_FORMAT_RGBA8888 );
+	pRenderContext->ReadPixels( x, y, width, height, pImage, IMAGE_FORMAT_RGBA8888 );
 
 	// allocate a buffer to write the tga into
 	int iMaxTGASize = 1024 + (width * height * 4);
@@ -1591,7 +1591,7 @@ static void DownsampleFBQuarterSize( IMatRenderContext *pRenderContext, int nSrc
 	}
 	else if ( g_bDumpRenderTargets )
 	{
-		DumpTGAofRenderTarget( nSrcWidth/4, nSrcHeight/4, "QuarterSizeFB" );
+		DumpTGAofRenderTarget( 0, 0, nSrcWidth/4, nSrcHeight/4, "QuarterSizeFB" );
 	}
 }
 
@@ -1674,7 +1674,7 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext,
 	}
 	else if ( g_bDumpRenderTargets )
 	{
-		DumpTGAofRenderTarget( nSrcWidth/4, nSrcHeight/4, "BlurX" );
+		DumpTGAofRenderTarget( 0, 0, nSrcWidth/4, nSrcHeight/4, "BlurX" );
 	}
 
 	// Gaussian blur y rt1 to rt0
@@ -1691,7 +1691,7 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext,
 	}
 	else if ( g_bDumpRenderTargets )
 	{
-		DumpTGAofRenderTarget( nSrcWidth/4, nSrcHeight/4, "BlurYAndBloom" );
+		DumpTGAofRenderTarget( 0, 0, nSrcWidth/4, nSrcHeight/4, "BlurYAndBloom" );
 	}
 
 	pRenderContext->PopRenderTargetAndViewport();
@@ -2345,7 +2345,7 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 		s_nRTIndex = 0;                 // Used for numbering the TGA files for easy browsing
 		mat_dump_rts.SetValue( 0 );     // We only want to capture one frame, on rising edge of this convar
 
-		DumpTGAofRenderTarget( w, h, "BackBuffer" );
+		DumpTGAofRenderTarget( x, y, w, h, "BackBuffer" );
 	}
 
 #if defined( _X360 )
@@ -2657,7 +2657,8 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 
 					if ( g_bDumpRenderTargets )
 					{
-						DumpTGAofRenderTarget( partialViewportPostDestRect.width, partialViewportPostDestRect.height, "EnginePost" );
+						DumpTGAofRenderTarget( partialViewportPostDestRect.x, partialViewportPostDestRect.y,
+											   partialViewportPostDestRect.width, partialViewportPostDestRect.height, "EnginePost" );
 					}
 				}
 				bFirstFrame = false;
@@ -2760,9 +2761,6 @@ void DoBlurFade( float flStrength, float flDesaturate, int x, int y, int w, int 
 	CMatRenderContextPtr pRenderContext( materials );
 	Generate8BitBloomTexture( pRenderContext, x, y, w, h, false, false );
 
-	int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
-	pRenderContext->GetViewport( nViewportX, nViewportY, nViewportWidth, nViewportHeight );
-
 	int nRtWidth, nRtHeight;
 	pRenderContext->GetRenderTargetDimensions( nRtWidth, nRtHeight );
 
@@ -2801,13 +2799,13 @@ void DoBlurFade( float flStrength, float flDesaturate, int x, int y, int w, int 
 	}
 
 	// Draw
-	pRenderContext->DrawScreenSpaceRectangle(	pMat, 0, 0, nViewportWidth, nViewportHeight,
-												nViewportX, nViewportY,
-												nViewportX + nViewportWidth - 1, nViewportY + nViewportHeight - 1,
+	pRenderContext->DrawScreenSpaceRectangle(	pMat, x, y, w, h,
+												x, y,
+												x + w - 1, y + h - 1,
 												nRtWidth, nRtHeight );
 	if ( g_bDumpRenderTargets )
 	{
-		DumpTGAofRenderTarget( nViewportWidth, nViewportHeight, "BlurFade" );
+		DumpTGAofRenderTarget( x, y, w, h, "BlurFade" );
 	}
 }
 
@@ -3170,7 +3168,7 @@ void DoImageSpaceMotionBlur( const CViewSetup &view, int x, int y, int w, int h 
 
 			if ( g_bDumpRenderTargets )
 			{
-				DumpTGAofRenderTarget( dest_width, dest_height, "MotionBlur" );
+				DumpTGAofRenderTarget( 0, 0, dest_width, dest_height, "MotionBlur" );
 			}
 		}
 	}

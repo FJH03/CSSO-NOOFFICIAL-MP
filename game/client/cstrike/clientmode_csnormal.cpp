@@ -49,6 +49,7 @@
 #include "cs_loadout.h"
 #include "materialsystem/itexture.h"
 #include "viewpostprocess.h"
+#include "ienginevgui.h"
 #include "cstrikeclientscoreboard.h"
 #include "cam_thirdperson.h"
 
@@ -86,6 +87,9 @@ extern ConVar cl_detail_avoid_recover_speed;
 extern ConVar v_viewmodel_fov;
 extern ConVar view_recoil_tracking;
 extern ConVar cam_recoil;
+
+ConVar mat_blur_strength( "mat_blur_strength", "1.0", FCVAR_ARCHIVE );
+ConVar mat_blur_desaturate( "mat_blur_desaturate", "0.5", FCVAR_ARCHIVE );
 
 //-----------------------------------------------------------------------------
 ConVar cl_autobuy(
@@ -1196,10 +1200,11 @@ bool ClientModeCSNormal::CanRecordDemo( char *errorMsg, int length ) const
 	return true;
 }
 
-ConVar mat_blur_strength( "mat_blur_strength", "1.0", FCVAR_ARCHIVE );
-ConVar mat_blur_desaturate( "mat_blur_desaturate", "0.5", FCVAR_ARCHIVE );
 void ClientModeCSNormal::DoPostScreenSpaceEffects( const CViewSetup *pSetup ) 
 {
+	if ( enginevgui->IsGameUIVisible() )
+		return;
+
 	CMatRenderContextPtr pRenderContext( materials );
 
 	int xl, yl, dest_width, dest_height;
