@@ -75,6 +75,7 @@ private:
 	bool	m_bCenter;
 	bool	m_bConsoleStyle;
 	float	m_flProgressFraction;
+	bool	m_bExtendedServerInfoLoaded;
 
 	CPanelAnimationVar( int, m_iAdditionalIndentX, "AdditionalIndentX", "0" );
 	CPanelAnimationVar( int, m_iAdditionalIndentY, "AdditionalIndentY", "0" );

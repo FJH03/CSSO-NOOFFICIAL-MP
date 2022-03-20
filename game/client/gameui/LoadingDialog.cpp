@@ -59,6 +59,7 @@ CLoadingDialog::CLoadingDialog( vgui::Panel *parent ) : Frame(parent, "LoadingDi
 	m_flSecondaryProgress = 0.0f;
 	m_flLastSecondaryProgressUpdateTime = 0.0f;
 	m_flSecondaryProgressStartTime = 0.0f;
+	m_bExtendedServerInfoLoaded = false;
 
 	m_pProgress = new ProgressBar( this, "Progress" );
 	m_pProgress2 = new ProgressBar( this, "Progress2" );
@@ -143,6 +144,14 @@ void CLoadingDialog::FireGameEvent( IGameEvent* event )
 
 void CLoadingDialog::SetExtendedServerInfo( KeyValues* pExtendedServerInfo )
 {
+	// don't load it twice: skirmish game modes default themselves
+	// to vanilla modes which results in incorrect loading screen
+	// information (eg. flying scoutsman -> casual)
+	if ( m_bExtendedServerInfoLoaded )
+		return;
+
+	m_bExtendedServerInfoLoaded = true;
+
 	char const* szMapName = pExtendedServerInfo->GetString( "map", "" );
 	if ( szMapName && *szMapName )
 	{
@@ -170,6 +179,7 @@ void CLoadingDialog::SetExtendedServerInfo( KeyValues* pExtendedServerInfo )
 
 void CLoadingDialog::ResetExtendedServerInfo()
 {
+	m_bExtendedServerInfoLoaded = false;
 	m_pMapNameLabel->SetText( "#GameUI_Loading" );
 	m_pMapImage->SetImage( "map_blank" );
 	m_pGameModeNameLabel->SetVisible( false );
