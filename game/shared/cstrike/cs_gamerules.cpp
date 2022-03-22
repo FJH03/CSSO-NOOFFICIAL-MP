@@ -4710,7 +4710,7 @@ ConVar snd_music_selection(
 					bEndMatch = true;
 				}
 			}
-			else if ( GetMapRemainingTime() <= 0 && m_iRoundWinStatus != WINNER_NONE )
+			else if ( GetMapRemainingTime() == 0 && m_iRoundWinStatus != WINNER_NONE )
 			{
 				bEndMatch = true;
 			}
@@ -4782,7 +4782,7 @@ ConVar snd_music_selection(
 					GoToIntermission();
 				}
 			}
-			else if ( GetMapRemainingTime() <= 0 && m_iRoundWinStatus != WINNER_NONE )
+			else if ( GetMapRemainingTime() == 0 && m_iRoundWinStatus != WINNER_NONE )
 			{
 				m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
 				GoToIntermission();
