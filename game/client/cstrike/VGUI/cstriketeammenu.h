@@ -82,6 +82,7 @@ public:
 	virtual void OnKeyCodeTyped( KeyCode code );
 
 	void ResetAgentModels();
+	void UpdatePlayerCount();
 
 private:
 	CCSTeamMenuAgentImage* m_pAgentModelT;
@@ -89,6 +90,8 @@ private:
 	Button* m_pCancelButton;
 	Button* m_pSpectateButton;
 	Button* m_pAutoAssignButton;
+	Label* m_pTPlayerCount;
+	Label* m_pCTPlayerCount;
 
 	IViewPort* m_pViewPort;
 };

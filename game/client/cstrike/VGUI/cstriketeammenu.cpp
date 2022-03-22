@@ -13,6 +13,9 @@
 #include "cs_gamerules.h"
 #include "cs_loadout.h"
 #include "c_team.h"
+#include "viewpostprocess.h"
+#include <vgui/ILocalize.h>
+#include "c_playerresource.h"
 
 CCSTeamMenuAgentImage::CCSTeamMenuAgentImage( Panel* parent, const char* panelName, int nTeamNumber ): Button( parent, panelName, L"" )
 {
@@ -404,7 +407,7 @@ CCSTeamMenu::CCSTeamMenu( IViewPort* pViewPort ): Frame( NULL, PANEL_TEAM )
 	SetSizeable( false );
 
 	SetProportional( true );
-	SetPaintBackgroundEnabled( false );
+	SetPaintBackgroundEnabled( true );
 
 	// initialize elements
 	m_pAgentModelT = new CCSTeamMenuAgentImage( this, "AgentModelT", TEAM_TERRORIST );
@@ -414,6 +417,8 @@ CCSTeamMenu::CCSTeamMenu( IViewPort* pViewPort ): Frame( NULL, PANEL_TEAM )
 	m_pCancelButton = new Button( this, "CancelButton", "#Cstrike_Cancel" );
 	m_pSpectateButton = new Button( this, "SpectateButton", "#Cstrike_Menu_Spectate" );
 	m_pAutoAssignButton = new Button( this, "AutoAssignButton", "#Cstrike_Team_AutoAssign" );
+	m_pTPlayerCount = new Label( this, "TPlayerCount", L"" );
+	m_pCTPlayerCount = new Label( this, "CTPlayerCount", L"" );
 
 	LoadControlSettings( "Resource/UI/TeamMenu.res" );
 }
@@ -438,6 +443,8 @@ void CCSTeamMenu::ShowPanel( bool bShow )
 		m_pAutoAssignButton->SetHotkey( '5' );
 		m_pSpectateButton->SetHotkey( '6' );
 
+		UpdatePlayerCount();
+
 		bool bAllowSpectate = false;
 		const ConVar* allowSpectators = cvar->FindVar( "mp_allowspectators" );
 		if ( allowSpectators &&
@@ -461,6 +468,21 @@ void CCSTeamMenu::ShowPanel( bool bShow )
 	}
 
 	m_pViewPort->ShowBackGround( bShow );
+}
+
+extern ConVar mat_blur_strength;
+extern ConVar mat_blur_desaturate;
+void CCSTeamMenu::PaintBackground()
+{
+	if ( engine->GetDXSupportLevel() < 90 )
+		BaseClass::PaintBackground();
+	else
+	{
+		// do the blur here instead of clientmode because it needs to render over VGUI elements
+		int x, y, w, h;
+		GetBounds( x, y, w, h );
+		DoBlurFade( mat_blur_strength.GetFloat(), mat_blur_desaturate.GetFloat(), x, y, w, h );
+	}
 }
 
 void CCSTeamMenu::OnClose()
@@ -667,4 +689,51 @@ void CCSTeamMenu::ResetAgentModels()
 			m_pAgentModelCT->SetGlovesModel( NULL );
 		}
 	}
+}
+
+void CCSTeamMenu::UpdatePlayerCount()
+{
+	if ( !g_PR )
+		return;
+
+	int iTHumans = 0;
+	int iTBots = 0;
+	int iCTHumans = 0;
+	int iCTBots = 0;
+	for ( int i = 0; i < MAX_PLAYERS; i++ )
+	{
+		if ( g_PR->IsConnected( i ) )
+		{
+			int iTeamNumber = g_PR->GetTeam( i );
+			if ( iTeamNumber == TEAM_TERRORIST )
+			{
+				if ( g_PR->IsFakePlayer( i ) )
+					iTBots++;
+				else
+					iTHumans++;
+			}
+			else if ( iTeamNumber == TEAM_CT )
+			{
+				if ( g_PR->IsFakePlayer( i ) )
+					iCTBots++;
+				else
+					iCTHumans++;
+			}
+		}
+	}
+
+	wchar_t wszHumanCount[8];
+	wchar_t wszBotCount[8];
+	wchar_t wszString[64];
+	const wchar_t* wszLocalized = g_pVGuiLocalize->Find( "#CStrike_Team_Humans_Bots" );
+
+	V_snwprintf( wszHumanCount, sizeof( wszHumanCount ), L"%d", iTHumans );
+	V_snwprintf( wszBotCount, sizeof( wszBotCount ), L"%d", iTBots );
+	g_pVGuiLocalize->ConstructString( wszString, sizeof( wszString ), wszLocalized, 2, wszHumanCount, wszBotCount );
+	m_pTPlayerCount->SetText( wszString );
+
+	V_snwprintf( wszHumanCount, sizeof( wszHumanCount ), L"%d", iCTHumans );
+	V_snwprintf( wszBotCount, sizeof( wszBotCount ), L"%d", iCTBots );
+	g_pVGuiLocalize->ConstructString( wszString, sizeof( wszString ), wszLocalized, 2, wszHumanCount, wszBotCount );
+	m_pCTPlayerCount->SetText( wszString );
 }
