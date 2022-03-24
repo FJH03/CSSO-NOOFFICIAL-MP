@@ -868,8 +868,9 @@ void CCSClientScoreBoardDialog::UpdatePlayerAvatar( int playerIndex, KeyValues* 
 //-----------------------------------------------------------------------------
 bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, KeyValues* kv )
 {
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
 	C_CS_PlayerResource* cs_PR = dynamic_cast<C_CS_PlayerResource*>(g_PR);
-	if ( !cs_PR )
+	if ( !pPlayer || !cs_PR )
 		return false;
 
 	int iPing = cs_PR->GetPing( playerIndex );
@@ -912,9 +913,9 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, KeyValues* 
 
 	if ( !cs_PR->IsAlive( playerIndex ) )
 		kv->SetInt( SECTIONED_LIST_HEADER_IMAGE, DEAD_ICON );
-	else if ( cs_PR->HasC4( playerIndex ) )
+	else if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST && cs_PR->HasC4( playerIndex ) )
 		kv->SetInt( SECTIONED_LIST_HEADER_IMAGE, BOMB_ICON );
-	else if ( cs_PR->HasDefuser( playerIndex ) )
+	else if ( pPlayer->GetTeamNumber() == TEAM_CT && cs_PR->HasDefuser( playerIndex ) )
 		kv->SetInt( SECTIONED_LIST_HEADER_IMAGE, DEFUSER_ICON );
 
 	kv->SetInt( "playerIndex", playerIndex );
