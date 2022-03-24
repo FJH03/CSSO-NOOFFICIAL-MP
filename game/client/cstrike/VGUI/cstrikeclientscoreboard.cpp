@@ -110,13 +110,13 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 	m_pPlayerMoneyColumn = new Label( this, "PlayerMoneyColumn", L"" );
 	m_pPlayerKillsColumn = new Label( this, "PlayerKillsColumn", L"" );
 
-	m_pCTPlayerList = new SectionedListPanel( this, "TeamCTPlayers" );
+	m_pCTPlayerList = new SectionedListPanel( this, "TeamCTPlayerList" );
 	m_pCTPlayerList->SetVerticalScrollbar( false );
 	m_pCTPlayerList->SetPaintBackgroundEnabled( false );
 	m_pCTPlayerList->SetPaintBorderEnabled( false );
 	m_pCTPlayerList->SetDrawHeaders( false );
 
-	m_pTPlayerList = new SectionedListPanel( this, "TeamTPlayers" );
+	m_pTPlayerList = new SectionedListPanel( this, "TeamTPlayerList" );
 	m_pTPlayerList->SetVerticalScrollbar( false );
 	m_pTPlayerList->SetPaintBackgroundEnabled( false );
 	m_pTPlayerList->SetPaintBorderEnabled( false );
