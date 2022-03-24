@@ -378,10 +378,10 @@ bool CCSClientScoreBoardDialog::CSStaticPlayerSortFunc( vgui::SectionedListPanel
 
 void CCSClientScoreBoardDialog::InitScoreboardSections()
 {
-	// setup the columns
 	int iColumnsWide = ping_column_wide + avatar_column_wide + avatar_name_gap_wide + money_column_wide +
 		kills_column_wide + assists_column_wide + deaths_column_wide + mvps_column_wide + score_column_wide;
 
+	// setup the columns
 	m_pCTPlayerList->AddSection( 0, "", CSStaticPlayerSortFunc );
 	m_pCTPlayerList->AddColumnToSection( 0, "ping", "", SectionedListPanel::COLUMN_CENTER, ping_column_wide );
 	m_pCTPlayerList->AddColumnToSection( 0, "avatar", "", SectionedListPanel::COLUMN_IMAGE, avatar_column_wide );
@@ -394,11 +394,31 @@ void CCSClientScoreBoardDialog::InitScoreboardSections()
 	m_pCTPlayerList->AddColumnToSection( 0, "deaths", "", SectionedListPanel::COLUMN_CENTER, deaths_column_wide );
 	m_pCTPlayerList->AddColumnToSection( 0, "mvps", "", SectionedListPanel::COLUMN_CENTER, mvps_column_wide );
 	m_pCTPlayerList->AddColumnToSection( 0, "score", "", SectionedListPanel::COLUMN_CENTER, score_column_wide );
-	m_pCTPlayerList->SetColumnBgColor( 0, "money", column_bgcolor1 );
-	m_pCTPlayerList->SetColumnBgColor( 0, "assists", column_bgcolor1 );
-	m_pCTPlayerList->SetColumnBgColor( 0, "mvps", column_bgcolor1 );
-	m_pCTPlayerList->SetColumnBgColor( 0, "score", column_bgcolor2 );
 
+	// setup the column bg color
+	bool bSkip = false;
+	int iColumnCount = m_pCTPlayerList->GetColumnCountBySection( 0 );
+	for ( int i = m_pCTPlayerList->GetColumnIndexByName( 0, "name" ); i < iColumnCount; i++ )
+	{
+		if ( i == iColumnCount - 1 )
+		{
+			m_pCTPlayerList->SetColumnBgColor( 0, i, column_bgcolor2 );
+		}
+		else
+		{
+			if ( bSkip )
+			{
+				bSkip = false;
+				continue;
+			}
+
+			m_pCTPlayerList->SetColumnBgColor( 0, i, column_bgcolor1 );
+
+			bSkip = true;
+		}
+	}
+
+	// setup the columns
 	m_pTPlayerList->AddSection( 0, "", CSStaticPlayerSortFunc );
 	m_pTPlayerList->AddColumnToSection( 0, "ping", "", SectionedListPanel::COLUMN_CENTER, ping_column_wide );
 	m_pTPlayerList->AddColumnToSection( 0, "avatar", "", SectionedListPanel::COLUMN_IMAGE, avatar_column_wide );
@@ -411,10 +431,29 @@ void CCSClientScoreBoardDialog::InitScoreboardSections()
 	m_pTPlayerList->AddColumnToSection( 0, "deaths", "", SectionedListPanel::COLUMN_CENTER, deaths_column_wide );
 	m_pTPlayerList->AddColumnToSection( 0, "mvps", "", SectionedListPanel::COLUMN_CENTER, mvps_column_wide );
 	m_pTPlayerList->AddColumnToSection( 0, "score", "", SectionedListPanel::COLUMN_CENTER, score_column_wide );
-	m_pTPlayerList->SetColumnBgColor( 0, "money", column_bgcolor1 );
-	m_pTPlayerList->SetColumnBgColor( 0, "assists", column_bgcolor1 );
-	m_pTPlayerList->SetColumnBgColor( 0, "mvps", column_bgcolor1 );
-	m_pTPlayerList->SetColumnBgColor( 0, "score", column_bgcolor2 );
+
+	// setup the column bg color
+	bSkip = false;
+	iColumnCount = m_pTPlayerList->GetColumnCountBySection( 0 );
+	for ( int i = m_pTPlayerList->GetColumnIndexByName( 0, "name" ); i < iColumnCount; i++ )
+	{
+		if ( i == iColumnCount - 1 )
+		{
+			m_pTPlayerList->SetColumnBgColor( 0, i, column_bgcolor2 );
+		}
+		else
+		{
+			if ( bSkip )
+			{
+				bSkip = false;
+				continue;
+			}
+
+			m_pTPlayerList->SetColumnBgColor( 0, i, column_bgcolor1 );
+
+			bSkip = true;
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------

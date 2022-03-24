@@ -1615,6 +1615,23 @@ void SectionedListPanel::SetColumnBgColor(int sectionID, const char *columnName,
 	column.m_bgColor = clr;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void SectionedListPanel::SetColumnBgColor(int sectionID, int columnID, Color clr)
+{
+	int index = FindSectionIndexByID(sectionID);
+	if (index < 0)
+		return;
+	section_t &section = m_Sections[index];
+
+	if (!section.m_Columns.IsValidIndex(columnID))
+		return;
+
+	column_t &column = section.m_Columns[columnID];
+	column.m_bgColor = clr;
+}
+
 //=============================================================================
 // HPE_BEGIN:
 // [menglish] Gets the column index by the string identifier

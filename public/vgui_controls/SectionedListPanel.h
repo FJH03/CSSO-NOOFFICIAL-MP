@@ -217,6 +217,7 @@ public:
 
 	void SetColumnWidthBySection(int sectionID, const char *columnName, int iWidth);
 	void SetColumnBgColor(int sectionID, const char *columnName, Color clr);
+	void SetColumnBgColor(int sectionID, int columnID, Color clr);
 
 protected:
 	virtual void PerformLayout();

@@ -104,6 +104,9 @@ private:
     vgui::Label* m_pTeamTScoreOvertime;
     CCSClientScoreBoardLossBonusPanel* m_pLossBonusCT;
     CCSClientScoreBoardLossBonusPanel* m_pLossBonusT;
+    vgui::Label* m_pPlayerAssistsColumn;
+    vgui::Label* m_pPlayerMoneyColumn;
+    vgui::Label* m_pPlayerKillsColumn;
 
 	int     m_iRoundTime;
 	int     m_iGameType;
