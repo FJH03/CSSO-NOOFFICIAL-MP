@@ -462,10 +462,9 @@ int CCSClientScoreBoardDialog::FindItemIDForPlayerIndex( int playerIndex )
 //-----------------------------------------------------------------------------
 void CCSClientScoreBoardDialog::UpdateTeamInfo()
 {
-	if ( g_PR == NULL )
-	{
+	C_CS_PlayerResource* cs_PR = (C_CS_PlayerResource*) g_PR;
+	if ( !cs_PR )
 		return;
-	}
 
 	// update the team sections in the scoreboard
 	for ( int teamIndex = TEAM_TERRORIST; teamIndex <= TEAM_CT; teamIndex++ )
@@ -519,7 +518,7 @@ void CCSClientScoreBoardDialog::UpdateTeamInfo()
 				if ( g_PR->IsConnected( playerIndex ) && g_PR->GetTeam( playerIndex ) == teamIndex )
 				{
 					numPlayers++;
-					if ( g_PR->IsAlive( playerIndex ) )
+					if ( cs_PR->IsAlive( playerIndex ) )
 					{
 						++numAlive;
 					}
@@ -574,18 +573,13 @@ void CCSClientScoreBoardDialog::UpdatePlayerInfo()
 	// walk all the players and make sure they're in the scoreboard
 	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 	{
-		int nTeamNumber = g_PR->GetTeam( i );
-		bool bShouldShow = g_PR->IsConnected( i );
+		int nTeamNumber = cs_PR->GetTeam( i );
+		bool bShouldShow = cs_PR->IsConnected( i );
+		bool bIsAlive = cs_PR->IsAlive( i );
 		SectionedListPanel* pPlayerList = (nTeamNumber == TEAM_CT) ? m_pCTPlayerList : m_pTPlayerList;
 
 		if ( bShouldShow && (nTeamNumber == TEAM_CT || nTeamNumber == TEAM_TERRORIST) )
 		{
-			bool bIsAlive = g_PR->IsAlive( i );
-			if ( cs_PR->GetControlledByPlayer( i ) )
-				bIsAlive = true;
-			else if ( cs_PR->GetControlledPlayer( i ) )
-				bIsAlive = false;
-
 			KeyValues* playerData = new KeyValues( "data" );
 			GetPlayerScoreInfo( i, playerData );
 			UpdatePlayerAvatar( i, playerData );
@@ -603,7 +597,7 @@ void CCSClientScoreBoardDialog::UpdatePlayerInfo()
 			}
 
 			// set the row color based on the players team
-			Color fgColor = g_PR->GetTeamColor( nTeamNumber );
+			Color fgColor = cs_PR->GetTeamColor( nTeamNumber );
 			if ( !bIsAlive )
 				fgColor[3] *= 0.5f; // half transparent
 
@@ -728,7 +722,6 @@ void CCSClientScoreBoardDialog::UpdatePlayerAvatar( int playerIndex, KeyValues* 
 bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, KeyValues* kv )
 {
 	C_CS_PlayerResource* cs_PR = dynamic_cast<C_CS_PlayerResource*>(g_PR);
-
 	if ( !cs_PR )
 		return false;
 
@@ -763,12 +756,7 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, KeyValues* 
 	}
 	kv->SetInt( "score", 100 ); // TODO
 
-	bool bIsAlive = g_PR->IsAlive( playerIndex );
-	if ( cs_PR->GetControlledByPlayer( playerIndex ) )
-		bIsAlive = true;
-	else if ( cs_PR->GetControlledPlayer( playerIndex ) )
-		bIsAlive = false;
-	if ( !bIsAlive )
+	if ( !cs_PR->IsAlive( playerIndex ) )
 		kv->SetInt( SECTIONED_LIST_HEADER_IMAGE, DEAD_ICON );
 	else if ( cs_PR->HasC4( playerIndex ) )
 		kv->SetInt( SECTIONED_LIST_HEADER_IMAGE, BOMB_ICON );

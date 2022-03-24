@@ -70,6 +70,21 @@ C_CS_PlayerResource::~C_CS_PlayerResource()
 {
 }
 
+bool C_CS_PlayerResource::IsAlive( int iIndex )
+{
+	if ( GetControlledByPlayer( iIndex ) > 0 )
+	{
+		return m_bAlive[GetControlledByPlayer( iIndex )];
+	}
+
+	if ( GetControlledPlayer( iIndex ) > 0 )
+	{
+		return false;
+	}
+
+	return m_bAlive[iIndex];
+}
+
 bool C_CS_PlayerResource::HasC4(int iIndex )
 {
 	if ( GetControlledByPlayer( iIndex ) > 0 )
