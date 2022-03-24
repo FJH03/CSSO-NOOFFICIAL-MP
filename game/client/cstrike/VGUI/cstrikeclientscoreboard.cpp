@@ -1010,23 +1010,8 @@ void CCSClientScoreBoardDialog::ShowPanel( bool state )
 		m_nGameType = iGameType;
 		m_nGameMode = iGameMode;
 
-		const char* pszCurrentGameMode = g_pGameTypes->GetGameModeFromInt( iGameType, iGameMode );
-		if ( pszCurrentGameMode )
-		{
-			char szIconPath[64];
-			V_snprintf( szIconPath, sizeof( szIconPath ), "materials/vgui/hud/svg/%s.svg", pszCurrentGameMode );
-			if ( !g_pFullFileSystem->FileExists( szIconPath ) )
-				m_pGameModeIcon->SetTexture( "materials/vgui/hud/svg/casual.svg" );
-			else
-				m_pGameModeIcon->SetTexture( szIconPath );
-		}
-		else
-		{
-			m_pGameModeIcon->SetTexture( "materials/vgui/hud/svg/casual.svg" );
-		}
-
 		// simplified scoreboard for AR and DM
-		if ( m_nGameType == CS_GameType_GunGame && (m_nGameMode == CS_GameMode::GunGame_Progressive || m_nGameMode == CS_GameMode::GunGame_Deathmatch) )
+		if ( iGameType == CS_GameType_GunGame && (iGameMode == CS_GameMode::GunGame_Progressive || iGameMode == CS_GameMode::GunGame_Deathmatch) )
 		{
 			LoadControlSettings( "Resource/UI/scoreboard_simple.res" );
 
@@ -1042,6 +1027,21 @@ void CCSClientScoreBoardDialog::ShowPanel( bool state )
 			m_iOriginalCTPlayerListTall = m_pCTPlayerList->GetTall();
 			m_iOriginalTPlayerListTall = m_pTPlayerList->GetTall();
 			m_bSimple = false;
+		}
+
+		const char* pszCurrentGameMode = g_pGameTypes->GetGameModeFromInt( iGameType, iGameMode );
+		if ( pszCurrentGameMode )
+		{
+			char szIconPath[64];
+			V_snprintf( szIconPath, sizeof( szIconPath ), "materials/vgui/hud/svg/%s.svg", pszCurrentGameMode );
+			if ( !g_pFullFileSystem->FileExists( szIconPath ) )
+				m_pGameModeIcon->SetTexture( "materials/vgui/hud/svg/casual.svg" );
+			else
+				m_pGameModeIcon->SetTexture( szIconPath );
+		}
+		else
+		{
+			m_pGameModeIcon->SetTexture( "materials/vgui/hud/svg/casual.svg" );
 		}
 	}
 
