@@ -18,6 +18,8 @@
 #include "vgui_avatarimage.h"
 #include "c_cs_playerresource.h"
 
+#define SCOREBOARD_MOUSE_INPUT 0
+
 enum PlayerListIcons_t
 {
     // NOTE: these go in order with UpdateImageList, starting from index 1!
@@ -71,7 +73,9 @@ public:
     // [tj] So we can do processing every frame
     virtual void OnThink();
 
+#if SCOREBOARD_MOUSE_INPUT
     virtual void SetMouseInputEnabled( bool state );
+#endif
 
 protected:
     virtual void FireGameEvent( IGameEvent* event );

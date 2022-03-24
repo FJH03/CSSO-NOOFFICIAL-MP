@@ -48,12 +48,11 @@
 #include "cs_shareddefs.h"
 #include "cs_loadout.h"
 #include "materialsystem/itexture.h"
-//=============================================================================
-// HPE_BEGIN:
+#include "viewpostprocess.h"
+#include "cstrikeclientscoreboard.h"
+
 // [tj] Needed to retrieve achievement text
-// [menglish] Need access to message macros
-//=============================================================================
- 
+// [menglish] Need access to message macros 
 #include "achievementmgr.h"
 #include "hud_macros.h"
 #include "c_plantedc4.h"
@@ -63,10 +62,6 @@
 
 // [tj] We need to forward declare this, since the definition is all inside the implementation file 
 class CHudHintDisplay;
- 
-//=============================================================================
-// HPE_END
-//=============================================================================
 
 
 void __MsgFunc_MatchEndConditions( bf_read &msg );
@@ -598,6 +593,19 @@ int	ClientModeCSNormal::KeyInput( int down, ButtonCode_t keynum, const char *psz
 	// don't process input in LogoMaps
 	if( CSGameRules() && CSGameRules()->IsLogoMap() )
 		return 1;
+
+#if SCOREBOARD_MOUSE_INPUT
+	if ( keynum == MOUSE_RIGHT )
+	{
+		EditablePanel* pScoreBoard = dynamic_cast<EditablePanel*>(gViewPortInterface->FindPanelByName( PANEL_SCOREBOARD ));
+		if ( pScoreBoard && pScoreBoard->IsVisible() )
+		{
+			pScoreBoard->SetMouseInputEnabled( true );
+			pScoreBoard->RequestFocus();
+			return 0;
+		}
+	}
+#endif
 	
 	return BaseClass::KeyInput( down, keynum, pszCurrentBinding );
 }

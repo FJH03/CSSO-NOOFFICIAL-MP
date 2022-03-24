@@ -326,6 +326,7 @@ void CCSClientScoreBoardDialog::UpdateImageList()
 	}
 }
 
+#if SCOREBOARD_MOUSE_INPUT
 void CCSClientScoreBoardDialog::SetMouseInputEnabled( bool state )
 {
 	BaseClass::SetMouseInputEnabled( state );
@@ -334,6 +335,7 @@ void CCSClientScoreBoardDialog::SetMouseInputEnabled( bool state )
 	// so the buttons can go over
 	m_pServerLabel->SetVisible( !state );
 }
+#endif
 
 bool CCSClientScoreBoardDialog::CSStaticPlayerSortFunc( vgui::SectionedListPanel* list, int itemID1, int itemID2 )
 {
@@ -1000,7 +1002,9 @@ void CCSClientScoreBoardDialog::ShowPanel( bool state )
 	if ( m_bForceShow && !state )
 		return;
 
+#if SCOREBOARD_MOUSE_INPUT
 	SetMouseInputEnabled( false ); // always disable it before showing the panel since clientmode might have enabled it
+#endif
 
 	// set a correct game mode icon
 	int iGameType = g_pGameTypes->GetCurrentGameType();
