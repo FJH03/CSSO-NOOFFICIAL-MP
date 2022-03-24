@@ -102,6 +102,7 @@ private:
     vgui::Label* m_pTeamTScoreFirstHalf;
     vgui::Label* m_pTeamTScoreSecondHalf;
     vgui::Label* m_pTeamTScoreOvertime;
+    vgui::Label* m_pLossBonusLabel;
     CCSClientScoreBoardLossBonusPanel* m_pLossBonusCT;
     CCSClientScoreBoardLossBonusPanel* m_pLossBonusT;
     vgui::Label* m_pPlayerAssistsColumn;

@@ -104,6 +104,7 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 	m_pTeamTScoreFirstHalf = new Label( this, "TeamTScoreFirstHalf", L"" );
 	m_pTeamTScoreSecondHalf = new Label( this, "TeamTScoreSecondHalf", L"" );
 	m_pTeamTScoreOvertime = new Label( this, "TeamTScoreOvertime", L"" );
+	m_pLossBonusLabel = new Label( this, "LossBonusLabel", L"" );
 	m_pLossBonusCT = new CCSClientScoreBoardLossBonusPanel( this, "LossBonusCT" );
 	m_pLossBonusT = new CCSClientScoreBoardLossBonusPanel( this, "LossBonusT" );
 	m_pPlayerAssistsColumn = new Label( this, "PlayerAssistsColumn", L"" );
@@ -943,6 +944,7 @@ void CCSClientScoreBoardDialog::ShowPanel( bool state )
 		m_pTeamTScoreFirstHalf->SetVisible( m_bHasHalfTime );
 		m_pTeamTScoreSecondHalf->SetVisible( m_bHasHalfTime );
 		m_pTeamTScoreOvertime->SetVisible( m_bHasOvertime );
+		m_pLossBonusLabel->SetVisible( m_bHasLossBonus );
 		m_pLossBonusCT->SetVisible( m_bHasLossBonus );
 		m_pLossBonusT->SetVisible( m_bHasLossBonus );
 		m_pLossBonusCT->SetFilledSegments( CSGameRules() ? CSGameRules()->m_iNumConsecutiveCTLoses : 0 );
