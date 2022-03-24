@@ -41,6 +41,7 @@ const float kUpdateInterval = 0.5f;				// how often the scoreboard refreshes
 
 extern ConVar cash_team_loser_bonus;
 extern ConVar cash_team_loser_bonus_consecutive_rounds;
+extern ConVar mp_display_kill_assists;
 
 CCSClientScoreBoardLossBonusPanel::CCSClientScoreBoardLossBonusPanel( vgui::Panel* pParent, const char* pszPanelName ): BaseClass( pParent, pszPanelName )
 {
@@ -105,6 +106,9 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 	m_pTeamTScoreOvertime = new Label( this, "TeamTScoreOvertime", L"" );
 	m_pLossBonusCT = new CCSClientScoreBoardLossBonusPanel( this, "LossBonusCT" );
 	m_pLossBonusT = new CCSClientScoreBoardLossBonusPanel( this, "LossBonusT" );
+	m_pPlayerAssistsColumn = new Label( this, "PlayerAssistsColumn", L"" );
+	m_pPlayerMoneyColumn = new Label( this, "PlayerMoneyColumn", L"" );
+	m_pPlayerKillsColumn = new Label( this, "PlayerKillsColumn", L"" );
 
 	m_pCTPlayerList = new SectionedListPanel( this, "TeamCTPlayers" );
 	m_pCTPlayerList->SetVerticalScrollbar( false );
@@ -164,6 +168,7 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 	m_bHasHalfTime = false;
 	m_bHasOvertime = false;
 	m_bHasLossBonus = false;
+	m_bHasAssists = true;
 }
 
 const wchar_t *LocalizeFindSafe( const char *pTokenName )
@@ -379,7 +384,9 @@ bool CCSClientScoreBoardDialog::CSStaticPlayerSortFunc( vgui::SectionedListPanel
 void CCSClientScoreBoardDialog::InitScoreboardSections()
 {
 	int iColumnsWide = ping_column_wide + avatar_column_wide + avatar_name_gap_wide + money_column_wide +
-		kills_column_wide + assists_column_wide + deaths_column_wide + mvps_column_wide + score_column_wide;
+		kills_column_wide + deaths_column_wide + mvps_column_wide + score_column_wide;
+	if ( m_bHasAssists )
+		iColumnsWide += assists_column_wide;
 
 	// setup the columns
 	m_pCTPlayerList->AddSection( 0, "", CSStaticPlayerSortFunc );
@@ -390,7 +397,8 @@ void CCSClientScoreBoardDialog::InitScoreboardSections()
 	m_pCTPlayerList->AddColumnToSection( 0, "name", "", 0, m_pCTPlayerList->GetWide() - iColumnsWide );
 	m_pCTPlayerList->AddColumnToSection( 0, "money", "", SectionedListPanel::COLUMN_CENTER, money_column_wide );
 	m_pCTPlayerList->AddColumnToSection( 0, "kills", "", SectionedListPanel::COLUMN_CENTER, kills_column_wide );
-	m_pCTPlayerList->AddColumnToSection( 0, "assists", "", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
+	if ( m_bHasAssists )
+		m_pCTPlayerList->AddColumnToSection( 0, "assists", "", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
 	m_pCTPlayerList->AddColumnToSection( 0, "deaths", "", SectionedListPanel::COLUMN_CENTER, deaths_column_wide );
 	m_pCTPlayerList->AddColumnToSection( 0, "mvps", "", SectionedListPanel::COLUMN_CENTER, mvps_column_wide );
 	m_pCTPlayerList->AddColumnToSection( 0, "score", "", SectionedListPanel::COLUMN_CENTER, score_column_wide );
@@ -427,7 +435,8 @@ void CCSClientScoreBoardDialog::InitScoreboardSections()
 	m_pTPlayerList->AddColumnToSection( 0, "name", "", 0, m_pTPlayerList->GetWide() - iColumnsWide );
 	m_pTPlayerList->AddColumnToSection( 0, "money", "", SectionedListPanel::COLUMN_CENTER, money_column_wide );
 	m_pTPlayerList->AddColumnToSection( 0, "kills", "", SectionedListPanel::COLUMN_CENTER, kills_column_wide );
-	m_pTPlayerList->AddColumnToSection( 0, "assists", "", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
+	if ( m_bHasAssists )
+		m_pTPlayerList->AddColumnToSection( 0, "assists", "", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
 	m_pTPlayerList->AddColumnToSection( 0, "deaths", "", SectionedListPanel::COLUMN_CENTER, deaths_column_wide );
 	m_pTPlayerList->AddColumnToSection( 0, "mvps", "", SectionedListPanel::COLUMN_CENTER, mvps_column_wide );
 	m_pTPlayerList->AddColumnToSection( 0, "score", "", SectionedListPanel::COLUMN_CENTER, score_column_wide );
@@ -924,6 +933,7 @@ void CCSClientScoreBoardDialog::ShowPanel( bool state )
 		m_bHasHalfTime = CSGameRules() ? CSGameRules()->HasHalfTime() : false;
 		m_bHasOvertime = CSGameRules() ? (CSGameRules()->GetOvertimePlaying() > 0) : false;
 		m_bHasLossBonus = (cash_team_loser_bonus_consecutive_rounds.GetInt() > 0) && (cash_team_loser_bonus.GetInt() > 0);
+
 		m_pTeamCTScoreFirstHalf->SetVisible( m_bHasHalfTime );
 		m_pTeamCTScoreSecondHalf->SetVisible( m_bHasHalfTime );
 		m_pTeamCTScoreOvertime->SetVisible( m_bHasOvertime );
@@ -937,6 +947,27 @@ void CCSClientScoreBoardDialog::ShowPanel( bool state )
 		m_pLossBonusT->SetVisible( m_bHasLossBonus );
 		m_pLossBonusCT->SetFilledSegments( CSGameRules() ? CSGameRules()->m_iNumConsecutiveCTLoses : 0 );
 		m_pLossBonusT->SetFilledSegments( CSGameRules() ? CSGameRules()->m_iNumConsecutiveTerroristLoses : 0 );
+
+		if ( m_bHasAssists != mp_display_kill_assists.GetBool() )
+		{
+			m_bHasAssists = mp_display_kill_assists.GetBool();
+			m_pPlayerAssistsColumn->SetVisible( m_bHasAssists );
+			
+			int xpos, ypos;
+			m_pPlayerMoneyColumn->GetPos( xpos, ypos );
+			if ( m_bHasAssists )
+				m_pPlayerMoneyColumn->SetPos( xpos - assists_column_wide, ypos );
+			else
+				m_pPlayerMoneyColumn->SetPos( xpos + assists_column_wide, ypos );
+
+			m_pPlayerKillsColumn->GetPos( xpos, ypos );
+			if ( m_bHasAssists )
+				m_pPlayerKillsColumn->SetPos( xpos - assists_column_wide, ypos );
+			else
+				m_pPlayerKillsColumn->SetPos( xpos + assists_column_wide, ypos );
+
+			Reset();
+		}
     }
     else
     {		

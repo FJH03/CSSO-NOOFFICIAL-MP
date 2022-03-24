@@ -120,6 +120,7 @@ private:
     bool    m_bHasHalfTime;
     bool    m_bHasOvertime;
     bool    m_bHasLossBonus;
+    bool    m_bHasAssists;
 
     CPanelAnimationVarAliasType( int, ping_column_wide, "ping_column_wide", "0", "proportional_width" );
     CPanelAnimationVarAliasType( int, avatar_column_wide, "avatar_column_wide", "0", "proportional_width" );
