@@ -406,7 +406,7 @@ void CCSClientScoreBoardDialog::InitScoreboardSections()
 	// setup the column bg color
 	bool bSkip = false;
 	int iColumnCount = m_pCTPlayerList->GetColumnCountBySection( 0 );
-	for ( int i = m_pCTPlayerList->GetColumnIndexByName( 0, "name" ); i < iColumnCount; i++ )
+	for ( int i = 4; i < iColumnCount; i++ ) // TODO: change 4 to m_pCTPlayerList->GetColumnIndexByName( 0, "name" ) + 1 if it ever changes!
 	{
 		if ( i == iColumnCount - 1 )
 		{
@@ -444,7 +444,7 @@ void CCSClientScoreBoardDialog::InitScoreboardSections()
 	// setup the column bg color
 	bSkip = false;
 	iColumnCount = m_pTPlayerList->GetColumnCountBySection( 0 );
-	for ( int i = m_pTPlayerList->GetColumnIndexByName( 0, "name" ); i < iColumnCount; i++ )
+	for ( int i = 4; i < iColumnCount; i++ ) // TODO: change 4 to m_pTPlayerList->GetColumnIndexByName( 0, "name" ) + 1 if it ever changes!
 	{
 		if ( i == iColumnCount - 1 )
 		{
