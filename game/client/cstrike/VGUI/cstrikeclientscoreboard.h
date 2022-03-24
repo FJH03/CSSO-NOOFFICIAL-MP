@@ -119,7 +119,6 @@ private:
     bool    m_bHasHalfTime;
     bool    m_bHasOvertime;
     bool    m_bHasLossBonus;
-    bool    m_bHasAssists;
     bool    m_bSimple;
 
     CPanelAnimationVarAliasType( int, ping_column_wide, "ping_column_wide", "0", "proportional_width" );
@@ -130,8 +129,10 @@ private:
     CPanelAnimationVarAliasType( int, kills_column_wide, "kills_column_wide", "0", "proportional_width" );
     CPanelAnimationVarAliasType( int, assists_column_wide, "assists_column_wide", "0", "proportional_width" );
     CPanelAnimationVarAliasType( int, deaths_column_wide, "deaths_column_wide", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, kd_column_wide, "kd_column_wide", "0", "proportional_width" );
     CPanelAnimationVarAliasType( int, mvps_column_wide, "mvps_column_wide", "0", "proportional_width" );
     CPanelAnimationVarAliasType( int, score_column_wide, "score_column_wide", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, gglevel_column_wide, "gglevel_column_wide", "0", "proportional_width" );
     CPanelAnimationVarAliasType( int, player_status_icon_tall, "player_status_icon_tall", "0", "proportional_height" );
     CPanelAnimationVar( Color, player_bgcolor, "player_bgcolor", "White" );
     CPanelAnimationVar( Color, dead_player_bgcolor, "dead_player_bgcolor", "White" );

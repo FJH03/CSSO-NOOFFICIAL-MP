@@ -41,7 +41,6 @@ const float kUpdateInterval = 0.5f;				// how often the scoreboard refreshes
 
 extern ConVar cash_team_loser_bonus;
 extern ConVar cash_team_loser_bonus_consecutive_rounds;
-extern ConVar mp_display_kill_assists;
 
 CCSClientScoreBoardLossBonusPanel::CCSClientScoreBoardLossBonusPanel( vgui::Panel* pParent, const char* pszPanelName ): BaseClass( pParent, pszPanelName )
 {
@@ -138,8 +137,8 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 	SetKeyBoardInputEnabled( false );
 
 	m_iRoundTime = 0;
-	m_nGameType = 0;
-	m_nGameMode = 0;
+	m_nGameType = -1;
+	m_nGameMode = -1;
 
 	if ( g_pClientMode &&
 		 g_pClientMode->GetMapName() )
@@ -169,7 +168,6 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 	m_bHasHalfTime = false;
 	m_bHasOvertime = false;
 	m_bHasLossBonus = false;
-	m_bHasAssists = true;
 	m_bSimple = false;
 }
 
@@ -345,9 +343,17 @@ bool CCSClientScoreBoardDialog::CSStaticPlayerSortFunc( vgui::SectionedListPanel
 	KeyValues* it2 = list->GetItemData( itemID2 );
 	Assert( it1 && it2 );
 
-	// first compare score
-	int v1 = it1->GetInt( "score" );
-	int v2 = it2->GetInt( "score" );
+	// first compare gg progression level
+	int v1 = it1->GetInt( "gglevel" );
+	int v2 = it2->GetInt( "gglevel" );
+	if ( v1 > v2 )
+		return true;
+	else if ( v1 < v2 )
+		return false;
+
+	// next compare score
+	v1 = it1->GetInt( "score" );
+	v2 = it2->GetInt( "score" );
 	if ( v1 > v2 )
 		return true;
 	else if ( v1 < v2 )
@@ -394,8 +400,11 @@ void CCSClientScoreBoardDialog::InitScoreboardSections()
 {
 	if ( m_bSimple )
 	{
+		bool bGunGameProgressive = (m_nGameType == CS_GameType_GunGame && m_nGameMode == CS_GameMode::GunGame_Progressive);
 		int iColumnsWide = ping_column_wide + avatar_column_wide + avatar_name_gap_wide + kills_column_wide + deaths_column_wide + score_column_wide;
-		if ( m_bHasAssists )
+		if ( bGunGameProgressive )
+			iColumnsWide += gglevel_column_wide;
+		else
 			iColumnsWide += assists_column_wide;
 
 		// setup the columns
@@ -408,10 +417,12 @@ void CCSClientScoreBoardDialog::InitScoreboardSections()
 		//m_pPlayerList->AddColumnToSection( 0, "name", "", 0, name_column_wide );
 		m_pPlayerList->AddColumnToSection( 0, "name", "", 0, m_pPlayerList->GetWide() - iColumnsWide );
 		m_pPlayerList->AddColumnToSection( 0, "kills", "#CStrike_SB_Kills", SectionedListPanel::COLUMN_CENTER, kills_column_wide );
-		if ( m_bHasAssists )
+		if ( !bGunGameProgressive )
 			m_pPlayerList->AddColumnToSection( 0, "assists", "#CStrike_SB_Assists", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
 		m_pPlayerList->AddColumnToSection( 0, "deaths", "#CStrike_SB_Deaths", SectionedListPanel::COLUMN_CENTER, deaths_column_wide );
 		m_pPlayerList->AddColumnToSection( 0, "score", "#CStrike_SB_Score", SectionedListPanel::COLUMN_CENTER, score_column_wide );
+		if ( bGunGameProgressive )
+			m_pPlayerList->AddColumnToSection( 0, "gglevel", "#CStrike_SB_GGLevel", SectionedListPanel::COLUMN_CENTER, gglevel_column_wide );
 
 		// setup the column bg color
 		bool bSkip = false;
@@ -438,10 +449,12 @@ void CCSClientScoreBoardDialog::InitScoreboardSections()
 	}
 	else
 	{
-		int iColumnsWide = ping_column_wide + avatar_column_wide + avatar_name_gap_wide + money_column_wide +
-			kills_column_wide + deaths_column_wide + mvps_column_wide + score_column_wide;
-		if ( m_bHasAssists )
-			iColumnsWide += assists_column_wide;
+		bool bGunGameTR = (m_nGameType == CS_GameType_GunGame && m_nGameMode == CS_GameMode::GunGame_Bomb);
+		int iColumnsWide = ping_column_wide + avatar_column_wide + avatar_name_gap_wide + kills_column_wide + assists_column_wide + deaths_column_wide + mvps_column_wide + score_column_wide;
+		if ( bGunGameTR )
+			iColumnsWide += kd_column_wide;
+		else
+			iColumnsWide += money_column_wide;
 
 		// setup the columns
 		m_pCTPlayerList->AddSection( 0, "", CSStaticPlayerSortFunc );
@@ -452,11 +465,13 @@ void CCSClientScoreBoardDialog::InitScoreboardSections()
 		m_pCTPlayerList->AddColumnToSection( 0, "nothing", "", 0, avatar_name_gap_wide );
 		//m_pCTPlayerList->AddColumnToSection( 0, "name", "", 0, name_column_wide );
 		m_pCTPlayerList->AddColumnToSection( 0, "name", "", 0, m_pCTPlayerList->GetWide() - iColumnsWide );
-		m_pCTPlayerList->AddColumnToSection( 0, "money", "#CStrike_SB_Money", SectionedListPanel::COLUMN_CENTER, money_column_wide );
+		if ( !bGunGameTR )
+			m_pCTPlayerList->AddColumnToSection( 0, "money", "#CStrike_SB_Money", SectionedListPanel::COLUMN_CENTER, money_column_wide );
 		m_pCTPlayerList->AddColumnToSection( 0, "kills", "#CStrike_SB_Kills", SectionedListPanel::COLUMN_CENTER, kills_column_wide );
-		if ( m_bHasAssists )
-			m_pCTPlayerList->AddColumnToSection( 0, "assists", "#CStrike_SB_Assists", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
+		m_pCTPlayerList->AddColumnToSection( 0, "assists", "#CStrike_SB_Assists", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
 		m_pCTPlayerList->AddColumnToSection( 0, "deaths", "#CStrike_SB_Deaths", SectionedListPanel::COLUMN_CENTER, deaths_column_wide );
+		if ( bGunGameTR )
+			m_pCTPlayerList->AddColumnToSection( 0, "kd", "#CStrike_SB_KD", SectionedListPanel::COLUMN_CENTER, kd_column_wide );
 		m_pCTPlayerList->AddColumnToSection( 0, "mvps", "#CStrike_SB_MVP", SectionedListPanel::COLUMN_CENTER, mvps_column_wide );
 		m_pCTPlayerList->AddColumnToSection( 0, "score", "#CStrike_SB_Score", SectionedListPanel::COLUMN_CENTER, score_column_wide );
 
@@ -492,11 +507,13 @@ void CCSClientScoreBoardDialog::InitScoreboardSections()
 		m_pTPlayerList->AddColumnToSection( 0, "nothing", "", 0, avatar_name_gap_wide );
 		//m_pTPlayerList->AddColumnToSection( 0, "name", "", 0, name_column_wide );
 		m_pTPlayerList->AddColumnToSection( 0, "name", "", 0, m_pTPlayerList->GetWide() - iColumnsWide );
-		m_pTPlayerList->AddColumnToSection( 0, "money", "#CStrike_SB_Money", SectionedListPanel::COLUMN_CENTER, money_column_wide );
+		if ( !bGunGameTR )
+			m_pTPlayerList->AddColumnToSection( 0, "money", "#CStrike_SB_Money", SectionedListPanel::COLUMN_CENTER, money_column_wide );
 		m_pTPlayerList->AddColumnToSection( 0, "kills", "#CStrike_SB_Kills", SectionedListPanel::COLUMN_CENTER, kills_column_wide );
-		if ( m_bHasAssists )
-			m_pTPlayerList->AddColumnToSection( 0, "assists", "#CStrike_SB_Assists", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
+		m_pTPlayerList->AddColumnToSection( 0, "assists", "#CStrike_SB_Assists", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
 		m_pTPlayerList->AddColumnToSection( 0, "deaths", "#CStrike_SB_Deaths", SectionedListPanel::COLUMN_CENTER, deaths_column_wide );
+		if ( bGunGameTR )
+			m_pTPlayerList->AddColumnToSection( 0, "kd", "#CStrike_SB_KD", SectionedListPanel::COLUMN_CENTER, kd_column_wide );
 		m_pTPlayerList->AddColumnToSection( 0, "mvps", "#CStrike_SB_MVP", SectionedListPanel::COLUMN_CENTER, mvps_column_wide );
 		m_pTPlayerList->AddColumnToSection( 0, "score", "#CStrike_SB_Score", SectionedListPanel::COLUMN_CENTER, score_column_wide );
 
@@ -867,9 +884,15 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, KeyValues* 
 	V_snwprintf( wszMoney, sizeof( wszMoney ), L"$%d", cs_PR->GetAccount( playerIndex ) );
 	kv->SetWString( "money", wszMoney );
 
-	kv->SetInt( "kills", cs_PR->GetPlayerScore( playerIndex ) );
+	int iKills = cs_PR->GetPlayerScore( playerIndex );
+	int iDeaths = cs_PR->GetDeaths( playerIndex );
+	kv->SetInt( "kills", iKills );
 	kv->SetInt( "assists", cs_PR->GetAssists( playerIndex ) );
-	kv->SetInt( "deaths", cs_PR->GetDeaths( playerIndex ) );
+	kv->SetInt( "deaths", iDeaths );
+
+	wchar_t wszKD[8];
+	V_snwprintf( wszKD, sizeof( wszKD ), L"%.2f", (float) iKills / (float) MAX( 1, iDeaths ) );
+	kv->SetWString( "kd", wszKD );
 
 	int iMVPs = cs_PR->GetNumMVPs( playerIndex );
 	if ( iMVPs < 1 )
@@ -883,6 +906,7 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, KeyValues* 
 		kv->SetWString( "mvps", wszMVP );
 	}
 	kv->SetInt( "score", 100 ); // TODO
+	kv->SetInt( "gglevel", cs_PR->GetPlayerGunGameWeaponIndex( playerIndex ) + 1 );
 
 	if ( !cs_PR->IsAlive( playerIndex ) )
 		kv->SetInt( SECTIONED_LIST_HEADER_IMAGE, DEAD_ICON );
@@ -1026,7 +1050,6 @@ void CCSClientScoreBoardDialog::ShowPanel( bool state )
 		m_bHasHalfTime = CSGameRules() ? CSGameRules()->HasHalfTime() : false;
 		m_bHasOvertime = CSGameRules() ? (CSGameRules()->GetOvertimePlaying() > 0) : false;
 		m_bHasLossBonus = (cash_team_loser_bonus_consecutive_rounds.GetInt() > 0) && (cash_team_loser_bonus.GetInt() > 0);
-		m_bHasAssists = mp_display_kill_assists.GetBool();
 
 		m_pTeamCTScoreFirstHalf->SetVisible( m_bHasHalfTime );
 		m_pTeamCTScoreSecondHalf->SetVisible( m_bHasHalfTime );
