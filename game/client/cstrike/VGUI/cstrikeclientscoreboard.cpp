@@ -107,21 +107,20 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 	m_pLossBonusLabel = new Label( this, "LossBonusLabel", L"" );
 	m_pLossBonusCT = new CCSClientScoreBoardLossBonusPanel( this, "LossBonusCT" );
 	m_pLossBonusT = new CCSClientScoreBoardLossBonusPanel( this, "LossBonusT" );
-	m_pPlayerAssistsColumn = new Label( this, "PlayerAssistsColumn", L"" );
-	m_pPlayerMoneyColumn = new Label( this, "PlayerMoneyColumn", L"" );
-	m_pPlayerKillsColumn = new Label( this, "PlayerKillsColumn", L"" );
 
 	m_pCTPlayerList = new SectionedListPanel( this, "TeamCTPlayerList" );
 	m_pCTPlayerList->SetVerticalScrollbar( false );
 	m_pCTPlayerList->SetPaintBackgroundEnabled( false );
 	m_pCTPlayerList->SetPaintBorderEnabled( false );
-	m_pCTPlayerList->SetDrawHeaders( false );
 
 	m_pTPlayerList = new SectionedListPanel( this, "TeamTPlayerList" );
 	m_pTPlayerList->SetVerticalScrollbar( false );
 	m_pTPlayerList->SetPaintBackgroundEnabled( false );
 	m_pTPlayerList->SetPaintBorderEnabled( false );
-	m_pTPlayerList->SetDrawHeaders( false );
+
+	// gets initialized in base class
+	m_pPlayerList->SetPaintBackgroundEnabled( false );
+	m_pPlayerList->SetPaintBorderEnabled( false );
 
 	ListenForGameEvent( "server_spawn" );
 	ListenForGameEvent( "game_newmap" );
@@ -139,8 +138,8 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 	SetKeyBoardInputEnabled( false );
 
 	m_iRoundTime = 0;
-	m_iGameType = 0;
-	m_iGameMode = 0;
+	m_nGameType = 0;
+	m_nGameMode = 0;
 
 	if ( g_pClientMode &&
 		 g_pClientMode->GetMapName() )
@@ -166,10 +165,12 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 	m_iOriginalTall = 0;
 	m_iOriginalCTPlayerListTall = 0;
 	m_iOriginalTPlayerListTall = 0;
+	m_iOriginalPlayerListTall = 0;
 	m_bHasHalfTime = false;
 	m_bHasOvertime = false;
 	m_bHasLossBonus = false;
 	m_bHasAssists = true;
+	m_bSimple = false;
 }
 
 const wchar_t *LocalizeFindSafe( const char *pTokenName )
@@ -194,14 +195,9 @@ void CCSClientScoreBoardDialog::ApplySchemeSettings( vgui::IScheme *pScheme )
 	m_iOriginalTall = GetTall();
 	m_iOriginalCTPlayerListTall = m_pCTPlayerList->GetTall();
 	m_iOriginalTPlayerListTall = m_pTPlayerList->GetTall();
+	m_iOriginalPlayerListTall = m_pPlayerList->GetTall();
 
 	SetPaintBorderEnabled( false );
-
-	// turn off the default player list since we have our own
-	if ( m_pPlayerList )
-	{
-		m_pPlayerList->SetVisible( false );
-	}
 
 	// Set the server name (in the case of a resolution change).
 	if ( m_pServerName[0] == L'\0' &&
@@ -220,6 +216,7 @@ void CCSClientScoreBoardDialog::PostApplySchemeSettings( vgui::IScheme *pScheme 
 {
 	m_pCTPlayerList->SetImageList( m_pImageList, false );
 	m_pTPlayerList->SetImageList( m_pImageList, false );
+	m_pPlayerList->SetImageList( m_pImageList, false );
 }
 
 //-----------------------------------------------------------------------------
@@ -257,16 +254,27 @@ void CCSClientScoreBoardDialog::Update()
 	// grow the scoreboard to fit all the players
 	int iWide, iTall;
 
-	m_pCTPlayerList->GetContentSize( iWide, iTall );
-	int iAdditionalCTPlayerListTall = MAX( 0, iTall - m_iOriginalCTPlayerListTall );
-	m_pCTPlayerList->SetTall( m_iOriginalCTPlayerListTall + iAdditionalCTPlayerListTall );
+	if ( m_bSimple )
+	{
+		m_pPlayerList->GetContentSize( iWide, iTall );
+		int iAdditionalPlayerListTall = MAX( 0, iTall - m_iOriginalPlayerListTall );
+		m_pPlayerList->SetTall( m_iOriginalPlayerListTall + iAdditionalPlayerListTall );
 
-	m_pTPlayerList->GetContentSize( iWide, iTall );
-	int iAdditionalTPlayerListTall = MAX( 0, iTall - m_iOriginalTPlayerListTall );
-	m_pTPlayerList->SetTall( m_iOriginalTPlayerListTall + iAdditionalTPlayerListTall );
+		SetTall( m_iOriginalTall + iAdditionalPlayerListTall );
+	}
+	else
+	{
+		m_pCTPlayerList->GetContentSize( iWide, iTall );
+		int iAdditionalCTPlayerListTall = MAX( 0, iTall - m_iOriginalCTPlayerListTall );
+		m_pCTPlayerList->SetTall( m_iOriginalCTPlayerListTall + iAdditionalCTPlayerListTall );
 
-	int iAdditionalTall = iAdditionalCTPlayerListTall + iAdditionalTPlayerListTall;
-	SetTall( m_iOriginalTall + iAdditionalTall );
+		m_pTPlayerList->GetContentSize( iWide, iTall );
+		int iAdditionalTPlayerListTall = MAX( 0, iTall - m_iOriginalTPlayerListTall );
+		m_pTPlayerList->SetTall( m_iOriginalTPlayerListTall + iAdditionalTPlayerListTall );
+
+		int iAdditionalTall = iAdditionalCTPlayerListTall + iAdditionalTPlayerListTall;
+		SetTall( m_iOriginalTall + iAdditionalTall );
+	}
 
 	MoveToCenterOfScreen();
 
@@ -384,84 +392,135 @@ bool CCSClientScoreBoardDialog::CSStaticPlayerSortFunc( vgui::SectionedListPanel
 
 void CCSClientScoreBoardDialog::InitScoreboardSections()
 {
-	int iColumnsWide = ping_column_wide + avatar_column_wide + avatar_name_gap_wide + money_column_wide +
-		kills_column_wide + deaths_column_wide + mvps_column_wide + score_column_wide;
-	if ( m_bHasAssists )
-		iColumnsWide += assists_column_wide;
-
-	// setup the columns
-	m_pCTPlayerList->AddSection( 0, "", CSStaticPlayerSortFunc );
-	m_pCTPlayerList->AddColumnToSection( 0, "ping", "", SectionedListPanel::COLUMN_CENTER, ping_column_wide );
-	m_pCTPlayerList->AddColumnToSection( 0, "avatar", "", SectionedListPanel::COLUMN_IMAGE, avatar_column_wide );
-	m_pCTPlayerList->AddColumnToSection( 0, "nothing", "", 0, avatar_name_gap_wide );
-	//m_pCTPlayerList->AddColumnToSection( 0, "name", "", 0, name_column_wide );
-	m_pCTPlayerList->AddColumnToSection( 0, "name", "", 0, m_pCTPlayerList->GetWide() - iColumnsWide );
-	m_pCTPlayerList->AddColumnToSection( 0, "money", "", SectionedListPanel::COLUMN_CENTER, money_column_wide );
-	m_pCTPlayerList->AddColumnToSection( 0, "kills", "", SectionedListPanel::COLUMN_CENTER, kills_column_wide );
-	if ( m_bHasAssists )
-		m_pCTPlayerList->AddColumnToSection( 0, "assists", "", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
-	m_pCTPlayerList->AddColumnToSection( 0, "deaths", "", SectionedListPanel::COLUMN_CENTER, deaths_column_wide );
-	m_pCTPlayerList->AddColumnToSection( 0, "mvps", "", SectionedListPanel::COLUMN_CENTER, mvps_column_wide );
-	m_pCTPlayerList->AddColumnToSection( 0, "score", "", SectionedListPanel::COLUMN_CENTER, score_column_wide );
-
-	// setup the column bg color
-	bool bSkip = false;
-	int iColumnCount = m_pCTPlayerList->GetColumnCountBySection( 0 );
-	for ( int i = 4; i < iColumnCount; i++ ) // TODO: change 4 to m_pCTPlayerList->GetColumnIndexByName( 0, "name" ) + 1 if it ever changes!
+	if ( m_bSimple )
 	{
-		if ( i == iColumnCount - 1 )
+		int iColumnsWide = ping_column_wide + avatar_column_wide + avatar_name_gap_wide + kills_column_wide + deaths_column_wide + score_column_wide;
+		if ( m_bHasAssists )
+			iColumnsWide += assists_column_wide;
+
+		// setup the columns
+		m_pPlayerList->AddSection( 0, "", CSStaticPlayerSortFunc );
+		m_pPlayerList->SetSectionDrawDividerBar( 0, false );
+		m_pPlayerList->SetSectionFgColor( 0, player_header_fgcolor );
+		m_pPlayerList->AddColumnToSection( 0, "ping", "", SectionedListPanel::COLUMN_CENTER, ping_column_wide );
+		m_pPlayerList->AddColumnToSection( 0, "avatar", "", SectionedListPanel::COLUMN_IMAGE, avatar_column_wide );
+		m_pPlayerList->AddColumnToSection( 0, "nothing", "", 0, avatar_name_gap_wide );
+		//m_pPlayerList->AddColumnToSection( 0, "name", "", 0, name_column_wide );
+		m_pPlayerList->AddColumnToSection( 0, "name", "", 0, m_pPlayerList->GetWide() - iColumnsWide );
+		m_pPlayerList->AddColumnToSection( 0, "kills", "#CStrike_SB_Kills", SectionedListPanel::COLUMN_CENTER, kills_column_wide );
+		if ( m_bHasAssists )
+			m_pPlayerList->AddColumnToSection( 0, "assists", "#CStrike_SB_Assists", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
+		m_pPlayerList->AddColumnToSection( 0, "deaths", "#CStrike_SB_Deaths", SectionedListPanel::COLUMN_CENTER, deaths_column_wide );
+		m_pPlayerList->AddColumnToSection( 0, "score", "#CStrike_SB_Score", SectionedListPanel::COLUMN_CENTER, score_column_wide );
+
+		// setup the column bg color
+		bool bSkip = false;
+		int iColumnCount = m_pPlayerList->GetColumnCountBySection( 0 );
+		for ( int i = 4; i < iColumnCount; i++ ) // TODO: change 4 to m_pPlayerList->GetColumnIndexByName( 0, "name" ) + 1 if it ever changes!
 		{
-			m_pCTPlayerList->SetColumnBgColor( 0, i, column_bgcolor2 );
-		}
-		else
-		{
-			if ( bSkip )
+			if ( i == iColumnCount - 1 )
 			{
-				bSkip = false;
-				continue;
+				m_pPlayerList->SetColumnBgColor( 0, i, player_column_bgcolor2 );
 			}
+			else
+			{
+				if ( bSkip )
+				{
+					bSkip = false;
+					continue;
+				}
 
-			m_pCTPlayerList->SetColumnBgColor( 0, i, column_bgcolor1 );
+				m_pPlayerList->SetColumnBgColor( 0, i, player_column_bgcolor1 );
 
-			bSkip = true;
+				bSkip = true;
+			}
 		}
 	}
-
-	// setup the columns
-	m_pTPlayerList->AddSection( 0, "", CSStaticPlayerSortFunc );
-	m_pTPlayerList->AddColumnToSection( 0, "ping", "", SectionedListPanel::COLUMN_CENTER, ping_column_wide );
-	m_pTPlayerList->AddColumnToSection( 0, "avatar", "", SectionedListPanel::COLUMN_IMAGE, avatar_column_wide );
-	m_pTPlayerList->AddColumnToSection( 0, "nothing", "", 0, avatar_name_gap_wide );
-	//m_pTPlayerList->AddColumnToSection( 0, "name", "", 0, name_column_wide );
-	m_pTPlayerList->AddColumnToSection( 0, "name", "", 0, m_pTPlayerList->GetWide() - iColumnsWide );
-	m_pTPlayerList->AddColumnToSection( 0, "money", "", SectionedListPanel::COLUMN_CENTER, money_column_wide );
-	m_pTPlayerList->AddColumnToSection( 0, "kills", "", SectionedListPanel::COLUMN_CENTER, kills_column_wide );
-	if ( m_bHasAssists )
-		m_pTPlayerList->AddColumnToSection( 0, "assists", "", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
-	m_pTPlayerList->AddColumnToSection( 0, "deaths", "", SectionedListPanel::COLUMN_CENTER, deaths_column_wide );
-	m_pTPlayerList->AddColumnToSection( 0, "mvps", "", SectionedListPanel::COLUMN_CENTER, mvps_column_wide );
-	m_pTPlayerList->AddColumnToSection( 0, "score", "", SectionedListPanel::COLUMN_CENTER, score_column_wide );
-
-	// setup the column bg color
-	bSkip = false;
-	iColumnCount = m_pTPlayerList->GetColumnCountBySection( 0 );
-	for ( int i = 4; i < iColumnCount; i++ ) // TODO: change 4 to m_pTPlayerList->GetColumnIndexByName( 0, "name" ) + 1 if it ever changes!
+	else
 	{
-		if ( i == iColumnCount - 1 )
+		int iColumnsWide = ping_column_wide + avatar_column_wide + avatar_name_gap_wide + money_column_wide +
+			kills_column_wide + deaths_column_wide + mvps_column_wide + score_column_wide;
+		if ( m_bHasAssists )
+			iColumnsWide += assists_column_wide;
+
+		// setup the columns
+		m_pCTPlayerList->AddSection( 0, "", CSStaticPlayerSortFunc );
+		m_pCTPlayerList->SetSectionDrawDividerBar( 0, false );
+		m_pCTPlayerList->SetSectionFgColor( 0, player_header_fgcolor );
+		m_pCTPlayerList->AddColumnToSection( 0, "ping", "", SectionedListPanel::COLUMN_CENTER, ping_column_wide );
+		m_pCTPlayerList->AddColumnToSection( 0, "avatar", "", SectionedListPanel::COLUMN_IMAGE, avatar_column_wide );
+		m_pCTPlayerList->AddColumnToSection( 0, "nothing", "", 0, avatar_name_gap_wide );
+		//m_pCTPlayerList->AddColumnToSection( 0, "name", "", 0, name_column_wide );
+		m_pCTPlayerList->AddColumnToSection( 0, "name", "", 0, m_pCTPlayerList->GetWide() - iColumnsWide );
+		m_pCTPlayerList->AddColumnToSection( 0, "money", "#CStrike_SB_Money", SectionedListPanel::COLUMN_CENTER, money_column_wide );
+		m_pCTPlayerList->AddColumnToSection( 0, "kills", "#CStrike_SB_Kills", SectionedListPanel::COLUMN_CENTER, kills_column_wide );
+		if ( m_bHasAssists )
+			m_pCTPlayerList->AddColumnToSection( 0, "assists", "#CStrike_SB_Assists", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
+		m_pCTPlayerList->AddColumnToSection( 0, "deaths", "#CStrike_SB_Deaths", SectionedListPanel::COLUMN_CENTER, deaths_column_wide );
+		m_pCTPlayerList->AddColumnToSection( 0, "mvps", "#CStrike_SB_MVP", SectionedListPanel::COLUMN_CENTER, mvps_column_wide );
+		m_pCTPlayerList->AddColumnToSection( 0, "score", "#CStrike_SB_Score", SectionedListPanel::COLUMN_CENTER, score_column_wide );
+
+		// setup the column bg color
+		bool bSkip = false;
+		int iColumnCount = m_pCTPlayerList->GetColumnCountBySection( 0 );
+		for ( int i = 4; i < iColumnCount; i++ ) // TODO: change 4 to m_pCTPlayerList->GetColumnIndexByName( 0, "name" ) + 1 if it ever changes!
 		{
-			m_pTPlayerList->SetColumnBgColor( 0, i, column_bgcolor2 );
-		}
-		else
-		{
-			if ( bSkip )
+			if ( i == iColumnCount - 1 )
 			{
-				bSkip = false;
-				continue;
+				m_pCTPlayerList->SetColumnBgColor( 0, i, player_column_bgcolor2 );
 			}
+			else
+			{
+				if ( bSkip )
+				{
+					bSkip = false;
+					continue;
+				}
 
-			m_pTPlayerList->SetColumnBgColor( 0, i, column_bgcolor1 );
+				m_pCTPlayerList->SetColumnBgColor( 0, i, player_column_bgcolor1 );
 
-			bSkip = true;
+				bSkip = true;
+			}
+		}
+
+		// setup the columns
+		m_pTPlayerList->AddSection( 0, "", CSStaticPlayerSortFunc );
+		m_pTPlayerList->SetSectionDrawDividerBar( 0, false );
+		m_pTPlayerList->SetSectionFgColor( 0, player_header_fgcolor );
+		m_pTPlayerList->AddColumnToSection( 0, "ping", "", SectionedListPanel::COLUMN_CENTER, ping_column_wide );
+		m_pTPlayerList->AddColumnToSection( 0, "avatar", "", SectionedListPanel::COLUMN_IMAGE, avatar_column_wide );
+		m_pTPlayerList->AddColumnToSection( 0, "nothing", "", 0, avatar_name_gap_wide );
+		//m_pTPlayerList->AddColumnToSection( 0, "name", "", 0, name_column_wide );
+		m_pTPlayerList->AddColumnToSection( 0, "name", "", 0, m_pTPlayerList->GetWide() - iColumnsWide );
+		m_pTPlayerList->AddColumnToSection( 0, "money", "#CStrike_SB_Money", SectionedListPanel::COLUMN_CENTER, money_column_wide );
+		m_pTPlayerList->AddColumnToSection( 0, "kills", "#CStrike_SB_Kills", SectionedListPanel::COLUMN_CENTER, kills_column_wide );
+		if ( m_bHasAssists )
+			m_pTPlayerList->AddColumnToSection( 0, "assists", "#CStrike_SB_Assists", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
+		m_pTPlayerList->AddColumnToSection( 0, "deaths", "#CStrike_SB_Deaths", SectionedListPanel::COLUMN_CENTER, deaths_column_wide );
+		m_pTPlayerList->AddColumnToSection( 0, "mvps", "#CStrike_SB_MVP", SectionedListPanel::COLUMN_CENTER, mvps_column_wide );
+		m_pTPlayerList->AddColumnToSection( 0, "score", "#CStrike_SB_Score", SectionedListPanel::COLUMN_CENTER, score_column_wide );
+
+		// setup the column bg color
+		bSkip = false;
+		iColumnCount = m_pTPlayerList->GetColumnCountBySection( 0 );
+		for ( int i = 4; i < iColumnCount; i++ ) // TODO: change 4 to m_pTPlayerList->GetColumnIndexByName( 0, "name" ) + 1 if it ever changes!
+		{
+			if ( i == iColumnCount - 1 )
+			{
+				m_pTPlayerList->SetColumnBgColor( 0, i, player_column_bgcolor2 );
+			}
+			else
+			{
+				if ( bSkip )
+				{
+					bSkip = false;
+					continue;
+				}
+
+				m_pTPlayerList->SetColumnBgColor( 0, i, player_column_bgcolor1 );
+
+				bSkip = true;
+			}
 		}
 	}
 }
@@ -474,31 +533,47 @@ int CCSClientScoreBoardDialog::FindItemIDForPlayerIndex( int playerIndex )
 	if ( !g_PR )
 		return -1;
 
-	int iTeamNumber = g_PR->GetTeam( playerIndex );
-
-	if ( iTeamNumber == TEAM_CT )
+	if ( m_bSimple )
 	{
-		for ( int i = 0; i <= m_pCTPlayerList->GetHighestItemID(); i++ )
+		for ( int i = 0; i <= m_pPlayerList->GetHighestItemID(); i++ )
 		{
-			if ( m_pCTPlayerList->IsItemIDValid( i ) )
+			if ( m_pPlayerList->IsItemIDValid( i ) )
 			{
-				KeyValues* kv = m_pCTPlayerList->GetItemData( i );
+				KeyValues* kv = m_pPlayerList->GetItemData( i );
 				kv = kv->FindKey( m_iPlayerIndexSymbol );
 				if ( kv && kv->GetInt() == playerIndex )
 					return i;
 			}
 		}
 	}
-	else if ( iTeamNumber == TEAM_TERRORIST )
+	else
 	{
-		for ( int i = 0; i <= m_pTPlayerList->GetHighestItemID(); i++ )
+		int iTeamNumber = g_PR->GetTeam( playerIndex );
+
+		if ( iTeamNumber == TEAM_CT )
 		{
-			if ( m_pTPlayerList->IsItemIDValid( i ) )
+			for ( int i = 0; i <= m_pCTPlayerList->GetHighestItemID(); i++ )
 			{
-				KeyValues* kv = m_pTPlayerList->GetItemData( i );
-				kv = kv->FindKey( m_iPlayerIndexSymbol );
-				if ( kv && kv->GetInt() == playerIndex )
-					return i;
+				if ( m_pCTPlayerList->IsItemIDValid( i ) )
+				{
+					KeyValues* kv = m_pCTPlayerList->GetItemData( i );
+					kv = kv->FindKey( m_iPlayerIndexSymbol );
+					if ( kv && kv->GetInt() == playerIndex )
+						return i;
+				}
+			}
+		}
+		else if ( iTeamNumber == TEAM_TERRORIST )
+		{
+			for ( int i = 0; i <= m_pTPlayerList->GetHighestItemID(); i++ )
+			{
+				if ( m_pTPlayerList->IsItemIDValid( i ) )
+				{
+					KeyValues* kv = m_pTPlayerList->GetItemData( i );
+					kv = kv->FindKey( m_iPlayerIndexSymbol );
+					if ( kv && kv->GetInt() == playerIndex )
+						return i;
+				}
 			}
 		}
 	}
@@ -625,7 +700,11 @@ void CCSClientScoreBoardDialog::UpdatePlayerInfo()
 		int nTeamNumber = cs_PR->GetTeam( i );
 		bool bShouldShow = cs_PR->IsConnected( i );
 		bool bIsAlive = cs_PR->IsAlive( i );
-		SectionedListPanel* pPlayerList = (nTeamNumber == TEAM_CT) ? m_pCTPlayerList : m_pTPlayerList;
+		SectionedListPanel* pPlayerList;
+		if ( m_bSimple )
+			pPlayerList = m_pPlayerList;
+		else
+			pPlayerList = (nTeamNumber == TEAM_CT) ? m_pCTPlayerList : m_pTPlayerList;
 
 		if ( bShouldShow && (nTeamNumber == TEAM_CT || nTeamNumber == TEAM_TERRORIST) )
 		{
@@ -902,16 +981,16 @@ void CCSClientScoreBoardDialog::ShowPanel( bool state )
 	// set a correct game mode icon
 	int iGameType = g_pGameTypes->GetCurrentGameType();
 	int iGameMode = g_pGameTypes->GetCurrentGameMode();
-	if ( m_iGameType != iGameType || m_iGameMode != iGameMode )
+	if ( m_nGameType != iGameType || m_nGameMode != iGameMode )
 	{
-		m_iGameType = iGameType;
-		m_iGameMode = iGameMode;
+		m_nGameType = iGameType;
+		m_nGameMode = iGameMode;
 
 		const char* pszCurrentGameMode = g_pGameTypes->GetGameModeFromInt( iGameType, iGameMode );
 		if ( pszCurrentGameMode )
 		{
 			char szIconPath[64];
-			V_snprintf( szIconPath, sizeof( szIconPath ), "materials/vgui/hud/svg/%s.svg", g_pGameTypes->GetGameModeFromInt( iGameType, iGameMode ) );
+			V_snprintf( szIconPath, sizeof( szIconPath ), "materials/vgui/hud/svg/%s.svg", pszCurrentGameMode );
 			if ( !g_pFullFileSystem->FileExists( szIconPath ) )
 				m_pGameModeIcon->SetTexture( "materials/vgui/hud/svg/casual.svg" );
 			else
@@ -921,19 +1000,33 @@ void CCSClientScoreBoardDialog::ShowPanel( bool state )
 		{
 			m_pGameModeIcon->SetTexture( "materials/vgui/hud/svg/casual.svg" );
 		}
+
+		// simplified scoreboard for AR and DM
+		if ( m_nGameType == CS_GameType_GunGame && (m_nGameMode == CS_GameMode::GunGame_Progressive || m_nGameMode == CS_GameMode::GunGame_Deathmatch) )
+		{
+			LoadControlSettings( "Resource/UI/scoreboard_simple.res" );
+
+			m_iOriginalTall = GetTall();
+			m_iOriginalPlayerListTall = m_pPlayerList->GetTall();
+			m_bSimple = true;
+		}
+		else
+		{
+			LoadControlSettings( "Resource/UI/scoreboard.res" );
+
+			m_iOriginalTall = GetTall();
+			m_iOriginalCTPlayerListTall = m_pCTPlayerList->GetTall();
+			m_iOriginalTPlayerListTall = m_pTPlayerList->GetTall();
+			m_bSimple = false;
+		}
 	}
 
-    BaseClass::ShowPanel(state);
-
-    int iRenderGroup = gHUD.LookupRenderGroupIndexByName( "hide_for_scoreboard" );
-
-    if ( state )
-    {
-        gHUD.LockRenderGroup( iRenderGroup );
-
+	if ( state )
+	{
 		m_bHasHalfTime = CSGameRules() ? CSGameRules()->HasHalfTime() : false;
 		m_bHasOvertime = CSGameRules() ? (CSGameRules()->GetOvertimePlaying() > 0) : false;
 		m_bHasLossBonus = (cash_team_loser_bonus_consecutive_rounds.GetInt() > 0) && (cash_team_loser_bonus.GetInt() > 0);
+		m_bHasAssists = mp_display_kill_assists.GetBool();
 
 		m_pTeamCTScoreFirstHalf->SetVisible( m_bHasHalfTime );
 		m_pTeamCTScoreSecondHalf->SetVisible( m_bHasHalfTime );
@@ -949,27 +1042,15 @@ void CCSClientScoreBoardDialog::ShowPanel( bool state )
 		m_pLossBonusT->SetVisible( m_bHasLossBonus );
 		m_pLossBonusCT->SetFilledSegments( CSGameRules() ? CSGameRules()->m_iNumConsecutiveCTLoses : 0 );
 		m_pLossBonusT->SetFilledSegments( CSGameRules() ? CSGameRules()->m_iNumConsecutiveTerroristLoses : 0 );
+	}
 
-		if ( m_bHasAssists != mp_display_kill_assists.GetBool() )
-		{
-			m_bHasAssists = mp_display_kill_assists.GetBool();
-			m_pPlayerAssistsColumn->SetVisible( m_bHasAssists );
-			
-			int xpos, ypos;
-			m_pPlayerMoneyColumn->GetPos( xpos, ypos );
-			if ( m_bHasAssists )
-				m_pPlayerMoneyColumn->SetPos( xpos - assists_column_wide, ypos );
-			else
-				m_pPlayerMoneyColumn->SetPos( xpos + assists_column_wide, ypos );
+    BaseClass::ShowPanel(state);
 
-			m_pPlayerKillsColumn->GetPos( xpos, ypos );
-			if ( m_bHasAssists )
-				m_pPlayerKillsColumn->SetPos( xpos - assists_column_wide, ypos );
-			else
-				m_pPlayerKillsColumn->SetPos( xpos + assists_column_wide, ypos );
+    int iRenderGroup = gHUD.LookupRenderGroupIndexByName( "hide_for_scoreboard" );
 
-			Reset();
-		}
+    if ( state )
+    {
+        gHUD.LockRenderGroup( iRenderGroup );
     }
     else
     {		

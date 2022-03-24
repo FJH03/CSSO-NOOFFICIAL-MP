@@ -105,23 +105,22 @@ private:
     vgui::Label* m_pLossBonusLabel;
     CCSClientScoreBoardLossBonusPanel* m_pLossBonusCT;
     CCSClientScoreBoardLossBonusPanel* m_pLossBonusT;
-    vgui::Label* m_pPlayerAssistsColumn;
-    vgui::Label* m_pPlayerMoneyColumn;
-    vgui::Label* m_pPlayerKillsColumn;
 
 	int     m_iRoundTime;
-	int     m_iGameType;
-	int     m_iGameMode;
+	int     m_nGameType;
+	int     m_nGameMode;
     wchar_t m_pMapName[256];
     wchar_t m_pServerName[256];
 	bool    m_bForceShow;
     int     m_iOriginalTall;
     int     m_iOriginalCTPlayerListTall;
     int     m_iOriginalTPlayerListTall;
+    int     m_iOriginalPlayerListTall;
     bool    m_bHasHalfTime;
     bool    m_bHasOvertime;
     bool    m_bHasLossBonus;
     bool    m_bHasAssists;
+    bool    m_bSimple;
 
     CPanelAnimationVarAliasType( int, ping_column_wide, "ping_column_wide", "0", "proportional_width" );
     CPanelAnimationVarAliasType( int, avatar_column_wide, "avatar_column_wide", "0", "proportional_width" );
@@ -138,8 +137,9 @@ private:
     CPanelAnimationVar( Color, dead_player_bgcolor, "dead_player_bgcolor", "White" );
     CPanelAnimationVar( Color, localplayer_ct_bgcolor, "localplayer_ct_bgcolor", "White" );
     CPanelAnimationVar( Color, localplayer_t_bgcolor, "localplayer_t_bgcolor", "White" );
-    CPanelAnimationVar( Color, column_bgcolor1, "column_bgcolor1", "White" );
-    CPanelAnimationVar( Color, column_bgcolor2, "column_bgcolor2", "White" );
+    CPanelAnimationVar( Color, player_column_bgcolor1, "player_column_bgcolor1", "White" );
+    CPanelAnimationVar( Color, player_column_bgcolor2, "player_column_bgcolor2", "White" );
+    CPanelAnimationVar( Color, player_header_fgcolor, "player_header_fgcolor", "White" );
 };
 
 

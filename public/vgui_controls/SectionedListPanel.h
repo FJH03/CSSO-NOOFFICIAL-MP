@@ -243,8 +243,6 @@ public:
 		BUTTON_HEIGHT_SPACER = 7,
 		DEFAULT_LINE_SPACING = 20,
 		DEFAULT_SECTION_GAP = 8,
-		COLUMN_DATA_INDENT = 6,
-		COLUMN_DATA_GAP = 2,
 	};
 
 	virtual void SetSectionDrawDividerBar( int sectionID, bool bDraw );
@@ -253,6 +251,7 @@ public:
 	CPanelAnimationVarAliasType( int, item_header_ypos, "item_header_ypos", "0", "proportional_ypos" );
 	CPanelAnimationVarAliasType( int, item_header_wide, "item_header_wide", "0", "proportional_width" );
 	CPanelAnimationVarAliasType( int, item_header_tall, "item_header_tall", "0", "proportional_height" );
+	CPanelAnimationVarAliasType( int, section_header_tall, "section_header_tall", "0", "proportional_height" );
 
 private:
 	MESSAGE_FUNC( OnSliderMoved, "ScrollBarSliderMoved" );
@@ -308,8 +307,7 @@ private:
 	int m_iLineSpacing;	// row height
 	int m_iLineGap;		// gap between rows
 	int m_iSectionGap;
-	int m_iHeaderSize[2];
-	
+
 	int FindSectionIndexByID(int sectionID);
     void ReSortList();
 

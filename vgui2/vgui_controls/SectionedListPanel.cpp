@@ -186,13 +186,18 @@ void SectionedListPanelHeader::PerformLayout()
 				wide = maxWidth;
 			}
 
-			if (columnFlags & SectionedListPanel::COLUMN_RIGHT)
+			if (columnFlags & SectionedListPanel::COLUMN_CENTER)
 			{
-				SetImageBounds(i, xpos + wide - contentWide, wide - SectionedListPanel::COLUMN_DATA_GAP);
+				int offSet = (wide / 2) - (contentWide / 2);
+				SetImageBounds( i, xpos + offSet, wide - offSet );
+			}
+			else if (columnFlags & SectionedListPanel::COLUMN_RIGHT)
+			{
+				SetImageBounds(i, xpos + wide - contentWide, wide);
 			}
 			else
 			{
-				SetImageBounds(i, xpos, wide - SectionedListPanel::COLUMN_DATA_GAP);
+				SetImageBounds(i, xpos, wide);
 			}
 			xpos += columnWidth;
 
@@ -465,15 +470,15 @@ public:
 				else if (columnFlags & SectionedListPanel::COLUMN_CENTER)
 				{
 					int offSet = (wide / 2) - (imageWide / 2);
-					SetImageBounds(i, xpos + offSet, wide - offSet - SectionedListPanel::COLUMN_DATA_GAP);
+					SetImageBounds(i, xpos + offSet, wide - offSet);
 				}
 				else if (columnFlags & SectionedListPanel::COLUMN_RIGHT)
 				{
-					SetImageBounds(i, xpos + wide - imageWide, wide - SectionedListPanel::COLUMN_DATA_GAP);
+					SetImageBounds(i, xpos + wide - imageWide, wide);
 				}
 				else
 				{
-					SetImageBounds(i, xpos, wide - SectionedListPanel::COLUMN_DATA_GAP);
+					SetImageBounds(i, xpos, wide);
 				}
 				xpos += wide;
 			}
@@ -1176,6 +1181,13 @@ void SectionedListPanel::ApplySettings(KeyValues *inResourceData)
 	{
 		SetRowFont( pScheme->GetFont( overrideFont, IsProportional() ) );
 	}
+	overrideFont = inResourceData->GetString( "headerfont", "" );
+	if ( *overrideFont )
+	{
+		SetHeaderFont( pScheme->GetFont( overrideFont, IsProportional() ) );
+	}
+
+	SetDrawHeaders( inResourceData->GetBool( "drawheaders", true ) );
 
 	// Restore original proportional base so other panels are not affected
 	g_pMatSystemSurface->RestoreProportionalBase();
@@ -2243,6 +2255,9 @@ void SectionedListPanel::OnSetFocus()
 //-----------------------------------------------------------------------------
 int SectionedListPanel::GetSectionTall()
 {
+	if ( section_header_tall > 0 )
+		return section_header_tall;
+
 	if (m_Sections.Count())
 	{
 		HFont font = m_Sections[0].m_pHeader->GetFont();
