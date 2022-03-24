@@ -891,7 +891,7 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, KeyValues* 
 	kv->SetInt( "deaths", iDeaths );
 
 	wchar_t wszKD[8];
-	V_snwprintf( wszKD, sizeof( wszKD ), L"%.2f", (float) iKills / (float) MAX( 1, iDeaths ) );
+	V_snwprintf( wszKD, sizeof( wszKD ), L"%.2f", MAX( 0.0f, (float) iKills / (float) MAX( 1, iDeaths ) ) );
 	kv->SetWString( "kd", wszKD );
 
 	int iMVPs = cs_PR->GetNumMVPs( playerIndex );
