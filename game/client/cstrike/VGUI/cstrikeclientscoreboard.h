@@ -18,8 +18,6 @@
 #include "vgui_avatarimage.h"
 #include "c_cs_playerresource.h"
 
-const int cMaxScoreLines = 32;  // This value must be > 2
-
 enum PlayerListIcons_t
 {
     // NOTE: these go in order with UpdateImageList, starting from index 1!
@@ -123,7 +121,7 @@ private:
     CPanelAnimationVarAliasType( int, ping_column_wide, "ping_column_wide", "0", "proportional_width" );
     CPanelAnimationVarAliasType( int, avatar_column_wide, "avatar_column_wide", "0", "proportional_width" );
     CPanelAnimationVarAliasType( int, avatar_name_gap_wide, "avatar_name_gap_wide", "0", "proportional_width" );
-    CPanelAnimationVarAliasType( int, name_column_wide, "name_column_wide", "0", "proportional_width" );
+    //CPanelAnimationVarAliasType( int, name_column_wide, "name_column_wide", "0", "proportional_width" );
     CPanelAnimationVarAliasType( int, money_column_wide, "money_column_wide", "0", "proportional_width" );
     CPanelAnimationVarAliasType( int, kills_column_wide, "kills_column_wide", "0", "proportional_width" );
     CPanelAnimationVarAliasType( int, assists_column_wide, "assists_column_wide", "0", "proportional_width" );

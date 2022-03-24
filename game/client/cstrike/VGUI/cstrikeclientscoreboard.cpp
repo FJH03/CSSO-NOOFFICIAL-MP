@@ -379,11 +379,15 @@ bool CCSClientScoreBoardDialog::CSStaticPlayerSortFunc( vgui::SectionedListPanel
 void CCSClientScoreBoardDialog::InitScoreboardSections()
 {
 	// setup the columns
+	int iColumnsWide = ping_column_wide + avatar_column_wide + avatar_name_gap_wide + money_column_wide +
+		kills_column_wide + assists_column_wide + deaths_column_wide + mvps_column_wide + score_column_wide;
+
 	m_pCTPlayerList->AddSection( 0, "", CSStaticPlayerSortFunc );
 	m_pCTPlayerList->AddColumnToSection( 0, "ping", "", SectionedListPanel::COLUMN_CENTER, ping_column_wide );
 	m_pCTPlayerList->AddColumnToSection( 0, "avatar", "", SectionedListPanel::COLUMN_IMAGE, avatar_column_wide );
 	m_pCTPlayerList->AddColumnToSection( 0, "nothing", "", 0, avatar_name_gap_wide );
-	m_pCTPlayerList->AddColumnToSection( 0, "name", "", 0, name_column_wide );
+	//m_pCTPlayerList->AddColumnToSection( 0, "name", "", 0, name_column_wide );
+	m_pCTPlayerList->AddColumnToSection( 0, "name", "", 0, m_pCTPlayerList->GetWide() - iColumnsWide );
 	m_pCTPlayerList->AddColumnToSection( 0, "money", "", SectionedListPanel::COLUMN_CENTER, money_column_wide );
 	m_pCTPlayerList->AddColumnToSection( 0, "kills", "", SectionedListPanel::COLUMN_CENTER, kills_column_wide );
 	m_pCTPlayerList->AddColumnToSection( 0, "assists", "", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
@@ -399,7 +403,8 @@ void CCSClientScoreBoardDialog::InitScoreboardSections()
 	m_pTPlayerList->AddColumnToSection( 0, "ping", "", SectionedListPanel::COLUMN_CENTER, ping_column_wide );
 	m_pTPlayerList->AddColumnToSection( 0, "avatar", "", SectionedListPanel::COLUMN_IMAGE, avatar_column_wide );
 	m_pTPlayerList->AddColumnToSection( 0, "nothing", "", 0, avatar_name_gap_wide );
-	m_pTPlayerList->AddColumnToSection( 0, "name", "", 0, name_column_wide );
+	//m_pTPlayerList->AddColumnToSection( 0, "name", "", 0, name_column_wide );
+	m_pTPlayerList->AddColumnToSection( 0, "name", "", 0, m_pTPlayerList->GetWide() - iColumnsWide );
 	m_pTPlayerList->AddColumnToSection( 0, "money", "", SectionedListPanel::COLUMN_CENTER, money_column_wide );
 	m_pTPlayerList->AddColumnToSection( 0, "kills", "", SectionedListPanel::COLUMN_CENTER, kills_column_wide );
 	m_pTPlayerList->AddColumnToSection( 0, "assists", "", SectionedListPanel::COLUMN_CENTER, assists_column_wide );
