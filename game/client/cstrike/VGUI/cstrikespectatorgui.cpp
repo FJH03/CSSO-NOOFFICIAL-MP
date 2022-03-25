@@ -583,6 +583,9 @@ bool CCSMapOverview::CanPlayerBeSeen( MapPlayer_t *player )
 		// This level will be for all the RadarMode thinking.  Base class will be the old way for the other modes.
 		float now = gpGlobals->curtime;
 
+		if ( localPlayer->GetUserID() == player->userid )
+			return true; // always yes for local player
+
 		if( player->position == Vector(0,0,0) )
 			return false; // Invalid guy.
 
@@ -593,9 +596,6 @@ bool CCSMapOverview::CanPlayerBeSeen( MapPlayer_t *player )
 		// otherwise, not dead people
 		if( player->health <= 0 )
 			return false;
-
-		if ( localPlayer->GetUserID() == player->userid )
-			return true; // always yes for local player
 
 		if ( !IsOtherEnemy( localPlayer->entindex(), player->index+1 ) )
 			return true; // always yes for teammates.
@@ -1688,7 +1688,7 @@ void CCSMapOverview::DrawMapPlayers()
 				DrawIconCS(m_radioFlash, m_radioFlashOffscreen, player->position, sizeForRing, player->angle[YAW], 255);
 			}
 			
-			bool doingLocalPlayer = GetPlayerByUserID(localPlayer->GetUserID()) == player;
+			bool doingLocalPlayer = localPlayer->GetUserID() == player->userid;
 			bool doingBomb = (m_bomb.state == CSMapBomb_t::BOMB_CARRIED && m_bomb.carrierIndex == player->index);
 			float angleForPlayer = GetViewAngle();
 
