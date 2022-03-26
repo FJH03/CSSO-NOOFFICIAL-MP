@@ -15,6 +15,7 @@
 #include "fmtstr.h"
 #include "molotov_projectile.h"
 #include "gametypes.h"
+#include "cs_loadout.h"
 
 #ifdef CLIENT_DLL
 
@@ -7845,7 +7846,7 @@ int CCSGameRules::GetWeaponScoreForDeathmatch( CSWeaponID nWeapID )
 		// 					int nScore = MAX( 1, ceil(flScore2) );
 		// 					pPlayer->AddContributionScore( nScore );
 
-		if ( nWeapID == WEAPON_KNIFE )
+		if ( CSLoadout()->IsKnife( nWeapID ) )
 		{
 			nScore = 20;
 		}
