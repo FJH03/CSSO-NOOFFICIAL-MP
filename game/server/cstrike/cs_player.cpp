@@ -5180,111 +5180,44 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos )
 
 void CCSPlayer::TransferInventory( CCSPlayer* pTargetPlayer )
 {
-	// first, transfer money
-	pTargetPlayer->m_iAccount = GetAccountBalance();
+	pTargetPlayer->RemoveAllItems( true );
 
-	// check is any slot has weapon in it and if so - give it
-	CBaseCombatWeapon* pKnife = Weapon_GetSlot( WEAPON_SLOT_KNIFE ); // TODO: check for taser conflicts
-	CWeaponCSBase* pPistol = dynamic_cast< CWeaponCSBase* >( Weapon_GetSlot( WEAPON_SLOT_PISTOL ) );
-	CWeaponCSBase* pPrimary = dynamic_cast< CWeaponCSBase* >( Weapon_GetSlot( WEAPON_SLOT_RIFLE ) );
-	CBaseCombatWeapon* pC4 = Weapon_GetSlot( WEAPON_SLOT_C4 );
-
-	if ( pKnife )
+	for ( int i = 0; i < MAX_WEAPONS; i++ )
 	{
-		pTargetPlayer->GiveNamedItem( pKnife->GetClassname() );
-		UTIL_Remove( pKnife ); // TODO: check for any problems because of this
-	}
-
-	if ( pPistol )
-	{
-		pTargetPlayer->GiveNamedItem( pPistol->GetClassname() );
-
-		// transfer ammo as well
-		CWeaponCSBase* pTransferedPistol = dynamic_cast< CWeaponCSBase* >( pTargetPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL ) );
-		if ( pTransferedPistol )
+		CWeaponCSBase* pWeapon = dynamic_cast<CWeaponCSBase*>(GetWeapon( i ));
+		if ( pWeapon && ((pWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE) == 0 || pWeapon->HasAmmo()) )
 		{
-			pTransferedPistol->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, pPistol->GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
-			pTransferedPistol->SetReserveAmmoCount( AMMO_POSITION_SECONDARY, pPistol->GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) );
-			pTransferedPistol->m_iClip1 = pPistol->m_iClip1;
-			pTransferedPistol->m_iClip2 = pPistol->m_iClip2;
-		}
-		// also transfer silencer state
-		pTransferedPistol->SetSilencer( pPistol->IsSilenced() );
-
-		UTIL_Remove( pPistol ); // TODO: check for any problems because of this
-	}
-
-	if ( pPrimary )
-	{
-		pTargetPlayer->GiveNamedItem( pPrimary->GetClassname() );
-
-		// transfer ammo as well
-		CWeaponCSBase* pTransferedPrimary = dynamic_cast< CWeaponCSBase* >( pTargetPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE ) );
-		if ( pTransferedPrimary )
-		{
-			pTransferedPrimary->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, pPrimary->GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
-			pTransferedPrimary->SetReserveAmmoCount( AMMO_POSITION_SECONDARY, pPrimary->GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) );
-			pTransferedPrimary->m_iClip1 = pPrimary->m_iClip1;
-			pTransferedPrimary->m_iClip2 = pPrimary->m_iClip2;
-		}
-		// also transfer silencer state
-		pTransferedPrimary->SetSilencer( pPrimary->IsSilenced() );
-
-		UTIL_Remove( pPrimary ); // TODO: check for any problems because of this
-	}
-
-	if ( pC4 )
-	{
-		pTargetPlayer->GiveNamedItem( pC4->GetClassname() );
-		UTIL_Remove( pC4 ); // TODO: check for any problems because of this
-	}
-
-	// now do the same process with grenades
-	const char* GrenadeClassnames[] =
-	{
-		"weapon_molotov",
-		"weapon_incgrenade",
-		"weapon_smokegrenade",
-		"weapon_hegrenade",
-		"weapon_flashbang",
-		"weapon_decoy",
-	};
-	CSWeaponID GrenadeInfo[] =
-	{
-		WEAPON_MOLOTOV,
-		WEAPON_INCGRENADE,
-		WEAPON_SMOKEGRENADE,
-		WEAPON_HEGRENADE,
-		WEAPON_FLASHBANG,
-		WEAPON_DECOY,
-	};
-
-	CWeaponCSBase* pGrenade;
-	for ( int i = 0; i < ARRAYSIZE( GrenadeClassnames ); i++ )
-	{
-		pGrenade = dynamic_cast< CWeaponCSBase* >( Weapon_OwnsThisType( GrenadeClassnames[i] ) );
-		if ( pGrenade )
-		{
-			pTargetPlayer->GiveNamedItem( GrenadeClassnames[i] );
-			if ( pTargetPlayer->Weapon_OwnsThisType( GrenadeClassnames[i] ) )
+			CWeaponCSBase *pNewWeapon = dynamic_cast<CWeaponCSBase*>(pTargetPlayer->GiveNamedItem( pWeapon->GetName() ));
+			if ( pNewWeapon )
 			{
-				int ammoType = GetWeaponInfo( GrenadeInfo[i] )->iAmmoType;
-				pTargetPlayer->SetAmmoCount( GetAmmoCount( ammoType ), ammoType );
+				pNewWeapon->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, pWeapon->GetReserveAmmoCount( AMMO_POSITION_PRIMARY ), true );
+				pNewWeapon->SetReserveAmmoCount( AMMO_POSITION_SECONDARY, pWeapon->GetReserveAmmoCount( AMMO_POSITION_SECONDARY ), true );
+				pNewWeapon->m_iClip1 = pWeapon->m_iClip1;
+				pNewWeapon->m_iClip2 = pWeapon->m_iClip2;
+				pNewWeapon->SetSilencer( pWeapon->IsSilenced() );
+				pNewWeapon->SetSequence( pWeapon->GetSequence() );
+				pNewWeapon->SetCycle( pWeapon->GetCycle() );
+				pNewWeapon->m_flNextPrimaryAttack = pWeapon->m_flNextPrimaryAttack;
+				pNewWeapon->m_flNextSecondaryAttack = pWeapon->m_flNextSecondaryAttack;
+				pNewWeapon->m_flDoneSwitchingSilencer = pWeapon->m_flDoneSwitchingSilencer;
+				pNewWeapon->m_flNextEmptySoundTime = pWeapon->m_flNextEmptySoundTime;
 			}
 		}
 	}
 
-	pTargetPlayer->SetArmorValue( ArmorValue() );
-	pTargetPlayer->m_bHasHelmet = m_bHasHelmet;
-	pTargetPlayer->m_bHasNightVision = m_bHasNightVision;
-	pTargetPlayer->m_bNightVisionOn = m_bNightVisionOn;
-
 	if ( HasDefuser() )
 		pTargetPlayer->GiveDefuser();
+	pTargetPlayer->SetArmorValue( ArmorValue() );
+	pTargetPlayer->m_bHasHelmet = m_bHasHelmet;
+	// pTargetPlayer-> hasheavyarmor = hasheavyarmor
+	pTargetPlayer->m_bHasNightVision = m_bHasNightVision;
+	pTargetPlayer->m_bNightVisionOn = m_bNightVisionOn;
+	pTargetPlayer->m_iAccount = m_iAccount;
 
 	// as part of transferring inventory, remove what WE have
 	SetArmorValue( 0 );
 	m_bHasHelmet = false;
+	// hasheavyarmor = false
 	m_bHasNightVision = false;
 	m_bNightVisionOn = false;
 
