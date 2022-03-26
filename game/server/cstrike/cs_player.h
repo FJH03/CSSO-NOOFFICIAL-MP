@@ -445,6 +445,9 @@ public:
 	bool m_bShowHints;
 	float m_flLastAttackedTeammate;
 
+	float m_flDominateEffectDelayTime;
+	EHANDLE m_hDominateEffectPlayer;
+
 	// mark this player as not receiving money at the start of the next round.
 	void ProcessSuicideAsKillReward();
 	void MarkAsNotReceivingMoneyNextRound();
@@ -587,6 +590,8 @@ public:
 
 	void SetLastKillerIndex( int nLastKillerIndex ) { m_nLastKillerIndex = nLastKillerIndex; }
 	int GetLastKillerIndex( void ) { return m_nLastKillerIndex; }
+	void SetLastConcurrentKilled( int nLastConcurrentKilled ) { m_nLastConcurrentKilled = nLastConcurrentKilled; }
+	int GetLastConcurrentKilled( void ) { return m_nLastConcurrentKilled; }
 
 // ------------------------------------------------------------------------------------------------ //
 // Player state management.
@@ -1056,6 +1061,7 @@ public:
 	void BuyRandom();
 
 	CNetworkVar( int, m_nLastKillerIndex );
+	CNetworkVar( int, m_nLastConcurrentKilled );
 
 	static void	StartNewBulletGroup();	// global function
 

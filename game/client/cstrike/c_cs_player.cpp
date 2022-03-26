@@ -44,6 +44,7 @@
 #include <vgui_controls/Panel.h>
 #include "ragdoll_shared.h"
 #include "collisionutils.h"
+#include <engine/IEngineSound.h>
 
 #include "eventlist.h"
 #include "npcevent.h"
@@ -1088,6 +1089,8 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropInt( RECVINFO( m_iControlledBotEntIndex ) ),
 
 	RecvPropInt( RECVINFO( m_nLastKillerIndex ) ),
+	// when a player dies, we send to the client the number of unbroken times in a row the player has been killed by their last killer
+	RecvPropInt( RECVINFO( m_nLastConcurrentKilled ) ),
 
 	RecvPropBool( RECVINFO( m_bIsLookingAtWeapon ) ),
 	RecvPropBool( RECVINFO( m_bIsHoldingLookAtWeapon ) ),
@@ -1107,7 +1110,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 
 END_RECV_TABLE()
 
-
+bool C_CSPlayer::s_bPlayingFreezeCamSound = false;
 
 C_CSPlayer::C_CSPlayer() :
 	m_iv_angEyeAngles( "C_CSPlayer::m_iv_angEyeAngles" )
@@ -2391,9 +2394,12 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 				m_holdTargetIDTimer.Reset();
 				m_iTargetedWeaponEntIndex = 0;
 
-				C_RecipientFilter filter;
-				filter.AddRecipient( this );
-				PlayMusicSelection( filter, CSMUSIC_DEATHCAM );
+				if ( CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
+				{
+					C_RecipientFilter filter;
+					filter.AddRecipient( this );
+					PlayMusicSelection( filter, CSMUSIC_DEATHCAM );
+				}
 			}
 
 			csPlayer->RemoveGlovesModel();
@@ -2460,6 +2466,13 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 		{
 			if ( pLocalPlayer && pLocalPlayer->GetUserID() == event->GetInt( "attackerid" ) )
 			{
+				if ( event->GetInt( "revenge" ) == 1 )
+				{
+					// Play gun game revenge sound
+					C_RecipientFilter filter;
+					filter.AddRecipient( this );
+					C_BaseEntity::EmitSound( filter, entindex(), "Music.GG_Revenge" );
+				}
 				if ( event->GetInt( "bonus" ) != 0 )
 				{
 					C_RecipientFilter filter;
@@ -2695,6 +2708,58 @@ void C_CSPlayer::ClientThink()
 	{
 		PerformObstaclePushaway( this );
 		m_fNextThinkPushAway =  gpGlobals->curtime + PUSHAWAY_THINK_INTERVAL;
+	}
+
+	if ( IsLocalPlayer() )
+	{
+		if ( m_iObserverMode == OBS_MODE_FREEZECAM )
+		{
+			static ConVarRef sv_disablefreezecam( "sv_disablefreezecam" );
+			if ( !s_bPlayingFreezeCamSound && !cl_disablefreezecam.GetBool() && !sv_disablefreezecam.GetBool() )
+			{
+				// Play sound
+				s_bPlayingFreezeCamSound = true;
+
+				C_RecipientFilter filter;
+				filter.AddRecipient( this );
+
+				// this lets us know at what "level" to play the death cam stinger
+				int nConsecutiveKills = GetLastConcurrentKilled();
+				// 0 == suicide or no killer
+				// 1, 2, 3 == consecutive number of kills from a player
+				// 4 + same, but on the 4th kill, domination kicks in
+
+				if ( CSGameRules()->IsPlayingGunGame() )
+				{
+					if ( nConsecutiveKills > 3 )
+					{
+						C_BaseEntity::EmitSound( filter, SOUND_FROM_WORLD, "Music.GG_Nemesis" );
+					}
+					else if ( nConsecutiveKills > 2 )
+					{
+						C_BaseEntity::EmitSound( filter, SOUND_FROM_WORLD, "Music.GG_DeathCam_03" );
+					}
+					else if ( nConsecutiveKills > 1 )
+					{
+						C_BaseEntity::EmitSound( filter, SOUND_FROM_WORLD, "Music.GG_DeathCam_02" );
+					}
+					else if ( nConsecutiveKills > 0 )
+					{
+						C_BaseEntity::EmitSound( filter, SOUND_FROM_WORLD, "Music.GG_DeathCam_01" );
+					}
+				}
+				// don't play this here with competetive mode, we play it when the player gets the player_death event for that mode instead so it happens immediately
+				else if ( !CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
+				{
+					PlayMusicSelection( filter, CSMUSIC_DEATHCAM );
+				}
+			}
+		}
+		else
+		{
+			s_bPlayingFreezeCamSound = false;
+			CancelFreezeCamFlashlightEffect();
+		}
 	}
 
 	ConVarRef mp_respawn_immunitytime( "mp_respawn_immunitytime" );

@@ -2716,7 +2716,10 @@ ConVar snd_music_selection(
 		// check for team-killing, and give monetary rewards/penalties
 		// Find the killer & the scorer
 		if ( !pScorer )
+		{
+			pCSVictim->SetLastConcurrentKilled( 0 );
 			return;
+		}
 
 		if ( IPointsForKill( pScorer, pVictim ) < 0 )
 		{

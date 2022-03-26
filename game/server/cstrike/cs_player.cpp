@@ -462,6 +462,8 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_iControlledBotEntIndex ) ),
 
 	SendPropInt( SENDINFO( m_nLastKillerIndex ), 8, SPROP_UNSIGNED ),
+	// when a player dies, we send to the client the number of unbroken times in a row the player has been killed by their last killer
+	SendPropInt( SENDINFO( m_nLastConcurrentKilled ), 8, SPROP_UNSIGNED ),
 
 	SendPropBool( SENDINFO( m_bIsLookingAtWeapon ) ),
 	SendPropBool( SENDINFO( m_bIsHoldingLookAtWeapon ) ),
@@ -563,6 +565,7 @@ CCSPlayer::CCSPlayer()
 	m_bIsBeingGivenItem = false;
 
 	m_nLastKillerIndex = 0;
+	m_nLastConcurrentKilled = 0;
 
 	m_bJustKilledTeammate = false;
 	m_bPunishedForTK = false;
@@ -677,6 +680,9 @@ CCSPlayer::CCSPlayer()
 
 	m_storedSpawnPosition = vec3_origin;
 	m_storedSpawnAngle.Init();
+
+	m_flDominateEffectDelayTime = -1;
+	m_hDominateEffectPlayer = NULL;
 
 	m_nPreferredGrenadeDrop = 0;
 
@@ -908,8 +914,14 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "HealthShot.Success" );
 	PrecacheScriptSound( "Player.Respawn" );
 
+	PrecacheScriptSound( "Music.GG_DeathCam_01" );
+	PrecacheScriptSound( "Music.GG_DeathCam_02" );
+	PrecacheScriptSound( "Music.GG_DeathCam_03" );
 	PrecacheScriptSound( "Music.Final_Round_Stinger" );
 	PrecacheScriptSound( "Music.Match_Point_Stinger" );
+	PrecacheScriptSound( "Music.GG_Nemesis" );
+	PrecacheScriptSound( "Music.GG_Revenge" );
+	PrecacheScriptSound( "Music.GG_Dominating" );
 
 	PrecacheScriptSound( "UI.ArmsRace.BecomeMatchLeader" );
 	PrecacheScriptSound( "UI.ArmsRace.BecomeTeamLeader" );
@@ -2689,6 +2701,12 @@ void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &
 
 				UpdateTeamLeaderPlaySound( GetTeamNumber() );
 			}
+		}
+
+		if ( pCSVictim && ( pCSVictim->GetDeathFlags() & CS_DEATH_DOMINATION || IsPlayerDominated( pCSVictim->entindex() ) ) )
+		{
+			m_hDominateEffectPlayer = pCSVictim;
+			m_flDominateEffectDelayTime = gpGlobals->curtime + 1.0f;
 		}
 	}
 }
@@ -4809,6 +4827,41 @@ void CCSPlayer::PreThink()
 			m_flLastMovement = gpGlobals->curtime;
 		}
 	}
+
+	if ( m_flDominateEffectDelayTime > -1 && m_flDominateEffectDelayTime <= gpGlobals->curtime && m_hDominateEffectPlayer.Get() )
+	{
+		CCSPlayer *pOtherPlayer = dynamic_cast<CCSPlayer*>( m_hDominateEffectPlayer.Get() );
+		if ( pOtherPlayer )
+		{
+			int victimEntIndex = pOtherPlayer->entindex();
+			int killerEntIndex = entindex();
+
+			if ( IsPlayerDominated( victimEntIndex ) )
+			{
+				//PlayerStats_t statsVictim = CCS_GameStats.FindPlayerStats( pOtherPlayer );	
+				int iKills = CCS_GameStats.FindPlayerStats( pOtherPlayer ).statsKills.iNumKilledByUnanswered[killerEntIndex];	
+				CFmtStr fmtPrintEntName( "#ENTNAME[%d]%s", pOtherPlayer->entindex(), pOtherPlayer->GetPlayerName() );
+				if ( CS_KILLS_FOR_DOMINATION == iKills )
+				{
+					ClientPrint( this, HUD_PRINTTALK, "#Player_You_Are_Now_Dominating", fmtPrintEntName.Access() );
+				}
+				else
+				{
+					ClientPrint( this, HUD_PRINTTALK, "#Player_You_Are_Still_Dominating", fmtPrintEntName.Access() );
+				}
+				// Play gun game domination sound
+				CRecipientFilter filter;
+				filter.AddRecipient( this );
+				EmitSound( filter, entindex(), "Music.GG_Dominating" );
+
+				// have this player brag to his team about dominating someone
+				Radio( "NiceShot"/*"OnARollBrag"*/ );
+			}
+		}		
+		m_flDominateEffectDelayTime = -1;
+		m_hDominateEffectPlayer = NULL;
+	}
+
 #ifndef _XBOX
 	// CS would like their players to continue to update their LastArea since it is displayed in the hud voice chat UI
 	// But we won't do the population tracking while dead.

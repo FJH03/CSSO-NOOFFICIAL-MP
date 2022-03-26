@@ -507,6 +507,7 @@ public:
 	virtual ShadowType_t		ShadowCastType();
 
 	virtual int GetLastKillerIndex( void ) { return m_nLastKillerIndex; }
+	int GetLastConcurrentKilled( void ) { return m_nLastConcurrentKilled; }
 
 	float m_flNightVisionAlpha;
 
@@ -582,9 +583,11 @@ private:
 
     bool    m_bPlayingFreezeCamSound;
 
+	static bool s_bPlayingFreezeCamSound;
 	bool	m_bShouldAutobuyDMWeapons;
 
 	int m_nLastKillerIndex;
+	int m_nLastConcurrentKilled;
 
 	CInterpolatedVar< QAngle >	m_iv_angEyeAngles;
 

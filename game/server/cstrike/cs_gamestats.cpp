@@ -1023,6 +1023,10 @@ void CCSGameStats::Event_PlayerKilledOther( CBasePlayer *pAttacker, CBaseEntity 
 		IncrementStat(pPlayerAttacker, CSSTAT_KILLS_ENEMY_WOUNDED, 1);
 	}
 
+	// set the number of consecutive kills this scorer has on the victim:
+	int nConsecutiveKills = pPlayerAttacker ? MAX( FindPlayerStats( pPlayerVictim ).statsKills.iNumKilledByUnanswered[pPlayerAttacker->entindex()], 1 ) : 0;
+	pPlayerVictim->SetLastConcurrentKilled( MIN( nConsecutiveKills, 8 ) );
+
 	// Let's check for the "Happy Camper" achievement where we snipe two players while standing in the same spot.
 	if ( pPlayerAttacker && !pPlayerAttacker->IsBot() && weaponId != WEAPON_NONE )
 	{
