@@ -861,6 +861,18 @@ ConVar sv_spec_hear( "sv_spec_hear", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Dete
 
 ConVar mp_c4timer( "mp_c4timer", "40", FCVAR_REPLICATED | FCVAR_NOTIFY, "how long from when the C4 is armed until it blows", true, 10, true, 90	);
 
+namespace SpecHear
+{
+	enum Type
+	{
+		OnlySpectators = 0,
+		AllPlayers = 1,
+		SpectatedTeam = 2,
+		Self = 3,
+		Nobody = 4,
+	};
+}
+
 // PiMoN: moved from under #ifndef CLIENT_DLL for client scoreboard
 ConVar cash_team_loser_bonus( "cash_team_loser_bonus", "1400", FCVAR_REPLICATED | FCVAR_NOTIFY );
 ConVar cash_team_loser_bonus_consecutive_rounds( "cash_team_loser_bonus_consecutive_rounds", "500", FCVAR_REPLICATED | FCVAR_NOTIFY );
@@ -1128,122 +1140,81 @@ ConVar snd_music_selection(
 
 	ConCommand EndRound( "endround", &CCSGameRules::EndRound, "End the current round.", FCVAR_CHEAT );
 
-	ConVar cash_team_terrorist_win_bomb(
-		"cash_team_terrorist_win_bomb",
-		"3500",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_team_elimination_hostage_map_t(
-		"cash_team_elimination_hostage_map_t",
-		"1000",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_team_elimination_hostage_map_ct(
-		"cash_team_elimination_hostage_map_ct",
-		"2000",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_team_elimination_bomb_map(
-		"cash_team_elimination_bomb_map",
-		"3250",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_team_win_by_time_running_out_hostage(
-		"cash_team_win_by_time_running_out_hostage",
-		"3250",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_team_win_by_time_running_out_bomb(
-		"cash_team_win_by_time_running_out_bomb",
-		"3250",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_team_win_by_defusing_bomb(
-		"cash_team_win_by_defusing_bomb",
-		"3250",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_team_win_by_hostage_rescue(
-		"cash_team_win_by_hostage_rescue",
-		"3500",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_team_rescued_hostage(
-		"cash_team_rescued_hostage",
-		"0",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_team_hostage_alive(
-		"cash_team_hostage_alive",
-		"0",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_team_planted_bomb_but_defused(
-		"cash_team_planted_bomb_but_defused",
-		"800",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_team_hostage_interaction(
-		"cash_team_hostage_interaction",
-		"500",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_player_killed_teammate(
-		"cash_player_killed_teammate",
-		"-300",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_player_killed_enemy_factor(
-		"cash_player_killed_enemy_factor",
+	// --------------------------------------------------------------------------------------------------- //
+	// Contribution score control values
+	// --------------------------------------------------------------------------------------------------- //
+	ConVar contributionscore_assist(
+		"contributionscore_assist",
 		"1",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
+		FCVAR_NONE,
+		"amount of contribution score added for an assist" );
 
-	ConVar cash_player_killed_enemy_default(
-		"cash_player_killed_enemy_default",
-		"300",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
+	ConVar contributionscore_kill(
+		"contributionscore_kill",
+		"2",
+		FCVAR_NONE,
+		"amount of contribution score added for a kill" );
 
-	ConVar cash_player_bomb_planted(
-		"cash_player_bomb_planted",
-		"300",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
+	ConVar contributionscore_objective_kill(
+		"contributionscore_objective_kill",
+		"3",
+		FCVAR_NONE,
+		"amount of contribution score added for an objective related kill" );
 
-	ConVar cash_player_bomb_defused(
-		"cash_player_bomb_defused",
-		"300",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
+	ConVar contributionscore_hostage_rescue_minor(
+		"contributionscore_hostage_rescue_minor",
+		"1",
+		FCVAR_NONE,
+		"amount of contribution score added to all alive CTs per hostage rescued" );
 
-	ConVar cash_player_rescued_hostage(
-		"cash_player_rescued_hostage",
-		"1000",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
+	ConVar contributionscore_hostage_rescue_major(
+		"contributionscore_hostage_rescue_major",
+		"3",
+		FCVAR_NONE,
+		"amount of contribution score added to rescuer per hostage rescued" );
 
-	ConVar cash_player_interact_with_hostage(
-		"cash_player_interact_with_hostage",
-		"150",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
+	ConVar contributionscore_bomb_defuse_minor(
+		"contributionscore_bomb_defuse_minor",
+		"1",
+		FCVAR_NONE,
+		"amount of contribution score for defusing a bomb after eliminating enemy team" );
 
-	ConVar cash_player_damage_hostage(
-		"cash_player_damage_hostage",
-		"-30",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
+	ConVar contributionscore_bomb_defuse_major(
+		"contributionscore_bomb_defuse_major",
+		"3",
+		FCVAR_NONE,
+		"amount of contribution score for defusing a bomb while at least one enemy remains alive" );
 
-	ConVar cash_player_killed_hostage(
-		"cash_player_killed_hostage",
-		"-1000",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
 
-	namespace SpecHear
-	{
-		enum Type
-		{
-			OnlySpectators = 0,
-			AllPlayers = 1,
-			SpectatedTeam = 2,
-			Self = 3,
-			Nobody = 4,
-		};
-	}
+	ConVar contributionscore_bomb_planted(
+		"contributionscore_bomb_planted",
+		"2",
+		FCVAR_NONE,
+		"amount of contribution score for planting a bomb" );
+
+	ConVar contributionscore_bomb_exploded(
+		"contributionscore_bomb_exploded",
+		"1",
+		FCVAR_NONE,
+		"amount of contribution score awarded to bomb planter and terrorists remaining alive if bomb explosion wins the round" );
+
+	ConVar contributionscore_suicide(
+		"contributionscore_suicide",
+		"-2",
+		FCVAR_NONE,
+		"amount of contribution score for a suicide, normally negative" );
+
+	ConVar contributionscore_team_kill(
+		"contributionscore_team_kill",
+		"-2",
+		FCVAR_NONE,
+		"amount of contribution score for a team kill, normally negative" );
+
+	ConVar contributionscore_hostage_kill(
+		"contributionscore_hostage_kill",
+		"-2",
+		FCVAR_NONE,
+		"amount of contribution score for killing a hostage, normally negative" );
 
 
 	// --------------------------------------------------------------------------------------------------- //
@@ -2521,10 +2492,7 @@ ConVar snd_music_selection(
         // note, only the highest damaging player can be awarded an assist
 		if ( maxDamagePlayer && (maxDamage > cs_AssistDamageThreshold.GetFloat()) )
 		{
-			if ( IPointsForKill( maxDamagePlayer, pCSVictim ) > 0 ) // this ensures that only assists on enemies are recorded, but "assists" for teammate kills are not
-			{
-				maxDamagePlayer->IncrementAssistsCount( 1 );
-			}
+			ScorePlayerAssist( maxDamagePlayer, pCSVictim );
 			return maxDamagePlayer;
 		}
 
@@ -2736,6 +2704,11 @@ ConVar snd_music_selection(
 		}
 		else
 		{
+			if ( pCSVictim == pCSScorer )
+			{
+				ScorePlayerSuicide( pCSVictim );
+			}
+
 			BaseClass::PlayerKilled( pVictim, info );
 		}
 
@@ -3152,7 +3125,7 @@ ConVar snd_music_selection(
 		m_bAnyHostageReached = true;
 
 		// If the round is already over don't add additional time
-		bool roundIsAlreadyOver = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
+		bool roundIsAlreadyOver = (m_iRoundWinStatus != WINNER_NONE);
 		if ( roundIsAlreadyOver )
 			return;
 
@@ -3388,9 +3361,9 @@ ConVar snd_music_selection(
 					if ( pPlayer->HasBeenControlledThisRound() )
 						continue;
 
-					if ( CSGameRules()->IsPlayingGunGameDeathmatch() )
+					if ( IsPlayingGunGameDeathmatch() )
 					{
-						int nScore = pPlayer->GetFrags();
+						int nScore = pPlayer->GetContributionScore();
 						int nEntindex = pPlayer->entindex();
 						if ( nScore > nBestScore || (nScore == nBestScore && nEntindex < maxKills) )
 						{
@@ -3403,7 +3376,7 @@ ConVar snd_music_selection(
 					else
 					{
 						// only consider players on the winning team
-						if ( CSGameRules()->m_iRoundWinStatus != WINNER_DRAW && pPlayer->GetTeamNumber() != CSGameRules()->m_iRoundWinStatus )
+						if ( m_iRoundWinStatus != WINNER_DRAW && pPlayer->GetTeamNumber() != m_iRoundWinStatus )
 							continue;
 
 						int nKills = pPlayer->GetNumRoundKills(); // - pPlayer->m_iNumRoundTKs; - for most eliminations count only enemies killed
@@ -5208,10 +5181,9 @@ ConVar snd_music_selection(
 
 					if ( pWinner != pPlayer )
 					{
-						// TODO: Change this to score!!!
-						if ( pWinner->FragCount() > pPlayer->FragCount() )
+						if ( pWinner->GetContributionScore() > pPlayer->GetContributionScore() )
 							continue;
-						else if ( pWinner->FragCount() < pPlayer->FragCount() )
+						else if ( pWinner->GetContributionScore() < pPlayer->GetContributionScore() )
 							pWinner = pPlayer;
 						else
 							pWinner = (pWinner->entindex() > pPlayer->entindex()) ? pWinner : pPlayer;
@@ -5365,15 +5337,124 @@ ConVar snd_music_selection(
 	// Contribution score helper functions
 	// --------------------------------------------------------------------------------------------------- //
 
+    void CCSGameRules::ScorePlayerKill( CCSPlayer* pPlayer )
+    {
+        ASSERT( pPlayer != NULL );
+        if ( pPlayer )
+        {
+			if ( IsPlayingGunGameDeathmatch() && pPlayer->GetActiveCSWeapon() )
+			{
+				CSWeaponID wepID = pPlayer->GetActiveCSWeapon()->GetCSWeaponID();
+
+				int nScore = GetWeaponScoreForDeathmatch( wepID );
+				if ( pPlayer->AddDeathmatchKillScore( nScore, wepID ) <= 0 )
+				{
+					pPlayer->AddContributionScore( contributionscore_kill.GetInt() );
+				}
+			}
+			else
+			{
+				pPlayer->AddContributionScore( contributionscore_kill.GetInt() );
+			}
+        }
+    }
+
+    void CCSGameRules::ScorePlayerAssist( CCSPlayer* pPlayer, CCSPlayer* pCSVictim )
+    {
+        ASSERT( pPlayer != NULL );
+        if ( pPlayer )
+        {
+			if ( IsPlayingGunGameDeathmatch() && pPlayer->GetActiveCSWeapon() )
+			{
+				CSWeaponID wepID = pPlayer->GetActiveCSWeapon()->GetCSWeaponID();
+				//int nScore = GetWeaponScoreForDeathmatch( wepID );
+				// we don't store what weapon the player did the assist damage with and we can't guarantee the player has a weapon 
+				// when the assist is awarded, so we just give them and average of half the points awarded
+				int nScore = 6;
+				pPlayer->AddDeathmatchKillScore( nScore, wepID, true, pCSVictim->GetPlayerName() );
+				pPlayer->IncrementAssistsCount( 1 );
+			}
+			else if ( IPointsForKill( pPlayer, pCSVictim ) > 0 ) // this ensures that only assists on enemies are recorded, but "assists" for teammate kills are not
+			{
+				pPlayer->AddContributionScore( contributionscore_assist.GetInt() );
+				pPlayer->IncrementAssistsCount( 1 );
+			}
+        }
+    }
+
+	void CCSGameRules::ScorePlayerObjectiveKill( CCSPlayer* pPlayer )
+	{
+		ASSERT( pPlayer != NULL );
+		if ( pPlayer )
+		{
+			pPlayer->AddContributionScore( contributionscore_objective_kill.GetInt() );
+		}
+	}
+
+	void CCSGameRules::ScorePlayerTeamKill( CCSPlayer* pPlayer )
+	{
+		ASSERT( pPlayer != NULL );
+		if ( pPlayer )
+		{
+			pPlayer->AddContributionScore( contributionscore_team_kill.GetInt() );
+		}
+	}
+
+	void CCSGameRules::ScorePlayerSuicide( CCSPlayer* pPlayer )
+	{
+		ASSERT( pPlayer != NULL );
+		if ( pPlayer )
+		{
+			pPlayer->AddContributionScore( contributionscore_suicide.GetInt() );
+			//pPlayer->ProcessSuicideAsKillReward();
+		}
+	}
+
+    void CCSGameRules::ScoreBombPlant( CCSPlayer* pPlayer )
+    {
+        ASSERT( pPlayer != NULL );
+        if ( pPlayer )
+        {
+            pPlayer->AddContributionScore( contributionscore_bomb_planted.GetInt() );
+        }
+    }
+
 	void CCSGameRules::ScoreBombExploded( CCSPlayer* pPlayer )
 	{
-		// PiMoN TODO: a stub currently, uncomment when adding proper score!
-		/*/
 		ASSERT( pPlayer != NULL );
 		if ( pPlayer )
 		{
 			pPlayer->AddContributionScore( contributionscore_bomb_exploded.GetInt() );
-		}*/
+		}
+	}
+
+    void CCSGameRules::ScoreBombDefuse( CCSPlayer* pPlayer, bool bMajorEvent )
+    {
+        ASSERT( pPlayer != NULL );
+        if ( pPlayer )
+        {
+            pPlayer->AddContributionScore( bMajorEvent ? contributionscore_bomb_defuse_major.GetInt() : contributionscore_bomb_defuse_minor.GetInt() );
+        }
+
+		m_bBombDefused = true;
+    }
+
+    void CCSGameRules::ScoreHostageRescue( CCSPlayer* pPlayer, CHostage* pHostage, bool bMajorEvent )
+    {
+        ASSERT( pPlayer != NULL );
+        if ( pPlayer )
+        {
+            pPlayer->AddContributionScore( bMajorEvent ? contributionscore_hostage_rescue_major.GetInt() : contributionscore_hostage_rescue_minor.GetInt() );
+        }
+    }
+
+	void CCSGameRules::ScoreHostageKilled( CCSPlayer* pPlayer )
+	{
+		ASSERT( pPlayer != NULL );
+		if ( pPlayer )
+		{
+			pPlayer->AddContributionScore( contributionscore_hostage_kill.GetInt() );
+		}
 	}
 
 #if defined (_DEBUG)
@@ -6084,20 +6165,15 @@ ConVar snd_music_selection(
 
 	// sort function for the list of players that we're going to use to scramble the teams
     int ScramblePlayersSort( CCSPlayer* const *p1, CCSPlayer* const *p2 )
-    {
-        CCSPlayerResource *pResource = dynamic_cast< CCSPlayerResource * >( g_pPlayerResource );
+	{
+		// check the priority
+		if ( p1 && p2 && (*p1) && (*p2) && (*p1)->GetContributionScore() > (*p2)->GetContributionScore()  )
+		{
+			return 1;
+		}
 
-        if ( pResource )
-        {
-            // check the priority
-            if ( p1 && p2 && (*p1) && (*p2) && (*p1)->GetFrags() > (*p2)->GetFrags()  ) 
-            {
-                return 1;
-            }
-        }
-
-        return -1;
-    }
+		return -1;
+	}
 
 	//////// PAUSE
 	void cc_PauseMatch( const CCommand& args )
@@ -6948,7 +7024,7 @@ ConVar snd_music_selection(
 			// [tj] Check flawless victory achievement - currently requiring extermination
 			if (((iReason == CTs_Win && m_bNoCTsDamaged) || (iReason == Terrorists_Win && m_bNoTerroristsDamaged))
 				&& losingTeam && losingTeam->GetNumPlayers() - ignoreCount >= AchievementConsts::DefaultMinOpponentsForAchievement
-				&& !CSGameRules()->IsPlayingGunGameProgressive())
+				&& !IsPlayingGunGameProgressive())
 			{
 				CTeam *pTeam = GetGlobalTeam( iWinnerTeam );
 
@@ -7744,6 +7820,40 @@ bool CCSGameRules::HasHalfTime( void ) const
 	return mp_halftime.GetBool();
 }
 
+#ifndef CLIENT_DLL
+int CCSGameRules::GetWeaponScoreForDeathmatch( CSWeaponID nWeapID )
+{
+	int nScore = 1;
+
+	if ( nWeapID == WEAPON_NONE )
+		return 0;
+
+	const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( nWeapID );
+	if ( pWeaponInfo )
+	{
+		// 					float flScore1 = ((pWeaponInfo->m_flCycleTime / pWeaponInfo->m_iDamage)-0.001f) * 10;
+		// 					float flScore2 = ((pWeaponInfo->m_iKillAward / MAX( 500, pWeaponInfo->m_iWeaponPrice )) + flScore1) * 100;
+		// 					int nScore = MAX( 1, ceil(flScore2) );
+		// 					pPlayer->AddContributionScore( nScore );
+
+		if ( nWeapID == WEAPON_KNIFE )
+		{
+			nScore = 20;
+		}
+		else
+		{
+			int nPrice = MIN( 4500, MAX(100, pWeaponInfo->GetWeaponPrice() - (pWeaponInfo->GetKillAward()/2)) );
+			float flScore1 = MAX( 0.05f, ((1 - ((float)nPrice/4500.0f)) * 10)/5);
+			float flScore2 = flScore1 + MIN( 2.0f, (((pWeaponInfo->m_flCycleTime[0] / pWeaponInfo->m_iDamage) * 10) + ((2.0f - pWeaponInfo->m_flArmorRatio) / 2)) / 4);
+			float flFinal = ceil(flScore2-0.5f);//ceil((flScore2/6) * 10 );
+			nScore = MAX( 0, flFinal ) + 10;
+		}
+	}
+
+	return nScore;
+}
+#endif
+
 int CCSGameRules::DefaultFOV()
 {
 	return 90;
@@ -8386,6 +8496,111 @@ CON_COMMAND_F( map_setbombradius, "Sets the bomb radius for the map.", FCVAR_CHE
 	map_showbombradius( args );
 }
 
+ConVar cash_team_terrorist_win_bomb(
+	"cash_team_terrorist_win_bomb",
+	"3500",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_team_elimination_hostage_map_t(
+	"cash_team_elimination_hostage_map_t",
+	"1000",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_team_elimination_hostage_map_ct(
+	"cash_team_elimination_hostage_map_ct",
+	"2000",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_team_elimination_bomb_map(
+	"cash_team_elimination_bomb_map",
+	"3250",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_team_win_by_time_running_out_hostage(
+	"cash_team_win_by_time_running_out_hostage",
+	"3250",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_team_win_by_time_running_out_bomb(
+	"cash_team_win_by_time_running_out_bomb",
+	"3250",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_team_win_by_defusing_bomb(
+	"cash_team_win_by_defusing_bomb",
+	"3250",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_team_win_by_hostage_rescue(
+	"cash_team_win_by_hostage_rescue",
+	"3500",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_team_rescued_hostage(
+	"cash_team_rescued_hostage",
+	"0",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_team_hostage_alive(
+	"cash_team_hostage_alive",
+	"0",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_team_planted_bomb_but_defused(
+	"cash_team_planted_bomb_but_defused",
+	"800",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_team_hostage_interaction(
+	"cash_team_hostage_interaction",
+	"500",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_player_killed_teammate(
+	"cash_player_killed_teammate",
+	"-300",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_player_killed_enemy_factor(
+	"cash_player_killed_enemy_factor",
+	"1",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_player_killed_enemy_default(
+	"cash_player_killed_enemy_default",
+	"300",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_player_bomb_planted(
+	"cash_player_bomb_planted",
+	"300",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_player_bomb_defused(
+	"cash_player_bomb_defused",
+	"300",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_player_rescued_hostage(
+	"cash_player_rescued_hostage",
+	"1000",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_player_interact_with_hostage(
+	"cash_player_interact_with_hostage",
+	"150",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_player_damage_hostage(
+	"cash_player_damage_hostage",
+	"-30",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+ConVar cash_player_killed_hostage(
+	"cash_player_killed_hostage",
+	"-1000",
+	FCVAR_REPLICATED | FCVAR_NOTIFY );
+
 int CCSGameRules::TeamCashAwardValue( int reason )
 {
 	switch ( reason )
@@ -8988,7 +9203,7 @@ void CCSGameRules::InitializeGameTypeAndMode( void )
             }
         }
 
-        if ( CSGameRules()->HasHalfTime() )
+        if ( HasHalfTime() )
         {
             m_match.SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
         }

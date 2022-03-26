@@ -56,6 +56,7 @@ public:
 	bool			HasDefuser( int iIndex );
 	int				GetAccount( int iIndex );
 	int				GetPlayerGunGameWeaponIndex( int iIndex );
+	int				GetContributionScore( int iIndex );
 
 	bool			IsControllingBot( int index );
 	int				GetControlledPlayer( int index );
@@ -92,6 +93,7 @@ protected:
 	bool	m_bHasDefuser[ MAX_PLAYERS + 1 ];
 	int		m_iAccount[ MAX_PLAYERS + 1 ];
 	int		m_iGunGameProgressiveWeaponIndex[ MAX_PLAYERS + 1 ];
+	int		m_iContributionScore[ MAX_PLAYERS + 1 ];
 
 	bool	m_bControllingBot[MAX_PLAYERS + 1];
 	int		m_iControlledPlayer[MAX_PLAYERS + 1];

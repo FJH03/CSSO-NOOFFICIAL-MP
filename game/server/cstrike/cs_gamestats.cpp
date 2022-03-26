@@ -986,23 +986,10 @@ void CCSGameStats::Event_PlayerKilledOther( CBasePlayer *pAttacker, CBaseEntity 
 	// [sbodenbender] check for deaths near planted bomb for funfact
 	if (pPlayerVictim && pPlayerAttacker && pPlayerAttacker->GetTeamNumber() == TEAM_TERRORIST && CSGameRules()->m_bBombPlanted)
 	{
-		float bombCheckDistSq = AchievementConsts::KillEnemyNearBomb_MaxDistance * AchievementConsts::KillEnemyNearBomb_MaxDistance;
-		for ( int i=0; i < g_PlantedC4s.Count(); i++ )
+		if ( pPlayerAttacker->IsCloseToActiveBomb() || pPlayerVictim->IsCloseToActiveBomb() )		
 		{
-			CPlantedC4 *pC4 = g_PlantedC4s[i];
-
-			if ( pC4->IsBombActive() )
-			{
-				Vector bombPos = pC4->GetAbsOrigin();
-				Vector victimToBomb = pPlayerVictim->GetAbsOrigin() - bombPos;
-				Vector attackerToBomb = pPlayerAttacker->GetAbsOrigin() - bombPos;
-				if (victimToBomb.LengthSqr() < bombCheckDistSq || attackerToBomb.LengthSqr() < bombCheckDistSq)
-				{
-					IncrementStat(pPlayerAttacker, CSSTAT_KILLS_WHILE_DEFENDING_BOMB, 1);
-					break;	// you only get credit for one kill even if you happen to be by more than one bomb
-				}
-			}
-		}		
+			IncrementStat(pPlayerAttacker, CSSTAT_KILLS_WHILE_DEFENDING_BOMB, 1);
+		}
 	}
 
 	//Increment stat if this is a headshot.

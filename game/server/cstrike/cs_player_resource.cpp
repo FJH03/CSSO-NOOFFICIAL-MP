@@ -38,6 +38,7 @@ IMPLEMENT_SERVERCLASS_ST(CCSPlayerResource, DT_CSPlayerResource)
 	SendPropArray3( SENDINFO_ARRAY3(m_bHasDefuser), SendPropInt( SENDINFO_ARRAY(m_bHasDefuser), 1, SPROP_UNSIGNED ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_iAccount), SendPropInt( SENDINFO_ARRAY(m_iAccount), COORD_INTEGER_BITS+1, SPROP_UNSIGNED ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_iGunGameProgressiveWeaponIndex), SendPropInt( SENDINFO_ARRAY(m_iGunGameProgressiveWeaponIndex), COORD_INTEGER_BITS+1, SPROP_UNSIGNED ) ),
+	SendPropArray3( SENDINFO_ARRAY3(m_iContributionScore), SendPropInt( SENDINFO_ARRAY(m_iContributionScore), 32) ),
 
 	SendPropArray3( SENDINFO_ARRAY3(m_bControllingBot), SendPropInt( SENDINFO_ARRAY(m_bControllingBot), 1, SPROP_UNSIGNED ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_iControlledPlayer), SendPropInt( SENDINFO_ARRAY(m_iControlledPlayer), 8, SPROP_UNSIGNED ) ),
@@ -163,6 +164,7 @@ void CCSPlayerResource::UpdatePlayerData( void )
 			m_bHasDefuser.Set(i, pPlayer->HasDefuser());
 			m_iAccount.Set( i, pPlayer->GetAccountBalance() );
 			m_iGunGameProgressiveWeaponIndex.Set( i, pPlayer->m_iGunGameProgressiveWeaponIndex );
+			m_iContributionScore.Set( i, pPlayer->GetContributionScore() );
 
 		}
 		else
@@ -381,6 +383,7 @@ void CCSPlayerResource::Spawn( void )
 		m_bHasDefuser.Set(i, false);
 		m_iAccount.Set( i, 0 );
 		m_iGunGameProgressiveWeaponIndex.Set( i, 0 );
+		m_iContributionScore.Set( i, 0 );
 	}
 
 	BaseClass::Spawn();

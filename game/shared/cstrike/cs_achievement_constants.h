@@ -49,6 +49,7 @@ namespace AchievementConsts
     const int   SameUniform_MinPlayers                      = 5;
     const int   FriendsSameUniform_MinPlayers               = 4;
 	const float KillEnemyNearBomb_MaxDistance				= 480.0f;
+	const float KillEnemyNearHostage_MaxDistance			= 250.0f;
 	const int   GrenadeDamage_MinDamage						= 200;
 }
 

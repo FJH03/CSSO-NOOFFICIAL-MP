@@ -360,6 +360,9 @@ public:
 	void OnLand( float fVelocity );
 
 	bool HasC4() const;	// Is this player carrying a C4 bomb?
+	bool IsCloseToActiveBomb();
+	bool IsCloseToHostage();
+	bool IsObjectiveKill( CCSPlayer* pCSVictim );
 
 	int GetClass( void ) const;
 
@@ -432,6 +435,8 @@ public:
 	void AddAccountAward( int reason );
 	void AddAccountAward( int reason, int amount, const CWeaponCSBase *pWeapon = NULL );
 	void AddAccountFromTeam( int amount, bool bTrackChange, TeamCashAward::Type reason );
+
+	int AddDeathmatchKillScore( int nScore, CSWeaponID wepID, bool bIsAssist = false, const char* szVictim = NULL );
 
 	void HintMessage( const char *pMessage, bool bDisplayIfDead, bool bOverrideClientSettings = false ); // Displays a hint message to the player
 	CHintMessageQueue *m_pHintMessageQueue;
@@ -1216,7 +1221,9 @@ public:
 	void	IncrementNumMVPs( CSMvpReason_t mvpReason );
 	int		GetNumMVPs();
 
-	int		GetFrags() const { return m_iFrags; }
+	int	GetContributionScore( void ) { return m_iContributionScore; }
+	void ClearContributionScore( void ) { m_iContributionScore = 0; }
+	void AddContributionScore( int iPoints );
 	 
     void    RemoveNemesisRelationships();
 	void	SetDeathFlags( int iDeathFlags ) { m_iDeathFlags = iDeathFlags; }
@@ -1243,6 +1250,9 @@ private:
 
     // [menglish] number of rounds this player has caused to be won for their team
 	int m_iMVPs;
+
+	// [pfreese] new contribution score system
+	int m_iContributionScore;
 
     // [dwenger] adding tracking for fun fact
 	bool m_bWieldingKnifeAndKilledByGun;

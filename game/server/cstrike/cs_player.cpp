@@ -682,6 +682,8 @@ CCSPlayer::CCSPlayer()
 
 	m_duckUntilOnGround = false;
 
+	ClearContributionScore();
+
 	m_bNeedToChangeKnife = true;
 	m_bNeedToChangeAgent = true;
 	m_bNeedToChangeGloves = true;
@@ -2415,6 +2417,81 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	}
 }
 
+bool CCSPlayer::IsCloseToActiveBomb( void )
+{
+	float bombCheckDistSq = AchievementConsts::KillEnemyNearBomb_MaxDistance * AchievementConsts::KillEnemyNearBomb_MaxDistance;
+	for ( int i=0; i < g_PlantedC4s.Count(); i++ )
+	{
+		CPlantedC4 *pC4 = g_PlantedC4s[i];
+
+		if ( pC4 && pC4->IsBombActive() )
+		{
+			Vector bombPos = pC4->GetAbsOrigin();
+			Vector distToBomb = this->GetAbsOrigin() - bombPos;
+			if ( distToBomb.LengthSqr() < bombCheckDistSq )
+			{
+				return true;
+			}
+		}
+	}		
+	
+	return false;
+}
+
+bool CCSPlayer::IsCloseToHostage( void )
+{
+	float hostageCheckDistSq = AchievementConsts::KillEnemyNearHostage_MaxDistance * AchievementConsts::KillEnemyNearHostage_MaxDistance;
+	for ( int i=0; i < g_Hostages.Count(); i++ )
+	{
+		CHostage *pHostage = g_Hostages[i];
+		if ( pHostage && pHostage->IsValid() )
+		{
+			Vector hostagePos = pHostage->GetAbsOrigin();
+			Vector distToHostage = this->GetAbsOrigin() - hostagePos;
+			if ( distToHostage.LengthSqr() < hostageCheckDistSq )
+			{
+				return true;
+			}
+		}
+	}		
+
+	return false;
+}
+
+bool CCSPlayer::IsObjectiveKill( CCSPlayer* pCSVictim )
+{
+	// check all cases where this kill is 'objective' Based
+	
+	// Killing someone close to a hostage
+	if ( ( pCSVictim && pCSVictim->IsCloseToHostage() ) ||
+		this->IsCloseToHostage() )
+		return true;
+	
+	switch ( GetTeamNumber() )
+	{
+	case TEAM_TERRORIST:
+		// Terrorist kills CT in a bomb plant zone after a bomb is planted
+		if ( ( pCSVictim && pCSVictim->IsCloseToActiveBomb() ) 
+			|| this->IsCloseToActiveBomb() )
+			return true;
+
+		// Terrorist kills hostage rescuer
+		if ( pCSVictim && ( pCSVictim->GetNumFollowers() > 0 ) )
+			return true;
+
+		break;
+
+	case TEAM_CT:
+		// killing someone WHILE guiding hostages
+		if ( this->GetNumFollowers() > 0 )
+			return true;
+
+		break;
+	}
+	
+	return false;
+}
+
 // [menglish, tj] Update and check any one-off achievements based on the kill
 // Notify that I've killed some other entity. (called from Victim's Event_Killed).
 void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &info )
@@ -2434,10 +2511,26 @@ void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &
 
 	if ( IsOtherSameTeam( pVictim->GetTeamNumber() ) && !IsOtherEnemy( pCSVictim ) && pVictim != pCSAttacker )
 	{
+		CSGameRules()->ScorePlayerTeamKill( pCSAttacker );
 		UpdateTeamLeaderPlaySound( pCSAttacker->GetTeamNumber() );
 	}
 	else // on a different team from the attacker
 	{
+		// score kill
+		if ( pCSAttacker && pCSVictim &&
+			(pVictim->GetTeamNumber() == TEAM_CT || pVictim->GetTeamNumber() == TEAM_TERRORIST ) ) // this makes sure the victim is not a hostage before awarding a score
+		{
+			if ( pCSAttacker->IsObjectiveKill( pCSVictim ) )
+				CSGameRules()->ScorePlayerObjectiveKill( pCSAttacker );
+			else			
+				CSGameRules()->ScorePlayerKill( pCSAttacker );
+		}
+		else if ( pCSAttacker && pVictim && StringHasPrefixCaseSensitive( pVictim->GetClassname(), "chicken" ) )
+		{
+			CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase * >( info.GetWeapon() );
+			pCSAttacker->AddDeathmatchKillScore( 1, pWeapon ? pWeapon->GetCSWeaponID() : WEAPON_NONE );
+		}
+
 		// Killed an enemy
 		if ( CSGameRules()->IsPlayingGunGame() && pCSVictim && pCSAttacker )
 		{
@@ -4062,8 +4155,9 @@ void CCSPlayer::Reset( bool resetScore )
 	if ( resetScore )
 	{
 		ResetFragCount();
-		ResetDeathCount();
 		ResetAssistsCount();
+		ResetDeathCount();
+		ClearContributionScore();
 		m_longestLife = -1.0f;
 	}
 
@@ -4207,6 +4301,55 @@ void CCSPlayer::AddAccount( int amount, bool bTrackChange, bool bItemBought, con
 	}
 	
 	m_iAccount = clamp( m_iAccount, 0, mp_maxmoney.GetInt() );
+}
+
+int CCSPlayer::AddDeathmatchKillScore( int nScore, CSWeaponID wepID, bool bIsAssist, const char* szVictim )
+{
+	if ( !CSGameRules() || !CSGameRules()->IsPlayingGunGameDeathmatch() )
+		return 0;
+
+	if ( nScore <= 0 )
+		return 0;
+
+	int nBonus = 0;
+
+	/*if ( CSGameRules()->IsDMBonusActive() && CSGameRules()->GetDMBonusWeaponLoadoutSlot() == iSlot && !bIsAssist )
+		nBonus = ( (float)( mp_dm_bonus_percent.GetInt() ) / 100.0f ) * nScore;*/
+
+	const char* awardReasonToken = NULL;
+
+	CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( wepID );
+	const char* szWeaponName = pWeaponInfo ? pWeaponInfo->szPrintName : "unknown";
+
+	if ( bIsAssist )
+	{
+		if ( nScore == 1 )
+			awardReasonToken = "#Player_Point_Award_Assist_Enemy";	
+		else
+			awardReasonToken = "#Player_Point_Award_Assist_Enemy_Plural";	
+
+		szWeaponName = szVictim;
+	}
+	else
+	{
+		if ( nScore == 1 )
+			awardReasonToken = "#Player_Point_Award_Killed_Enemy";	
+		else
+			awardReasonToken = "#Player_Point_Award_Killed_Enemy_Plural";	
+	}
+
+	char strnScore[64];
+	if ( nBonus > 0 )
+		Q_snprintf( strnScore, sizeof( strnScore ), "%d (+%d)", abs( nScore ), abs( nBonus ) );
+	else
+		Q_snprintf( strnScore, sizeof( strnScore ), "%d", abs( nScore ));
+
+
+	ClientPrint( this, HUD_PRINTTALK, awardReasonToken, strnScore, szWeaponName );
+
+	AddContributionScore( nScore + nBonus );
+
+	return nScore + nBonus;
 }
 
 void CCSPlayer::MarkAsNotReceivingMoneyNextRound()
@@ -11869,13 +12012,32 @@ void CCSPlayer::IncrementAssistsCount( int nCount )
 	}
 
 	m_iAssists += nCount;
-	//pl.assists = m_iAssists;
 }
 
 void CCSPlayer::ResetAssistsCount()
 {
 	m_iAssists = 0;
-	//pl.assists = m_iAssists;
+}
+
+void CCSPlayer::AddContributionScore( int iPoints )
+{ 
+	// calculate score count properly for a bot-controlled player
+	if( IsControllingBot() )
+	{
+		CCSPlayer* controlledPlayerScorer = GetControlledBot();
+		if( controlledPlayerScorer )
+		{
+			controlledPlayerScorer->AddContributionScore( iPoints );
+		}
+	}
+	else
+	{
+		m_iContributionScore += iPoints;
+		// note, the round score isn't capped to be positive...  on any given round we expect that it may go negative (example:  for determining griefers )
+	}
+
+	if ( m_iContributionScore < 0 )
+		m_iContributionScore = 0; // cap negative points at zero
 }
 
 int CCSPlayer::GetNumConcurrentDominations( )

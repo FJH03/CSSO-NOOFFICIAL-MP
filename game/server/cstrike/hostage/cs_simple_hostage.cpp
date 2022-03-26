@@ -736,7 +736,27 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 
 		if ( player )
 		{
+			bool bWinningRescueEvent = !roundWasAlreadyOver && ( CSGameRules()->m_iRoundWinStatus != WINNER_NONE );
 			CCS_GameStats.Event_HostageRescued( player );
+			CSGameRules()->ScoreHostageRescue( player, this, bWinningRescueEvent );
+		}
+
+		if ( !roundWasAlreadyOver )
+		{
+			// All alive CTs also get assistance credit for hostage rescue.
+			// This way hostage rescued after round was already won gives 1 pt to the rescuer
+			// The winning rescue in pickup mode scores the rescuer 4 pts and all other alive
+			// teammates get 1 pt for assist / suppressing fire.
+			for ( int i = 1; i <= MAX_PLAYERS; i++ )
+			{
+				CCSPlayer* pCheckPlayer = (CCSPlayer*)UTIL_PlayerByIndex( i );
+				if ( !pCheckPlayer )
+					continue;
+				if ( pCheckPlayer->GetTeamNumber() != TEAM_CT )
+					continue;
+				if ( pCheckPlayer->IsAlive() )
+					CSGameRules()->ScoreHostageRescue( pCheckPlayer, this, false );
+			}
 		}
 	}
 }
@@ -1506,6 +1526,10 @@ void CHostage::SetHostageStartFollowingPlayer( CCSPlayer *pPlayer )
 		m_hasBeenUsed = true;
 
 		GiveCTUseBonus( pPlayer );
+		if ( pPlayer )
+		{
+			CSGameRules()->ScoreHostageRescue( pPlayer, this, false );
+		}
 
 		CSGameRules()->HostageTouched();
 

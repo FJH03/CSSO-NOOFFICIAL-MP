@@ -495,13 +495,48 @@ END_PREDICTION_DATA()
 			//if the defuse process has ended, kill the c4 (for safety we also check whether the Terrorists have already won the round in which case we cannot score the defuse!)
 			else if ( m_pBombDefuser->IsAlive() && ( CSGameRules()->m_iRoundWinStatus != WINNER_TER ) )
 			{
+				bool roundWasAlreadyWon = ( CSGameRules()->m_iRoundWinStatus != WINNER_NONE );	// This condition checks whether CTs already won the round
+				// Check if there are Terrorists alive
+				bool bTerroristsAlive = false;
+				for ( int i = 1; i <= MAX_PLAYERS; i++ )
+				{
+					CCSPlayer* pCheckPlayer = (CCSPlayer*)UTIL_PlayerByIndex( i );
+					if ( !pCheckPlayer )
+						continue;
+					if ( pCheckPlayer->GetTeamNumber() != TEAM_TERRORIST )
+						continue;
+					if ( pCheckPlayer->IsAlive() )
+					{
+						bTerroristsAlive = true;
+						break;
+					}
+				}
+
 				// set down-to-the-wire defuse fun fact
 				m_pBombDefuser->SetDefusedBombWithThisTimeRemaining( m_flC4Blow - gpGlobals->curtime );
 
                 // [dwenger] Stats update for bomb defusing
                 CCS_GameStats.Event_BombDefused( m_pBombDefuser );
-
+				CSGameRules()->ScoreBombDefuse( m_pBombDefuser, ( bTerroristsAlive && !roundWasAlreadyWon ) );
 				m_pBombDefuser->AddAccountAward( PlayerCashAward::BOMB_DEFUSED );
+
+				if ( !roundWasAlreadyWon )
+				{
+					// All alive CTs also get assistance credit for bomb defuse.
+					// This way if all Terrorists are eliminated then all alive CTs get 1pt and defuser gets 2pt;
+					// if a Terrorist remains alive then the defuser gets 5 pts and all other alive
+					// teammates get 1 pt for assist / suppressing fire.
+					for ( int i = 1; i <= MAX_PLAYERS; i++ )
+					{
+						CCSPlayer* pCheckPlayer = (CCSPlayer*)UTIL_PlayerByIndex( i );
+						if ( !pCheckPlayer )
+							continue;
+						if ( pCheckPlayer->GetTeamNumber() != TEAM_CT )
+							continue;
+						if ( pCheckPlayer->IsAlive() )
+							CSGameRules()->ScoreBombDefuse( pCheckPlayer, false );
+					}
+				}
 
 				IGameEvent * event = gameeventmanager->CreateEvent( "bomb_defused" );
 				if( event )
@@ -547,8 +582,6 @@ END_PREDICTION_DATA()
 
 				// release the player from being frozen
 				m_pBombDefuser->m_bIsDefusing = false;
-
-				CSGameRules()->m_bBombDefused = true;
 				
 				if ( UTIL_IsCSSOBirthday() )
 				{
@@ -559,9 +592,6 @@ END_PREDICTION_DATA()
 					//EmitSound( filter, entindex(), "Birthday_PartyHorn.VO" );
 					//C_BaseEntity::EmitSound(filter, SOUND_FROM_LOCAL_PLAYER, "Birthday_PartyHorn.VO");
 				}
-
-				// [menglish] Give the bomb defuser an mvp if they ended the round		 
-				bool roundWasAlreadyWon = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
 
 				// Setup MVP granting class in case round wasn't already won
 				class CPlantedC4DefusedMVP : public CCSGameRules::ICalculateEndOfRoundMVPHook_t
@@ -1382,8 +1412,8 @@ void CC4::PrimaryAttack()
 			}
 
 			pPlayer->SetBombPlacedTime( gpGlobals->curtime );
-
             CCS_GameStats.Event_BombPlanted( pPlayer );
+			CSGameRules()->ScoreBombPlant( pPlayer );
 
 			pPlayer->AddAccountAward( PlayerCashAward::BOMB_PLANTED );
 

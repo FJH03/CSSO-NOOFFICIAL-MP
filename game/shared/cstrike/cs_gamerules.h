@@ -44,16 +44,8 @@
 
 #define MAX_WEAPON_NAME_POPUP_RANGE 128.0
 
-//=============================================================================
-// HPE_BEGIN:
-// [tj] Forward declaration so we can track bot suicides in the game rules.
-//=============================================================================
-
 class CCSBot;
-
-//=============================================================================
-// HPE_END
-//=============================================================================
+class CHostage;
 
 extern ConVar mp_startmoney;
 extern ConVar mp_maxmoney;
@@ -281,8 +273,6 @@ public:
 
 	void StartWarmup( void );
 	void EndWarmup( void );
-
-	void SetIsWarmupPeriod( bool bIsWarmup ) { m_bWarmupPeriod = bIsWarmup; }
 
 	virtual bool ShouldCollide( int collisionGroup0, int collisionGroup1 );
 
@@ -631,7 +621,17 @@ public:
 	// HOSTAGE MAP FUNCTIONS
 	void HostageTouched();
 
+	// Contribution score helpers
+	void ScorePlayerKill( CCSPlayer* pPlayer );
+	void ScorePlayerAssist( CCSPlayer* pPlayer, CCSPlayer* pCSVictim );
+	void ScorePlayerObjectiveKill( CCSPlayer* pPlayer );
+	void ScorePlayerTeamKill( CCSPlayer* pPlayer );
+	void ScorePlayerSuicide( CCSPlayer* pPlayer );
+	void ScoreBombPlant( CCSPlayer* pPlayer );
 	void ScoreBombExploded( CCSPlayer* pPlayer );
+	void ScoreBombDefuse( CCSPlayer* pPlayer, bool bMajorEvent );
+	void ScoreHostageRescue( CCSPlayer* pPlayer, CHostage* pHostage, bool bMajorEvent );
+	void ScoreHostageKilled( CCSPlayer* pPlayer );
 
 	// Sets up g_pPlayerResource.
 	virtual void CreateStandardEntities();
@@ -811,6 +811,10 @@ public:
 	// So AreTeamsPlayingSwitchedSides will return true when TeamA is playing T-side and will return false when TeamA plays CT-side as they started match on CT
 	// in scenario outlined above.
 	bool AreTeamsPlayingSwitchedSides() const;
+
+	void SetIsWarmupPeriod( bool bIsWarmup ) { m_bWarmupPeriod = bIsWarmup; }
+
+	int GetWeaponScoreForDeathmatch( CSWeaponID nWeapID );
 
 public:
 	CBaseEntity* GetNextSpawnpoint( int teamNumber );

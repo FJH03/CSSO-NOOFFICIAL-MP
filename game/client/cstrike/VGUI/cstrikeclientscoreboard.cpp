@@ -908,7 +908,7 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, KeyValues* 
 		V_snwprintf( wszMVP, sizeof( wszMVP ), L"x%d", cs_PR->GetNumMVPs( playerIndex ) );
 		kv->SetWString( "mvps", wszMVP );
 	}
-	kv->SetInt( "score", 100 ); // TODO
+	kv->SetInt( "score", cs_PR->GetContributionScore( playerIndex ) );
 	kv->SetInt( "gglevel", cs_PR->GetPlayerGunGameWeaponIndex( playerIndex ) + 1 );
 
 	if ( !cs_PR->IsAlive( playerIndex ) )
