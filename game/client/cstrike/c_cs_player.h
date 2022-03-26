@@ -17,6 +17,7 @@
 #include "weapon_csbase.h"
 #include "baseparticleentity.h"
 #include "beamdraw.h"
+#include "cs_gamerules.h"
 #include "weapon_basecsgloves.h"
 #include "csgo_playeranimstate.h"
 
@@ -25,6 +26,7 @@
 class C_PhysicsProp;
 
 extern ConVar cl_disablefreezecam;
+
 
 #define BONESNAPSHOT_ENTIRE_BODY 0
 #define BONESNAPSHOT_UPPER_BODY 1
@@ -54,9 +56,9 @@ public:
 	void			Disable( void )				{ if ( m_bEnabled ) { AbandonAnyPending(); } m_bEnabled = false; }
 
 	float			GetCurrentWeight( void )	{ return m_flWeight; }
-
+	
 	void			SetLastBoneSetupTimeIndex( void ) { m_flLastBoneSetupTimeIndex = gpGlobals->curtime; }
-
+	
 	void Init( void )
 	{
 		m_pEnt = NULL;
@@ -296,7 +298,6 @@ public:
 		return  gpGlobals->curtime - m_flMusicRoundStartTime;
 	}
 
-	
 	// [menglish] Returns whether this player is dominating or is being dominated by the specified player
 	bool IsPlayerDominated( int iPlayerIndex );
 	bool IsPlayerDominatingMe( int iPlayerIndex );
@@ -308,11 +309,11 @@ public:
 
 	virtual float GetDeathCamInterpolationTime();
 	float GetFreezeFrameInterpolant( void );
-	
+
 	AcquireResult::Type CanAcquire( CSWeaponID weaponId, AcquireMethod::Type acquireMethod );
 	int					GetCarryLimit( CSWeaponID weaponId );
 	int					GetWeaponPrice( CSWeaponID weaponId ) const;
- 
+
 	bool IsOtherSameTeam( int nTeam );
 	bool IsOtherEnemy( CCSPlayer *pPlayer );
 	bool IsOtherEnemy( int nEntIndex );
@@ -320,15 +321,17 @@ public:
 
 	virtual void SetModelPointer( const model_t *pModel );
 
+
 // Called by shared code.
 public:
 
-	// ICSPlayerAnimState overrides.
+	// IPlayerAnimState overrides.
 	virtual CWeaponCSBase* CSAnim_GetActiveWeapon();
 	virtual bool CSAnim_CanMove();
 
 	// View model prediction setup
 	virtual void		CalcView( Vector& eyeOrigin, QAngle& eyeAngles, float& zNear, float& zFar, float& fov );
+
 
 	void DoAnimationEvent( PlayerAnimEvent_t event, int nData = 0 );
 
@@ -337,7 +340,7 @@ public:
 public:
 	virtual float GetPlayerMaxSpeed();
 	bool IsPrimaryOrSecondaryWeapon( CSWeaponType nType );
-	
+
 	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity, CConfigurationForHighPriorityUseEntity_t &cfg );
 	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity );
 	CBaseEntity *GetUsableHighPriorityEntity( void );
@@ -397,7 +400,7 @@ public:
 	bool HasC4() const;	// Is this player carrying a C4 bomb?
 
 	virtual void SetAnimation( PLAYER_ANIM playerAnim );
-
+	
 
 public:
 
@@ -422,19 +425,27 @@ public:
 	// Used to control animation state.
 	Activity m_Activity;
 
+	CNetworkVar( bool, m_bIsScoped );
 	CNetworkVar( bool, m_bIsWalking );
 	// Predicted variables.
-	CNetworkVar( bool, m_bIsScoped );
 	CNetworkVar( bool, m_bResumeZoom );
 	CNetworkVar( int , m_iLastZoom ); // after firing a shot, set the FOV to 90, and after showing the animation, bring the FOV back to last zoom level.
 	CNetworkVar( CSPlayerState, m_iPlayerState );	// SupraFiend: this gives the current state in the joining process, the states are listed above
 	CNetworkVar( bool, m_bIsDefusing );			// tracks whether this player is currently defusing a bomb
 	CNetworkVar( bool, m_bIsGrabbingHostage );	// tracks whether this player is currently grabbing a hostage
+	CNetworkVar( bool, m_bHasMovedSinceSpawn ); // Whether player has moved from spawn position
+	CNetworkVar( float, m_fImmuneToDamageTime );	// When gun game spawn damage immunity will expire
+	float m_fImmuneToDamageTimeLast;
+	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune
+	CNetworkVar( bool, m_bMadeFinalGunGameProgressiveKill );
+	CNetworkVar( int, m_iGunGameProgressiveWeaponIndex ); // index of current gun game weapon
+	CNetworkVar( int, m_iNumGunGameTRKillPoints );	// number of kill points accumulated so far in TR Gun Game mode (resets to 0 when weapon is upgraded)
+	CNetworkVar( int, m_NumEnemiesKilledThisRound );	// number of kills a player has gotten in a round
 	CNetworkVar( bool, m_bInBombZone );
 	CNetworkVar( bool, m_bInBuyZone );
 	CNetworkVar( bool, m_bInNoDefuseArea );
 	CNetworkVar( int, m_iThrowGrenadeCounter );	// used to trigger grenade throw animations.
-	
+
 	CNetworkVar( bool, m_bKilledByTaser );
 	CNetworkVar( int, m_iMoveState );		// Is the player trying to run or walk or idle?  Tells us what the player is "trying" to do.
 
@@ -454,14 +465,6 @@ public:
 	virtual void NotifyOnLayerChangeWeight( const CAnimationLayer* pLayer, const float flNewWeight ) OVERRIDE;
 	virtual void NotifyOnLayerChangeCycle( const CAnimationLayer* pLayer, const float flNewCycle ) OVERRIDE;
 
-	CNetworkVar( bool, m_bHasMovedSinceSpawn ); // Whether player has moved from spawn position
-	CNetworkVar( float, m_fImmuneToDamageTime );	// When gun game spawn damage immunity will expire
-	float m_fImmuneToDamageTimeLast;
-	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune
-	CNetworkVar( bool, m_bMadeFinalGunGameProgressiveKill );
-	CNetworkVar( int, m_iGunGameProgressiveWeaponIndex ); // index of current gun game weapon
-	CNetworkVar( int, m_iNumGunGameTRKillPoints );	// number of kill points accumulated so far in TR Gun Game mode (resets to 0 when weapon is upgraded)
-
 	bool IsInHostageRescueZone( void );
 
 	// This is a combination of the ADDON_ flags in cs_shareddefs.h.
@@ -478,29 +481,19 @@ public:
 
 	// When the progress bar should start.
 	CNetworkVar( float, m_flProgressBarStartTime );
-	CNetworkVar( bool, m_bDuckOverride );
+
+	CNetworkVar( bool, m_bDuckOverride ); // force the player to duck regardless of if they're holding crouch
+
 	CNetworkVar( float, m_flStamina );
 	CNetworkVar( int, m_iDirection );	// The current lateral kicking direction; 1 = right,  0 = left
 	CNetworkVar( int, m_iShotsFired );	// number of shots fired recently
 	CNetworkVar( bool, m_bNightVisionOn );
 	CNetworkVar( bool, m_bHasNightVision );
 
-    //=============================================================================
-    // HPE_BEGIN:
-    // [dwenger] Added for fun-fact support
-    //=============================================================================
-
-    //CNetworkVar( bool, m_bPickedUpDefuser );
-    //CNetworkVar( bool, m_bDefusedWithPickedUpKit );
-
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
-
-    CNetworkVar( float, m_flVelocityModifier );
+	CNetworkVar( float, m_flVelocityModifier );
 	CNetworkVar( float, m_flGroundAccelLinearFracLastTime );
-	CNetworkVar( bool, m_bNeedToChangeGloves );
 
+	CNetworkVar( bool, m_bNeedToChangeGloves );
 
 	EHANDLE	m_hRagdoll;
 
@@ -533,17 +526,15 @@ public:
 	void SurpressLadderChecks( const Vector& pos, const Vector& normal );
 	bool CanGrabLadder( const Vector& pos, const Vector& normal );
 
-//=============================================================================
-// HPE_BEGIN:
-//=============================================================================
-
 // [tj] checks if this player has another given player on their Steam friends list.
-	bool HasPlayerAsFriend(C_CSPlayer* player);
+	bool HasPlayerAsFriend( C_CSPlayer* player );
 
 	bool MadeFinalGunGameProgressiveKill( void ) { return m_bMadeFinalGunGameProgressiveKill; }
 	int GetPlayerGunGameWeaponIndex( void ) { return m_iGunGameProgressiveWeaponIndex; }
 	int GetNumGunGameTRKillPoints( void ) { return m_iNumGunGameTRKillPoints; }
-	
+
+	int GetNumRoundKills( void ) { return m_NumEnemiesKilledThisRound; }
+
 	bool IsAbleToInstantRespawn( void );
 
 	void ToggleRandomWeapons( void );
@@ -577,13 +568,12 @@ public:
 private:
 
 	void PushawayThink();
+
 	void FireGameEvent( IGameEvent *event );
 
 	int		m_iAccount;
 	bool	m_bHasHelmet;
-	
 	int		m_iClass;
-
 	int		m_ArmorValue;
 	QAngle	m_angEyeAngles;
 	bool	m_bHasDefuser;
@@ -593,8 +583,6 @@ private:
     bool    m_bPlayingFreezeCamSound;
 
 	bool	m_bShouldAutobuyDMWeapons;
-
-	Vector m_vecRagdollVelocity;
 
 	int m_nLastKillerIndex;
 
@@ -637,17 +625,12 @@ private:
 	float m_serverIntendedCycle;	// server periodically updates this to fix up our anims, here it is the float we want, or -1 for no override
 
 
-
-    //=============================================================================
-    // HPE_BEGIN:
     // [tj] Network variables that track who are dominating and being dominated by
-    //=============================================================================
-
     CNetworkArray( bool, m_bPlayerDominated, MAX_PLAYERS+1 );		// array of state per other player whether player is dominating other players
     CNetworkArray( bool, m_bPlayerDominatingMe, MAX_PLAYERS+1 );	// array of state per other player whether other players are dominating this player
-	
+
 	CNetworkArray( int, m_iWeaponPurchasesThisRound, MAX_WEAPONS );		// number of times each weapon purchased this round; used to limit repurchases
-	
+
 	CNetworkVar( bool, m_bIsLookingAtWeapon );
 	CNetworkVar( bool, m_bIsHoldingLookAtWeapon );
 
@@ -694,7 +677,7 @@ public:
 	virtual	bool	GetAttachment( int number, Vector &origin, QAngle &angles );
 
 	bool	IsBotOrControllingBot();
-	
+
 	bool IsControllingBot()							const { return m_bIsControllingBot; }
 	bool CanControlObservedBot()					const { return m_bCanControlObservedBot; }
 
@@ -707,12 +690,13 @@ private:
 	int			m_iControlledBotEntIndex;
 
 	CNetworkVar( bool, m_bHasControlledBotThisRound );
-public:
-	Vector m_vecLastAliveLocalVelocity;
 
 private:
 	float		m_flNextMagDropTime;
 	int			m_nLastMagDropAttachmentIndex;
+
+public:
+	Vector m_vecLastAliveLocalVelocity;
 };
 
 C_CSPlayer* GetLocalOrInEyeCSPlayer( void );
@@ -736,6 +720,7 @@ vgui::IImage* GetDefaultAvatarImage( C_BasePlayer *pPlayer );
 void AddSmokeGrenadeHandle( EHANDLE hGrenade );
 void RemoveSmokeGrenadeHandle( EHANDLE hGrenade );
 bool LineGoesThroughSmoke( Vector from, Vector to, bool grenadeBloat );
+
 
 
 

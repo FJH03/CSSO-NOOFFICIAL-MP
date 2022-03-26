@@ -33,7 +33,6 @@
 #include "effect_dispatch_data.h"	//for water ripple / splash effect
 #include "c_te_effect_dispatch.h"	//ditto
 #include "c_te_legacytempents.h"
-#include "cs_gamerules.h"
 #include "fx_cs_blood.h"
 #include "c_cs_playerresource.h"
 #include "c_team.h"
@@ -45,7 +44,6 @@
 #include <vgui_controls/Panel.h>
 #include "ragdoll_shared.h"
 #include "collisionutils.h"
-#include "cs_shareddefs.h"
 
 #include "eventlist.h"
 #include "npcevent.h"
@@ -91,8 +89,8 @@ ConVar spec_freeze_cinematiclight_b( "spec_freeze_cinematiclight_b", "1.0", FCVA
 ConVar spec_freeze_cinematiclight_scale( "spec_freeze_cinematiclight_scale", "2.0", FCVAR_CHEAT );
 
 ConVar cl_crosshair_sniper_width( "cl_crosshair_sniper_width", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If >1 sniper scope cross lines gain extra width (1 for single-pixel hairline)" );
-
 ConVar cl_ragdoll_physics_enable( "cl_ragdoll_physics_enable", "1", 0, "Enable/disable ragdoll physics." );
+ConVar cl_disable_shooting_effects( "cl_disable_shooting_effects", "0", FCVAR_ARCHIVE );
 
 ConVar fov_cs_debug( "fov_cs_debug", "0", FCVAR_CHEAT, "Sets the view fov if cheats are on." );
 
@@ -157,27 +155,27 @@ CUtlVector<EHANDLE> g_SmokeGrenadeHandles;
 
 void AddSmokeGrenadeHandle( EHANDLE hGrenade )
 {
- 	for ( int i = 0; i < g_SmokeGrenadeHandles.Count(); i++ )
- 	{
- 		if ( g_SmokeGrenadeHandles[i] && g_SmokeGrenadeHandles[i] == hGrenade )
- 		{
- 			return;
- 		}
- 	}
- 
- 	g_SmokeGrenadeHandles.AddToTail( hGrenade );
- }
- 
+	for ( int i = 0; i < g_SmokeGrenadeHandles.Count(); i++ )
+	{
+		if ( g_SmokeGrenadeHandles[i] && g_SmokeGrenadeHandles[i] == hGrenade )
+		{
+			return;
+		}
+	}
+
+	g_SmokeGrenadeHandles.AddToTail( hGrenade );
+}
+
 void RemoveSmokeGrenadeHandle( EHANDLE hGrenade )
 {
- 	for ( int i = 0; i < g_SmokeGrenadeHandles.Count(); i++ )
- 	{
- 		if ( g_SmokeGrenadeHandles[i] && g_SmokeGrenadeHandles[i] == hGrenade )
- 		{
- 			g_SmokeGrenadeHandles.FastRemove( i );
- 			break;
- 		}
- 	}
+	for ( int i = 0; i < g_SmokeGrenadeHandles.Count(); i++ )
+	{
+		if ( g_SmokeGrenadeHandles[i] && g_SmokeGrenadeHandles[i] == hGrenade )
+		{
+			g_SmokeGrenadeHandles.FastRemove( i );
+			break;
+		}
+	}
 }
 
 bool LineGoesThroughSmoke( Vector from, Vector to, bool grenadeBloat )
@@ -343,10 +341,10 @@ private:
 	EHANDLE	m_hControlledPlayer;
 	CNetworkVector( m_vecRagdollVelocity );
 	CNetworkVector( m_vecRagdollOrigin );
-	CNetworkVar(int, m_iDeathPose );
-	CNetworkVar(int, m_iDeathFrame );
-	CNetworkVar(float, m_flDeathYaw );
-	CNetworkVar(float, m_flAbsYaw );
+	CNetworkVar( int, m_iDeathPose );
+	CNetworkVar( int, m_iDeathFrame );
+	CNetworkVar( float, m_flDeathYaw );
+	CNetworkVar( float, m_flAbsYaw );
 	float m_flRagdollSinkStart;
 	bool m_bInitialized;
 	bool m_bCreatedWhilePlaybackSkipping;
@@ -798,8 +796,8 @@ void C_CSRagdoll::CreateCSRagdoll()
 void C_CSRagdoll::CreateGlovesModel()
 {
 	C_CSPlayer *pPlayer = dynamic_cast< C_CSPlayer* >(m_hControlledPlayer.Get());
- 	if ( !pPlayer )
- 		pPlayer = dynamic_cast< C_CSPlayer* >(m_hPlayer.Get());
+	if ( !pPlayer )
+		pPlayer = dynamic_cast< C_CSPlayer* >(m_hPlayer.Get());
 	if ( !pPlayer )
 		return;
 
@@ -1011,33 +1009,27 @@ void __MsgFunc_ReloadEffect( bf_read &msg )
 USER_MESSAGE_REGISTER( ReloadEffect );
 
 BEGIN_RECV_TABLE_NOBASE( C_CSPlayer, DT_CSLocalPlayerExclusive )
+	RecvPropVectorXY( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
+	RecvPropFloat( RECVINFO_NAME( m_vecNetworkOrigin[2], m_vecOrigin[2] ) ),
+
 	RecvPropFloat( RECVINFO(m_flStamina) ),
 	RecvPropInt( RECVINFO( m_iDirection ) ),
 	RecvPropInt( RECVINFO( m_iShotsFired ) ),
-	RecvPropFloat( RECVINFO( m_flVelocityModifier ) ),
 	RecvPropBool( RECVINFO( m_bDuckOverride ) ),
+	RecvPropFloat( RECVINFO( m_flVelocityModifier ) ),
 
-	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
-
-    //=============================================================================
-    // HPE_BEGIN:
     // [tj]Set up the receive table for per-client domination data
-    //=============================================================================
-
     RecvPropArray3( RECVINFO_ARRAY( m_bPlayerDominated ), RecvPropBool( RECVINFO( m_bPlayerDominated[0] ) ) ),
     RecvPropArray3( RECVINFO_ARRAY( m_bPlayerDominatingMe ), RecvPropBool( RECVINFO( m_bPlayerDominatingMe[0] ) ) ),
- 
- 	RecvPropArray3( RECVINFO_ARRAY( m_iWeaponPurchasesThisRound ), RecvPropInt( RECVINFO( m_iWeaponPurchasesThisRound[0] ) ) ),
 
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
+	RecvPropArray3( RECVINFO_ARRAY( m_iWeaponPurchasesThisRound ), RecvPropInt( RECVINFO( m_iWeaponPurchasesThisRound[0] ) ) ),
 
 END_RECV_TABLE()
 
 
 BEGIN_RECV_TABLE_NOBASE( C_CSPlayer, DT_CSNonLocalPlayerExclusive )
-	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
+	RecvPropVectorXY( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
+	RecvPropFloat( RECVINFO_NAME( m_vecNetworkOrigin[2], m_vecOrigin[2] ) ),
 END_RECV_TABLE()
 
 
@@ -1077,6 +1069,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropBool( RECVINFO( m_bMadeFinalGunGameProgressiveKill ) ),
 	RecvPropInt( RECVINFO( m_iGunGameProgressiveWeaponIndex ) ),
 	RecvPropInt( RECVINFO( m_iNumGunGameTRKillPoints ) ),
+	RecvPropInt( RECVINFO( m_NumEnemiesKilledThisRound ) ),
 	RecvPropFloat( RECVINFO( m_fImmuneToDamageTime ) ),
 	RecvPropBool( RECVINFO( m_bImmunity ) ),
 	RecvPropInt( RECVINFO( m_iLastZoom ) ),
@@ -1249,14 +1242,14 @@ C_CSPlayer::~C_CSPlayer()
 		m_PlayerAnimStateCSGO->Release();
 
 	for ( int i = 0; i < MAX_VIEWMODELS; ++i )
- 	{
- 		C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>(GetViewModel( i ));
- 		if ( pViewModel )
- 		{
- 			pViewModel->RemoveViewmodelArmModels();
- 			pViewModel->RemoveViewmodelStatTrak();
- 		}
- 	}
+	{
+		C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>(GetViewModel( i ));
+		if ( pViewModel )
+		{
+			pViewModel->RemoveViewmodelArmModels();
+			pViewModel->RemoveViewmodelStatTrak();
+		}
+	}
 }
 
 
@@ -2053,7 +2046,6 @@ void C_CSPlayer::CreateAddonModel( int i )
 	{
 		pEnt->SetBodygroup( pEnt->FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
 	}
-	
 
 	// Create the addon.
 	CAddonModel *pAddon = &m_AddonModels[m_AddonModels.AddToTail()];
@@ -2079,7 +2071,7 @@ void C_CSPlayer::CreateAddonModel( int i )
 	}
 
 	pEnt->SetMoveType( MOVETYPE_NONE );
- 	pEnt->SetModelScale( flScale );
+	pEnt->SetModelScale( flScale );
 	if ( IsLocalPlayer() )
 	{
 		pEnt->SetSolid( SOLID_NONE );
@@ -2357,19 +2349,19 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	else if ( Q_strcmp( name, "cs_pre_restart" ) == 0 )
 	{
 		CLocalPlayerFilter filter;
- 		if ( CSGameRules()->IsPlayingGunGame() )
+		if ( CSGameRules()->IsPlayingGunGame() )
 		{
 			if ( IsLocalPlayer() )
- 			{
- 				PlayMusicSelection( filter, CSMUSIC_STARTGG );
- 			}
+			{
+				PlayMusicSelection( filter, CSMUSIC_STARTGG );
+			}
 		}
 		else
- 		{
- 			if ( GetTeamNumber() == TEAM_SPECTATOR || IsLocalPlayer() )
- 			{
- 				PlayMusicSelection( filter, CSMUSIC_START );
- 			}
+		{
+			if ( GetTeamNumber() == TEAM_SPECTATOR || IsLocalPlayer() )
+			{
+				PlayMusicSelection( filter, CSMUSIC_START );
+			}
 
 			SetCurrentMusic( CSMUSIC_START );
 		}
@@ -2419,9 +2411,9 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			m_iTargetedWeaponEntIndex = 0;
 
 			m_nLastKillerDamageTaken = 0;
- 			m_nLastKillerHitsTaken = 0;
- 			m_nLastKillerDamageGiven = 0;
- 			m_nLastKillerHitsGiven = 0;
+			m_nLastKillerHitsTaken = 0;
+			m_nLastKillerDamageGiven = 0;
+			m_nLastKillerHitsGiven = 0;
 
 			UpdateAddonModels( true );
 
@@ -2438,6 +2430,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 				m_PlayerAnimStateCSGO->Reset();
 			}
 		}
+
 	}
 	else if ( Q_strcmp( "ggprogressive_player_levelup", name ) == 0 )
 	{
@@ -2451,16 +2444,16 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 		}
 	}
 	else if ( Q_strcmp( "gg_player_impending_upgrade", name ) == 0 )
- 	{
- 		// Let the local player know a level-up is impending
- 		if ( GetUserID() == EventUserID )
- 		{
- 			// Play level-up gun game sound
- 			C_RecipientFilter filter;
- 			filter.AddRecipient( this );
- 			C_BaseEntity::EmitSound( filter, entindex(), "GunGameWeapon.ImpendingLevelUp" );
- 		}
- 	}
+	{
+		// Let the local player know a level-up is impending
+		if ( GetUserID() == EventUserID )
+		{
+			// Play level-up gun game sound
+			C_RecipientFilter filter;
+			filter.AddRecipient( this );
+			C_BaseEntity::EmitSound( filter, entindex(), "GunGameWeapon.ImpendingLevelUp" );
+		}
+	}
 	else if ( Q_strcmp( "gg_killed_enemy", name ) == 0 )
 	{
 		if ( CSGameRules()->IsPlayingGunGame() )
@@ -2468,18 +2461,18 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			if ( pLocalPlayer && pLocalPlayer->GetUserID() == event->GetInt( "attackerid" ) )
 			{
 				if ( event->GetInt( "bonus" ) != 0 )
- 				{
- 					C_RecipientFilter filter;
- 					filter.AddRecipient( this );
- 					C_BaseEntity::EmitSound( filter, entindex(), "UI.DeathMatchBonusKill" );
- 				}
- 				else if ( CSGameRules()->IsPlayingGunGameDeathmatch() || CSGameRules()->IsPlayingGunGameProgressive() )
- 				{
- 					// Play level-up gun game sound because it's a better kill sound than the default one.
- 					C_RecipientFilter filter;
- 					filter.AddRecipient( this );
- 					C_BaseEntity::EmitSound( filter, entindex(), "GunGameWeapon.ImpendingLevelUp" );
- 				}
+				{
+					C_RecipientFilter filter;
+					filter.AddRecipient( this );
+					C_BaseEntity::EmitSound( filter, entindex(), "UI.DeathMatchBonusKill" );
+				}
+				else if ( CSGameRules()->IsPlayingGunGameDeathmatch() || CSGameRules()->IsPlayingGunGameProgressive() )
+				{
+					// Play level-up gun game sound because it's a better kill sound than the default one.
+					C_RecipientFilter filter;
+					filter.AddRecipient( this );
+					C_BaseEntity::EmitSound( filter, entindex(), "GunGameWeapon.ImpendingLevelUp" );
+				}
 			}
 		}
 	}
@@ -2508,56 +2501,56 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 		}
 	}
 	else if ( Q_strcmp( "item_equip", name ) == 0 )
- 	{
- 		// We only update the view model for the local player.
- 		if ( pLocalPlayer && pLocalPlayer->GetUserID() == EventUserID )
- 		{
- 			for ( int i = 0; i < MAX_VIEWMODELS; ++i )
- 			{
- 				C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>(GetViewModel( i ));
- 				if ( pViewModel )
- 				{
- 					// Update the StatTrak module
- 					pViewModel->RemoveViewmodelStatTrak();
- 				}
- 			}
- 		}
- 	}
+	{
+		// We only update the view model for the local player.
+		if ( pLocalPlayer && pLocalPlayer->GetUserID() == EventUserID )
+		{
+			for ( int i = 0; i < MAX_VIEWMODELS; ++i )
+			{
+				C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>(GetViewModel( i ));
+				if ( pViewModel )
+				{
+					// Update the StatTrak module
+					pViewModel->RemoveViewmodelStatTrak();
+				}
+			}
+		}
+	}
 }
 
 static void ClientBuyHelperForwardToServer( char const *szCommand, char const *szParam )
- {
- 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
- 	if ( !pPlayer )
- 		return;
- 
- 	if ( engine->IsHLTV() )
- 		return;
- 
- 	if ( !szParam )
- 	{
- 		// just forward the command without parameters
- 		engine->ServerCmd( szCommand );
- 	}
- 	else
- 	{
- 		// forward the command with parameter
- 		char command[ 256 ] = {};
- 		Q_snprintf( command, sizeof( command ), "%s \"%s\"", szCommand, szParam );
- 		engine->ServerCmd( command );
- 	}
- }
- 
- CON_COMMAND_F( autobuy, "Attempt to purchase items with the order listed in cl_autobuy", FCVAR_CLIENTCMD_CAN_EXECUTE )
- {
- 	extern ConVar cl_autobuy;
- 	ClientBuyHelperForwardToServer( "autobuy", cl_autobuy.GetString() );
- }
- CON_COMMAND_F( rebuy, "Attempt to repurchase items with the order listed in cl_rebuy", FCVAR_CLIENTCMD_CAN_EXECUTE )
- {
- 	extern ConVar cl_rebuy;
- 	ClientBuyHelperForwardToServer( "rebuy", cl_rebuy.GetString() );
- }
+{
+	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( !pPlayer )
+		return;
+
+	if ( engine->IsHLTV() )
+		return;
+
+	if ( !szParam )
+	{
+		// just forward the command without parameters
+		engine->ServerCmd( szCommand );
+	}
+	else
+	{
+		// forward the command with parameter
+		char command[ 256 ] = {};
+		Q_snprintf( command, sizeof( command ), "%s \"%s\"", szCommand, szParam );
+		engine->ServerCmd( command );
+	}
+}
+
+CON_COMMAND_F( autobuy, "Attempt to purchase items with the order listed in cl_autobuy", FCVAR_CLIENTCMD_CAN_EXECUTE )
+{
+	extern ConVar cl_autobuy;
+	ClientBuyHelperForwardToServer( "autobuy", cl_autobuy.GetString() );
+}
+CON_COMMAND_F( rebuy, "Attempt to repurchase items with the order listed in cl_rebuy", FCVAR_CLIENTCMD_CAN_EXECUTE )
+{
+	extern ConVar cl_rebuy;
+	ClientBuyHelperForwardToServer( "rebuy", cl_rebuy.GetString() );
+}
 
 CON_COMMAND_F( dm_togglerandomweapons, "Turns random weapons in deathmatch on/off", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_SERVER_CAN_EXECUTE )
 {
@@ -3406,7 +3399,7 @@ void C_CSPlayer::ProcessMuzzleFlashEvent()
 	{
 		// also don't show in 1st person spec mode
 		if ( pLocalPlayer->GetObserverTarget() == this )
-			return;
+		return;
 	}
 
 	CWeaponCSBase *pWeapon = GetActiveCSWeapon();
@@ -3797,7 +3790,6 @@ void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Qu
 	
 	if ( !IsVisible() || (IsLocalPlayer() && !C_BasePlayer::ShouldDrawLocalPlayer()) || !ShouldDraw() )
 		return;
-
 	mstudioikchain_t *pLeftArmChain = NULL;
 
 	int nLeftHandBoneIndex = LookupBone( "hand_L" );
@@ -3811,8 +3803,8 @@ void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Qu
 		{
 			pLeftArmChain = pchain;
 			break;
- 		}
- 	}
+		}
+	}
 
 	int nLeftHandIkBoneDriver = LookupBone( "lh_ik_driver" );
 	if ( nLeftHandIkBoneDriver > 0 && pos[nLeftHandIkBoneDriver].x > 0 )
@@ -4820,17 +4812,17 @@ bool C_CSPlayer::HasPlayerAsFriend(C_CSPlayer* player)
 bool C_CSPlayer::IsPlayerDominated( int iPlayerIndex )
 {
 	if ( CSGameRules()->IsPlayingGunGame() )
- 		return m_bPlayerDominated.Get( iPlayerIndex );
- 
- 	return false;
+		return m_bPlayerDominated.Get( iPlayerIndex );
+
+	return false;
 }
 
 bool C_CSPlayer::IsPlayerDominatingMe( int iPlayerIndex )
 {
 	if ( CSGameRules()->IsPlayingGunGame() )
- 		return m_bPlayerDominatingMe.Get( iPlayerIndex );
- 
- 	return false;
+		return m_bPlayerDominatingMe.Get( iPlayerIndex );
+
+	return false;
 }
 
 
@@ -5198,3 +5190,4 @@ void C_CSPlayer::CalcDeathCamView( Vector& eyeOrigin, QAngle& eyeAngles, float& 
 //=============================================================================
 // HPE_END
 //=============================================================================
+

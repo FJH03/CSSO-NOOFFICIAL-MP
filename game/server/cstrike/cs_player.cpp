@@ -443,6 +443,7 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropBool( SENDINFO( m_bMadeFinalGunGameProgressiveKill ) ),
 	SendPropInt( SENDINFO( m_iGunGameProgressiveWeaponIndex ), 32, SPROP_UNSIGNED | SPROP_CHANGES_OFTEN ),
 	SendPropInt( SENDINFO( m_iNumGunGameTRKillPoints ) ),
+	SendPropInt( SENDINFO( m_NumEnemiesKilledThisRound ) ),
 	SendPropFloat( SENDINFO( m_fImmuneToDamageTime ) ),
 	SendPropBool( SENDINFO( m_bImmunity ) ),
 	SendPropInt( SENDINFO( m_iLastZoom ), 8, SPROP_UNSIGNED ),

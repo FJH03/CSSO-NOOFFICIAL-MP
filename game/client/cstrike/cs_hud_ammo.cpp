@@ -16,6 +16,7 @@
 #include <vgui_controls/EditablePanel.h>
 #include <vgui_controls/Label.h>
 #include <vgui_controls/VectorImagePanel.h>
+#include <vgui_controls/ImagePanel.h>
 
 #include "c_cs_player.h"
 #include "cs_client_gamestats.h"
@@ -49,6 +50,8 @@ private:
 	Label				*m_pPrimaryAmmoLabel;
 	Label				*m_pPrimaryReserveAmmoLabel;
 	Label				*m_pStatTrakCounter;
+	Label				*m_pKillCounter;
+	ImagePanel			*m_pKillCounterImage;
 	VectorImagePanel	*m_pBulletIcon;
 	VectorImagePanel	*m_pExhaustibleWeaponIcon;
 	VectorImagePanel	*m_pBurstIcon;
@@ -90,9 +93,11 @@ CHudAmmo::CHudAmmo( const char *pElementName ): CHudElement( pElementName ), Edi
 
 	m_pActiveWeapon = NULL;
 
-	m_pPrimaryAmmoLabel = new Label( this, "PrimaryAmmoLabel", "10" );
-	m_pPrimaryReserveAmmoLabel = new Label( this, "PrimaryReserveAmmoLabel", "/ 20" );
-	m_pStatTrakCounter = new Label( this, "StatTrakCounter", "0" );
+	m_pPrimaryAmmoLabel = new Label( this, "PrimaryAmmoLabel", L"10" );
+	m_pPrimaryReserveAmmoLabel = new Label( this, "PrimaryReserveAmmoLabel", L"/ 20" );
+	m_pStatTrakCounter = new Label( this, "StatTrakCounter", L"0" );
+	m_pKillCounter = new Label( this, "KillCounter", L"x0" );
+	m_pKillCounterImage = new ImagePanel( this, "KillCounterImage" );
 	m_pBulletIcon = new VectorImagePanel( this, "BulletIcon" );
 	m_pExhaustibleWeaponIcon = new VectorImagePanel( this, "ExhaustibleWeaponIcon" );
 	m_pBurstIcon = new VectorImagePanel( this, "BurstIcon" );
@@ -255,6 +260,8 @@ void CHudAmmo::OnThink()
 		if ( bWeaponChanged )
 			m_pExhaustibleWeaponIcon->SetTexture( UTIL_VarArgs( "materials/vgui/weapons/svg/%s.svg", pWeapon->GetClassname() + 7 ) );
 	}
+
+	wchar_t wszString[8];
 	if ( pWeapon->HasStatTrak() )
 	{
 		int iStatTrakCounter = 0;
@@ -269,11 +276,10 @@ void CHudAmmo::OnThink()
 
 		if ( iStatTrakCounter > 0 )
 		{
-			wchar_t wszStatTrakCounter[8];
-			V_snwprintf( wszStatTrakCounter, sizeof( wszStatTrakCounter ), L"%d", iStatTrakCounter );
+			V_snwprintf( wszString, sizeof( wszString ), L"%d", iStatTrakCounter );
 
 			wchar_t wszLocalized[32];
-			g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_StatTrak" ), 1, wszStatTrakCounter );
+			g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_StatTrak" ), 1, wszString );
 
 			m_pStatTrakCounter->SetText( wszLocalized );
 			m_pStatTrakCounter->SetVisible( true );
@@ -286,5 +292,19 @@ void CHudAmmo::OnThink()
 	else
 	{
 		m_pStatTrakCounter->SetVisible( false );
+	}
+
+	int iNumRoundKills = pPlayer->GetNumRoundKills();
+	if ( iNumRoundKills > 0 )
+	{
+		V_snwprintf( wszString, sizeof( wszString ), L"x%d", iNumRoundKills );
+		m_pKillCounter->SetText( wszString );
+		m_pKillCounter->SetVisible( true );
+		m_pKillCounterImage->SetVisible( true );
+	}
+	else
+	{
+		m_pKillCounter->SetVisible( false );
+		m_pKillCounterImage->SetVisible( false );
 	}
 }

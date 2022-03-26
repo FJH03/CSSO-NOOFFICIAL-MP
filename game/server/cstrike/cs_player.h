@@ -1118,7 +1118,7 @@ public:
 
 	int m_NumEnemiesKilledThisSpawn;
 	int m_maxNumEnemiesKillStreak;
-	int m_NumEnemiesKilledThisRound;
+	CNetworkVar( int, m_NumEnemiesKilledThisRound );
 	int m_NumEnemiesAtRoundStart;
 	int m_KillingSpreeStartTime;
 
