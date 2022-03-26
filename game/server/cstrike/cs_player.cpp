@@ -10800,6 +10800,24 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			pAttacker->GiveNamedItem( "weapon_healthshot" );
 		}
 
+		if ( CSGameRules()->IsPlayingGunGameProgressive() && pAttacker->m_NumEnemiesKilledThisSpawn > 1 )
+		{
+			char strStreak[64];
+			Q_snprintf( strStreak, sizeof( strStreak ), "%d", pAttacker->m_NumEnemiesKilledThisSpawn );
+			if ( pAttacker->m_NumEnemiesKilledThisSpawn >= 4 )
+			{
+				pAttacker->Radio( "OnARollBrag" );
+
+				ClientPrint( pAttacker, HUD_PRINTCENTER, "#Player_Killing_Spree_more", strStreak );
+
+				CRecipientFilter filter;
+				filter.AddAllPlayers();
+				filter.MakeReliable();
+				CFmtStr fmtEntName( "#ENTNAME[%d]%s", pAttacker->entindex(), pAttacker->GetPlayerName() );
+				UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#Player_On_Killing_Spree", fmtEntName.Access(), strStreak );
+			}
+		}
+
 		//store a list of kill times for spree tracking
 		pAttacker->m_killTimes.AddToTail(gpGlobals->curtime);
 
