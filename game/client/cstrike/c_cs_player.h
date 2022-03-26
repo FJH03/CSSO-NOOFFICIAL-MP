@@ -440,7 +440,7 @@ public:
 	CNetworkVar( bool, m_bMadeFinalGunGameProgressiveKill );
 	CNetworkVar( int, m_iGunGameProgressiveWeaponIndex ); // index of current gun game weapon
 	CNetworkVar( int, m_iNumGunGameTRKillPoints );	// number of kill points accumulated so far in TR Gun Game mode (resets to 0 when weapon is upgraded)
-	CNetworkVar( int, m_NumEnemiesKilledThisRound );	// number of kills a player has gotten in a round
+	CNetworkVar( int, m_NumEnemiesKilledThisSpawn );	// number of kills a player has gotten without dying
 	CNetworkVar( bool, m_bInBombZone );
 	CNetworkVar( bool, m_bInBuyZone );
 	CNetworkVar( bool, m_bInNoDefuseArea );
@@ -534,7 +534,7 @@ public:
 	int GetPlayerGunGameWeaponIndex( void ) { return m_iGunGameProgressiveWeaponIndex; }
 	int GetNumGunGameTRKillPoints( void ) { return m_iNumGunGameTRKillPoints; }
 
-	int GetNumRoundKills( void ) { return m_NumEnemiesKilledThisRound; }
+	int GetNumKillsThisSpawn( void ) { return m_NumEnemiesKilledThisSpawn; }
 
 	bool IsAbleToInstantRespawn( void );
 

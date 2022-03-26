@@ -294,10 +294,10 @@ void CHudAmmo::OnThink()
 		m_pStatTrakCounter->SetVisible( false );
 	}
 
-	int iNumRoundKills = pPlayer->GetNumRoundKills();
-	if ( iNumRoundKills > 0 )
+	int iNumKills = pPlayer->GetNumKillsThisSpawn();
+	if ( iNumKills > 0 )
 	{
-		V_snwprintf( wszString, sizeof( wszString ), L"x%d", iNumRoundKills );
+		V_snwprintf( wszString, sizeof( wszString ), L"x%d", iNumKills );
 		m_pKillCounter->SetText( wszString );
 		m_pKillCounter->SetVisible( true );
 		m_pKillCounterImage->SetVisible( true );

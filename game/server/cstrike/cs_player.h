@@ -1129,9 +1129,9 @@ public:
 	//List of weapons we have used to kill players with this round
 	CUtlVector<int>				m_killWeapons; 
 
-	int m_NumEnemiesKilledThisSpawn;
+	CNetworkVar( int, m_NumEnemiesKilledThisSpawn );
 	int m_maxNumEnemiesKillStreak;
-	CNetworkVar( int, m_NumEnemiesKilledThisRound );
+	int m_NumEnemiesKilledThisRound;
 	int m_NumEnemiesAtRoundStart;
 	int m_KillingSpreeStartTime;
 

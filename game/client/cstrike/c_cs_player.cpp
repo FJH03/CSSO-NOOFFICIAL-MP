@@ -1070,7 +1070,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropBool( RECVINFO( m_bMadeFinalGunGameProgressiveKill ) ),
 	RecvPropInt( RECVINFO( m_iGunGameProgressiveWeaponIndex ) ),
 	RecvPropInt( RECVINFO( m_iNumGunGameTRKillPoints ) ),
-	RecvPropInt( RECVINFO( m_NumEnemiesKilledThisRound ) ),
+	RecvPropInt( RECVINFO( m_NumEnemiesKilledThisSpawn ) ),
 	RecvPropFloat( RECVINFO( m_fImmuneToDamageTime ) ),
 	RecvPropBool( RECVINFO( m_bImmunity ) ),
 	RecvPropInt( RECVINFO( m_iLastZoom ) ),
