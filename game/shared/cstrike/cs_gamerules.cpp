@@ -2939,6 +2939,15 @@ ConVar snd_music_selection(
 	
 	void CCSGameRules::ClientDisconnected( edict_t *pClient )
 	{
+		// [vitaliy] Players who disconnect while alive and reconnect in competitive mode before the end of the round will not receive win money just like suicide
+		if ( CCSPlayer *pPlayer = ToCSPlayer( GetContainingEntity( pClient ) ) )
+		{
+			if ( pPlayer->IsAlive() )
+			{
+				pPlayer->ProcessSuicideAsKillReward();
+			}
+		}
+
 		BaseClass::ClientDisconnected( pClient );
 
         // [tj] Clear domination data when a player disconnects
@@ -5406,7 +5415,7 @@ ConVar snd_music_selection(
 		if ( pPlayer )
 		{
 			pPlayer->AddContributionScore( contributionscore_suicide.GetInt() );
-			//pPlayer->ProcessSuicideAsKillReward();
+			pPlayer->ProcessSuicideAsKillReward();
 		}
 	}
 

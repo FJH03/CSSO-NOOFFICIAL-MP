@@ -432,6 +432,7 @@ public:
 
 	// Add money to this player's account.
 	void AddAccount( int amount, bool bTrackChange=true, bool bItemBought=false, const char *pItemName = NULL );
+	bool AreAccountAwardsEnabled() const;
 	void AddAccountAward( int reason );
 	void AddAccountAward( int reason, int amount, const CWeaponCSBase *pWeapon = NULL );
 	void AddAccountFromTeam( int amount, bool bTrackChange, TeamCashAward::Type reason );
@@ -445,6 +446,7 @@ public:
 	float m_flLastAttackedTeammate;
 
 	// mark this player as not receiving money at the start of the next round.
+	void ProcessSuicideAsKillReward();
 	void MarkAsNotReceivingMoneyNextRound();
 	bool DoesPlayerGetRoundStartMoney(); // self-explanitory :)
 

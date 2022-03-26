@@ -4188,6 +4188,19 @@ void CCSPlayer::HintMessage( const char *pMessage, bool bDisplayIfDead, bool bOv
 		m_pHintMessageQueue->AddMessage( pMessage );
 }
 
+bool CCSPlayer::AreAccountAwardsEnabled() const
+{
+	// no awards in the warmup period
+	if ( CSGameRules() && CSGameRules()->IsWarmupPeriod() )
+		return false;
+
+	// cash awards for individual actions must be enabled for this game mode
+	if ( !mp_playercashawards.GetBool() )
+		return false;
+
+	return true;
+}
+
 void CCSPlayer::AddAccountAward( int reason )
 {
 	// we don't want to award a bot money that is being controlled by a player because the player is currently storing the bots money
@@ -4199,12 +4212,7 @@ void CCSPlayer::AddAccountAward( int reason )
 
 void CCSPlayer::AddAccountAward( int reason, int amount, const CWeaponCSBase *pWeapon )
 {
-	// no awards in the warmup period
-	if ( CSGameRules()->IsWarmupPeriod() )
-		return;
-
-	// cash awards for individual actions must be enabled for this game mode
-	if ( !mp_playercashawards.GetBool() )
+	if ( !AreAccountAwardsEnabled() )
 		return;
 
 	if ( amount == 0 )
@@ -4355,6 +4363,125 @@ int CCSPlayer::AddDeathmatchKillScore( int nScore, CSWeaponID wepID, bool bIsAss
 void CCSPlayer::MarkAsNotReceivingMoneyNextRound()
 {
 	m_receivesMoneyNextRound = false;
+}
+
+void CCSPlayer::ProcessSuicideAsKillReward()
+{
+	// Don't give any rewards during warmup period or freezetime aka buytime
+	// If any human disconnects during buytime then a bot will replace their vacant spot on the team
+	// so enemies will have fodder to kill and get a kill reward
+	if ( CCSGameRules *pCSGameRules = CSGameRules() )
+	{
+		if ( pCSGameRules->IsWarmupPeriod() )
+			return;
+		if ( pCSGameRules->IsFreezePeriod() )
+			return;
+	}
+
+	// Find alive players on the enemy team and give them maximum possible kill reward
+	// tie break by an enemy player with the lowest amount of money
+	int myteam = GetTeamNumber();
+	int team = myteam;
+	switch ( team )
+	{
+	case TEAM_TERRORIST:
+		team = TEAM_CT;
+		break;
+	case TEAM_CT:
+		team = TEAM_TERRORIST;
+		break;
+	default:
+		return;
+	}
+
+	// Best bonus enemy
+	CCSPlayer *pBestEnemy = NULL;
+	int numBestBonusMoney = 0;
+	
+	// Look at alive players on the team
+	for ( int nAttempt = 0; ( nAttempt < 3 ) && !pBestEnemy; ++ nAttempt )
+	{
+		for ( int playerNum = 1; playerNum <= gpGlobals->maxClients; ++playerNum )
+		{
+			CCSPlayer *player = ( CCSPlayer * ) UTIL_PlayerByIndex( playerNum );
+			if ( !player )
+				continue;
+			if ( !player->IsAlive() )
+				continue;
+			if ( player->GetTeamNumber() != team )
+				continue;
+			if ( !player->AreAccountAwardsEnabled() )
+				continue;
+			if ( ( nAttempt < 2 ) && player->IsControllingBot() )
+				continue;
+			if ( ( nAttempt < 1 ) && player->IsBot() )
+				continue;
+
+			// Let's see which guns this player has?
+			extern ConVar cash_player_killed_enemy_default;
+			int numBonusMoney = cash_player_killed_enemy_default.GetInt();
+			int arrSlots[] = { WEAPON_SLOT_RIFLE, WEAPON_SLOT_PISTOL };
+			for ( int k = 0; k < Q_ARRAYSIZE( arrSlots ); ++k )
+			{
+				CBaseCombatWeapon *pWpn = player->Weapon_GetSlot( arrSlots[ k ] );
+				CWeaponCSBase *pWpnCsBase = dynamic_cast< CWeaponCSBase * >( pWpn );
+				if ( !pWpnCsBase ) continue;
+
+				int numWpnKillAward = pWpnCsBase->GetKillAward();
+				if ( numWpnKillAward > numBonusMoney )
+					numBonusMoney = numWpnKillAward;
+			}
+
+			// See if this is a better player to reward?
+			if ( ( numBonusMoney > numBestBonusMoney ) ||
+				( ( numBonusMoney == numBestBonusMoney ) && ( player->GetAccountBalance() < pBestEnemy->GetAccountBalance() ) ) )
+			{
+				pBestEnemy = player;
+				numBestBonusMoney = numBonusMoney;
+			}
+		}
+	}
+
+	// Give the player kill reward
+	extern ConVar cash_player_killed_enemy_factor;
+	int numDollarsEarned = RoundFloatToInt( numBestBonusMoney * cash_player_killed_enemy_factor.GetFloat() );
+	if ( pBestEnemy && ( numDollarsEarned > 0 ) )
+	{
+		pBestEnemy->AddAccountAward( PlayerCashAward::KILLED_ENEMY, numBestBonusMoney );
+
+		CFmtStr fmtDollarsEarned( "%u", numDollarsEarned );
+		ClientPrint( pBestEnemy, HUD_PRINTTALK, "#Player_Cash_Award_ExplainSuicide_YouGotCash", CFmtStr( "#ENTNAME[%d]%s", this->entindex(), this->GetPlayerName() ), fmtDollarsEarned.Get() );
+
+		// Notify all players about what just happened?
+		CRecipientFilter rfSuicidingTeam, rfGettingMoneyTeam;
+		rfSuicidingTeam.MakeReliable(); rfGettingMoneyTeam.MakeReliable();
+		for ( int playerNum = 1; playerNum <= gpGlobals->maxClients; ++playerNum )
+		{
+			CCSPlayer *player = ( CCSPlayer * ) UTIL_PlayerByIndex( playerNum );
+			if ( !player || ( player == pBestEnemy ) )
+				continue;
+			if ( player->GetTeamNumber() == myteam )
+			{
+				rfSuicidingTeam.AddRecipient( player );
+			}
+			else if ( player->GetTeamNumber() == team )
+			{
+				rfGettingMoneyTeam.AddRecipient( player );
+			}
+		}
+
+		UTIL_ClientPrintFilter( rfGettingMoneyTeam, HUD_PRINTTALK, "#Player_Cash_Award_ExplainSuicide_TeammateGotCash",
+			CFmtStr( "#ENTNAME[%d]%s", this->entindex(), this->GetPlayerName() ), fmtDollarsEarned.Get(),
+			CFmtStr( "#ENTNAME[%d]%s", pBestEnemy->entindex(), pBestEnemy->GetPlayerName() ) );
+		UTIL_ClientPrintFilter( rfSuicidingTeam, HUD_PRINTTALK, "#Player_Cash_Award_ExplainSuicide_EnemyGotCash",
+			CFmtStr( "#ENTNAME[%d]%s", this->entindex(), this->GetPlayerName() ) );
+
+		// Notify spectators
+		CTeamRecipientFilter teamfilter( TEAM_SPECTATOR, true );
+		UTIL_ClientPrintFilter( teamfilter, HUD_PRINTTALK, "#Player_Cash_Award_ExplainSuicide_Spectators",
+			CFmtStr( "#ENTNAME[%d]%s", this->entindex(), this->GetPlayerName() ), fmtDollarsEarned.Get(),
+			CFmtStr( "#ENTNAME[%d]%s", pBestEnemy->entindex(), pBestEnemy->GetPlayerName() ) );
+	}
 }
 
 bool CCSPlayer::DoesPlayerGetRoundStartMoney()
