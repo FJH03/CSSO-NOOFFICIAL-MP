@@ -27,6 +27,8 @@
 #include "tier0/memdbgon.h"
 
 static ConVar hud_deathnotice_time( "hud_deathnotice_time", "6", 0 );
+static ConVar hud_deathnotice_fade_time( "hud_deathnotice_fade_time", "0.5", 0 );
+static ConVar hud_deathnotice_scroll_time( "hud_deathnotice_scroll_time", "0.1", 0 );
 ConVar cl_show_clan_in_death_notice( "cl_show_clan_in_death_notice", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Is set, the clan name will show next to player names in the death notices." );
 extern ConVar mp_display_kill_assists;
 
@@ -46,7 +48,7 @@ struct DeathNoticeItem
 	DeathNoticePlayer   Assister;
 	CHudTexture *iconDeath;
 	bool		bSuicide;
-	float		flDisplayTime;
+	float		flTimeRemaining;
 	bool		bHeadshot;
 	bool		bNoScope;
 	bool		bBlind;
@@ -262,6 +264,14 @@ void CHudDeathNotice::Paint()
 		CHudTexture *icon = m_DeathNotices[i].iconDeath;
 		if ( !icon )
 			continue;
+
+		float flFadeTime = hud_deathnotice_fade_time.GetFloat();
+		float flAlpha = 1.0f;
+		float flOldAlpha = surface()->DrawGetAlphaMultiplier();
+		if ( m_DeathNotices[i].flTimeRemaining < flFadeTime )
+			flAlpha = flOldAlpha * clamp( m_DeathNotices[i].flTimeRemaining, 0.0f, flFadeTime ) / flFadeTime;
+
+		surface()->DrawSetAlphaMultiplier( flAlpha );
 		
 		int iLocalPlayerIndex = GetLocalPlayerIndex();
 		bool bKillerIsLocalPlayer = (m_DeathNotices[i].Killer.iEntIndex == iLocalPlayerIndex);
@@ -277,6 +287,14 @@ void CHudDeathNotice::Paint()
 		// Get the local position for this notice
 		int victimNameLen = UTIL_ComputeStringWidth( m_hTextFont, victim );
 		int y = yStart + ((m_iHeightMargin + m_iLineHeight) * i);
+
+		float flScrollTime = hud_deathnotice_scroll_time.GetFloat();
+		float flScroll = 0.0f;
+		if ( m_DeathNotices[i].flTimeRemaining < flScrollTime )
+		{
+			flScroll = 1.0f - clamp( m_DeathNotices[i].flTimeRemaining, 0.0f, flScrollTime ) / flScrollTime;
+			yStart -= ((m_iHeightMargin + m_iLineHeight) * flScroll);
+		}
 
 		int iconWide;
 		int iconTall;
@@ -427,6 +445,11 @@ void CHudDeathNotice::Paint()
 		surface()->DrawSetTextPos( x, y );
 		surface()->DrawSetTextFont( m_hTextFont );	//reset the font, draw icon can change it
 		surface()->DrawUnicodeString( victim );
+
+		surface()->DrawSetAlphaMultiplier( flOldAlpha );
+		m_DeathNotices[i].flTimeRemaining -= gpGlobals->frametime;
+		if ( m_DeathNotices[i].flTimeRemaining < 0.0f )
+			m_DeathNotices[i].flTimeRemaining = 0.0f;
 	}
 
 	// Now retire any death notices that have expired
@@ -442,7 +465,7 @@ void CHudDeathNotice::RetireExpiredDeathNotices( void )
 	int iSize = m_DeathNotices.Size();
 	for ( int i = iSize-1; i >= 0; i-- )
 	{
-		if ( m_DeathNotices[i].flDisplayTime < gpGlobals->curtime )
+		if ( m_DeathNotices[i].flTimeRemaining <= 0.0f )
 		{
 			m_DeathNotices.Remove(i);
 		}
@@ -570,7 +593,7 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	Q_wcsncpy( deathMsg.Killer.wszName, wszKillerName, MAX_DECORATED_PLAYER_NAME_LENGTH );
 	Q_wcsncpy( deathMsg.Victim.wszName, wszVictimName, MAX_DECORATED_PLAYER_NAME_LENGTH );
 	Q_wcsncpy( deathMsg.Assister.wszName, wszAssisterName, MAX_DECORATED_PLAYER_NAME_LENGTH );
-	deathMsg.flDisplayTime = gpGlobals->curtime + hud_deathnotice_time.GetFloat();
+	deathMsg.flTimeRemaining = hud_deathnotice_time.GetFloat();
 	deathMsg.bSuicide = ( !iKiller || iKiller == iVictim );
 	deathMsg.bHeadshot = headshot;
 	deathMsg.bNoScope = noscope;
