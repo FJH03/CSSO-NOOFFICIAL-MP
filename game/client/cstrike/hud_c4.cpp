@@ -12,6 +12,7 @@
 #include "cs_gamerules.h"
 #include "hud_numericdisplay.h"
 
+extern ConVar cl_draw_only_deathnotices;
 
 class CHudC4 : public CHudElement, public vgui::VectorImagePanel
 {
@@ -76,6 +77,9 @@ void CHudC4::OnThink()
 
 bool CHudC4::ShouldDraw()
 {
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 
 	// if we are spectating another player first person, check this player

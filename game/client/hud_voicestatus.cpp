@@ -18,6 +18,7 @@
 #include <vgui_controls/VectorImagePanel.h>
 
 ConVar *sv_alltalk = NULL;
+extern ConVar cl_draw_only_deathnotices;
 
 //=============================================================================
 // Icon for the local player using voice
@@ -66,6 +67,9 @@ void CHudVoiceDisabledPanel::OnThink()
 
 bool CHudVoiceDisabledPanel::ShouldDraw()
 {
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
 	static ConVarRef voice_enable( "voice_enable" );
 	return !voice_enable.GetBool() && CHudElement::ShouldDraw();
 }
@@ -314,6 +318,9 @@ void CHudVoiceStatus::OnThink( void )
 
 bool CHudVoiceStatus::ShouldDraw()
 {
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
 	if ( IsInFreezeCam() == true )
 		return false;
 

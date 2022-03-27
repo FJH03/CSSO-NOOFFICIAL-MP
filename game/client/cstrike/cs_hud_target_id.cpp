@@ -26,6 +26,7 @@ extern CUtlVector< C_CHostage* > g_Hostages;
 
 static ConVar hud_showtargetpos( "hud_showtargetpos", "0", FCVAR_ARCHIVE, "0: center, 1: upper left, 2 upper right, 3: lower left, 4: lower right" );
 static ConVar hud_showtargetid( "hud_showtargetid", "1", FCVAR_ARCHIVE, "Enables display of target names" );
+extern ConVar cl_draw_only_deathnotices;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -39,6 +40,7 @@ public:
 	void Init( void );
 	virtual void	ApplySchemeSettings( vgui::IScheme *scheme );
 	virtual void	Paint( void );
+	virtual bool	ShouldDraw();
 	void VidInit( void );
 
 private:
@@ -409,4 +411,12 @@ void CTargetID::Paint()
 			vgui::surface()->DrawPrintText( sIDString, wcslen(sIDString) );
 		}
 	}
+}
+
+bool CTargetID::ShouldDraw()
+{
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
+	return CHudElement::ShouldDraw();
 }

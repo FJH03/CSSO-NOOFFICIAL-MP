@@ -28,6 +28,7 @@ extern ConVar cl_hud_healthammo_style;
 extern ConVar cl_hud_background_alpha;
 extern ConVar cl_hud_color;
 extern ConVar loadout_stattrak;
+extern ConVar cl_draw_only_deathnotices;
 
 //-----------------------------------------------------------------------------
 // Purpose: Displays current ammunition level
@@ -43,6 +44,7 @@ public:
 	virtual void Reset( void );
 	virtual void OnThink();
 	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
+	virtual bool ShouldDraw();
 	
 private:
 	CHandle<C_WeaponCSBase>	m_pActiveWeapon;
@@ -307,4 +309,12 @@ void CHudAmmo::OnThink()
 		m_pKillCounter->SetVisible( false );
 		m_pKillCounterImage->SetVisible( false );
 	}
+}
+
+bool CHudAmmo::ShouldDraw()
+{
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
+	return CHudElement::ShouldDraw();
 }

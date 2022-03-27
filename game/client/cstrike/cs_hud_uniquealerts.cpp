@@ -27,6 +27,7 @@ using namespace vgui;
 #include "c_cs_player.h"
 
 extern ConVar mp_team_timeout_max;
+extern ConVar cl_draw_only_deathnotices;
 
 //-----------------------------------------------------------------------------
 // Purpose: Money panel
@@ -41,6 +42,7 @@ public:
 	virtual void OnThink();
 	virtual void FireGameEvent( IGameEvent *event );
 	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
+	virtual bool ShouldDraw();
 
 	// Display an alert in the 'alert text' area.  If 'oneShot' is true, will automatically hide.
 	// One-shot messages always flash on set, otherwise will only flash if the panel is coming from
@@ -300,4 +302,12 @@ void CHudUniqueAlerts::OnThink()
 		m_flNextAlertTick = gpGlobals->curtime + 1;
 		ProcessAlertBar();
 	}
+}
+
+bool CHudUniqueAlerts::ShouldDraw()
+{
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
+	return CHudElement::ShouldDraw();
 }

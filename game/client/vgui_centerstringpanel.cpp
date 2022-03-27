@@ -29,6 +29,7 @@
 #include "tier0/memdbgon.h"
 
 static ConVar		scr_centertime( "scr_centertime", "4" );
+extern ConVar cl_draw_only_deathnotices;
 
 static CNotificationPanel *g_NotificationPanel = NULL;
 
@@ -46,6 +47,7 @@ public:
 	// vgui::Panel
 	virtual void		OnThink( void );
 	virtual void		OnScreenSizeChanged( int iOldWide, int iOldTall );
+	virtual bool		ShouldDraw();
 
 	// CGameEventListener
 	virtual void		FireGameEvent( IGameEvent * event );
@@ -121,6 +123,14 @@ void CNotificationPanel::OnScreenSizeChanged( int iOldWide, int iOldTall )
 {
 	// reload the .res file so items are rescaled
 	LoadControlSettings( "resource/hud/notificationpanel.res" );
+}
+
+bool CNotificationPanel::ShouldDraw()
+{
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
+	return CHudElement::ShouldDraw();
 }
 
 //-----------------------------------------------------------------------------

@@ -35,6 +35,7 @@ public:
 	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void FireGameEvent( IGameEvent * event );
 	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
+	virtual bool ShouldDraw();
 
 	void Show();
 	void Hide();

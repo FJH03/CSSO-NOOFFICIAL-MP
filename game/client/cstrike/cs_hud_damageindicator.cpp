@@ -26,6 +26,8 @@ using namespace vgui;
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+extern ConVar cl_draw_only_deathnotices;
+
 //-----------------------------------------------------------------------------
 // Purpose: HDU Damage indication
 //-----------------------------------------------------------------------------
@@ -111,6 +113,9 @@ void CHudDamageIndicator::Init( void )
 //-----------------------------------------------------------------------------
 bool CHudDamageIndicator::ShouldDraw( void )
 {
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
 	if ( !CHudElement::ShouldDraw() )
 		return false;
 

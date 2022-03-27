@@ -39,6 +39,7 @@ ConVar cl_disablefreezecam(
 	);
 
 extern Color LerpColors( Color cStart, Color cEnd, float flPercent );
+extern ConVar cl_draw_only_deathnotices;
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
@@ -352,6 +353,9 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 //-----------------------------------------------------------------------------
 bool CCSFreezePanel::ShouldDraw( void )
 {
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
 	// [Forrest] Added sv_disablefreezecam check
 	static ConVarRef sv_disablefreezecam( "sv_disablefreezecam" );
 	return ( m_bShouldBeVisible && !cl_disablefreezecam.GetBool() && !sv_disablefreezecam.GetBool() && CHudElement::ShouldDraw() );

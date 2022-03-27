@@ -29,6 +29,7 @@ using namespace vgui;
 extern ConVar cl_hud_healthammo_style;
 extern ConVar cl_hud_background_alpha;
 extern ConVar cl_hud_color;
+extern ConVar cl_draw_only_deathnotices;
 
 namespace vgui
 {
@@ -166,6 +167,7 @@ public:
 	virtual void Reset( void );
 	virtual void OnThink();
 	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
+	virtual bool ShouldDraw();
 
 private:
 	int		m_iHealth;
@@ -386,4 +388,12 @@ void CHudHealthArmor::OnThink()
 	}
 
 	m_pHelmetIcon->SetVisible( pPlayer->HasHelmet() );
+}
+
+bool CHudHealthArmor::ShouldDraw()
+{
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
+	return CHudElement::ShouldDraw();
 }

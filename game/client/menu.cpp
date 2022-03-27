@@ -31,6 +31,8 @@ char g_szPrelocalisedMenuString[MAX_MENU_STRING];
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+extern ConVar cl_draw_only_deathnotices;
+
 //
 //-----------------------------------------------------
 //
@@ -125,6 +127,9 @@ void CHudMenu::OnThink()
 //-----------------------------------------------------------------------------
 bool CHudMenu::ShouldDraw( void )
 {
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
 	bool draw = CHudElement::ShouldDraw() && m_bMenuDisplayed;
 	if ( !draw )
 		return false;

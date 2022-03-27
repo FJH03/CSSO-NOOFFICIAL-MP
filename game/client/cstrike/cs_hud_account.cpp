@@ -29,6 +29,7 @@ using namespace vgui;
 extern ConVar cl_hud_background_alpha;
 extern ConVar mp_maxmoney;
 extern ConVar cl_hud_color;
+extern ConVar cl_draw_only_deathnotices;
 
 //-----------------------------------------------------------------------------
 // Purpose: Money panel
@@ -146,6 +147,9 @@ void CHudAccount::OnThink()
 
 bool CHudAccount::ShouldDraw()
 {
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
 	if ( mp_maxmoney.GetInt() <= 0 )
 		return false;
 

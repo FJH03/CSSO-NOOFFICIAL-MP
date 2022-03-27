@@ -60,6 +60,7 @@ extern ConVar overview_names;
 extern ConVar overview_tracks;
 extern ConVar overview_locked;
 extern ConVar overview_alpha;
+extern ConVar cl_draw_only_deathnotices;
 ConVar cl_radar_square( "cl_radar_square", "2", FCVAR_ARCHIVE, "0 - round radar, 1 - square radar, 2 - square when scoreboard is visible", true, 0, true, 2 );
 ConVar cl_radaralpha( "cl_radaralpha", "200", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, NULL, true, 0, true, 255 );
 ConVar cl_radar_rotate( "cl_radar_rotate", "1", FCVAR_ARCHIVE, "1" );
@@ -1144,6 +1145,9 @@ void CCSMapOverview::UpdateBomb()
 
 bool CCSMapOverview::ShouldDraw( void )
 {
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
 	int alpha = GetMasterAlpha();
 	if( alpha == 0 )
 		return false;// we have been set to fully transparent

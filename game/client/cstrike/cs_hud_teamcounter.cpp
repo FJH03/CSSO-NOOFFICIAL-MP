@@ -23,6 +23,7 @@
 using namespace vgui;
 
 ConVar hud_playercount_pos( "hud_playercount_pos", "0", FCVAR_ARCHIVE, "0 = default (top), 1 = bottom" );
+extern ConVar cl_draw_only_deathnotices;
 
 
 class CHudTeamCounter: public CHudElement, public EditablePanel
@@ -113,6 +114,9 @@ void CHudTeamCounter::Reset()
 
 bool CHudTeamCounter::ShouldDraw()
 {
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if ( !pPlayer )
 		return false;

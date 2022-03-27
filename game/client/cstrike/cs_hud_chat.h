@@ -48,6 +48,8 @@ class CHudChat : public CBaseHudChat
 public:
 	CHudChat( const char *pElementName );
 
+	virtual bool	ShouldDraw();
+
 	virtual void	CreateChatInputLine( void );
 	virtual void	CreateChatLines( void );
 

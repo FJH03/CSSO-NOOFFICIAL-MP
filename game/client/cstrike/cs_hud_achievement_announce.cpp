@@ -31,6 +31,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+extern ConVar cl_draw_only_deathnotices;
+
 DECLARE_HUDELEMENT_DEPTH( CCSAchievementAnnouncePanel, 1 );
 
 #define CALLOUT_WIDE		(XRES(100))
@@ -155,6 +157,9 @@ void CCSAchievementAnnouncePanel::Hide()
 
 bool CCSAchievementAnnouncePanel::ShouldDraw( void )
 {
+    if ( cl_draw_only_deathnotices.GetBool() )
+        return false;
+
 	return (m_bShouldBeVisible && CHudElement::ShouldDraw());
 }
 

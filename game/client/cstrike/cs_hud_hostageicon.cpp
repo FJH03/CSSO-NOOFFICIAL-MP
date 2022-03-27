@@ -16,6 +16,8 @@
 #include "c_cs_hostage.h"
 #include "c_plantedc4.h"
 
+extern ConVar cl_draw_only_deathnotices;
+
 #define HOSTAGE_ALIVE_ICON "materials/vgui/hud/svg/hostage_alive.svg"
 #define HOSTAGE_DEAD_ICON "materials/vgui/hud/svg/hostage_alive.svg"
 #define HOSTAGE_RESCUED_ICON "materials/vgui/hud/svg/hostage_rescued.svg"
@@ -29,6 +31,7 @@ public:
 	CHudScenarioHostageIcon( const char *name );
 	virtual void OnThink();
 	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
+	virtual bool ShouldDraw();
 
 	virtual void FireGameEvent( IGameEvent * event );
 
@@ -167,3 +170,12 @@ void CHudScenarioHostageIcon::OnThink()
 	else
 		m_pRescueZoneIcon->SetVisible( false );
 }
+
+bool CHudScenarioHostageIcon::ShouldDraw()
+{
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
+	return CHudElement::ShouldDraw();
+}
+

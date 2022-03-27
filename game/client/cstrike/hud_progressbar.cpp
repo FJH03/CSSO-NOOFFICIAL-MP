@@ -16,6 +16,8 @@
 #include "clientmode_csnormal.h"
 #include "vgui_borderprogress.h"
 
+extern ConVar cl_draw_only_deathnotices;
+
 class CHudProgressBar : public CHudElement, public vgui::EditablePanel
 {
 public:
@@ -57,6 +59,9 @@ CHudProgressBar::CHudProgressBar( const char *name ) :
 
 bool CHudProgressBar::ShouldDraw()
 {
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 
 	if( pPlayer && pPlayer->GetObserverMode() == OBS_MODE_IN_EYE )

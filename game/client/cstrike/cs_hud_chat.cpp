@@ -29,6 +29,8 @@ DECLARE_HUD_MESSAGE( CHudChat, SayText2 );
 DECLARE_HUD_MESSAGE( CHudChat, TextMsg );
 DECLARE_HUD_MESSAGE( CHudChat, RawAudio );
 
+extern ConVar cl_draw_only_deathnotices;
+
 
 //=====================
 //CHudChatLine
@@ -81,6 +83,14 @@ CHudChat::CHudChat( const char *pElementName ) : BaseClass( pElementName )
 	//=============================================================================
 	// HPE_END
 	//=============================================================================
+}
+
+bool CHudChat::ShouldDraw()
+{
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
+	return CHudElement::ShouldDraw();
 }
 
 void CHudChat::CreateChatInputLine( void )

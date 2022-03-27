@@ -10,6 +10,7 @@
 // The number of counter-strike HUD achievements to display
 const int cMaxCSHUDAchievments = 4;
 
+extern ConVar cl_draw_only_deathnotices;
 
 using namespace vgui;
 
@@ -23,6 +24,7 @@ public:
     virtual void PerformLayout();
     virtual int  GetMaxAchievementsShown();
     virtual bool ShouldShowAchievement( IAchievement *pAchievement );
+    virtual bool ShouldDraw();
 
 private:
     CPanelAnimationVarAliasType( int, m_iNormalY, "NormalY", "5", "proportional_int" );
@@ -65,4 +67,12 @@ bool CHudAchievementTracker::ShouldShowAchievement( IAchievement *pAchievement )
         return false;
 
     return true;
+}
+
+bool CHudAchievementTracker::ShouldDraw()
+{
+    if ( cl_draw_only_deathnotices.GetBool() )
+        return false;
+
+    return CHudElement::ShouldDraw();
 }

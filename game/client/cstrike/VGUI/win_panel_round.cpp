@@ -27,6 +27,7 @@ DECLARE_HUDELEMENT_DEPTH( WinPanel_Round, 1 );	// 1 is foreground
 extern const wchar_t *LocalizeFindSafe( const char *pTokenName );
 
 extern ConVar mp_ggtr_bomb_pts_for_upgrade;
+extern ConVar cl_draw_only_deathnotices;
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
@@ -384,4 +385,12 @@ void WinPanel_Round::ApplySchemeSettings( vgui::IScheme *pScheme )
 
 	m_clrCT = pScheme->GetColor( "TeamCT", COLOR_WHITE );
 	m_clrT = pScheme->GetColor( "TeamT", COLOR_WHITE );
+}
+
+bool WinPanel_Round::ShouldDraw()
+{
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
+	return CHudElement::ShouldDraw();
 }

@@ -16,6 +16,7 @@
 
 ConVar cl_showloadout( "cl_showloadout", "1", FCVAR_ARCHIVE, "Toggles display of current loadout." );
 extern ConVar cl_hud_color;
+extern ConVar cl_draw_only_deathnotices;
 
 DECLARE_HUDELEMENT( CCSHudWeaponSelection );
 
@@ -684,4 +685,12 @@ void CCSHudWeaponSelection::FireGameEvent( IGameEvent *event )
  			m_bUpdateInventoryReset = true;
  		}
  	}
+}
+
+bool CCSHudWeaponSelection::ShouldDraw()
+{
+	if ( cl_draw_only_deathnotices.GetBool() )
+		return false;
+
+	return CHudElement::ShouldDraw();
 }
