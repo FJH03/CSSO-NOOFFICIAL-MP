@@ -583,15 +583,15 @@ bool CCSMapOverview::CanPlayerBeSeen( MapPlayer_t *player )
 		// This level will be for all the RadarMode thinking.  Base class will be the old way for the other modes.
 		float now = gpGlobals->curtime;
 
-		if ( localPlayer->GetUserID() == player->userid )
-			return true; // always yes for local player
-
 		if( player->position == Vector(0,0,0) )
 			return false; // Invalid guy.
 
 		// draw special icons if within time
-		if ( csPlayer->overrideExpirationTime != -1  &&  csPlayer->overrideExpirationTime > gpGlobals->curtime )
+		if ( csPlayer->overrideExpirationTime != -1 && csPlayer->overrideExpirationTime > gpGlobals->curtime )
 			return true;
+
+		if ( localPlayer->GetUserID() == player->userid && !localPlayer->IsObserver() )
+			return true; // always yes for local player, unless we are spectating
 
 		// otherwise, not dead people
 		if( player->health <= 0 )
