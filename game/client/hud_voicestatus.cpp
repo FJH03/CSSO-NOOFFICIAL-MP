@@ -55,8 +55,8 @@ CHudVoiceDisabledPanel::CHudVoiceDisabledPanel( const char *pName ):
 
 void CHudVoiceDisabledPanel::OnScreenSizeChanged( int iOldWide, int iOldTall )
 {
- 	// reload the .res file so items are rescaled
- 	LoadControlSettings( "resource/hud/voicedisabled.res" );
+	// reload the .res file so items are rescaled
+	LoadControlSettings( "resource/hud/voicedisabled.res" );
 }
 
 void CHudVoiceDisabledPanel::OnThink()
@@ -194,17 +194,12 @@ void CHudVoiceStatus::VidInit( void )
 
 void CHudVoiceStatus::OnThink( void )
 {
-	for ( int iPlayerIndex=0; iPlayerIndex<=gpGlobals->maxClients; iPlayerIndex++ )
+	for ( int iPlayerIndex=1; iPlayerIndex<=gpGlobals->maxClients; iPlayerIndex++ )
 	{
 		int activeSpeakerIndex = FindActiveSpeaker(iPlayerIndex);
 
-		// hackerman
 		bool bSpeaking;
-		bool bLocalPlayer = false;
-		CBasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
-		if ( pPlayer )
-			bLocalPlayer = pPlayer->IsLocalPlayer();
-
+		bool bLocalPlayer = (iPlayerIndex == GetLocalPlayerIndex());
 		if ( bLocalPlayer )
 			bSpeaking = GetClientVoiceMgr()->IsLocalPlayerSpeaking();
 		else
