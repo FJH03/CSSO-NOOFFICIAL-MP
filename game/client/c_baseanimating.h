@@ -422,11 +422,14 @@ public:
 	static void						ShutdownBoneSetupThreadPool();
 	void							MarkForThreadedBoneSetup();
 	static void						SetupBonesOnBaseAnimating( C_BaseAnimating *&pBaseAnimating );
+	static void						AllowInvalidBonesQueueThread( bool bState ) { s_bAllowInvalidBoneSetups = bState; }
+	static void						ThreadedInvalidBoneSetup();
+	static void						SetupInvalidBonesOnBaseAnimating( C_BaseAnimating*& pBaseAnimating );
 
 	// Invalidate bone caches so all SetupBones() calls force bone transforms to be regenerated.
 	static void						InvalidateBoneCaches();
 	// Enable/Disable Invalidation of Bone Caches
-	static void						EnableInvalidateBoneCache( bool bEnable ) { s_bEnableInvalidateBoneCache = bEnable; };
+	static void						EnableInvalidateBoneCache( bool bEnable ) { s_bEnableInvalidateBoneCache = bEnable; }
 
 	// Purpose: My physics object has been updated, react or extract data
 	virtual void					VPhysicsUpdate( IPhysicsObject *pPhysics );
@@ -544,6 +547,7 @@ protected:
 	int								m_iAccumulatedBoneMask;
 
 	static bool						s_bEnableInvalidateBoneCache;
+	static bool						s_bAllowInvalidBoneSetups;
 
 	CBoneAccessor					m_BoneAccessor;
 	CThreadFastMutex				m_BoneSetupLock;

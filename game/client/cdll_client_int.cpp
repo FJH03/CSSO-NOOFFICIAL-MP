@@ -2150,6 +2150,7 @@ void OnRenderStart()
 		// Enable access to all model bones except view models.
 		// This is necessary for aim-ent computation to occur properly
 		C_BaseAnimating::PushAllowBoneAccess( true, false, "OnRenderStart->CViewRender::SetUpView" ); // pops in CViewRender::SetUpView
+		C_BaseAnimating::AllowInvalidBonesQueueThread( true );
 
 		// FIXME: This needs to be done before the player moves; it forces
 		// aiments the player may be attached to to forcibly update their position
@@ -2185,11 +2186,15 @@ void OnRenderStart()
 	// so we don't have to explicitly call ResetColorCorrectionWeights + SimulateEntities, etc.
 	g_pColorCorrectionMgr->ResetColorCorrectionWeights();
 
+	C_BaseAnimating::ThreadedBoneSetup();
+	{
+		VPROF_BUDGET( "C_BaseAnimating::ThreadedInvalidBoneSetup 1", VPROF_BUDGETGROUP_CLIENT_ANIMATION_THREADED );
+		C_BaseAnimating::ThreadedInvalidBoneSetup();
+	}
+
 	// Simulate all the entities.
 	SimulateEntities();
 	PhysicsSimulate();
-
-	C_BaseAnimating::ThreadedBoneSetup();
 
 	{
 		VPROF_("Client TempEnts", 0, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_CLIENT);
@@ -2219,6 +2224,12 @@ void OnRenderStart()
 	// Now that the view model's position is setup and aiments are marked dirty, update
 	// their positions so they're in the leaf system correctly.
 	C_BaseEntity::CalcAimEntPositions();
+
+	C_BaseAnimating::AllowInvalidBonesQueueThread( false );
+	{
+		VPROF_BUDGET( "C_BaseAnimating::ThreadedInvalidBoneSetup 2", VPROF_BUDGETGROUP_CLIENT_ANIMATION_THREADED );
+		C_BaseAnimating::ThreadedInvalidBoneSetup();
+	}
 
 	// For entities marked for recording, post bone messages to IToolSystems
 	if ( ToolsEnabled() )

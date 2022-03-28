@@ -67,6 +67,7 @@ static ConVar cl_SetupAllBones( "cl_SetupAllBones", "0" );
 ConVar r_sequence_debug( "r_sequence_debug", "" );
 
 bool C_BaseAnimating::s_bEnableInvalidateBoneCache = true;
+bool C_BaseAnimating::s_bAllowInvalidBoneSetups = false;
 
 // If an NPC is moving faster than this, he should play the running footstep sound
 const float RUN_SPEED_ESTIMATE_SQR = 150.0f * 150.0f;
@@ -668,16 +669,21 @@ void C_ClientRagdoll::Release( void )
 static unsigned long	g_iModelBoneCounter = 0;
 CUtlVector<C_BaseAnimating *> g_PreviousBoneSetups;
 static unsigned long	g_iPreviousBoneCounter = (unsigned)-1;
+CUtlVector<C_BaseAnimating*> g_InvalidBoneSetups;
 
 class C_BaseAnimatingGameSystem : public CAutoGameSystem
 {
 	void LevelShutdownPostEntity()
 	{
 		g_iPreviousBoneCounter = (unsigned)-1;
-		if ( g_PreviousBoneSetups.Count() != 0 )
+		if ( !g_PreviousBoneSetups.IsEmpty() )
 		{
 			Msg( "%d entities in bone setup array. Should have been cleaned up by now\n", g_PreviousBoneSetups.Count() );
 			g_PreviousBoneSetups.RemoveAll();
+		}
+		if ( !g_InvalidBoneSetups.IsEmpty() )
+		{
+			g_InvalidBoneSetups.RemoveAll();
 		}
 	}
 } g_BaseAnimatingGameSystem;
@@ -784,9 +790,8 @@ C_BaseAnimating::C_BaseAnimating() :
 C_BaseAnimating::~C_BaseAnimating()
 {
 	Assert( !g_bInThreadedBoneSetup );
-	int i = g_PreviousBoneSetups.Find( this );
-	if ( i != -1 )
-		g_PreviousBoneSetups.FastRemove( i );
+	g_PreviousBoneSetups.FindAndFastRemove( this );
+	g_InvalidBoneSetups.FindAndFastRemove( this );
 
 	TermRopes();
 
@@ -2573,8 +2578,8 @@ CMouthInfo *C_BaseAnimating::GetMouth( void )
 ConVar cl_warn_thread_contested_bone_setup("cl_warn_thread_contested_bone_setup", "0" );
 #endif
 
-ConVar cl_threaded_bone_setup("cl_threaded_bone_setup", "0", 0,
-                              "Enable parallel processing of C_BaseAnimating::SetupBones()" );
+ConVar cl_threaded_bone_setup("cl_threaded_bone_setup", "1", 0,
+                              "Enable parallel processing of C_BaseAnimating::SetupBones(). 1 - old method, 2 - new method (by reg1oxen from ClientMod)" );
 
 //-----------------------------------------------------------------------------
 // Purpose: Do the default sequence blending rules as done in HL1
@@ -2599,6 +2604,11 @@ void C_BaseAnimating::SetupBonesOnBaseAnimating( C_BaseAnimating *&pBaseAnimatin
 #ifdef DEBUG_BONE_SETUP_THREADING
 	(*pCount)++;
 #endif
+}
+
+void C_BaseAnimating::SetupInvalidBonesOnBaseAnimating( C_BaseAnimating*& pBaseAnimating )
+{
+	pBaseAnimating->SetupBones( NULL, -1, -1, gpGlobals->curtime );
 }
 
 static void PreThreadedBoneSetup()
@@ -2651,7 +2661,26 @@ void C_BaseAnimating::MarkForThreadedBoneSetup()
 			}
 		}
 	}
+}
 
+void C_BaseAnimating::ThreadedInvalidBoneSetup()
+{
+	//VPROF("C_BaseAnimating::ThreadedInvalidBoneSetup");
+	if ( g_bDoThreadedBoneSetup && cl_threaded_bone_setup.GetInt() == 2 )
+	{
+		int nCount = g_InvalidBoneSetups.Count();
+		if ( nCount > 1 )
+		{
+			g_bInThreadedBoneSetup = true;
+			{
+				CParallelProcessor<C_BaseAnimating*, CFuncJobItemProcessor<C_BaseAnimating*>> processor( "C_BaseAnimating::ThreadedInvalidBoneSetup()" );;
+				processor.m_ItemProcessor.Init( &SetupInvalidBonesOnBaseAnimating, &PreThreadedBoneSetup, &PostThreadedBoneSetup );
+				processor.Run( g_InvalidBoneSetups.Base(), nCount, INT_MAX, g_pBoneSetupThreadPool );
+			}
+			g_bInThreadedBoneSetup = false;
+		}
+	}
+	g_InvalidBoneSetups.RemoveAll();
 }
 
 void C_BaseAnimating::ThreadedBoneSetup()
@@ -2662,7 +2691,7 @@ void C_BaseAnimating::ThreadedBoneSetup()
 		int nCount = g_PreviousBoneSetups.Count();
 		if ( nCount > 1 )
 		{
-			VPROF_BUDGET( "C_BaseAnimating::ThreadedBoneSetup", "Client_Animation_Threaded" );
+			VPROF_BUDGET( "C_BaseAnimating::ThreadedBoneSetup", VPROF_BUDGETGROUP_CLIENT_ANIMATION_THREADED );
 
 #ifdef DEBUG_BONE_SETUP_THREADING
 			Msg( "{\n" );
@@ -2699,18 +2728,10 @@ void C_BaseAnimating::ThreadedBoneSetup()
 			nCount = g_PreviousBoneSetups.Count();
 
 			g_bInThreadedBoneSetup = true;
-			if ( cl_threaded_bone_setup.GetInt() == 1 )
 			{
 				CParallelProcessor<C_BaseAnimating *, CFuncJobItemProcessor<C_BaseAnimating *> > processor( "C_BaseAnimating::ThreadedBoneSetup" );
 				processor.m_ItemProcessor.Init( &SetupBonesOnBaseAnimating, &PreThreadedBoneSetup, &PostThreadedBoneSetup );
 				processor.Run( g_PreviousBoneSetups.Base(), nCount, INT_MAX, g_pBoneSetupThreadPool );
-			}
-			else
-			{
-				for ( int i = 0; i < nCount; i++ )
-				{
-					SetupBonesOnBaseAnimating( g_PreviousBoneSetups[i] );
-				}
 			}
 			g_bInThreadedBoneSetup = false;
 
@@ -3149,6 +3170,11 @@ void C_BaseAnimating::InvalidateBoneCache()
 {
 	if ( !s_bEnableInvalidateBoneCache )
 		return;
+
+	if ( cl_threaded_bone_setup.GetInt() == 2 && !IsViewModelOrAttachment() && s_bAllowInvalidBoneSetups && g_InvalidBoneSetups.Find( this ) == g_InvalidBoneSetups.InvalidIndex() )
+	{
+		g_InvalidBoneSetups.AddToTail( this );
+	}
 
 	m_iMostRecentModelBoneCounter = g_iModelBoneCounter - 1;
 	m_flLastBoneSetupTime = -FLT_MAX; 
