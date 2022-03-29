@@ -16,6 +16,7 @@
 #include <vgui/IScheme.h>
 #include <vgui/ISurface.h>
 #include <KeyValues.h>
+#include <VGuiMatSurface/IMatSystemSurface.h>
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include <tier0/memdbgon.h>
@@ -24,6 +25,11 @@ using namespace vgui;
 
 DECLARE_BUILD_FACTORY( ProgressBar );
 
+#define DEFAULT_SEGMENT_GAP 4
+#define DEFAULT_SEGMENT_WIDTH 8
+#define DEFAULT_BAR_INSET 4
+#define DEFAULT_MARGIN 0
+
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
@@ -31,9 +37,9 @@ ProgressBar::ProgressBar(Panel *parent, const char *panelName) : Panel(parent, p
 {
 	_progress = 0.0f;
 	m_pszDialogVar = NULL;
-	SetSegmentInfo( 4, 8 );
-	SetBarInset( 4 );
-	SetMargin( 0 );
+	SetSegmentInfo( DEFAULT_SEGMENT_GAP, DEFAULT_SEGMENT_WIDTH );
+	SetBarInset( DEFAULT_BAR_INSET );
+	SetMargin( DEFAULT_MARGIN );
 	m_iProgressDirection = PROGRESS_EAST;
 }
 
@@ -335,6 +341,9 @@ void ProgressBar::ApplySettings(KeyValues *inResourceData)
 {
 	BaseClass::ApplySettings( inResourceData );
 
+	// Override base resolution first
+	g_pMatSystemSurface->OverrideProportionalBase( m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1] );
+
 	_progress = inResourceData->GetFloat("progress", 0.0f);
 
 	const char *dialogVar = inResourceData->GetString("variable", "");
@@ -347,6 +356,21 @@ void ProgressBar::ApplySettings(KeyValues *inResourceData)
 	// override default border value from vgui::Panel
 	IScheme *pScheme = scheme()->GetIScheme( GetScheme() );
 	SetBorder( pScheme->GetBorder( inResourceData->GetString( "border", "ButtonDepressedBorder" ) ) );
+
+	_segmentGap = inResourceData->GetInt( "segment_gap", DEFAULT_SEGMENT_GAP );
+	_segmentWide = inResourceData->GetInt( "segment_width", DEFAULT_SEGMENT_WIDTH );
+	m_iBarInset = inResourceData->GetInt( "bar_inset", DEFAULT_BAR_INSET );
+	m_iBarMargin = inResourceData->GetInt( "bar_margin", DEFAULT_MARGIN );
+	if ( IsProportional() )
+	{
+		_segmentGap = scheme()->GetProportionalNormalizedValueEx( GetScheme(), _segmentGap );
+		_segmentWide = scheme()->GetProportionalNormalizedValueEx( GetScheme(), _segmentWide );
+		m_iBarInset = scheme()->GetProportionalNormalizedValueEx( GetScheme(), m_iBarInset );
+		m_iBarMargin = scheme()->GetProportionalNormalizedValueEx( GetScheme(), m_iBarMargin );
+	}
+
+	// Restore original proportional base so other panels are not affected
+	g_pMatSystemSurface->RestoreProportionalBase();
 }
 
 //-----------------------------------------------------------------------------
