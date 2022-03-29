@@ -67,6 +67,7 @@ static ConVar cl_SetupAllBones( "cl_SetupAllBones", "0" );
 ConVar r_sequence_debug( "r_sequence_debug", "" );
 
 bool C_BaseAnimating::s_bEnableInvalidateBoneCache = true;
+bool C_BaseAnimating::s_bEnableNewBoneSetupRequest = true;
 bool C_BaseAnimating::s_bAllowInvalidBoneSetups = false;
 
 // If an NPC is moving faster than this, he should play the running footstep sound
@@ -2630,6 +2631,9 @@ IThreadPool *g_pBoneSetupThreadPool;
 
 void C_BaseAnimating::InitBoneSetupThreadPool()
 {
+#ifdef DEBUG_BONE_SETUP_THREADING
+	pCount = new CThreadLocalInt<>;
+#endif
 	g_pBoneSetupThreadPool = g_pThreadPool;
 }
 
@@ -2909,7 +2913,7 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 	m_iAccumulatedBoneMask = 0;
 #else
 
-	if( ( m_iMostRecentModelBoneCounter != g_iModelBoneCounter ) )
+	if( ( m_iMostRecentModelBoneCounter != g_iModelBoneCounter ) && s_bEnableNewBoneSetupRequest )
 	{
 		// Clear out which bones we've touched this frame if this is 
 		// the first time we've seen this object this frame.

@@ -428,6 +428,8 @@ public:
 
 	// Invalidate bone caches so all SetupBones() calls force bone transforms to be regenerated.
 	static void						InvalidateBoneCaches();
+	// Enable/Disable use of stale data, instead of updating contents of bonecache
+	static void						EnableNewBoneSetupRequest( bool bEnable ) { s_bEnableNewBoneSetupRequest = bEnable; };
 	// Enable/Disable Invalidation of Bone Caches
 	static void						EnableInvalidateBoneCache( bool bEnable ) { s_bEnableInvalidateBoneCache = bEnable; }
 
@@ -546,6 +548,7 @@ protected:
 	int								m_iPrevBoneMask;
 	int								m_iAccumulatedBoneMask;
 
+	static bool						s_bEnableNewBoneSetupRequest;
 	static bool						s_bEnableInvalidateBoneCache;
 	static bool						s_bAllowInvalidBoneSetups;
 
