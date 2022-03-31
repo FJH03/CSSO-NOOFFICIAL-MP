@@ -1082,14 +1082,33 @@ void CC_Player_Use( const CCommand &args )
 }
 static ConCommand use("use", CC_Player_Use, "Use a particular weapon\t\nArguments: <weapon_name>");
 
-
 //------------------------------------------------------------------------------
 // A small wrapper around SV_Move that never clips against the supplied entity.
 //------------------------------------------------------------------------------
-static bool TestEntityPosition ( CBasePlayer *pPlayer )
-{	
+bool TestEntityPosition ( CBaseEntity *pEntity, unsigned int mask )
+{
 	trace_t	trace;
-	UTIL_TraceEntity( pPlayer, pPlayer->GetAbsOrigin(), pPlayer->GetAbsOrigin(), MASK_PLAYERSOLID, &trace );
+	IPhysicsObject *physObject = pEntity->VPhysicsGetObject();
+	const Vector &origin = pEntity->GetAbsOrigin();
+	if ( physObject )
+	{
+		QAngle angles = pEntity->GetAbsAngles();
+
+		//Vector obbMins, obbMaxs;
+		Vector mins, maxs;
+		//obbMins = pEntity->CollisionProp()->OBBMins();
+		//obbMaxs = pEntity->CollisionProp()->OBBMaxs();
+		//pEntity->CollisionProp()->CollisionAABBToWorldAABB( obbMins, obbMaxs, &mins, &maxs );
+		pEntity->CollisionProp()->WorldSpaceSurroundingBounds( &mins, &maxs );
+
+		UTIL_TraceHull( vec3_origin, vec3_origin, mins, maxs, mask, pEntity, COLLISION_GROUP_NONE, &trace );
+		//SimplePhysicsTraceFilter filter( pEntity, (int)mask );
+		//physenv->SweepCollideable( physObject->GetCollide(), origin, origin, angles, mask, &filter, &trace );
+	}
+	else
+	{
+		UTIL_TraceEntity( pEntity, origin, origin, mask, &trace );
+	}
 	return (trace.startsolid == 0);
 }
 
@@ -1099,17 +1118,17 @@ static bool TestEntityPosition ( CBasePlayer *pPlayer )
 // the entity position is passible.
 // Used for putting the player in valid space when toggling off noclip mode.
 //------------------------------------------------------------------------------
-static int FindPassableSpace( CBasePlayer *pPlayer, const Vector& direction, float step, Vector& oldorigin )
+static int FindPassableSpace( CBaseEntity *pEntity, unsigned int mask, const Vector& direction, float step, Vector& oldorigin )
 {
 	int i;
 	for ( i = 0; i < 100; i++ )
 	{
-		Vector origin = pPlayer->GetAbsOrigin();
+		Vector origin = pEntity->GetAbsOrigin();
 		VectorMA( origin, step, direction, origin );
-		pPlayer->SetAbsOrigin( origin );
-		if ( TestEntityPosition( pPlayer ) )
+		pEntity->SetAbsOrigin( origin );
+		if ( TestEntityPosition( pEntity, mask ) )
 		{
-			VectorCopy( pPlayer->GetAbsOrigin(), oldorigin );
+			VectorCopy( pEntity->GetAbsOrigin(), oldorigin );
 			return 1;
 		}
 	}
@@ -1118,8 +1137,24 @@ static int FindPassableSpace( CBasePlayer *pPlayer, const Vector& direction, flo
 
 
 //------------------------------------------------------------------------------
+// Test various directions for empty space -- for debugging only; this is slow and
+// meant for finding a place to put a noclipped player who goes solid again.
+//------------------------------------------------------------------------------
+bool FindEmptySpace( CBaseEntity *pEntity, unsigned int mask, const Vector &forward, const Vector &right, const Vector &up, Vector *testOrigin )
+{
+	return	FindPassableSpace( pEntity, mask, forward, 1, *testOrigin )	||  // forward
+			FindPassableSpace( pEntity, mask, right, 1, *testOrigin )	||  // right
+			FindPassableSpace( pEntity, mask, right, -1, *testOrigin )	||  // left
+			FindPassableSpace( pEntity, mask, up, 1, *testOrigin )		||  // up
+			FindPassableSpace( pEntity, mask, up, -1, *testOrigin )		||  // down
+			FindPassableSpace( pEntity, mask, forward, -1, *testOrigin ) ;  // back
+}
+
+
+//------------------------------------------------------------------------------
 // Noclip
 //------------------------------------------------------------------------------
+ConVar noclip_fixup( "noclip_fixup", "1", FCVAR_CHEAT );
 void EnableNoClip( CBasePlayer *pPlayer )
 {
 	// Disengage from hierarchy
@@ -1129,7 +1164,33 @@ void EnableNoClip( CBasePlayer *pPlayer )
 	pPlayer->AddEFlags( EFL_NOCLIP_ACTIVE );
 }
 
-void CC_Player_NoClip( void )
+void DisableNoClip( CBasePlayer *pPlayer )
+{
+	CPlayerState *pl = pPlayer->PlayerData();
+	Assert( pl );
+
+	pPlayer->RemoveEFlags( EFL_NOCLIP_ACTIVE );
+	pPlayer->SetMoveType( MOVETYPE_WALK );
+
+	ClientPrint( pPlayer, HUD_PRINTCONSOLE, "noclip OFF\n");
+	Vector oldorigin = pPlayer->GetAbsOrigin();
+	unsigned int mask = MASK_PLAYERSOLID;
+	if ( noclip_fixup.GetBool() && !TestEntityPosition( pPlayer, mask ) )
+	{
+		Vector forward, right, up;
+
+		AngleVectors ( pl->v_angle, &forward, &right, &up);
+
+		if ( !FindEmptySpace( pPlayer, mask, forward, right, up, &oldorigin ) )
+		{
+			Msg( "Can't find the world\n" );
+		}
+
+		pPlayer->SetAbsOrigin( oldorigin );
+	}
+}
+
+CON_COMMAND_F( noclip, "Toggle. Player becomes non-solid and flies.  Optional argument of 0 or 1 to force enable/disable", FCVAR_CHEAT )
 {
 	if ( !sv_cheats->GetBool() )
 		return;
@@ -1138,52 +1199,31 @@ void CC_Player_NoClip( void )
 	if ( !pPlayer )
 		return;
 
-	CPlayerState *pl = pPlayer->PlayerData();
-	Assert( pl );
-
-	if (pPlayer->GetMoveType() != MOVETYPE_NOCLIP)
+	if ( args.ArgC() >= 2 )
 	{
-		EnableNoClip( pPlayer );
-		return;
-	}
-
-	pPlayer->RemoveEFlags( EFL_NOCLIP_ACTIVE );
-	pPlayer->SetMoveType( MOVETYPE_WALK );
-
-	Vector oldorigin = pPlayer->GetAbsOrigin();
-	ClientPrint( pPlayer, HUD_PRINTCONSOLE, "noclip OFF\n");
-	if ( !TestEntityPosition( pPlayer ) )
-	{
-		Vector forward, right, up;
-
-		AngleVectors ( pl->v_angle, &forward, &right, &up);
-		
-		// Try to move into the world
-		if ( !FindPassableSpace( pPlayer, forward, 1, oldorigin ) )
+		bool bEnable = Q_atoi( args.Arg( 1 ) ) ? true : false;
+		if ( bEnable && pPlayer->GetMoveType() != MOVETYPE_NOCLIP )
 		{
-			if ( !FindPassableSpace( pPlayer, right, 1, oldorigin ) )
-			{
-				if ( !FindPassableSpace( pPlayer, right, -1, oldorigin ) )		// left
-				{
-					if ( !FindPassableSpace( pPlayer, up, 1, oldorigin ) )	// up
-					{
-						if ( !FindPassableSpace( pPlayer, up, -1, oldorigin ) )	// down
-						{
-							if ( !FindPassableSpace( pPlayer, forward, -1, oldorigin ) )	// back
-							{
-								Msg( "Can't find the world\n" );
-							}
-						}
-					}
-				}
-			}
+			EnableNoClip( pPlayer );
 		}
-
-		pPlayer->SetAbsOrigin( oldorigin );
+		else if ( !bEnable && pPlayer->GetMoveType() == MOVETYPE_NOCLIP )
+		{
+			DisableNoClip( pPlayer );
+		}
+	}
+	else
+	{
+		// Toggle the noclip state if there aren't any arguments.
+		if ( pPlayer->GetMoveType() != MOVETYPE_NOCLIP )
+		{
+			EnableNoClip( pPlayer );
+		}
+		else
+		{
+			DisableNoClip( pPlayer );
+		}
 	}
 }
-
-static ConCommand noclip("noclip", CC_Player_NoClip, "Toggle. Player becomes non-solid and flies.", FCVAR_CHEAT);
 
 
 //------------------------------------------------------------------------------
@@ -1246,7 +1286,45 @@ CON_COMMAND_F( setpos, "Move player to specified origin (must have sv_cheats).",
 
 	pPlayer->SetAbsOrigin( newpos );
 
-	if ( !TestEntityPosition( pPlayer ) )
+	if ( !TestEntityPosition( pPlayer, MASK_PLAYERSOLID ) )
+	{
+		ClientPrint( pPlayer, HUD_PRINTCONSOLE, "setpos into world, use noclip to unstick yourself!\n");
+	}
+}
+
+
+//------------------------------------------------------------------------------
+// Sets client to godmode
+//------------------------------------------------------------------------------
+CON_COMMAND_F( setpos_player, "Move specified player to specified origin (must have sv_cheats).", FCVAR_CHEAT )
+{
+	if ( !sv_cheats->GetBool() )
+		return;
+
+	CBasePlayer *pCommandPlayer = ToBasePlayer( UTIL_GetCommandClient() ); 
+	if ( !pCommandPlayer )
+		return;
+
+	if ( args.ArgC() < 4 )
+	{
+		ClientPrint( pCommandPlayer, HUD_PRINTCONSOLE, "Usage:  setpos player_index x y <z optional>\n");
+		return;
+	}
+
+	CBasePlayer *pPlayer = ToBasePlayer( UTIL_PlayerByIndex( atoi( args[1] ) ) ); 
+	if ( !pPlayer )
+		return;
+
+	Vector oldorigin = pPlayer->GetAbsOrigin();
+
+	Vector newpos;
+	newpos.x = atof( args[2] );
+	newpos.y = atof( args[3] );
+	newpos.z = args.ArgC() == 5 ? atof( args[4] ) : oldorigin.z;
+
+	pPlayer->SetAbsOrigin( newpos );
+
+	if ( !TestEntityPosition( pPlayer, MASK_PLAYERSOLID ) )
 	{
 		ClientPrint( pPlayer, HUD_PRINTCONSOLE, "setpos into world, use noclip to unstick yourself!\n");
 	}
@@ -1283,17 +1361,6 @@ void CC_setang_f (const CCommand &args)
 
 static ConCommand setang("setang", CC_setang_f, "Snap player eyes to specified pitch yaw <roll:optional> (must have sv_cheats).", FCVAR_CHEAT );
 
-static float GetHexFloat( const char *pStr )
-{
-	if ( ( pStr[0] == '0' ) && ( pStr[1] == 'x' ) )
-	{
-		uint32 f = (uint32)V_atoi64( pStr );
-		return *reinterpret_cast< const float * >( &f );
-	}
-	
-	return atof( pStr );
-}
-
 //------------------------------------------------------------------------------
 // Move position
 //------------------------------------------------------------------------------
@@ -1315,13 +1382,13 @@ CON_COMMAND_F( setpos_exact, "Move player to an exact specified origin (must hav
 	Vector oldorigin = pPlayer->GetAbsOrigin();
 
 	Vector newpos;
-	newpos.x = GetHexFloat( args[1] );
-	newpos.y = GetHexFloat( args[2] );
-	newpos.z = args.ArgC() == 4 ? GetHexFloat( args[3] ) : oldorigin.z;
+	newpos.x = atof( args[1] );
+	newpos.y = atof( args[2] );
+	newpos.z = args.ArgC() == 4 ? atof( args[3] ) : oldorigin.z;
 
 	pPlayer->Teleport( &newpos, NULL, NULL );
 
-	if ( !TestEntityPosition( pPlayer ) )
+	if ( !TestEntityPosition( pPlayer, MASK_PLAYERSOLID ) )
 	{
 		if ( pPlayer->GetMoveType() != MOVETYPE_NOCLIP )
 		{
@@ -1349,9 +1416,9 @@ CON_COMMAND_F( setang_exact, "Snap player eyes and orientation to specified pitc
 	QAngle oldang = pPlayer->GetAbsAngles();
 
 	QAngle newang;
-	newang.x = GetHexFloat( args[1] );
-	newang.y = GetHexFloat( args[2] );
-	newang.z = args.ArgC() == 4 ? GetHexFloat( args[3] ) : oldang.z;
+	newang.x = atof( args[1] );
+	newang.y = atof( args[2] );
+	newang.z = args.ArgC() == 4 ? atof( args[3] ) : oldang.z;
 
 	pPlayer->Teleport( NULL, &newang, NULL );
 	pPlayer->SnapEyeAngles( newang );
