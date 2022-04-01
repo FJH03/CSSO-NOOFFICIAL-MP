@@ -862,7 +862,7 @@ void Button::ApplySettings( KeyValues *inResourceData )
 	}
 
 	m_bStaySelectedOnClick = inResourceData->GetBool( "stayselectedonclick", false );
-	m_bStayArmedOnClick = inResourceData->GetBool( "stay_armed_on_click", false );
+	m_bStayArmedOnClick = inResourceData->GetBool( "stay_armed_on_click", true );
 
 	const char *sound = inResourceData->GetString("sound_armed", "");
 	if (*sound)
