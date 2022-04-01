@@ -246,6 +246,7 @@ public:
 	};
 
 	virtual void SetSectionDrawDividerBar( int sectionID, bool bDraw );
+	virtual void SetSectionInset( int x, int y );
 
 	CPanelAnimationVarAliasType( int, item_header_xpos, "item_header_xpos", "0", "proportional_xpos" );
 	CPanelAnimationVarAliasType( int, item_header_ypos, "item_header_ypos", "0", "proportional_ypos" );
@@ -307,6 +308,7 @@ private:
 	int m_iLineSpacing;	// row height
 	int m_iLineGap;		// gap between rows
 	int m_iSectionGap;
+	int m_iSectionInset[2];
 
 	int FindSectionIndexByID(int sectionID);
     void ReSortList();

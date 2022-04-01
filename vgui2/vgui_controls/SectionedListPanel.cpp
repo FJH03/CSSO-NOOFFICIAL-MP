@@ -819,6 +819,7 @@ SectionedListPanel::SectionedListPanel(vgui::Panel *parent, const char *name) : 
 	m_iLineSpacing = DEFAULT_LINE_SPACING;
 	m_iLineGap = 0;
 	m_iSectionGap = DEFAULT_SECTION_GAP;
+	m_iSectionInset[0] = m_iSectionInset[1] = 5;
 
 	m_pImageList = NULL;
 	m_bDeleteImageListWhenDone = false;
@@ -949,8 +950,8 @@ void SectionedListPanel::PerformLayout()
 //-----------------------------------------------------------------------------
 void SectionedListPanel::LayoutPanels(int &contentTall)
 {
-	int tall = GetSectionTall(), wide = GetWide();
-	int x = 0, y = 0;
+	int tall = GetSectionTall(), wide = GetWide() - (m_iSectionInset[0] * 2);
+	int x = m_iSectionInset[0], y = m_iSectionInset[1];
 	
 	if (m_pScrollBar->IsVisible())
 	{
@@ -1462,6 +1463,15 @@ void SectionedListPanel::SetSectionDrawDividerBar( int sectionID, bool bDraw )
 		return;
 
 	m_Sections[sectionID].m_pHeader->DrawDividerBar( bDraw );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void SectionedListPanel::SetSectionInset( int x, int y )
+{
+	m_iSectionInset[0] = x;
+	m_iSectionInset[1] = y;
 }
 
 //-----------------------------------------------------------------------------

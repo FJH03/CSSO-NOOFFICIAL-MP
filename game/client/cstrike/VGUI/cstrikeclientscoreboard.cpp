@@ -111,11 +111,13 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 	m_pCTPlayerList->SetVerticalScrollbar( false );
 	m_pCTPlayerList->SetPaintBackgroundEnabled( false );
 	m_pCTPlayerList->SetPaintBorderEnabled( false );
+	m_pCTPlayerList->SetSectionInset( 0, 0 );
 
 	m_pTPlayerList = new SectionedListPanel( this, "TeamTPlayerList" );
 	m_pTPlayerList->SetVerticalScrollbar( false );
 	m_pTPlayerList->SetPaintBackgroundEnabled( false );
 	m_pTPlayerList->SetPaintBorderEnabled( false );
+	m_pCTPlayerList->SetSectionInset( 0, 0 );
 
 	// gets initialized in base class
 	m_pPlayerList->SetPaintBackgroundEnabled( false );
