@@ -16,7 +16,6 @@
 
 
 #define BACKGROUND_MUSIC_FILENAME "mainmenu.mp3"
-#define MAX_BACKGROUND_MUSIC 3
 
 class IGameClientExports;
 
@@ -158,10 +157,8 @@ private:
 
 	int m_nBackgroundMusicGUID;
 	bool m_bBackgroundMusicDesired;
-	int m_nBackgroundMusicVersion;
 	float m_flBackgroundMusicStopTime;
 	const char *m_pMusicExtension;
-	float m_flMasterMusicVolume;
 };
 
 // Purpose: singleton accessor

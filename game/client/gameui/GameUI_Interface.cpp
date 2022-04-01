@@ -24,7 +24,7 @@
 #ifdef SendMessage
 #undef SendMessage
 #endif
-																
+																 
 #include "filesystem.h"
 #include "GameUI_Interface.h"
 #include "Sys_Utils.h"
@@ -145,10 +145,8 @@ CGameUI::CGameUI()
 	m_iPlayGameStartupSound = 0;
 	m_nBackgroundMusicGUID = 0;
 	m_bBackgroundMusicDesired = false;
-	m_nBackgroundMusicVersion = RandomInt( 1, MAX_BACKGROUND_MUSIC );
 	m_flBackgroundMusicStopTime = -1.0;
 	m_pMusicExtension = NULL;
-	m_flMasterMusicVolume = -1;
 }
 
 //-----------------------------------------------------------------------------
@@ -1161,53 +1159,26 @@ void CGameUI::ReleaseBackgroundMusic( void )
 #include "cdll_util.h"
 void CGameUI::UpdateBackgroundMusic( void )
 {
-	static ConVarRef snd_musicvolume( "snd_musicvolume" );
-	static ConVarRef snd_menumusic_volume( "snd_menumusic_volume" );
-
-	if ( m_bBackgroundMusicDesired && snd_musicvolume.GetFloat() > 0.0f && snd_menumusic_volume.GetFloat() > 0.0f )
+	if ( m_bBackgroundMusicDesired )
 	{
-		static ConVarRef snd_music_selection( "snd_music_selection" );
-		const char * pNewMusicExtension = snd_music_selection.GetString();
-
-		if ( !IsBackgroundMusicPlaying() )
+		static ConVarRef snd_musicvolume( "snd_musicvolume" );
+		static ConVarRef snd_menumusic_volume( "snd_menumusic_volume" );
+		if ( !IsBackgroundMusicPlaying() && snd_musicvolume.GetFloat() > 0.0f && snd_menumusic_volume.GetFloat() > 0.0f )
 		{
-			m_flMasterMusicVolume = snd_musicvolume.GetFloat();
 			m_flBackgroundMusicStopTime = -1.0;
 
-			char sMusicKit[128];
+			static ConVarRef snd_music_selection( "snd_music_selection" );
+			m_pMusicExtension = snd_music_selection.GetString();
 
-			m_pMusicExtension = pNewMusicExtension;
-
-			bool bUseStandardMusic = (!Q_strcmp( m_pMusicExtension, "valve_csgo_01" )) || (!Q_strcmp( m_pMusicExtension, "valve_csgo_02" ));
-			if ( !bUseStandardMusic && m_pMusicExtension != NULL )
+			if ( m_pMusicExtension != NULL )
 			{
+				char sMusicKit[128];
 				V_sprintf_safe( sMusicKit, "music/%s/%s", m_pMusicExtension, BACKGROUND_MUSIC_FILENAME );
+				m_nBackgroundMusicGUID = enginesound->EmitAmbientSound( sMusicKit, 1.0f );
 			}
-			else
-			{
-				m_nBackgroundMusicVersion++;
-
-				if ( m_nBackgroundMusicVersion == 1 )
-				{
-					V_sprintf_safe( sMusicKit, "music/valve_csgo_02/%s", BACKGROUND_MUSIC_FILENAME );
-				}
-				else
-				{
-					m_nBackgroundMusicVersion = 0;
-					V_sprintf_safe( sMusicKit, "music/valve_csgo_01/%s", BACKGROUND_MUSIC_FILENAME );
-				}
-			}
-			m_nBackgroundMusicGUID = enginesound->EmitAmbientSound( sMusicKit, m_flMasterMusicVolume );
-			
 		}
 		else
 		{
-			if ( m_flMasterMusicVolume != snd_musicvolume.GetFloat() )
-			{
-				m_flMasterMusicVolume = snd_musicvolume.GetFloat();
-				enginesound->SetVolumeByGuid( m_nBackgroundMusicGUID, m_flMasterMusicVolume );
-			}
-
 			if( ( m_flBackgroundMusicStopTime > -1.0 ) )
 			{
 				float flDelta = gpGlobals->curtime - m_flBackgroundMusicStopTime;

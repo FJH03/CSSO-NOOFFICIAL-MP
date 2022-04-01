@@ -40,6 +40,7 @@ using namespace vgui;
 const char* szMusicStrings[] =
 {
 	"valve_csgo_01", // the default one should be on top
+	"valve_csgo_02", // the default one should be on top
 	"amontobin_01",
 	"austinwintory_01",
 	"austinwintory_02",
