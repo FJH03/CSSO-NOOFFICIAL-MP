@@ -8105,8 +8105,15 @@ bool CCSGameRules::IsPlayingOffline( void ) const
 	if ( engine->IsDedicatedServer() )
 		return false;
 #endif
-	extern ConVar game_online;
-	return !game_online.GetBool();
+	// PiMoN: game_online gets reset to default (1)
+	// when server gets started so I'm going to assume
+	// that we're always offline when not on a dedicated server
+	// TODO: why it worked before but doesn't work now? or was
+	// it always like that?
+	return true;
+
+	/*extern ConVar game_online;
+	return !game_online.GetBool();*/
 }
 
 bool CCSGameRules::IsAwardsProgressAllowedForBotDifficulty( void ) const
