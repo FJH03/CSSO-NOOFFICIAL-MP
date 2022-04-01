@@ -37,7 +37,7 @@ using namespace vgui;
 //-----------------------------------------------------------------------------
 // Purpose: Basic help dialog
 //-----------------------------------------------------------------------------
-CModOptionsDialog::CModOptionsDialog(vgui::Panel *parent) : PropertyDialog(parent, "OptionsDialog")
+CModOptionsDialog::CModOptionsDialog(vgui::Panel *parent) : PropertyDialog(parent, "ModOptionsDialog")
 {
 	SetDeleteSelfOnClose(true);
 
