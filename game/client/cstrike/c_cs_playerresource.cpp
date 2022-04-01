@@ -64,7 +64,7 @@ C_CS_PlayerResource::C_CS_PlayerResource()
 	memset( m_bHasDefuser, 0, sizeof( m_bHasDefuser ) );
 	memset( m_iAccount, 0, sizeof( m_iAccount ) );
 	memset( m_iGunGameProgressiveWeaponIndex, 0, sizeof( m_iGunGameProgressiveWeaponIndex ) );
-	memset( m_iScore, 0, sizeof( m_iScore ) );
+	memset( m_iContributionScore, 0, sizeof( m_iContributionScore ) );
 }
 
 //-----------------------------------------------------------------------------
