@@ -1161,9 +1161,11 @@ void CGameUI::ReleaseBackgroundMusic( void )
 #include "cdll_util.h"
 void CGameUI::UpdateBackgroundMusic( void )
 {
-	if ( m_bBackgroundMusicDesired )
-	{	
-		static ConVarRef snd_musicvolume( "snd_musicvolume" );
+	static ConVarRef snd_musicvolume( "snd_musicvolume" );
+	static ConVarRef snd_menumusic_volume( "snd_menumusic_volume" );
+
+	if ( m_bBackgroundMusicDesired && snd_musicvolume.GetFloat() > 0.0f && snd_menumusic_volume.GetFloat() > 0.0f )
+	{
 		static ConVarRef snd_music_selection( "snd_music_selection" );
 		const char * pNewMusicExtension = snd_music_selection.GetString();
 
