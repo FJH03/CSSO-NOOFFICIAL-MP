@@ -57,6 +57,7 @@ public:
 	int				GetAccount( int iIndex );
 	int				GetPlayerGunGameWeaponIndex( int iIndex );
 	int				GetContributionScore( int iIndex );
+	int				GetMusicID( int iIndex );
 
 	bool			IsControllingBot( int index );
 	int				GetControlledPlayer( int index );
@@ -94,6 +95,7 @@ protected:
 	int		m_iAccount[ MAX_PLAYERS + 1 ];
 	int		m_iGunGameProgressiveWeaponIndex[ MAX_PLAYERS + 1 ];
 	int		m_iContributionScore[ MAX_PLAYERS + 1 ];
+	int		m_nMusicID[ MAX_PLAYERS + 1 ];
 
 	bool	m_bControllingBot[MAX_PLAYERS + 1];
 	int		m_iControlledPlayer[MAX_PLAYERS + 1];

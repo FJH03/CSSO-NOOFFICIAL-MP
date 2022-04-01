@@ -423,7 +423,6 @@ public:
 	bool	IsBotOrControllingBot();
 	bool	m_bNeedToChangeKnife;
 	bool	m_bNeedToChangeAgent;
-
 	CNetworkVar( bool, m_bNeedToChangeGloves );
 
 	const char *m_szPlayerDefaultGloves;
@@ -894,6 +893,7 @@ public:
 	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesT );
 	bool m_bLoadoutStatTrak;
+	int m_iLoadoutMusic;
 
 private:
 	CountdownTimer m_ladderSurpressionTimer;

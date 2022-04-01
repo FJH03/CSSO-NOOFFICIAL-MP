@@ -28,6 +28,8 @@
 
 #include "GameUI_Interface.h"
 
+#include "cs_shareddefs.h"
+
 #if defined( _X360 )
 #include "xbox/xbox_win32stubs.h"
 #endif
@@ -37,71 +39,7 @@
 
 using namespace vgui;
 
-const char* szMusicStrings[] =
-{
-	"valve_csgo_01", // the default one should be on top
-	"valve_csgo_02", // the default one should be on top
-	"amontobin_01",
-	"austinwintory_01",
-	"austinwintory_02",
-	"austinwintory_03",
-	"awolnation_01",
-	"bbnos_01",
-	"beartooth_01",
-	"beartooth_02",
-	"blitzkids_01",
-	"chipzel_01",
-	"damjanmravunac_01",
-	"danielsadowski_01",
-	"danielsadowski_02",
-	"danielsadowski_03",
-	"danielsadowski_04",
-	"darude_01",
-	"dren_01",
-	"dren_02",
-	"feedme_01",
-	"freakydna_01",
-	"hades_01",
-	"halflife_alyx_01",
-	"halo_01",
-	"hotlinemiami_01",
-	"hundredth_01",
-	"ianhultquist_01",
-	"jesseharlin_01",
-	"kellybailey_01",
-	"kitheory_01",
-	"laurashigihara_01",
-	"lenniemoore_01",
-	"mateomessina_01",
-	"mattlange_01",
-	"mattlevine_01",
-	"michaelbross_01",
-	"midnightriders_01",
-	"mordfustang_01",
-	"neckdeep_01",
-	"neckdeep_02",
-	"newbeatfund_01",
-	"noisia_01",
-	"proxy_01",
-	"roam_01",
-	"robertallaire_01",
-	"sammarshall_01",
-	"sarahschachner_01",
-	"sasha_01",
-	"scarlxrd_01",
-	"scarlxrd_02",
-	"seanmurray_01",
-	"skog_01",
-	"skog_02",
-	"skog_03",
-	"theverkkars_01",
-	"theverkkars_02",
-	"timhuling_01",
-	"treeadams_benbromfield_01",
-	"troelsfolmann_01",
-	"twinatlantic_01"
-};
-
+extern ConVar loadout_music;
 
 //-----------------------------------------------------------------------------
 // Purpose: Basic help dialog
@@ -155,12 +93,12 @@ CModOptionsSubLoadout::CModOptionsSubLoadout(vgui::Panel *parent) : vgui::Proper
 	m_pStatTrak = new CCvarToggleCheckButton( this, "EnableStatTrak", "#GameUI_Loadout_StatTrak", "loadout_stattrak" );
 	m_pMusicSelection = new CLabeledCommandComboBox( this, "MusicSelectionComboBox" );
 
-	for ( int i = 0; i < ARRAYSIZE( szMusicStrings ); i++ )
+	for ( int i = 0; i < MAX_MUSIC; i++ )
 	{
 		char command[128];
 		char string[128];
-		Q_snprintf( command, sizeof( command ), "snd_music_selection %s", szMusicStrings[i] );
-		Q_snprintf( string, sizeof( string ), "#GameUI_Gameplay_MusicKit_%s", szMusicStrings[i] );
+		Q_snprintf( command, sizeof( command ), "loadout_music %d", i );
+		Q_snprintf( string, sizeof( string ), "#GameUI_Gameplay_MusicKit_%s", g_szMusicKits[i] );
 		m_pMusicSelection->AddItem( string, command );
 	}
 
@@ -237,16 +175,7 @@ void CModOptionsSubLoadout::OnResetData()
 
 	m_pStatTrak->Reset();
 
-	ConVarRef snd_music_selection( "snd_music_selection" );
-	const char *pMusicName = snd_music_selection.GetString();
-	for ( int i = 0; i < ARRAYSIZE( szMusicStrings ); i++ )
-	{
-		if ( !Q_strcmp( pMusicName, szMusicStrings[i] ) )
-		{
-			m_pMusicSelection->SetInitialItem( i );
-			break;
-		}
-	}
+	m_pMusicSelection->SetInitialItem( Clamp( loadout_music.GetInt(), 0, MAX_MUSIC - 1 ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -263,11 +192,11 @@ void CModOptionsSubLoadout::OnApplyChanges()
 	m_pLoadoutDeagleCTComboBox->ApplyChanges();
 	m_pLoadoutDeagleTComboBox->ApplyChanges();
 	m_pStatTrak->ApplyChanges();
-	ConVarRef snd_music_selection( "snd_music_selection" );
+
 #if INSTANT_MUSIC_CHANGE
-	if ( Q_strcmp( snd_music_selection.GetString(), szMusicStrings[m_pMusicSelection->GetActiveItem()] ) )
+	if ( loadout_music.GetInt() != m_pMusicSelection->GetActiveItem() )
 #else
-	if ( m_bNeedToWarnAboutMusic && Q_strcmp( snd_music_selection.GetString(), szMusicStrings[m_pMusicSelection->GetActiveItem()] ) )
+	if ( m_bNeedToWarnAboutMusic && loadout_music.GetInt() != m_pMusicSelection->GetActiveItem() )
 #endif
 	{
 		// Bring up the confirmation dialog

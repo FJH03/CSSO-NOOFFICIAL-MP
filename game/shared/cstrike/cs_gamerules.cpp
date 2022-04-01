@@ -22,6 +22,7 @@
 	#include "networkstringtable_clientdll.h"
 	#include "utlvector.h"
 	#include "soundenvelope.h"
+	#include "c_cs_playerresource.h"
 
 #else
 
@@ -897,12 +898,6 @@ ConVar cl_autohelp(
 	"1",
 	FCVAR_ARCHIVE | FCVAR_USERINFO,
 	"Auto-help" );
-
-ConVar snd_music_selection(
-    "snd_music_selection",
-    "valve_csgo_01",
-    FCVAR_ARCHIVE,
-    "Name of the music kit to use (from game files).");
 
 #else
 
@@ -8345,6 +8340,7 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 		}
 
 		pCSPlayer->m_bLoadoutStatTrak = !!atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_stattrak" ) );
+		pCSPlayer->m_iLoadoutMusic = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_music" ) );
 	}
 }
 
@@ -9530,9 +9526,8 @@ const char *musicTypeStrings[] =
 	"Music.HalfTime",
 };
 
-void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType )
+void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType, int nPlayerEntIndex /* = 0 */ )
 {
-#if 0
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// test for between rounds and block incoming events until in round
 	//
@@ -9550,18 +9545,29 @@ void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType )
 		return;
 	}
 
-	const char *pEntry = musicTypeStrings[ nMusicType ];
-	
-	if( pEntry )
+	C_CS_PlayerResource* cs_PR = dynamic_cast<C_CS_PlayerResource*>(g_PR);
+	if ( !cs_PR )
+		return;
+
+	int nPlayerIndex = GetLocalPlayerIndex();
+	if ( nPlayerEntIndex )
 	{
-		const char* pMusicExtension = snd_music_selection.GetString();
-		char musicSelection[128];
-		int nExtLen = V_strlen( pMusicExtension );
-		int nStrLen = V_strlen( pEntry );
-		V_snprintf( musicSelection, nExtLen + nStrLen+2, "%s.%s", pEntry, pMusicExtension );
-		C_BaseEntity::EmitSound( filter, -1, musicSelection );
+		if ( cs_PR->IsConnected( nPlayerEntIndex ) )
+		{
+			int nMusicID = cs_PR->GetMusicID( nPlayerEntIndex );
+			if ( nMusicID > 1 )
+				nPlayerIndex = nPlayerEntIndex;
+		}
 	}
-#endif
+
+	int nMusicKitID = Clamp( cs_PR->GetMusicID( nPlayerIndex ), 0, MAX_MUSIC - 1 );
+	const char* pMusicExtension = g_szMusicKits[nMusicKitID];
+	
+	char musicSelection[128];
+	int nExtLen = V_strlen( pMusicExtension );
+	int nStrLen = V_strlen( musicTypeStrings[nMusicType] );
+	V_snprintf( musicSelection, nExtLen + nStrLen+2, "%s.%s", musicTypeStrings[nMusicType], pMusicExtension );
+	C_BaseEntity::EmitSound( filter, -1, musicSelection );
 }
 #endif
 

@@ -82,6 +82,9 @@
 #include "tier0/dbg.h"
 #include "engine/IEngineSound.h"
 
+#include "cdll_util.h"
+#include "cs_shareddefs.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include <tier0/memdbgon.h>
 
@@ -146,7 +149,6 @@ CGameUI::CGameUI()
 	m_nBackgroundMusicGUID = 0;
 	m_bBackgroundMusicDesired = false;
 	m_flBackgroundMusicStopTime = -1.0;
-	m_pMusicExtension = NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -1156,26 +1158,21 @@ void CGameUI::ReleaseBackgroundMusic( void )
 //The way to loop an MP3 is just to constantly check if it is playing and restart it otherwise
 #define MENUMUSIC_FADETIME 1.34
 
-#include "cdll_util.h"
 void CGameUI::UpdateBackgroundMusic( void )
 {
-	if ( m_bBackgroundMusicDesired )
+	static ConVarRef snd_musicvolume( "snd_musicvolume" );
+	static ConVarRef snd_menumusic_volume( "snd_menumusic_volume" );
+	if ( m_bBackgroundMusicDesired && snd_musicvolume.GetFloat() > 0.0f && snd_menumusic_volume.GetFloat() > 0.0f )
 	{
-		static ConVarRef snd_musicvolume( "snd_musicvolume" );
-		static ConVarRef snd_menumusic_volume( "snd_menumusic_volume" );
-		if ( !IsBackgroundMusicPlaying() && snd_musicvolume.GetFloat() > 0.0f && snd_menumusic_volume.GetFloat() > 0.0f )
+		if ( !IsBackgroundMusicPlaying() )
 		{
 			m_flBackgroundMusicStopTime = -1.0;
 
-			static ConVarRef snd_music_selection( "snd_music_selection" );
-			m_pMusicExtension = snd_music_selection.GetString();
+			static ConVarRef loadout_music( "loadout_music" );
 
-			if ( m_pMusicExtension != NULL )
-			{
-				char sMusicKit[128];
-				V_sprintf_safe( sMusicKit, "music/%s/%s", m_pMusicExtension, BACKGROUND_MUSIC_FILENAME );
-				m_nBackgroundMusicGUID = enginesound->EmitAmbientSound( sMusicKit, 1.0f );
-			}
+			char sMusicKit[128];
+			V_sprintf_safe( sMusicKit, "music/%s/%s", g_szMusicKits[Clamp( loadout_music.GetInt(), 0, MAX_MUSIC - 1 )], BACKGROUND_MUSIC_FILENAME );
+			m_nBackgroundMusicGUID = enginesound->EmitAmbientSound( sMusicKit, 1.0f );
 		}
 		else
 		{

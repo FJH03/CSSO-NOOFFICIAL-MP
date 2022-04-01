@@ -896,7 +896,7 @@ int UTIL_SpectatorsInGame( void );
 //-----------------------------------------------------------------------------
 
 #ifdef CLIENT_DLL
-void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType );
+void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType, int nPlayerEntIndex = 0 );
 #endif
 
 

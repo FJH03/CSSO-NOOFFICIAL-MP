@@ -353,6 +353,7 @@ void ClientModeCSNormal::Init()
 	}
 
 	m_fDelayedCTWinTime = -1.0f;
+	m_nRoundMVP = 0;
 }
 
 void ClientModeCSNormal::InitViewport()
@@ -403,7 +404,14 @@ void ClientModeCSNormal::Update()
 		{
 			bStartedHalfTimeMusic = true;
 			CSingleUserRecipientFilter filter(C_BasePlayer::GetLocalPlayer());
-			PlayMusicSelection(filter, CSMUSIC_HALFTIME);
+			if( CSGameRules()->GetGamePhase() == GAMEPHASE_HALFTIME )
+			{
+				PlayMusicSelection(filter, CSMUSIC_HALFTIME);
+			}
+			else if( m_nRoundMVP != 0 )
+			{
+				PlayMusicSelection(filter, CSMUSIC_HALFTIME, m_nRoundMVP );
+			}
 		}
 	}
 	else
@@ -670,6 +678,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 
 	if ( Q_strcmp( "round_start", eventname ) == 0 )
 	{
+		m_nRoundMVP = 0;
 		// recreate all client side physics props
 		C_PhysPropClientside::RecreateAll();
 
@@ -688,7 +697,9 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		engine->ClientCmd( "r_cleardecals\n" );
 
 		//stop any looping sounds
-		enginesound->StopAllSounds( true );
+		//enginesound->StopAllSounds( true );
+
+		CBaseEntity::EmitSound( filter, pLocalPlayer->entindex(), "Music.StopAllExceptMusic" );
 
 		Soundscape_OnStopAllSounds();	// Tell the soundscape system.
 
@@ -1021,7 +1032,21 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 	}
 	else if ( V_strcmp( "round_mvp", eventname ) == 0 )
 	{
-		PlayMusicSelection( filter, CSMUSIC_MVP );
+		C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
+		if ( pPlayer )
+		{
+			int nPlayerIndex = pPlayer->entindex();
+
+			if ( C_CS_PlayerResource *cs_PR = dynamic_cast< C_CS_PlayerResource * >( g_PR ) )
+			{
+				int nMusicID = cs_PR->GetMusicID( nPlayerIndex );
+				if ( nMusicID > 1 )
+				{
+					m_nRoundMVP = nPlayerIndex;
+					PlayMusicSelection( filter, CSMUSIC_MVP, nPlayerIndex );
+				}
+			}
+		}
 	}
 	else if ( V_strcmp( "bot_takeover", eventname ) == 0 )
 	{

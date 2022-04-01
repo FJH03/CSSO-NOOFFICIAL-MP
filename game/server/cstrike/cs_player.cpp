@@ -706,6 +706,8 @@ CCSPlayer::CCSPlayer()
 	m_iLoadoutSlotKnifeWeaponT = 0;
 	m_iLoadoutSlotGlovesCT = 0;
 	m_iLoadoutSlotGlovesT = 0;
+	m_bLoadoutStatTrak = false;
+	m_iLoadoutMusic = 0;
 }
 
 
@@ -7122,6 +7124,12 @@ bool CCSPlayer::HandleCommand_JoinClass( int iClass )
 // 		SetModelFromClass();
 		GetIntoGame();
 	}
+
+	// PiMoN: putting it here instead of VGUI code because we might or not have an agent
+	// and class selection is a different panel which means that it might stop before you
+	// select your class
+	CSingleUserRecipientFilter filter( this );
+	EmitSound( filter, SOUND_FROM_WORLD, "Music.StopSelection" );
 
 	return true;
 }

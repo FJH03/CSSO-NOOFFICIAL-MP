@@ -2382,27 +2382,30 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "player_death", name ) == 0 )
 	{
-		C_CSPlayer* csPlayer = ToCSPlayer( UTIL_PlayerByUserId( EventUserID ) );
-		if (csPlayer)
+		if ( IsLocalPlayer() )
 		{
-			if ( csPlayer->IsLocalPlayer() )
+			C_CSPlayer* csPlayer = ToCSPlayer( UTIL_PlayerByUserId( EventUserID ) );
+			if ( csPlayer && csPlayer->IsLocalPlayer() )
 			{
-				//reset target ID 
-				m_iIDEntIndex = 0;
-				m_delayTargetIDTimer.Reset();
-				m_iOldIDEntIndex = 0;
-				m_holdTargetIDTimer.Reset();
-				m_iTargetedWeaponEntIndex = 0;
-
-				if ( CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
+				if ( csPlayer->IsLocalPlayer() )
 				{
-					C_RecipientFilter filter;
-					filter.AddRecipient( this );
-					PlayMusicSelection( filter, CSMUSIC_DEATHCAM );
-				}
-			}
+					//reset target ID 
+					m_iIDEntIndex = 0;
+					m_delayTargetIDTimer.Reset();
+					m_iOldIDEntIndex = 0;
+					m_holdTargetIDTimer.Reset();
+					m_iTargetedWeaponEntIndex = 0;
 
-			csPlayer->RemoveGlovesModel();
+					if ( CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
+					{
+						C_RecipientFilter filter;
+						filter.AddRecipient( this );
+						PlayMusicSelection( filter, CSMUSIC_DEATHCAM );
+					}
+				}
+
+				csPlayer->RemoveGlovesModel();
+			}
 		}
 	}
 	else if ( Q_strcmp( "player_spawn", name ) == 0 )

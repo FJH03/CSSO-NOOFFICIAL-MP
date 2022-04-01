@@ -1351,6 +1351,22 @@ void C_BaseEntity::GetVectors(Vector* pForward, Vector* pRight, Vector* pUp) con
 	}
 }
 
+void C_BaseEntity::UpdateVisibilityAllEntities()
+{
+	C_BaseEntityIterator iterator;
+	C_BaseEntity *pEnt;
+	while ( (pEnt = iterator.Next()) != NULL )	
+	{
+		pEnt->UpdateVisibility();	
+	}
+}
+
+// (static function)
+CON_COMMAND( cl_updatevisibility, "Updates visibility bits." )
+{
+	C_BaseEntity::UpdateVisibilityAllEntities();
+}
+
 void C_BaseEntity::UpdateVisibility()
 {
 #ifdef TF_CLIENT_DLL

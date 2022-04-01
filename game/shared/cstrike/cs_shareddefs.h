@@ -44,6 +44,7 @@
 #define MAX_HOSTAGE_RESCUES			4
 #define HOSTAGE_RULE_CAN_PICKUP		1
 #define MAX_KNIVES					19
+#define MAX_MUSIC					61
 
 #define MAX_MODEL_STRING_SIZE 256
 
@@ -187,6 +188,9 @@ extern const char* CTIDFPlayerModelStrings[MAX_IDF_SKINS];
 extern const char* CTSWATPlayerModelStrings[MAX_FACTION_SKINS];
 
 extern const char *KnivesEntitiesStrings[MAX_KNIVES];
+
+extern const char* g_szMusicKits[MAX_MUSIC];
+
 
 // These go in CCSPlayer::m_iAddonBits and get sent to the client so it can create
 // grenade models hanging off players.
@@ -344,7 +348,6 @@ static PlayerViewmodelArmConfig s_playerViewmodelArmConfigs[] =
 };
 
 const PlayerViewmodelArmConfig *GetPlayerViewmodelArmConfigForPlayerModel( const char* szPlayerModel );
-
 
 // The various states the player can be in during the join game process.
 enum CSPlayerState

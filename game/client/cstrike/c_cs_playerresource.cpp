@@ -41,6 +41,7 @@ IMPLEMENT_CLIENTCLASS_DT(C_CS_PlayerResource, DT_CSPlayerResource, CCSPlayerReso
 	RecvPropArray3( RECVINFO_ARRAY(m_iAccount), RecvPropInt( RECVINFO(m_iAccount[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_iGunGameProgressiveWeaponIndex), RecvPropInt( RECVINFO(m_iGunGameProgressiveWeaponIndex[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_iContributionScore), RecvPropInt( RECVINFO(m_iContributionScore[0]))),
+	RecvPropArray3( RECVINFO_ARRAY(m_nMusicID), RecvPropInt( RECVINFO(m_nMusicID[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_bControllingBot), RecvPropInt( RECVINFO(m_bControllingBot[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_iControlledPlayer), RecvPropInt( RECVINFO(m_iControlledPlayer[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_iControlledByPlayer), RecvPropInt( RECVINFO(m_iControlledByPlayer[0]))),
@@ -65,6 +66,7 @@ C_CS_PlayerResource::C_CS_PlayerResource()
 	memset( m_iAccount, 0, sizeof( m_iAccount ) );
 	memset( m_iGunGameProgressiveWeaponIndex, 0, sizeof( m_iGunGameProgressiveWeaponIndex ) );
 	memset( m_iContributionScore, 0, sizeof( m_iContributionScore ) );
+	memset( m_nMusicID, 0, sizeof( m_nMusicID ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -381,5 +383,14 @@ int C_CS_PlayerResource::GetContributionScore( int iIndex )
 		return 0;
 
 	return m_iContributionScore[iIndex];
+}
+
+//--------------------------------------------------------------------------------------------------------
+int C_CS_PlayerResource::GetMusicID( int iIndex )
+{
+	if ( !IsConnected( iIndex ) )
+		return 0;
+
+	return m_nMusicID[ iIndex ];
 }
 

@@ -16,6 +16,7 @@
 #include "viewpostprocess.h"
 #include <vgui/ILocalize.h>
 #include "c_playerresource.h"
+#include "engine/IEngineSound.h"
 
 CCSTeamMenuAgentImage::CCSTeamMenuAgentImage( Panel* parent, const char* panelName, int nTeamNumber ): Button( parent, panelName, L"" )
 {
@@ -431,6 +432,12 @@ void CCSTeamMenu::ShowPanel( bool bShow )
 
 	if ( bShow )
 	{
+		if ( !IsVisible() )
+		{
+			CLocalPlayerFilter filter;
+			PlayMusicSelection( filter, CSMUSIC_SELECTION );
+		}
+
 		// hide the system buttons
 		SetTitleBarVisible( false );
 

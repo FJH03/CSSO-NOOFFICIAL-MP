@@ -459,7 +459,7 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 	m_pSurfaceData = NULL;
 	m_surfaceFriction = 1.0f;
 	m_chTextureType = 0;
-
+	m_bIsLocalPlayer = false;
 	m_flNextAchievementAnnounceTime = 0;
 
 	m_bStartedFreezeFrame = false;
@@ -896,6 +896,42 @@ void C_BasePlayer::PreDataUpdate( DataUpdateType_t updateType )
 	BaseClass::PreDataUpdate( updateType );
 }
 
+void C_BasePlayer::CheckForLocalPlayer()
+{
+	// Make sure s_pLocalPlayer is correct
+	int iLocalPlayerIndex = engine->GetLocalPlayer();
+
+	if ( g_nKillCamMode )
+		iLocalPlayerIndex = g_nKillCamTarget1;
+
+	if ( iLocalPlayerIndex == index )
+	{
+		s_pLocalPlayer = this;
+		m_bIsLocalPlayer = true;
+
+		// Reset our sound mixed in case we were in a freeze cam when we
+		// changed level, which would cause the snd_soundmixer to be left modified.
+		ConVar *pVar = (ConVar *)cvar->FindVar( "snd_soundmixer" );
+		pVar->Revert();
+	}
+
+	UpdateVisibilityAllEntities();
+}
+
+void C_BasePlayer::SetAsLocalPlayer()
+{
+	Assert( s_pLocalPlayer == NULL );
+	s_pLocalPlayer = this;
+	m_bIsLocalPlayer = true;
+
+	// Reset our sound mixed in case we were in a freeze cam when we
+	// changed level, which would cause the snd_soundmixer to be left modified.
+	ConVar *pVar = ( ConVar * )cvar->FindVar( "snd_soundmixer" );
+	pVar->Revert();
+
+	UpdateVisibilityAllEntities();
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : updateType - 
@@ -908,23 +944,7 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 
 	if ( updateType == DATA_UPDATE_CREATED )
 	{
-		// Make sure s_pLocalPlayer is correct
-
-		int iLocalPlayerIndex = engine->GetLocalPlayer();
-
-		if ( g_nKillCamMode )
-			iLocalPlayerIndex = g_nKillCamTarget1;
-
-		if ( iLocalPlayerIndex == index )
-		{
-			Assert( s_pLocalPlayer == NULL );
-			s_pLocalPlayer = this;
-
-			// Reset our sound mixed in case we were in a freeze cam when we
-			// changed level, which would cause the snd_soundmixer to be left modified.
-			ConVar *pVar = (ConVar *)cvar->FindVar( "snd_soundmixer" );
-			pVar->Revert();
-		}
+		CheckForLocalPlayer();
 	}
 
 	bool bForceEFNoInterp = IsNoInterpolationFrame();
@@ -2085,16 +2105,6 @@ bool C_BasePlayer::ShouldDrawThisPlayer()
 	return false;
 }
 
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Output : Returns true on success, false on failure.
-//-----------------------------------------------------------------------------
-bool C_BasePlayer::IsLocalPlayer( void ) const
-{
-	return ( GetLocalPlayer() == this );
-}
 
 int	C_BasePlayer::GetUserID( void )
 {

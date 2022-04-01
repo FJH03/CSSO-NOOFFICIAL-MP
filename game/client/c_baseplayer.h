@@ -211,8 +211,12 @@ public:
 		return false;
 	}
 
-
-	bool						IsLocalPlayer( void ) const;
+	// Makes sure s_pLocalPlayer is properly initialized
+	void						CheckForLocalPlayer();
+	void						SetAsLocalPlayer();
+	
+	/// is this player a local player ( call when you have already verified that your pointer really is a C_BasePlayer )
+	inline bool					IsLocalPlayer( void ) const;
 
 	// Global/static methods
 	virtual void				ThirdPersonSwitch( bool bThirdperson );
@@ -646,6 +650,8 @@ protected:
 
 	float			m_flNextAchievementAnnounceTime;
 
+	bool			m_bIsLocalPlayer;
+
 	int				m_nForceVisionFilterFlags; // Force our vision filter to a specific setting
 
 #if defined USES_ECON_ITEMS
@@ -739,6 +745,11 @@ inline const CUserCmd *CBasePlayer::GetCurrentUserCommand() const
 {
 	Assert( m_pCurrentCommand );
 	return m_pCurrentCommand;
+}
+
+inline bool	C_BasePlayer::IsLocalPlayer( void ) const
+{
+	return m_bIsLocalPlayer;
 }
 
 #endif // C_BASEPLAYER_H

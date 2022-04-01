@@ -50,6 +50,7 @@ protected:
 	CNetworkArray( int, m_iAccount, MAX_PLAYERS + 1);
 	CNetworkArray( int, m_iGunGameProgressiveWeaponIndex, MAX_PLAYERS + 1);
 	CNetworkArray( int, m_iContributionScore, MAX_PLAYERS + 1 );
+	CNetworkArray( int, m_nMusicID, MAX_PLAYERS + 1 );
 
 	CNetworkArray( int, m_bControllingBot, MAX_PLAYERS + 1 );
 	CNetworkArray( int, m_iControlledPlayer, MAX_PLAYERS + 1 );

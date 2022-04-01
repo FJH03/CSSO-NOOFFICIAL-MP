@@ -699,6 +699,8 @@ void CInput::CAM_ToThirdPerson(void)
 		m_fCameraInThirdPerson = true; 
 	
 		g_ThirdPersonManager.SetCameraOffsetAngles( Vector( viewangles[ YAW ], viewangles[ PITCH ], CAM_MIN_DIST ) );
+
+		C_BaseEntity::UpdateVisibilityAllEntities();
 	}
 
 	cam_command.SetValue( 0 );
@@ -714,7 +716,11 @@ void CInput::CAM_ToFirstPerson(void)
 {
 	g_ThirdPersonManager.SetDesiredCameraOffset( vec3_origin );
 
-	m_fCameraInThirdPerson = false;
+	if ( m_fCameraInThirdPerson )
+	{
+		m_fCameraInThirdPerson = false;
+		C_BaseEntity::UpdateVisibilityAllEntities();
+	}
 	cam_command.SetValue( 0 );
 
 	// Let the local player know
@@ -757,7 +763,11 @@ CAM_ToFirstPerson
 */
 void CInput::CAM_ToOrthographic(void)
 {
-	m_fCameraInThirdPerson = false;
+	if ( m_fCameraInThirdPerson )
+	{
+		m_fCameraInThirdPerson = false;
+		C_BaseEntity::UpdateVisibilityAllEntities();
+	}
 	m_CameraIsOrthographic = true;
 	cam_command.SetValue( 0 );
 }

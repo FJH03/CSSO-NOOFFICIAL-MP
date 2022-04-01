@@ -158,7 +158,6 @@ private:
 	int m_nBackgroundMusicGUID;
 	bool m_bBackgroundMusicDesired;
 	float m_flBackgroundMusicStopTime;
-	const char *m_pMusicExtension;
 };
 
 // Purpose: singleton accessor

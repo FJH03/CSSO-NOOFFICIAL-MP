@@ -2329,6 +2329,25 @@ void CHLClient::FrameStageNotify( ClientFrameStage_t curStage )
 		break;
 	case FRAME_NET_UPDATE_POSTDATAUPDATE_END:
 		{
+			if ( !C_BasePlayer::GetLocalPlayer() )
+			{
+				// this is only possible when we're playing back the past, when our killer hasn't been spawned yet
+				if ( C_BasePlayer *pPlayer = UTIL_PlayerByIndex( engine->GetLocalPlayer() ) )
+				{
+					pPlayer->SetAsLocalPlayer();
+				}
+				else
+				{
+					Warning( "No local player %d after full frame update\n", engine->GetLocalPlayer() );
+					for ( int i = 0; i < MAX_PLAYERS; ++i )
+						if ( C_BasePlayer*p = UTIL_PlayerByIndex( i ) )
+						{
+							Msg( "Setting fallback player %s as local player\n", p->GetPlayerName() );
+							p->SetAsLocalPlayer();
+							break;
+						}
+				}
+			}
 			VPROF( "CHLClient::FrameStageNotify FRAME_NET_UPDATE_POSTDATAUPDATE_END" );
 			PREDICTION_ENDTRACKVALUE();
 			// Let prediction copy off pristine data

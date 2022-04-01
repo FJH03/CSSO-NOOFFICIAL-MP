@@ -62,6 +62,8 @@ private:
 	float				m_CCFreezePeriodPercent_T;
 
 	float				m_fDelayedCTWinTime;
+
+	int m_nRoundMVP;
 };
 
 
