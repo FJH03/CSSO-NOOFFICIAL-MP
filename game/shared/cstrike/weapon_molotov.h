@@ -68,26 +68,14 @@ public:
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_INCGRENADE; }
 
-#ifdef CLIENT_DLL
-	virtual void	Simulate();
-	virtual void	UpdateParticles( void );
-	virtual void	OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect );
-#else
+#ifndef CLIENT_DLL
 	DECLARE_DATADESC();
 
 	virtual void 	EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer );
-	virtual void 	Precache( void );
 #endif
-
-	virtual void	Drop( const Vector& vecVelocity );
 
 private:
 	CIncendiaryGrenade( const CIncendiaryGrenade& );
-
-private:
-#if defined( CLIENT_DLL )
-	CUtlReference<CNewParticleEffect> m_molotovParticleEffect;
-#endif
 };
 
 #endif // WEAPON_MOLOTOV_H

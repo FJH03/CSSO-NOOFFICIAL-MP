@@ -75,30 +75,37 @@ void CMolotovGrenade::UpdateParticles( void )
 
 	if ( iWeaponId == WEAPON_MOLOTOV )
 	{
-		bool bIsThirdPersonMolotovVisible = false;
-		CBaseWeaponWorldModel *pWeaponWorldModel = pCSWeapon->GetWeaponWorldModel();
-		if ( pWeaponWorldModel )
+		bool bIsEffectVisible = false;
+		C_BaseAnimating* pWeaponAnimating = pCSWeapon->GetWeaponWorldModel();
+
+		if ( pWeaponAnimating && pWeaponAnimating->ShouldDraw() )
 		{
-			bIsThirdPersonMolotovVisible = pWeaponWorldModel->ShouldDraw();
+			bIsEffectVisible = true;
+		}
+		else
+		{
+			pWeaponAnimating = pPlayer->GetViewModel();
+			if ( pWeaponAnimating && pWeaponAnimating->ShouldDraw() )
+				bIsEffectVisible = true;
 		}
 
-		if ( m_molotovParticleEffect.IsValid() ) 
+		if ( m_molotovParticleEffect.IsValid() )
 		{
-			m_molotovParticleEffect->SetDormant( !bIsThirdPersonMolotovVisible ); // Is the weapon Hidden?
+			m_molotovParticleEffect->SetDormant( !bIsEffectVisible ); // Is the weapon Hidden?
 		}
 
-		if ( bIsThirdPersonMolotovVisible )
+		if ( bIsEffectVisible )
 		{
 			if ( m_bPinPulled )
 			{
 				if ( !m_molotovParticleEffect() )
 				{
 					// TEST: [mlowrance] This is to test for attachment.
-					int iAttachment = pWeaponWorldModel->LookupAttachment( "Wick" );
+					int iAttachment = pWeaponAnimating->LookupAttachment( "Wick" );
 					if ( iAttachment >= 0 )
 					{
 						// FIXME: Precache 'Wick' attachment index
-						m_molotovParticleEffect = pWeaponWorldModel->ParticleProp()->Create( "weapon_molotov_held", PATTACH_POINT_FOLLOW, iAttachment );
+						m_molotovParticleEffect = pWeaponAnimating->ParticleProp()->Create( "weapon_molotov_held", PATTACH_POINT_FOLLOW, iAttachment );
 						EmitSound( "Molotov.IdleLoop" );
 						SetLoopingSoundPlaying( true );
 
@@ -164,68 +171,7 @@ END_DATADESC()
 
 void CIncendiaryGrenade::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer )
 {
-	// [mlowrance] were throwing the grenade, be sure to remove flame sound effect
-	//SetLoopingSoundPlaying( false );
-	StopSound( "Molotov.IdleLoop" ); 
-	//DevMsg( 1, "---------->Stopping Molotov.IdleLoop 2\n" );
 	CMolotovProjectile::Create( vecSrc, vecAngles, vecVel, angImpulse, pPlayer, true );
 }
 
-void CIncendiaryGrenade::Precache( void )
-{
-	BaseClass::Precache();
-	
-	PrecacheScriptSound( "Molotov.IdleLoop" );
-	PrecacheParticleSystem( "weapon_molotov_held" );
-}
-
-#else // GAME_DLL
-
-void CIncendiaryGrenade::UpdateParticles( void )
-{
-	// FIXME: This is bogus; we need to make the particle property have particle system types:
-	// first person, third person, owner, and logic in the particle property to know whether
-	// to render a given system given these rules and knowledge of what mode the owner is in
-	C_CSPlayer *pPlayer = ToCSPlayer( GetOwner() );
-	if ( !pPlayer )
-		return;
-
-	//int nRenderFlags = 0;
-
-	CWeaponCSBase *pCSWeapon = (CWeaponCSBase*)pPlayer->GetActiveWeapon();
-	if ( !pCSWeapon )
-		return;
-	
-	if ( m_molotovParticleEffect.IsValid() )
-	{
-		StopSound( "Molotov.IdleLoop" );
-		//DevMsg( 1, "---------->Stopping Molotov.IdleLoop 1\n" );
-		m_molotovParticleEffect->StopEmission( false, false );
-		m_molotovParticleEffect->SetRemoveFlag();
-		m_molotovParticleEffect = NULL;
-	}
-}
-
-void CIncendiaryGrenade::Simulate()
-{
-	UpdateParticles();
-	return BaseClass::Simulate();
-}
-
-//--------------------------------------------------------------------------------------------------------
-void CIncendiaryGrenade::OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect )
-{
-	if ( m_molotovParticleEffect() == pParticleEffect )
-	{
-		m_molotovParticleEffect = NULL;
-	}
-}
-
 #endif // !CLIENT_DLL
-
-void CIncendiaryGrenade::Drop(const Vector& vecVelocity)
-{
-	CBaseCSGrenade::Drop(vecVelocity);
-	StopSound( "Molotov.IdleLoop" ); 
-	SetLoopingSoundPlaying( false );
-}
