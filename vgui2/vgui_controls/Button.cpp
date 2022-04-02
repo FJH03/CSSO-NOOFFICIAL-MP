@@ -384,10 +384,10 @@ Color Button::GetButtonFgColor()
 	{
 		if (_buttonFlags.IsFlagSet( DEPRESSED ))
 			return _depressedFgColor;
-		if (_buttonFlags.IsFlagSet( ARMED ))
-			return _armedFgColor;
 		if (_buttonFlags.IsFlagSet( SELECTED))
 			return _selectedFgColor;
+		if (_buttonFlags.IsFlagSet( ARMED ))
+			return _armedFgColor;
 		return _defaultFgColor;
 	}
 
@@ -395,10 +395,10 @@ Color Button::GetButtonFgColor()
 
 	if (_buttonFlags.IsFlagSet( DEPRESSED ))
 		cBlendedColor = _depressedFgColor;
-	else if (_buttonFlags.IsFlagSet( ARMED ))
-		cBlendedColor = _armedFgColor;
 	else if (_buttonFlags.IsFlagSet( SELECTED ))
 		cBlendedColor = _selectedFgColor;
+	else if (_buttonFlags.IsFlagSet( ARMED ))
+		cBlendedColor = _armedFgColor;
 	else
 		cBlendedColor = _defaultFgColor;
 
