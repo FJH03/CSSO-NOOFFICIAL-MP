@@ -63,7 +63,7 @@ public:
 
 protected:	// private structures & types
 
-	float GetViewAngle( void ); // The angle that determines the viewport twist from map texture to panel drawing.
+	virtual float GetViewAngle( void ); // The angle that determines the viewport twist from map texture to panel drawing.
 
 	// list of game events the hLTV takes care of
 
@@ -246,7 +246,6 @@ protected:
 
 	Vector	m_MapOrigin;	// read from KeyValues files
 	float	m_fMapScale;	// origin and scale used when screenshot was made
-	bool	m_bRotateMap;	// if true roatate map around 90 degress, so it fits better to 4:3 screen ratio
 
 	int		m_nFollowEntity;// entity number to follow, 0 = off
 	CPanelAnimationVar( float, m_fZoom, "zoom", "1.0" );	// current zoom n = overview panel shows 1/n^2 of whole map'

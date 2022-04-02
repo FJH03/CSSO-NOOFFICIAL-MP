@@ -1532,10 +1532,7 @@ bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector p
 			}
 			else 
 			{
-				if ( m_bRotateMap )
-					angleToUse += 180.0f;
-				else
-					angleToUse += 90.0f;
+				angleToUse += 90.0f;
 			}
 		}
 
@@ -2581,6 +2578,22 @@ Vector2D CCSMapOverview::PanelToMap( const Vector2D &panelPos )
 	mapPos.y = offset.y + m_MapCenter.y;
 
 	return mapPos;
+}
+
+//-----------------------------------------------------------------------------
+float CCSMapOverview::GetViewAngle( void )
+{
+	float viewAngle = m_fViewAngle;
+	if ( m_fZoom != 1.0f || m_bRoundRadar ) // if not showing full map in square (with scoreboard)
+		viewAngle -= 90.0f;
+
+	if ( !m_bFollowAngle )
+	{
+		// We don't use fViewAngle.  We just show straight at all times.
+		viewAngle = 0.0f;
+	}
+
+	return viewAngle;
 }
 
 //-----------------------------------------------------------------------------

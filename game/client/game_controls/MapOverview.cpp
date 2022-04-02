@@ -566,14 +566,6 @@ void CMapOverview::DrawObjects( )
 
 		float flAngle = obj->angle[YAW];
 
-		if ( obj->flags & MAP_OBJECT_ALIGN_TO_MAP && m_bRotateMap )
-		{
-			if ( m_bRotateMap )
-                flAngle = 90;
-			else
-				flAngle = 0;
-		}
-
 		MapObject_t tempObj = *obj;
 		tempObj.angle[YAW] = flAngle;
 		tempObj.text = text;
@@ -748,10 +740,7 @@ float CMapOverview::GetViewAngle( void )
 	if ( !m_bFollowAngle )
 	{
 		// We don't use fViewAngle.  We just show straight at all times.
-		if ( m_bRotateMap )
-			viewAngle = 90.0f;
-		else
-			viewAngle = 0.0f;
+		viewAngle = 0.0f;
 	}
 
 	return viewAngle;
@@ -814,7 +803,6 @@ void CMapOverview::SetMap(const char * levelname)
 		m_MapOrigin.x = 0;
 		m_MapOrigin.y = 0;
 		m_fMapScale = 1;
-		m_bRotateMap = false;
 		return;
 	}
 
@@ -839,7 +827,6 @@ void CMapOverview::SetMap(const char * levelname)
 	m_MapOrigin.x	= m_MapKeyValues->GetInt("pos_x");
 	m_MapOrigin.y	= m_MapKeyValues->GetInt("pos_y");
 	m_fMapScale		= m_MapKeyValues->GetFloat("scale", 1.0f);
-	m_bRotateMap	= m_MapKeyValues->GetInt("rotate")!=0;
 }
 
 void CMapOverview::ResetRound()

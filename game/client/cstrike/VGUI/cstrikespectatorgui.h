@@ -223,6 +223,7 @@ protected:
 	void			ClearGoalIcons();
 	virtual bool	IsRadarLocked();
 	Vector2D		PanelToMap( const Vector2D &panelPos );
+	virtual float	GetViewAngle( void ); // The angle that determines the viewport twist from map texture to panel drawing.
 
 	bool			AdjustPointToPanel(Vector2D *pos);
 	MapPlayer_t*	GetPlayerByEntityID( int entityID );
