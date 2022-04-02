@@ -147,6 +147,7 @@ void CheckButton::SetSelected(bool state )
 {
 	if (m_bCheckButtonCheckable)
 	{
+		SetArmed( false );
 		// send a message saying we've been checked
 		KeyValues *msg = new KeyValues("CheckButtonChecked", "state", (int)state);
 		PostActionSignal(msg);
