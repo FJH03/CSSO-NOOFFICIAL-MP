@@ -10223,11 +10223,11 @@ void CShaderAPIDx8::PushMatrix()
 
 void CShaderAPIDx8::PopMatrix()
 {
+	// Have to pop even while deactivated, otherwise the stack will overflow and we'll crash
+	m_pMatrixStack[m_CurrStack]->Pop();
+
 	if (MatrixIsChanging())
-	{
-		m_pMatrixStack[m_CurrStack]->Pop();
 		UpdateMatrixTransform();
-	}
 }
 
 void CShaderAPIDx8::LoadIdentity( )
