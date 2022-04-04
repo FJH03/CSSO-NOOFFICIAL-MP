@@ -150,12 +150,15 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 		const char* pszLocalizedGameModeName = g_pVGuiLocalize->FindAsUTF8( g_pGameTypes->GetCurrentGameModeNameID() );
 		if ( pszLocalizedGameModeName )
 		{
+			char szLocalizedGameModeName[128];
+			Q_strcpy( szLocalizedGameModeName, pszLocalizedGameModeName );
 			char szMapName[256];
-			char szGameModeMap[256];
 			g_pVGuiLocalize->ConvertUnicodeToANSI( m_pMapName, szMapName, sizeof( szMapName ) );
 
 			const char* pszLocalizedMapName = g_pVGuiLocalize->FindAsUTF8( g_pGameTypes->GetMapNameID( szMapName ) );
-			V_snprintf( szGameModeMap, sizeof( szGameModeMap ), "%s | %s", pszLocalizedGameModeName, pszLocalizedMapName ? pszLocalizedMapName : szMapName );
+			char szGameModeMap[256];
+
+			V_snprintf( szGameModeMap, sizeof( szGameModeMap ), "%s | %s", szLocalizedGameModeName, pszLocalizedMapName ? pszLocalizedMapName : szMapName );
 			SetDialogVariable( "mapname_gamemode", szGameModeMap );
 		}
 	}
@@ -966,10 +969,13 @@ void CCSClientScoreBoardDialog::FireGameEvent( IGameEvent *event )
 			const char* pszLocalizedGameModeName = g_pVGuiLocalize->FindAsUTF8( g_pGameTypes->GetCurrentGameModeNameID() );
 			if ( pszLocalizedGameModeName )
 			{
-				char szGameModeMap[256];
+				char szLocalizedGameModeName[128];
+				Q_strcpy( szLocalizedGameModeName, pszLocalizedGameModeName );
 
 				const char* pszLocalizedMapName = g_pVGuiLocalize->FindAsUTF8( g_pGameTypes->GetMapNameID( mapName ) );
-				V_snprintf( szGameModeMap, sizeof( szGameModeMap ), "%s | %s", pszLocalizedGameModeName, pszLocalizedMapName ? pszLocalizedMapName : mapName );
+				char szGameModeMap[256];
+
+				V_snprintf( szGameModeMap, sizeof( szGameModeMap ), "%s | %s", szLocalizedGameModeName, pszLocalizedMapName ? pszLocalizedMapName : mapName );
 				SetDialogVariable( "mapname_gamemode", szGameModeMap );
 			}
 
