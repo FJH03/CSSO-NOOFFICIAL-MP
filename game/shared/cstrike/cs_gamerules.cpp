@@ -379,8 +379,8 @@ ConVar mp_do_warmup_period(
 	true, 0,
 	true, 1 );
 
-ConVar mp_do_warmup_offine( 
-    "mp_do_warmup_offine", 
+ConVar mp_do_warmup_offline( 
+    "mp_do_warmup_offline", 
     "0",
     FCVAR_REPLICATED,
     "Whether or not to do a warmup period at the start of a match in an offline (bot) match.",
@@ -7603,7 +7603,7 @@ bool CCSGameRules::IsFreezePeriod()
 
 bool CCSGameRules::IsWarmupPeriod() const
 {
-	if ( IsPlayingOffline() && !mp_do_warmup_offine.GetBool() )
+	if ( IsPlayingOffline() && !mp_do_warmup_offline.GetBool() )
 		return false;
 
 	return m_bWarmupPeriod;
