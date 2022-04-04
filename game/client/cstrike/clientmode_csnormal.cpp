@@ -671,6 +671,9 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
 	CLocalPlayerFilter filter;
 
+	if ( !pLocalPlayer )
+		return;
+
 	const char *eventname = event->GetName();
 
 	if ( !eventname || !eventname[0] )
