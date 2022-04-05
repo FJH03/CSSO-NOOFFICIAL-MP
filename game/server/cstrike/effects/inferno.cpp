@@ -772,16 +772,6 @@ bool CInferno::CheckExpired()
 
 	if ( isDone )
 	{
-		IGameEvent * event = gameeventmanager->CreateEvent( "inferno_expire" );
-		if ( event )
-		{
-			event->SetInt( "entityid", this->entindex() );
-			event->SetFloat( "x", m_startPos.x );
-			event->SetFloat( "y", m_startPos.y );
-			event->SetFloat( "z", m_startPos.z );
-			gameeventmanager->FireEvent( event );
-		}
-
 		// if all fires have burned out, we're done
 		UTIL_Remove( this );
 
