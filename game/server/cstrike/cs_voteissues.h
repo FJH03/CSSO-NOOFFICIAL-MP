@@ -63,7 +63,6 @@ public:
 	virtual void		ListIssueDetails( CBasePlayer *pForWhom );
 	virtual const char *GetVotePassedString( void );
 	virtual bool		IsTeamRestrictedVote( void ) { return true; }
-	virtual void		OnVoteFailed( int iEntityHoldingVote );
 	virtual void		OnVoteStarted( void );
 	virtual const char *GetDetailsString( void );
 	virtual const char *GetOtherTeamDisplayString() { return "#CStrike_otherteam_vote_kick_player"; }
@@ -92,7 +91,6 @@ public:
 	virtual void		ListIssueDetails( CBasePlayer *pForWhom );
 	virtual const char *GetVotePassedString( void );
 	virtual bool		IsTeamRestrictedVote( void ) { return true; }
-	virtual void		OnVoteFailed( int iEntityHoldingVote );
 	virtual void		OnVoteStarted( void );
 	virtual const char *GetDetailsString( void );
 

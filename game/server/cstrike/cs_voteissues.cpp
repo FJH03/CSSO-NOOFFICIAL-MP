@@ -246,17 +246,6 @@ bool CKickIssue::CanCallVote( int iEntIndex, const char *pszDetails, vote_create
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CKickIssue::OnVoteFailed( int iEntityHoldingVote )
-{
-	CBaseCSIssue::OnVoteFailed( iEntityHoldingVote );
-
-	CCSPlayer *subject = NULL;
-	ExtractDataFromDetails( m_szDetailsString, &subject );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 void CKickIssue::OnVoteStarted( void )
 {
 	CCSPlayer *pSubject = NULL;
@@ -453,17 +442,6 @@ bool CBanIssue::CanCallVote( int iEntIndex, const char *pszDetails, vote_create_
 	}
 
 	return true;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CBanIssue::OnVoteFailed( int iEntityHoldingVote )
-{
-	CBaseCSIssue::OnVoteFailed( iEntityHoldingVote );
-
-	CCSPlayer *subject = NULL;
-	ExtractDataFromDetails( m_szDetailsString, &subject );
 }
 
 //-----------------------------------------------------------------------------
@@ -753,7 +731,7 @@ bool CNextLevelIssue::CanCallVote( int iEntIndex, const char *pszDetails, vote_c
 		return false;
 
 	// CSGameRules created vote
-	if ( sv_vote_issue_nextlevel_choicesmode.GetBool() && iEntIndex == 99 )
+	if ( sv_vote_issue_nextlevel_choicesmode.GetBool() && iEntIndex == DEDICATED_SERVER )
 	{
 		// Invokes a UI down stream
 		if ( Q_strcmp( pszDetails, "" ) == 0 )
