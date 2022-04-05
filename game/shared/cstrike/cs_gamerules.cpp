@@ -8099,13 +8099,15 @@ bool CCSGameRules::IsPlayingOffline( void ) const
 #ifndef CLIENT_DLL
 	if ( engine->IsDedicatedServer() )
 		return false;
-#endif
+
+	return true;
+#else
 	// PiMoN: game_online gets reset to default (1)
-	// when server gets started so I'm going to assume
-	// that we're always offline when not on a dedicated server
+	// when server gets started
 	// TODO: why it worked before but doesn't work now? or was
 	// it always like that?
-	return true;
+	return engine->IsClientLocalToActiveServer();
+#endif
 
 	/*extern ConVar game_online;
 	return !game_online.GetBool();*/
