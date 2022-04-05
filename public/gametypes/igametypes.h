@@ -87,7 +87,9 @@ public:
 	// Get maps from mapgroup and get mapgroup from type and mode
 	virtual const char *GetRandomMapGroup( const char *gameType, const char *gameMode ) = 0;
 	virtual const char *GetFirstMap( const char *mapGroup ) = 0;
+	virtual const char *GetRandomMap() = 0;
 	virtual const char *GetRandomMap( const char *mapGroup ) = 0;
+	virtual const char *GetNextMap( const char *mapName ) = 0;
 	virtual const char *GetNextMap( const char *mapGroup, const char *mapName ) = 0;
 
 	virtual int GetMaxPlayersForTypeAndMode( int iType, int iMode ) = 0;

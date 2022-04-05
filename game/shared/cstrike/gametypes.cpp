@@ -1778,6 +1778,25 @@ const char *GameTypes::GetFirstMap( const char *mapGroup )
 }
 
 // -------------------------------------------------------------------------------------------- //
+// Purpose: Get a random map from a random mapgroup
+// -------------------------------------------------------------------------------------------- //
+const char *GameTypes::GetRandomMap()
+{
+	const char* pszCurrentGameType = GetGameTypeFromInt( GetCurrentGameType() );
+	const char* pszCurrentGameMode = GetGameModeFromInt( GetCurrentGameType(), GetCurrentGameMode() );
+	if ( pszCurrentGameType && pszCurrentGameMode )
+	{
+		const char* pszMapGroup = GetRandomMapGroup( pszCurrentGameType, pszCurrentGameMode );
+		if ( pszMapGroup )
+		{
+			return GetRandomMap( pszMapGroup );
+		}
+	}
+
+	return NULL;
+}
+
+// -------------------------------------------------------------------------------------------- //
 // Purpose: Get a random map from the mapgroup
 // -------------------------------------------------------------------------------------------- //
 const char *GameTypes::GetRandomMap( const char *mapGroup )
@@ -1803,6 +1822,26 @@ const char *GameTypes::GetRandomMap( const char *mapGroup )
 	// Randomly choose a map from our map list.
 	int iRandom = m_randomStream.RandomInt( 0, pMapGroup->m_Maps.Count() - 1 );
 	return pMapGroup->m_Maps[iRandom];
+}
+
+// -------------------------------------------------------------------------------------------- //
+// Purpose: Get the next map for current game mode;
+// -------------------------------------------------------------------------------------------- //
+const char *GameTypes::GetNextMap( const char *mapName )
+{
+	const char* pszCurrentGameType = GetGameTypeFromInt( GetCurrentGameType() );
+	const char* pszCurrentGameMode = GetGameModeFromInt( GetCurrentGameType(), GetCurrentGameMode() );
+	if ( pszCurrentGameType && pszCurrentGameMode )
+	{
+		const char* pszMapGroup = GetRandomMapGroup( pszCurrentGameType, pszCurrentGameMode );
+		if ( pszMapGroup )
+		{
+			// TODO: build a lsit of maps from all map groups and find the next map from this list instead of a random map group!
+			return GetNextMap( pszMapGroup, mapName );
+		}
+	}
+
+	return NULL;
 }
 
 // -------------------------------------------------------------------------------------------- //

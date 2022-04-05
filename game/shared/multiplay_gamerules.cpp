@@ -1194,9 +1194,7 @@ ConVarRef suitcharger( "sk_suitcharger" );
 
 	void CMultiplayRules::GetNextLevelName( char *pszNextMap, int bufsize, bool bRandom /* = false */ )
 	{
-		const char *mapGroupName = NULL;	
-
-		mapGroupName = STRING( gpGlobals->mapGroupName );
+		const char *mapGroupName = STRING( gpGlobals->mapGroupName );
 
 		// If mapcycling is disabled, just return the same map name and bail.
 		if ( mapcycledisabled.GetBool() )
@@ -1206,14 +1204,30 @@ ConVarRef suitcharger( "sk_suitcharger" );
 		}
 
 		const char* nextMapName = NULL;
-		if ( bRandom )
-		{	
-			nextMapName = g_pGameTypes->GetRandomMap( mapGroupName );
+
+		if ( mapGroupName && mapGroupName[0] )
+		{
+			if ( bRandom )
+			{	
+				nextMapName = g_pGameTypes->GetRandomMap( mapGroupName );
+			}
+			else
+			{
+				const char* szPrevMap = STRING( gpGlobals->mapname );
+				nextMapName = g_pGameTypes->GetNextMap( mapGroupName, szPrevMap );
+			}
 		}
 		else
 		{
-			const char* szPrevMap = STRING( gpGlobals->mapname );
-			nextMapName = g_pGameTypes->GetNextMap( mapGroupName, szPrevMap );
+			if ( bRandom )
+			{
+				nextMapName = g_pGameTypes->GetRandomMap();
+			}
+			else
+			{
+				const char* szPrevMap = STRING( gpGlobals->mapname );
+				nextMapName = g_pGameTypes->GetNextMap( szPrevMap );
+			}
 		}
 
 		if ( nextMapName )

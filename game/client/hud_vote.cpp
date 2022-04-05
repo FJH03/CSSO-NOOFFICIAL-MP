@@ -18,6 +18,7 @@
 #include "hud_vote.h"
 #include "menu.h"
 #include "cs_hud_chat.h"
+#include "gametypes.h"
 
 #include <vgui/IScheme.h>
 #include <vgui/ISurface.h>
@@ -611,6 +612,27 @@ void CVoteSetupDialog::OnItemSelected( vgui::Panel *panel )
 					// Don't show the current map
 					if ( V_strncmp( m_VoteIssuesMapCycle[index], m_szCurrentMap, ( V_strlen( m_VoteIssuesMapCycle[index] ) - 1 ) ) == 0 )
 						continue;
+
+					int nGameType = g_pGameTypes->GetCurrentGameType();
+					if ( nGameType != CS_GameType_Custom ) // custom mode allows for all maps; TODO: softcode it!
+					{
+						const char* pszGameType = g_pGameTypes->GetGameTypeFromInt( g_pGameTypes->GetCurrentGameType() );
+						const char* pszGameMode = g_pGameTypes->GetGameModeFromInt( g_pGameTypes->GetCurrentGameType(), g_pGameTypes->GetCurrentGameMode() );
+						if ( pszGameType && pszGameMode )
+						{
+							const char* pszMapGroupName = engine->GetMapGroupName();
+							if ( pszMapGroupName && pszMapGroupName[0] && g_pGameTypes->IsValidMapGroupForTypeAndMode( pszMapGroupName, pszGameType, pszGameMode ) )
+							{
+								if ( !g_pGameTypes->IsValidMapInMapGroup( pszMapGroupName, m_VoteIssuesMapCycle[index] ) )
+									continue;
+							}
+							else
+							{
+								if ( !g_pGameTypes->IsValidMapForTypeAndMode( m_VoteIssuesMapCycle[index], pszGameType, pszGameMode ) )
+									continue;
+							}
+						}
+					}
 
 					KeyValues *pKeyValues = new KeyValues( "Name" );
 					pKeyValues->SetString( "Name", m_VoteIssuesMapCycle[index] );

@@ -152,7 +152,9 @@ public:
 
 	virtual const char *GetRandomMapGroup( const char *gameType, const char *gameMode );
 	virtual const char *GetFirstMap( const char *mapGroup );
+	virtual const char *GetRandomMap();
 	virtual const char *GetRandomMap( const char *mapGroup );
+	virtual const char *GetNextMap( const char *mapName );
 	virtual const char *GetNextMap( const char *mapGroup, const char *mapName );
 
 	virtual int GetMaxPlayersForTypeAndMode( int iType, int iMode );

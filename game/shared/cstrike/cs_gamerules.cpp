@@ -94,6 +94,33 @@ ConVar sv_buy_status_override( "sv_buy_status_override", "-1", FCVAR_GAMEDLL | F
 ConVar mp_team_timeout_time( "mp_team_timeout_time", "60", FCVAR_GAMEDLL | FCVAR_REPLICATED, "Duration of each timeout." );
 ConVar mp_team_timeout_max( "mp_team_timeout_max", "1", FCVAR_GAMEDLL | FCVAR_REPLICATED, "Number of timeouts each team gets per match." );
 
+#ifdef CLIENT_DLL
+CON_COMMAND( print_mapgroup, "Prints the current mapgroup and the contained maps" )
+#else
+CON_COMMAND( print_mapgroup_sv, "Prints the current mapgroup and the contained maps" )
+#endif
+{
+#if defined ( CLIENT_DLL )
+	const char* szMapGroup = engine->GetMapGroupName();
+#else
+	const char* szMapGroup = STRING( gpGlobals->mapGroupName );
+#endif
+	const CUtlStringList *pMaps = g_pGameTypes->GetMapGroupMapList( szMapGroup );
+	Msg( "Map group: %s\n", szMapGroup );
+	if ( pMaps )
+	{
+		FOR_EACH_VEC( *pMaps, i )
+		{
+			const char* szMap = (*pMaps)[i];
+			Msg( "     %s\n", szMap );
+		}
+	}
+	else
+	{
+		Msg( "No maps in mapgroup map list!\n");
+	}
+}
+
 /**
  * Player hull & eye position for standing, ducking, etc.  This version has a taller
  * player height, but goldsrc-compatible collision bounds.
