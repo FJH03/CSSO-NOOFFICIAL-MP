@@ -17,19 +17,32 @@ public:
 	DECLARE_CLASS( C_TEFireBullets, C_BaseTempEntity );
 	DECLARE_CLIENTCLASS();
 
+	C_TEFireBullets();
+
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	int		m_iPlayer;
-	Vector	m_vecOrigin;
-	QAngle	m_vecAngles;
-	int		m_iWeaponID;
-	int		m_iMode;
-	int		m_iSeed;
-	float	m_fInaccuracy;
-	float	m_fSpread;
+	int				m_iPlayer;
+	Vector			m_vecOrigin;
+	QAngle			m_vecAngles;
+	int				m_iWeaponID;
+	int				m_iMode;
+	int				m_iSeed;
+	float			m_fInaccuracy;
+	float			m_fSpread;
+	WeaponSound_t	m_iSoundType;
 };
 
+C_TEFireBullets::C_TEFireBullets()
+{
+	m_iPlayer = 0;
+	m_iWeaponID = WEAPON_NONE;
+	m_iMode = 0;
+	m_iSeed = 0;
+	m_fInaccuracy = 0;
+	m_fSpread = 0;
+	m_iSoundType = SINGLE;
+}
 
 void C_TEFireBullets::PostDataUpdate( DataUpdateType_t updateType )
 {
@@ -46,8 +59,8 @@ void C_TEFireBullets::PostDataUpdate( DataUpdateType_t updateType )
 		m_iSeed,
 		m_fInaccuracy,
 		m_fSpread,
- 		0,
- 		SINGLE
+		0,
+		m_iSoundType
 		);
 }
 

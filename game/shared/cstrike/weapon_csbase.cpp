@@ -1795,7 +1795,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 
 	/*const char* CWeaponCSBase::GetMuzzleFlashEffectName( bool bThirdPerson )
 	{
-		if ( HasSilencer() && IsSilenced() )
+		if ( HasSilencer() > 0 && IsSilenced() )
 		{
 			return bThirdPerson ? GetCSWpnData().m_szMuzzleFlash3rdPersonAlt : GetCSWpnData().m_szMuzzleFlash1stPersonAlt;
 		}
@@ -2450,8 +2450,8 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
         m_donor = NULL;
 		m_donated = false;
 
-		m_bSilencerOn = HasSilencer() ? true : false;
-		m_weaponMode = HasSilencer() ? Secondary_Mode : Primary_Mode;
+		m_bSilencerOn = (HasSilencer() > 0) ? true : false;
+		m_weaponMode = (HasSilencer() > 0) ? Secondary_Mode : Primary_Mode;
 
 		UpdateIronSightController();
 

@@ -397,6 +397,10 @@ void CWeaponCSBaseGun::SecondaryAttack()
 		if ( m_bSilencerOn )
 		{
 			SendWeaponAnim( ACT_VM_DETACH_SILENCER );
+
+#ifndef CLIENT_DLL
+			pPlayer->DoAnimationEvent( PLAYERANIMEVENT_SILENCER_DETACH );
+#endif
 		}
 		else
 		{
@@ -471,7 +475,7 @@ void CWeaponCSBaseGun::BurstFireRemaining()
 		GetInaccuracy(),
 		GetSpread(), 
 		m_fNextBurstShot,
-		(HasSilencer() && IsSilenced()) ? SPECIAL1 : SINGLE );
+		(HasSilencer() > 0 && IsSilenced()) ? SPECIAL1 : SINGLE );
 
 	SendWeaponAnim( ACT_VM_PRIMARYATTACK );
 
@@ -570,7 +574,7 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 		GetInaccuracy(),
 		GetSpread(), 
 		flCurAttack,
-		(HasSilencer() && IsSilenced()) ? SPECIAL1 : SINGLE );
+		(HasSilencer() > 0 && IsSilenced()) ? SPECIAL1 : SINGLE );
 
 	DoFireEffects();
 

@@ -416,23 +416,23 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
  	m_flFlinchVelocityModifierSmall = pKeyValuesData->GetFloat( "FlinchVelocityModifierSmall", 1.0f );
 
 	m_bIsRevolver				= pKeyValuesData->GetBool( "IsRevolver" );
- 
- 	m_bDoesUnzoomAfterShot		= pKeyValuesData->GetBool( "DoesUnzoomAfterShot" );
- 	m_iZoomLevels				= pKeyValuesData->GetInt( "ZoomLevels" );
- 	m_iZoomFOV[0]				= pKeyValuesData->GetInt( "ZoomFOV1" );
- 	m_iZoomFOV[1]				= pKeyValuesData->GetInt( "ZoomFOV2" );
- 	m_flZoomTime[0]				= pKeyValuesData->GetFloat( "ZoomTime0" );
- 	m_flZoomTime[1]				= pKeyValuesData->GetFloat( "ZoomTime1" );
- 	m_flZoomTime[2]				= pKeyValuesData->GetFloat( "ZoomTime2" );
- 	Q_strncpy( m_szZoomINSound, pKeyValuesData->GetString( "ZoomINSound" ), sizeof( m_szZoomINSound ) );
- 	Q_strncpy( m_szZoomOUTSound, pKeyValuesData->GetString( "ZoomOUTSound" ), sizeof( m_szZoomOUTSound ) );
- 	m_bHideViewmodelWhenZoomed	= pKeyValuesData->GetBool( "HideViewmodelWhenZoomed" );
- 
- 	m_bHasBurst					= pKeyValuesData->GetBool( "HasBurst" );
- 	m_flCycleTimeInBurst		= pKeyValuesData->GetFloat( "CycleTimeInBurst" );
- 	m_flTimeBetweenBurstShots	= pKeyValuesData->GetFloat( "TimeBetweenBurstShots" );
- 
- 	m_iHasSilencer				= pKeyValuesData->GetInt( "HasSilencer" );
+
+	m_bDoesUnzoomAfterShot		= pKeyValuesData->GetBool( "DoesUnzoomAfterShot" );
+	m_iZoomLevels				= pKeyValuesData->GetInt( "ZoomLevels" );
+	m_iZoomFOV[0]				= pKeyValuesData->GetInt( "ZoomFOV1" );
+	m_iZoomFOV[1]				= pKeyValuesData->GetInt( "ZoomFOV2" );
+	m_flZoomTime[0]				= pKeyValuesData->GetFloat( "ZoomTime0" );
+	m_flZoomTime[1]				= pKeyValuesData->GetFloat( "ZoomTime1" );
+	m_flZoomTime[2]				= pKeyValuesData->GetFloat( "ZoomTime2" );
+	Q_strncpy( m_szZoomINSound, pKeyValuesData->GetString( "ZoomINSound" ), sizeof( m_szZoomINSound ) );
+	Q_strncpy( m_szZoomOUTSound, pKeyValuesData->GetString( "ZoomOUTSound" ), sizeof( m_szZoomOUTSound ) );
+	m_bHideViewmodelWhenZoomed	= pKeyValuesData->GetBool( "HideViewmodelWhenZoomed" );
+
+	m_bHasBurst					= pKeyValuesData->GetBool( "HasBurst" );
+	m_flCycleTimeInBurst		= pKeyValuesData->GetFloat( "CycleTimeInBurst" );
+	m_flTimeBetweenBurstShots	= pKeyValuesData->GetFloat( "TimeBetweenBurstShots" );
+
+	m_nHasSilencer				= pKeyValuesData->GetInt( "HasSilencer" );
 
 	// new accuracy model parameters
 	m_fSpread[0]				= pKeyValuesData->GetFloat("Spread", 0.0f);

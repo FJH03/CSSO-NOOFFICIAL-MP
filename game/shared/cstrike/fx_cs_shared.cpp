@@ -195,7 +195,8 @@ void FX_FireBullets(
 		iMode,
 		iSeed,
 		fInaccuracy,
-		fSpread
+		fSpread,
+		sound_type
 		);
 
 

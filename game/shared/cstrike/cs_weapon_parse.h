@@ -250,20 +250,20 @@ public:
  	float	m_flFlinchVelocityModifierSmall;
 
 	bool	m_bIsRevolver;
- 
- 	bool	m_bDoesUnzoomAfterShot;
- 	int		m_iZoomLevels;
- 	int		m_iZoomFOV[2];
- 	float	m_flZoomTime[3];
- 	char	m_szZoomINSound[MAX_WEAPON_STRING];
- 	char	m_szZoomOUTSound[MAX_WEAPON_STRING];
- 	bool	m_bHideViewmodelWhenZoomed;
- 
- 	bool	m_bHasBurst;
- 	float	m_flCycleTimeInBurst;
- 	float	m_flTimeBetweenBurstShots;
- 
- 	int		m_iHasSilencer;
+
+	bool	m_bDoesUnzoomAfterShot;
+	int		m_iZoomLevels;
+	int		m_iZoomFOV[2];
+	float	m_flZoomTime[3];
+	char	m_szZoomINSound[MAX_WEAPON_STRING];
+	char	m_szZoomOUTSound[MAX_WEAPON_STRING];
+	bool	m_bHideViewmodelWhenZoomed;
+
+	bool	m_bHasBurst;
+	float	m_flCycleTimeInBurst;
+	float	m_flTimeBetweenBurstShots;
+
+	int		m_nHasSilencer;
 
 	// variables for new accuracy model
 	float m_fSpread[2];

@@ -204,7 +204,7 @@ public:
 	// return true is this weapon is capable of being silenced
 	virtual int HasSilencer( void ) const
 	{ 
-		return GetCSWpnData().m_iHasSilencer;
+		return GetCSWpnData().m_nHasSilencer;
 	}
 	
 #ifdef CLIENT_DLL
