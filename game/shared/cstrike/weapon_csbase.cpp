@@ -325,6 +325,7 @@ CWeaponCSBase::CWeaponCSBase()
 	SetUseParentLightingOrigin( true );
 	m_iCrosshairTextureID = 0;
 	m_flGunAccuracyPosition = 0;
+	m_flLastClientFireBulletTime = 0;
 #else
 	m_iDefaultExtraAmmo = 0;
 	m_numRemoveUnownedWeaponThink = 0;

@@ -38,6 +38,7 @@ public:
 	CNetworkVar( int, m_iMode );
 	CNetworkVar( int, m_iSeed );
 	CNetworkVar( float, m_fInaccuracy );
+	CNetworkVar( float, m_flRecoilIndex );
 	CNetworkVar( float, m_fSpread );
 	CNetworkVar( int, m_iSoundType );
 };
@@ -66,7 +67,8 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE(CTEFireBullets, DT_TEFireBullets)
 	SendPropInt( SENDINFO( m_iMode ), 1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_iSeed ), NUM_BULLET_SEED_BITS, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_iPlayer ), 6, SPROP_UNSIGNED ), 	// max 64 players, see MAX_PLAYERS
-	SendPropFloat( SENDINFO( m_fInaccuracy ), 10, 0, 0, 1 ),	
+	SendPropFloat( SENDINFO( m_fInaccuracy ), 10, 0, 0, 1 ),
+	SendPropFloat( SENDINFO( m_flRecoilIndex ), 10, 0, 0, 1000 ),
 	SendPropFloat( SENDINFO( m_fSpread ), 8, 0, 0, 0.1f ),
 	SendPropInt( SENDINFO( m_iSoundType ), 6, SPROP_UNSIGNED ),
 END_SEND_TABLE()
@@ -85,10 +87,12 @@ void TE_FireBullets(
 	int iSeed,
 	float fInaccuracy,
 	float fSpread,
-	int iSoundType
+	int iSoundType,
+	float flRecoilIndex
 	)
 {
-	CPASFilter filter( vOrigin );
+	// Just always send gunshots to clients.
+	CBroadcastRecipientFilter filter;
 	filter.UsePredictionRules();
 
 	g_TEFireBullets.m_iPlayer = iPlayerIndex-1;
@@ -96,6 +100,7 @@ void TE_FireBullets(
 	g_TEFireBullets.m_vecAngles = vAngles;
 	g_TEFireBullets.m_iSeed = iSeed;
 	g_TEFireBullets.m_fInaccuracy = fInaccuracy;
+	g_TEFireBullets.m_flRecoilIndex = flRecoilIndex;
 	g_TEFireBullets.m_fSpread = fSpread;
 	g_TEFireBullets.m_iMode = iMode;
 	g_TEFireBullets.m_iWeaponID = iWeaponID;

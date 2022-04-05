@@ -469,13 +469,14 @@ void CWeaponCSBaseGun::BurstFireRemaining()
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(),
 		pPlayer->GetFinalAimAngle(),
-		GetWeaponID(),
+		GetCSWeaponID(),
 		m_weaponMode,
 		CBaseEntity::GetPredictionRandomSeed() & 255,
 		GetInaccuracy(),
 		GetSpread(), 
 		m_fNextBurstShot,
-		(HasSilencer() > 0 && IsSilenced()) ? SPECIAL1 : SINGLE );
+		(HasSilencer() > 0 && IsSilenced()) ? SPECIAL1 : SINGLE,
+		m_flRecoilIndex );
 
 	SendWeaponAnim( ACT_VM_PRIMARYATTACK );
 
@@ -568,13 +569,14 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(),
 		pPlayer->GetFinalAimAngle(),
-		GetWeaponID(),
+		GetCSWeaponID(),
 		weaponMode,
 		CBaseEntity::GetPredictionRandomSeed() & 255,
 		GetInaccuracy(),
 		GetSpread(), 
 		flCurAttack,
-		(HasSilencer() > 0 && IsSilenced()) ? SPECIAL1 : SINGLE );
+		(HasSilencer() > 0 && IsSilenced()) ? SPECIAL1 : SINGLE,
+		m_flRecoilIndex );
 
 	DoFireEffects();
 

@@ -403,7 +403,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	pTemp = pKeyValuesData->GetString( "MuzzleFlash3rdPersonAlt", m_szMuzzleFlash3rdPerson );
 	Q_strncpy( m_szMuzzleFlash3rdPersonAlt, pTemp, sizeof( m_szMuzzleFlash3rdPersonAlt ) );*/
 
-	m_iPenetration		= pKeyValuesData->GetFloat( "Penetration", 1 );
+	m_flPenetration		= pKeyValuesData->GetFloat( "Penetration", 1 );
 	m_iDamage			= pKeyValuesData->GetInt( "Damage", 42 ); // Douglas Adams 1952 - 2001
 	m_flRange			= pKeyValuesData->GetFloat( "Range", 8192.0f );
 	m_flRangeModifier	= pKeyValuesData->GetFloat( "RangeModifier", 0.98f );
@@ -464,8 +464,10 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_fRecoilMagnitudeVariance[1]	= pKeyValuesData->GetFloat( "RecoilMagnitudeVarianceAlt",	m_fRecoilMagnitudeVariance[0] );
 	m_iRecoilSeed					= pKeyValuesData->GetInt( "RecoilSeed", 0 );
 
-	m_fInaccuracyReload			= pKeyValuesData->GetFloat("InaccuracyReload", 0.0f);
-	m_fInaccuracyAltSwitch		= pKeyValuesData->GetFloat("InaccuracyAltSwitch", 0.0f);
+	m_fInaccuracyReload				= pKeyValuesData->GetFloat("InaccuracyReload", 0.0f);
+	m_fInaccuracyAltSwitch			= pKeyValuesData->GetFloat("InaccuracyAltSwitch", 0.0f);
+	m_fInaccuracyPitchShift			= pKeyValuesData->GetFloat("InaccuracyPitchShift", 0.0f);
+	m_fInaccuracyAltSoundThreshold	= pKeyValuesData->GetFloat("InaccuracyAltSoundThreshold", 0.0f);
 
 	m_fRecoveryTimeCrouch		= pKeyValuesData->GetFloat("RecoveryTimeCrouch", 1.0f);
 	m_fRecoveryTimeCrouchFinal	= pKeyValuesData->GetFloat("RecoveryTimeCrouchFinal", m_fRecoveryTimeCrouch);

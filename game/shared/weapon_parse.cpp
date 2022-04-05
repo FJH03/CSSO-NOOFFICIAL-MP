@@ -21,6 +21,7 @@ const char *pWeaponSoundCategories[ NUM_SHOOT_SOUND_TYPES ] =
 {
 	"empty",
 	"single_shot",
+	"single_shot_accurate",
 	"single_shot_npc",
 	"double_shot",
 	"double_shot_npc",

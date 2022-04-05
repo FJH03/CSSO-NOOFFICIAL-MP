@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -25,13 +25,14 @@ void FX_FireBullets(
 	int	iPlayer,
 	const Vector &vOrigin,
 	const QAngle &vAngles,
-	int	iWeaponID,
+	CSWeaponID iWeaponID,
 	int	iMode,
 	int iSeed,
 	float fInaccuracy,
 	float fSpread,
-	float flSoundTime,
- 	WeaponSound_t sound_type/* = SINGLE*/
+	float flSoundTime/* = 0.0f*/,
+	WeaponSound_t sound_type/* = SINGLE*/,
+	float flRecoilIndex/* = 0.0f*/
 	);
 
 // This runs on both the client and the server.

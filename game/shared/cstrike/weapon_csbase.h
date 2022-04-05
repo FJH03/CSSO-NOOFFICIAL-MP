@@ -376,6 +376,9 @@ private:
 #endif
 
 public:
+#ifdef CLIENT_DLL
+	float m_flLastClientFireBulletTime;
+#endif
 
 	CIronSightController *GetIronSightController( void );
 	void				 UpdateIronSightController( void );

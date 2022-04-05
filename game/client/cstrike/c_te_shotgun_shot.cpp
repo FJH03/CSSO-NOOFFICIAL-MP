@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -10,6 +10,8 @@
 #include "c_basetempentity.h"
 #include <cliententitylist.h>
 
+// NOTE: This has to be the last file included!
+#include "tier0/memdbgon.h"
 
 class C_TEFireBullets : public C_BaseTempEntity
 {
@@ -25,11 +27,15 @@ public:
 	int				m_iPlayer;
 	Vector			m_vecOrigin;
 	QAngle			m_vecAngles;
-	int				m_iWeaponID;
+	CSWeaponID		m_iWeaponID;
 	int				m_iMode;
 	int				m_iSeed;
 	float			m_fInaccuracy;
+	float			m_flRecoilIndex;
 	float			m_fSpread;
+#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
+	float			m_fAccuracyFishtail;
+#endif
 	WeaponSound_t	m_iSoundType;
 };
 
@@ -40,8 +46,9 @@ C_TEFireBullets::C_TEFireBullets()
 	m_iMode = 0;
 	m_iSeed = 0;
 	m_fInaccuracy = 0;
+	m_flRecoilIndex = 0;
 	m_fSpread = 0;
-	m_iSoundType = SINGLE;
+	m_iSoundType = EMPTY;
 }
 
 void C_TEFireBullets::PostDataUpdate( DataUpdateType_t updateType )
@@ -60,7 +67,8 @@ void C_TEFireBullets::PostDataUpdate( DataUpdateType_t updateType )
 		m_fInaccuracy,
 		m_fSpread,
 		0,
-		m_iSoundType
+		m_iSoundType,
+		m_flRecoilIndex
 		);
 }
 
@@ -78,6 +86,8 @@ BEGIN_RECV_TABLE_NOBASE(C_TEFireBullets, DT_TEFireBullets)
 	RecvPropInt( RECVINFO( m_iPlayer ) ),
 	RecvPropFloat( RECVINFO( m_fInaccuracy ) ),
 	RecvPropFloat( RECVINFO( m_fSpread ) ),
+	RecvPropInt( RECVINFO( m_iSoundType ) ),
+	RecvPropFloat( RECVINFO( m_flRecoilIndex ) ),
 END_RECV_TABLE()
 
 

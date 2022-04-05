@@ -238,7 +238,7 @@ public:
 	float m_flMuzzleScale;
 	
 	// Parameters for FX_FireBullets:
-	float	m_iPenetration;
+	float	m_flPenetration;
 	int		m_iDamage;
 	float	m_flRange;
 	float	m_flRangeModifier;
@@ -281,6 +281,8 @@ public:
 	float m_fRecoveryTimeCrouchFinal;
 	float m_fInaccuracyReload;
 	float m_fInaccuracyAltSwitch;
+	float m_fInaccuracyPitchShift;
+	float m_fInaccuracyAltSoundThreshold;
 	float m_fRecoilAngle[2];
 	float m_fRecoilAngleVariance[2];
 	float m_fRecoilMagnitude[2];

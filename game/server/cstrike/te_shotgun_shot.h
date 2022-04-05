@@ -20,7 +20,8 @@ void TE_FireBullets(
 	int iSeed,
 	float fInaccuracy,
 	float fSpread,
-	int iSoundType
+	int iSoundType,
+	float flRecoilIndex
 	);
 
 void TE_PlantBomb( int iPlayerIndex, const Vector &vOrigin, PlantBombOption_t option );

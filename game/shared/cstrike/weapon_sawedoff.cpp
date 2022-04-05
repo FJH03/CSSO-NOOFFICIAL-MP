@@ -119,7 +119,8 @@ void CWeaponSawedOff::PrimaryAttack( void )
 		GetInaccuracy(),
 		GetSpread(), // flSpread
 		flCurAttack,
-		SINGLE );
+		SINGLE,
+		m_flRecoilIndex );
 
 	// are we firing the last round in the clip?
 	if ( m_iClip1 == 1 )
