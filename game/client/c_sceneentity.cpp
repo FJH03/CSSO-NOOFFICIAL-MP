@@ -41,7 +41,7 @@ void RecvProxy_ForcedClientTime( const CRecvProxyData *pData, void *pStruct, voi
 #undef CSceneEntity
 #endif
 
-IMPLEMENT_CLIENTCLASS_DT(C_SceneEntity, DT_SceneEntity, CSceneEntity)
+IMPLEMENT_CLIENTCLASS_DT_NOBASE(C_SceneEntity, DT_SceneEntity, CSceneEntity)
 	RecvPropInt(RECVINFO(m_nSceneStringIndex)),
 	RecvPropBool(RECVINFO(m_bIsPlayingBack)),
 	RecvPropBool(RECVINFO(m_bPaused)),

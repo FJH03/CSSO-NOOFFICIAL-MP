@@ -49,7 +49,7 @@ private:
 	ClientCCHandle_t m_CCHandle;
 };
 
-IMPLEMENT_CLIENTCLASS_DT(C_ColorCorrection, DT_ColorCorrection, CColorCorrection)
+IMPLEMENT_CLIENTCLASS_DT_NOBASE(C_ColorCorrection, DT_ColorCorrection, CColorCorrection)
 	RecvPropVector( RECVINFO(m_vecOrigin) ),
 	RecvPropFloat(  RECVINFO(m_minFalloff) ),
 	RecvPropFloat(  RECVINFO(m_maxFalloff) ),

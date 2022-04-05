@@ -45,7 +45,7 @@ private:
 	ClientCCHandle_t m_CCHandle;
 };
 
-IMPLEMENT_CLIENTCLASS_DT(C_ColorCorrectionVolume, DT_ColorCorrectionVolume, CColorCorrectionVolume)
+IMPLEMENT_CLIENTCLASS_DT_NOBASE(C_ColorCorrectionVolume, DT_ColorCorrectionVolume, CColorCorrectionVolume)
 	RecvPropFloat( RECVINFO(m_Weight) ),
 	RecvPropString( RECVINFO(m_lookupFilename) ),
 END_RECV_TABLE()

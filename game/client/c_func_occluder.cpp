@@ -27,7 +27,7 @@ private:
 	bool m_bActive = false;
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_FuncOccluder, DT_FuncOccluder, CFuncOccluder )
+IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_FuncOccluder, DT_FuncOccluder, CFuncOccluder )
 	RecvPropBool( RECVINFO( m_bActive ) ),
 	RecvPropInt( RECVINFO(m_nOccluderIndex) ),
 END_RECV_TABLE()

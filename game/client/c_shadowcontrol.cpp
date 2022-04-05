@@ -34,7 +34,7 @@ private:
 	bool m_bDisableShadows;
 };
 
-IMPLEMENT_CLIENTCLASS_DT(C_ShadowControl, DT_ShadowControl, CShadowControl)
+IMPLEMENT_CLIENTCLASS_DT_NOBASE(C_ShadowControl, DT_ShadowControl, CShadowControl)
 	RecvPropVector(RECVINFO(m_shadowDirection)),
 	RecvPropInt(RECVINFO(m_shadowColor)),
 	RecvPropFloat(RECVINFO(m_flShadowMaxDist)),

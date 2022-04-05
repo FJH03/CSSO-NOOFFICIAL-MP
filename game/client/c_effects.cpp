@@ -1208,7 +1208,7 @@ BEGIN_RECV_TABLE_NOBASE(CEnvWindShared, DT_EnvWindShared)
 //	RecvPropInt		(RECVINFO(m_iszGustSound)),
 END_RECV_TABLE()
 
-IMPLEMENT_CLIENTCLASS_DT( C_EnvWind, DT_EnvWind, CEnvWind )
+IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_EnvWind, DT_EnvWind, CEnvWind )
 	RecvPropDataTable(RECVINFO_DT(m_EnvWindShared), 0, &REFERENCE_RECV_TABLE(DT_EnvWindShared)),
 END_RECV_TABLE()
 

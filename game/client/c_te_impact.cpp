@@ -34,7 +34,6 @@ public:
 	Vector			m_vecOrigin;
 	Vector			m_vecNormal;
 	int				m_iType;
-	byte			m_ucFlags;
 };
 
 //-----------------------------------------------------------------------------
@@ -47,7 +46,6 @@ C_TEImpact::C_TEImpact( void )
 	m_vecNormal.Init();
 	
 	m_iType		= -1;
-	m_ucFlags	= 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -94,5 +92,4 @@ IMPLEMENT_CLIENTCLASS_EVENT_DT( C_TEImpact, DT_TEImpact, CTEImpact)
 	RecvPropVector( RECVINFO( m_vecOrigin ) ),
 	RecvPropVector( RECVINFO( m_vecNormal ) ),
 	RecvPropInt( RECVINFO( m_iType ) ),
-	RecvPropInt( RECVINFO( m_ucFlags ) ),
 END_RECV_TABLE()

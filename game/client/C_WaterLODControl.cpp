@@ -33,7 +33,7 @@ private:
 	float m_flCheapWaterEndDistance;
 };
 
-IMPLEMENT_CLIENTCLASS_DT(C_WaterLODControl, DT_WaterLODControl, CWaterLODControl)
+IMPLEMENT_CLIENTCLASS_DT_NOBASE(C_WaterLODControl, DT_WaterLODControl, CWaterLODControl)
 	RecvPropFloat(RECVINFO(m_flCheapWaterStartDistance)),
 	RecvPropFloat(RECVINFO(m_flCheapWaterEndDistance)),
 END_RECV_TABLE()

@@ -115,7 +115,6 @@ private:
 	float	m_flFloatLerpStartValue;
 	float	m_flFloatLerpEndValue;
 	float	m_flFloatLerpTransitionTime;
-	bool	m_bFloatLerpWrap;
 	float	m_flAnimationStartTime;
 
 	int		m_nModifyMode;
@@ -133,7 +132,6 @@ IMPLEMENT_CLIENTCLASS_DT(C_MaterialModifyControl, DT_MaterialModifyControl, CMat
 	RecvPropFloat( RECVINFO(m_flFloatLerpStartValue) ),
 	RecvPropFloat( RECVINFO(m_flFloatLerpEndValue) ),
 	RecvPropFloat( RECVINFO(m_flFloatLerpTransitionTime) ),
-	RecvPropInt( RECVINFO(m_bFloatLerpWrap) ),
 	RecvPropInt( RECVINFO(m_nModifyMode) ),
 END_RECV_TABLE()
 

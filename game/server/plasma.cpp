@@ -20,6 +20,7 @@ LINK_ENTITY_TO_CLASS( _plasma, CPlasma );
 
 //Send datatable
 IMPLEMENT_SERVERCLASS_ST( CPlasma, DT_Plasma )
+	SendPropFloat(  SENDINFO( m_flStartScale ), 0,	SPROP_NOSCALE),
 	SendPropFloat(	SENDINFO( m_flScale ),		0,	SPROP_NOSCALE),
 	SendPropFloat(	SENDINFO( m_flScaleTime ),	0,	SPROP_NOSCALE),
 	SendPropInt(	SENDINFO( m_nFlags ),		8,  SPROP_UNSIGNED ),

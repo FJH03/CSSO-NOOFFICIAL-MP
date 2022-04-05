@@ -40,7 +40,7 @@ private:
 	void UpdateParticles( void );
 	CUtlReference<CNewParticleEffect> m_burnParticleEffect;
 
-	enum { MAX_INFERNO_FIRES = 100 };
+	enum { MAX_INFERNO_FIRES = 64 };
 	int m_fireXDelta[ MAX_INFERNO_FIRES ];
 	int m_fireYDelta[ MAX_INFERNO_FIRES ];
 	int m_fireZDelta[ MAX_INFERNO_FIRES ];

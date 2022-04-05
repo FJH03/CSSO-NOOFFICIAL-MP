@@ -166,8 +166,8 @@ BEGIN_DATADESC( CBaseAnimating )
 	DEFINE_INPUT( m_nBody, FIELD_INTEGER, "SetBodyGroup" ),
 	DEFINE_KEYFIELD( m_nHitboxSet, FIELD_INTEGER, "hitboxset" ),
 	DEFINE_KEYFIELD( m_nSequence, FIELD_INTEGER, "sequence" ),
-	DEFINE_ARRAY( m_flPoseParameter, FIELD_FLOAT, CBaseAnimating::NUM_POSEPAREMETERS ),
-	DEFINE_ARRAY( m_flEncodedController,	FIELD_FLOAT, CBaseAnimating::NUM_BONECTRLS ),
+	DEFINE_ARRAY( m_flPoseParameter, FIELD_FLOAT, MAXSTUDIOPOSEPARAM ),
+	DEFINE_ARRAY( m_flEncodedController,	FIELD_FLOAT, MAXSTUDIOBONECTRLS ),
 	DEFINE_KEYFIELD( m_flPlaybackRate, FIELD_FLOAT, "playbackrate" ),
 	DEFINE_KEYFIELD( m_flCycle, FIELD_FLOAT, "cycle" ),
 //	DEFINE_FIELD( m_flIKGroundContactTime, FIELD_TIME ),
@@ -2888,9 +2888,9 @@ void CBaseAnimating::InitBoneControllers ( void ) // FIXME: rename
 		return;
 
 	int nBoneControllerCount = pStudioHdr->numbonecontrollers();	
-	if ( nBoneControllerCount > NUM_BONECTRLS )
+	if ( nBoneControllerCount > MAXSTUDIOBONECTRLS )
 	{
-		nBoneControllerCount = NUM_BONECTRLS;
+		nBoneControllerCount = MAXSTUDIOBONECTRLS;
 
 #ifdef _DEBUG
 		Warning( "Model %s has too many bone controllers! (Max %d allowed)\n", pStudioHdr->pszName(), NUM_BONECTRLS );

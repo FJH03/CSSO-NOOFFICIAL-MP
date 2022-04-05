@@ -38,12 +38,6 @@ public:
 
 	DECLARE_PREDICTABLE();
 
-	enum
-	{
-		NUM_POSEPAREMETERS = 24,
-		NUM_BONECTRLS = 4
-	};
-
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 	DECLARE_ENT_SCRIPTDESC();
@@ -406,8 +400,8 @@ private:
 	// was pev->frame
 	CNetworkVar( float, m_flCycle );
 	CNetworkVar( int, m_nSequence );	
-	CNetworkArray( float, m_flPoseParameter, NUM_POSEPAREMETERS );	// must be private so manual mode works!
-	CNetworkArray( float, m_flEncodedController, NUM_BONECTRLS );		// bone controller setting (0..1)
+	CNetworkArray( float, m_flPoseParameter, MAXSTUDIOPOSEPARAM );	// must be private so manual mode works!
+	CNetworkArray( float, m_flEncodedController, MAXSTUDIOBONECTRLS );		// bone controller setting (0..1)
 
 	// Client-side animation (useful for looping animation objects)
 	CNetworkVar( bool, m_bClientSideAnimation );
