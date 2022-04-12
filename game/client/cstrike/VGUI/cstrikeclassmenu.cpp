@@ -29,6 +29,7 @@ CCSClassMenu::CCSClassMenu( IViewPort* pViewPort ): Frame( NULL, GetName() )
 
 	// initialize elements
 	m_pCancelButton = new Button( this, "CancelButton", "#Cstrike_Cancel" );
+	m_pAutoAssignButton = new Button( this, "AutoAssignButton", "#Cstrike_Team_AutoAssign" );
 }
 
 void CCSClassMenu::Update()
@@ -50,6 +51,8 @@ void CCSClassMenu::ShowPanel( bool bShow )
 
 		Activate();
 		SetMouseInputEnabled( true );
+
+		m_pAutoAssignButton->SetHotkey( '8' );
 
 		engine->ClientCmd_Unrestricted( "gameui_preventescapetoshow\n" );
 	}

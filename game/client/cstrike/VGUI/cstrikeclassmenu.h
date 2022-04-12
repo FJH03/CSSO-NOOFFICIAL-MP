@@ -44,6 +44,7 @@ public:
 
 private:
 	Button* m_pCancelButton;
+	Button* m_pAutoAssignButton;
 
 	IViewPort* m_pViewPort;
 };
