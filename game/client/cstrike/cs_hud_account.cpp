@@ -54,8 +54,6 @@ private:
 	CPanelAnimationVarAliasType( int, buyzone_icon_xpos, "buyzone_icon_xpos", "0", "proportional_xpos" );
 	CPanelAnimationVarAliasType( int, buyzone_icon_ypos, "buyzone_icon_ypos", "0", "proportional_ypos" );
 	CPanelAnimationVarAliasType( int, margin_right, "margin_right", "0", "proportional_width" );
-
-	CPanelAnimationVar( Color, m_clrBuyZoneIconFg, "BuyZoneIconFg", "FgColor" );
 };
 
 DECLARE_HUDELEMENT( CHudAccount );
@@ -93,7 +91,7 @@ void CHudAccount::OnScreenSizeChanged( int iOldWide, int iOldTall )
 //-----------------------------------------------------------------------------
 void CHudAccount::Init()
 {
-	m_iAccount			= -1;
+	m_iAccount = -1;
 }
 
 //-----------------------------------------------------------------------------
@@ -147,10 +145,17 @@ void CHudAccount::OnThink()
 
 bool CHudAccount::ShouldDraw()
 {
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pPlayer )
+		return false;
+
 	if ( cl_draw_only_deathnotices.GetBool() )
 		return false;
 
 	if ( mp_maxmoney.GetInt() <= 0 )
+		return false;
+
+	if ( !pPlayer->CanPlayerBuy( false ) )
 		return false;
 
 	return CHudElement::ShouldDraw();

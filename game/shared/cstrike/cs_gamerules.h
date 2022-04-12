@@ -404,6 +404,8 @@ public:
 	CNetworkVar( bool, m_bBombDropped );
 	CNetworkVar( bool, m_bBombPlanted );
 	CNetworkVar( int, m_iRoundWinStatus );
+	CNetworkVar( bool, m_bTCantBuy );			// Who can and can't buy.
+	CNetworkVar( bool, m_bCTCantBuy );
 
 	CNetworkVar( int, m_iNumConsecutiveCTLoses );			//SupraFiend: the number of rounds the CTs have lost in a row.
  	CNetworkVar( int, m_iNumConsecutiveTerroristLoses );	//SupraFiend: the number of rounds the Terrorists have lost in a row.
@@ -720,8 +722,6 @@ public:
 	int m_iMaxNumTerrorists;
 	int m_iMaxNumCTs;
 
-	bool m_bTCantBuy;			// Who can and can't buy.
-	bool m_bCTCantBuy;
 	bool m_bMapHasBuyZone;
 
 	int m_iLoserBonus;			// SupraFiend: the amount of money the losing team gets. This scales up as they lose more rounds in a row

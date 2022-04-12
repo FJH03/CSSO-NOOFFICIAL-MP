@@ -326,6 +326,64 @@ bool CCSPlayer::IsOtherEnemy( int nEntIndex )
 	return IsOtherEnemy( pPlayer );
 }
 
+bool CCSPlayer::CanPlayerBuy( bool display )
+{
+	if ( !CSGameRules() )
+		return false;
+
+	// is the player alive?
+	if ( m_lifeState != LIFE_ALIVE )
+	{
+		return false;
+	}
+
+	// is the player in a buy zone?
+	if ( !IsInBuyZone() )
+	{
+		return false;
+	}
+
+	CCSGameRules* mp = CSGameRules();
+
+	// Don't allow buying in the last few seconds of warmup because everybody should be freezed, but sometimes people aren't
+	// also fixes buy on the very moment that round starts which might cause the bought weapon to spawn, but touched by the
+	// player in the actual match time next frame and have a powerful gun for the first pistol round.
+	if ( mp->IsWarmupPeriod() && ( mp->GetWarmupPeriodEndTime() - 3 < gpGlobals->curtime ) )
+		return false;
+
+	if ( mp->m_bCTCantBuy && ( GetTeamNumber() == TEAM_CT ) )
+	{
+		if ( display == true )
+			ClientPrint( this, HUD_PRINTCENTER, "#CT_cant_buy" );
+
+		return false;
+	}
+
+	if ( mp->m_bTCantBuy && ( GetTeamNumber() == TEAM_TERRORIST ) )
+	{
+		if ( display == true )
+			ClientPrint( this, HUD_PRINTCENTER, "#Terrorist_cant_buy" );
+
+		return false;
+	}
+
+	int buyTime = mp_buytime.GetInt();
+
+	if ( mp->IsBuyTimeElapsed() && !CanBuyDuringImmunity() )
+	{
+		if ( display == true )
+		{
+			char strBuyTime[16];
+			Q_snprintf( strBuyTime, sizeof( strBuyTime ), "%d", buyTime );
+			ClientPrint( this, HUD_PRINTCENTER, "#Cant_buy", strBuyTime );
+		}
+
+		return false;
+	}
+
+	return true;
+}
+
 bool CCSPlayer::IsOtherEnemy( CCSPlayer *pPlayer )
 {
 	if ( !pPlayer )
@@ -1837,6 +1895,9 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 	const CCSWeaponInfo *pWeaponInfo = NULL;
 	if ( weaponId == WEAPON_NONE )
 		return AcquireResult::InvalidItem;
+
+	if ( (acquireMethod == AcquireMethod::Buy || acquireMethod == AcquireMethod::BuyDrop) && !CanPlayerBuy( false ) )
+		return AcquireResult::NotAllowedByMode;
 
 	pWeaponInfo = GetWeaponInfo( weaponId );
 
