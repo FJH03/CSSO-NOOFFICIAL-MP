@@ -117,11 +117,12 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 	m_pTPlayerList->SetVerticalScrollbar( false );
 	m_pTPlayerList->SetPaintBackgroundEnabled( false );
 	m_pTPlayerList->SetPaintBorderEnabled( false );
-	m_pCTPlayerList->SetSectionInset( 0, 0 );
+	m_pTPlayerList->SetSectionInset( 0, 0 );
 
 	// gets initialized in base class
 	m_pPlayerList->SetPaintBackgroundEnabled( false );
 	m_pPlayerList->SetPaintBorderEnabled( false );
+	m_pPlayerList->SetSectionInset( 0, 0 );
 
 	ListenForGameEvent( "server_spawn" );
 	ListenForGameEvent( "game_newmap" );
