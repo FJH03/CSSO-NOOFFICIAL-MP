@@ -10732,11 +10732,15 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			pAttacker->m_maxNumEnemiesKillStreak = pAttacker->m_NumEnemiesKilledThisSpawn;
 
 		// give a healthshot in DM and GG for every triple kill streak if dont have a healthshot
-		if ( ((CSGameRules()->IsPlayingGunGameDeathmatch() && pAttacker->m_NumEnemiesKilledThisSpawn % mp_tdm_healthshot_killcount.GetInt() == 0) ||
-			  (CSGameRules()->IsPlayingGunGameProgressive() && pAttacker->m_NumEnemiesKilledThisSpawn % mp_ggprogressive_healthshot_killcount.GetInt() == 0)) &&
-			 !pAttacker->Weapon_OwnsThisType( "weapon_healthshot" ) )
+		if ( CSGameRules()->IsPlayingGunGameDeathmatch() && mp_tdm_healthshot_killcount.GetInt() > 0 )
 		{
-			pAttacker->GiveNamedItem( "weapon_healthshot" );
+			if ( pAttacker->m_NumEnemiesKilledThisSpawn % mp_tdm_healthshot_killcount.GetInt() == 0 && !pAttacker->Weapon_OwnsThisType( "weapon_healthshot" ) )
+				pAttacker->GiveNamedItem( "weapon_healthshot" );
+		}
+		if ( CSGameRules()->IsPlayingGunGameProgressive() && mp_ggprogressive_healthshot_killcount.GetInt() > 0 )
+		{
+			if ( pAttacker->m_NumEnemiesKilledThisSpawn % mp_ggprogressive_healthshot_killcount.GetInt() == 0 && !pAttacker->Weapon_OwnsThisType( "weapon_healthshot" ) )
+				pAttacker->GiveNamedItem( "weapon_healthshot" );
 		}
 
 		if ( CSGameRules()->IsPlayingGunGameProgressive() && pAttacker->m_NumEnemiesKilledThisSpawn > 1 )
