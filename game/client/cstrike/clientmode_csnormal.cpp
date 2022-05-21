@@ -50,6 +50,7 @@
 #include "materialsystem/itexture.h"
 #include "viewpostprocess.h"
 #include "cstrikeclientscoreboard.h"
+#include "cam_thirdperson.h"
 
 // [tj] Needed to retrieve achievement text
 // [menglish] Need access to message macros 
@@ -86,6 +87,8 @@ extern ConVar cl_detail_avoid_radius;
 extern ConVar cl_detail_avoid_force;
 extern ConVar cl_detail_avoid_recover_speed;
 extern ConVar v_viewmodel_fov;
+extern ConVar view_recoil_tracking;
+extern ConVar cam_recoil;
 
 //-----------------------------------------------------------------------------
 ConVar cl_autobuy(
@@ -529,6 +532,75 @@ void ClientModeCSNormal::OnColorCorrectionWeightsReset( void )
 	g_pColorCorrectionMgr->SetColorCorrectionWeight( m_CCDeathHandle, m_CCDeathPercent );
 	g_pColorCorrectionMgr->SetColorCorrectionWeight( m_CCFreezePeriodHandle_CT, m_CCFreezePeriodPercent_CT );
 	g_pColorCorrectionMgr->SetColorCorrectionWeight( m_CCFreezePeriodHandle_T, m_CCFreezePeriodPercent_T );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *pSetup - 
+//-----------------------------------------------------------------------------
+void ClientModeCSNormal::OverrideView( CViewSetup* pSetup )
+{
+	QAngle camAngles;
+
+	// Let the player override the view.
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( !pPlayer )
+		return;
+
+	pPlayer->OverrideView( pSetup );
+
+	if ( ::input->CAM_IsThirdPerson() )
+	{
+		const Vector& cam_ofs = g_ThirdPersonManager.GetCameraOffsetAngles();
+		Vector cam_ofs_distance = g_ThirdPersonManager.GetFinalCameraOffset();
+
+		cam_ofs_distance *= g_ThirdPersonManager.GetDistanceFraction();
+
+		camAngles[PITCH] = cam_ofs[PITCH];
+		camAngles[YAW] = cam_ofs[YAW];
+		camAngles[ROLL] = 0;
+
+		Vector camForward, camRight, camUp;
+
+		if ( g_ThirdPersonManager.IsOverridingThirdPerson() == false )
+		{
+			engine->GetViewAngles( camAngles );
+		}
+
+		// get the forward vector
+		AngleVectors( camAngles, &camForward, &camRight, &camUp );
+
+		VectorMA( pSetup->origin, -cam_ofs_distance[0], camForward, pSetup->origin );
+		VectorMA( pSetup->origin, cam_ofs_distance[1], camRight, pSetup->origin );
+		VectorMA( pSetup->origin, cam_ofs_distance[2], camUp, pSetup->origin );
+
+		CBasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+
+		// PiMoN: apply view punch separately for third person
+		if ( pPlayer && cam_recoil.GetBool() )
+		{
+			// Apply punch angles
+			VectorAdd( camAngles, pPlayer->m_Local.m_viewPunchAngle, camAngles );
+
+			// TODO[pmf]: apply a scaling factor to this
+			VectorAdd( camAngles, pPlayer->GetAimPunchAngle() * view_recoil_tracking.GetFloat(), camAngles );
+		}
+
+		// Override angles from third person camera
+		VectorCopy( camAngles, pSetup->angles );
+	}
+	else if ( ::input->CAM_IsOrthographic() )
+	{
+		pSetup->m_bOrtho = true;
+		float w, h;
+		::input->CAM_OrthographicSize( w, h );
+		w *= 0.5f;
+		h *= 0.5f;
+		pSetup->m_OrthoLeft = -w;
+		pSetup->m_OrthoTop = -h;
+		pSetup->m_OrthoRight = w;
+		pSetup->m_OrthoBottom = h;
+	}
 }
 
 /*

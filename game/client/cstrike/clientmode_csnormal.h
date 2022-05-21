@@ -50,6 +50,8 @@ public:
 	virtual void	UpdateColorCorrectionWeights( void );
 	virtual void	OnColorCorrectionWeightsReset( void );
 
+	virtual void	OverrideView( CViewSetup* pSetup );
+
 private:
 	wchar_t			m_pServerName[256];
 	wchar_t			m_pMapName[256];
