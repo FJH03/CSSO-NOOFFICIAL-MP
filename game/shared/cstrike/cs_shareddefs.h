@@ -349,8 +349,8 @@ static PlayerViewmodelArmConfig s_playerViewmodelArmConfigs[] =
 
 const PlayerViewmodelArmConfig *GetPlayerViewmodelArmConfigForPlayerModel( const char* szPlayerModel );
 
-#define MAX_MAINMENU_WEAPONS_T 26
-#define MAX_MAINMENU_WEAPONS_CT 27
+#define MAX_MAINMENU_WEAPONS_T 45
+#define MAX_MAINMENU_WEAPONS_CT 46
 struct CSMainMenuWeapons
 {
 	const char* m_pszModel;
