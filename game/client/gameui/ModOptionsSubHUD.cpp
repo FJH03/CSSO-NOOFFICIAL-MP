@@ -22,6 +22,7 @@
 #include "EngineInterface.h"
 #include "tier1/convar.h"
 #include "BasePanel.h"
+#include "GameUI_Interface.h"
 
 #include "hud.h" // for MAX_HUD_COLORS
 
@@ -58,6 +59,7 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 	m_pRadarRotate = new CCvarToggleCheckButton( this, "RadarRotateCheckbox", "#GameUI_HUD_RotateRadar", "cl_radar_rotate" );
 	m_pRadarSquare = new CLabeledCommandComboBox( this, "RadarSquareComboBox" );
 	m_pMenuBackground = new CLabeledCommandComboBox( this, "MenuBackgroundComboBox" );
+	m_pMenuAgent = new CLabeledCommandComboBox( this, "MenuAgentComboBox" );
 
 	m_pPlayerCountPos->AddItem( "#GameUI_HUD_PlayerCount_Top", "hud_playercount_pos 0" );
 	m_pPlayerCountPos->AddItem( "#GameUI_HUD_PlayerCount_Bottom", "hud_playercount_pos 1" );
@@ -68,6 +70,10 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 	m_pRadarSquare->AddItem( "#GameUI_HUD_RadarSquare_0", "cl_radar_square 0" );
 	m_pRadarSquare->AddItem( "#GameUI_HUD_RadarSquare_1", "cl_radar_square 1" );
 	m_pRadarSquare->AddItem( "#GameUI_HUD_RadarSquare_2", "cl_radar_square 2" );
+
+	m_pMenuAgent->AddItem( "#GameUI_Loadout_Agent_None", "loadout_mainmenu_agent 0" );
+	m_pMenuAgent->AddItem( "#GameUI_Loadout_Agent_T", "loadout_mainmenu_agent 1" );
+	m_pMenuAgent->AddItem( "#GameUI_Loadout_Agent_CT", "loadout_mainmenu_agent 2" );
 
 	char localization[64];
 	char command[64];
@@ -92,6 +98,7 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 	m_pRadarRotate->AddActionSignalTarget( this );
 	m_pRadarSquare->AddActionSignalTarget( this );
 	m_pMenuBackground->AddActionSignalTarget( this );
+	m_pMenuAgent->AddActionSignalTarget( this );
 
 	LoadControlSettings( "Resource/ModOptionsSubHUD.res" );
 }
@@ -137,6 +144,10 @@ void CModOptionsSubHUD::OnResetData()
 	if ( cl_menu_background.IsValid() )
 		m_pMenuBackground->SetInitialItem( cl_menu_background.GetInt() );
 
+	ConVarRef loadout_mainmenu_agent( "loadout_mainmenu_agent" );
+	if ( loadout_mainmenu_agent.IsValid() )
+		m_pMenuAgent->SetInitialItem( loadout_mainmenu_agent.GetInt() );
+
 	m_pHUDBackgroundAlpha->Reset();
 	m_pRadarScale->Reset();
 	m_pAlwaysShowInventory->Reset();
@@ -163,4 +174,9 @@ void CModOptionsSubHUD::OnApplyChanges()
 		m_pMenuBackground->ApplyChanges();
 		BasePanel()->RestartBackgroundVideo();
 	}
+
+	m_pMenuAgent->ApplyChanges();
+
+	// update agent on main menu
+	GameUI().UpdateAgentModel();
 }

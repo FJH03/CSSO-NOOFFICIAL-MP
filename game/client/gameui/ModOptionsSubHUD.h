@@ -49,6 +49,7 @@ private:
 	CCvarToggleCheckButton*		m_pRadarRotate;
 	CLabeledCommandComboBox*	m_pRadarSquare;
 	CLabeledCommandComboBox*	m_pMenuBackground;
+	CLabeledCommandComboBox*	m_pMenuAgent;
 };
 
 #endif // ModOptionsSubHUD_H

@@ -1201,6 +1201,11 @@ void CGameUI::SetBackgroundMusicDesired( bool bPlayMusic )
 	m_bBackgroundMusicDesired = bPlayMusic;
 }
 
+void CGameUI::UpdateAgentModel( void )
+{
+	BasePanel()->UpdateAgentModel();
+}
+
 void CGameUI::OnConfirmQuit( void )
 {
 	BasePanel()->OnOpenQuitConfirmationDialog();

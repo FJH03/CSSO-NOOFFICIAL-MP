@@ -20,6 +20,9 @@
 #include "tier1/convar.h"
 #include "BitmapImagePanel.h"
 
+#include "cs_shareddefs.h"
+#include "GameUI_Interface.h"
+
 #if defined( _X360 )
 #include "xbox/xbox_win32stubs.h"
 #endif
@@ -143,6 +146,8 @@ CModOptionsSubAgents::CModOptionsSubAgents(vgui::Panel *parent) : vgui::Property
 
 	m_pLoadoutAgentCTComboBox = new CLabeledCommandComboBox( this, "AgentCTComboBox" );
 	m_pLoadoutAgentTComboBox = new CLabeledCommandComboBox( this, "AgentTComboBox" );
+	m_pLoadoutMainMenuWeaponCTComboBox = new CLabeledCommandComboBox( this, "MainMenuWeaponCTComboBox" );
+	m_pLoadoutMainMenuWeaponTComboBox = new CLabeledCommandComboBox( this, "MainMenuWeaponTComboBox" );
 
 	m_pAgentImageCT = new CBitmapImagePanel( this, "AgentImageCT", NULL );
 	m_pAgentImageCT->AddActionSignalTarget( this );
@@ -161,8 +166,21 @@ CModOptionsSubAgents::CModOptionsSubAgents(vgui::Panel *parent) : vgui::Property
 		Q_snprintf( command, sizeof( command ), "loadout_slot_agent_t %d", i );
 		m_pLoadoutAgentTComboBox->AddItem( agentsT[i].m_szUIName, command );
 	}
+	for ( i = 0; i < MAX_MAINMENU_WEAPONS_CT; i++ )
+	{
+		Q_snprintf( command, sizeof( command ), "loadout_mainmenu_weapon_ct %d", i );
+		m_pLoadoutMainMenuWeaponCTComboBox->AddItem( GetCSMainMenuWeaponCT( i )->m_pszName, command );
+	}
+	for ( i = 0; i < MAX_MAINMENU_WEAPONS_T; i++ )
+	{
+		Q_snprintf( command, sizeof( command ), "loadout_mainmenu_weapon_t %d", i );
+		m_pLoadoutMainMenuWeaponTComboBox->AddItem( GetCSMainMenuWeaponT( i )->m_pszName, command );
+	}
+
 	m_pLoadoutAgentCTComboBox->AddActionSignalTarget( this );
 	m_pLoadoutAgentTComboBox->AddActionSignalTarget( this );
+	m_pLoadoutMainMenuWeaponCTComboBox->AddActionSignalTarget( this );
+	m_pLoadoutMainMenuWeaponTComboBox->AddActionSignalTarget( this );
 
 	LoadControlSettings("Resource/ModOptionsSubAgents.res");
 }
@@ -227,12 +245,16 @@ void CModOptionsSubAgents::OnTextChanged( vgui::Panel *panel )
 void CModOptionsSubAgents::OnResetData()
 {
 	ConVarRef loadout_slot_agent_ct( "loadout_slot_agent_ct" );
-	if ( loadout_slot_agent_ct.IsValid() )
-		m_pLoadoutAgentCTComboBox->SetInitialItem( loadout_slot_agent_ct.GetInt() );
+	m_pLoadoutAgentCTComboBox->SetInitialItem( loadout_slot_agent_ct.GetInt() );
 
 	ConVarRef loadout_slot_agent_t( "loadout_slot_agent_t" );
-	if ( loadout_slot_agent_t.IsValid() )
-		m_pLoadoutAgentTComboBox->SetInitialItem( loadout_slot_agent_t.GetInt() );
+	m_pLoadoutAgentTComboBox->SetInitialItem( loadout_slot_agent_t.GetInt() );
+
+	ConVarRef loadout_mainmenu_weapon_ct( "loadout_mainmenu_weapon_ct" );
+	m_pLoadoutMainMenuWeaponCTComboBox->SetInitialItem( loadout_mainmenu_weapon_ct.GetInt() );
+
+	ConVarRef loadout_mainmenu_weapon_t( "loadout_mainmenu_weapon_t" );
+	m_pLoadoutMainMenuWeaponTComboBox->SetInitialItem( loadout_mainmenu_weapon_t.GetInt() );
 
 	RemapAgentsImage();
 }
@@ -244,4 +266,9 @@ void CModOptionsSubAgents::OnApplyChanges()
 {
 	m_pLoadoutAgentCTComboBox->ApplyChanges();
 	m_pLoadoutAgentTComboBox->ApplyChanges();
+	m_pLoadoutMainMenuWeaponCTComboBox->ApplyChanges();
+	m_pLoadoutMainMenuWeaponTComboBox->ApplyChanges();
+
+	// update agent on main menu
+	GameUI().UpdateAgentModel();
 }

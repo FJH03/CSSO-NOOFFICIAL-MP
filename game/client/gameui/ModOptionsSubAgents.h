@@ -45,6 +45,8 @@ private:
 
 	CLabeledCommandComboBox *m_pLoadoutAgentCTComboBox;
 	CLabeledCommandComboBox *m_pLoadoutAgentTComboBox;
+	CLabeledCommandComboBox *m_pLoadoutMainMenuWeaponCTComboBox;
+	CLabeledCommandComboBox * m_pLoadoutMainMenuWeaponTComboBox;
 };
 
 #endif // MODOPTIONSSUBAGENTS_H

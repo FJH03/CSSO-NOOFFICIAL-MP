@@ -349,6 +349,17 @@ static PlayerViewmodelArmConfig s_playerViewmodelArmConfigs[] =
 
 const PlayerViewmodelArmConfig *GetPlayerViewmodelArmConfigForPlayerModel( const char* szPlayerModel );
 
+#define MAX_MAINMENU_WEAPONS_T 26
+#define MAX_MAINMENU_WEAPONS_CT 27
+struct CSMainMenuWeapons
+{
+	const char* m_pszModel;
+	const char* m_pszSequence;
+	const char* m_pszName;
+};
+const CSMainMenuWeapons *GetCSMainMenuWeaponT( int i );
+const CSMainMenuWeapons *GetCSMainMenuWeaponCT( int i );
+
 // The various states the player can be in during the join game process.
 enum CSPlayerState
 {

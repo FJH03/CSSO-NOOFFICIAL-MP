@@ -30,6 +30,9 @@ ConVar loadout_slot_gloves_ct( "loadout_slot_gloves_ct", "0", FCVAR_ARCHIVE | FC
 ConVar loadout_slot_gloves_t( "loadout_slot_gloves_t", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "Which gloves to use for Ts.", true, 0, true, MAX_GLOVES );
 ConVar loadout_stattrak( "loadout_stattrak", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "Enable or disable StatTrak on weapons.", true, 0, true, 1 );
 ConVar loadout_music( "loadout_music", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "Which music kit to use.", true, 0, true, MAX_MUSIC - 1 );
+ConVar loadout_mainmenu_agent( "loadout_mainmenu_agent", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "What agent to use for main menu.\n 0 - None\n 1 - T\n 2 - CT", true, 0, true, 2 );
+ConVar loadout_mainmenu_weapon_t( "loadout_mainmenu_weapon_t", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "What weapon to use for T main menu agent.", true, 0, true, MAX_MAINMENU_WEAPONS_T - 1 );
+ConVar loadout_mainmenu_weapon_ct( "loadout_mainmenu_weapon_ct", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "What weapon to use for CT main menu agent.", true, 0, true, MAX_MAINMENU_WEAPONS_CT - 1 );
 #endif
 ConVar bot_loadout_random_knives( "bot_loadout_random_knives", "0", FCVAR_REPLICATED, "Whether or not the bots will have random knives." );
 ConVar bot_loadout_random_gloves( "bot_loadout_random_gloves", "0", FCVAR_REPLICATED, "Whether or not the bots will have random gloves." );

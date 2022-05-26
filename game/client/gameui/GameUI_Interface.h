@@ -117,6 +117,8 @@ public:
 	void StartBackgroundMusicFade( void );
 	void ReleaseBackgroundMusic( void );
 
+	void UpdateAgentModel( void );
+
 private:
 	void SendConnectedToGameMessage();
 

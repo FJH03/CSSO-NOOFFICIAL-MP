@@ -19,6 +19,7 @@
 #include "LabeledCommandComboBox.h"
 #include "tier1/convar.h"
 #include "BitmapImagePanel.h"
+#include "GameUI_Interface.h"
 
 #if defined( _X360 )
 #include "xbox/xbox_win32stubs.h"
@@ -176,4 +177,7 @@ void CModOptionsSubGloves::OnApplyChanges()
 {
 	m_pLoadoutGloveCTComboBox->ApplyChanges();
 	m_pLoadoutGloveTComboBox->ApplyChanges();
+
+	// update gloves on main menu agents
+	GameUI().UpdateAgentModel();
 }

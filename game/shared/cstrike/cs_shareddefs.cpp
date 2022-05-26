@@ -68,7 +68,8 @@ const PlayerViewmodelArmConfig *GetPlayerViewmodelArmConfigForPlayerModel( const
 
 CCSAgentInfo g_AgentInfosCT[MAX_AGENTS_CT + 1] =
 {
-	{ "", "", 0, 0 },
+	// default
+	{ "models/player/custom_player/legacy/ctm_sas.mdl",					NULL,					NULL,					NULL	},
 	// Shattered Web
 	{ "models/player/custom_player/legacy/ctm_fbi_variantf.mdl",		NULL,					CS_CLASS_FBI,			false	},
 	{ "models/player/custom_player/legacy/ctm_fbi_variantf_legacy.mdl",	NULL,					CS_CLASS_FBI,			false	},
@@ -123,7 +124,8 @@ const CCSAgentInfo* GetCSAgentInfoCT( int i )
 
 CCSAgentInfo g_AgentInfosT[MAX_AGENTS_T + 1] =
 {
-	{ "", "", 0, 0 },
+	// default
+	{ "models/player/custom_player/legacy/tm_phoenix.mdl",					NULL,				NULL,							NULL	},
 	// Shattered Web
 	{ "models/player/custom_player/legacy/tm_leet_variantg.mdl",			NULL,				CS_CLASS_L337_KREW,				false	},
 	{ "models/player/custom_player/legacy/tm_leet_variantg_legacy.mdl",		NULL,				CS_CLASS_L337_KREW,				false	},
@@ -177,6 +179,79 @@ const CCSAgentInfo* GetCSAgentInfoT( int i )
 {
 	Assert( i >= 0 && i < ARRAYSIZE( g_AgentInfosT ) );
 	return &g_AgentInfosT[i];
+}
+
+CSMainMenuWeapons g_MainMenuWeaponsT[MAX_MAINMENU_WEAPONS_T] =
+{
+	{	"models/weapons/w_knife_default_t.mdl",		"t_loadout_knife_idle1",			"#Cstrike_WPNHUD_Knife"				},
+	{	"models/weapons/w_c4.mdl",					"t_loadout_c4_idle",				"#Cstrike_WPNHUD_C4"				},
+	{	"models/weapons/w_pist_glock18.mdl",		"t_loadout_pistol_idle",			"#Cstrike_WPNHUD_Glock18"			},
+	{	"models/weapons/w_pist_elite.mdl",			"t_loadout_dual_idle",				"#Cstrike_WPNHUD_Elites"			},
+	{	"models/weapons/w_pist_p250.mdl",			"t_loadout_pistol_idle",			"#Cstrike_WPNHUD_P250"				},
+	{	"models/weapons/w_pist_tec9.mdl",			"t_loadout_pistol_idle",			"#Cstrike_WPNHUD_Tec9"				},
+	{	"models/weapons/w_pist_cz_75.mdl",			"t_loadout_pistol_idle",			"#Cstrike_WPNHUD_CZ75"				},
+	{	"models/weapons/w_pist_deagle.mdl",			"t_loadout_pistol_idle",			"#Cstrike_WPNHUD_DesertEagle"		},
+	{	"models/weapons/w_pist_revolver.mdl",		"t_loadout_pistol_idle",			"#Cstrike_WPNHUD_Revolver"			},
+	{	"models/weapons/w_smg_mac10.mdl",			"t_loadout_shotgun_xm_idle",		"#Cstrike_WPNHUD_MAC10"				},
+	{	"models/weapons/w_smg_mp7.mdl",				"t_loadout_mp7_idle",				"#Cstrike_WPNHUD_MP7"				},
+	{	"models/weapons/w_smg_mp5sd.mdl",			"t_loadout_shotgun_xm_idle",		"#Cstrike_WPNHUD_MP5SD"				},
+	{	"models/weapons/w_smg_ump45.mdl",			"t_loadout_ump45_idle",				"#Cstrike_WPNHUD_UMP45"				},
+	{	"models/weapons/w_smg_p90.mdl",				"t_loadout_p90_idle",				"#Cstrike_WPNHUD_P90"				},
+	{	"models/weapons/w_smg_bizon.mdl",			"t_loadout_bizon_idle",				"#Cstrike_WPNHUD_Bizon"				},
+	{	"models/weapons/w_rif_galilar.mdl",			"t_loadout_rifle02_idle_galil",		"#Cstrike_WPNHUD_GalilAR"			},
+	{	"models/weapons/w_rif_ak47.mdl",			"t_loadout_rifle02_idle",			"#Cstrike_WPNHUD_AK47"				},
+	{	"models/weapons/w_snip_ssg08.mdl",			"t_loadout_rifle02_idle_sniper",	"#Cstrike_WPNHUD_SSG08"				},
+	{	"models/weapons/w_rif_sg556.mdl",			"t_loadout_rifle02_idle",			"#Cstrike_WPNHUD_SG556"				},
+	{	"models/weapons/w_snip_awp.mdl",			"t_loadout_rifle02_idle_awp",		"#Cstrike_WPNHUD_AWP"				},
+	{	"models/weapons/w_snip_g3sg1.mdl",			"t_loadout_rifle02_idle_g3sg",		"#Cstrike_WPNHUD_G3SG1"				},
+	{	"models/weapons/w_shot_nova.mdl",			"t_loadout_shotgun_idle",			"#Cstrike_WPNHUD_Nova"				},
+	{	"models/weapons/w_shot_xm1014.mdl",			"t_loadout_shotgun_xm_idle",		"#Cstrike_WPNHUD_xm1014"			},
+	{	"models/weapons/w_shot_sawedoff.mdl",		"t_loadout_shotgun_idle",			"#Cstrike_WPNHUD_SawedOff"			},
+	{	"models/weapons/w_mach_m249.mdl",			"t_loadout_heavy_m249_idle",		"#Cstrike_WPNHUD_M249"				},
+	{	"models/weapons/w_mach_negev.mdl",			"t_loadout_heavy_idle",				"#Cstrike_WPNHUD_Negev"				},
+};
+
+const CSMainMenuWeapons* GetCSMainMenuWeaponT( int i )
+{
+	Assert( i >= 0 && i < ARRAYSIZE( g_MainMenuWeaponsT ) );
+	return &g_MainMenuWeaponsT[i];
+}
+
+CSMainMenuWeapons g_MainMenuWeaponsCT[MAX_MAINMENU_WEAPONS_CT] =
+{
+	{	"models/weapons/w_knife_default_ct.mdl",	"ct_loadout_knife_idle1",				"#Cstrike_WPNHUD_Knife"			},
+	{	"models/weapons/w_pist_hkp2000.mdl",		"ct_loadout_pistol01_idle",				"#Cstrike_WPNHUD_HKP2000"		},
+	{	"models/weapons/w_pist_usp.mdl",			"ct_loadout_pistol01_idle",				"#Cstrike_WPNHUD_USP45"			},
+	{	"models/weapons/w_pist_elite.mdl",			"ct_loadout_dual_idle",					"#Cstrike_WPNHUD_Elites"		},
+	{	"models/weapons/w_pist_p250.mdl",			"ct_loadout_pistol01_idle",				"#Cstrike_WPNHUD_P250"			},
+	{	"models/weapons/w_pist_fiveseven.mdl",		"ct_loadout_pistol01_idle",				"#Cstrike_WPNHUD_FiveSeven"		},
+	{	"models/weapons/w_pist_cz_75.mdl",			"ct_loadout_pistol01_idle",				"#Cstrike_WPNHUD_CZ75"			},
+	{	"models/weapons/w_pist_deagle.mdl",			"ct_loadout_pistol01_idle",				"#Cstrike_WPNHUD_DesertEagle"	},
+	{	"models/weapons/w_pist_revolver.mdl",		"ct_loadout_pistol01_idle",				"#Cstrike_WPNHUD_Revolver"		},
+	{	"models/weapons/w_smg_mp9.mdl",				"ct_loadout_p90_idle",					"#Cstrike_WPNHUD_MP9"			},
+	{	"models/weapons/w_smg_mp7.mdl",				"ct_loadout_mp7_idle",					"#Cstrike_WPNHUD_MP7"			},
+	{	"models/weapons/w_smg_mp5sd.mdl",			"ct_loadout_p90_idle",					"#Cstrike_WPNHUD_MP5SD"			},
+	{	"models/weapons/w_smg_ump45.mdl",			"ct_loadout_p90_idle",					"#Cstrike_WPNHUD_UMP45"			},
+	{	"models/weapons/w_smg_p90.mdl",				"ct_loadout_p90_idle",					"#Cstrike_WPNHUD_P90"			},
+	{	"models/weapons/w_smg_bizon.mdl",			"ct_loadout_p90_idle",					"#Cstrike_WPNHUD_Bizon"			},
+	{	"models/weapons/w_rif_famas.mdl",			"ct_loadout_famas_idle",				"#Cstrike_WPNHUD_Famas"			},
+	{	"models/weapons/w_rif_m4a4.mdl",			"ct_loadout_rifle_idle_handrepo_m4",	"#Cstrike_WPNHUD_M4A4"			},
+	{	"models/weapons/w_rif_m4a1_silencer.mdl",	"ct_loadout_rifle_idle_handrepo_m4",	"#Cstrike_WPNHUD_M4A1"			},
+	{	"models/weapons/w_snip_ssg08.mdl",			"ct_loadout_rifle_ssg08_idle",			"#Cstrike_WPNHUD_SSG08"			},
+	{	"models/weapons/w_rif_aug.mdl",				"ct_loadout_rifle_idle_handrepo_aug",	"#Cstrike_WPNHUD_Aug"			},
+	{	"models/weapons/w_snip_awp.mdl",			"ct_loadout_rifle_awp_idle",			"#Cstrike_WPNHUD_AWP"			},
+	{	"models/weapons/w_snip_scar20.mdl",			"ct_loadout_rifle_scar_idle",			"#Cstrike_WPNHUD_SCAR20"		},
+	{	"models/weapons/w_shot_nova.mdl",			"ct_loadout_nova_idle",					"#Cstrike_WPNHUD_Nova"			},
+	{	"models/weapons/w_shot_xm1014.mdl",			"ct_loadout_xm1014_idle",				"#Cstrike_WPNHUD_xm1014"		},
+	{	"models/weapons/w_shot_mag7.mdl",			"ct_loadout_mag7_idle",					"#Cstrike_WPNHUD_MAG7"			},
+	{	"models/weapons/w_mach_m249.mdl",			"ct_loadout_heavystanding_idle",		"#Cstrike_WPNHUD_M249"			},
+	{	"models/weapons/w_mach_negev.mdl",			"ct_loadout_heavystanding_idle",		"#Cstrike_WPNHUD_Negev"			},
+};
+
+const CSMainMenuWeapons* GetCSMainMenuWeaponCT( int i )
+{
+	Assert( i >= 0 && i < ARRAYSIZE( g_MainMenuWeaponsCT ) );
+	return &g_MainMenuWeaponsCT[i];
 }
 
 const char *pszWinPanelCategoryHeaders[] =
