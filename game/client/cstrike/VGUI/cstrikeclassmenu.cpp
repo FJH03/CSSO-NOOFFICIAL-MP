@@ -189,9 +189,10 @@ void CCSClassMenu_TER::ResetAgentModels()
 
 		if ( CSLoadout()->HasGlovesSet( pPlayer, TEAM_TERRORIST ) )
 		{
-			const char* pszGlovesViewModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szViewModel;
-			const char* pszGlovesWorldModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel;
-			if ( pszGlovesViewModel && pPlayer->m_szPlayerDefaultGloves && m_pAgentModels[i]->DoesModelSupportGloves( pszGlovesViewModel, pPlayer->m_szPlayerDefaultGloves ) )
+			const char* pszGlovesViewModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, TEAM_TERRORIST ) )->szViewModel;
+			const char* pszGlovesWorldModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, TEAM_TERRORIST ) )->szWorldModel;
+			const char* pszDefaultGlovesModel = GetPlayerViewmodelArmConfigForPlayerModel( pszPlayerModel )->szAssociatedGloveModel;
+			if ( pszGlovesViewModel && pszDefaultGlovesModel && m_pAgentModels[i]->DoesModelSupportGloves( pszGlovesViewModel, pszDefaultGlovesModel ) )
 			{
 				m_pAgentModels[i]->SetGlovesModel( pszGlovesWorldModel );
 			}
@@ -296,9 +297,10 @@ void CCSClassMenu_CT::ResetAgentModels()
 
 		if ( CSLoadout()->HasGlovesSet( pPlayer, TEAM_CT ) )
 		{
-			const char* pszGlovesViewModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szViewModel;
-			const char* pszGlovesWorldModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel;
-			if ( pszGlovesViewModel && pPlayer->m_szPlayerDefaultGloves && m_pAgentModels[i]->DoesModelSupportGloves( pszGlovesViewModel, pPlayer->m_szPlayerDefaultGloves ) )
+			const char* pszGlovesViewModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, TEAM_CT ) )->szViewModel;
+			const char* pszGlovesWorldModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, TEAM_CT ) )->szWorldModel;
+			const char* pszDefaultGlovesModel = GetPlayerViewmodelArmConfigForPlayerModel( pszPlayerModel )->szAssociatedGloveModel;
+			if ( pszGlovesViewModel && pszDefaultGlovesModel && m_pAgentModels[i]->DoesModelSupportGloves( pszGlovesViewModel, pszDefaultGlovesModel ) )
 			{
 				m_pAgentModels[i]->SetGlovesModel( pszGlovesWorldModel );
 			}
