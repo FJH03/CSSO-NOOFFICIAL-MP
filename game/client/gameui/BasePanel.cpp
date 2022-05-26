@@ -1956,6 +1956,14 @@ void CBaseModPanel::UpdateAgentModel()
 {
 	// PiMoN: I hate this spaghetti code.
 
+	bool bUpdateAgent = false;
+
+	if ( m_iAgentToUse != loadout_mainmenu_agent.GetInt() )
+	{
+		m_iAgentToUse = loadout_mainmenu_agent.GetInt();
+		bUpdateAgent = true;
+	}
+
 	if ( m_iAgentToUse == 0 || (m_eBackgroundState != BACKGROUND_MAINMENU && m_eBackgroundState != BACKGROUND_DISCONNECTED) )
 	{
 		m_pPlayerModel->SetVisible( false );
@@ -1967,14 +1975,6 @@ void CBaseModPanel::UpdateAgentModel()
 		surface()->GetScreenSize( wide, tall );
 		m_pPlayerModel->SetBounds( wide / 2, 0, wide / 2, tall );
 		m_pPlayerModel->SetVisible( true );
-	}
-
-	bool bUpdateAgent = false;
-
-	if ( m_iAgentToUse != loadout_mainmenu_agent.GetInt() )
-	{
-		m_iAgentToUse = loadout_mainmenu_agent.GetInt();
-		bUpdateAgent = true;
 	}
 
 	if ( m_iAgentToUse == 1 )
