@@ -1750,6 +1750,9 @@ void CBaseModPanel::OnSizeChanged( int newWide, int newTall )
 	{
 		m_hMatchmakingBasePanel->SetBounds( 0, 0, newWide, newTall );
 	}
+
+	// resize agent panel
+	UpdateAgentModel();
 }
 
 //-----------------------------------------------------------------------------
@@ -1960,6 +1963,9 @@ void CBaseModPanel::UpdateAgentModel()
 	}
 	else
 	{
+		int wide, tall;
+		surface()->GetScreenSize( wide, tall );
+		m_pPlayerModel->SetBounds( wide / 2, 0, wide / 2, tall );
 		m_pPlayerModel->SetVisible( true );
 	}
 
