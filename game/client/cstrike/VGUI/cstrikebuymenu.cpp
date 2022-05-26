@@ -1018,6 +1018,11 @@ CCSBuyMenu::CCSBuyMenu( IViewPort* pViewPort ): Frame( NULL, PANEL_BUY )
 	LoadControlSettings( "Resource/UI/BuyMenu.res" );
 }
 
+CCSBuyMenu::~CCSBuyMenu()
+{
+	m_kvBuyMenuConfig->deleteThis();
+}
+
 void CCSBuyMenu::ShowPanel( bool bShow )
 {
 	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();

@@ -214,6 +214,7 @@ class CCSBuyMenu: public Frame, public IViewPortPanel
 	DECLARE_CLASS_SIMPLE( CCSBuyMenu, Frame );
 public:
 	CCSBuyMenu( IViewPort* pViewPort );
+	~CCSBuyMenu();
 
 	// IViewPortPanel overrides
 	virtual const char* GetName( void ) { return PANEL_BUY; }
