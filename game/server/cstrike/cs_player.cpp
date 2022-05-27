@@ -5554,6 +5554,11 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAd
 
 		BuyResult_e equipResult = BUY_INVALID_ITEM;
 
+		AcquireMethod::Type nAcquireMethod = bDrop ? AcquireMethod::BuyDrop : AcquireMethod::Buy;
+		AcquireResult::Type nAcquireResult = CanAcquire( weaponId, nAcquireMethod );
+		if ( nAcquireResult != AcquireResult::Allowed )
+			return BUY_NOT_ALLOWED;
+
 		if ( weaponId == ITEM_KEVLAR )
 		{
 			equipResult = AttemptToBuyVest();
@@ -5586,11 +5591,9 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAd
 	}
 	else
 	{
-		AcquireMethod::Type nAcquireMethod = AcquireMethod::Buy;
-		if ( bDrop )
-			nAcquireMethod = AcquireMethod::BuyDrop;
-		AcquireResult::Type acquireResult = CanAcquire( weaponId, nAcquireMethod );
-		switch ( acquireResult )
+		AcquireMethod::Type nAcquireMethod = bDrop ? AcquireMethod::BuyDrop : AcquireMethod::Buy;
+		AcquireResult::Type nAcquireResult = CanAcquire( weaponId, nAcquireMethod );
+		switch ( nAcquireResult )
 		{
 		case AcquireResult::Allowed:
 			break;
