@@ -375,7 +375,11 @@ void CTargetID::Paint()
 		CWeaponCSBase *pWeapon = static_cast<CWeaponCSBase*>(cl_entitylist->GetEnt( iWeaponEntIndex ));
 		if ( pWeapon )
 		{
-			if ( pPlayer->CanAcquire( pWeapon->GetCSWeaponID(), AcquireMethod::PickUp ) == AcquireResult::Allowed )
+			bool bShow = pPlayer->CanAcquire( pWeapon->GetCSWeaponID(), AcquireMethod::PickUp ) == AcquireResult::Allowed;
+			if ( pWeapon->IsA( WEAPON_TASER ) )
+				bShow = bShow && pWeapon->HasAnyAmmo();
+
+			if ( bShow )
 			{
 				if ( pPlayer->Weapon_GetSlot( pWeapon->GetSlot() ) && pPlayer->IsPrimaryOrSecondaryWeapon( pWeapon->GetCSWpnData().m_WeaponType ) )
 				{
