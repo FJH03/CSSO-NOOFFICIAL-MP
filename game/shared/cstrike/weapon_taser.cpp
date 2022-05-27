@@ -101,7 +101,12 @@ void CWeaponTaser::ItemPostFrame()
 
 	if ( HasAmmo() == false && gpGlobals->curtime >= m_fFireTime + kTaserDropDelay )
 	{
-		GetPlayerOwner()->CSWeaponDrop( this );
+		// PiMoN: fix for zeus staying as active weapon when you shoot it in DM
+		// because it doesnt get switched but it does get removed
+		if ( this == GetPlayerOwner()->GetActiveWeapon() )
+		{
+			GetPlayerOwner()->SwitchToNextBestWeapon( this );
+		}
 	}
 }
 
