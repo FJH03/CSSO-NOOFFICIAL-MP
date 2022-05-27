@@ -8130,18 +8130,9 @@ bool CCSGameRules::IsPlayingOffline( void ) const
 #ifndef CLIENT_DLL
 	if ( engine->IsDedicatedServer() )
 		return false;
-
-	return true;
-#else
-	// PiMoN: game_online gets reset to default (1)
-	// when server gets started
-	// TODO: why it worked before but doesn't work now? or was
-	// it always like that?
-	return engine->IsClientLocalToActiveServer();
 #endif
-
-	/*extern ConVar game_online;
-	return !game_online.GetBool();*/
+	ConVarRef sv_lan( "sv_lan" );
+	return sv_lan.GetBool();
 }
 
 bool CCSGameRules::IsAwardsProgressAllowedForBotDifficulty( void ) const
