@@ -1844,6 +1844,11 @@ void CCSPlayer::GiveDefaultItems()
 	CBaseCombatWeapon *pistol = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
 	CBaseCombatWeapon *rifle = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
 
+	//If the player has the knife, then they survived the previous round and need to display their current inventrory
+	//The only question is whether they got rid of their pistol.
+	if ( knife && pistol )
+		return;
+
 	m_bUsingDefaultPistol = true;
 
 	const char *meleeString = NULL;
