@@ -29,7 +29,6 @@
 void DisplayGameModeConvars( void );
 
 // The following convars depend on the order of the game types and modes in GameModes.txt.
-ConVar game_public( "game_public", "1", FCVAR_REPLICATED | FCVAR_HIDDEN | FCVAR_GAMEDLL | FCVAR_CLIENTDLL, "The current game is public." );
 ConVar game_type( "game_type", "0", FCVAR_REPLICATED | FCVAR_GAMEDLL | FCVAR_CLIENTDLL, "The current game type. See GameModes.txt." );
 ConVar game_mode( "game_mode", "0", FCVAR_REPLICATED | FCVAR_GAMEDLL | FCVAR_CLIENTDLL, "The current game mode (based on game type). See GameModes.txt." );
 ConVar custom_bot_difficulty( "custom_bot_difficulty", "0", FCVAR_REPLICATED | FCVAR_GAMEDLL | FCVAR_CLIENTDLL, "Bot difficulty for offline play." );
