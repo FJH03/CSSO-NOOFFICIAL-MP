@@ -9210,41 +9210,10 @@ void CCSPlayer::FlashlightTurnOff( void )
 
 bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 {
-
 	CWeaponCSBase *pCSWeapon = dynamic_cast< CWeaponCSBase* >( pWeapon ? pWeapon : GetActiveWeapon() );
 
 	if( pCSWeapon )
 	{
-/*
-		CBaseCarribleItem *pItem = dynamic_cast< CBaseCarribleItem * >( pCSWeapon );
-		if ( pItem  )
-		{
-			pItem->DropItem();
-				
-			// decrement the ammo
-			pItem->DecrementAmmo( this );
-			// if that was the last item, delete this one
-			if ( pItem->GetCurrentItems() <= 0 )
-			{
-				CSWeaponDrop( pItem, true );
-				UTIL_Remove( pItem );
-				UpdateAddonBits();
-			}
-
-			return false;
-		}
-*/
-		CSWeaponType type = pCSWeapon->GetWeaponType();
-		if ( mp_death_drop_gun.GetInt() == 0 && !pCSWeapon->IsA( WEAPON_C4 ) && type != WEAPONTYPE_GRENADE )
-			return true;
-		
-		// [dwenger] Determine value of dropped item.
-		if ( !pCSWeapon->IsAPriorOwner( this ) )
-		{
-			pCSWeapon->AddToPriorOwnerList( this );
-			CCS_GameStats.IncrementStat(this, CSTAT_ITEMS_DROPPED_VALUE, pCSWeapon->GetCSWpnData().GetWeaponPrice() );
-		}
-
 		if ( pCSWeapon->IsA( WEAPON_HEALTHSHOT ) )
 		{
 			CItem_Healthshot* pHealth = dynamic_cast< CItem_Healthshot* >( pCSWeapon );
@@ -9256,6 +9225,7 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 			return true;
 		}
 
+		CSWeaponType type = pCSWeapon->GetWeaponType();
 		if ( type == WEAPONTYPE_GRENADE )
 		{
 			if ( mp_drop_grenade_enable.GetBool() )
@@ -9266,54 +9236,75 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 					if ( pGrenade->DropPlayerGrenade() )
 						ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
 				}
-				return true;
 			}
-		}
+			else
+			{
+				ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_CannotDropWeapon", pCSWeapon->GetPrintName() );
+			}
 
-		switch ( type )
+			return true;
+		}
+		
+		// let dedicated servers optionally allow droppable knives
+		if ( (type == WEAPONTYPE_KNIFE && mp_drop_knife_enable.GetBool( )) || pCSWeapon->GetCSWeaponID() == WEAPON_TASER )
 		{
-		// Only certail weapons can be dropped when drop is initiated by player
-		case WEAPONTYPE_PISTOL:
-		case WEAPONTYPE_SUBMACHINEGUN:
-		case WEAPONTYPE_RIFLE:
-		case WEAPONTYPE_SHOTGUN:
-		case WEAPONTYPE_SNIPER_RIFLE:
-		case WEAPONTYPE_MACHINEGUN:
-		case WEAPONTYPE_C4:
-		{
-			if (CSGameRules()->GetCanDonateWeapon() && !pCSWeapon->GetDonated() )
+			if ( CSGameRules( )->GetCanDonateWeapon( ) && !pCSWeapon->GetDonated( ) )
 			{
 				pCSWeapon->SetDonated( true );
 				pCSWeapon->SetDonor( this );
 			}
 			CSWeaponDrop( pCSWeapon, true );
+		
+			if ( IsAlive( ) && !bSwapping )
+				ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName( ) );
 
-			if ( IsAlive() && !bSwapping )
-				ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
+			return true;
 		}
-		break;
 
-		default:
+		if ( mp_death_drop_gun.GetInt() == 0 && !pCSWeapon->IsA( WEAPON_C4 ) )
 		{
-			// let dedicated servers optionally allow droppable knives
-			if ( (type == WEAPONTYPE_KNIFE && mp_drop_knife_enable.GetBool( )) || pCSWeapon->GetCSWeaponID() == WEAPON_TASER )
+			ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_CannotDropWeapon", pCSWeapon->GetPrintName() );
+			return true;
+		}
+
+		// [dwenger] Determine value of dropped item.
+		if ( !pCSWeapon->IsAPriorOwner( this ) )
+		{
+			pCSWeapon->AddToPriorOwnerList( this );
+			CCS_GameStats.IncrementStat(this, CSTAT_ITEMS_DROPPED_VALUE, pCSWeapon->GetCSWpnData().GetWeaponPrice() );
+		}
+
+		switch ( type )
+		{
+			// Only certail weapons can be dropped when drop is initiated by player
+			case WEAPONTYPE_PISTOL:
+			case WEAPONTYPE_SUBMACHINEGUN:
+			case WEAPONTYPE_RIFLE:
+			case WEAPONTYPE_SHOTGUN:
+			case WEAPONTYPE_SNIPER_RIFLE:
+			case WEAPONTYPE_MACHINEGUN:
+			case WEAPONTYPE_C4:
 			{
-				if ( CSGameRules( )->GetCanDonateWeapon( ) && !pCSWeapon->GetDonated( ) )
+				if (CSGameRules()->GetCanDonateWeapon() && !pCSWeapon->GetDonated() )
 				{
 					pCSWeapon->SetDonated( true );
 					pCSWeapon->SetDonor( this );
 				}
 				CSWeaponDrop( pCSWeapon, true );
 
-				if ( IsAlive( ) && !bSwapping )
-					ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName( ) );
+				if ( IsAlive() && !bSwapping )
+					ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
 			}
-			else if ( IsAlive( ) && !bSwapping )
+			break;
+
+			default:
 			{
-				ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_CannotDropWeapon", pCSWeapon->GetPrintName( ) );
+				if ( IsAlive( ) && !bSwapping )
+				{
+					ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_CannotDropWeapon", pCSWeapon->GetPrintName( ) );
+				}
 			}
-		}
-		break;
+			break;
 		}
 
 		return true;
