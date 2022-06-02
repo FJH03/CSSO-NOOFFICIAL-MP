@@ -32,6 +32,7 @@ public:
 	WinPanel_Round(const char *pElementName);
 
 	virtual void Reset();
+	virtual void OnThink();
 	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void FireGameEvent( IGameEvent * event );
 	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
@@ -58,6 +59,8 @@ private:
 
 	Color m_clrCT;
 	Color m_clrT;
+
+	float m_flFunFactShowTime;
 
 	CPanelAnimationVarAliasType( int, mvp_avatar_margin, "mvp_avatar_margin", "0", "proportional_width" );
 };

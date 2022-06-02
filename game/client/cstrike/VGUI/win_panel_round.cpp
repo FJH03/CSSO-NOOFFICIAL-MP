@@ -57,6 +57,8 @@ WinPanel_Round::WinPanel_Round( const char *pElementName ): CHudElement( pElemen
 	m_pGGTRNextWeaponLabel = new Label( this, "GGTRNextWeaponLabel", L"" );
 	m_pGGTRNextWeaponBackground = new Panel( this, "GGTRNextWeaponBackground" );
 
+	m_flFunFactShowTime = 0.0f;
+
 	LoadControlSettings( "Resource/UI/Win_Round.res" );
 }
 
@@ -72,6 +74,73 @@ void WinPanel_Round::OnScreenSizeChanged( int iOldWide, int iOldTall )
 void WinPanel_Round::Reset()
 {
 	Hide();
+}
+
+void WinPanel_Round::OnThink()
+{
+	// PiMoN: hack to give some time for local player to receive GGTR points from the server
+	// in case if the player gets the last kill so it shows correct weapon icon!
+	// (if I process this stuff instantly in Show(), then it will use outdated data)
+	if ( m_flFunFactShowTime > 0.0f && gpGlobals->curtime >= m_flFunFactShowTime )
+	{
+		m_flFunFactShowTime = 0.0f;
+		g_pClientMode->GetViewportAnimationController()->RunAnimationCommand( m_pFunFactLabel, "Alpha", 255.0f, 0.0f, 0.05f, AnimationController::Interpolators_e::INTERPOLATOR_LINEAR );
+		g_pClientMode->GetViewportAnimationController()->RunAnimationCommand( m_pGGTRNextWeaponBackground, "Alpha", 255.0f, 0.0f, 0.05f, AnimationController::Interpolators_e::INTERPOLATOR_LINEAR );
+		g_pClientMode->GetViewportAnimationController()->RunAnimationCommand( m_pGGTRNextWeaponLabel, "Alpha", 255.0f, 0.0f, 0.05f, AnimationController::Interpolators_e::INTERPOLATOR_LINEAR );
+		g_pClientMode->GetViewportAnimationController()->RunAnimationCommand( m_pGGTRNextWeaponIcon, "Alpha", 255.0f, 0.0f, 0.05f, AnimationController::Interpolators_e::INTERPOLATOR_LINEAR );
+		g_pClientMode->GetViewportAnimationController()->RunAnimationCommand( m_pGGTRBonusGrenadeIcon, "Alpha", 255.0f, 0.0f, 0.05f, AnimationController::Interpolators_e::INTERPOLATOR_LINEAR );
+
+		bool bShowGunGameTRPanel = false;
+		bool bShowGunGameBonusGrenade = false;
+		if ( CSGameRules()->IsPlayingGunGameTRBomb() )
+		{
+			C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
+			if ( pPlayer && pPlayer->GetNumGunGameTRKillPoints() >= mp_ggtr_bomb_pts_for_upgrade.GetInt() )
+			{
+				int nNextWeaponID = CSGameRules()->GetNextGunGameWeapon( pPlayer->GetPlayerGunGameWeaponIndex(), pPlayer->GetTeamNumber() );
+				if ( nNextWeaponID > -1 )
+				{
+					const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( (CSWeaponID) nNextWeaponID );
+					if ( pWeaponInfo )
+					{
+						wchar_t wszString[256];
+						g_pVGuiLocalize->ConstructString( wszString, sizeof( wszString ), g_pVGuiLocalize->Find( "#CStrike_GG_YourNextWeaponIs" ), 1, g_pVGuiLocalize->Find( pWeaponInfo->szPrintName ) );
+						m_pGGTRNextWeaponLabel->SetText( wszString );
+
+						char szWeaponIcon[128];
+						Q_snprintf( szWeaponIcon, sizeof( szWeaponIcon ), "materials/vgui/weapons/svg/%s.svg", WeaponIDToAlias( nNextWeaponID ) );
+						m_pGGTRNextWeaponIcon->SetTexture( szWeaponIcon );
+
+						int nBonusGrenadeID = CSGameRules()->GetGunGameTRBonusGrenade( pPlayer );
+						int iTotalWide = m_pGGTRNextWeaponIcon->GetWide();
+						if ( nBonusGrenadeID > 0 )
+						{
+							char szGrenadeIcon[128];
+							Q_snprintf( szGrenadeIcon, sizeof( szGrenadeIcon ), "materials/vgui/weapons/svg/%s.svg", WeaponIDToAlias( nBonusGrenadeID ) );
+							m_pGGTRBonusGrenadeIcon->SetTexture( szGrenadeIcon );
+							iTotalWide += m_pGGTRBonusGrenadeIcon->GetXPos() + m_pGGTRBonusGrenadeIcon->GetWide();
+							bShowGunGameBonusGrenade = true;
+						}
+						else
+						{
+							bShowGunGameBonusGrenade = false;
+						}
+
+						int iXPos = m_pGGTRNextWeaponBackground->GetXPos() + (m_pGGTRNextWeaponBackground->GetWide() / 2) - (iTotalWide / 2);
+						int iYPos = m_pGGTRNextWeaponIcon->GetYPos();
+						m_pGGTRNextWeaponIcon->SetPos( iXPos, iYPos );
+
+						bShowGunGameTRPanel = true;
+					}
+				}
+			}
+		}
+
+		m_pGGTRNextWeaponBackground->SetVisible( bShowGunGameTRPanel );
+		m_pGGTRNextWeaponIcon->SetVisible( bShowGunGameTRPanel );
+		m_pGGTRNextWeaponLabel->SetVisible( bShowGunGameTRPanel );
+		m_pGGTRBonusGrenadeIcon->SetVisible( bShowGunGameBonusGrenade );
+	}
 }
 
 // [Forrest] Allow win panel to be turned off on client
@@ -316,57 +385,7 @@ void WinPanel_Round::Show( void )
 		gHUD.LockRenderGroup( iRenderGroup );
 	}
 	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "WinPanelShow" );
-
-	bool bShowGunGameTRPanel = false;
-	bool bShowGunGameBonusGrenade = false;
-	if ( CSGameRules()->IsPlayingGunGameTRBomb() )
-	{
-		C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
-		if ( pPlayer && pPlayer->GetNumGunGameTRKillPoints() >= mp_ggtr_bomb_pts_for_upgrade.GetInt() )
-		{
-			int nNextWeaponID = CSGameRules()->GetNextGunGameWeapon( pPlayer->GetPlayerGunGameWeaponIndex(), pPlayer->GetTeamNumber() );
-			if ( nNextWeaponID > -1 )
-			{
-				const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( (CSWeaponID) nNextWeaponID );
-				if ( pWeaponInfo )
-				{
-					wchar_t wszString[256];
-					g_pVGuiLocalize->ConstructString( wszString, sizeof( wszString ), g_pVGuiLocalize->Find( "#CStrike_GG_YourNextWeaponIs" ), 1, g_pVGuiLocalize->Find( pWeaponInfo->szPrintName ) );
-					m_pGGTRNextWeaponLabel->SetText( wszString );
-
-					char szWeaponIcon[128];
-					Q_snprintf( szWeaponIcon, sizeof( szWeaponIcon ), "materials/vgui/weapons/svg/%s.svg", WeaponIDToAlias( nNextWeaponID ) );
-					m_pGGTRNextWeaponIcon->SetTexture( szWeaponIcon );
-
-					int nBonusGrenadeID = CSGameRules()->GetGunGameTRBonusGrenade( pPlayer );
-					int iTotalWide = m_pGGTRNextWeaponIcon->GetWide();
-					if ( nBonusGrenadeID > 0 )
-					{
-						char szGrenadeIcon[128];
-						Q_snprintf( szGrenadeIcon, sizeof( szGrenadeIcon ), "materials/vgui/weapons/svg/%s.svg", WeaponIDToAlias( nBonusGrenadeID ) );
-						m_pGGTRBonusGrenadeIcon->SetTexture( szGrenadeIcon );
-						iTotalWide += m_pGGTRBonusGrenadeIcon->GetXPos() + m_pGGTRBonusGrenadeIcon->GetWide();
-						bShowGunGameBonusGrenade = true;
-					}
-					else
-					{
-						bShowGunGameBonusGrenade = false;
-					}
-					
-					int iXPos = m_pGGTRNextWeaponBackground->GetXPos() + (m_pGGTRNextWeaponBackground->GetWide() / 2) - (iTotalWide / 2);
-					int iYPos = m_pGGTRNextWeaponIcon->GetYPos();
-					m_pGGTRNextWeaponIcon->SetPos( iXPos, iYPos );
-
-					bShowGunGameTRPanel = true;
-				}
-			}
-		}
-	}
-
-	m_pGGTRNextWeaponBackground->SetVisible( bShowGunGameTRPanel );
-	m_pGGTRNextWeaponIcon->SetVisible( bShowGunGameTRPanel );
-	m_pGGTRNextWeaponLabel->SetVisible( bShowGunGameTRPanel );
-	m_pGGTRBonusGrenadeIcon->SetVisible( bShowGunGameBonusGrenade );
+	m_flFunFactShowTime = gpGlobals->curtime + 1.0f;
 }
 
 void WinPanel_Round::Hide( void )
@@ -377,6 +396,7 @@ void WinPanel_Round::Hide( void )
 		gHUD.UnlockRenderGroup( iRenderGroup );
 	}
 	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "WinPanelHide" );
+	m_flFunFactShowTime = 0.0f;
 }
 
 void WinPanel_Round::ApplySchemeSettings( vgui::IScheme *pScheme )
