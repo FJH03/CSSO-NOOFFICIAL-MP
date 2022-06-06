@@ -124,6 +124,20 @@ void CWeaponCSBaseGun::Drop( const Vector &vecVelocity )
 	BaseClass::Drop( vecVelocity );
 }
 
+bool CWeaponCSBaseGun::SendWeaponAnim( int iActivity )
+{
+	// PiMoN: some addons want to use ACT_VM_DRYFIRE just as it works on Deagle in CS:GO so I'm backporting this "feature"
+	if ( !IsRevolver() && iActivity == ACT_VM_PRIMARYATTACK && m_iClip1 == 1 )
+	{
+		if ( IsSilenced() && LookupActivity( "ACT_VM_DRYFIRE_SILENCED" ) != ACT_INVALID )
+			iActivity = ACT_VM_DRYFIRE_SILENCED;
+		if ( !IsSilenced() && LookupActivity( "ACT_VM_DRYFIRE" ) != ACT_INVALID )
+			iActivity = ACT_VM_DRYFIRE;
+	}
+
+	return BaseClass::SendWeaponAnim( iActivity );
+}
+
 void CWeaponCSBaseGun::ItemBusyFrame()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
@@ -530,7 +544,7 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 			if ( IsRevolver() )
 			{
 				m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime[weaponMode];
-				BaseClass::SendWeaponAnim( ACT_VM_DRYFIRE ); // empty!
+				SendWeaponAnim( ACT_VM_DRYFIRE ); // empty!
 			}
 			m_bFireOnEmpty = false;
 		}
@@ -546,13 +560,13 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 	}
 	else if ( IsRevolver() )
 	{
-		BaseClass::SendWeaponAnim( ACT_VM_PRIMARYATTACK );
+		SendWeaponAnim( ACT_VM_PRIMARYATTACK );
 	}
 	else
 	{
 		CIronSightController* pIronSightController = GetIronSightController();
 		if ( pIronSightController )
-			// hacky but for some reason IsInIronSight() returns false server-side resulting in a wrong anim
+			// PiMoN: hacky but for some reason IsInIronSight() returns false server-side resulting in a wrong anim
 			//SendWeaponAnim( pIronSightController->IsInIronSight() ? ACT_VM_SECONDARYATTACK : ACT_VM_PRIMARYATTACK );
 			SendWeaponAnim( (weaponMode == Secondary_Mode) ? ACT_VM_SECONDARYATTACK : ACT_VM_PRIMARYATTACK );
 		else

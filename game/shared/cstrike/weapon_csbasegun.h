@@ -41,6 +41,7 @@ public:
 	virtual void WeaponIdle();
 	virtual bool Holster( CBaseCombatWeapon *pSwitchingTo );
 	virtual void Drop( const Vector &vecVelocity );
+	virtual bool SendWeaponAnim( int iActivity );
 
 	// Derived classes call this to fire a bullet.
 	bool CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode );
