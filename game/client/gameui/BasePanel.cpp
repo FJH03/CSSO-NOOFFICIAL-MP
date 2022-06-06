@@ -2526,7 +2526,7 @@ void CBaseModPanel::ApplySchemeSettings(IScheme *pScheme)
 		else
 			m_iGameMenuWidth = atoi(pClientScheme->GetResourceString( "Main.Menu.Width"));
 
-		m_pGameMenu->SetFont( pClientScheme->GetFont( "GameMenuFont", IsProportional() ) );
+		m_pGameMenu->SetFont( pClientScheme->GetFont( "GameMenuFont", true ) );
 		m_pGameMenu->SetBgColor( pClientScheme->GetColor( "Main.Menu.BgColor", Color( 0, 0, 0, 0 ) ) );
 		m_pGameMenu->SetPaintBackgroundType( 2 ); // Rounded Corner Box
 	}
