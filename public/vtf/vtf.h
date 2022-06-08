@@ -72,7 +72,7 @@ enum CompiledVtfFlags
 
 	TEXTUREFLAGS_SSBUMP                        = 0x08000000,
 					
-		TEXTUREFLAGS_UNUSED_10000000           = 0x10000000,
+	TEXTUREFLAGS_MOST_MIPS                     = 0x10000000,
 
 	// Clamp to border color on all texture coordinates
 	TEXTUREFLAGS_BORDER						   = 0x20000000,
@@ -86,6 +86,8 @@ enum CompiledVtfFlags
 enum VersionedVtfFlags
 {
 	VERSIONED_VTF_FLAGS_MASK_7_3			=	~0xD1780400,	// For a ver 7.3 or earlier only these flags are valid
+
+	VERSIONED_VTF_FLAGS_SRGB_7_5			=	0x00080000,		// 7.5's SRGB flag is different
 };
 
 

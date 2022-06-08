@@ -1033,7 +1033,14 @@ bool CVTFTexture::ReadHeader( CUtlBuffer &buf, VTFFileHeader_t &header )
 		header.flags &= VERSIONED_VTF_FLAGS_MASK_7_3;
 		// fall-through
 	case 4:
+		break;
 	case VTF_MINOR_VERSION:
+		if ( header.flags & VERSIONED_VTF_FLAGS_SRGB_7_5 )
+		{
+			// 7.5's SRGB flag is different
+			header.flags &= ~VERSIONED_VTF_FLAGS_SRGB_7_5;
+			header.flags |= TEXTUREFLAGS_SRGB;
+		}
 		break;
 	}
 
