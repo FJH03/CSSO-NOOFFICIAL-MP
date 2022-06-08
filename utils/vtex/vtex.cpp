@@ -394,6 +394,10 @@ void VTexConfigInfo_t::ParseOptionKey( const char *pKeyName,  const char *pKeyVa
 	{
 		SetFlagValue( m_nFlags, TEXTUREFLAGS_ALL_MIPS, iValue );
 	}
+	else if( !stricmp( pKeyName, "mostmips" ) )
+	{
+		SetFlagValue( m_nFlags, TEXTUREFLAGS_MOST_MIPS, iValue );
+	}
 	else if( !stricmp( pKeyName, "nonice" ) )
 	{
 		SetFlagValue( m_vtfProcOptions.flags0, VtfProcessingOptions::OPT_FILTER_NICE, !iValue );
