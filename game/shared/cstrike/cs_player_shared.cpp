@@ -47,6 +47,8 @@
 #include "ammodef.h"
 #include "cs_loadout.h"
 
+ConVar sv_penetration_type( "sv_penetration_type", "1", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY, "What type of penertration to use. 0 = old CS, 1 = new penetration" );
+
 ConVar sv_showimpacts("sv_showimpacts", "0", FCVAR_REPLICATED, "Shows client (red) and server (blue) bullet impact point (1=both, 2=client-only, 3=server-only)" );
 ConVar sv_showplayerhitboxes( "sv_showplayerhitboxes", "0", FCVAR_REPLICATED, "Show lag compensated hitboxes for the specified player index whenever a player fires." );
 
@@ -721,6 +723,13 @@ void CCSPlayer::GetBulletTypeParameters(
 	float &fPenetrationPower,
 	float &flPenetrationDistance )
 {
+	if ( sv_penetration_type.GetInt() == 1 )
+	{
+		fPenetrationPower = 35;
+		flPenetrationDistance = 3000.0;
+		return;
+	}
+
 	//MIKETODO: make ammo types come from a script file.
 	if ( IsAmmoType( iBulletType, BULLET_PLAYER_50AE ) )
 	{
@@ -955,7 +964,8 @@ void CCSPlayer::FireBullet(
 	GetBulletTypeParameters( iBulletType, flPenetrationPower, flPenetrationDistance );
 
 	// we use the max penetrations on this gun to figure out how much penetration it's capable of
-	flPenetrationPower = flPenetration; 
+	if ( sv_penetration_type.GetInt() == 1 )
+		flPenetrationPower = flPenetration; 
 
 	if ( !pevAttacker )
 		pevAttacker = this;  // the default attacker is ourselves
@@ -1412,106 +1422,187 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 	surfacedata_t *pExitSurfaceData = physprops->GetSurfaceData( exitTr.surface.surfaceProps );
 	int iExitMaterial = pExitSurfaceData->game.material;
 
-	// percent of total damage lost automatically on impacting a surface
-	float flDamLostPercent = 0.16;
-
-	// since some railings in de_inferno are CONTENTS_GRATE but CHAR_TEX_CONCRETE, we'll trust the
-	// CONTENTS_GRATE and use a high damage modifier.
-	if ( hitGrate || bIsNodraw || iEnterMaterial == CHAR_TEX_GLASS || iEnterMaterial == CHAR_TEX_GRATE )
+	// new penetration method
+	if ( sv_penetration_type.GetInt() == 1 )
 	{
-		// If we're a concrete grate (TOOLS/TOOLSINVISIBLE texture) allow more penetrating power.
-		if ( iEnterMaterial == CHAR_TEX_GLASS || iEnterMaterial == CHAR_TEX_GRATE )
+		// percent of total damage lost automatically on impacting a surface
+		float flDamLostPercent = 0.16;
+
+		// since some railings in de_inferno are CONTENTS_GRATE but CHAR_TEX_CONCRETE, we'll trust the
+		// CONTENTS_GRATE and use a high damage modifier.
+		if ( hitGrate || bIsNodraw || iEnterMaterial == CHAR_TEX_GLASS || iEnterMaterial == CHAR_TEX_GRATE )
 		{
-			flPenetrationModifier = 3.0f;
-			flDamLostPercent = 0.05;
+			// If we're a concrete grate (TOOLS/TOOLSINVISIBLE texture) allow more penetrating power.
+			if ( iEnterMaterial == CHAR_TEX_GLASS || iEnterMaterial == CHAR_TEX_GRATE )
+			{
+				flPenetrationModifier = 3.0f;
+				flDamLostPercent = 0.05;
+			}
+			else
+				flPenetrationModifier = 1.0f;
+
+			flDamageModifier = 0.99f;
+		}
+		else if ( iEnterMaterial == CHAR_TEX_FLESH && ff_damage_reduction_bullets.GetFloat() == 0 
+				  && tr.m_pEnt && tr.m_pEnt->IsPlayer() && tr.m_pEnt->GetTeamNumber() == GetTeamNumber() )
+		{
+			if ( ff_damage_bullet_penetration.GetFloat() == 0 )
+			{
+				// don't allow penetrating players when FF is off
+				flPenetrationModifier = 0;
+				return true;
+			}
+
+			flPenetrationModifier = ff_damage_bullet_penetration.GetFloat();
+			flDamageModifier = ff_damage_bullet_penetration.GetFloat();
 		}
 		else
-			flPenetrationModifier = 1.0f;
-
-		flDamageModifier = 0.99f;
-	}
-	else if ( iEnterMaterial == CHAR_TEX_FLESH && ff_damage_reduction_bullets.GetFloat() == 0
-			  && tr.m_pEnt && tr.m_pEnt->IsPlayer() && tr.m_pEnt->GetTeamNumber() == GetTeamNumber() )
-	{
-		if ( ff_damage_bullet_penetration.GetFloat() == 0 )
 		{
-			// don't allow penetrating players when FF is off
-			flPenetrationModifier = 0;
-			return true;
+			// check the exit material and average the exit and entrace values
+			float flExitPenetrationModifier = 0.0f;
+			float flExitDamageModifier = 0.0f;
+			GetMaterialParameters( iExitMaterial, flPenetrationModifier, flDamageModifier );
+			flPenetrationModifier = (flPenetrationModifier + flExitPenetrationModifier)/2;
+			flDamageModifier = (flDamageModifier + flExitDamageModifier)/2;
 		}
 
-		flPenetrationModifier = ff_damage_bullet_penetration.GetFloat();
-		flDamageModifier = ff_damage_bullet_penetration.GetFloat();
+		// if enter & exit point is wood we assume this is 
+		// a hollow crate and give a penetration bonus
+		if ( iEnterMaterial == iExitMaterial )
+		{
+			if( iExitMaterial == CHAR_TEX_WOOD )
+			{
+				flPenetrationModifier = 3;
+			}
+			else if ( iExitMaterial == CHAR_TEX_PLASTIC )
+			{
+				flPenetrationModifier = 2;
+			}
+		}
+
+		float flTraceDistance = VectorLength( exitTr.endpos - tr.endpos );
+
+		float flPenMod = MAX( 0, ( 1 / flPenetrationModifier ));
+
+		float flPercentDamageChunk = fCurrentDamage * flDamLostPercent;
+		float flPenWepMod = flPercentDamageChunk + MAX( 0, ( 3/ flPenetrationPower ) * 1.25 ) * (flPenMod * 3.0);
+
+		float flLostDamageObject = ((flPenMod * (flTraceDistance*flTraceDistance)) / 24);
+		float flTotalLostDamage = flPenWepMod + flLostDamageObject;
+		
+		// reduce damage power each time we hit something other than a grate
+		fCurrentDamage -= MAX( 0, flTotalLostDamage );
+
+		if ( fCurrentDamage < 1 )
+			return true;
+
+		// penetration was successful
+
+		// bullet did penetrate object, exit Decal
+		if ( bDoEffects )
+		{
+			UTIL_ImpactTrace( &exitTr, iDamageType );
+		}
+
+	#ifndef CLIENT_DLL
+		// decal players on the server to eliminate the disparity between where the client thinks the decal went and where it actually went
+		// we want to eliminate the case where a player sees a blood decal on someone, but they are at 100 health
+		if ( sv_server_verify_blood_on_player.GetBool() && tr.DidHit() && tr.m_pEnt && tr.m_pEnt->IsPlayer() )
+		{
+			UTIL_ImpactTrace( &tr, iDamageType );
+		}
+	#endif
+
+		//setup new start end parameters for successive trace
+
+		//flPenetrationPower -= (flTraceDistance/2) / flPenMod;
+		flCurrentDistance += flTraceDistance;
+
+		// NDebugOverlay::Box( exitTr.endpos, Vector(-2,-2,-2), Vector(2,2,2), 0,255,0,127, 8 );
+
+		vecSrc = exitTr.endpos;
+		flDistance = (flDistance - flCurrentDistance) * 0.5;
+
+		nPenetrationCount--;
+		return false;
 	}
 	else
 	{
-		// check the exit material and average the exit and entrace values
-		float flExitPenetrationModifier;
-		float flExitDamageModifier;
-		GetMaterialParameters( pExitSurfaceData->game.material, flExitPenetrationModifier, flExitDamageModifier );
-		flPenetrationModifier = (flPenetrationModifier + flExitPenetrationModifier) / 2;
-		flDamageModifier = (flDamageModifier + flExitDamageModifier) / 2;
-	}
-
-	// if enter & exit point is wood we assume this is 
-	// a hollow crate and give a penetration bonus
-	if ( iEnterMaterial == iExitMaterial )
-	{
-		if ( iExitMaterial == CHAR_TEX_WOOD )
+		// since some railings in de_inferno are CONTENTS_GRATE but CHAR_TEX_CONCRETE, we'll trust the
+		// CONTENTS_GRATE and use a high damage modifier.
+		if ( hitGrate || bIsNodraw )
 		{
-			flPenetrationModifier = 3;
+			// If we're a concrete grate (TOOLS/TOOLSINVISIBLE texture) allow more penetrating power.
+			flPenetrationModifier = 1.0f;
+			flDamageModifier = 0.99f;
 		}
-		else if ( iExitMaterial == CHAR_TEX_PLASTIC )
+		else
 		{
-			flPenetrationModifier = 2;
+			// Check the exit material to see if it is has less penetration than the entrance material.
+			float flExitPenetrationModifier = 0.0f;
+			float flExitDamageModifier = 0.0f;
+			GetMaterialParameters( iExitMaterial, flPenetrationModifier, flDamageModifier );
+			if ( flExitPenetrationModifier < flPenetrationModifier )
+			{
+				flPenetrationModifier = flExitPenetrationModifier;
+			}
+			if ( flExitDamageModifier < flDamageModifier )
+			{
+				flDamageModifier = flExitDamageModifier;
+			}
 		}
+
+		// if enter & exit point is wood or metal we assume this is 
+		// a hollow crate or barrel and give a penetration bonus
+		if ( iEnterMaterial == iExitMaterial )
+		{
+			if ( iExitMaterial == CHAR_TEX_WOOD ||
+				 iExitMaterial == CHAR_TEX_METAL )
+			{
+				flPenetrationModifier *= 2;
+			}
+		}
+
+		float flTraceDistance = VectorLength( exitTr.endpos - tr.endpos );
+
+		// check if bullet has enough power to penetrate this distance for this material
+		if ( flTraceDistance > ( flPenetrationPower * flPenetrationModifier ) )
+			return true; // bullet hasn't enough power to penetrate this distance
+
+		// reduce damage power each time we hit something other than a grate
+		fCurrentDamage *= flDamageModifier;
+
+		// penetration was successful
+
+		// bullet did penetrate object, exit Decal
+		if ( bDoEffects )
+		{
+			UTIL_ImpactTrace( &exitTr, iDamageType );
+		}
+
+	#ifndef CLIENT_DLL
+		// decal players on the server to eliminate the disparity between where the client thinks the decal went and where it actually went
+		// we want to eliminate the case where a player sees a blood decal on someone, but they are at 100 health
+		if ( sv_server_verify_blood_on_player.GetBool() && tr.DidHit() && tr.m_pEnt && tr.m_pEnt->IsPlayer() )
+		{
+			UTIL_ImpactTrace( &tr, iDamageType );
+		}
+	#endif
+
+		//setup new start end parameters for successive trace
+
+		flPenetrationPower -= flTraceDistance / flPenetrationModifier;
+		flCurrentDistance += flTraceDistance;
+
+		// NDebugOverlay::Box( exitTr.endpos, Vector(-2,-2,-2), Vector(2,2,2), 0,255,0,127, 8 );
+
+		vecSrc = exitTr.endpos;
+		flDistance = ( flDistance - flCurrentDistance ) * 0.5;
+
+		// reduce penetration counter
+		nPenetrationCount--;
+		return false;
 	}
-
-	float flTraceDistance = VectorLength( exitTr.endpos - tr.endpos );
-
-	float flPenMod = MAX( 0, (1 / flPenetrationModifier) );
-
-	float flPercentDamageChunk = fCurrentDamage * flDamLostPercent;
-	float flPenWepMod = flPercentDamageChunk + MAX( 0, (3 / flPenetrationPower) * 1.25 ) * (flPenMod * 3.0);
-
-	float flLostDamageObject = ((flPenMod * (flTraceDistance*flTraceDistance)) / 24);
-	float flTotalLostDamage = flPenWepMod + flLostDamageObject;
-
-	// reduce damage power each time we hit something other than a grate
-	fCurrentDamage -= MAX( 0, flTotalLostDamage );
-
-	if ( fCurrentDamage < 1 )
-		return true;
-
-	// penetration was successful
-
-	// bullet did penetrate object, exit Decal
-	if ( bDoEffects )
-	{
-		UTIL_ImpactTrace( &exitTr, iDamageType );
-	}
-
-#ifndef CLIENT_DLL
-	// decal players on the server to eliminate the disparity between where the client thinks the decal went and where it actually went
-	// we want to eliminate the case where a player sees a blood decal on someone, but they are at 100 health
-	if ( sv_server_verify_blood_on_player.GetBool() && tr.DidHit() && tr.m_pEnt && tr.m_pEnt->IsPlayer() )
-	{
-		UTIL_ImpactTrace( &tr, iDamageType );
-	}
-#endif
-
-	//setup new start end parameters for successive trace
-
-	//flPenetrationPower -= (flTraceDistance/2) / flPenMod;
-	flCurrentDistance += flTraceDistance;
-
-	// NDebugOverlay::Box( exitTr.endpos, Vector(-2,-2,-2), Vector(2,2,2), 0,255,0,127, 8 );
-
-	vecSrc = exitTr.endpos;
-	flDistance = (flDistance - flCurrentDistance) * 0.5;
-
-	nPenetrationCount--;
-	return false;
 }
 
 void CCSPlayer::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
