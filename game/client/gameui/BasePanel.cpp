@@ -1142,6 +1142,8 @@ void CBaseModPlayerPanel::OnPaint3D()
 	if ( m_MDL.GetMDL() == MDLHANDLE_INVALID )
 		return;
 
+	MDLCACHE_CRITICAL_SECTION();
+
 	CMatRenderContextPtr pRenderContext( vgui::MaterialSystem() );
 	pRenderContext->BindLocalCubemap( m_DefaultEnvCubemap );
 
