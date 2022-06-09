@@ -690,7 +690,6 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 		}
 	}
 
-
 	// verify stattrak module and add if necessary
 	if ( pCSWeapon->HasStatTrak() )
 	{
@@ -719,9 +718,10 @@ void C_BaseViewModel::AddViewmodelArmModel( const char *pszArmsModel, int nSkint
 		if ( nSkintoneIndex != -1 )
 			pEnt->m_nSkin = nSkintoneIndex;
 
-		// magic tricks to get 0.01 more fps on potato PCs
-		if ( pEnt->FindBodygroupByName( "bare" ) != -1 )
-			pEnt->SetBodygroup( pEnt->FindBodygroupByName( "bare" ), bHideBareArms );
+		// PiMoN: magic trick to get 0.01 more fps on potato PCs
+		int iBodygroup = pEnt->FindBodygroupByName( "bare" );
+		if ( iBodygroup != -1 )
+			pEnt->SetBodygroup( iBodygroup, bHideBareArms );
 
 		pEnt->SetParent( this );
 		pEnt->SetLocalOrigin( vec3_origin );

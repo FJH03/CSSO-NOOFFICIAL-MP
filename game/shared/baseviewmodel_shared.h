@@ -182,7 +182,7 @@ public:
 	void					UpdateAllViewmodelAddons( void );
 
 #if defined ( CLIENT_DLL )
-	void					AddViewmodelArmModel( const char *pszModel, int nSkintoneIndex = -1, bool bHideBareArms = false );
+	void					AddViewmodelArmModel( const char *pszModel, int nSkintoneIndex = 0, bool bHideBareArms = false );
 	void					AddViewmodelStatTrak( C_WeaponCSBase* pWeapon, int holderIndex );
 	void					RemoveViewmodelArmModels( void );
 	void					RemoveViewmodelStatTrak( void );
