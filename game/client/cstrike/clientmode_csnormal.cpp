@@ -61,9 +61,6 @@
 #include "cs_client_gamestats.h"
 #include "c_cs_playerresource.h"
 
-// [tj] We need to forward declare this, since the definition is all inside the implementation file 
-class CHudHintDisplay;
-
 
 void __MsgFunc_MatchEndConditions( bf_read &msg );
 
@@ -323,16 +320,6 @@ void ClientModeCSNormal::Init()
  	ListenForGameEvent( "smokegrenade_expired" );
 
 	usermessages->HookMessage( "KillCam", MsgFunc_KillCam );
-
-	// [tj] Add the shared HUD elements to the render groups responsible for hiding 
-	//		conflicting UI
-	CHudElement* hintBox = (CHudElement*)GET_HUDELEMENT( CHudHintDisplay );
-	if (hintBox)
-	{
-		hintBox->RegisterForRenderGroup("hide_for_scoreboard");
-		hintBox->RegisterForRenderGroup("hide_for_round_panel");
-	}
-
 
 	if ( m_CCDeathHandle == INVALID_CLIENT_CCHANDLE )
 	{
