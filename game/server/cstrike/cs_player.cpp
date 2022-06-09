@@ -1216,7 +1216,7 @@ void CCSPlayer::SetModelFromClass( void )
 			}
 			default:
 			{
-				Assert( false ); // we shouldn't be here
+				SetModel( CTST6PlayerModelStrings[0] );
 				break;
 			}
 		}
@@ -1270,15 +1270,14 @@ void CCSPlayer::SetModelFromClass( void )
 			}
 			default:
 			{
-				Assert( false ); // we shouldn't be here
+				SetModel( CTST6PlayerModelStrings[0] );
 				break;
 			}
 		}
 	}
 	else
 	{
-		Assert( false ); // we shouldn't be here
-		//SetModel( CTST6PlayerModels[0] );
+		SetModel( CTST6PlayerModelStrings[0] );
 	}
 }
 
