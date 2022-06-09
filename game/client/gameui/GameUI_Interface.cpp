@@ -169,6 +169,7 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 	ConnectTier2Libraries( &factory, 1 );
 	ConVar_Register( FCVAR_CLIENTDLL );
 	ConnectTier3Libraries( &factory, 1 );
+	MathLib_Init( 2.2f, 2.2f, 0.0f, 2.0f );
 
 	enginesound = (IEngineSound *)factory(IENGINESOUND_CLIENT_INTERFACE_VERSION, NULL);
 	engine = (IVEngineClient *)factory( VENGINE_CLIENT_INTERFACE_VERSION, NULL );
