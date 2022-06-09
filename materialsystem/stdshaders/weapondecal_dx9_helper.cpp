@@ -273,13 +273,6 @@ void DrawWeaponDecal(  CBaseVSShader *pShader, IMaterialVar** params, IShaderDyn
 				bool bHdr = (g_pHardwareConfig->GetHDRType() != HDR_TYPE_NONE);
 				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER3, bHdr ? false : true );
 			}
-
-			// PiMoN TODO: solve this
-			/*pShader->PI_BeginCommandBuffer();
-			pShader->PI_SetPixelShaderAmbientLightCube( PSREG_AMBIENT_CUBE );
-			pShader->PI_SetPixelShaderLocalLighting( PSREG_LIGHT_INFO_ARRAY );
-			//pShader->PI_SetModulationPixelShaderDynamicState_LinearColorSpace( 1 );
-			pShader->PI_EndCommandBuffer();*/
 			
 		}
 		if ( pShaderAPI && ( (! pContextData ) || ( pContextData->m_bMaterialVarsChanged ) ) )
@@ -456,6 +449,10 @@ void DrawWeaponDecal(  CBaseVSShader *pShader, IMaterialVar** params, IShaderDyn
 			pShader->Draw( false );
 			return;
 		}
+
+		pShaderAPI->SetPixelShaderStateAmbientLightCube( PSREG_AMBIENT_CUBE );
+		pShaderAPI->CommitPixelShaderLighting( PSREG_LIGHT_INFO_ARRAY );
+		//pShader->SetModulationPixelShaderDynamicState_LinearColorSpace( 1 );
 
 #ifdef _PS3
 		CCommandBufferBuilder< CDynamicCommandStorageBuffer > DynamicCmdsOut;
