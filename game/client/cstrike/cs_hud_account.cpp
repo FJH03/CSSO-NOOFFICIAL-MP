@@ -155,7 +155,13 @@ bool CHudAccount::ShouldDraw()
 	if ( mp_maxmoney.GetInt() <= 0 )
 		return false;
 
-	if ( !pPlayer->CanPlayerBuy( false ) )
+	if ( !CSGameRules() )
+		return false;
+
+	if ( CSGameRules()->m_bCTCantBuy && (pPlayer->GetTeamNumber() == TEAM_CT) )
+		return false;
+
+	if ( CSGameRules()->m_bTCantBuy && (pPlayer->GetTeamNumber() == TEAM_TERRORIST) )
 		return false;
 
 	return CHudElement::ShouldDraw();

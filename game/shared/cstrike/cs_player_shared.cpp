@@ -345,15 +345,13 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 		return false;
 	}
 
-	CCSGameRules* mp = CSGameRules();
-
 	// Don't allow buying in the last few seconds of warmup because everybody should be freezed, but sometimes people aren't
 	// also fixes buy on the very moment that round starts which might cause the bought weapon to spawn, but touched by the
 	// player in the actual match time next frame and have a powerful gun for the first pistol round.
-	if ( mp->IsWarmupPeriod() && ( mp->GetWarmupPeriodEndTime() - 3 < gpGlobals->curtime ) )
+	if ( CSGameRules()->IsWarmupPeriod() && (CSGameRules()->GetWarmupPeriodEndTime() - 3 < gpGlobals->curtime) )
 		return false;
 
-	if ( mp->m_bCTCantBuy && ( GetTeamNumber() == TEAM_CT ) )
+	if ( CSGameRules()->m_bCTCantBuy && ( GetTeamNumber() == TEAM_CT ) )
 	{
 		if ( display == true )
 			ClientPrint( this, HUD_PRINTCENTER, "#CT_cant_buy" );
@@ -361,7 +359,7 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 		return false;
 	}
 
-	if ( mp->m_bTCantBuy && ( GetTeamNumber() == TEAM_TERRORIST ) )
+	if ( CSGameRules()->m_bTCantBuy && ( GetTeamNumber() == TEAM_TERRORIST ) )
 	{
 		if ( display == true )
 			ClientPrint( this, HUD_PRINTCENTER, "#Terrorist_cant_buy" );
@@ -371,7 +369,7 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 
 	int buyTime = mp_buytime.GetInt();
 
-	if ( mp->IsBuyTimeElapsed() && !CanBuyDuringImmunity() )
+	if ( CSGameRules()->IsBuyTimeElapsed() && !CanBuyDuringImmunity() )
 	{
 		if ( display == true )
 		{
