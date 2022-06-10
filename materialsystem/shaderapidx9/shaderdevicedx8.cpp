@@ -799,9 +799,13 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 		{
 			pCaps->m_NumPixelShaderConstants = 224;
 		}
-		else
+		else if ( pCaps->m_SupportsPixelShaders_2_0 )
 		{
 			pCaps->m_NumPixelShaderConstants = 32;
+		}
+		else
+		{
+			pCaps->m_NumPixelShaderConstants = 8;
 		}
 	}
 	else
