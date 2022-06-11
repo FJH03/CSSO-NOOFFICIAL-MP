@@ -1484,17 +1484,22 @@ void CCSMapOverview::DrawBomb()
 }
 
 #define ICON_SCALE_FACTOR 0.4f
-bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector pos, float scale, float angle, int alpha, bool allowRotation, const char *text, Color *textColor, float status, Color *statusColor )
+void CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector pos, float scale, float angle, int alpha, bool allowRotation, const char *text, Color *textColor, float status, Color *statusColor )
 {
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	if ( !pPlayer )
-		return false;
+		return;
 
 	if( GetMode() == MAP_MODE_RADAR  &&  cl_radaralpha.GetInt() == 0 )
-		return false;
+		return;
 
 	if( alpha <= 0 )
-		return false;
+		return;
+
+	// PiMoN: sometimes local player icon is incorrect
+	// and I am not sure how to solve it...
+	if ( textureID < 1 )
+		return;
 
 	// magic trick to make the icons appear the same on different map scale
 	scale *= m_fMapScale;
@@ -1511,7 +1516,7 @@ bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector p
 	if( AdjustPointToPanel( &pospanel ) && (m_bRoundRadar || (cl_radar_square.GetInt() == 1 && pPlayer->IsAlive())) )
 	{
 		if ( offscreenTextureID == -1 )
-			return false; //Doesn't want to draw if off screen.
+			return; //Doesn't want to draw if off screen.
 
 		// Move it in to on panel, and change the icon.
 		idToUse = offscreenTextureID;
@@ -1621,8 +1626,6 @@ bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector p
 		surface()->DrawSetTextPos( x, y );
 		surface()->DrawPrintText( iconText, wcslen(iconText) );
 	}
-
-	return true;
 }
 
 void CCSMapOverview::DrawMapPlayers()

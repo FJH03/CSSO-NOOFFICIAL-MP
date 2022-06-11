@@ -237,7 +237,7 @@ protected:
 	virtual bool	RunHudAnimations(){ return false; }
 
 private:
-	bool			DrawIconCS(	int textureID,
+	void			DrawIconCS(	int textureID,
 		int offscreenTextureID,
 		Vector pos,
 		float scale,
