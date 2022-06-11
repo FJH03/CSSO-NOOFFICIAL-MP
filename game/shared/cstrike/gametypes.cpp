@@ -1532,7 +1532,7 @@ bool GameTypes::ApplyConvarsForCurrentMode( bool isMultiplayer )
 {
 	GameType *pGameType = GetCurrentGameType_Internal();
 	Assert( pGameType );
-	if ( !pGameType || pGameType->m_Index == CS_GameType_Custom )
+	if ( !pGameType )
 	{
 		return false;
 	}
@@ -1557,31 +1557,36 @@ bool GameTypes::ApplyConvarsForCurrentMode( bool isMultiplayer )
 	}
 
 	// Apply the convars for this mode.
-	for ( KeyValues *pKV_Convar = pKV_Convars->GetFirstValue(); pKV_Convar; pKV_Convar = pKV_Convar->GetNextValue() )
+	// PiMoN: previously this method would instantly return if it was custom game type,
+	// but we still need to apply bot difficulty so moved that check here
+	if ( pGameType->m_Index != CS_GameType_Custom )
 	{
-		if ( !Q_stricmp( "exec", pKV_Convar->GetName() ) )
+		for ( KeyValues *pKV_Convar = pKV_Convars->GetFirstValue(); pKV_Convar; pKV_Convar = pKV_Convar->GetNextValue() )
 		{
-			CFmtStr sExecCmd( "exec \"%s\"\n", pKV_Convar->GetString() );
-			//
-			// NOTE: This is horrible design to have this file included in multiple projects (client.dll, server.dll)
-			// which don't have same interfaces applicable to interact with the engine and don't have sufficient context here
-			// hence these compile-time conditionals to use appropriate interfaces
-			// ---
-			// to be fair, only server.dll calls this method, just the horrible design is that this method is compiled in a bunch
-			// of dlls that don't need it...
-			//
+			if ( !Q_stricmp( "exec", pKV_Convar->GetName() ) )
+			{
+				CFmtStr sExecCmd( "exec \"%s\"\n", pKV_Convar->GetString() );
+				//
+				// NOTE: This is horrible design to have this file included in multiple projects (client.dll, server.dll)
+				// which don't have same interfaces applicable to interact with the engine and don't have sufficient context here
+				// hence these compile-time conditionals to use appropriate interfaces
+				// ---
+				// to be fair, only server.dll calls this method, just the horrible design is that this method is compiled in a bunch
+				// of dlls that don't need it...
+				//
 #if defined( CLIENT_DLL )
-			engine->ExecuteClientCmd( sExecCmd );
+				engine->ExecuteClientCmd( sExecCmd );
 #elif defined( GAME_DLL )
-			engine->ServerCommand( sExecCmd );
-			engine->ServerExecute();
+				engine->ServerCommand( sExecCmd );
+				engine->ServerExecute();
 #endif
+			}
 		}
-	}
 
-	DevMsg( "GameTypes: set convars for game type/mode (%s:%d/%s:%d):\n",
-		pGameType->m_Name, game_type.GetInt(), pGameMode->m_Name, game_mode.GetInt() );
-	KeyValuesDumpAsDevMsg( pKV_Convars, 1 );
+		DevMsg( "GameTypes: set convars for game type/mode (%s:%d/%s:%d):\n",
+			pGameType->m_Name, game_type.GetInt(), pGameMode->m_Name, game_mode.GetInt() );
+		KeyValuesDumpAsDevMsg( pKV_Convars, 1 );
+	}
 
 	// If this is offline, then set the bot difficulty convars.
 	if ( !isMultiplayer )
