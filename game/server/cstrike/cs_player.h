@@ -26,6 +26,7 @@ class CMenu;
 class CHintMessageQueue;
 class CNavArea;
 class CCSBot;
+class CBaseCSGloves;
 
 #include "cs_weapon_parse.h"
 
@@ -247,6 +248,7 @@ public:
 	virtual void		Spawn();
 	virtual void		InitialSpawn( void );
 	virtual void		PostSpawnPointSelection( void );
+	virtual void		UpdateOnRemove( void );
 
 	void SetCSSpawnLocation( Vector position, QAngle angle );
 	
@@ -413,6 +415,9 @@ public:
 	void GiveDefaultItems();
 	void RemoveAllItems( bool removeSuit );	//overridden to remove the defuser
 
+	void UpdateGloves();
+	void RemoveGloves();
+
 	// Reset account, get rid of weapons, etc..
 	void Reset( bool resetScore );
 
@@ -424,6 +429,7 @@ public:
 	bool	m_bNeedToChangeKnife;
 	bool	m_bNeedToChangeAgent;
 	CNetworkVar( bool, m_bNeedToChangeGloves );
+	bool	m_bNeedToRespawnGloves;
 
 	const char *m_szPlayerDefaultGloves;
 
@@ -892,6 +898,7 @@ public:
 	CNetworkVar( int, m_iLoadoutSlotKnifeWeaponT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesT );
+	CNetworkHandle( CBaseCSGloves, m_hLoadoutGloves );
 	bool m_bLoadoutStatTrak;
 	int m_iLoadoutMusic;
 

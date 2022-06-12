@@ -12,32 +12,35 @@
 
 #ifdef CLIENT_DLL
 #define CBaseCSGloves C_BaseCSGloves
-#define CCSPlayer C_CSPlayer
 
 #include "c_baseanimating.h"
 #else
 #include "baseanimating.h"
 #endif
 
-class CCSPlayer;
-
 class CBaseCSGloves: public CBaseAnimating
 {
 	DECLARE_CLASS( CBaseCSGloves, CBaseAnimating );
+	DECLARE_NETWORKCLASS();
+	DECLARE_DATADESC();
 
 public:
-	CBaseCSGloves( const char *pszModel );
+	CBaseCSGloves();
 
-#ifdef CLIENT_DLL
-	virtual bool ShouldDraw( void );
-
-	virtual const Vector& GetAbsOrigin( void ) const;
+#ifdef GAME_DLL
+	virtual int UpdateTransmitState();
 #endif
 
-	void Equip( CCSPlayer *pOwner );
+	void Equip( CBaseAnimating *pOwner );
 	void UnEquip();
 
 	void UpdateGlovesModel();
+
+	int GetGloveID() { return m_nGloveID; }
+	void SetGloveID( int iGloveID ) { m_nGloveID = iGloveID; }
+
+private:
+	CNetworkVar( int, m_nGloveID );
 };
 
 #endif // WEAPON_BASECSGLOVES_H

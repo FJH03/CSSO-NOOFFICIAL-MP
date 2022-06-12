@@ -13,56 +13,35 @@
 #include "cs_player.h"
 #endif
 
-CBaseCSGloves::CBaseCSGloves( const char *pszModel )
-{
+LINK_ENTITY_TO_CLASS( cs_base_glove, CBaseCSGloves );
+IMPLEMENT_NETWORKCLASS_ALIASED( BaseCSGloves, DT_BaseCSGloves )
+
+BEGIN_NETWORK_TABLE( CBaseCSGloves, DT_BaseCSGloves )
 #ifdef CLIENT_DLL
-	InitializeAsClientEntity( pszModel, RENDER_GROUP_OPAQUE_ENTITY );
+	RecvPropInt( RECVINFO( m_nGloveID ) ),
+#else
+	SendPropInt( SENDINFO( m_nGloveID ), 8 ),
+#endif
+END_NETWORK_TABLE()
+
+BEGIN_DATADESC( CBaseCSGloves )
+END_DATADESC()
+
+CBaseCSGloves::CBaseCSGloves()
+{
+#ifndef CLIENT_DLL
+	m_nGloveID = 0;
 #endif
 }
 
-#ifdef CLIENT_DLL
-bool CBaseCSGloves::ShouldDraw( void )
+#ifdef GAME_DLL
+int CBaseCSGloves::UpdateTransmitState()
 {
-	CCSPlayer *pPlayerOwner = ToCSPlayer( GetOwnerEntity() );
-
-	if ( !pPlayerOwner )
-		return false;
-
-	if ( !pPlayerOwner->ShouldDrawThisPlayer() )
-		return false;
-
-	if ( !pPlayerOwner->IsVisible() )
-		return false;
-
-	if ( pPlayerOwner->IsDormant() )
-		return false;
-
-	if ( !pPlayerOwner->IsAlive() )
-		return false;
-		
-	return BaseClass::ShouldDraw();
-}
-
-const Vector& CBaseCSGloves::GetAbsOrigin( void ) const
-{
-	// if the player carrying this glove is in lod state (meaning outside the camera frustum)
-	// we don't need to set up all the player's attachment bones just to find out where exactly
-	// the gloves model wants to render. Just return the player's origin.
-
-	CCSPlayer *pPlayerOwner = ToCSPlayer( GetOwnerEntity() );
-
-	if ( pPlayerOwner )
-	{
-		if ( pPlayerOwner->IsDormant() || !pPlayerOwner->IsVisible() )
-			return pPlayerOwner->GetAbsOrigin();
-
-	}
-
-	return BaseClass::GetAbsOrigin();
+	return SetTransmitState( FL_EDICT_ALWAYS );
 }
 #endif
 
-void CBaseCSGloves::Equip( CCSPlayer *pOwner )
+void CBaseCSGloves::Equip( CBaseAnimating* pOwner )
 {
 	if ( !pOwner )
 		return;
@@ -73,6 +52,7 @@ void CBaseCSGloves::Equip( CCSPlayer *pOwner )
 	FollowEntity( pOwner, true );
 	SetOwnerEntity( pOwner );
 	AddEffects( EF_BONEMERGE_FASTCULL );
+	SetSolid( SOLID_NONE );
 
 	UpdateGlovesModel();
 
@@ -90,15 +70,12 @@ void CBaseCSGloves::UnEquip()
 
 	if ( !pPlayerOwner )
 	{
-		Remove();
 		return;
 	}
 
 	pPlayerOwner->SetBodygroup( pPlayerOwner->FindBodygroupByName( "gloves" ), 0 ); // restore default gloves
 
 	SetOwnerEntity( NULL );
-
-	Remove();
 }
 
 void CBaseCSGloves::UpdateGlovesModel()
@@ -110,19 +87,17 @@ void CBaseCSGloves::UpdateGlovesModel()
 #ifdef CLIENT_DLL
 	MDLCACHE_CRITICAL_SECTION();
 #endif
-	const char *pszModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayerOwner, pPlayerOwner->GetTeamNumber() ) )->szWorldModel;
+	const char *pszModel = GetGlovesInfo( m_nGloveID )->szWorldModel;
 	SetModel( pszModel );
 
 #ifdef CLIENT_DLL
 	if ( pPlayerOwner->m_pViewmodelArmConfig != NULL )
 		m_nSkin = pPlayerOwner->m_pViewmodelArmConfig->iSkintoneIndex;
 	else
-	{
 #endif
+	{
 		CStudioHdr *pHdr = pPlayerOwner->GetModelPtr();
 		if ( pHdr )
 			m_nSkin = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() )->iSkintoneIndex;
-#ifdef CLIENT_DLL
 	}
-#endif
 }

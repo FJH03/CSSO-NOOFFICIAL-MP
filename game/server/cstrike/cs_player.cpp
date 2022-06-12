@@ -68,6 +68,7 @@
 #include "cs_loadout.h"
 #include "item_healthshot.h"
 #include "game.h"
+#include "weapon_basecsgloves.h"
 
 #define REPORT_PLAYER_DAMAGE 0
 
@@ -480,6 +481,7 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_iLoadoutSlotKnifeWeaponT ) ),
 	SendPropInt( SENDINFO( m_iLoadoutSlotAgentCT ) ),
 	SendPropInt( SENDINFO( m_iLoadoutSlotAgentT ) ),
+	SendPropEHandle( SENDINFO( m_hLoadoutGloves ) ),
 
 
 END_SEND_TABLE()
@@ -1448,16 +1450,6 @@ void CCSPlayer::Spawn()
 
 	BaseClass::Spawn();
 
-	const char *szViewGlovesModel = NULL;
-	if ( CSLoadout()->HasGlovesSet( this, GetTeamNumber() ) )
-	{
-		szViewGlovesModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() ) )->szViewModel;
-	}
-	if ( szViewGlovesModel && m_szPlayerDefaultGloves && DoesModelSupportGloves( szViewGlovesModel, m_szPlayerDefaultGloves ) )
-		SetBodygroup( FindBodygroupByName( "gloves" ), 1 ); // has to be here because doesn't work on client
-	else
-		SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
-
 	//=============================================================================
 	// HPE_BEGIN:
 	// [pfreese] Clear the last known nav area (used to be done by CBasePlayer)
@@ -1660,6 +1652,19 @@ void CCSPlayer::Spawn()
 		m_bIsFemale = (CSLoadout()->HasAgentSet( this, TEAM_CT )) ? (GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer( this, TEAM_CT ) )->m_bIsFemale) : false;
 	else
 		m_bIsFemale = (CSLoadout()->HasAgentSet( this, TEAM_TERRORIST )) ? (GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer( this, TEAM_TERRORIST ) )->m_bIsFemale) : false;
+
+	// only actually spawn gloves when you're spawning in the round, otherwise they wont show up on first spawn
+	if ( State_Get() == STATE_ACTIVE )
+	{
+		UpdateGloves();
+	}
+}
+
+void CCSPlayer::UpdateOnRemove()
+{
+	RemoveGloves();
+
+	BaseClass::UpdateOnRemove();
 }
 
 void CCSPlayer::ShowViewPortPanel( const char * name, bool bShow, KeyValues *data )
@@ -1967,6 +1972,59 @@ void CCSPlayer::GiveDefaultItems()
 	}
 	
 	m_bPickedUpWeapon = false; // make sure this is set after getting default weapons
+}
+
+void CCSPlayer::UpdateGloves()
+{
+	int nGlovesID = CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() );
+	if ( nGlovesID == 0 )
+	{
+		RemoveGloves();
+		return;
+	}
+
+	const char* szViewGlovesModel = NULL;
+	if ( CSLoadout()->HasGlovesSet( this, GetTeamNumber() ) )
+	{
+		szViewGlovesModel = GetGlovesInfo( nGlovesID )->szViewModel;
+	}
+
+	if ( szViewGlovesModel && m_szPlayerDefaultGloves && DoesModelSupportGloves( szViewGlovesModel, m_szPlayerDefaultGloves ) )
+	{
+		if ( m_hLoadoutGloves != NULL )
+		{
+			if ( m_hLoadoutGloves->GetGloveID() != nGlovesID )
+			{
+				m_hLoadoutGloves->SetGloveID( nGlovesID );
+				m_hLoadoutGloves->UpdateGlovesModel();
+			}
+			return;
+		}
+
+		CBaseCSGloves* pGloves = dynamic_cast<CBaseCSGloves*>(CreateEntityByName( "cs_base_glove" ));
+		if ( pGloves )
+		{
+			pGloves->SetGloveID( nGlovesID );
+			pGloves->Equip( this );
+
+			m_hLoadoutGloves = pGloves;
+		}
+	}
+	else
+	{
+		RemoveGloves();
+	}
+}
+
+void CCSPlayer::RemoveGloves()
+{
+	if ( m_hLoadoutGloves.Get() )
+	{
+		m_hLoadoutGloves->UnEquip();
+		UTIL_Remove( m_hLoadoutGloves );
+	}
+
+	m_hLoadoutGloves = NULL;
 }
 
 void CCSPlayer::SetClanTag( const char *pTag )

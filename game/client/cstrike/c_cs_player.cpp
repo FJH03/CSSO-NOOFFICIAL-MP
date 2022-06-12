@@ -38,6 +38,7 @@
 #include "c_team.h"
 #include "c_cs_hostage.h"
 #include "prediction.h"
+#include "weapon_basecsgloves.h"
 
 #include "weapon_selection.h"
 #include "vguicenterprint.h"
@@ -45,6 +46,8 @@
 #include "ragdoll_shared.h"
 #include "collisionutils.h"
 #include <engine/IEngineSound.h>
+#include <inetchannel.h>
+#include <netmessages.h>
 
 #include "eventlist.h"
 #include "npcevent.h"
@@ -349,7 +352,7 @@ private:
 	float m_flRagdollSinkStart;
 	bool m_bInitialized;
 	bool m_bCreatedWhilePlaybackSkipping;
-	C_BaseAnimating* m_pGlovesModel;
+	C_BaseCSGloves* m_pGloves;
 };
 
 
@@ -376,17 +379,17 @@ C_CSRagdoll::C_CSRagdoll()
 	m_flRagdollSinkStart = -1;
 	m_bInitialized = false;
 	m_bCreatedWhilePlaybackSkipping = engine->IsSkippingPlayback();
-	m_pGlovesModel = NULL;
+	m_pGloves = NULL;
 }
 
 C_CSRagdoll::~C_CSRagdoll()
 {
 	PhysCleanupFrictionSounds( this );
 
-	if ( m_pGlovesModel )
+	if ( m_pGloves )
 	{
-		m_pGlovesModel->Remove();
-		m_pGlovesModel = NULL;
+		m_pGloves->Remove();
+		m_pGloves = NULL;
 	}
 }
 
@@ -802,41 +805,41 @@ void C_CSRagdoll::CreateGlovesModel()
 	if ( !pPlayer )
 		return;
 
+	int nGlovesID = 0;
+	if ( pPlayer->GetTeamNumber() == TEAM_CT )
+		nGlovesID = pPlayer->m_iLoadoutSlotGlovesCT;
+	else if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST )
+		nGlovesID = pPlayer->m_iLoadoutSlotGlovesT;
+
 	const char *szGlovesViewModel = NULL;
-	if ( CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
+	if ( nGlovesID > 0 )
 	{
-		szGlovesViewModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szViewModel;
+		szGlovesViewModel = GetGlovesInfo( nGlovesID )->szViewModel;
 	}
-	if ( szGlovesViewModel && pPlayer->m_szPlayerDefaultGloves && !m_pGlovesModel && DoesModelSupportGloves( szGlovesViewModel, pPlayer->m_szPlayerDefaultGloves ) )
+	if ( szGlovesViewModel && pPlayer->m_szPlayerDefaultGloves && !m_pGloves && DoesModelSupportGloves( szGlovesViewModel, pPlayer->m_szPlayerDefaultGloves ) )
 	{
-		m_pGlovesModel = new C_BaseAnimating;
-		if ( m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY ) )
+		m_pGloves = new C_BaseCSGloves;
+		if ( m_pGloves->InitializeAsClientEntity( GetGlovesInfo( nGlovesID )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY ) )
 		{
-			// hide the gloves first
-			// UNDONE: m_nBody = pPlayer->GetBody(); is now handling this
-			//SetBodygroup( FindBodygroupByName( "gloves" ), 1 );
+			m_pGloves->SetGloveID( nGlovesID );
+			m_pGloves->Equip( this );
 
-			m_pGlovesModel->FollowEntity( this ); // attach to player model
-			m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
-
-			int skin = 0;
+			int nSkin = 0;
 			if ( pPlayer->m_pViewmodelArmConfig )
-				skin = pPlayer->m_pViewmodelArmConfig->iSkintoneIndex;
+				nSkin = pPlayer->m_pViewmodelArmConfig->iSkintoneIndex;
 			else
 			{
 				CStudioHdr *pHdr = pPlayer->GetModelPtr();
 				if ( pHdr )
-					skin = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() )->iSkintoneIndex;
+					nSkin = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() )->iSkintoneIndex;
 			}
 
-			m_pGlovesModel->m_nSkin = skin; // set the corrent skin tone
+			m_pGloves->m_nSkin = nSkin; // set the corrent skin tone
 		}
 		else
 		{
-			m_pGlovesModel->Release();
-			m_pGlovesModel = NULL;
-			// UNDONE: m_nBody = pPlayer->GetBody(); is now handling this
-			//SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
+			m_pGloves->Release();
+			m_pGloves = NULL;
 		}
 	}
 }
@@ -1106,6 +1109,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropInt( RECVINFO( m_iLoadoutSlotKnifeWeaponT ) ),
 	RecvPropInt( RECVINFO( m_iLoadoutSlotAgentCT ) ),
 	RecvPropInt( RECVINFO( m_iLoadoutSlotAgentT ) ),
+	RecvPropEHandle( RECVINFO( m_hLoadoutGloves ) ),
 
 END_RECV_TABLE()
 
@@ -1235,8 +1239,6 @@ C_CSPlayer::~C_CSPlayer()
 	RemoveAddonModels();
 
 	ReleaseFlashlight();
-
-	RemoveGlovesModel();
 
 	if ( m_PlayerAnimState )
 		m_PlayerAnimState->Release();
@@ -2239,37 +2241,6 @@ void C_CSPlayer::UpdateAddonModels( bool bForce )
 }
 
 
-void C_CSPlayer::UpdateGlovesModel()
-{
-	const char *szViewGlovesModel = NULL;
-	const char *szWorldGlovesModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() ) )->szWorldModel;
-	if ( CSLoadout()->HasGlovesSet( this, GetTeamNumber() ) )
-	{
-		szViewGlovesModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() ) )->szViewModel;
-	}
-	if ( !szViewGlovesModel || !m_szPlayerDefaultGloves || !DoesModelSupportGloves( szViewGlovesModel, m_szPlayerDefaultGloves ) || !IsAlive() )
-	{
-		RemoveGlovesModel();
-		return;
-	}
-
-	if ( !m_pCSGloves )
-	{
-		m_pCSGloves = new CBaseCSGloves( szWorldGlovesModel );
-		m_pCSGloves->Equip( this );
-	}
-	
-	const char *pszModelName = m_pCSGloves->GetModelName();
-	if ( pszModelName && pszModelName[0] )
-	{
-		if ( V_stricmp( STRING( pszModelName ), szWorldGlovesModel ) != 0 )
-		{
-			m_pCSGloves->UpdateGlovesModel();
-		}
-	}
-}
-
-
 void C_CSPlayer::RemoveAddonModels()
 {
 	m_iAddonBits = 0;
@@ -2290,16 +2261,6 @@ void C_CSPlayer::RemoveAddonModels()
 		}
 
 		m_AddonModels.Remove( n );
-	}
-}
-
-
-void C_CSPlayer::RemoveGlovesModel()
-{
-	if ( m_pCSGloves )
-	{
-		m_pCSGloves->UnEquip();
-		m_pCSGloves = NULL;
 	}
 }
 
@@ -2402,8 +2363,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 						PlayMusicSelection( filter, CSMUSIC_DEATHCAM );
 					}
 				}
-
-				csPlayer->RemoveGlovesModel();
 			}
 		}
 	}
@@ -2430,7 +2389,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->IsPlayingGunGameDeathmatch() )
 				m_bShouldAutobuyDMWeapons = true;
 
-			RemoveGlovesModel();
 			m_pViewmodelArmConfig = NULL;
 
 			if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
@@ -2438,7 +2396,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 				m_PlayerAnimStateCSGO->Reset();
 			}
 		}
-
 	}
 	else if ( Q_strcmp( "ggprogressive_player_levelup", name ) == 0 )
 	{
@@ -2625,8 +2582,6 @@ void C_CSPlayer::NotifyShouldTransmit( ShouldTransmitState_t state )
 	{
 		RemoveAddonModels();
 
-		RemoveGlovesModel();
-
 		if( m_pFlashlightBeam != NULL )
 		{
 			ReleaseFlashlight();
@@ -2693,7 +2648,7 @@ void C_CSPlayer::ClientThink()
 
 	UpdateAddonModels( m_bAddonModelsAreOutOfDate );
 
-	UpdateGlovesModel();
+	UpdateFlashBangEffect();
 
 	UpdateHostageCarryModels();
 

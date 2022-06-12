@@ -18,7 +18,6 @@
 #include "baseparticleentity.h"
 #include "beamdraw.h"
 #include "cs_gamerules.h"
-#include "weapon_basecsgloves.h"
 #include "csgo_playeranimstate.h"
 
 #include "cs_player_shared.h"
@@ -560,10 +559,6 @@ private:
 	void UpdateAddonModels( bool bForce = false );
 	bool m_bAddonModelsAreOutOfDate;
 	void UpdateHostageCarryModels();
-
-	void UpdateGlovesModel();
-	void RemoveGlovesModel();
-	CBaseCSGloves* m_pCSGloves;
 public:
 	const char *m_szPlayerDefaultGloves;
 
@@ -645,6 +640,7 @@ public:
 	CNetworkVar( int, m_iLoadoutSlotKnifeWeaponT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesT );
+	EHANDLE	m_hLoadoutGloves;
 
 	float m_flThirdpersonRecoil;
 

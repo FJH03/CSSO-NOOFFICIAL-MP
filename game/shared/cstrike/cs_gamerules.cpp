@@ -986,6 +986,7 @@ ConVar cl_autohelp(
 		"worldspawn",
 		"point_devshot_camera",
 		"vote_controller",
+		"cs_base_glove",
 		"", // END Marker
 	};
 
