@@ -443,9 +443,13 @@ int CBaseCombatWeapon::WeaponMeleeAttack2Condition( float flDot, float flDist )
 void CBaseCombatWeapon::Delete( void )
 {
 	SetTouch( NULL );
+#ifdef CSTRIKE_DLL
+	UTIL_Remove( this );
+#else
 	// FIXME: why doesn't this just remove itself now?
 	SetThink(&CBaseCombatWeapon::SUB_Remove);
 	SetNextThink( gpGlobals->curtime + 0.1f );
+#endif
 }
 
 void CBaseCombatWeapon::DestroyItem( void )
