@@ -357,16 +357,19 @@ void CHudHealthArmor::OnThink()
 		if ( iRealHealth <= 20 )
 		{
 			// we are badly injured
+			g_pClientMode->GetViewportAnimationController()->CancelAnimationsForPanel( this );
 			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "HealthLow" );
 		}
 		else if ( iRealHealth < m_iHealth )
 		{
 			// took a hit
+			g_pClientMode->GetViewportAnimationController()->CancelAnimationsForPanel( this );
 			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( gHUD.GetSequenceNameForHUDColor( "HealthTookDamage", m_iHUDColor ) );
 		}
 		else
 		{
 			// round restarted, we have 100 again
+			g_pClientMode->GetViewportAnimationController()->CancelAnimationsForPanel( this );
 			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( gHUD.GetSequenceNameForHUDColor( "HealthRestored", m_iHUDColor ) );
 		}
 
