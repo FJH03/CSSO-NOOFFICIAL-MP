@@ -4990,6 +4990,7 @@ ConVar cl_autohelp(
 		if ( gpGlobals->curtime > m_tmNextPeriodicThink )
 		{
 			CheckRestartRound();
+			CheckRespawnWaves();
 			m_tmNextPeriodicThink = gpGlobals->curtime + 1.0;
 		}
 
@@ -8027,6 +8028,40 @@ extern ConVar sv_allchat;
 bool CCSGameRules::PlayerCanHearChat( CBasePlayer *pListener, CBasePlayer *pSpeaker, bool bTeamOnly  )
 {
 	return CanPlayerHear( pListener, pSpeaker, bTeamOnly, sv_allchat.GetBool() );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CCSGameRules::CheckRespawnWaves( void )
+{
+	for ( int team = LAST_SHARED_TEAM+1; team < GetNumberOfTeams(); team++ )
+	{
+		// respawn all players who are able to respawn here
+		for ( int i = 1; i <= MAX_PLAYERS; i++ )
+		{
+			CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+			if ( pPlayer && pPlayer->PlayerClass() != 0 && pPlayer->GetTeamNumber() > TEAM_SPECTATOR && pPlayer->GetTeamNumber() == team && !pPlayer->IsAlive() )
+			{
+				bool bMatchRespawnGamePhase = false;
+				switch ( m_match.GetPhase() )
+				{
+					case GAMEPHASE_WARMUP_ROUND:
+					case GAMEPHASE_PLAYING_STANDARD:
+					case GAMEPHASE_PLAYING_FIRST_HALF:
+					case GAMEPHASE_PLAYING_SECOND_HALF:
+						bMatchRespawnGamePhase = true;
+						break;
+				}
+
+				if ( bMatchRespawnGamePhase && pPlayer->IsAbleToInstantRespawn() && pPlayer->GetObserverMode() > OBS_MODE_FREEZECAM )
+				{
+					// respawn
+					pPlayer->State_Transition( STATE_RESPAWN );
+				}
+			}
+		}
+	}
 }
 #endif
 
