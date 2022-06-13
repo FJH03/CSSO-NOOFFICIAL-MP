@@ -3022,6 +3022,19 @@ FORCEINLINE fltx4 RandSignedSIMD( void )					// -1..1
 }
 
 
+FORCEINLINE fltx4 LerpSIMD ( const fltx4 &percent, const fltx4 &a, const fltx4 &b)
+{
+	return AddSIMD( a, MulSIMD( SubSIMD( b, a ), percent ) );
+}
+
+FORCEINLINE fltx4 RemapValClampedSIMD(const fltx4 &val, const fltx4 &a, const fltx4 &b, const fltx4 &c, const fltx4 &d) // Remap val from clamped range between a and b to new range between c and d
+{
+	fltx4 range = MaskedAssign( CmpEqSIMD( a, b ), Four_Ones, SubSIMD( b, a ) ); //make sure range > 0
+	fltx4 cVal = MaxSIMD( Four_Zeros, MinSIMD( Four_Ones, DivSIMD( SubSIMD( val, a ), range ) ) ); //saturate
+	return LerpSIMD( cVal, c, d );
+}
+
+
 // SIMD versions of mathlib simplespline functions
 // hermite basis function for smooth interpolation
 // Similar to Gain() above, but very cheap to call

@@ -626,6 +626,202 @@ void C_OP_FadeOut::Operate( CParticleCollection *pParticles, float flStrength,  
 	} while( --nCtr );
 }
 
+//-----------------------------------------------------------------------------
+// Fade In Operator - fast version
+//-----------------------------------------------------------------------------
+class C_OP_FadeInSimple : public CParticleOperatorInstance
+{
+	DECLARE_PARTICLE_OPERATOR( C_OP_FadeInSimple );
+
+	uint32 GetWrittenAttributes( void ) const
+	{
+		return PARTICLE_ATTRIBUTE_ALPHA_MASK;
+	}
+
+	uint32 GetReadAttributes( void ) const
+	{
+		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK | PARTICLE_ATTRIBUTE_LIFE_DURATION_MASK ;
+	}
+
+	uint32 GetReadInitialAttributes( void ) const
+	{
+		return PARTICLE_ATTRIBUTE_ALPHA_MASK;
+	}
+
+	virtual void Operate( CParticleCollection *pParticles, float flStrength, void *pContext ) const;
+
+	float	m_flFadeInTime;
+};
+
+DEFINE_PARTICLE_OPERATOR( C_OP_FadeInSimple, "Alpha Fade In Simple", OPERATOR_GENERIC );
+
+BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_FadeInSimple ) 
+DMXELEMENT_UNPACK_FIELD( "proportional fade in time",".25", float, m_flFadeInTime )
+END_PARTICLE_OPERATOR_UNPACK( C_OP_FadeInSimple )
+
+
+void C_OP_FadeInSimple::Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
+{
+	CM128AttributeIterator pCreationTime( PARTICLE_ATTRIBUTE_CREATION_TIME, pParticles );
+	CM128AttributeIterator pLifeDuration( PARTICLE_ATTRIBUTE_LIFE_DURATION, pParticles );
+	CM128InitialAttributeIterator pInitialAlpha( PARTICLE_ATTRIBUTE_ALPHA, pParticles );
+	CM128AttributeWriteIterator pAlpha( PARTICLE_ATTRIBUTE_ALPHA, pParticles );
+
+	fltx4 CurTime = pParticles->m_fl4CurTime;
+
+	int nCtr = pParticles->m_nPaddedActiveParticles;
+
+	fltx4 fl4FadeInTime = ReplicateX4( m_flFadeInTime );
+
+	do 
+	{
+		// Find our life percentage
+		fltx4 fl4LifeTime = SubSIMD( CurTime, *pCreationTime );
+
+		fl4LifeTime = MaxSIMD( Four_Zeros, MinSIMD( Four_Ones,
+			MulSIMD( fl4LifeTime, ReciprocalEstSIMD( *pLifeDuration ) ) ) );
+
+		fltx4 ApplyMask = CmpGtSIMD( fl4FadeInTime, fl4LifeTime );
+		if ( IsAnyNegative( ApplyMask ) )
+		{
+			// Fading in
+			fltx4 NewAlpha =
+				SimpleSplineRemapValWithDeltasClamped(
+				fl4LifeTime, Four_Zeros,
+				fl4FadeInTime, ReciprocalEstSIMD( fl4FadeInTime ), 
+				Four_Zeros, *pInitialAlpha );
+			*( pAlpha ) = MaskedAssign( ApplyMask, NewAlpha, *( pAlpha ) );
+		}
+		++pCreationTime;
+		++pLifeDuration;
+		++pInitialAlpha;
+		++pAlpha;
+	} while( --nCtr );
+}
+
+
+
+//-----------------------------------------------------------------------------
+// Fade Out Operator - fast version
+//-----------------------------------------------------------------------------
+class C_OP_FadeOutSimple : public CParticleOperatorInstance
+{
+	DECLARE_PARTICLE_OPERATOR( C_OP_FadeOut );
+
+	uint32 GetWrittenAttributes( void ) const
+	{
+		return PARTICLE_ATTRIBUTE_ALPHA_MASK;
+	}
+
+	uint32 GetReadAttributes( void ) const
+	{
+		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK | PARTICLE_ATTRIBUTE_LIFE_DURATION_MASK ;
+	}
+
+	uint32 GetReadInitialAttributes( void ) const
+	{
+		return PARTICLE_ATTRIBUTE_ALPHA_MASK;
+	}
+
+	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
+
+	float	m_flFadeOutTime;
+};
+
+DEFINE_PARTICLE_OPERATOR( C_OP_FadeOutSimple, "Alpha Fade Out Simple", OPERATOR_GENERIC );
+
+BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_FadeOutSimple ) 
+DMXELEMENT_UNPACK_FIELD( "proportional fade out time",".25", float, m_flFadeOutTime )
+END_PARTICLE_OPERATOR_UNPACK( C_OP_FadeOutSimple )
+
+
+void C_OP_FadeOutSimple::Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
+{
+	CM128AttributeIterator pCreationTime( PARTICLE_ATTRIBUTE_CREATION_TIME, pParticles );
+	CM128AttributeIterator pLifeDuration( PARTICLE_ATTRIBUTE_LIFE_DURATION, pParticles );
+	CM128InitialAttributeIterator pInitialAlpha( PARTICLE_ATTRIBUTE_ALPHA, pParticles );
+	CM128AttributeWriteIterator pAlpha( PARTICLE_ATTRIBUTE_ALPHA, pParticles );
+
+	fltx4 fl4CurTime = pParticles->m_fl4CurTime;
+
+	int nCtr = pParticles->m_nPaddedActiveParticles;
+
+	fltx4 fl4FadeOutTime= ReplicateX4( 1.0f - m_flFadeOutTime );
+	fltx4 fl4Fadespan = ReplicateX4( m_flFadeOutTime );
+
+	do 
+	{
+		// Find our life percentage
+		fltx4 fl4LifeTime = SubSIMD( fl4CurTime, *pCreationTime );
+		fltx4 fl4LifeDuration = *pLifeDuration;
+
+		fl4LifeTime = MulSIMD( fl4LifeTime, ReciprocalEstSIMD( fl4LifeDuration ) );
+
+		fltx4 ApplyMask = CmpLtSIMD( fl4FadeOutTime, fl4LifeTime );
+		if ( IsAnyNegative( ApplyMask ) )
+		{
+			// Fading out
+			fltx4 NewAlpha;
+
+			fltx4 fl4Frac = MulSIMD( SubSIMD( fl4LifeTime, fl4FadeOutTime ), ReciprocalEstSIMD( fl4Fadespan ) );
+			fl4Frac = MinSIMD( Four_Ones, MaxSIMD( Four_Zeros, fl4Frac ) );
+			fl4Frac = SimpleSpline( fl4Frac );
+			fl4Frac	= SubSIMD( Four_Ones, fl4Frac );
+			NewAlpha = MulSIMD( *pInitialAlpha, fl4Frac );
+	
+			*pAlpha = MaskedAssign( ApplyMask, MinSIMD( NewAlpha, *pAlpha), *pAlpha );
+		}
+		++pCreationTime;
+		++pLifeDuration;
+		++pInitialAlpha;
+		++pAlpha;
+	} while( --nCtr );
+}
+
+
+
+//-----------------------------------------------------------------------------
+// Clamp Scalar Operator
+//-----------------------------------------------------------------------------
+class C_OP_ClampScalar : public CParticleOperatorInstance
+{
+	DECLARE_PARTICLE_OPERATOR( C_OP_ClampScalar );
+
+	uint32 GetWrittenAttributes( void ) const
+	{
+		return 1 << m_nFieldOutput;
+	}
+
+	uint32 GetReadAttributes( void ) const
+	{
+		return 0;
+	}
+
+	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
+
+	int		m_nFieldOutput;
+	float	m_flOutputMin;
+	float	m_flOutputMax;
+};
+
+DEFINE_PARTICLE_OPERATOR( C_OP_ClampScalar, "Clamp Scalar", OPERATOR_GENERIC );
+
+BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_ClampScalar )
+DMXELEMENT_UNPACK_FIELD_USERDATA( "output field", "3", int, m_nFieldOutput, "intchoice particlefield_scalar" )
+DMXELEMENT_UNPACK_FIELD( "output minimum","0", float, m_flOutputMin )
+DMXELEMENT_UNPACK_FIELD( "output maximum","1", float, m_flOutputMax )
+END_PARTICLE_OPERATOR_UNPACK( C_OP_ClampScalar )
+
+void C_OP_ClampScalar::Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
+{
+	for ( int i = 0; i < pParticles->m_nActiveParticles; ++i )
+	{
+		float *pOutput = pParticles->GetFloatAttributePtrForWrite( m_nFieldOutput, i );
+		float flOutput = clamp( *pOutput, m_flOutputMin, m_flOutputMax );
+		*pOutput = Lerp (flStrength, *pOutput, flOutput);
+	}
+}
+
 
 
 
@@ -1020,6 +1216,99 @@ void C_OP_RemapScalar::Operate( CParticleCollection *pParticles, float flStrengt
 
 
 //-----------------------------------------------------------------------------
+// Remap Speed Operator
+//-----------------------------------------------------------------------------
+class C_OP_RemapSpeed : public CParticleOperatorInstance
+{
+	DECLARE_PARTICLE_OPERATOR( C_OP_RemapSpeed );
+
+	uint32 GetWrittenAttributes( void ) const
+	{
+		return 1 << m_nFieldOutput;
+	}
+
+	uint32 GetReadAttributes( void ) const
+	{
+		return PARTICLE_ATTRIBUTE_XYZ_MASK | PARTICLE_ATTRIBUTE_PREV_XYZ_MASK;
+	}
+
+	uint32 GetReadInitialAttributes( void ) const
+	{
+		return 1 << m_nFieldOutput;
+	}
+
+	virtual void InitParams(CParticleSystemDefinition *pDef )
+	{
+		m_flInputMin = MAX(MIN_PARTICLE_SPEED, m_flInputMin);
+		m_flInputMax = MAX(MIN_PARTICLE_SPEED, m_flInputMax);
+	}
+
+	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
+
+	int		m_nFieldOutput;
+	float	m_flInputMin;
+	float	m_flInputMax;
+	float	m_flOutputMin;
+	float	m_flOutputMax;
+	bool	m_bScaleInitialRange;
+	bool	m_bScaleCurrent;
+};
+
+DEFINE_PARTICLE_OPERATOR( C_OP_RemapSpeed, "Remap Speed to Scalar", OPERATOR_GENERIC );
+BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_RemapSpeed )
+DMXELEMENT_UNPACK_FIELD( "input minimum","0", float, m_flInputMin )
+DMXELEMENT_UNPACK_FIELD( "input maximum","1", float, m_flInputMax )
+DMXELEMENT_UNPACK_FIELD_USERDATA( "output field", "3", int, m_nFieldOutput, "intchoice particlefield_scalar" )
+DMXELEMENT_UNPACK_FIELD( "output minimum","0", float, m_flOutputMin )
+DMXELEMENT_UNPACK_FIELD( "output maximum","1", float, m_flOutputMax )
+DMXELEMENT_UNPACK_FIELD( "output is scalar of initial random range","0", bool, m_bScaleInitialRange )
+DMXELEMENT_UNPACK_FIELD( "output is scalar of current value","0", bool, m_bScaleCurrent )
+END_PARTICLE_OPERATOR_UNPACK( C_OP_RemapSpeed );
+
+void C_OP_RemapSpeed::Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
+{
+	// clamp the result to 0 and 1 if it's alpha
+	fltx4 flMin = ReplicateX4( m_flOutputMin );
+	fltx4 flMax = ReplicateX4( m_flOutputMax );
+	if ( ATTRIBUTES_WHICH_ARE_0_TO_1 & ( 1 << m_nFieldOutput ) )
+	{
+		flMin = ReplicateX4( clamp(m_flOutputMin, 0.0f, 1.0f ) );
+		flMax = ReplicateX4( clamp(m_flOutputMax, 0.0f, 1.0f ) );
+	}
+
+	fltx4 fl4Dt = ReplicateX4( pParticles->m_flDt );
+	fltx4 fl4InputMin = ReplicateX4( m_flInputMin );
+	fltx4 fl4InputMax = ReplicateX4( m_flInputMax );
+	fltx4 fl4Strength = ReplicateX4( flStrength );
+	C4VAttributeIterator pXYZ( PARTICLE_ATTRIBUTE_XYZ, pParticles );
+	C4VAttributeIterator pPrevXYZ( PARTICLE_ATTRIBUTE_PREV_XYZ, pParticles );
+	CM128AttributeWriteIterator pOutput (m_nFieldOutput, pParticles);
+	CM128InitialAttributeIterator pInitialOutput ( m_nFieldOutput, pParticles );
+
+	for ( int i = 0; i < pParticles->m_nPaddedActiveParticles; i++ )
+	{
+		fltx4 fl4Speed = DivSIMD ( (*pXYZ - *pPrevXYZ).length(), fl4Dt );
+		fltx4 fl4Output = RemapValClampedSIMD( fl4Speed, fl4InputMin, fl4InputMax, flMin, flMax  );
+		if ( m_bScaleInitialRange )
+		{
+			fl4Output = MulSIMD( *pInitialOutput, fl4Output );
+		}
+		if ( m_bScaleCurrent )
+		{
+			fl4Output = MulSIMD( *pOutput, fl4Output );
+		}
+
+		*pOutput = LerpSIMD( fl4Strength, *pOutput, fl4Output );
+
+		++pXYZ;
+		++pPrevXYZ;
+		++pOutput;
+		++pInitialOutput;
+	}
+}
+
+
+//-----------------------------------------------------------------------------
 // noise Operator
 //-----------------------------------------------------------------------------
 class C_OP_Noise : public CParticleOperatorInstance
@@ -1237,6 +1526,11 @@ class C_OP_VelocityDecay : public CParticleOperatorInstance
 	uint32 GetReadAttributes( void ) const
 	{
 		return PARTICLE_ATTRIBUTE_XYZ_MASK | PARTICLE_ATTRIBUTE_PREV_XYZ_MASK;
+	}
+
+	virtual void InitParams(CParticleSystemDefinition *pDef )
+	{
+		m_flMinVelocity = MAX( MIN_PARTICLE_SPEED, m_flMinVelocity );
 	}
 
 	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
@@ -4369,6 +4663,107 @@ void C_OP_RemapCPtoScalar::Operate( CParticleCollection *pParticles, float flStr
 	}
 }
 
+
+
+//-----------------------------------------------------------------------------
+// Set Control Point to Impact Point
+//-----------------------------------------------------------------------------
+class C_OP_SetControlPointToImpactPoint : public CParticleOperatorInstance
+{
+	DECLARE_PARTICLE_OPERATOR( C_OP_SetControlPointToImpactPoint );
+
+	int m_nCPOut;
+	int m_nCPIn;
+	int m_nCollisionGroupNumber;
+	float m_flUpdateRate;
+	float m_flTraceLength;
+	float m_flOffset;
+	Vector m_vecTraceDir;
+	char	m_CollisionGroupName[128];
+
+	struct C_OP_SetCPToImpactPointContext_t
+	{
+		float m_flNextUpdateTime;
+	};
+
+	uint32 GetWrittenAttributes( void ) const
+	{
+		return 0;
+	}
+
+	uint32 GetReadAttributes( void ) const
+	{
+		return 0;
+	}
+
+	bool ShouldRunBeforeEmitters( void ) const
+	{
+		return true;
+	}
+
+	void InitParams( CParticleSystemDefinition *pDef )
+	{
+		m_nCollisionGroupNumber = g_pParticleSystemMgr->Query()->GetCollisionGroupFromName( m_CollisionGroupName );
+		m_nCPIn = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nCPIn ) );
+		m_nCPOut = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nCPOut ) );
+	}
+
+	size_t GetRequiredContextBytes( void ) const
+	{
+		return sizeof( C_OP_SetCPToImpactPointContext_t );
+	}
+
+	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	{
+		C_OP_SetCPToImpactPointContext_t *pCtx=reinterpret_cast<C_OP_SetCPToImpactPointContext_t *>( pContext );
+		pCtx->m_flNextUpdateTime = 0.0 - m_flUpdateRate;
+	}
+
+	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
+
+
+};
+
+DEFINE_PARTICLE_OPERATOR( C_OP_SetControlPointToImpactPoint, "Set Control Point to Impact Point", OPERATOR_GENERIC );
+
+BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_SetControlPointToImpactPoint )
+DMXELEMENT_UNPACK_FIELD( "Control Point to Set", "1", int, m_nCPOut )
+DMXELEMENT_UNPACK_FIELD( "Control Point to Trace From", "1", int, m_nCPIn )
+DMXELEMENT_UNPACK_FIELD( "Trace Direction Override", "0 0 0", Vector, m_vecTraceDir )
+DMXELEMENT_UNPACK_FIELD( "Trace Update Rate", "0.5", float, m_flUpdateRate )
+DMXELEMENT_UNPACK_FIELD( "Max Trace Length", "1024", float, m_flTraceLength )
+DMXELEMENT_UNPACK_FIELD( "Offset End Point Amount", "0", float, m_flOffset )
+DMXELEMENT_UNPACK_FIELD_STRING( "trace collision group", "NONE", m_CollisionGroupName )
+END_PARTICLE_OPERATOR_UNPACK( C_OP_SetControlPointToImpactPoint )
+
+void C_OP_SetControlPointToImpactPoint::Operate( CParticleCollection *pParticles, float flStrength, void *pContext ) const
+{
+	C_OP_SetCPToImpactPointContext_t *pCtx=reinterpret_cast<C_OP_SetCPToImpactPointContext_t *>( pContext );
+	
+	if ( pCtx->m_flNextUpdateTime <= pParticles->m_flCurTime )
+	{
+		Vector pForward = m_vecTraceDir;
+		Vector pUp;
+		Vector pRight;
+		if ( m_vecTraceDir == vec3_origin )
+			pParticles->GetControlPointOrientationAtTime(m_nCPIn, pParticles->m_flCurTime, &pForward, &pRight, &pUp );
+
+		Vector vecStartPnt = pParticles->GetControlPointAtCurrentTime( m_nCPIn );
+		Vector vecEndPnt = vecStartPnt + ( pForward * m_flTraceLength );
+
+		CBaseTrace tr;
+		g_pParticleSystemMgr->Query()->TraceLine( vecStartPnt, vecEndPnt, MASK_ALL, NULL , m_nCollisionGroupNumber, &tr );
+
+		Vector vecForward, vecRight, vecUp;
+		vecForward = tr.plane.normal;
+		VectorVectors( vecForward, vecRight, vecUp );
+		Vector vecPos = tr.endpos + ( pForward * -m_flOffset );
+		pParticles->SetControlPoint( m_nCPOut, vecPos );
+		pParticles->SetControlPointOrientation( m_nCPOut, vecForward, vecRight, vecUp );
+		pCtx->m_flNextUpdateTime = pParticles->m_flCurTime + m_flUpdateRate;
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Rotate Particle around axis
 //-----------------------------------------------------------------------------
@@ -4540,14 +4935,149 @@ void C_OP_RemapSpeedtoCP::Operate( CParticleCollection *pParticles, float flStre
 }
 
 
+//-----------------------------------------------------------------------------
+// Ramp Scalar Linear - changes a scalar value at a set rate
+//-----------------------------------------------------------------------------
+class C_OP_RampScalarLinear : public CParticleOperatorInstance
+{
+	DECLARE_PARTICLE_OPERATOR( C_OP_RampScalarLinear );
+
+	uint32 GetWrittenAttributes( void ) const
+	{
+		return 1 << m_nField;
+	}
+
+	uint32 GetReadAttributes( void ) const
+	{
+		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK | PARTICLE_ATTRIBUTE_LIFE_DURATION_MASK
+			| PARTICLE_ATTRIBUTE_PARTICLE_ID_MASK;
+	}
+
+	virtual void InitParams(CParticleSystemDefinition *pDef )
+	{
+		m_bUsesStartEnd = !( m_flStartTime_min == 0 && m_flStartTime_max == 0 && m_flEndTime_min == 1 && m_flEndTime_max == 1 && m_bProportionalOp );
+		// Set values to clamp against at init rather than branching inside the per-particle loop
+		if ( ATTRIBUTES_WHICH_ARE_0_TO_1 & ( 1 << m_nField ) )
+		{
+			m_fl4MinCmp = Four_Zeros;
+			m_fl4MaxCmp = Four_Ones;
+		}
+		else if ( ATTRIBUTES_WHICH_ARE_SIZE & ( 1 << m_nField ) )
+		{
+			m_fl4MinCmp = Four_Zeros;
+			m_fl4MaxCmp = Four_FLT_MAX;
+		}
+		else
+		{
+			m_fl4MinCmp = Four_Negative_FLT_MAX;
+			m_fl4MaxCmp = Four_FLT_MAX;
+		}
+	}
+
+
+	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
+
+	float	m_RateMin;
+	float	m_RateMax;
+	float	m_flStartTime_min;
+	float	m_flStartTime_max;
+	float	m_flEndTime_min;
+	float	m_flEndTime_max;
+	fltx4	m_fl4MinCmp;
+	fltx4	m_fl4MaxCmp;
+	int		m_nField;
+	bool    m_bProportionalOp;
+	bool	m_bUsesStartEnd;
+};
+
+DEFINE_PARTICLE_OPERATOR( C_OP_RampScalarLinear, "Ramp Scalar Linear Random", OPERATOR_GENERIC );
+
+BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_RampScalarLinear )
+DMXELEMENT_UNPACK_FIELD_USERDATA( "ramp field", "3", int, m_nField, "intchoice particlefield_scalar" )
+DMXELEMENT_UNPACK_FIELD( "ramp rate min", "0", float, m_RateMin )
+DMXELEMENT_UNPACK_FIELD( "ramp rate max", "0", float, m_RateMax )
+DMXELEMENT_UNPACK_FIELD( "start time min", "0", float, m_flStartTime_min )
+DMXELEMENT_UNPACK_FIELD( "start time max", "0", float, m_flStartTime_max )
+DMXELEMENT_UNPACK_FIELD( "end time min", "1", float, m_flEndTime_min )
+DMXELEMENT_UNPACK_FIELD( "end time max", "1", float, m_flEndTime_max )
+DMXELEMENT_UNPACK_FIELD( "start/end proportional", "1", bool, m_bProportionalOp )
+END_PARTICLE_OPERATOR_UNPACK( C_OP_RampScalarLinear )
+
+void C_OP_RampScalarLinear::Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
+{
+	CM128AttributeIterator pCreationTime( PARTICLE_ATTRIBUTE_CREATION_TIME, pParticles );
+	CM128AttributeIterator pLifeDuration( PARTICLE_ATTRIBUTE_LIFE_DURATION, pParticles );
+	C4IAttributeIterator pParticleId ( PARTICLE_ATTRIBUTE_PARTICLE_ID, pParticles );
+	CM128AttributeWriteIterator pRampField ( m_nField, pParticles) ;
+
+	fltx4 fl4CurTime = pParticles->m_fl4CurTime;
+
+	int nRandomOffset = pParticles->OperatorRandomSampleOffset();
+
+	fltx4 fl4ScaleFactor = ReplicateX4( flStrength * pParticles->m_flDt );
+
+	fltx4 fl4StartTimeMin = ReplicateX4( m_flStartTime_min );
+	fltx4 fl4StartTimeWidth = ReplicateX4( m_flStartTime_max - m_flStartTime_min );
+	fltx4 fl4EndTimeMin = ReplicateX4( m_flEndTime_min );
+	fltx4 fl4EndTimeWidth = ReplicateX4( m_flEndTime_max - m_flEndTime_min );
+
+	fltx4 fl4RateMin = ReplicateX4( m_RateMin );
+	fltx4 fl4RateWidth = ReplicateX4( m_RateMax - m_RateMin );
+
+	int nCtr = pParticles->m_nPaddedActiveParticles;
+
+	do 
+	{
+		fltx4 fl4LifeDuration = *pLifeDuration;
+		fltx4 fl4GoodMask = CmpGtSIMD( fl4LifeDuration, Four_Zeros );
+		if ( m_bUsesStartEnd )
+		{
+			fltx4 fl4LifeTime;
+			if ( m_bProportionalOp )
+			{
+				fl4LifeTime = MulSIMD( SubSIMD( fl4CurTime, *pCreationTime ), ReciprocalEstSIMD( fl4LifeDuration ) ); // maybe need accurate div here?
+			}
+			else
+			{
+				fl4LifeTime = SubSIMD( fl4CurTime, *pCreationTime ); 
+			}
+
+			fltx4 fl4StartTime= pParticles->RandomFloat( *pParticleId, nRandomOffset + 11);
+			fl4StartTime = AddSIMD( fl4StartTimeMin, MulSIMD( fl4StartTimeWidth, fl4StartTime ) );
+			fltx4 fl4EndTime= pParticles->RandomFloat( *pParticleId, nRandomOffset + 12);
+			fl4EndTime = AddSIMD( fl4EndTimeMin, MulSIMD( fl4EndTimeWidth, fl4EndTime ) );
+			fl4GoodMask = AndSIMD( fl4GoodMask, CmpGeSIMD( fl4LifeTime, fl4StartTime ) );
+			fl4GoodMask = AndSIMD( fl4GoodMask, CmpLtSIMD( fl4LifeTime, fl4EndTime ) );
+		}
+
+		if ( IsAnyNegative( fl4GoodMask ) )
+		{
+			fltx4 fl4Rate = AddSIMD( fl4RateMin, MulSIMD( fl4RateWidth, pParticles->RandomFloat( *pParticleId, nRandomOffset ) ) );
+
+			fltx4 fl4RampVal = AddSIMD ( *pRampField, MulSIMD( fl4Rate, fl4ScaleFactor) );
+
+			*pRampField = MaskedAssign( fl4GoodMask, 
+				MaxSIMD( MinSIMD( fl4RampVal, m_fl4MaxCmp), m_fl4MinCmp ), *pRampField );
+		}
+		++pCreationTime;
+		++pLifeDuration;
+		++pRampField;
+		++pParticleId;
+	} while (--nCtr );
+};
+
+
 void AddBuiltInParticleOperators( void )
 {
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_BasicMovement );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_Decay );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_VelocityDecay );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_FadeAndKill );
+	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_FadeAndKillForTracers );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_FadeIn );
+	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_FadeInSimple );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_FadeOut );
+	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_FadeOutSimple );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_Spin );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_SpinUpdate );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_SpinYaw );
@@ -4571,11 +5101,13 @@ void AddBuiltInParticleOperators( void )
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_Cull );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_ControlpointLight ); 	
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_RemapScalar );
+	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_RemapSpeed );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_Noise );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_VectorNoise );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_VelocityMatchingForce );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_MaxVelocity );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_MaintainSequentialPath );
+	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_MovementPlaceOnGround );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_RemapDotProductToScalar );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_RemapCPtoScalar );		
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_MovementRotateParticleAroundAxis );		

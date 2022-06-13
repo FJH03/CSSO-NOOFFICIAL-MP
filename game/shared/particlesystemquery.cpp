@@ -9,6 +9,7 @@
 #include "baseparticleentity.h"
 #include "entityparticletrail_shared.h"
 #include "collisionutils.h"
+#include "raytrace.h"
 #include "animation.h"
 #include "activitylist.h"
 #include "tier3/mdlutils.h"
@@ -57,6 +58,8 @@ public:
 		int *pHitBoxIndexOut
 		);
 
+	virtual int GetRayTraceEnvironmentFromName( const char *pszRtEnvName );
+
 	virtual int GetCollisionGroupFromName( const char *pszCollisionGroupName );
 
 
@@ -69,6 +72,9 @@ public:
 	virtual	bool IsPointInControllingObjectHitBox( 
 		CParticleCollection *pParticles,
 		int nControlPointNumber, Vector vecPos, bool bBBoxOnly );
+	// Traces Four Rays against a defined RayTraceEnvironment
+	virtual void TraceAgainstRayTraceEnv( int envnumber, const FourRays &rays, fltx4 TMin, fltx4 TMax,
+		RayTracingResult *rslt_out, int32 skip_id ) const ;
 
 	virtual Vector GetLocalPlayerPos( void );
 	virtual void GetLocalPlayerEyeVectors( Vector *pForward, Vector *pRight = NULL, Vector *pUp = NULL );
@@ -552,6 +558,44 @@ bool CParticleSystemQuery::IsPointInControllingObjectHitBox(
 	}
 #endif
 	return bSuccess;
+}
+
+extern CUtlVector< RayTracingEnvironment * > g_RayTraceEnvironments;
+
+void CParticleSystemQuery::TraceAgainstRayTraceEnv( int envnumber, const FourRays &rays, fltx4 TMin, fltx4 TMax,
+													  RayTracingResult *rslt_out, int32 skip_id ) const
+{
+#if defined( CLIENT_DLL )
+	if ( g_RayTraceEnvironments.IsValidIndex( envnumber ) )
+	{
+		RayTracingEnvironment *RtEnv = g_RayTraceEnvironments.Element( envnumber );
+		RtEnv->Trace4Rays( rays, TMin, TMax, rslt_out, skip_id );
+	}
+#endif
+}
+
+
+struct RayTraceEnvironmentNameRecord_t
+{
+	const char *m_pszGroupName;
+	int m_nGroupID;
+};
+
+
+static RayTraceEnvironmentNameRecord_t s_RtEnvNameMap[]={
+	{ "PRECIPITATION", 0 },
+	{ "PRECIPITATIONBLOCKER", 1 },
+};
+
+
+int CParticleSystemQuery::GetRayTraceEnvironmentFromName( const char *pszRtEnvName )
+{
+	for(int i = 0; i < ARRAYSIZE( s_RtEnvNameMap ); i++ )
+	{
+		if ( ! stricmp( s_RtEnvNameMap[i].m_pszGroupName, pszRtEnvName ) )
+			return s_RtEnvNameMap[i].m_nGroupID;
+	}
+	return 0;
 }
 
 

@@ -23,6 +23,7 @@
 #include "materialsystem/MaterialSystemUtil.h"
 #include "trace.h"
 #include "tier1/utlsoacontainer.h"
+#include "raytrace.h"
 
 #if defined( CLIENT_DLL )
 #include "c_pixel_visibility.h"
@@ -128,6 +129,16 @@ DEFPARTICLE_ATTRIBUTE( PITCH, 22 );
 #define ATTRIBUTES_WHICH_ARE_INTS (PARTICLE_ATTRIBUTE_PARTICLE_ID_MASK | PARTICLE_ATTRIBUTE_HITBOX_INDEX_MASK )
 #define ATTRIBUTES_WHICH_ARE_NORMAL (PARTICLE_ATTRIBUTE_NORMAL_MASK)
 
+// Auto filters
+#define ATTRIBUTES_WHICH_ARE_POSITION_AND_VELOCITY (PARTICLE_ATTRIBUTE_XYZ_MASK | PARTICLE_ATTRIBUTE_PREV_XYZ_MASK)
+#define ATTRIBUTES_WHICH_ARE_LIFE_DURATION (PARTICLE_ATTRIBUTE_LIFE_DURATION_MASK | PARTICLE_ATTRIBUTE_CREATION_TIME_MASK)
+#define ATTRIBUTES_WHICH_ARE_ROTATION (PARTICLE_ATTRIBUTE_ROTATION_MASK | PARTICLE_ATTRIBUTE_YAW_MASK | PARTICLE_ATTRIBUTE_ROTATION_SPEED_MASK | PARTICLE_ATTRIBUTE_PITCH_MASK )
+#define ATTRIBUTES_WHICH_ARE_SIZE (PARTICLE_ATTRIBUTE_RADIUS_MASK | PARTICLE_ATTRIBUTE_TRAIL_LENGTH_MASK)
+#define ATTRIBUTES_WHICH_ARE_COLOR_AND_OPACITY (PARTICLE_ATTRIBUTE_TINT_RGB_MASK | PARTICLE_ATTRIBUTE_ALPHA_MASK | PARTICLE_ATTRIBUTE_ALPHA2_MASK )
+#define ATTRIBUTES_WHICH_ARE_ANIMATION_SEQUENCE (PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER_MASK | PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER1_MASK)
+#define ATTRIBUTES_WHICH_ARE_HITBOX (PARTICLE_ATTRIBUTE_HITBOX_INDEX_MASK | PARTICLE_ATTRIBUTE_HITBOX_RELATIVE_XYZ_MASK)
+#define ATTRIBUTES_WHICH_ARE_NORMAL (PARTICLE_ATTRIBUTE_NORMAL_MASK)
+
 #if defined( _X360 )
 #define MAX_PARTICLES_IN_A_SYSTEM 2000
 #else
@@ -138,6 +149,8 @@ DEFPARTICLE_ATTRIBUTE( PITCH, 22 );
 // Note that this profiling is expensive on Linux, and some anti-virus
 // products can make this *extremely* expensive on Windows.
 #define MEASURE_PARTICLE_PERF 0
+
+#define MIN_PARTICLE_SPEED 0.001
 
 
 //-----------------------------------------------------------------------------
@@ -246,6 +259,11 @@ public:
 		return true;
 	}
 
+	virtual int GetRayTraceEnvironmentFromName( const char *pszRtEnvName )
+	{
+		return 0;											// == PRECIPITATION
+	}
+
 	virtual int GetCollisionGroupFromName( const char *pszCollisionGroupName )
 	{
 		return 0;											// == COLLISION_GROUP_NONE
@@ -272,6 +290,12 @@ public:
 		// returns number of hit boxes output
 		return 0;
 	}
+
+	// Traces Four Rays against a defined RayTraceEnvironment
+	virtual void TraceAgainstRayTraceEnv( 
+		int envnumber, 
+		const FourRays &rays, fltx4 TMin, fltx4 TMax,
+		RayTracingResult *rslt_out, int32 skip_id ) const = 0;
 
 	virtual Vector GetLocalPlayerPos( void )
 	{
@@ -778,6 +802,8 @@ public:
 	float m_flOpEndFadeOutTime;
 	float m_flOpFadeOscillatePeriod;
 
+	bool m_bStrengthFastPath;								// set for operators which just always have strengh = 0
+
 	virtual void Precache( void )
 	{
 	}
@@ -791,6 +817,8 @@ public:
 		// so that sheet references, etc can be cleaned up
 	}
 
+	void CheckForFastPath( void );							// call at operator init time
+
 protected:
 	// utility function for initting a scalar attribute to a random range in an sse fashion
 	void InitScalarAttributeRandomRangeBlock( int nAttributeId, float fMinValue, float fMaxValue,
@@ -799,6 +827,9 @@ protected:
 		CParticleCollection *pParticles, int nStartBlock, int nBlockCount ) const;
 	void AddScalarAttributeRandomRangeBlock( int nAttributeId, float fMinValue, float fMaxValue, float fExp,
 		CParticleCollection *pParticles, int nStartBlock, int nBlockCount, bool bRandomlyInvert ) const;
+
+	void InitScalarAttributeRandomRangeExpScalar( int nAttributeId, float fMinValue, float fMaxValue, float fExp,
+												  CParticleCollection *pParticles, int nStartParticle, int nParticleCount ) const;
 
 private:
 	friend class CParticleCollection;

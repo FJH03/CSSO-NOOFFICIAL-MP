@@ -531,12 +531,148 @@ END_PARTICLE_OPERATOR_UNPACK( C_OP_LennardJonesForce )
 
 #endif
 
+class C_OP_TimeVaryingForce : public CParticleOperatorInstance
+{
+	DECLARE_PARTICLE_OPERATOR( C_OP_TimeVaryingForce );
+
+	uint32 GetWrittenAttributes( void ) const
+	{
+		return 0;
+	}
+
+	uint32 GetReadAttributes( void ) const
+	{
+		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
+	}
+
+
+	virtual void AddForces( FourVectors *pAccumulatedForces, 
+							CParticleCollection *pParticles,
+							int nBlocks,
+							float flStrength,
+							void *pContext ) const;
+
+	float m_flStartLerpTime;
+	Vector m_StartingForce;
+	float m_flEndLerpTime;
+	Vector m_EndingForce;
+};
+
+void C_OP_TimeVaryingForce::AddForces( FourVectors *pAccumulatedForces, 
+								  CParticleCollection *pParticles,
+								  int nBlocks,
+								  float flStrength,					  
+								  void *pContext ) const
+{
+	FourVectors box_min,box_max;
+	box_min.DuplicateVector( m_StartingForce * flStrength );
+	box_max.DuplicateVector( m_EndingForce * flStrength);
+	box_max -= box_min;
+	CM128AttributeIterator pCreationTime( PARTICLE_ATTRIBUTE_CREATION_TIME, pParticles );
+	fltx4 fl4StartTime = ReplicateX4( m_flStartLerpTime );
+	fltx4 fl4OODuration = ReplicateX4( 1.0 / ( m_flEndLerpTime - m_flStartLerpTime ) );
+	fltx4 fl4CurTime = pParticles->m_fl4CurTime;
+	for(int i=0;i<nBlocks;i++)
+	{
+		fltx4 fl4Age = SubSIMD( fl4CurTime, *pCreationTime );
+		fl4Age = MulSIMD( fl4OODuration, SubSIMD( fl4Age, fl4StartTime ) );
+		fl4Age = MaxSIMD( Four_Zeros, MinSIMD( Four_Ones, fl4Age ) );
+		FourVectors v4Force = box_max;
+		v4Force *= fl4Age;
+		v4Force += box_min;
+		(*pAccumulatedForces) += v4Force;
+		++pAccumulatedForces;
+		++pCreationTime;
+	}
+}
+
+DEFINE_PARTICLE_OPERATOR( C_OP_TimeVaryingForce, "time varying force", OPERATOR_GENERIC );
+
+BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_TimeVaryingForce ) 
+    DMXELEMENT_UNPACK_FIELD( "time to start transition", "0", float, m_flStartLerpTime )
+	DMXELEMENT_UNPACK_FIELD( "starting force", "0 0 0", Vector, m_StartingForce )
+    DMXELEMENT_UNPACK_FIELD( "time to end transition", "10", float, m_flEndLerpTime )
+	DMXELEMENT_UNPACK_FIELD( "ending force", "0 0 0", Vector, m_EndingForce )
+END_PARTICLE_OPERATOR_UNPACK( C_OP_TimeVaryingForce )
+
+
+class C_OP_TurbulenceForce : public CParticleOperatorInstance
+{
+	DECLARE_PARTICLE_OPERATOR( C_OP_TurbulenceForce );
+
+	uint32 GetWrittenAttributes( void ) const
+	{
+		return 0;
+	}
+
+	uint32 GetReadAttributes( void ) const
+	{
+		return PARTICLE_ATTRIBUTE_XYZ_MASK;
+	}
+
+
+	virtual void AddForces( FourVectors *pAccumulatedForces, 
+							CParticleCollection *pParticles,
+							int nBlocks,
+							float flStrength,
+							void *pContext ) const;
+
+	float m_flNoiseCoordScale[4];
+	Vector m_vecNoiseAmount[4];
+
+
+};
+
+void C_OP_TurbulenceForce::AddForces( FourVectors *pAccumulatedForces, 
+								  CParticleCollection *pParticles,
+								  int nBlocks,
+								  float flStrength,					  
+								  void *pContext ) const
+{
+	C4VAttributeIterator pXYZ( PARTICLE_ATTRIBUTE_XYZ, pParticles );
+	fltx4 fl4Scales[4];
+	FourVectors v4Amounts[4];
+	for( int i = 0; i < ARRAYSIZE( fl4Scales ); i++ )
+	{
+		fl4Scales[i] = ReplicateX4( m_flNoiseCoordScale[i] );
+		v4Amounts[i].DuplicateVector( m_vecNoiseAmount[i] );
+	}
+	for(int i=0;i<nBlocks;i++)
+	{
+		for( int j = 0; j < ARRAYSIZE( fl4Scales ); j++ )
+		{
+			FourVectors ppos = *pXYZ;
+			ppos *= fl4Scales[j];
+			ppos = DNoiseSIMD( ppos );
+			ppos *= v4Amounts[j];
+			(*pAccumulatedForces) += ppos;
+		}
+		++pAccumulatedForces;
+		++pXYZ;
+	}
+}
+
+DEFINE_PARTICLE_OPERATOR( C_OP_TurbulenceForce, "turbulent force", OPERATOR_GENERIC );
+BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_TurbulenceForce ) 
+ DMXELEMENT_UNPACK_FIELD( "Noise scale 0", "1", float, m_flNoiseCoordScale[0] )
+ DMXELEMENT_UNPACK_FIELD( "Noise amount 0", "1 1 1", Vector, m_vecNoiseAmount[0] )
+ DMXELEMENT_UNPACK_FIELD( "Noise scale 1", "0", float, m_flNoiseCoordScale[1] )
+ DMXELEMENT_UNPACK_FIELD( "Noise amount 1", ".5 .5 .5", Vector, m_vecNoiseAmount[1] )
+ DMXELEMENT_UNPACK_FIELD( "Noise scale 2", "0", float, m_flNoiseCoordScale[2] )
+ DMXELEMENT_UNPACK_FIELD( "Noise amount 2", ".25 .25 .25", Vector, m_vecNoiseAmount[2] )
+ DMXELEMENT_UNPACK_FIELD( "Noise scale 3", "0", float, m_flNoiseCoordScale[3] )
+ DMXELEMENT_UNPACK_FIELD( "Noise amount 3", ".125 .125 .125", Vector, m_vecNoiseAmount[3] )
+END_PARTICLE_OPERATOR_UNPACK( C_OP_TurbulenceForce )
+
 
 void AddBuiltInParticleForceGenerators( void )
 {
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_FORCEGENERATOR, C_OP_RandomForce );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_FORCEGENERATOR, C_OP_TwistAroundAxis );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_FORCEGENERATOR, C_OP_AttractToControlPoint );
+	REGISTER_PARTICLE_OPERATOR( FUNCTION_FORCEGENERATOR, C_OP_TimeVaryingForce );
+	REGISTER_PARTICLE_OPERATOR( FUNCTION_FORCEGENERATOR, C_OP_TurbulenceForce );
+	REGISTER_PARTICLE_OPERATOR( FUNCTION_FORCEGENERATOR, C_OP_ForceBasedOnDistanceToPlane );
 	#ifdef USE_BLOBULATOR
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_FORCEGENERATOR, C_OP_LennardJonesForce );
 	#endif
