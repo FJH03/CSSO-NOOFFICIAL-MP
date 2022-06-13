@@ -1468,7 +1468,7 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 		// a hollow crate and give a penetration bonus
 		if ( iEnterMaterial == iExitMaterial )
 		{
-			if( iExitMaterial == CHAR_TEX_WOOD )
+			if( iExitMaterial == CHAR_TEX_WOOD || iExitMaterial == CHAR_TEX_CARDBOARD )
 			{
 				flPenetrationModifier = 3;
 			}

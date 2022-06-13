@@ -207,7 +207,7 @@ char const *GetImpactDecal( C_BaseEntity *pEntity, int iMaterial, int iDamageTyp
 //-----------------------------------------------------------------------------
 // Purpose: Perform custom effects based on the Decal index
 //-----------------------------------------------------------------------------
-static ConVar cl_new_impact_effects( "cl_new_impact_effects", "0" );
+static ConVar cl_new_impact_effects( "cl_new_impact_effects", "0", FCVAR_DEVELOPMENTONLY );
 
 struct ImpactEffect_t
 {
@@ -319,15 +319,16 @@ void PerformCustomEffects( const Vector &vecOrigin, trace_t &tr, const Vector &s
 	}
 
 	// Cement and wood have dust and flecks
-	if ( ( iMaterial == CHAR_TEX_CONCRETE ) || ( iMaterial == CHAR_TEX_TILE ) )
+	if ( ( iMaterial == CHAR_TEX_CONCRETE ) || ( iMaterial == CHAR_TEX_TILE ) || ( iMaterial == CHAR_TEX_ASPHALT ) ||
+		 ( iMaterial == CHAR_TEX_BRICK ) || ( iMaterial == CHAR_TEX_ROCK ) )
 	{
 		FX_DebrisFlecks( vecOrigin, &tr, iMaterial, iScale, bNoFlecks );
 	}
-	else if ( iMaterial == CHAR_TEX_WOOD )
+	else if ( iMaterial == CHAR_TEX_WOOD || iMaterial == CHAR_TEX_CARDBOARD )
 	{
 		FX_DebrisFlecks( vecOrigin, &tr, iMaterial, iScale, bNoFlecks );
 	}
-	else if ( ( iMaterial == CHAR_TEX_DIRT ) || ( iMaterial == CHAR_TEX_SAND ) )
+	else if ( ( iMaterial == CHAR_TEX_DIRT ) || ( iMaterial == CHAR_TEX_SAND ) || ( iMaterial == CHAR_TEX_GRASS ) )
 	{
 		FX_DustImpact( vecOrigin, &tr, iScale );
 	}
@@ -335,7 +336,7 @@ void PerformCustomEffects( const Vector &vecOrigin, trace_t &tr, const Vector &s
 	{
 		FX_AntlionImpact( vecOrigin, &tr );
 	}
-	else if ( ( iMaterial == CHAR_TEX_METAL ) || ( iMaterial == CHAR_TEX_VENT ) )
+	else if ( ( iMaterial == CHAR_TEX_METAL ) || ( iMaterial == CHAR_TEX_VENT ) || ( iMaterial == CHAR_TEX_SANDBARREL ) )
 	{
 		Vector	reflect;
 		float	dot = shotDir.Dot( tr.plane.normal );
@@ -411,18 +412,26 @@ void PlayImpactSound( CBaseEntity *pEntity, trace_t &tr, Vector &vecServerOrigin
 			case CHAR_TEX_METAL:
 			case CHAR_TEX_CONCRETE:
 			case CHAR_TEX_COMPUTER:
+			case CHAR_TEX_BRICK:
 			case CHAR_TEX_TILE:
+			case CHAR_TEX_ROCK:
+			case CHAR_TEX_ASPHALT:
 				flRicoChance = 5.0;
 				break;
 
 			case CHAR_TEX_GRATE:
 			case CHAR_TEX_VENT:
 			case CHAR_TEX_WOOD:
+			case CHAR_TEX_RUBBER:
+			case CHAR_TEX_SHEETROCK:
+			case CHAR_TEX_CARPET:
 				flRicoChance = 3.0;
 				break;
 
 			case CHAR_TEX_DIRT:
 			case CHAR_TEX_PLASTIC:
+			case CHAR_TEX_CLAY:
+			case CHAR_TEX_PLASTER:
 				flRicoChance = 1.0;
 				break;
 		}
