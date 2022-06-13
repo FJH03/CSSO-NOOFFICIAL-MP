@@ -496,6 +496,8 @@ void CParticleSystemDefinition::ParseOperators(
 				ops[i]->UnpackIntoStructure( pNewRef, flist[j]->GetClassSize(), pUnpack );
 			}
 			pNewRef->InitParams( this, pElement );
+			pNewRef->CheckForFastPath();
+
 			m_nAttributeReadMask |= pNewRef->GetReadAttributes();
 			m_nControlPointReadMask |= pNewRef->GetReadControlPointMask();
 
@@ -532,7 +534,7 @@ void CParticleSystemDefinition::ParseOperators(
 		if ( !bFound )
 		{
 			if ( flist.Count() )							// don't warn if no ops of that type defined (server)
-				Warning( "Didn't find particle function %s\n", pOpName );
+				DevWarning( "Didn't find particle function %s\n", pOpName );
 		}
 	}
 }
@@ -1642,6 +1644,12 @@ bool CParticleCollection::CheckIfOperatorShouldRun(
 	CParticleOperatorInstance const * pOp ,
 	float *pflCurStrength)
 {
+	if ( pOp->m_bStrengthFastPath )
+	{
+		if ( pflCurStrength )
+			*pflCurStrength = 1.0;
+		return true;
+	}
 	float flTime=m_flCurTime;
 	if ( pOp->m_flOpFadeOscillatePeriod > 0.0 )
 	{
@@ -1654,6 +1662,23 @@ bool CParticleCollection::CheckIfOperatorShouldRun(
 	if ( pflCurStrength )
 		*pflCurStrength = flStrength;
 	return ( flStrength > 0.0 );
+}
+void CParticleOperatorInstance::CheckForFastPath( void )
+{
+	// store away whether this operator has any of the operator modulation params set (most ops dont)
+	if (
+		( m_flOpStartFadeInTime == 0. ) &&
+		( m_flOpEndFadeOutTime == 0. ) &&
+		( m_flOpStartFadeOutTime == 0. ) &&
+		( m_flOpEndFadeOutTime == 0. ) )
+	{
+		m_bStrengthFastPath = true;
+	}
+	else
+	{
+		m_bStrengthFastPath = false;
+	}
+
 }
 
 
@@ -2903,6 +2928,15 @@ public:
 		{
 			pPntsOut[i].Init();
 		}
+	}
+
+	virtual void TraceAgainstRayTraceEnv( 
+		int envnumber,  
+		const FourRays &rays, fltx4 TMin, fltx4 TMax,
+		RayTracingResult *rslt_out, int32 skip_id ) const
+	{
+		rslt_out->HitDistance = Four_Ones;
+		rslt_out->surface_normal.DuplicateVector( vec3_origin );
 	}
 
 	virtual float GetPixelVisibility( int *pQueryHandle, const Vector &vecOrigin, float flScale ) { return 0.0f; }
