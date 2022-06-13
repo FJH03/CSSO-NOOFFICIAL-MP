@@ -76,32 +76,8 @@ C_CS_PlayerResource::~C_CS_PlayerResource()
 {
 }
 
-bool C_CS_PlayerResource::IsAlive( int iIndex )
-{
-	if ( GetControlledByPlayer( iIndex ) > 0 )
-	{
-		return m_bAlive[GetControlledByPlayer( iIndex )];
-	}
-
-	if ( GetControlledPlayer( iIndex ) > 0 )
-	{
-		return false;
-	}
-
-	return m_bAlive[iIndex];
-}
-
 bool C_CS_PlayerResource::HasC4(int iIndex )
 {
-	if ( GetControlledByPlayer( iIndex ) > 0 )
-	{
-		return m_iPlayerC4 == GetControlledByPlayer( iIndex );
-	}
-	
-	if ( GetControlledPlayer( iIndex ) > 0 )
-	{
-		return false;
-	}
 	return m_iPlayerC4 == iIndex;
 }
 
@@ -344,16 +320,6 @@ bool C_CS_PlayerResource::HasDefuser( int iIndex )
 {
 	if ( !IsConnected( iIndex ) )
 		return false;
-
-	if ( GetControlledByPlayer( iIndex ) > 0 )
-	{
-		return m_bHasDefuser[GetControlledByPlayer( iIndex )];
-	}
-
-	if ( GetControlledPlayer( iIndex ) > 0 )
-	{
-		return false;
-	}
 
 	return m_bHasDefuser[iIndex];
 }

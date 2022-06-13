@@ -666,8 +666,16 @@ void CCSClientScoreBoardDialog::UpdateTeamInfo()
 			{
 				if ( g_PR->IsConnected( playerIndex ) && g_PR->GetTeam( playerIndex ) == teamIndex )
 				{
+					int nControlledByPlayerIndex = cs_PR->GetControlledByPlayer( playerIndex );
+
+					bool bIsAlive = false;
+					if ( nControlledByPlayerIndex > 0 )
+						bIsAlive = cs_PR->IsAlive( nControlledByPlayerIndex );
+					else
+						bIsAlive = !cs_PR->IsControllingBot( playerIndex ) && cs_PR->IsAlive( playerIndex );
+
 					numPlayers++;
-					if ( cs_PR->IsAlive( playerIndex ) )
+					if ( bIsAlive )
 					{
 						++numAlive;
 					}
@@ -724,7 +732,14 @@ void CCSClientScoreBoardDialog::UpdatePlayerInfo()
 	{
 		int nTeamNumber = cs_PR->GetTeam( i );
 		bool bShouldShow = cs_PR->IsConnected( i );
-		bool bIsAlive = cs_PR->IsAlive( i );
+		int nControlledByPlayerIndex = cs_PR->GetControlledByPlayer( i );
+
+		bool bIsAlive = false;
+		if ( nControlledByPlayerIndex > 0 )
+			bIsAlive = cs_PR->IsAlive( nControlledByPlayerIndex );
+		else
+			bIsAlive = !cs_PR->IsControllingBot( i ) && cs_PR->IsAlive( i );
+
 		SectionedListPanel* pPlayerList;
 		if ( m_bSimple )
 			pPlayerList = m_pPlayerList;
@@ -917,11 +932,31 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, KeyValues* 
 	kv->SetInt( "score", cs_PR->GetContributionScore( playerIndex ) );
 	kv->SetInt( "gglevel", cs_PR->GetPlayerGunGameWeaponIndex( playerIndex ) + 1 );
 
-	if ( !cs_PR->IsAlive( playerIndex ) )
+	int nControlledByPlayerIndex = cs_PR->GetControlledByPlayer( playerIndex );
+
+	bool bIsAlive = false;
+	if ( nControlledByPlayerIndex > 0 )
+		bIsAlive = cs_PR->IsAlive( nControlledByPlayerIndex );
+	else
+		bIsAlive = !cs_PR->IsControllingBot( playerIndex ) && cs_PR->IsAlive( playerIndex );
+
+	bool bHasC4 = false;
+	if ( nControlledByPlayerIndex > 0 )
+		bHasC4 = cs_PR->HasC4( nControlledByPlayerIndex );
+	else
+		bHasC4 = !cs_PR->IsControllingBot( playerIndex ) && cs_PR->HasC4( playerIndex );
+
+	bool bHasDefuser = false;
+	if ( nControlledByPlayerIndex > 0 )
+		bHasDefuser = cs_PR->HasDefuser( nControlledByPlayerIndex );
+	else
+		bHasDefuser = !cs_PR->IsControllingBot( playerIndex ) && cs_PR->HasDefuser( playerIndex );
+
+	if ( !bIsAlive )
 		kv->SetInt( SECTIONED_LIST_HEADER_IMAGE, DEAD_ICON );
-	else if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST && cs_PR->HasC4( playerIndex ) )
+	else if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST && bHasC4 )
 		kv->SetInt( SECTIONED_LIST_HEADER_IMAGE, BOMB_ICON );
-	else if ( pPlayer->GetTeamNumber() == TEAM_CT && cs_PR->HasDefuser( playerIndex ) )
+	else if ( pPlayer->GetTeamNumber() == TEAM_CT && bHasDefuser )
 		kv->SetInt( SECTIONED_LIST_HEADER_IMAGE, DEFUSER_ICON );
 
 	kv->SetInt( "playerIndex", playerIndex );
