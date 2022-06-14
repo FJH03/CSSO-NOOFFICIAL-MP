@@ -1567,8 +1567,7 @@ void CCSPlayer::Spawn()
 
 	// Calculate timeout for immunity
 	float flImmuneTime = mp_respawn_immunitytime.GetFloat();
-
-	if ( flImmuneTime > 0 || CSGameRules()->IsWarmupPeriod() )
+	if ( flImmuneTime > 0.0f || (flImmuneTime >= 0.0f && CSGameRules()->IsWarmupPeriod()) )
 	{
 		//Make sure we can't move if we respawn in gun game after the rounds ends
 		CCSMatch* pMatch = CSGameRules()->GetMatch();
@@ -7916,7 +7915,8 @@ void CCSPlayer::State_Enter_ACTIVE()
 void CCSPlayer::State_PreThink_ACTIVE()
 {
 	// Calculate timeout for immunity
-	if ( mp_respawn_immunitytime.GetFloat() > 0 || (CSGameRules() && CSGameRules()->IsWarmupPeriod()) )
+	float flImmuneTime = mp_respawn_immunitytime.GetFloat();
+	if ( flImmuneTime > 0.0f || (flImmuneTime >= 0.0f && CSGameRules() && CSGameRules()->IsWarmupPeriod()) )
 	{
 		if ( m_bImmunity )
 		{

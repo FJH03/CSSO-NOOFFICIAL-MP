@@ -2720,7 +2720,7 @@ void C_CSPlayer::ClientThink()
 
 	ConVarRef mp_respawn_immunitytime( "mp_respawn_immunitytime" );
 	float flImmuneTime = mp_respawn_immunitytime.GetFloat();
-	if ( flImmuneTime > 0 || CSGameRules()->IsWarmupPeriod() )
+	if ( flImmuneTime > 0.0f || (flImmuneTime >= 0.0f && CSGameRules()->IsWarmupPeriod()) )
 	{
 		if ( m_bImmunity )
 		{
