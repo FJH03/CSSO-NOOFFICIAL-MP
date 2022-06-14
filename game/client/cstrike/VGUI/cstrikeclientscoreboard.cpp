@@ -104,6 +104,7 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 	m_pTeamTScoreSecondHalf = new Label( this, "TeamTScoreSecondHalf", L"" );
 	m_pTeamTScoreOvertime = new Label( this, "TeamTScoreOvertime", L"" );
 	m_pLossBonusLabel = new Label( this, "LossBonusLabel", L"" );
+	m_pSpectatorsLabel = new Label( this, "SpectatorsLabel", L"" );
 	m_pLossBonusCT = new CCSClientScoreBoardLossBonusPanel( this, "LossBonusCT" );
 	m_pLossBonusT = new CCSClientScoreBoardLossBonusPanel( this, "LossBonusT" );
 
@@ -728,6 +729,9 @@ void CCSClientScoreBoardDialog::UpdatePlayerInfo()
 		iLocalPlayerIndex = pPlayer->GetControlledBotIndex();
 
 	// walk all the players and make sure they're in the scoreboard
+	int nSpectators = 0;
+	wchar_t wszSpectatorsList[256];
+	wszSpectatorsList[0] = '\0';
 	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 	{
 		int nTeamNumber = cs_PR->GetTeam( i );
@@ -746,41 +750,64 @@ void CCSClientScoreBoardDialog::UpdatePlayerInfo()
 		else
 			pPlayerList = (nTeamNumber == TEAM_CT) ? m_pCTPlayerList : m_pTPlayerList;
 
-		if ( bShouldShow && (nTeamNumber == TEAM_CT || nTeamNumber == TEAM_TERRORIST) )
+		if ( bShouldShow )
 		{
-			KeyValues* playerData = new KeyValues( "data" );
-			GetPlayerScoreInfo( i, playerData );
-			UpdatePlayerAvatar( i, playerData );
-			int nItemID = FindItemIDForPlayerIndex( i );
-
-			if ( nItemID == -1 )
+			if ( nTeamNumber == TEAM_CT || nTeamNumber == TEAM_TERRORIST )
 			{
-				// add a new row
-				nItemID = pPlayerList->AddItem( 0, playerData );
+				KeyValues* playerData = new KeyValues( "data" );
+				GetPlayerScoreInfo( i, playerData );
+				UpdatePlayerAvatar( i, playerData );
+				int nItemID = FindItemIDForPlayerIndex( i );
+
+				if ( nItemID == -1 )
+				{
+					// add a new row
+					nItemID = pPlayerList->AddItem( 0, playerData );
+				}
+				else
+				{
+					// modify the current row
+					pPlayerList->ModifyItem( nItemID, 0, playerData );
+				}
+
+				// set the row color based on the players team
+				Color fgColor = cs_PR->GetTeamColor( nTeamNumber );
+				if ( !bIsAlive )
+					fgColor[3] *= 0.5f; // half transparent
+
+				if ( i == iLocalPlayerIndex && bIsAlive )
+				{
+					pPlayerList->SetItemFgColor( nItemID, COLOR_WHITE );
+					pPlayerList->SetItemBgColor( nItemID, (nTeamNumber == TEAM_CT) ? localplayer_ct_bgcolor : localplayer_t_bgcolor );
+				}
+				else
+				{
+					pPlayerList->SetItemFgColor( nItemID, fgColor );
+					pPlayerList->SetItemBgColor( nItemID, bIsAlive ? player_bgcolor : dead_player_bgcolor );
+				}
+
+				playerData->deleteThis();
 			}
 			else
 			{
-				// modify the current row
-				pPlayerList->ModifyItem( nItemID, 0, playerData );
-			}
+				// remove the player
+				int nItemID = FindItemIDForPlayerIndex( i );
+				if ( nItemID != -1 )
+				{
+					pPlayerList->RemoveItem( nItemID );
+				}
 
-			// set the row color based on the players team
-			Color fgColor = cs_PR->GetTeamColor( nTeamNumber );
-			if ( !bIsAlive )
-				fgColor[3] *= 0.5f; // half transparent
+				if ( nTeamNumber == TEAM_UNASSIGNED || nTeamNumber == TEAM_SPECTATOR )
+				{
+					nSpectators++;
+					wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+					cs_PR->GetDecoratedPlayerName( i, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_Simple );
 
-			if ( i == iLocalPlayerIndex && bIsAlive )
-			{
-				pPlayerList->SetItemFgColor( nItemID, COLOR_WHITE );
-				pPlayerList->SetItemBgColor( nItemID, (nTeamNumber == TEAM_CT ) ? localplayer_ct_bgcolor : localplayer_t_bgcolor );
+					if ( nSpectators > 1 )
+						V_wcscat_safe( wszSpectatorsList, L", " );
+					V_wcscat_safe( wszSpectatorsList, wszPlayerName );
+				}
 			}
-			else
-			{
-				pPlayerList->SetItemFgColor( nItemID, fgColor );
-				pPlayerList->SetItemBgColor( nItemID, bIsAlive ? player_bgcolor : dead_player_bgcolor );
-			}
-
-			playerData->deleteThis();
 		}
 		else
 		{
@@ -791,6 +818,18 @@ void CCSClientScoreBoardDialog::UpdatePlayerInfo()
 				pPlayerList->RemoveItem( nItemID );
 			}
 		}
+	}
+
+	if ( nSpectators > 0 )
+	{
+		wchar_t wszSpectatorsLabel[512];
+		g_pVGuiLocalize->ConstructString( wszSpectatorsLabel, sizeof( wszSpectatorsLabel ), g_pVGuiLocalize->Find( "#CStrike_Scoreboard_Spectators" ), 1, wszSpectatorsList );
+		m_pSpectatorsLabel->SetText( wszSpectatorsLabel );
+		m_pSpectatorsLabel->SetVisible( true );
+	}
+	else
+	{
+		m_pSpectatorsLabel->SetVisible( false );
 	}
 }
 
