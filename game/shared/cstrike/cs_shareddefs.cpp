@@ -48,6 +48,8 @@ static PlayerGloves s_playerGloves[MAX_GLOVES+1] =
 const PlayerGloves* GetGlovesInfo( int i )
 {
 	Assert( i >= 0 && i < ARRAYSIZE( s_playerGloves ) );
+	if ( i < 0 || i >= ARRAYSIZE( s_playerGloves ) )
+		return &s_playerGloves[1]; // 0 is all null so return the first valid index
 	return &s_playerGloves[i];
 }
 
@@ -119,6 +121,8 @@ CCSAgentInfo g_AgentInfosCT[MAX_AGENTS_CT + 1] =
 const CCSAgentInfo* GetCSAgentInfoCT( int i )
 {
 	Assert( i >= 0 && i < ARRAYSIZE( g_AgentInfosCT ) );
+	if ( i < 0 || i >= ARRAYSIZE( g_AgentInfosCT ) )
+		return &g_AgentInfosCT[0];
 	return &g_AgentInfosCT[i];
 }
 
@@ -178,6 +182,8 @@ CCSAgentInfo g_AgentInfosT[MAX_AGENTS_T + 1] =
 const CCSAgentInfo* GetCSAgentInfoT( int i )
 {
 	Assert( i >= 0 && i < ARRAYSIZE( g_AgentInfosT ) );
+	if ( i < 0 || i >= ARRAYSIZE( g_AgentInfosT ) )
+		return &g_AgentInfosT[0];
 	return &g_AgentInfosT[i];
 }
 

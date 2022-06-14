@@ -1226,7 +1226,7 @@ void CCSPlayer::SetModelFromClass( void )
 	else if ( GetTeamNumber() == TEAM_CT )
 	{
 		int index = m_iClass - FIRST_CT_CLASS;
-		if ( index < 0 || index >= (LAST_CT_CLASS - FIRST_CT_CLASS + 1) )
+		if ( index < 0 || index > (LAST_CT_CLASS - FIRST_CT_CLASS) )
 		{
 			index = RandomInt( 0, LAST_CT_CLASS - FIRST_CT_CLASS );
 			m_iClass = index + FIRST_CT_CLASS; // clean up players who selected a higher class than we support yet
