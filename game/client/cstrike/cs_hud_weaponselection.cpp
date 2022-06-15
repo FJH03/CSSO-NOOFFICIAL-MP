@@ -79,13 +79,13 @@ void CCSHudWeaponSelection::OnThink()
 		UpdateIconColors();
 	}
 
-	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
-	if ( !pLocalPlayer )
+	C_CSPlayer *pPlayer = GetHudPlayer();
+	if ( !pPlayer )
 		return;
 
-	if ( m_bHasDefuser != pLocalPlayer->HasDefuser() )
+	if ( m_bHasDefuser != pPlayer->HasDefuser() )
 	{
-		m_bHasDefuser = pLocalPlayer->HasDefuser();
+		m_bHasDefuser = pPlayer->HasDefuser();
 		m_pDefuserIcon->SetFgColor( m_clrDefuser ); // it gets updated after initializing so just change it here
 		m_pDefuserIcon->SetVisible( m_bHasDefuser );
 		ShowAndUpdateSelection( WEPSELECT_SWITCH ); // update panel positions
