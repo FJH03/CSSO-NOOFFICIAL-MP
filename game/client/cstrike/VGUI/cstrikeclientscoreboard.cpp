@@ -943,9 +943,16 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, KeyValues* 
 	cs_PR->GetDecoratedPlayerName( playerIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_Simple );
 	kv->SetWString( "name", wszPlayerName );
 
-	wchar_t wszMoney[16];
-	V_snwprintf( wszMoney, sizeof( wszMoney ), L"$%d", cs_PR->GetAccount( playerIndex ) );
-	kv->SetWString( "money", wszMoney );
+	if ( pPlayer->GetTeamNumber() == cs_PR->GetTeam( playerIndex ) ) // PiMoN TODO: is there a convar for this in CSGO?
+	{
+		wchar_t wszMoney[16];
+		V_snwprintf( wszMoney, sizeof( wszMoney ), L"$%d", cs_PR->GetAccount( playerIndex ) );
+		kv->SetWString( "money", wszMoney );
+	}
+	else
+	{
+		kv->SetWString( "money", L" " );
+	}
 
 	int iKills = cs_PR->GetPlayerScore( playerIndex );
 	int iDeaths = cs_PR->GetDeaths( playerIndex );
