@@ -8788,7 +8788,7 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 	}
 
 	bool bTeamHasClinchedVictory = false;
-	if ( IsPlayingClassic() )
+	if ( IsPlayingClassic() && !IsPlayingCustomGametype() )
 	{
 		int iNumWinsToClinch = ( mp_maxrounds.GetInt() / 2 ) + 1 + GetOvertimePlaying() * ( mp_overtime_maxrounds.GetInt() / 2 );
 		bTeamHasClinchedVictory = mp_match_can_clinch.GetBool() && ( m_match.GetCTScore() >= iNumWinsToClinch ) || ( m_match.GetTerroristScore() >= iNumWinsToClinch );
