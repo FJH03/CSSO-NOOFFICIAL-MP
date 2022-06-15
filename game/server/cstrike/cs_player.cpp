@@ -551,6 +551,7 @@ CCSPlayer::CCSPlayer()
 	m_iThrowGrenadeCounter = 0;
 
 	m_bIsSpawning = false;
+	m_bIsTransferingInventory = false;
 
 	m_lifeState = LIFE_DEAD; // Start "dead".
 	m_bInBombZone = false;
@@ -5244,6 +5245,7 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos )
 void CCSPlayer::TransferInventory( CCSPlayer* pTargetPlayer )
 {
 	pTargetPlayer->RemoveAllItems( true );
+	pTargetPlayer->SetTransferingInventory( true );
 
 	for ( int i = 0; i < MAX_WEAPONS; i++ )
 	{
@@ -5285,6 +5287,7 @@ void CCSPlayer::TransferInventory( CCSPlayer* pTargetPlayer )
 	m_bNightVisionOn = false;
 
 	RemoveAllItems( true );
+	pTargetPlayer->SetTransferingInventory( false );
 }
 
 bool CCSPlayer::DropRifle( bool fromDeath )
@@ -9063,7 +9066,7 @@ void CCSPlayer::StockPlayerAmmo( CBaseCombatWeapon *pNewWeapon )
 
 		if ( nAmmo != -1 )
 		{
-			pWeapon->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, 9999 );
+			pWeapon->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, 9999, IsTransferingInventory() );
 			pWeapon->m_iClip1 = pWeapon->GetMaxClip1();
 		}
 

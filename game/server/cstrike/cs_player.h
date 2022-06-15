@@ -939,6 +939,9 @@ public:
 	bool IsPlayerSpawning( void ) { return m_bIsSpawning; }
 	void SetPlayerSpawning( bool bIsSpawning ) { m_bIsSpawning = bIsSpawning; }
 
+	bool IsTransferingInventory() { return m_bIsTransferingInventory; }
+	void SetTransferingInventory( bool bState ) { m_bIsTransferingInventory = bState; }
+
 protected:
 	void TransferInventory( CCSPlayer* pTargetPlayer );
 	bool DropRifle( bool fromDeath = false );
@@ -1007,6 +1010,7 @@ private:
 	Vector m_storedSpawnPosition;
 	QAngle m_storedSpawnAngle;
 	bool m_bIsSpawning;
+	bool m_bIsTransferingInventory;
 
 public:
 	CNetworkVar( float, m_flThirdpersonRecoil );
