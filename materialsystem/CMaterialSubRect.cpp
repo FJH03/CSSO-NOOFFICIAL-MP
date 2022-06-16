@@ -260,6 +260,7 @@ private:
 	DECLARE_FIXEDSIZE_ALLOCATOR( CMaterialSubRect );
 
 	IMaterialInternal			*m_pMaterialPage;
+	IMaterialInternal			*m_pModelMaterialPage;
 
 	int							m_iEnumID;
 
@@ -337,6 +338,7 @@ CMaterialSubRect::CMaterialSubRect( const char *pMaterialName, const char *pText
 #endif
 
 	m_pMaterialPage = NULL;
+	m_pModelMaterialPage = NULL;
 	m_iEnumID = 0;
 	m_symTextureGroupName = pTextureGroupName;
 	m_vecOffset.Init();
@@ -371,6 +373,10 @@ CMaterialSubRect::CMaterialSubRect( const char *pMaterialName, const char *pText
 
 	// Increment the material page usage counter.
 	m_pMaterialPage->IncrementReferenceCount();
+	if ( m_pModelMaterialPage )
+	{
+		m_pModelMaterialPage->IncrementReferenceCount();
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -388,6 +394,12 @@ CMaterialSubRect::~CMaterialSubRect()
 	{
 		m_pMaterialPage->DecrementReferenceCount();
 		m_pMaterialPage = NULL;
+	}
+
+	if ( m_pModelMaterialPage )
+	{
+		m_pModelMaterialPage->DecrementReferenceCount();
+		m_pModelMaterialPage = NULL;
 	}
 
 	if ( m_pVMTKeyValues )
@@ -668,7 +680,15 @@ void CMaterialSubRect::ParseMaterialVars( KeyValues &keyValues )
 				m_pMaterialPage = static_cast<IMaterialInternal*>( MaterialSystem()->FindMaterial( pVar->GetString(), TEXTURE_GROUP_DECAL ) );
 				m_pMaterialPage = m_pMaterialPage->GetRealTimeVersion(); //always work with the realtime material internally
 			}
-
+			else if ( !Q_stricmp( pVar->GetName(), "$ModelMaterial" ) )
+			{
+				IMaterialInternal *pMaterial = static_cast<IMaterialInternal*>( MaterialSystem()->FindMaterial( pVar->GetString(), TEXTURE_GROUP_DECAL ) );
+				pMaterial = pMaterial->GetRealTimeVersion(); //always work with the realtime material internally
+				if ( !pMaterial->IsErrorMaterial() )
+				{
+					m_pModelMaterialPage = pMaterial;
+				}
+			}
 //			else if ( !Q_stricmp( pVar->GetName(), "$decalscale" ) )
 //			{
 //				m_flDecalScale = pVar->GetFloat();
@@ -701,6 +721,14 @@ void CMaterialSubRect::SetupMaterialVars( void )
 	// Ask the material page for its size.
 	int nMaterialPageWidth = m_pMaterialPage->GetMappingWidth();
 	int nMaterialPageHeight = m_pMaterialPage->GetMappingHeight();
+
+	if ( m_pModelMaterialPage )
+	{
+		// a subrect optionally supports a redirection for a model material
+		// precache this now, same as the subrect's material page
+		// otherwise, runtime load hitch when model rendering accesses
+		m_pModelMaterialPage->GetMappingWidth();
+	}
 
 	// Normalize the offset and scale.
 	float flOOWidth = 1.0f / static_cast<float>( nMaterialPageWidth );
