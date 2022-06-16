@@ -1287,11 +1287,10 @@ void CHudVote::MsgFunc_VoteStart( bf_read &msg )
 	char szOtherTeam[k_MAX_VOTE_NAME_LENGTH] = { 0 };
 	msg.ReadString( szOtherTeam, sizeof(szOtherTeam) );
 
+	m_bIsYesNoVote = msg.ReadOneBit();
 	int iTargetEntIndex = msg.ReadByte();
 	if ( !bShowingOtherTeam )
 	{
-		m_bIsYesNoVote = msg.ReadByte();
-
 		m_flVoteResultCycleTime = -1.f;
 		m_bVotingActive = true;
 		m_pVoteFailed->SetVisible( false );
@@ -1573,7 +1572,9 @@ void CHudVote::MsgFunc_VoteSetup( bf_read &msg )
 		return;
 
 	// Load up the list of Vote Issues
-	m_VoteSetupIssues.RemoveAll();
+	bool bRemoveExisting = msg.ReadOneBit();
+	if ( bRemoveExisting )
+		m_VoteSetupIssues.RemoveAll();
 	int nIssueCount = msg.ReadByte();
 	if ( nIssueCount )
 	{

@@ -110,7 +110,7 @@ CON_COMMAND( callvote, "Start a vote on an issue." )
 	if ( !g_voteControllerGlobal || !g_voteControllerCT || !g_voteControllerT )
 	{
 		DevMsg( "Vote Controllers Not Found!\n" );
-			return;
+		return;
 	}
 
 	CBasePlayer *pVoteCaller = UTIL_GetCommandClient();
@@ -118,13 +118,10 @@ CON_COMMAND( callvote, "Start a vote on an issue." )
 	if ( pVoteCaller )
 		iEntindex = pVoteCaller->entindex();
 
-	if ( !sv_vote_allow_spectators.GetBool() )
+	if ( !sv_vote_allow_spectators.GetBool() && pVoteCaller && pVoteCaller->GetTeamNumber() == TEAM_SPECTATOR )
 	{
-		if ( pVoteCaller->GetTeamNumber() == TEAM_SPECTATOR )
-		{
-			g_voteControllerGlobal->SendVoteCreationFailedMessage( VOTE_FAILED_SPECTATOR, pVoteCaller );
-			return;
-		}
+		g_voteControllerGlobal->SendVoteCreationFailedMessage( VOTE_FAILED_SPECTATOR, pVoteCaller );
+		return;
 	}
 
 	// Parameters
@@ -133,20 +130,24 @@ CON_COMMAND( callvote, "Start a vote on an issue." )
 	const char *arg2 = args[ 1 ];
 	const char *arg3 = args.ArgC() >= 3 ? args[ 2 ] : szEmptyDetails;
 
-	CVoteController *pVoteController;
+	CVoteController *pTeamVoteController = NULL;
 	if ( pVoteCaller )
 	{
-		pVoteController = pVoteCaller->GetTeamVoteController();
-	}
-	else
-	{
-		pVoteController = g_voteControllerGlobal;
+		pTeamVoteController = pVoteCaller->GetTeamVoteController();
 	}
 
 	// If we don't have any arguments, invoke VoteSetup UI
 	if ( args.ArgC() < 2 )
 	{
-		pVoteController->SetupVote( iEntindex );
+		if ( pTeamVoteController )
+		{
+			pTeamVoteController->SetupVote( iEntindex );
+			g_voteControllerGlobal->SetupVote( iEntindex, false );
+		}
+		else
+		{
+			g_voteControllerGlobal->SetupVote( iEntindex );
+		}
 
 		return;
 	}
@@ -155,9 +156,9 @@ CON_COMMAND( callvote, "Start a vote on an issue." )
 	{
 		g_voteControllerGlobal->CreateVote( iEntindex, arg2, arg3 );
 	}
-	else if ( pVoteController->HasIssue( arg2 ) )
+	else if ( pTeamVoteController->HasIssue( arg2 ) )
 	{
-		pVoteController->CreateVote( iEntindex, arg2, arg3 );
+		pTeamVoteController->CreateVote( iEntindex, arg2, arg3 );
 	}
 	else
 	{
@@ -250,7 +251,7 @@ bool CVoteController::CanTeamCastVote( int iTeam ) const
 //-----------------------------------------------------------------------------
 // Purpose: Handles menu-driven setup of Voting
 //-----------------------------------------------------------------------------
-bool CVoteController::SetupVote( int iEntIndex )
+bool CVoteController::SetupVote( int iEntIndex, bool bRemoveExisting )
 {
 	CBasePlayer *pVoteCaller = UTIL_PlayerByIndex( iEntIndex );
 	if( !pVoteCaller )
@@ -278,6 +279,7 @@ bool CVoteController::SetupVote( int iEntIndex )
 	CSingleUserRecipientFilter filter( pVoteCaller );
 	filter.MakeReliable();
 	UserMessageBegin( filter, "VoteSetup" );
+	WRITE_BOOL( bRemoveExisting );
 	WRITE_BYTE( nIssueCount );
 	int nMsgSize = 0;
 

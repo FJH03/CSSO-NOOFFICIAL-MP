@@ -124,7 +124,7 @@ public:
 	virtual int		UpdateTransmitState( void );
 	virtual bool	IsVoteSystemEnabled( void );
 
-	bool			SetupVote( int iEntIndex );					// This creates a list of issues for the UI
+	bool			SetupVote( int iEntIndex, bool bRemoveExisting = true );					// This creates a list of issues for the UI
 	bool			CreateVote( int iEntIndex, const char *pszTypeString, const char *pszDetailString );	// This is what the UI passes in
 	TryCastVoteResult TryCastVote( int iEntIndex, const char *pszVoteString );
 	void			RegisterIssue( CBaseIssue *pNewIssue );
