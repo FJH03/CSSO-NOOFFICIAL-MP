@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -63,7 +63,6 @@ abstract_class IDecalEmitterSystem
 {
 public:
 	virtual int	GetDecalIndexForName( char const *decalname ) = 0;
-	virtual const char *GetDecalNameForIndex( int nIndex ) = 0;
 	virtual char const *TranslateDecalForGameMaterial( char const *decalName, unsigned char gamematerial ) = 0;
 };
 
