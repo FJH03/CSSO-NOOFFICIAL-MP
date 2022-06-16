@@ -184,7 +184,7 @@ protected:
 	CFireOverlay		*m_pFireOverlay;
 
 	// New Particle Fire Effect
-	CNewParticleEffect *m_hEffect;
+	CUtlReference<CNewParticleEffect> m_hEffect;
 private:
 	C_FireSmoke( const C_FireSmoke & );
 };

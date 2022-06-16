@@ -71,9 +71,9 @@ public:
 	void SetOwner( CBaseEntity *pOwner ) { m_hOwner = pOwner; }
 	CNewParticleEffect* ReplaceWith( const char *pParticleSystemName );
 
-	static CSmartPtr<CNewParticleEffect> Create( CBaseEntity *pOwner, const char *pParticleSystemName,
+	static CNewParticleEffect *Create( CBaseEntity *pOwner, const char *pParticleSystemName,
 												 const char *pDebugName = NULL );
-	static CSmartPtr<CNewParticleEffect> Create( CBaseEntity *pOwner, CParticleSystemDefinition *pDef,
+	static CNewParticleEffect *Create( CBaseEntity *pOwner, CParticleSystemDefinition *pDef,
 												 const char *pDebugName = NULL );
 	virtual int DrawModel( int flags );
 
@@ -306,7 +306,7 @@ inline void CNewParticleEffect::MarkShouldPerformCullCheck( bool bEnable )
 	m_bShouldPerformCullCheck = bEnable;
 }
 
-inline CSmartPtr<CNewParticleEffect> CNewParticleEffect::Create( CBaseEntity *pOwner, const char *pParticleSystemName, const char *pDebugName )
+inline CNewParticleEffect *CNewParticleEffect::Create( CBaseEntity *pOwner, const char *pParticleSystemName, const char *pDebugName )
 {
 	CNewParticleEffect *pRet = new CNewParticleEffect( pOwner, pParticleSystemName );
 	pRet->m_pDebugName = pDebugName;
@@ -314,7 +314,7 @@ inline CSmartPtr<CNewParticleEffect> CNewParticleEffect::Create( CBaseEntity *pO
 	return pRet;
 }
 
-inline CSmartPtr<CNewParticleEffect> CNewParticleEffect::Create( CBaseEntity *pOwner, CParticleSystemDefinition *pDef, const char *pDebugName )
+inline CNewParticleEffect *CNewParticleEffect::Create( CBaseEntity *pOwner, CParticleSystemDefinition *pDef, const char *pDebugName )
 {
 	CNewParticleEffect *pRet = new CNewParticleEffect( pOwner, pDef );
 	pRet->m_pDebugName = pDebugName;

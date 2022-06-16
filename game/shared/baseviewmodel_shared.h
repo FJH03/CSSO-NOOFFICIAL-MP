@@ -209,7 +209,7 @@ private:
 	virtual void 			OnNewParticleEffect( const char *pszParticleName, CNewParticleEffect *pNewParticleEffect );
 	virtual void 			OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect );
 
-	CNewParticleEffect* m_viewmodelParticleEffect;
+	CUtlReference<CNewParticleEffect> m_viewmodelParticleEffect;
 
 #endif
 

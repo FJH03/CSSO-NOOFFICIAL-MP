@@ -223,8 +223,8 @@ void ParticleEffectCallback( const CEffectData &data )
 			pszName = GameRules()->TranslateEffectForVisionFilter( "particles", pszName );
 		}
 
-		pEffect = CNewParticleEffect::Create( NULL, pszName );
-		if ( pEffect->IsValid() )
+		CUtlReference<CNewParticleEffect> pEffect = CNewParticleEffect::Create( NULL, pszName );
+		if ( pEffect.IsValid() && pEffect->IsValid() )
 		{
 			pEffect->SetSortOrigin( data.m_vOrigin );
 			pEffect->SetControlPoint( 0, data.m_vOrigin );
