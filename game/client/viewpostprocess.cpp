@@ -1365,6 +1365,61 @@ void SetOverrideTonemapScale( bool bEnableOverride, float flTonemapScale )
 	GetCurrentTonemappingSystem()->SetOverrideTonemapScale( bEnableOverride, flTonemapScale );
 }
 
+//=====================================================================================================================
+// BloomAdd material proxy ============================================================================================
+//=====================================================================================================================
+
+class CBloomAddMaterialProxy : public CEntityMaterialProxy
+{
+public:
+	CBloomAddMaterialProxy();
+	virtual ~CBloomAddMaterialProxy() {}
+	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
+	virtual void OnBind( C_BaseEntity *pEntity );
+	virtual IMaterial *GetMaterial();
+
+private:
+	IMaterialVar *m_pMaterialParam_BloomAmount;
+
+public:
+	static void SetBloomAmount( float flBloomAmount ) { s_flBloomAmount = flBloomAmount; }
+
+private:
+	static float s_flBloomAmount;
+};
+
+float CBloomAddMaterialProxy::s_flBloomAmount = 1.0f;
+
+CBloomAddMaterialProxy::CBloomAddMaterialProxy()
+: m_pMaterialParam_BloomAmount( NULL )
+{
+}
+
+bool CBloomAddMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
+{
+	bool bFoundVar = false;
+
+	m_pMaterialParam_BloomAmount = pMaterial->FindVar( "$c0_x", &bFoundVar, false );
+
+	return true;
+}
+
+void CBloomAddMaterialProxy::OnBind( C_BaseEntity *pEnt )
+{
+	if ( m_pMaterialParam_BloomAmount )
+		m_pMaterialParam_BloomAmount->SetFloatValue( s_flBloomAmount );
+}
+
+IMaterial *CBloomAddMaterialProxy::GetMaterial()
+{
+	if ( m_pMaterialParam_BloomAmount == NULL)
+		return NULL;
+
+	return m_pMaterialParam_BloomAmount->GetOwningMaterial();
+}
+
+EXPOSE_MATERIAL_PROXY( CBloomAddMaterialProxy, BloomAdd );
+
 
 //=====================================================================================================================
 // Engine_Post material proxy ============================================================================================
@@ -1391,6 +1446,7 @@ private:
 	IMaterialVar *m_pMaterialParam_AAValues;
 	IMaterialVar *m_pMaterialParam_AAValues2;
 	IMaterialVar *m_pMaterialParam_BloomEnable;
+	IMaterialVar *m_pMaterialParam_BloomAmount;
 	IMaterialVar *m_pMaterialParam_BloomUVTransform;
 	IMaterialVar *m_pMaterialParam_ColCorrectEnable;
 	IMaterialVar *m_pMaterialParam_ColCorrectNumLookups;
@@ -1398,8 +1454,8 @@ private:
 	IMaterialVar *m_pMaterialParam_ColCorrectLookupWeights;
 
 public:
-	static IMaterial * SetupEnginePostMaterial( const Vector4D & fullViewportBloomUVs, const Vector4D & fullViewportFBUVs, const Vector2D & destTexSize,
-												bool bPerformSoftwareAA, bool bPerformBloom, bool bPerformColCorrect, float flAAStrength );
+	static void SetupEnginePostMaterial( const Vector4D & fullViewportBloomUVs, const Vector4D & fullViewportFBUVs, const Vector2D & destTexSize,
+												bool bPerformSoftwareAA, bool bPerformBloom, bool bPerformColCorrect, float flAAStrength, float flBloomAmount );
 	static void SetupEnginePostMaterialAA( bool bPerformSoftwareAA, float flAAStrength );
 	static void SetupEnginePostMaterialTextureTransform( const Vector4D & fullViewportBloomUVs, const Vector4D & fullViewportFBUVs, Vector2D destTexSize );
 
@@ -1408,12 +1464,14 @@ private:
 	static float s_vBloomAAValues2[4];
 	static float s_vBloomUVTransform[4];
 	static int   s_PostBloomEnable;
+	static float s_PostBloomAmount;
 };
 
 float CEnginePostMaterialProxy::s_vBloomAAValues[4]					= { 0.0f, 0.0f, 0.0f, 0.0f };
 float CEnginePostMaterialProxy::s_vBloomAAValues2[4]				= { 0.0f, 0.0f, 0.0f, 0.0f };
 float CEnginePostMaterialProxy::s_vBloomUVTransform[4]				= { 0.0f, 0.0f, 0.0f, 0.0f };
 int   CEnginePostMaterialProxy::s_PostBloomEnable					= 1;
+float CEnginePostMaterialProxy::s_PostBloomAmount					= 1.0f;
 
 CEnginePostMaterialProxy::CEnginePostMaterialProxy()
 {
@@ -1421,6 +1479,7 @@ CEnginePostMaterialProxy::CEnginePostMaterialProxy()
 	m_pMaterialParam_AAValues2					= NULL;
 	m_pMaterialParam_BloomUVTransform			= NULL;
 	m_pMaterialParam_BloomEnable				= NULL;
+	m_pMaterialParam_BloomAmount				= NULL;
 	m_pMaterialParam_ColCorrectEnable			= NULL;
 	m_pMaterialParam_ColCorrectNumLookups		= NULL;
 	m_pMaterialParam_ColCorrectDefaultWeight	= NULL;
@@ -1440,6 +1499,7 @@ bool CEnginePostMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues
 	m_pMaterialParam_AAValues2 = pMaterial->FindVar( "$AAInternal3", &bFoundVar, false );
 	m_pMaterialParam_BloomUVTransform = pMaterial->FindVar( "$AAInternal2", &bFoundVar, false );
 	m_pMaterialParam_BloomEnable = pMaterial->FindVar( "$bloomEnable", &bFoundVar, false );
+	m_pMaterialParam_BloomAmount = pMaterial->FindVar( "$bloomAmount", &bFoundVar, false );
 	m_pMaterialParam_ColCorrectEnable = pMaterial->FindVar( "$colCorrectEnable", &bFoundVar, false );
 	m_pMaterialParam_ColCorrectNumLookups = pMaterial->FindVar( "$colCorrect_NumLookups", &bFoundVar, false );
 	m_pMaterialParam_ColCorrectDefaultWeight = pMaterial->FindVar( "$colCorrect_DefaultWeight", &bFoundVar, false );
@@ -1461,6 +1521,9 @@ void CEnginePostMaterialProxy::OnBind( C_BaseEntity *pEnt )
 
 	if ( m_pMaterialParam_BloomEnable )
 		m_pMaterialParam_BloomEnable->SetIntValue( s_PostBloomEnable );
+
+	if ( m_pMaterialParam_BloomAmount )
+		m_pMaterialParam_BloomAmount->SetFloatValue( s_PostBloomAmount );
 }
 
 IMaterial *CEnginePostMaterialProxy::GetMaterial()
@@ -1532,41 +1595,31 @@ void CEnginePostMaterialProxy::SetupEnginePostMaterialTextureTransform( const Ve
 	s_vBloomUVTransform[3]	= uvScale.y;
 }
 
-IMaterial * CEnginePostMaterialProxy::SetupEnginePostMaterial(	const Vector4D & fullViewportBloomUVs, const Vector4D & fullViewportFBUVs, const Vector2D & destTexSize,
-																bool bPerformSoftwareAA, bool bPerformBloom, bool bPerformColCorrect, float flAAStrength )
+void CEnginePostMaterialProxy::SetupEnginePostMaterial(	const Vector4D & fullViewportBloomUVs, const Vector4D & fullViewportFBUVs, const Vector2D & destTexSize,
+																bool bPerformSoftwareAA, bool bPerformBloom, bool bPerformColCorrect, float flAAStrength, float flBloomAmount )
 {
 	// Shouldn't get here if none of the effects are enabled
 	Assert( bPerformSoftwareAA || bPerformBloom || bPerformColCorrect );
 
-	s_PostBloomEnable		= bPerformBloom ? 1 : 0;
+	s_PostBloomEnable = bPerformBloom ? 1 : 0;
+	s_PostBloomAmount = flBloomAmount;
 
 	SetupEnginePostMaterialAA( bPerformSoftwareAA, flAAStrength );
 
-	if ( bPerformSoftwareAA || bPerformColCorrect )
-	{
-		SetupEnginePostMaterialTextureTransform( fullViewportBloomUVs, fullViewportFBUVs, destTexSize );
-		return materials->FindMaterial( "dev/engine_post", TEXTURE_GROUP_OTHER, true);
-	}
-	else
-	{
-		// Just use the old bloomadd material (which uses additive blending, unlike engine_post)
-		// NOTE: this path is what gets used for DX8 (which cannot enable AA or col-correction)
-		return materials->FindMaterial( "dev/bloomadd", TEXTURE_GROUP_OTHER, true);
-	}
+	SetupEnginePostMaterialTextureTransform( fullViewportBloomUVs, fullViewportFBUVs, destTexSize );
 }
 
 EXPOSE_MATERIAL_PROXY( CEnginePostMaterialProxy, engine_post );
 
 
-static void DrawBloomDebugBoxes( IMatRenderContext *pRenderContext )
+static void DrawBloomDebugBoxes( IMatRenderContext *pRenderContext, int nX, int nY, int nWidth, int nHeight )
 {
 	// draw inset rects which should have a centered bloom 
-	pRenderContext->SetRenderTarget(NULL);
-	int dest_width, dest_height;
-	pRenderContext->GetRenderTargetDimensions( dest_width, dest_height );
+	pRenderContext->PushRenderTargetAndViewport();
+	pRenderContext->SetRenderTarget( IsPS3() ? materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET ) : NULL );
 
 	// full screen clear
-	pRenderContext->Viewport( 0, 0, dest_width, dest_height );
+	pRenderContext->Viewport( nX, nY, nWidth, nHeight );
 	pRenderContext->ClearColor3ub( 0, 0, 0 );
 	pRenderContext->ClearBuffers( true, true );
 
@@ -1578,36 +1631,32 @@ static void DrawBloomDebugBoxes( IMatRenderContext *pRenderContext )
 	static int wx = 0;
 	wx = ( wx + 1 ) & 63;
 
-	pRenderContext->Viewport( dest_width / 2 + wx, dest_height / 2, size, size );
+	pRenderContext->Viewport( nWidth / 2 + nX + wx, nY + nHeight / 2, size, size );
 	pRenderContext->ClearColor3ub( 255, 255, 255 );
 	pRenderContext->ClearBuffers( true, true );
 
 	// upper left
-	pRenderContext->Viewport( inset, inset, size, size );
+	pRenderContext->Viewport( nX + inset, nY + inset, size, size );
 	pRenderContext->ClearBuffers( true, true );
 
 	// upper right
-	pRenderContext->Viewport( dest_width - inset - size, inset, size, size );
+	pRenderContext->Viewport( nX + nWidth - inset - size, nY + inset, size, size );
 	pRenderContext->ClearBuffers( true, true );
 	
 	// lower right
-	pRenderContext->Viewport( dest_width - inset - size, dest_height - inset - size, size, size );
+	pRenderContext->Viewport( nX + nWidth - inset - size, nY + nHeight - inset - size, size, size );
 	pRenderContext->ClearBuffers( true, true );
 	
 	// lower left
-	pRenderContext->Viewport( inset, dest_height - inset - size, size, size );
+	pRenderContext->Viewport( nX + inset, nX + nHeight - inset - size, size, size );
 	pRenderContext->ClearBuffers( true, true );
 	
 	// restore
-	pRenderContext->Viewport( 0, 0, dest_width, dest_height );
+	pRenderContext->PopRenderTargetAndViewport();
 }
 
 static float GetBloomAmount( void )
 {
-	// return bloom amount ( 0.0 if disabled or otherwise turned off )
-	if ( engine->GetDXSupportLevel() < 80 )
-		return 0.0;
-
 	HDRType_t hdrType = g_pMaterialSystemHardwareConfig->GetHDRType();
 
 	bool bBloomEnabled = (mat_hdr_level.GetInt() >= 1);
@@ -1624,10 +1673,6 @@ static float GetBloomAmount( void )
 	{
 		bBloomEnabled = false;
 	}
-	if( !g_pMaterialSystemHardwareConfig->CanDoSRGBReadFromRTs() && g_pMaterialSystemHardwareConfig->FakeSRGBWrite() )
-	{
-		bBloomEnabled = false;		
-	}
 
 	float flBloomAmount=0.0;
 
@@ -1639,6 +1684,20 @@ static float GetBloomAmount( void )
 		// Use the appropriate bloom scale settings.  Mapmakers's overrides the convar settings.
 		currentBloomAmount = GetCurrentBloomScale() * rate + ( 1.0f - rate ) * currentBloomAmount;
 		flBloomAmount = currentBloomAmount;
+
+		if (IsGameConsole())
+		{
+			//we want to scale the bloom effect down because the effect textures are lower reolution on the 360.
+			//target match 1280x1024
+			if ( (g_pMaterialSystem->GetCurrentConfigForVideoCard().m_VideoMode.m_Height == 720) )
+			{
+				flBloomAmount *= (720.0f/1024.0f);
+			}
+			else //640x480
+			{
+				flBloomAmount *= (480.0f/1024.0f);
+			}
+		}
 	}
 
 	if ( hdrType == HDR_TYPE_NONE )
@@ -2493,27 +2552,26 @@ static ConVar mat_postprocess_y( "mat_postprocess_y", "1" );
 
 void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, bool bPostVGui )
 {
-	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
-
-	CMatRenderContextPtr pRenderContext( materials );
+	// don't do this if in alt-tab
+	if ( w <=0 || h <= 0 )
+	{
+		return;
+	}
 
 	if ( g_bDumpRenderTargets )
 	{
-		g_bDumpRenderTargets = false;   // Turn off from previous frame
+		g_bDumpRenderTargets = false;	// Turn off from previous frame
 	}
 
 	if ( mat_dump_rts.GetBool() )
 	{
-		g_bDumpRenderTargets = true;    // Dump intermediate render targets this frame
-		s_nRTIndex = 0;                 // Used for numbering the TGA files for easy browsing
-		mat_dump_rts.SetValue( 0 );     // We only want to capture one frame, on rising edge of this convar
-
-		DumpTGAofRenderTarget( x, y, w, h, "BackBuffer" );
+		g_bDumpRenderTargets = true;	// Dump intermediate render targets this frame
+		s_nRTIndex = 0;					// Used for numbering the TGA files for easy browsing
+		mat_dump_rts.SetValue( 0 );		// We only want to capture one frame, on rising edge of this convar
 	}
-
-#if defined( _X360 )
-	pRenderContext->PushVertexShaderGPRAllocation( 16 ); //max out pixel shader threads
-#endif
+	
+	CMatRenderContextPtr pRenderContext( materials );
+	PIXEVENT( pRenderContext, "DoEnginePostProcessing" );
 
 	if ( r_queued_post_processing.GetInt() )
 	{
@@ -2524,6 +2582,10 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 			return;
 		}
 	}
+
+	#if defined( _X360 )
+		pRenderContext->PushVertexShaderGPRAllocation( 16 ); //max out pixel shader threads
+	#endif
 
 	GetTonemapSettingsFromEnvTonemapController();
 
@@ -2537,16 +2599,177 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 
 	if ( mat_debug_bloom.GetInt() == 1 )
 	{
-		DrawBloomDebugBoxes( pRenderContext );
+		DrawBloomDebugBoxes( pRenderContext, x, y, w, h );
 	}
 
+	s_bScreenEffectTextureIsUpdated = false; // Force an update in tone mapping code
 	DoTonemapping( pRenderContext, x, y, w, h, flAutoExposureMin, flAutoExposureMax );
+
+	ConVarRef mat_software_aa_strength( "mat_software_aa_strength" );
+
+	// Set software-AA on by default for 360
+	if ( mat_software_aa_strength.GetFloat() == -1.0f )
+	{
+		if ( IsGameConsole() )
+		{
+			mat_software_aa_strength.SetValue( 1.0f );
+			if ( g_pMaterialSystem->GetCurrentConfigForVideoCard().m_VideoMode.m_Height > 480 )
+			{
+				mat_software_aa_quality.SetValue( 0 );
+			}
+			else
+			{
+				// For standard-def, we have fewer pixels so we can afford 'high quality' mode (5->9 taps/pixel)
+				mat_software_aa_quality.SetValue( 1 );
+
+				// Disable in 480p for now
+				mat_software_aa_strength.SetValue( 0.0f );
+			}
+		}
+		else
+		{
+			mat_software_aa_strength.SetValue( 0.0f );
+		}
+	}
+
+	// Same trick for setting up the vgui aa strength
+	if ( mat_software_aa_strength_vgui.GetFloat() == -1.0f )
+	{
+		if ( IsGameConsole() && (g_pMaterialSystem->GetCurrentConfigForVideoCard().m_VideoMode.m_Height == 720) )
+		{
+			mat_software_aa_strength_vgui.SetValue( 2.0f );
+		}
+		else
+		{
+			mat_software_aa_strength_vgui.SetValue( 1.0f );
+		}
+	}
+
+	float flAAStrength;
+
+	// We do a second AA blur pass over the TF intro menus. use mat_software_aa_strength_vgui there instead
+	if ( IsGameConsole() && bPostVGui )
+	{
+		flAAStrength = mat_software_aa_strength_vgui.GetFloat();
+	}
+	else
+	{
+		flAAStrength = mat_software_aa_strength.GetFloat();
+	}
+
+	// Bloom, software-AA and color-correction (applied in 1 pass, after generation of the bloom texture)
+	float flBloomScale = GetBloomAmount();
+	bool  bPerformSoftwareAA	= ( flAAStrength != 0.0f );
+	bool  bPerformBloom			= !bPostVGui && ( flBloomScale > 0.0f );
+	bool  bPerformColCorrect	= !bPostVGui && 
+								  g_pColorCorrectionMgr->HasNonZeroColorCorrectionWeights() &&
+								  mat_colorcorrection.GetInt();
+
+	pRenderContext->EnableColorCorrection( bPerformColCorrect );
+
+	bool bPerformLocalContrastEnhancement = false;
+	IMaterial* pPostMat = materials->FindMaterial( "dev/engine_post", TEXTURE_GROUP_OTHER, true );
+
+	if ( true )
+	{
+		ITexture *pSrc = materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
+
+		int nSrcWidth = pSrc->GetActualWidth();
+		int nSrcHeight = pSrc->GetActualHeight();
+
+		ITexture *dest_rt1 = materials->FindTexture( "_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET );
+
+		if ( !s_bScreenEffectTextureIsUpdated && !IsPS3() )
+		{
+			UpdateScreenEffectTexture( 0, x, y, w, h, false );
+			s_bScreenEffectTextureIsUpdated = true;
+		}
+
+		if ( g_bDumpRenderTargets )
+		{
+			DumpTGAofRenderTarget( 0, 0, nSrcWidth, nSrcHeight, "FullFrameFB" );
+		}
+
+		if ( bPerformBloom || bPerformLocalContrastEnhancement )
+		{
+			Generate8BitBloomTexture( pRenderContext, x, y, w, h, true, false );
+		}
+
+		// Now add bloom (dest_rt0) to the framebuffer and perform software anti-aliasing and
+		// colour correction, all in one pass (improves performance, reduces quantization errors)
+		//
+		// First, set up texel coords (in the bloom and fb textures) at the centres of the outer pixel of the viewport:
+		float flFbWidth = ( float )pSrc->GetActualWidth();
+		float flFbHeight = ( float )pSrc->GetActualHeight();
+
+		Vector4D fullViewportPostSrcCorners(	0.0f,	-0.5f,	nSrcWidth/4-1,	nSrcHeight/4-1 );
+		Vector4D fullViewportPostSrcRect( nSrcWidth * ( ( x + 0 ) / flFbWidth ) / 4.0f + 0.0f, nSrcHeight * ( ( y + 0 ) / flFbHeight ) / 4.0f - 0.5f,
+										  nSrcWidth * ( ( x + w ) / flFbWidth ) / 4.0f - 1.0f, nSrcHeight * ( ( y + h ) / flFbHeight ) / 4.0f - 1.0f );
+		Vector4D fullViewportPostDestCorners(	0.0f,	 0.0f,	nSrcWidth - 1,	nSrcHeight - 1 );
+		Rect_t   fullViewportPostDestRect = {	x,		 y,		w,				h };
+		Vector2D destTexSize(									nSrcWidth,		nSrcHeight );
+
+		// When the viewport is not fullscreen, the UV-space size of a pixel changes
+		// (due to a stretchrect blit being used in UpdateScreenEffectTexture()), so
+		// we need to adjust the corner-pixel UVs sent to our drawrect call:
+		Vector2D uvScale(	( nSrcWidth  - ( nSrcWidth  / (float)w ) ) / ( nSrcWidth  - 1 ),
+							( nSrcHeight - ( nSrcHeight / (float)h ) ) / ( nSrcHeight - 1 ) );
+		CenterScaleQuadUVs( fullViewportPostSrcCorners,  uvScale );
+		CenterScaleQuadUVs( fullViewportPostDestCorners, uvScale );
+
+		Rect_t   partialViewportPostDestRect   = fullViewportPostDestRect;
+		Vector4D partialViewportPostSrcCorners = fullViewportPostSrcCorners;
+		if ( debug_postproc.GetInt() == 2 )
+		{
+			// Restrict the post effects to the centre quarter of the screen
+			// (we only use a portion of the bloom texture, so this *does* affect bloom texture UVs)
+			partialViewportPostDestRect.x		+= 0.25f*fullViewportPostDestRect.width;
+			partialViewportPostDestRect.y		+= 0.25f*fullViewportPostDestRect.height;
+			partialViewportPostDestRect.width	-= 0.50f*fullViewportPostDestRect.width;
+			partialViewportPostDestRect.height	-= 0.50f*fullViewportPostDestRect.height;
+
+			// This math interprets texel coords as being at corner pixel centers (*not* at corner vertices):
+			Vector2D uvScale(	1.0f - ( (w / 2) / (float)(w - 1) ),
+								1.0f - ( (h / 2) / (float)(h - 1) ) );
+			CenterScaleQuadUVs( partialViewportPostSrcCorners, uvScale );
+		}
+
+		// Temporary hack... Color correction was crashing on the first frame 
+		// when run outside the debugger for some mods (DoD). This forces it to skip
+		// a frame, ensuring we don't get the weird texture crash we otherwise would.
+		// FIXME: This will be removed when the true cause is found [added: Main CL 144694]
+		static bool bFirstFrame = !IsGameConsole();
+		if ( !bFirstFrame || !bPerformColCorrect )
+		{
+			Vector4D v4dFullViewportPostDestRect( fullViewportPostDestRect.x, fullViewportPostDestRect.y,
+												  fullViewportPostDestRect.x + fullViewportPostDestRect.width - 1,
+												  fullViewportPostDestRect.y + fullViewportPostDestRect.height - 1 );
+
+			CEnginePostMaterialProxy::SetupEnginePostMaterial( fullViewportPostSrcRect, v4dFullViewportPostDestRect, destTexSize, bPerformSoftwareAA, bPerformBloom, bPerformColCorrect, flAAStrength, flBloomScale );
+
+			pRenderContext->DrawScreenSpaceRectangle( pPostMat,
+													  0, 0,
+													  partialViewportPostDestRect.width, partialViewportPostDestRect.height,
+													  fullViewportPostSrcRect.x, fullViewportPostSrcRect.y,
+													  fullViewportPostSrcRect.z, fullViewportPostSrcRect.w,
+
+													  dest_rt1->GetActualWidth(), dest_rt1->GetActualHeight(),
+													  GetClientWorldEntity()->GetClientRenderable(),
+													  mat_postprocess_x.GetInt(), mat_postprocess_y.GetInt() );
+
+			if ( g_bDumpRenderTargets )
+			{
+				DumpTGAofRenderTarget( 0, 0, partialViewportPostDestRect.width, partialViewportPostDestRect.height, "EnginePost" );
+			}
+		}
+		bFirstFrame = false;
+	}
 
 	GetCurrentTonemappingSystem()->DisplayHistogram();
 
-#if defined( _X360 )
-	pRenderContext->PopVertexShaderGPRAllocation();
-#endif
+	#if defined( _X360 )
+		pRenderContext->PopVertexShaderGPRAllocation();
+	#endif
 }
 
 void DoBlurFade( float flStrength, float flDesaturate, int x, int y, int w, int h )
