@@ -88,6 +88,7 @@ class CFuncLadder;
 class CNavArea;
 class CHintSystem;
 class CAI_Expresser;
+class CTonemapTrigger;
 
 #if defined USES_ECON_ITEMS
 class CEconWearable;
@@ -632,6 +633,11 @@ public:
 
 	virtual void			HandleAnimEvent( animevent_t *pEvent );
 
+	CBaseEntity				*GetTonemapController( void ) const
+	{
+		return m_hTonemapController.Get();
+	}
+
 	virtual bool			ShouldAnnounceAchievement( void );
 
 #if defined USES_ECON_ITEMS
@@ -868,6 +874,10 @@ public:
 	void InitFogController( void );
 	void InputSetFogController( inputdata_t &inputdata );
 
+	void OnTonemapTriggerStartTouch( CTonemapTrigger *pTonemapTrigger );
+	void OnTonemapTriggerEndTouch( CTonemapTrigger *pTonemapTrigger );
+	CUtlVector< CHandle< CTonemapTrigger > > m_hTriggerTonemapList;
+
 	// Used by env_soundscape_triggerable to manage when the player is touching multiple
 	// soundscape triggers simultaneously.
 	// The one at the HEAD of the list is always the current soundscape for the player.
@@ -1008,6 +1018,9 @@ protected:
 	float					m_fDelay;			// replay delay in seconds
 	float					m_fReplayEnd;		// time to stop replay mode
 	int						m_iReplayEntity;	// follow this entity in replay
+
+	virtual void UpdateTonemapController( void );
+	CNetworkHandle( CBaseEntity, m_hTonemapController );
 
 private:
 	void HandleFuncTrain();

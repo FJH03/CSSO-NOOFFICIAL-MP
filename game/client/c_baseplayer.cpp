@@ -263,6 +263,8 @@ END_RECV_TABLE()
 		RecvPropInt			( RECVINFO( m_nWaterLevel ) ),
 		RecvPropFloat		( RECVINFO( m_flLaggedMovementValue )),
 
+		RecvPropEHandle		( RECVINFO( m_hTonemapController ) ),
+
 	END_RECV_TABLE()
 
 	

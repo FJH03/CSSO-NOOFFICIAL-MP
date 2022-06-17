@@ -555,10 +555,14 @@ public:
 
 	void SetToneMappingScaleLinear( const Vector &scale )
 	{
+		m_LastSetToneMapScale = scale;
 		m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::SetToneMappingScaleLinear, RefToVal( scale ) );
-		m_LastSetToneMapScale = Vector( scale );
 	}
 
+	Vector GetToneMappingScaleLinear( void )
+	{
+		return m_LastSetToneMapScale;
+	}
 
 	void DeferredBeginBatch( uint16 *pIndexData, int nIndices );
 	void DeferredDrawPrimList( IMesh *pMesh, CPrimList *pLists, int nLists );

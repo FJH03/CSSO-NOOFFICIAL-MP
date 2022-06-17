@@ -988,6 +988,7 @@ ConVar cl_autohelp(
 		"env_sun",
 		"env_wind",
 		"env_fog_controller",
+		"env_tonemap_controller",
 		"func_brush",
 		"func_wall",
 		"func_buyzone",

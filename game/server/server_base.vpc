@@ -329,6 +329,7 @@ $Project
 		$File	"env_screenoverlay.cpp"
 		$File	"env_texturetoggle.cpp"
 		$File	"env_tonemap_controller.cpp"
+		$File	"env_tonemap_controller.h"
 		$File	"$SRCDIR\game\shared\env_wind_shared.cpp"
 		$File	"$SRCDIR\game\shared\env_wind_shared.h"
 		$File	"env_zoom.cpp"
