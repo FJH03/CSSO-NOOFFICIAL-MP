@@ -23,6 +23,7 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 		SHADER_PARAM( AAINTERNAL2,				SHADER_PARAM_TYPE_VEC4,		"[0 0 0 0]",		"Internal anti-aliasing values set via material proxy" )
 		SHADER_PARAM( AAINTERNAL3,				SHADER_PARAM_TYPE_VEC4,		"[0 0 0 0]",		"Internal anti-aliasing values set via material proxy" )
 		SHADER_PARAM( BLOOMENABLE,				SHADER_PARAM_TYPE_BOOL,		"1",				"Enable bloom" )
+		SHADER_PARAM( BLOOMAMOUNT,				SHADER_PARAM_TYPE_FLOAT,	"1.0",				"Bloom scale factor" )
 	END_SHADER_PARAMS
 
 	SHADER_INIT_PARAMS()
@@ -46,6 +47,10 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 		if( !params[ BLOOMENABLE ]->IsDefined() )
 		{
 			params[ BLOOMENABLE ]->SetIntValue( 1 );
+		}
+		if ( !params[ BLOOMAMOUNT ]->IsDefined() )
+		{
+			params[ BLOOMAMOUNT ]->SetFloatValue( 1.0f );
 		}
 		SET_FLAGS2( MATERIAL_VAR2_NEEDS_FULL_FRAME_BUFFER_TEXTURE );
 	}
@@ -190,6 +195,7 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 			int colCorrectEnabled			=    ccInfo.m_bIsEnabled;
 
 			float flBloomFactor = bloomEnabled ? 1.0f : 0.0f;
+			flBloomFactor *= params[BLOOMAMOUNT]->GetFloatValue();
 			float bloomConstant[4] = { flBloomFactor, flBloomFactor, flBloomFactor, flBloomFactor };
 			pShaderAPI->SetPixelShaderConstant( 5, bloomConstant );
 
