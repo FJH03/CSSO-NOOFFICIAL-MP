@@ -434,7 +434,9 @@ public:
 	Vector2D m_vecLastPositionAtFullCrouchSpeed;
 	
 	// Data for only the local player
-	CNetworkVarEmbedded( CPlayerLocalData, m_Local );
+	CNetworkVarEmbedded( CPlayerLocalData, m_Local )
+
+	EHANDLE					m_hTonemapController;
 
 #if defined USES_ECON_ITEMS
 	CNetworkVarEmbedded( CAttributeList, m_AttributeList );

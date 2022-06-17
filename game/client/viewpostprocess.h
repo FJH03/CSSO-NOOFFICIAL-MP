@@ -19,6 +19,10 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 void DoImageSpaceMotionBlur( const CViewSetup &view, int x, int y, int w, int h );
 void DumpTGAofRenderTarget( const int x, const int y, const int width, const int height, const char *pFilename );
 
+void UpdateMaterialSystemTonemapScalar();
+float GetCurrentTonemapScale();
+void SetOverrideTonemapScale( bool bEnableOverride, float flTonemapScale );
+
 void DoBlurFade( float flStrength, float flDesaturate, int x, int y, int w, int h );
 
 void ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *viewSetup );

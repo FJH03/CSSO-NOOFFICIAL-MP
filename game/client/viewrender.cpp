@@ -1977,9 +1977,8 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 
 		g_pColorCorrectionMgr->UpdateColorCorrection();
 
-		pRenderContext.GetFrom( materials );
-		pRenderContext->TurnOnToneMapping();
-		pRenderContext.SafeRelease();
+		// Send the current tonemap scalar to the material system
+		UpdateMaterialSystemTonemapScalar();
 
 		// clear happens here probably
 		SetupMain3DView( viewRender, nClearFlags );
@@ -2070,6 +2069,13 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 
 		// Prevent sound stutter if going slow
 		engine->Sound_ExtraUpdate();	
+
+		if ( g_pMaterialSystemHardwareConfig->GetHDRType() != HDR_TYPE_NONE )
+		{
+			pRenderContext.GetFrom( materials );
+			pRenderContext->SetToneMappingScaleLinear(Vector(1,1,1));
+			pRenderContext.SafeRelease();
+		}
 	
 		if ( !building_cubemaps.GetBool() && viewRender.m_bDoBloomAndToneMapping )
 		{
@@ -2105,13 +2111,6 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 		}
 
 		PerformScreenSpaceEffects( 0, 0, viewRender.width, viewRender.height );
-
-		if ( g_pMaterialSystemHardwareConfig->GetHDRType() == HDR_TYPE_INTEGER )
-		{
-			pRenderContext.GetFrom( materials );
-			pRenderContext->SetToneMappingScaleLinear(Vector(1,1,1));
-			pRenderContext.SafeRelease();
-		}
 
 		g_pClientMode->DoPostScreenSpaceEffects( &viewRender );
 

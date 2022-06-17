@@ -2983,6 +2983,10 @@ void CMatRenderContext::SetScissorRect( const int nLeft, const int nTop, const i
 
 void CMatRenderContext::SetToneMappingScaleLinear( const Vector &scale )
 {
+	// Keep a copy in CMatRenderContext since CMatRenderContextBase::GetToneMappingScaleLinear() doesn't have access to ShaderAPI
+	m_LastSetToneMapScale = scale;
+
+	// Call into ShaderAPI
 	g_pShaderAPI->SetToneMappingScaleLinear( scale );
 }
 
