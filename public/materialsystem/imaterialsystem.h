@@ -1457,19 +1457,11 @@ public:
 	virtual void GetWorldSpaceCameraPosition( Vector *pCameraPos ) = 0;
 	virtual void GetWorldSpaceCameraVectors( Vector *pVecForward, Vector *pVecRight, Vector *pVecUp ) = 0;
 
-	// Tone mapping
-	virtual void				ResetToneMappingScale( float monoscale) = 0; 			// set scale to monoscale instantly with no chasing
-	virtual void				SetGoalToneMappingScale( float monoscale)  = 0; 			// set scale to monoscale instantly with no chasing
-
-	// call TurnOnToneMapping before drawing the 3d scene to get the proper interpolated brightness
-	// value set.
-	virtual void				TurnOnToneMapping() = 0;
-
 	// Set a linear vector color scale for all 3D rendering.
 	// A value of [1.0f, 1.0f, 1.0f] should match non-tone-mapped rendering.
 	virtual void				SetToneMappingScaleLinear( const Vector &scale ) = 0;
-
 	virtual Vector				GetToneMappingScaleLinear( void ) = 0;
+
 	virtual void				SetShadowDepthBiasFactors( float fSlopeScaleDepthBias, float fDepthBias ) = 0;
 
 	// Apply stencil operations to every pixel on the screen without disturbing depth or color buffers
