@@ -56,7 +56,7 @@ ConVar mat_texture_reload_frame_swap_workaround( "mat_texture_reload_frame_swap_
 ConVar mat_requires_rt_alloc_first( "mat_requires_rt_alloc_first", "0", FCVAR_HIDDEN );
 
 // Make sure this convar gets created before videocfg.lib is initialized, so it can be driven by dxsupport.cfg
-static ConVar mat_tonemapping_occlusion_use_stencil( "mat_tonemapping_occlusion_use_stencil", "0" );
+static ConVar mat_tonemapping_occlusion_use_stencil( "mat_tonemapping_occlusion_use_stencil", "0", FCVAR_DEVELOPMENTONLY );
 
 #ifdef DX_TO_GL_ABSTRACTION
 // In GL mode, we currently require mat_dxlevel to be between 90-92
