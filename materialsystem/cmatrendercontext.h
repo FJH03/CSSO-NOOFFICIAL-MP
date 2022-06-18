@@ -134,10 +134,7 @@ public:
 	virtual void							GetWorldSpaceCameraPosition( Vector *pCameraPos );
 	virtual void							GetWorldSpaceCameraVectors( Vector *pVecForward, Vector *pVecRight, Vector *pVecUp );
 
-	void									ResetToneMappingScale( float scvalue);
-	void									TurnOnToneMapping();
 	Vector									GetToneMappingScaleLinear();
-	void									SetGoalToneMappingScale( float monoscale);
 
 	// Inherited from IMaterialSystemInternal
 	int										GetLightmapPage( void );

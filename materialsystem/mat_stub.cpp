@@ -1989,12 +1989,6 @@ public:
 	virtual void PushHeightClipPlane( void )
 	{
 	}
-	void ResetToneMappingScale( float sc)
-	{
-	}
-	void TurnOnToneMapping()
-	{
-	}
 
 	virtual void GetDXLevelDefaults(uint &max_dxlevel,uint &recommended_dxlevel)
 	{
@@ -2040,8 +2034,6 @@ public:
 	virtual void BindBatch( IMesh* pVertices, IMaterial *pAutoBind = NULL ) {}
 	virtual void DrawBatch(int nFirstIndex, int nIndexCount )  {}
 	virtual void EndBatch()  {}
-
-	virtual void SetGoalToneMappingScale(float) {}
 
 	virtual bool SupportsShadowDepthTextures( void ) { return false; }
 

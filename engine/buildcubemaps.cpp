@@ -184,8 +184,7 @@ static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase
 				bool bOverExposedTexels=true;
 				while( bOverExposedTexels && (exposure>0.05))
 				{
-					mat_force_tonemap_scale.SetValue(0.0f);
-					pRenderContext->ResetToneMappingScale( exposure );
+					mat_force_tonemap_scale.SetValue( exposure );
 					g_ClientDLL->RenderView( view, nFlags, 0 );
 					uint8 *pImage = new uint8[ screenBufSize * screenBufSize * 4 ];
 					uint8 *pImage1 = new uint8[ tgaSize * tgaSize * 4 ];
@@ -231,6 +230,7 @@ static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase
 					exposure*=0.75;
 					materials->SwapBuffers();
 				}
+				mat_force_tonemap_scale.SetValue( 0.0f );
 				Q_snprintf( name, sizeof( name ), "%s%s%s", pFileNameBase, facingName[side],pExtension );
 //				hdr_map.WritePFM(name);
 			}
