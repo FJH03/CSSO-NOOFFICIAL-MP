@@ -924,7 +924,7 @@ float CMatRenderContextBase::ComputePixelDiameterOfSphere( const Vector& vecAbsO
 	return vheight * fabs( clipPos2.y - clipPos1.y ) / 2.0f;
 }
 
-ConVar mat_accelerate_adjust_exposure_down( "mat_accelerate_adjust_exposure_down", "3.0", FCVAR_CHEAT );
+ConVar mat_accelerate_adjust_exposure_down( "mat_accelerate_adjust_exposure_down", "40.0", FCVAR_CHEAT );
 ConVar mat_hdr_manual_tonemap_rate( "mat_hdr_manual_tonemap_rate", "1.0" );
 ConVar mat_hdr_tonemapscale( "mat_hdr_tonemapscale", "1.0", FCVAR_CHEAT );
 ConVar mat_tonemap_algorithm( "mat_tonemap_algorithm", "1", FCVAR_CHEAT, "0 = Original Algorithm 1 = New Algorithm" );
