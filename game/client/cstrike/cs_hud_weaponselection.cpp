@@ -633,7 +633,7 @@ void CCSHudWeaponSelection::UpdateSlotLabels()
 
 			if ( bFirstTime )
 			{
-				iXPos = GetWide() - icons_base_xpos + slot_label_xpos;
+				iXPos = GetWide() - m_pSlotLabels[i]->GetWide() - slot_label_xpos;
 				iYPos = icons_base_ypos + slot_label_ypos;
 				if ( pPlayer->HasDefuser() )
 					iYPos -= weapon_icon_defuser_margin;
