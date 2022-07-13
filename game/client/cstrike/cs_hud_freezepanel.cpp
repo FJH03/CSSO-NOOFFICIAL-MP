@@ -124,7 +124,7 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 				m_pDominationIcon->SetImage( "hud/freeze_nemesis" );
 				m_pDominationIcon->SetVisible( true );
 
-				//SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find("#FreezePanel_NewNemesis"));
+				SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find("#FreezePanel_NewNemesis"));
 			}
 			// was the killer your pre-existing nemesis?
 			else if ( pKiller && pKiller->IsPlayerDominated( iPlayerIndexVictim ) )
@@ -132,14 +132,14 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 				m_pDominationIcon->SetImage( "hud/freeze_nemesis" );
 				m_pDominationIcon->SetVisible( true );
 
-				//SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find("#FreezePanel_OldNemesis"));
+				SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find("#FreezePanel_OldNemesis"));
 			}
 			else if ( event->GetInt( "revenge" ) > 0 )
 			{
 				m_pDominationIcon->SetImage( "hud/freeze_revenge" );
 				m_pDominationIcon->SetVisible( true );
 
-				//SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find("#FreezePanel_Revenge"));
+				SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find("#FreezePanel_Revenge"));
 			}
 			else if ( pKiller == pLocalPlayer || pKiller == NULL )
 			{
@@ -147,7 +147,7 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 
 				// is it a grenade suicide?
 				// only he and decoy is included because you cant suicide from other grenades (no shit)
-				/*if ( StringHasPrefixCaseSensitive(szWeapon, "hegrenade") ||
+				if ( StringHasPrefixCaseSensitive(szWeapon, "hegrenade") ||
 					 StringHasPrefixCaseSensitive( szWeapon, "decoy" ) )
 				{
 					SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find( "#FreezePanel_KilledByOwnGrenade" ) );
@@ -159,12 +159,12 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 				else
 				{
 					SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find( "#FreezePanel_KilledSelf" ) );
-				}*/
+				}
 			}
 			else if ( szWeapon && szWeapon[0] )
 			{
 				m_pDominationIcon->SetVisible( false );
-				/*if ( pKiller )
+				if ( pKiller )
 				{
 					const char *pszLocString = "#FreezePanel_Killer_Weapon";
 					wchar_t wszLocalizedString[256];
@@ -197,7 +197,7 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 						{
 							g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pVGuiLocalize->Find( pszLocString ), 1, g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_Molotov" ) );
 						}
-						else if ( !V_strcmp(szWeapon, "inferno") )
+						else if ( !V_strcmp( szWeapon, "inferno" ) )
 						{
 							V_swprintf_safe( wszLocalizedString, L"" FMT_WS, g_pVGuiLocalize->Find( "#FreezePanel_KilledByFire" ) );
 							SetDialogVariable( "InfoLabel", wszLocalizedString );
@@ -219,7 +219,7 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 						g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pVGuiLocalize->Find( pszLocString ), 1, g_pVGuiLocalize->Find( pWeaponInfo->szPrintName ) );
 					}
 					SetDialogVariable( "InfoLabel", wszLocalizedString );
-				}*/
+				}
 			}
 
 			wchar_t wzBind[16] = L"";
