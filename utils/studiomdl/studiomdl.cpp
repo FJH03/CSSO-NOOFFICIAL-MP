@@ -3357,6 +3357,10 @@ int ParseCmdlistToken( int &numcmds, s_animcmd_t *cmds )
 	{
 		pcmd->cmd = CMD_NOANIMATION;
 	}
+	else if (stricmp("noanim_keepduration", token ) == 0)
+	{
+		pcmd->cmd = CMD_NOANIM_KEEPDURATION;
+	}
 	else if (stricmp("lineardelta", token ) == 0)
 	{
 		pcmd->cmd = CMD_LINEARDELTA;

@@ -95,7 +95,7 @@ void matchBlend( s_animation_t *pDestAnim, s_animation_t *pSrcAnimation, int iSr
 void makeAngle( s_animation_t *panim, float angle );
 void fixupIKErrors( s_animation_t *panim, s_ikrule_t *pRule );
 void createDerivative( s_animation_t *panim, float scale );
-void clearAnimations( s_animation_t *panim );
+void clearAnimations( s_animation_t *panim, bool bRetainDuration = false );
 void counterRotateBone( s_animation_t *panim, int bone, QAngle target );
 void localHierarchy( s_animation_t *panim, char *pBonename, char *pParentname, int start, int peak, int tail, int end  );
 
@@ -221,6 +221,11 @@ void processAnimations()
 			case CMD_NOANIMATION:
 				{
 					clearAnimations( panim );
+				}
+				break;
+			case CMD_NOANIM_KEEPDURATION:
+				{
+					clearAnimations( panim, true );
 				}
 				break;
 			case CMD_LINEARDELTA:
@@ -1390,23 +1395,30 @@ void createDerivative( s_animation_t *panim, float scale )
 // Purpose: subtract each frame from the previous to calculate the animations derivative
 //-----------------------------------------------------------------------------
 
-void clearAnimations( s_animation_t *panim )
+void clearAnimations( s_animation_t *panim, bool bRetainDuration )
 {
 	panim->flags |= STUDIO_DELTA;
 	panim->flags |= STUDIO_ALLZEROS;
-	
-	panim->numframes = 1;
-	panim->startframe = 0;
-	panim->endframe = 1;
-	
-	int k;
 
-	for (k = 0; k < g_numbones; k++)
+	if ( !bRetainDuration )
 	{
-		panim->sanim[0][k].pos = Vector( 0, 0, 0 );
-		panim->sanim[0][k].rot = RadianEuler( 0, 0, 0 );
-		panim->weight[k] = 0.0;
-		panim->posweight[k] = 0.0;
+		panim->numframes = 1;
+		panim->startframe = 0;
+		panim->endframe = 1;
+	
+		int k;
+
+		for (k = 0; k < g_numbones; k++)
+		{
+			panim->sanim[0][k].pos = Vector( 0, 0, 0 );
+			panim->sanim[0][k].rot = RadianEuler( 0, 0, 0 );
+			panim->weight[k] = 0.0;
+			panim->posweight[k] = 0.0;
+		}
+	}
+	else
+	{
+		// fixme: zero the bone data?
 	}
 }
 

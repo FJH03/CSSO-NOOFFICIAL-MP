@@ -396,6 +396,7 @@ struct s_linearmove_t
 #define CMD_WORLDSPACEBLEND 19
 #define CMD_MATCHBLEND 20
 #define CMD_LOCALHIERARCHY 21
+#define CMD_NOANIM_KEEPDURATION 22
 
 struct s_animation_t;
 struct s_ikrule_t;
