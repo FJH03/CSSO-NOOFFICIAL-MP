@@ -1725,7 +1725,9 @@ void CCSPlayer::GiveDefaultItems()
 		GiveDefuser( false );
 	}
 
-	if ( CSGameRules()->IsArmorFree() )
+	if ( CSGameRules()->GetArmorFree() == 1 )
+		GiveNamedItem( "item_kevlar" );
+	else if ( CSGameRules()->GetArmorFree() == 2 )
 		GiveNamedItem( "item_assaultsuit" );
 
 	const char *pchTeamKnifeName = GetTeamNumber() == TEAM_TERRORIST ? "weapon_knife_t" : "weapon_knife";
