@@ -7809,7 +7809,7 @@ void CCSGameRules::EndCTTimeOut( void )
 
 ConVar mp_solid_teammates("mp_solid_teammates", "1", FCVAR_REPLICATED, "Determines whether teammates are solid or not." );
 ConVar mp_solid_enemies("mp_solid_enemies", "1", FCVAR_REPLICATED, "Determines whether enemies are solid or not." );
-ConVar mp_free_armor("mp_free_armor", "0", FCVAR_REPLICATED, "Determines whether armor and helmet are given automatically." );
+ConVar mp_free_armor("mp_free_armor", "0", FCVAR_REPLICATED, "Determines whether kevlar (1+) and/or helmet (2+) are given automatically." );
 ConVar mp_halftime("mp_halftime", "0", FCVAR_REPLICATED, "Determines whether the match switches sides in a halftime event.");
 ConVar mp_randomspawn("mp_randomspawn", "0", FCVAR_REPLICATED, "Determines whether players are to spawn. 0 = default; 1 = both teams; 2 = Terrorists; 3 = CTs." );
 ConVar mp_randomspawn_los("mp_randomspawn_los", "1", FCVAR_REPLICATED, "If using mp_randomspawn, determines whether to test Line of Sight when spawning." );
@@ -7870,9 +7870,9 @@ bool CCSGameRules::IsMatchWaitingForResume()
 }
 
 #ifndef CLIENT_DLL
-bool CCSGameRules::IsArmorFree()
+int CCSGameRules::GetArmorFree()
 {
-	return mp_free_armor.GetBool();
+	return mp_free_armor.GetInt();
 }
 #endif
 

@@ -312,7 +312,7 @@ public:
 	bool IsAwardsProgressAllowedForBotDifficulty() const; // returns false if the user is playing offline with trivial bots (no bots, harmless bots)
 
 #ifndef CLIENT_DLL
-	bool IsArmorFree();
+	int GetArmorFree();
 #endif
 	bool IsTeammateSolid( void ) const;				// returns true if teammates are solid obstacles in the current game mode
 	bool IsEnemySolid( void ) const;				// returns true if enemies are solid obstacles in the current game mode
