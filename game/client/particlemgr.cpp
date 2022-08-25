@@ -990,7 +990,7 @@ bool CParticleMgr::Init(unsigned long count, IMaterialSystem *pMaterials)
 	g_pParticleSystemMgr->AddBuiltinRenderingOperators();
 
 	// Send true to load the sheets
-	ParseParticleEffects( true );
+	ParseParticleEffects( true, false );
 
 #ifdef TF_CLIENT_DLL
 	if ( IsGameConsole() )

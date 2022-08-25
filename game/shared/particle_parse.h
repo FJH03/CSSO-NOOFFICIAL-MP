@@ -12,6 +12,7 @@
 
 #include "utlvector.h"
 #include "utlstring.h"
+#include "ifilelist.h"
 
 //-----------------------------------------------------------------------------
 // Particle attachment methods
@@ -43,11 +44,15 @@ extern int GetAttachTypeFromString( const char *pszString );
 //-----------------------------------------------------------------------------
 // Parse the particle manifest file & register the effects within it
 // Only needs to be called once per game, unless tools change particle definitions
-void ParseParticleEffects( bool bLoadSheets );
+void ParseParticleEffects( bool bLoadSheets, bool bPrecache );
+void ParseParticleEffectsMap( const char *pMapName, bool bLoadSheets, IFileList *pFilesToReload = NULL ); 
 
 // Precaches standard particle systems (only necessary on server)
 // Should be called once per level
 void PrecacheStandardParticleSystems( );
+
+class IFileList;
+void ReloadParticleEffectsInList( IFileList *pFilesToReload );
 
 //-----------------------------------------------------------------------------
 // Particle spawning methods

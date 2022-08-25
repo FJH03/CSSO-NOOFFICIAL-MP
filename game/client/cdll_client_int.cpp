@@ -1606,6 +1606,9 @@ void CHLClient::LevelInitPreEntity( char const* pMapName )
 	input->LevelInit();
 
 	vieweffects->LevelInit();
+
+	//Tony; loadup per-map manifests.
+	ParseParticleEffectsMap( pMapName, true );
 	
 	// Tell mode manager that map is changing
 	modemanager->LevelInit( pMapName );
@@ -2577,6 +2580,7 @@ void ReloadSoundEntriesInList( IFileList *pFilesToReload );
 //-----------------------------------------------------------------------------
 void CHLClient::ReloadFilesInList( IFileList *pFilesToReload )
 {
+	ReloadParticleEffectsInList( pFilesToReload );
 	ReloadSoundEntriesInList( pFilesToReload );
 }
 

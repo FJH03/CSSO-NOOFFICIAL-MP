@@ -58,7 +58,7 @@ int GetAttachTypeFromString( const char *pszString )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void ParseParticleEffects( bool bLoadSheets )
+void ParseParticleEffects( bool bLoadSheets, bool bPrecache )
 {
 	MEM_ALLOC_CREDIT();
 
@@ -70,7 +70,140 @@ void ParseParticleEffects( bool bLoadSheets )
 	int nCount = files.Count();
 	for ( int i = 0; i < nCount; ++i )
 	{
-		g_pParticleSystemMgr->ReadParticleConfigFile( files[i], false, false );
+		g_pParticleSystemMgr->ReadParticleConfigFile( files[i], bPrecache, false );
+	}
+
+	g_pParticleSystemMgr->DecommitTempMemory();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void ReloadParticleEffectsInList( IFileList *pFilesToReload )
+{
+	MEM_ALLOC_CREDIT();
+
+	CUtlVector<CUtlString> files;
+	GetParticleManifest( files );
+
+	// CAB 2/17/11 Reload all the particles regardless (Fixes filename change exploits).
+	bool bReloadAll = true;
+
+	//int nCount = files.Count();
+	//for ( int i = 0; i < nCount; ++i )
+	//{
+	//	// Skip the precache marker
+	//	const char *pFile = files[i];
+ //		if ( pFile[0] == '!' )
+ //		{
+ //			pFile++;
+ //		}
+
+	//	char szDX80Filename[MAX_PATH];
+	//	V_strncpy( szDX80Filename, pFile, sizeof( szDX80Filename ) );
+	//	V_StripExtension( pFile, szDX80Filename, sizeof( szDX80Filename ) );
+	//	V_strncat( szDX80Filename, "_dx80.", sizeof( szDX80Filename ) );
+	//	V_strncat( szDX80Filename, V_GetFileExtension( pFile ), sizeof( szDX80Filename ) );
+
+	//	if ( pFilesToReload->IsFileInList( pFile ) || pFilesToReload->IsFileInList( szDX80Filename ) )
+	//	{
+	//		Msg( "Reloading all particle files due to pure settings.\n" );
+	//		bReloadAll = true;
+	//		break;
+	//	}
+	//}
+
+	// Then check to see if we need to reload the map's particles
+	const char *pszMapName = NULL;
+#ifdef CLIENT_DLL
+	pszMapName = engine->GetLevelName();	
+#else
+	pszMapName = STRING( gpGlobals->mapname );
+#endif
+	if ( pszMapName && pszMapName[0] )
+	{
+		char mapname[MAX_MAP_NAME];
+		Q_FileBase( pszMapName, mapname, sizeof( mapname ) );
+		Q_strlower( mapname );
+		ParseParticleEffectsMap( mapname, true, pFilesToReload );
+	}
+
+	if ( bReloadAll )
+	{
+		ParseParticleEffects( true, true );
+	}
+	
+	g_pParticleSystemMgr->DecommitTempMemory();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: loads per-map manifest!
+//-----------------------------------------------------------------------------
+void ParseParticleEffectsMap( const char *pMapName, bool bLoadSheets, IFileList *pFilesToReload )
+{
+	MEM_ALLOC_CREDIT();
+
+	CUtlVector<CUtlString> files;
+	char szMapManifestFilename[MAX_PATH];
+
+	szMapManifestFilename[0] = NULL;
+
+	if ( pMapName && *pMapName )
+	{
+		V_snprintf( szMapManifestFilename, sizeof( szMapManifestFilename ), "maps/%s_particles.txt", pMapName );
+	}
+
+	// Open the manifest file, and read the particles specified inside it
+	KeyValues *manifest = new KeyValues( szMapManifestFilename );
+	if ( manifest->LoadFromFile( filesystem, szMapManifestFilename, "GAME" ) )
+	{
+		DevMsg( "Successfully loaded particle effects manifest '%s' for map '%s'\n", szMapManifestFilename, pMapName );
+		for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != NULL; sub = sub->GetNextKey() )
+		{
+			if ( !Q_stricmp( sub->GetName(), "file" ) )
+			{
+				// Ensure the particles are in the particles directory
+				char szPath[ 512 ];
+				Q_strncpy( szPath, sub->GetString(), sizeof( szPath ) );
+				Q_StripFilename( szPath );
+				char *pszPath = (szPath[0] == '!') ? &szPath[1] : &szPath[0];
+				if ( pszPath && pszPath[0] && !Q_stricmp( pszPath, "particles" ) )
+				{
+					files.AddToTail( sub->GetString() );
+					continue;
+				}
+				else
+				{
+					Warning( "CParticleMgr::LevelInit:  Manifest '%s' contains a particle file '%s' that's not under the particles directory. Custom particles must be placed in the particles directory.\n", szMapManifestFilename, sub->GetString() );
+				}
+			}
+			else
+			{
+				Warning( "CParticleMgr::LevelInit:  Manifest '%s' with bogus file type '%s', expecting 'file'\n", szMapManifestFilename, sub->GetName() );
+			}
+		}
+	}
+	else
+	{
+		// Don't print a warning, and don't proceed any further if the file doesn't exist!
+		return;
+	}
+
+	int nCount = files.Count();
+	if ( !nCount )
+	{
+		return;
+	}
+
+	g_pParticleSystemMgr->ShouldLoadSheets( bLoadSheets );
+
+	for ( int i = 0; i < nCount; ++i )
+	{
+		// If we've been given a list of particles to reload, only reload those.
+		if ( !pFilesToReload || (pFilesToReload && pFilesToReload->IsFileInList( files[i] )) )
+		{
+			g_pParticleSystemMgr->ReadParticleConfigFile( files[i], true, true );
+		}
 	}
 
 	g_pParticleSystemMgr->DecommitTempMemory();
