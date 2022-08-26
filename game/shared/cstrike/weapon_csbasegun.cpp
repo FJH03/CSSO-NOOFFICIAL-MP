@@ -514,7 +514,7 @@ void CWeaponCSBaseGun::BurstFireRemaining()
 	m_fAccuracyPenalty += weaponInfo.m_fInaccuracyImpulseFire[m_weaponMode];
 
 	// table driven recoil
-	Recoil( Secondary_Mode );
+	Recoil( Secondary_Mode, pPlayer );
 
 	++pPlayer->m_iShotsFired;
 	m_flRecoilIndex += 1.0f;
@@ -607,7 +607,7 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[weaponMode];
 
 	// table driven recoil
-	Recoil( weaponMode );
+	Recoil( weaponMode, pPlayer );
 
 	m_flRecoilIndex += 1.0f;
 

@@ -332,7 +332,7 @@ public:
 protected:
 
 	float	CalculateNextAttackTime( float flCycleTime );
-	void Recoil( CSWeaponMode weaponMode );
+	void Recoil( CSWeaponMode weaponMode, CCSPlayer* pPlayer );
 
 private:
 
