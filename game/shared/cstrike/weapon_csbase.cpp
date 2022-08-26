@@ -3159,11 +3159,10 @@ void CWeaponCSBase::OnLand( float fVelocity )
 	pPlayer->SetAimPunchAngle( angle );
 }
 
-void CWeaponCSBase::Recoil( CSWeaponMode weaponMode )
+void CWeaponCSBase::Recoil( CSWeaponMode weaponMode, CCSPlayer* pPlayer )
 {
 	// PiMoN: huge thanks to https://github.com/SwagSoftware/Kisak-Strike/!
 	//lwss - rebuilt this function from reversing retail bins
-	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
 

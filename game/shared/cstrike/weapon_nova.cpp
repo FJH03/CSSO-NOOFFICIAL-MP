@@ -146,7 +146,7 @@ void CWeaponNova::PrimaryAttack( void )
 	m_fAccuracyPenalty += weaponInfo.m_fInaccuracyImpulseFire[Primary_Mode];
 
 	// table driven recoil
-	Recoil( Primary_Mode );
+	Recoil( Primary_Mode, pPlayer );
 
 	++pPlayer->m_iShotsFired;
 	m_flRecoilIndex += 1.0f;
