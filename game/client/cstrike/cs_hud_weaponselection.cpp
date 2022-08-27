@@ -286,6 +286,15 @@ void CCSHudWeaponSelection::ShowAndUpdateSelection( int nType, C_BaseCombatWeapo
 	if ( !pPlayer )
 		return;
 
+	// if we have more than 0 ammo, then it's a grenade that asks to be removed but it shouldn't
+	// since it still has ammo
+	// a (weapon type == grenade) check added just in case, really no weapons except grenades
+	// should ever have more than 0 ammo on player
+	C_WeaponCSBase* pCSWeapon = dynamic_cast<C_WeaponCSBase*>(pWeapon);
+	if ( pCSWeapon && pCSWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_GRENADE &&
+		 nType == WEPSELECT_DROP && pPlayer->GetAmmoCount( pWeapon->GetPrimaryAmmoType() ) > 0 )
+		return;
+
 	CHudWeaponSelection *pHudSelection = (CHudWeaponSelection *)GET_HUDELEMENT( CHudWeaponSelection );
 	if ( !pHudSelection )
 		return;
@@ -322,9 +331,9 @@ void CCSHudWeaponSelection::ShowAndUpdateSelection( int nType, C_BaseCombatWeapo
 						}
 						// this is an edge case where this happens when the very first round starts
 						// but we can't add grenades back after they've been thrown because they are set as thrown before they've left our inventory.....
-						// if it's not a grenade, OR if its a grenade and hasn't been thrown, add it back
+						// if it's not a grenade, OR if its a grenade and hasn't been thrown, OR thrown but player still has it, add it back
 						// we are awarded bonus grenades late during gun gun arsenal mode, so we have to catch them here
-						if ( !pGrenade || (pGrenade && !pGrenade->IsPinPulled() && !pGrenade->IsBeingThrown() && !pGrenade->GetIsThrown()) )
+						if ( !pGrenade || (pGrenade && !pGrenade->IsPinPulled() && !pGrenade->IsBeingThrown() && (!pGrenade->GetIsThrown() || pPlayer->GetAmmoCount( pGrenade->GetPrimaryAmmoType() ) > 0)) )
 						{
 							AddWeapon( pNextWeapon, (GetSelectedWeapon() == pNextWeapon) );
 						}
