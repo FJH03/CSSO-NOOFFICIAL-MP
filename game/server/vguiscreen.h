@@ -66,6 +66,7 @@ private:
 	void InputSetInactive( inputdata_t &inputdata );
 
 	string_t m_strOverlayMaterial;
+	bool	m_bIsTransparent;
 
 	CNetworkVar( float, m_flWidth ); 
 	CNetworkVar( float, m_flHeight );
