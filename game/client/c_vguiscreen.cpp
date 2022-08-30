@@ -82,7 +82,7 @@ IMPLEMENT_CLIENTCLASS_DT(C_VGuiScreen, DT_VGuiScreen, CVGuiScreen)
 	RecvPropFloat( RECVINFO(m_flHeight) ),
 	RecvPropInt( RECVINFO(m_fScreenFlags) ),
 	RecvPropInt( RECVINFO(m_nPanelName) ),
-	RecvPropInt( RECVINFO(m_nAttachmentIndex) ),
+	RecvPropIntWithMinusOneFlag( RECVINFO(m_nAttachmentIndex) ),
 	RecvPropInt( RECVINFO(m_nOverlayMaterial) ),
 	RecvPropEHandle( RECVINFO(m_hPlayerOwner) ),
 END_RECV_TABLE()
@@ -180,7 +180,13 @@ void C_VGuiScreen::CreateVguiScreen( const char *pTypeName )
 	// Clear out any old screens.
 	DestroyVguiScreen();
 
+#if defined ( CSTRIKE_DLL )
+	// Asserts were firing for screens because they had EFL_USE_PARTITION_WHEN_NOT_SOLID but no physics data.
+	SetSolid( SOLID_NONE );
+	RemoveEFlags( EFL_USE_PARTITION_WHEN_NOT_SOLID );
+#else
 	AddEFlags( EFL_USE_PARTITION_WHEN_NOT_SOLID );
+#endif
 
 	// Create the new screen...
 	VGuiScreenInitData_t initData( this );
@@ -424,7 +430,7 @@ void C_VGuiScreen::ClientThink( void )
 		m_nOldPy = py;
 	}
 
-	if (m_nButtonPressed & IN_ATTACK)
+	if ( m_nButtonPressed & IN_ATTACK || m_nButtonPressed & IN_USE )
 	{
 		g_InputInternal->SetMouseCodeState( MOUSE_LEFT, vgui::BUTTON_PRESSED );
 		g_InputInternal->InternalMousePressed(MOUSE_LEFT);
@@ -434,7 +440,7 @@ void C_VGuiScreen::ClientThink( void )
 		g_InputInternal->SetMouseCodeState( MOUSE_RIGHT, vgui::BUTTON_PRESSED );
 		g_InputInternal->InternalMousePressed( MOUSE_RIGHT );
 	}
-	if ( (m_nButtonReleased & IN_ATTACK) || m_bLoseThinkNextFrame) // for a button release on loosing focus
+	if ( (m_nButtonReleased & IN_ATTACK) || ( m_nButtonReleased & IN_USE ) || m_bLoseThinkNextFrame) // for a button release on loosing focus
 	{
 		g_InputInternal->SetMouseCodeState( MOUSE_LEFT, vgui::BUTTON_RELEASED );
 		g_InputInternal->InternalMouseReleased( MOUSE_LEFT );
@@ -565,7 +571,12 @@ void C_VGuiScreen::DrawScreenOverlay()
 int	C_VGuiScreen::DrawModel( int flags )
 {
 	vgui::Panel *pPanel = m_PanelWrapper.GetPanel();
-	if (!pPanel || !IsActive())
+	if (!pPanel)
+		return 0;
+
+	pPanel->SetEnabled( IsActive() );
+	
+	if (!IsActive())
 		return 0;
 	
 	// Don't bother drawing stuff not visible to me...
@@ -835,7 +846,7 @@ bool CVGuiScreenPanel::Init( KeyValues* pKeyValues, VGuiScreenInitData_t* pInitD
 		C_VGuiScreen *screen = dynamic_cast< C_VGuiScreen * >( pInitData->m_pEntity );
 		if ( screen )
 		{
-			bool acceptsInput = pKeyValues->GetInt( "acceptsinput", 1 ) ? true : false;
+			bool acceptsInput = pKeyValues->GetBool( "acceptsinput", true );
 			screen->SetAcceptsInput( acceptsInput );
 		}
 	}
@@ -848,12 +859,12 @@ bool CVGuiScreenPanel::Init( KeyValues* pKeyValues, VGuiScreenInitData_t* pInitD
 vgui::Panel *CVGuiScreenPanel::CreateControlByName(const char *controlName)
 {
 	// Check the panel metaclass manager to make these controls...
-	if (!Q_strncmp(controlName, "MaterialImage", 20))
+	if ( StringHasPrefixCaseSensitive( controlName, "MaterialImage" ) )
 	{
 		return new CBitmapPanel(NULL, "BitmapPanel");
 	}
 
-	if (!Q_strncmp(controlName, "MaterialButton", 20))
+	if ( StringHasPrefixCaseSensitive( controlName, "MaterialButton" ) )
 	{
 		return new CBitmapButton(NULL, "BitmapButton", "");
 	}
