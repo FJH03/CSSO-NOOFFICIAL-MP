@@ -836,7 +836,7 @@ static void GetMaterialParameters( int iMaterial, float &flPenetrationModifier, 
 }
 
 
-static bool TraceToExit( Vector start, Vector dir, Vector &end, trace_t &trEnter, trace_t &trExit, float flStepSize, float flMaxDistance )
+static bool TraceToExit( CCSPlayer *pPlayer, Vector start, Vector dir, Vector &end, trace_t &trEnter, trace_t &trExit, float flStepSize, float flMaxDistance )
 {
 	float flDistance = 0;
 	Vector last = start;
@@ -858,7 +858,7 @@ static bool TraceToExit( Vector start, Vector dir, Vector &end, trace_t &trEnter
 		if ( (nCurrentContents & CS_MASK_SHOOT) == 0 || ((nCurrentContents & CONTENTS_HITBOX) && nStartContents != nCurrentContents) )
 		{
 			// this gets a bit more complicated and expensive when we have to deal with displacements
-			UTIL_TraceLine( end, vecTrEnd, CS_MASK_SHOOT|CONTENTS_HITBOX, NULL, &trExit );
+			UTIL_TraceLine( end, vecTrEnd, CS_MASK_SHOOT|CONTENTS_HITBOX, pPlayer, COLLISION_GROUP_NONE, &trExit );
 
 			// we exited the wall into a player's hitbox
 			if ( trExit.startsolid == true && (trExit.surface.flags & SURF_HITBOX)/*( nStartContents & CONTENTS_HITBOX ) == 0 && (nCurrentContents & CONTENTS_HITBOX)*/ )
@@ -1400,7 +1400,7 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 
 	// find exact penetration exit
 	trace_t exitTr;
-	if ( !TraceToExit( tr.endpos, vecDir, penetrationEnd, tr, exitTr, 4, MAX_PENETRATION_DISTANCE ) )
+	if ( !TraceToExit( this, tr.endpos, vecDir, penetrationEnd, tr, exitTr, 4, MAX_PENETRATION_DISTANCE ) )
 	{
 		// ended in solid
 		if ( (UTIL_PointContents ( tr.endpos ) & CS_MASK_SHOOT) == 0 )
