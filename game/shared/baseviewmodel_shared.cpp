@@ -465,8 +465,8 @@ void CBaseViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& eyePos
 				vecRight *=	flInvIronSightAmount;
 			}
 		}
-		vmorigin += ( viewmodel_offset_y.GetFloat() * vecForward ) + ( viewmodel_offset_z.GetFloat() * vecUp ) + ( viewmodel_offset_x.GetFloat() * vecRight );
-		vmangles += (owner->m_Local.m_aimPunchAngle * viewmodel_recoil.GetFloat() * 0.5f); // PiMoN: Valve are probably multiplying it by 0.5 as well... right? I mean it makes it look exactly like in CS:GO
+
+		vmorigin += (vecForward * viewmodel_offset_y.GetFloat()) + (vecUp * viewmodel_offset_z.GetFloat()) + (vecRight * viewmodel_offset_x.GetFloat());
 	}
 
 	CBaseCombatWeapon *pWeapon = m_hWeapon.Get();
@@ -497,6 +497,18 @@ void CBaseViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& eyePos
 		vieweffects->ApplyShake( vmorigin, vmangles, 0.1 );	
 	}
 #endif
+
+	// PiMoN: I reversed this code from retail binaries, and this check is incredibly useless!
+	// owner cannot be NULL, and surprise-suprise, IsPlayer() is always true on C_BasePlayer!!!
+	if ( owner && owner->IsPlayer() )
+	{
+		QAngle angRecoil = owner->GetAimPunchAngle();
+		angRecoil *= viewmodel_recoil.GetFloat() * 0.325f;
+		if ( ShouldFlipViewModel() )
+			angRecoil[YAW] = -angRecoil[YAW];
+
+		vmangles += angRecoil;
+	}
 
 	if( UseVR() )
 	{
