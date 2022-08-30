@@ -928,6 +928,7 @@ float CWeaponCSBase::GetInaccuracy() const
 	if ( pPlayer->GetGroundEntity() == nullptr )
 	{
 		float flInaccuracyJumpInitial = weaponInfo.m_fInaccuracyJumpInitial * weapon_air_spread_scale.GetFloat();
+		float flInaccuracyJumpApex = weaponInfo.m_fInaccuracyJumpApex * weapon_air_spread_scale.GetFloat();
 		static const float kMaxFallingPenalty = 2.0f;	// Accuracy is never worse than 2x starting penalty
 
 		// Use sqrt here to make the curve more "sudden" around the accurate point at the apex of the jump
@@ -937,7 +938,7 @@ float CWeaponCSBase::GetInaccuracy() const
 		float flAirSpeedInaccuracy = RemapVal( fSqrtVerticalSpeed,
 			fSqrtMaxJumpSpeed * 0.25f,	// Anything less than 6.25% of maximum speed has no additional accuracy penalty for z-motion (6.25% = .25 * .25)
 			fSqrtMaxJumpSpeed,			// Penalty at max jump speed
-			0.0f,						// No movement-related penalty when close to stopped
+			flInaccuracyJumpApex,		// No movement-related penalty when close to stopped
 			flInaccuracyJumpInitial );	// Movement-penalty at start of jump
 
 		// Clamp to min/max values.  (Don't use RemapValClamped because it makes clamping to > kJumpMovePenalty hard)

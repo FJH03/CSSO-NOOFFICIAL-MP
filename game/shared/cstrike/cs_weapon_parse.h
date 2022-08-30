@@ -268,6 +268,7 @@ public:
 	float m_fInaccuracyStand[2];
 	float m_fInaccuracyJump[2];
 	float m_fInaccuracyJumpInitial;
+	float m_fInaccuracyJumpApex;
 	float m_fInaccuracyLand[2];
 	float m_fInaccuracyLadder[2];
 	float m_fInaccuracyImpulseFire[2];
