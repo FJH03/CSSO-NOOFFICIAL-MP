@@ -195,7 +195,7 @@ extern ConVar ff_damage_reduction_other;
 ConVar phys_playerscale( "phys_playerscale", "10.0", FCVAR_REPLICATED, "This multiplies the bullet impact impuse on players for more dramatic results when players are shot." );
 ConVar phys_headshotscale( "phys_headshotscale", "1.3", FCVAR_REPLICATED, "Modifier for the headshot impulse hits on players" );
 
-ConVar sv_damage_print_enable( "sv_damage_print_enable", "1", FCVAR_REPLICATED, "Turn this off to disable the player's damage feed in the console after getting killed." );
+ConVar sv_damage_print_enable( "sv_damage_print_enable", "1", FCVAR_REPLICATED, "0: no damage print in console. 1: damage print in console on death. 2: damage print in console only at next round restart." );
 
 ConVar sv_spawn_afk_bomb_drop_time( "sv_spawn_afk_bomb_drop_time", "15", FCVAR_REPLICATED, "Players that have never moved since they spawned will drop the bomb after this amount of time." );
 
@@ -2500,9 +2500,12 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 
 	SendLastKillerDamageToClient( pAttackerPlayer );
 
-	OutputDamageGiven();
-	OutputDamageTaken();
-	ResetDamageCounters();
+	if ( sv_damage_print_enable.GetInt() != 2 )
+	{
+		OutputDamageGiven();
+		OutputDamageTaken();
+		ResetDamageCounters();
+	}
 
 	if ( m_bPunishedForTK )
 	{
