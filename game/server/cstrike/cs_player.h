@@ -579,7 +579,7 @@ public:
 
 	void ResetStamina( void );
 	bool IsArmored( int nHitGroup );
-	void Pain( bool HasArmour, int nDmgTypeBits );
+	void Pain( CCSPlayer* attacker, bool HasArmour, int nDmgTypeBits = 0 );
 	
 	void DeathSound( const CTakeDamageInfo &info );
 	
