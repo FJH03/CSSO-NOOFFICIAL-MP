@@ -921,7 +921,9 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "Player.PickupWeapon" );
 	PrecacheScriptSound( "Player.PickupWeaponSilent" );
 	PrecacheScriptSound( "Player.DamageHelmet" );
+	PrecacheScriptSound( "Player.DamageHelmetFeedback" );
 	PrecacheScriptSound( "Player.DamageHeadShot" );
+	PrecacheScriptSound( "Player.DamageHeadShotFeedback" );
 	PrecacheScriptSound( "Default.Land" );
 	PrecacheScriptSound( "Flesh.BulletImpact" );
 	PrecacheScriptSound( "Player.DamageKevlar" );
@@ -3433,7 +3435,7 @@ bool CCSPlayer::IsArmored( int nHitGroup )
 	return bApplyArmor;
 }
 
-void CCSPlayer::Pain( bool bHasArmour, int nDmgTypeBits )
+void CCSPlayer::Pain( CCSPlayer* pAttacker, bool bHasArmour, int nDmgTypeBits )
 {
 	if ( (nDmgTypeBits & DMG_BURN) )
 	{
@@ -3467,16 +3469,48 @@ void CCSPlayer::Pain( bool bHasArmour, int nDmgTypeBits )
 
 	switch (m_LastHitGroup)
 	{
-		case HITGROUP_HEAD:
-			if (m_bHasHelmet)  // He's wearing a helmet
+		case HITGROUP_HEAD: {
+			//When hit in the head we play a sound for the player who made the headshot to give them
+			//feedback. This plays even at a very long range. Other players receive another sound
+			//that doesn't carry as far.
+			CRecipientFilter filter;
+			for (int i = 1; i <= gpGlobals->maxClients; ++i)
 			{
-				EmitSound( "Player.DamageHelmet" );
+				CBasePlayer* pPlayer = UTIL_PlayerByIndex(i);
+				if (!pPlayer || pPlayer == pAttacker)
+				{
+					//exclude the player who made the shot.
+					continue;
+				}
+
+				filter.AddRecipient(pPlayer);
 			}
-			else  // He's not wearing a helmet
+
+			EmitSound_t params;
+			params.m_pSoundName = m_bHasHelmet ? "Player.DamageHelmet" : "Player.DamageHeadShot";
+			params.m_flSoundTime = 0.0f;
+			params.m_pflSoundDuration = nullptr;
+			params.m_bWarnOnDirectWaveReference = true;
+
+			EmitSound(filter, entindex(), params);
+
+			if (pAttacker != nullptr)
 			{
-				EmitSound( "Player.DamageHeadShot" );
+				//The player who made the shot gets this 'feedback' version of the sound.
+				CRecipientFilter attacker_filter;
+				attacker_filter.AddRecipient(pAttacker);
+
+				EmitSound_t attacker_params;
+				attacker_params.m_pSoundName = m_bHasHelmet ? "Player.DamageHelmetFeedback" : "Player.DamageHeadShotFeedback";
+				attacker_params.m_flSoundTime = 0.0f;
+				attacker_params.m_pflSoundDuration = nullptr;
+				attacker_params.m_bWarnOnDirectWaveReference = true;
+
+				EmitSound(attacker_filter, entindex(), attacker_params);
 			}
+
 			break;
+		}
 		default:
 			if ( bHasArmour == false )
 			{
@@ -3818,15 +3852,14 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 
 		if( !(info.GetDamageType() & DMG_FALL ) && !(info.GetDamageType() & DMG_BURN ) && !(info.GetDamageType() & DMG_BLAST ) )
 		{
-
-			Pain( true /*has armor*/, info.GetDamageType() );
+			Pain( pAttacker, true /*has armor*/, info.GetDamageType() );
 		}
 	}
 	else 
 	{
 		m_lastDamageArmor = 0;
 		if( !(info.GetDamageType() & DMG_FALL ) )
-			Pain( false /*no armor*/, info.GetDamageType() );
+			Pain( pAttacker, false /*no armor*/, info.GetDamageType() );
 	}
 
 	if ( pInflictorWeapon != NULL || ( pGrenade && fDamageToHealth > 0 ) )
