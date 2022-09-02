@@ -45,6 +45,8 @@
 #define MOVEMENT_ACCURACY_DECAYED	0
 #define MOVEMENT_CURVE01_EXPONENT   0.25
 
+#define VIEWPUNCH_COMPENSATE_MAGIC_SCALAR 0.65 // cl_flinch_scale.GetFloat()
+
 extern WeaponRecoilData g_WeaponRecoilData;
 
 extern ConVar cl_righthand;
@@ -1382,6 +1384,8 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 
 #if defined( CLIENT_DLL )
 ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.75", 0, "" );
+ConVar cl_crosshair_recoil( "cl_crosshair_recoil", "0", FCVAR_CHEAT, "Recoil/aimpunch will move the user's crosshair to show the effect", true, 0, true, 1 );
+extern ConVar view_recoil_tracking;
 
 	//-----------------------------------------------------------------------------
 	// Purpose: Draw the weapon's crosshair
@@ -1590,9 +1594,8 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 		int iCenterY = ScreenHeight() / 2;
 #endif
 
-		float flAngleToScreenPixel = 0;
+		float flAngleToScreenPixel = VIEWPUNCH_COMPENSATE_MAGIC_SCALAR * 2 * (ScreenHeight() / (2.0f * tanf( DEG2RAD( pPlayer->GetFOV() ) / 2.0f )));
 
-#ifdef CLIENT_DLL
 		// subtract a ratio of cam driver motion from crosshair according to cl_cam_driver_compensation_scale
 		if ( cl_cam_driver_compensation_scale.GetFloat() != 0 )
 		{
@@ -1605,31 +1608,23 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 					QAngle angCamDriver = vm->m_flCamDriverWeight * vm->m_angCamDriverLastAng * clamp( cl_cam_driver_compensation_scale.GetFloat(), -10.0f, 10.0f );
 					if ( angCamDriver.x != 0 || angCamDriver.y != 0  )
 					{
-						flAngleToScreenPixel = 0.65 * 2 * ( ScreenHeight() / ( 2.0f * tanf(DEG2RAD( pPlayer->GetFOV() ) / 2.0f) ) );
 						iCenterY -= ( flAngleToScreenPixel * sinf( DEG2RAD( angCamDriver.x ) ) ) ;
 						iCenterX += ( flAngleToScreenPixel * sinf( DEG2RAD( angCamDriver.y ) ) ) ;
 					}
 				}
 			}
 		}
-#endif
 
-		/*
-		// Optionally subtract out viewangle since it doesn't affect shooting.
-		if ( cl_flinch_compensate_crosshair.GetBool() )
+		if ( cl_crosshair_recoil.GetBool() )
 		{
-		QAngle viewPunch = pPlayer->GetViewPunchAngle();
+			QAngle viewPunch = pPlayer->GetAimPunchAngle();
 
-		if ( viewPunch.x != 0 || viewPunch.y != 0 )
-		{
-		if ( flAngleToScreenPixel == 0 )
-		flAngleToScreenPixel = VIEWPUNCH_COMPENSATE_MAGIC_SCALAR * 2 * ( ScreenHeight() / ( 2.0f * tanf(DEG2RAD( pPlayer->GetFOV() ) / 2.0f) ) );
-
-		iCenterY -= flAngleToScreenPixel * sinf( DEG2RAD( viewPunch.x ) );
-		iCenterX += flAngleToScreenPixel * sinf( DEG2RAD( viewPunch.y ) );
+			if ( viewPunch.x != 0 || viewPunch.y != 0 )
+			{
+				iCenterY += flAngleToScreenPixel * sinf( DEG2RAD( viewPunch.x ) ) * (1.0f - view_recoil_tracking.GetFloat());
+				iCenterX -= flAngleToScreenPixel * sinf( DEG2RAD( viewPunch.y ) ) * (1.0f - view_recoil_tracking.GetFloat());
+			}
 		}
-		}
-		*/
 
 		float flAlphaSplitInner = cl_crosshair_dynamic_splitalpha_innermod.GetFloat();
 		float flAlphaSplitOuter = cl_crosshair_dynamic_splitalpha_outermod.GetFloat();
