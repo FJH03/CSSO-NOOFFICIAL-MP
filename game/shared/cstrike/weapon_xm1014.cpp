@@ -25,6 +25,7 @@ public:
 	
 	CWeaponXM1014();
 
+	virtual bool Deploy();
 	virtual void PrimaryAttack( void );
 	virtual bool Reload( void );
 	virtual void WeaponIdle( void );
@@ -36,7 +37,6 @@ public:
 private:
 	CWeaponXM1014( const CWeaponXM1014 & );
 
-	float m_flPumpTime;
 	CNetworkVar( int, m_reloadState );	// special reload state for shotgun
 };
 
@@ -61,8 +61,16 @@ PRECACHE_WEAPON_REGISTER( weapon_xm1014 );
 
 CWeaponXM1014::CWeaponXM1014( void )
 {
-	m_flPumpTime = 0.0f;
 	m_reloadState = 0;
+}
+
+bool CWeaponXM1014::Deploy()
+{
+	bool bResult = BaseClass::Deploy();
+	if ( bResult )
+		m_reloadState = 0;
+
+	return bResult;
 }
 
 void CWeaponXM1014::PrimaryAttack( void )
@@ -129,7 +137,6 @@ void CWeaponXM1014::PrimaryAttack( void )
 	}
 	else
 	{
-		m_flPumpTime = gpGlobals->curtime + 0.5f;
 		SetWeaponIdleTime( gpGlobals->curtime + 2.5f );
 	}
 
@@ -214,12 +221,6 @@ void CWeaponXM1014::WeaponIdle( void )
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
-
-	if ( m_flPumpTime && m_flPumpTime < gpGlobals->curtime )
-	{
-		// play pumping sound
-		m_flPumpTime = 0.0f;
-	}
 
 	if ( m_flTimeWeaponIdle < gpGlobals->curtime )
 	{
