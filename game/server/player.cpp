@@ -2707,6 +2707,7 @@ bool CBasePlayer::SetObserverTarget(CBaseEntity *target)
 	return true;
 }
 
+ConVar sv_spec_post_death_additional_time( "sv_spec_post_death_additional_time", "0", FCVAR_REPLICATED, "", true, 0.0, true, 60.0 );
 bool CBasePlayer::IsValidObserverTarget(CBaseEntity * target)
 {
 	if ( target == NULL )
@@ -2734,9 +2735,23 @@ bool CBasePlayer::IsValidObserverTarget(CBaseEntity * target)
 
 	if ( player->m_lifeState == LIFE_DEAD || player->m_lifeState == LIFE_DYING )
 	{
-		if ( (player->m_flDeathTime + DEATH_ANIMATION_TIME ) < gpGlobals->curtime )
+#define SPEC_TEAMMATE_DEATH_MIN_TIME 0.5
+
+		float flDeathSpecTime = player->m_flDeathTime;
+
+		// allow spectators to add arbitrary delay to post-death target switch
+		if ( GetTeamNumber() == TEAM_SPECTATOR )
 		{
-			return false;	// allow watching until 3 seconds after death to see death animation
+			flDeathSpecTime += DEATH_ANIMATION_TIME + sv_spec_post_death_additional_time.GetFloat( );
+		}
+		else
+		{
+			flDeathSpecTime += MIN( SPEC_TEAMMATE_DEATH_MIN_TIME, DEATH_ANIMATION_TIME );
+		}
+
+		if ( flDeathSpecTime < gpGlobals->curtime )
+		{
+			return false;	// allow watching death animation
 		}
 	}
 		
