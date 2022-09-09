@@ -16,6 +16,7 @@
 #include <KeyValues.h>
 #include "c_baseplayer.h"
 #include "c_team.h"
+#include "vgui_controls/SVGImage.h"
 
 #include "cs_shareddefs.h"
 #include "clientmode_csnormal.h"
@@ -43,10 +44,15 @@ struct DeathNoticePlayer
 // Contents of each entry in our list of death notices
 struct DeathNoticeItem 
 {
+	DeathNoticeItem()
+	{
+		iconDeath = NULL;
+	}
+
 	DeathNoticePlayer	Killer;
 	DeathNoticePlayer   Victim;
 	DeathNoticePlayer   Assister;
-	CHudTexture *iconDeath;
+	SVGImage	*iconDeath;
 	bool		bSuicide;
 	float		flTimeRemaining;
 	bool		bHeadshot;
@@ -67,6 +73,7 @@ class CHudDeathNotice : public CHudElement, public vgui::Panel
 	DECLARE_CLASS_SIMPLE( CHudDeathNotice, vgui::Panel );
 public:
 	CHudDeathNotice( const char *pElementName );
+	~CHudDeathNotice();
 
 	void Init( void );
 	void VidInit( void );
@@ -78,18 +85,17 @@ public:
 	
 	void FireGameEvent( IGameEvent *event );
 
-protected:
-	int SetupHudImageId( const char* fname );
-
 private:
 
 	CPanelAnimationVarAliasType( int, m_iLineHeight, "LineHeight", "15", "proportional_height" );
 	CPanelAnimationVarAliasType( int, m_iHeightMargin, "HeightMargin", "0", "proportional_height" );
-	CPanelAnimationVarAliasType( int, m_iBackgroundHeightMargin, "BackgroundHeightMargin", "0", "proportional_height" );
 	CPanelAnimationVarAliasType( int, m_iBackgroundWidthMargin, "BackgroundWidthMargin", "0", "proportional_width" );
 	CPanelAnimationVarAliasType( int, m_iRightMargin, "RightMargin", "0", "proportional_width" );
 	CPanelAnimationVarAliasType( int, m_iTopMargin, "TopMargin", "0", "proportional_height" );
 	CPanelAnimationVarAliasType( int, m_iBorderSize, "BorderSize", "0", "proportional_height" );
+	CPanelAnimationVarAliasType( int, m_iIconMargin, "IconMargin", "0", "proportional_width" );
+	CPanelAnimationVarAliasType( int, m_iIconWide, "IconWide", "0", "proportional_width" );
+	CPanelAnimationVarAliasType( int, m_iIconTall, "IconTall", "0", "proportional_height" );
 
 	CPanelAnimationVar( vgui::HFont, m_hTextFont, "TextFont", "HudNumbersTimer" );
 
@@ -102,18 +108,20 @@ private:
 	CPanelAnimationVar( int, m_iMaxDeathNotices, "MaxDeathNotices", "4" );
 
 	// Texture for skull symbol
-	CHudTexture		*m_iconD_skull; 
-	CHudTexture		*m_iconD_headshot;
-	CHudTexture		*m_iconD_dominated;
-	CHudTexture		*m_iconD_revenge;
-	CHudTexture		*m_iconD_noscope; 
-	CHudTexture		*m_iconD_blind;
-	CHudTexture		*m_iconD_penetrated;
-	CHudTexture		*m_iconD_thrusmoke;
+	SVGImage		*m_iconD_skull; 
+	SVGImage		*m_iconD_headshot;
+	SVGImage		*m_iconD_dominated;
+	SVGImage		*m_iconD_revenge;
+	SVGImage		*m_iconD_noscope; 
+	SVGImage		*m_iconD_blind;
+	SVGImage		*m_iconD_penetrated;
+	SVGImage		*m_iconD_thrusmoke;
+	SVGImage		*m_iconD_inferno;
 
 	Color			m_teamColors[TEAM_MAXCOUNT];
 
 	CUtlVector<DeathNoticeItem> m_DeathNotices;
+	CUtlStringMap<SVGImage*> m_IconCache;
 };
 
 using namespace vgui;
@@ -129,28 +137,43 @@ CHudDeathNotice::CHudDeathNotice( const char *pElementName ) :
 	vgui::Panel *pParent = g_pClientMode->GetViewport();
 	SetParent( pParent );
 
-	m_iconD_headshot = NULL;
-	m_iconD_skull = NULL;
-	m_iconD_dominated = NULL;
-	m_iconD_revenge = NULL;
-	m_iconD_noscope = NULL;
-	m_iconD_blind = NULL;
-	m_iconD_penetrated = NULL;
-	m_iconD_thrusmoke = NULL;
+	m_iconD_skull = new SVGImage;
+	m_iconD_headshot = new SVGImage;
+	m_iconD_dominated = new SVGImage;
+	m_iconD_revenge = new SVGImage;
+	m_iconD_noscope = new SVGImage;
+	m_iconD_blind = new SVGImage;
+	m_iconD_penetrated = new SVGImage;
+	m_iconD_thrusmoke = new SVGImage;
+	m_iconD_inferno = new SVGImage;
 
 	SetHiddenBits( HIDEHUD_MISCSTATUS );
 }
 
-
-/**
- * Helper function to get an image id and set 
- */
-int CHudDeathNotice::SetupHudImageId( const char* fname )
+CHudDeathNotice::~CHudDeathNotice()
 {
-	int imageId = surface()->CreateNewTextureID();
-	surface()->DrawSetTextureFile( imageId, fname, true, false );
-	return imageId;
+	delete m_iconD_skull;
+	m_iconD_skull = NULL;
+	delete m_iconD_headshot;
+	m_iconD_headshot = NULL;
+	delete m_iconD_dominated;
+	m_iconD_dominated = NULL;
+	delete m_iconD_revenge;
+	m_iconD_revenge = NULL;
+	delete m_iconD_noscope;
+	m_iconD_noscope = NULL;
+	delete m_iconD_blind;
+	m_iconD_blind = NULL;
+	delete m_iconD_penetrated;
+	m_iconD_penetrated = NULL;
+	delete m_iconD_thrusmoke;
+	m_iconD_thrusmoke = NULL;
+	delete m_iconD_inferno;
+	m_iconD_inferno = NULL;
+
+	m_IconCache.PurgeAndDeleteElements();
 }
+
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -179,14 +202,24 @@ void CHudDeathNotice::Init( void )
 //-----------------------------------------------------------------------------
 void CHudDeathNotice::VidInit( void )
 {
-	m_iconD_skull = gHUD.GetIcon( "d_skull_cs" );
-	m_iconD_headshot = gHUD.GetIcon( "d_headshot" );
-	m_iconD_dominated = gHUD.GetIcon( "d_dominated" );
-	m_iconD_revenge = gHUD.GetIcon( "d_revenge" );
-	m_iconD_noscope = gHUD.GetIcon( "d_noscope" );
-	m_iconD_blind = gHUD.GetIcon( "d_blind" );
-	m_iconD_penetrated = gHUD.GetIcon( "d_penetrated" );
-	m_iconD_thrusmoke = gHUD.GetIcon( "d_thrusmoke" );
+	m_iconD_skull->SetSize( m_iIconWide, m_iIconTall );
+	m_iconD_skull->SetTexture( "materials/vgui/hud/svg/icon_suicide.svg" );
+	m_iconD_headshot->SetSize( m_iIconWide, m_iIconTall );
+	m_iconD_headshot->SetTexture( "materials/vgui/hud/svg/icon_headshot.svg" );
+	m_iconD_dominated->SetSize( m_iIconWide, m_iIconTall );
+	m_iconD_dominated->SetTexture( "materials/vgui/hud/svg/domination.svg" );
+	m_iconD_revenge->SetSize( m_iIconWide, m_iIconTall );
+	m_iconD_revenge->SetTexture( "materials/vgui/hud/svg/revenge.svg" );
+	m_iconD_noscope->SetSize( m_iIconWide, m_iIconTall );
+	m_iconD_noscope->SetTexture( "materials/vgui/hud/svg/noscope.svg" );
+	m_iconD_blind->SetSize( m_iIconWide, m_iIconTall );
+	m_iconD_blind->SetTexture( "materials/vgui/hud/svg/blind_kill.svg" );
+	m_iconD_penetrated->SetSize( m_iIconWide, m_iIconTall );
+	m_iconD_penetrated->SetTexture( "materials/vgui/hud/svg/penetrate.svg" );
+	m_iconD_thrusmoke->SetSize( m_iIconWide, m_iIconTall );
+	m_iconD_thrusmoke->SetTexture( "materials/vgui/hud/svg/smoke_kill.svg" );
+	m_iconD_inferno->SetSize( m_iIconWide, m_iIconTall );
+	m_iconD_inferno->SetTexture( "materials/vgui/hud/svg/inferno.svg" );
 	m_DeathNotices.Purge();
 }
 
@@ -218,7 +251,9 @@ bool CHudDeathNotice::ShouldDraw( void )
 //-----------------------------------------------------------------------------
 void CHudDeathNotice::Paint()
 {
-	if ( !m_iconD_headshot || !m_iconD_skull || !m_iconD_dominated || !m_iconD_revenge || !m_iconD_noscope || !m_iconD_blind || !m_iconD_penetrated || !m_iconD_thrusmoke )
+	if ( !m_iconD_headshot || !m_iconD_skull || !m_iconD_dominated ||
+		 !m_iconD_revenge || !m_iconD_noscope || !m_iconD_blind ||
+		 !m_iconD_penetrated || !m_iconD_thrusmoke || !m_iconD_inferno )
 		return;
 
 	int yStart = m_iTopMargin;
@@ -226,42 +261,31 @@ void CHudDeathNotice::Paint()
 	surface()->DrawSetTextFont( m_hTextFont );
 	surface()->DrawSetTextColor( m_clrCTText );
 
-	int iconDominationWide = surface()->GetCharacterWidth( m_iconD_dominated->hFont, m_iconD_dominated->cCharacterInFont );
-	int iconDominationTall = surface()->GetFontTall( m_iconD_dominated->hFont );
-	int iconRevengeWide = surface()->GetCharacterWidth( m_iconD_revenge->hFont, m_iconD_revenge->cCharacterInFont );
-	int iconRevengeTall = surface()->GetFontTall( m_iconD_revenge->hFont );
+	int iconDominationWide, iconDominationTall;
+	m_iconD_dominated->GetContentSize( iconDominationWide, iconDominationTall );
 
-	int iconHeadshotWide;
-	int iconHeadshotTall;
+	int iconRevengeWide, iconRevengeTall;
+	m_iconD_revenge->GetContentSize( iconRevengeWide, iconRevengeTall );
 
-	if( m_iconD_headshot->bRenderUsingFont )
-	{
-		iconHeadshotWide = surface()->GetCharacterWidth( m_iconD_headshot->hFont, m_iconD_headshot->cCharacterInFont );
-		iconHeadshotTall = surface()->GetFontTall( m_iconD_headshot->hFont );
-	}
-	else
-	{
-		float scale = ( (float)ScreenHeight() / 480.0f );	//scale based on 640x480
-		iconHeadshotWide = (int)( scale * (float)m_iconD_headshot->Width() );
-		iconHeadshotTall = (int)( scale * (float)m_iconD_headshot->Height() );
-	}
+	int iconHeadshotWide, iconHeadshotTall;
+	m_iconD_headshot->GetContentSize( iconHeadshotWide, iconHeadshotTall );
 
-	int iconNoScopeWide = surface()->GetCharacterWidth( m_iconD_noscope->hFont, m_iconD_noscope->cCharacterInFont );
-	int iconNoScopeTall = surface()->GetFontTall( m_iconD_noscope->hFont );
+	int iconNoScopeWide, iconNoScopeTall;
+	m_iconD_noscope->GetContentSize( iconNoScopeWide, iconNoScopeTall );
 
-	int iconBlindWide = surface()->GetCharacterWidth( m_iconD_blind->hFont, m_iconD_blind->cCharacterInFont );
-	int iconBlindTall = surface()->GetFontTall( m_iconD_blind->hFont );
+	int iconBlindWide, iconBlindTall;
+	m_iconD_blind->GetContentSize( iconBlindWide, iconBlindTall );
 
-	int iconPenetrateWide = surface()->GetCharacterWidth( m_iconD_penetrated->hFont, m_iconD_penetrated->cCharacterInFont );
-	int iconPenetrateTall = surface()->GetFontTall( m_iconD_penetrated->hFont );
+	int iconPenetrateWide, iconPenetrateTall;
+	m_iconD_penetrated->GetContentSize( iconPenetrateWide, iconPenetrateTall );
 
-	int iconThruSmokeWide = surface()->GetCharacterWidth( m_iconD_thrusmoke->hFont, m_iconD_thrusmoke->cCharacterInFont );
-	int iconThruSmokeTall = surface()->GetFontTall( m_iconD_thrusmoke->hFont );
+	int iconThruSmokeWide, iconThruSmokeTall;
+	m_iconD_thrusmoke->GetContentSize( iconThruSmokeWide, iconThruSmokeTall );
 
 	int iCount = m_DeathNotices.Count();
 	for ( int i = 0; i < iCount; i++ )
 	{
-		CHudTexture *icon = m_DeathNotices[i].iconDeath;
+		SVGImage *icon = m_DeathNotices[i].iconDeath;
 		if ( !icon )
 			continue;
 
@@ -286,7 +310,8 @@ void CHudDeathNotice::Paint()
 
 		// Get the local position for this notice
 		int victimNameLen = UTIL_ComputeStringWidth( m_hTextFont, victim );
-		int y = yStart + ((m_iHeightMargin + m_iLineHeight) * i);
+		int yText = yStart + ((m_iHeightMargin + m_iLineHeight) * i);
+		int yIcon = yText;
 
 		float flScrollTime = hud_deathnotice_scroll_time.GetFloat();
 		float flScroll = 0.0f;
@@ -296,39 +321,28 @@ void CHudDeathNotice::Paint()
 			yStart -= ((m_iHeightMargin + m_iLineHeight) * flScroll);
 		}
 
-		int iconWide;
-		int iconTall;
+		int iconWide, iconTall;
+		icon->GetContentSize( iconWide, iconTall );
 
-		if( icon->bRenderUsingFont )
-		{
-			iconWide = surface()->GetCharacterWidth( icon->hFont, icon->cCharacterInFont );
-			iconTall = surface()->GetFontTall( icon->hFont );
-		}
-		else
-		{
-			float scale = ( (float)ScreenHeight() / 480.0f );	//scale based on 640x480
-			iconWide = (int)( scale * (float)icon->Width() );
-			iconTall = (int)( scale * (float)icon->Height() );
-		}
-
-		int x = GetWide() - m_iRightMargin;
+		int x = GetWide() - m_iRightMargin - m_iBackgroundWidthMargin;
 		x -= victimNameLen;
 		x -= iconWide;
+		x -= m_iIconMargin + m_iIconMargin;
 
 		if ( m_DeathNotices[i].bBlind )
-			x -= iconBlindWide;
+			x -= iconBlindWide + m_iIconMargin;
 
 		if ( m_DeathNotices[i].bNoScope )
-			x -= iconNoScopeWide;
+			x -= iconNoScopeWide + m_iIconMargin;
 
 		if ( m_DeathNotices[i].bPenetrated )
-			x -= iconPenetrateWide;
+			x -= iconPenetrateWide + m_iIconMargin;
 
 		if ( m_DeathNotices[i].bThruSmoke )
-			x -= iconThruSmokeWide;
+			x -= iconThruSmokeWide + m_iIconMargin;
 
 		if ( m_DeathNotices[i].bHeadshot )
-			x -= iconHeadshotWide;
+			x -= iconHeadshotWide + m_iIconMargin;
 
 		if ( m_DeathNotices[i].bAssisted )
 		{
@@ -342,16 +356,16 @@ void CHudDeathNotice::Paint()
 		}
 			
 		if (m_DeathNotices[i].bDomination)
-		{				
-			x -= iconDominationWide;
+		{
+			x -= iconDominationWide + m_iIconMargin;
 		}
 		if (m_DeathNotices[i].bRevenge)
-		{				
-			x -= iconRevengeWide;
+		{
+			x -= iconRevengeWide + m_iIconMargin;
 		}
 
-		int bkgX = x - m_iBackgroundWidthMargin - m_iBackgroundWidthMargin;
-		int bkgY = y;
+		int bkgX = x - m_iBackgroundWidthMargin;
+		int bkgY = yText;
 		int bkgWide = GetWide() - m_iRightMargin - bkgX;
 		int bkgTall = m_iLineHeight;
 
@@ -362,18 +376,21 @@ void CHudDeathNotice::Paint()
 		if ( ((bKillerIsLocalPlayer && !m_DeathNotices[i].bSuicide) || bAssisterIsLocalPlayer) )
 			DrawOutlinedBox( bkgX, bkgY, bkgWide, bkgTall, m_clrBorder, 1.0f, MAX(1, m_iBorderSize) ); // HACK: border has 0 size on very low res :(
 
-		y += m_iBackgroundHeightMargin;
-		x -= m_iBackgroundWidthMargin;
+		int fontTall = surface()->GetFontTall( m_hTextFont );
 
 		if (m_DeathNotices[i].bDomination)
 		{
-			m_iconD_dominated->DrawSelf( x, y, iconDominationWide, iconDominationTall, m_clrIcons );
-			x += iconDominationWide;
+			m_iconD_dominated->SetPos( x, yIcon + ((m_iLineHeight - iconDominationTall) / 2) );
+			m_iconD_dominated->SetColor( m_clrIcons );
+			m_iconD_dominated->Paint();
+			x += iconDominationWide + m_iIconMargin;
 		}
 		if (m_DeathNotices[i].bRevenge)
 		{
-			m_iconD_revenge->DrawSelf( x, y, iconRevengeWide, iconRevengeTall, m_clrIcons );
-			x += iconRevengeWide;
+			m_iconD_revenge->SetPos( x, yIcon + ((m_iLineHeight - iconRevengeTall) / 2) );
+			m_iconD_revenge->SetColor( m_clrIcons );
+			m_iconD_revenge->Paint();
+			x += iconRevengeWide + m_iIconMargin;
 		}
 		
 		// Only draw killers name if it wasn't a suicide
@@ -381,16 +398,18 @@ void CHudDeathNotice::Paint()
 		{
 			if ( m_DeathNotices[i].bBlind )
 			{
-				m_iconD_blind->DrawSelf( x, y, iconBlindWide, iconBlindTall, m_clrIcons );
-				x += iconBlindWide;
+				m_iconD_blind->SetPos( x, yIcon + ((m_iLineHeight - iconBlindTall) / 2) );
+				m_iconD_blind->SetColor( m_clrIcons );
+				m_iconD_blind->Paint();
+				x += iconBlindWide + m_iIconMargin;
 			}
 
 			// Draw killer's name
 			surface()->DrawSetTextColor( m_DeathNotices[i].Killer.color );
-			surface()->DrawSetTextPos( x, y );
+			surface()->DrawSetTextPos( x, yText + ((m_iLineHeight - fontTall) / 2) );
 			surface()->DrawSetTextFont( m_hTextFont );
 			surface()->DrawUnicodeString( killer );
-			surface()->DrawGetTextPos( x, y );
+			surface()->DrawGetTextPos( x, yText );
 		}
 		
 		if ( m_DeathNotices[i].bAssisted )
@@ -398,51 +417,62 @@ void CHudDeathNotice::Paint()
 			// Draw the plus sign in between killer and assister name
 			surface()->DrawSetTextColor( m_clrIcons );
 			//surface()->DrawSetTextColor( iconColor );
-			surface()->DrawSetTextPos( x, y );
+			surface()->DrawSetTextPos( x, yText ); // don't add anything to Y since GetTextPos() above takes care of that
 			surface()->DrawSetTextFont( m_hTextFont );
 			surface()->DrawUnicodeString( assistplussign );
-			surface()->DrawGetTextPos( x, y );
+			surface()->DrawGetTextPos( x, yText );
 
 			// Draw assister's name
 			surface()->DrawSetTextColor( m_DeathNotices[i].Assister.color );
-			surface()->DrawSetTextPos( x, y );
+			surface()->DrawSetTextPos( x, yText );
 			surface()->DrawSetTextFont( m_hTextFont );
 			surface()->DrawUnicodeString( assister );
-			surface()->DrawGetTextPos( x, y );
+			surface()->DrawGetTextPos( x, yText );
 		}
 
 		// Draw death weapon
 		//If we're using a font char, this will ignore iconTall and iconWide
-		icon->DrawSelf( x, y, iconWide, iconTall, m_clrIcons );
-		x += iconWide;
+		x += m_iIconMargin;
+		icon->SetPos( x, yIcon + ((m_iLineHeight - iconTall) / 2) );
+		icon->SetColor( m_clrIcons );
+		icon->Paint();
+		x += iconWide + m_iIconMargin;
 
 		if( m_DeathNotices[i].bNoScope )
 		{
-			m_iconD_noscope->DrawSelf( x, y, iconNoScopeWide, iconNoScopeTall, m_clrIcons );
-			x += iconNoScopeWide;
+			m_iconD_noscope->SetPos( x, yIcon + ((m_iLineHeight - iconNoScopeTall) / 2) );
+			m_iconD_noscope->SetColor( m_clrIcons );
+			m_iconD_noscope->Paint();
+			x += iconNoScopeWide + m_iIconMargin;
 		}
 
 		if( m_DeathNotices[i].bThruSmoke )
 		{
-			m_iconD_thrusmoke->DrawSelf( x, y, iconThruSmokeWide, iconThruSmokeTall, m_clrIcons );
-			x += iconThruSmokeWide;
+			m_iconD_thrusmoke->SetPos( x, yIcon + ((m_iLineHeight - iconThruSmokeTall) / 2) );
+			m_iconD_thrusmoke->SetColor( m_clrIcons );
+			m_iconD_thrusmoke->Paint();
+			x += iconThruSmokeWide + m_iIconMargin;
 		}
 
 		if( m_DeathNotices[i].bPenetrated )
 		{
-			m_iconD_penetrated->DrawSelf( x, y, iconPenetrateWide, iconPenetrateTall, m_clrIcons );
-			x += iconPenetrateWide;
+			m_iconD_penetrated->SetPos( x, yIcon + ((m_iLineHeight - iconPenetrateTall) / 2) );
+			m_iconD_penetrated->SetColor( m_clrIcons );
+			m_iconD_penetrated->Paint();
+			x += iconPenetrateWide + m_iIconMargin;
 		}
 
 		if( m_DeathNotices[i].bHeadshot )
 		{
-			m_iconD_headshot->DrawSelf( x, y, iconHeadshotWide, iconHeadshotTall, m_clrIcons );
-			x += iconHeadshotWide;
+			m_iconD_headshot->SetPos( x, yIcon + ((m_iLineHeight - iconHeadshotTall) / 2) );
+			m_iconD_headshot->SetColor( m_clrIcons );
+			m_iconD_headshot->Paint();
+			x += iconHeadshotWide + m_iIconMargin;
 		}
 
 		// Draw victims name
 		surface()->DrawSetTextColor( m_DeathNotices[i].Victim.color );
-		surface()->DrawSetTextPos( x, y );
+		surface()->DrawSetTextPos( x, yText );
 		surface()->DrawSetTextFont( m_hTextFont );	//reset the font, draw icon can change it
 		surface()->DrawUnicodeString( victim );
 
@@ -530,10 +560,10 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 			thrusmoke = false;
 	}
 
-	char fullkilledwith[128];
+	char fullkilledwith[64];
 	if ( killedwith && *killedwith )
 	{
-		Q_snprintf( fullkilledwith, sizeof(fullkilledwith), "d_%s", killedwith );
+		Q_snprintf( fullkilledwith, sizeof(fullkilledwith), "materials/vgui/weapons/svg/%s.svg", killedwith );
 	}
 	else
 	{
@@ -604,14 +634,20 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	deathMsg.bRevenge = event->GetInt( "revenge" ) > 0;
 	deathMsg.bAssisted = iAssister > 0;
 
-	// Try and find the death identifier in the icon list
-	deathMsg.iconDeath = gHUD.GetIcon( fullkilledwith );
-
-	if ( !deathMsg.iconDeath )
+	UtlSymId_t sym = m_IconCache.Find( killedwith );
+	if ( sym == m_IconCache.InvalidIndex() )
 	{
-		// Can't find it, so use the default skull & crossbones icon
-		deathMsg.iconDeath = m_iconD_skull;
+		sym = m_IconCache.AddString( killedwith );
+		m_IconCache[sym] = new SVGImage;
+		m_IconCache[sym]->SetSize( m_iIconWide, m_iIconTall );
+		if ( !m_IconCache[sym]->SetTexture( fullkilledwith ) )
+		{
+			// Can't find it, so use the default skull & crossbones icon
+			*m_IconCache[sym] = *m_iconD_skull;
+		}
 	}
+	
+	deathMsg.iconDeath = m_IconCache[sym];
 
 	// Add it to our list of death notices
 	m_DeathNotices.AddToTail( deathMsg );
