@@ -14,7 +14,7 @@
 #include "props.h"
 
 typedef enum { expRandom = 0, expDirected, expUsePrecise} Explosions;
-typedef enum { matGlass = 0, matWood, matMetal, matFlesh, matCinderBlock, matCeilingTile, matComputer, matUnbreakableGlass, matRocks, matWeb, matNone, matLastMaterial } Materials;
+typedef enum { matGlass = 0, matWood, matMetal, matFlesh, matCinderBlock, matCeilingTile, matComputer, matUnbreakableGlass, matRocks, matMetalPanel, matNone, matLastMaterial } Materials;
 
 
 #define	NUM_SHARDS 6 // this many shards spawned when breakable objects break;

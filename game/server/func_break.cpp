@@ -337,13 +337,13 @@ const char *CBreakable::MaterialSound( Materials precacheMaterial )
 	case matWood:
 		return "Breakable.MatWood";
 	case matFlesh:
-	case matWeb:
 		return "Breakable.MatFlesh";
 	case matComputer:
 		return "Breakable.Computer";
 	case matUnbreakableGlass:
 	case matGlass:
 		return "Breakable.MatGlass";
+	case matMetalPanel:
 	case matMetal:
 		return "Breakable.MatMetal";
 	case matCinderBlock:
@@ -396,6 +396,10 @@ void CBreakable::Precache( void )
 	case matUnbreakableGlass:
 	case matGlass:
 		pGibName = "GlassChunks";
+		break;
+
+	case matMetalPanel:
+		pGibName = "MetalPanelChunks";
 		break;
 
 	case matMetal:
@@ -531,6 +535,7 @@ void CBreakable::DamageSound( void )
 		soundname = "Breakable.MatWood";
 		break;
 
+	case matMetalPanel:
 	case matMetal:
 		soundname = "Breakable.MatMetal";
 		break;
@@ -961,12 +966,12 @@ void CBreakable::Die( void )
 		break;
 
 	case matMetal:
+	case matMetalPanel:
 		soundname = "Breakable.Metal";
 		cFlag = BREAK_METAL;
 		break;
 
 	case matFlesh:
-	case matWeb:
 		soundname = "Breakable.Flesh";
 		cFlag = BREAK_FLESH;
 		break;
