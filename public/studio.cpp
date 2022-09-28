@@ -19,13 +19,8 @@
 // Purpose:
 //-----------------------------------------------------------------------------
 
-mstudioanimdesc_t &studiohdr_t::pAnimdesc( int i ) const
+mstudioanimdesc_t &studiohdr_t::pAnimdesc_Internal( int i ) const
 { 
-	if (numincludemodels == 0)
-	{
-		return *pLocalAnimdesc( i );
-	}
-
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
 	Assert( pVModel );
 
@@ -242,13 +237,8 @@ bool studiohdr_t::SequencesAvailable() const
 // Purpose:
 //-----------------------------------------------------------------------------
 
-int studiohdr_t::GetNumSeq( void ) const
+int studiohdr_t::GetNumSeq_Internal( void ) const
 {
-	if (numincludemodels == 0)
-	{
-		return numlocalseq;
-	}
-
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
 	Assert( pVModel );
 	return pVModel->m_seq.Count();
@@ -258,13 +248,8 @@ int studiohdr_t::GetNumSeq( void ) const
 // Purpose:
 //-----------------------------------------------------------------------------
 
-mstudioseqdesc_t &studiohdr_t::pSeqdesc( int i ) const
+mstudioseqdesc_t &studiohdr_t::pSeqdesc_Internal( int i ) const
 {
-	if (numincludemodels == 0)
-	{
-		return *pLocalSeqdesc( i );
-	}
-
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
 	Assert( pVModel );
 
@@ -284,13 +269,8 @@ mstudioseqdesc_t &studiohdr_t::pSeqdesc( int i ) const
 // Purpose:
 //-----------------------------------------------------------------------------
 
-int studiohdr_t::iRelativeAnim( int baseseq, int relanim ) const
+int studiohdr_t::iRelativeAnim_Internal( int baseseq, int relanim ) const
 {
-	if (numincludemodels == 0)
-	{
-		return relanim;
-	}
-
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
 	Assert( pVModel );
 
@@ -303,13 +283,8 @@ int studiohdr_t::iRelativeAnim( int baseseq, int relanim ) const
 // Purpose:
 //-----------------------------------------------------------------------------
 
-int studiohdr_t::iRelativeSeq( int baseseq, int relseq ) const
+int studiohdr_t::iRelativeSeq_Internal( int baseseq, int relseq ) const
 {
-	if (numincludemodels == 0)
-	{
-		return relseq;
-	}
-
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
 	Assert( pVModel );
 
@@ -885,13 +860,8 @@ const studiohdr_t *CStudioHdr::pAnimStudioHdr( int animation )
 
 
 
-mstudioanimdesc_t &CStudioHdr::pAnimdesc( int i )
+mstudioanimdesc_t &CStudioHdr::pAnimdesc_Internal( int i )
 { 
-	if (m_pVModel == NULL)
-	{
-		return *m_pStudioHdr->pLocalAnimdesc( i );
-	}
-
 	const studiohdr_t *pStudioHdr = GroupStudioHdr( m_pVModel->m_anim[i].group );
 
 	return *pStudioHdr->pLocalAnimdesc( m_pVModel->m_anim[i].index );
@@ -901,13 +871,8 @@ mstudioanimdesc_t &CStudioHdr::pAnimdesc( int i )
 // Purpose:
 //-----------------------------------------------------------------------------
 
-int CStudioHdr::GetNumSeq( void ) const
+int CStudioHdr::GetNumSeq_Internal( void ) const
 {
-	if (m_pVModel == NULL)
-	{
-		return m_pStudioHdr->numlocalseq;
-	}
-
 	return m_pVModel->m_seq.Count();
 }
 
@@ -915,28 +880,13 @@ int CStudioHdr::GetNumSeq( void ) const
 // Purpose:
 //-----------------------------------------------------------------------------
 
-mstudioseqdesc_t &CStudioHdr::pSeqdesc( int i )
+mstudioseqdesc_t &CStudioHdr::pSeqdesc_Internal( int i )
 {
-	Assert( ( i >= 0 && i < GetNumSeq() ) || ( i == 1 && GetNumSeq() <= 1 ) );
+	Assert( i >= 0 && i < GetNumSeq() );
 	if ( i < 0 || i >= GetNumSeq() )
 	{
-		if ( GetNumSeq() <= 0 )
-		{
-			// Return a zero'd out struct reference if we've got nothing.
-			// C_BaseObject::StopAnimGeneratedSounds was crashing due to this function
-			//	returning a reference to garbage. It should now see numevents is 0,
-			//	and bail.
-			static mstudioseqdesc_t s_nil_seq;
-			return s_nil_seq;
-		}
-
 		// Avoid reading random memory.
 		i = 0;
-	}
-	
-	if (m_pVModel == NULL)
-	{
-		return *m_pStudioHdr->pLocalSeqdesc( i );
 	}
 
 	const studiohdr_t *pStudioHdr = GroupStudioHdr( m_pVModel->m_seq[i].group );
@@ -948,13 +898,8 @@ mstudioseqdesc_t &CStudioHdr::pSeqdesc( int i )
 // Purpose:
 //-----------------------------------------------------------------------------
 
-int CStudioHdr::iRelativeAnim( int baseseq, int relanim ) const
+int CStudioHdr::iRelativeAnim_Internal( int baseseq, int relanim ) const
 {
-	if (m_pVModel == NULL)
-	{
-		return relanim;
-	}
-
 	virtualgroup_t *pGroup = &m_pVModel->m_group[ m_pVModel->m_seq[baseseq].group ];
 
 	return pGroup->masterAnim[ relanim ];

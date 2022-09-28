@@ -1964,8 +1964,27 @@ private:
 		float *pBaseWeight	= m_boneWeights + vertIndex*numStoredWeights;
 		char  *pBaseIndex	= m_boneIndices + vertIndex*m_numBoneInfluences;
 		float  sum			= 0.0f;
+		// TODO: unroll this loop? It's only three. We could use a switch
+		// and code it explicitly for the various possible m_numBoneInfluences
+		// which would improve scheduling but bloat code.
 		for (int i = 0;i < MAX_NUM_BONES_PER_VERT;i++)
 		{
+			float weight;
+			if ( i < ( m_numBoneInfluences - 1 ) )
+			{
+				weight = pBaseWeight[i];
+				sum += weight;
+			}
+			else
+			{
+				weight = 1.0f - sum;
+				sum = 1.0f;
+			}
+
+			pBoneWeights->weight[i] = weight;
+			pBoneWeights->bone[i] = ( i < m_numBoneInfluences ) ? pBaseIndex[i] : 0;
+
+			/*
 			if ( i < ( m_numBoneInfluences - 1 ) )
 				pBoneWeights->weight[i] = pBaseWeight[i];
 			else
@@ -1973,6 +1992,7 @@ private:
 			sum += pBoneWeights->weight[i];
 
 			pBoneWeights->bone[i] = ( i < m_numBoneInfluences ) ? pBaseIndex[i] : 0;
+			*/
 		}
 
 		// Treat 'zero weights' as '100% binding to bone zero':
@@ -2263,11 +2283,52 @@ struct studiohdr_t
 
 //public:
 	bool				SequencesAvailable() const;
-	int					GetNumSeq() const;
-	mstudioanimdesc_t	&pAnimdesc( int i ) const;
-	mstudioseqdesc_t	&pSeqdesc( int i ) const;
-	int					iRelativeAnim( int baseseq, int relanim ) const;	// maps seq local anim reference to global anim index
-	int					iRelativeSeq( int baseseq, int relseq ) const;		// maps seq local seq reference to global seq index
+	int					GetNumSeq_Internal() const;
+	inline int			GetNumSeq() const
+	{
+		if (numincludemodels == 0)
+		{
+			return numlocalseq;
+		}
+		return GetNumSeq_Internal();
+
+	}
+	mstudioanimdesc_t	&pAnimdesc_Internal( int i ) const;
+	inline mstudioanimdesc_t &pAnimdesc( int i ) const
+	{
+		if (numincludemodels == 0)
+		{
+			return *pLocalAnimdesc( i );
+		}
+
+		return pAnimdesc_Internal( i );
+	}
+
+	mstudioseqdesc_t	&pSeqdesc_Internal( int i ) const;
+	inline mstudioseqdesc_t &pSeqdesc( int i ) const
+	{
+		if (numincludemodels == 0)
+		{
+			return *pLocalSeqdesc( i );
+		}
+		return pSeqdesc_Internal( i );
+	}
+	int			iRelativeAnim_Internal( int baseseq, int relanim ) const;	// maps seq local anim reference to global anim index
+	inline int			iRelativeAnim( int baseseq, int relanim ) const
+	{
+		if ( numincludemodels == 0 )
+			return relanim;
+		return iRelativeAnim_Internal( baseseq, relanim );
+	}
+	int					iRelativeSeq_Internal( int baseseq, int relseq ) const;		// maps seq local seq reference to global seq index
+	inline int			iRelativeSeq( int baseseq, int relseq ) const
+	{
+		if (numincludemodels == 0)
+		{
+			return relseq;
+		}
+		return iRelativeSeq_Internal( baseseq, relseq );
+	}
 
 //private:
 	mutable int			activitylistversion;	// initialization flag - have the sequences been indexed?
@@ -2516,10 +2577,38 @@ public:
 	int					RemapSeqBone( int iSequence, int iLocalBone ) const;	// maps local sequence bone to global bone
 
 	bool				SequencesAvailable() const;
-	int					GetNumSeq( void ) const;
-	mstudioanimdesc_t	&pAnimdesc( int i );
-	mstudioseqdesc_t	&pSeqdesc( int iSequence );
-	int					iRelativeAnim( int baseseq, int relanim ) const;	// maps seq local anim reference to global anim index
+	int					GetNumSeq_Internal( void ) const;
+	inline int			GetNumSeq( void ) const
+	{
+		if ( !m_pVModel )
+			return m_pStudioHdr->numlocalseq;
+		return GetNumSeq_Internal();
+	}
+
+	mstudioanimdesc_t	&pAnimdesc_Internal( int i );
+	inline mstudioanimdesc_t &pAnimdesc( int i )
+	{
+		if  ( !m_pVModel )
+			return *m_pStudioHdr->pLocalAnimdesc( i );
+		return pAnimdesc_Internal( i );
+	}
+	mstudioseqdesc_t	&pSeqdesc_Internal( int iSequence );
+	inline mstudioseqdesc_t &pSeqdesc( int iSequence )
+	{
+		if ( !m_pVModel )
+			return *m_pStudioHdr->pLocalSeqdesc( iSequence );
+
+		return pSeqdesc_Internal( iSequence );
+	}
+
+	int					iRelativeAnim_Internal( int baseseq, int relanim ) const;	// maps seq local anim reference to global anim index
+	inline int			iRelativeAnim( int baseseq, int relanim ) const
+	{
+		if ( !m_pVModel )
+			return relanim;
+		return iRelativeAnim_Internal( baseseq, relanim );
+	}
+
 	int					iRelativeSeq( int baseseq, int relseq ) const;		// maps seq local seq reference to global seq index
 
 	int					GetSequenceActivity( int iSequence );
