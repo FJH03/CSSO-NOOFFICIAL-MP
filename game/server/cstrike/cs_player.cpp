@@ -6925,7 +6925,7 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 	}
 	else if ( FStrEq( pcmd, "playerradio" ) )
 	{
-		if ( args.ArgC() >= 2 && g_pDeveloper->GetInt() > 0 )
+		if ( args.ArgC() >= 2 && ShouldRunRateLimitedCommand( args ) )
 		{
 			const char* pszSound = args.Arg( 1 );
 			const char* pszCaption = (args.ArgC() > 2) ? args.Arg( 2 ) : NULL;

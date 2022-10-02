@@ -36,6 +36,7 @@
 #include "cstrikebuymenu.h"
 #include "cstrikespectatorgui.h"
 #include "cstrikeclientscoreboard.h"
+#include "cstrikeradiomenu.h"
 #include "clientmode_csnormal.h"
 #include "IGameUIFuncs.h"
 
@@ -136,6 +137,24 @@ CON_COMMAND_F( togglescores, "Toggles score panel", FCVAR_CLIENTCMD_CAN_EXECUTE)
 	}
 }
 
+void radiomenu_on_f()
+{
+	gViewPortInterface->ShowPanel( PANEL_RADIO_MENU, true );
+}
+ConCommand radiomenu_on( "+radiomenu", radiomenu_on_f );
+void radiomenu_off_f()
+{
+	gViewPortInterface->ShowPanel( PANEL_RADIO_MENU, false );
+}
+ConCommand radiomenu_off( "-radiomenu", radiomenu_off_f );
+void radiomenu_toggle_f()
+{
+	IViewPortPanel *pPanel = gViewPortInterface->FindPanelByName( PANEL_RADIO_MENU );
+	if ( pPanel )
+		pPanel->ShowPanel( !pPanel->IsVisible() );
+}
+ConCommand radiomenu_toggle( "radiomenu_toggle", radiomenu_toggle_f );
+
 //-----------------------------------------------------------------------------
 // Purpose: called when the VGUI subsystem starts up
 //			Creates the sub panels and initialises them
@@ -196,6 +215,11 @@ IViewPortPanel* CounterStrikeViewport::CreatePanelByName(const char *szPanelName
 		newpanel = new CCSTextWindow( this );
 	}
 
+	else if ( Q_strcmp(PANEL_RADIO_MENU, szPanelName) == 0 )
+	{
+		newpanel = new CCSRadioMenu( this );
+	}
+
 	else
 	{
 		// create a generic base panel, don't add twice
@@ -211,6 +235,7 @@ void CounterStrikeViewport::CreateDefaultPanels( void )
 	AddNewPanel( CreatePanelByName( PANEL_CLASS_CT ), "PANEL_CLASS_CT" );
 	AddNewPanel( CreatePanelByName( PANEL_CLASS_TER ), "PANEL_CLASS_TER" );
 	AddNewPanel( CreatePanelByName( PANEL_BUY ), "PANEL_BUY" );
+	AddNewPanel( CreatePanelByName( PANEL_RADIO_MENU ), "PANEL_RADIO_MENU" );
 
 	BaseClass::CreateDefaultPanels();
 

@@ -24,6 +24,7 @@
 #define PANEL_BUY			"buy"
 #define PANEL_NAV_PROGRESS	"nav_progress"
 #define PANEL_INTRO			"intro"
+#define PANEL_RADIO_MENU	"radio_menu"
 
 
 #define PANEL_COMMENTARY_MODELVIEWER	"commentary_modelviewer"
