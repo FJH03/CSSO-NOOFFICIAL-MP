@@ -19,6 +19,9 @@
 splinerope_vsxx.fxc
 splinerope_ps2x.fxc
 fade_blur_ps2x.fxc
+clearalpha_ps2x.fxc
+depth_of_field_ps20b.fxc
+depth_of_field_vs20.fxc
 
 //AccumBuff4Sample_ps2x.fxc
 //accumbuff5sample_ps2x.fxc

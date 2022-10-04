@@ -15,6 +15,8 @@
 
 void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, bool bPostVGui = false );
 void DoImageSpaceMotionBlur( const CViewSetup &view );
+bool IsDepthOfFieldEnabled();
+void DoDepthOfField( const CViewSetup &view );
 void DumpTGAofRenderTarget( const int x, const int y, const int width, const int height, const char *pFilename );
 
 void UpdateMaterialSystemTonemapScalar();
