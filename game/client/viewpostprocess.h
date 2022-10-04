@@ -23,6 +23,8 @@ void SetOverrideTonemapScale( bool bEnableOverride, float flTonemapScale );
 
 void DoBlurFade( float flStrength, float flDesaturate, int x, int y, int w, int h );
 
+void SetPostProcessParams( const PostProcessParameters_t *pPostProcessParameters );
+
 void SetViewFadeParams( byte r, byte g, byte b, byte a, bool bModulate );
 
 void ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *viewSetup );

@@ -25,6 +25,7 @@
 #include "c_env_fog_controller.h"
 #include "igameevents.h"
 #include "GameEventListener.h"
+#include "c_postprocesscontroller.h"
 
 #if defined USES_ECON_ITEMS
 #include "econ_item.h"
@@ -400,6 +401,8 @@ public:
 	void					UpdateFogController( void );
 	void					UpdateFogBlend( void );
 
+	C_PostProcessController* GetActivePostProcessController() const;
+
 	float					GetFOVTime( void ){ return m_flFOVTime; }
 
 	virtual void			OnAchievementAchieved( int iAchievement ) {}
@@ -480,6 +483,8 @@ public:
 	float			m_flConstraintRadius;
 	float			m_flConstraintWidth;
 	float			m_flConstraintSpeedFactor;
+
+	int			m_iDeathPostEffect;
 
 protected:
 
@@ -692,6 +697,9 @@ public:
 	void SetOldPlayerZ( float flOld ) { m_flOldPlayerZ = flOld;	}
 
 	virtual bool IsHoldingLookAtWeapon( void ) const { return false; }
+
+private:
+	CNetworkHandle( CPostProcessController, m_hPostProcessCtrl );	// active postprocessing controller
 };
 
 EXTERN_RECV_TABLE(DT_BasePlayer);

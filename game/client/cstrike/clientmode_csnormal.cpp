@@ -86,6 +86,53 @@ extern ConVar v_viewmodel_fov;
 extern ConVar view_recoil_tracking;
 extern ConVar cam_recoil;
 
+
+//--------------------------------------------------------------------------------------------------------
+CON_COMMAND_F( cl_reloadpostprocessparams, "", FCVAR_CHEAT )
+{
+	// get optional filename
+	if ( args.ArgC() == 2 )
+	{
+		GetClientModeCSNormal()->LoadPostProcessParamsFromFile( args[1] );
+	}
+	else
+	{
+		GetClientModeCSNormal()->LoadPostProcessParamsFromFile();
+	}
+}
+
+//--------------------------------------------------------------------------------------------------------
+const char* ClientModeCSNormal::ms_postProcessEffectNames[NUM_POST_EFFECTS] =
+{
+	"default",
+	"low_health",
+	"very_low_health",
+	"in_buy_menu",
+	"death_cam",
+	"spectating",
+	"in_fire",
+	"zoomed_rifle",
+	"zoomed_sniper",
+	"zoomed_sniper_moving",
+	"under_water",
+	"round_end_via_bombing",
+	"spec_camera_lerping",
+	"map_control_unused",
+	"death_cam_bodyshot",
+	"death_cam_headshot"
+};
+
+//--------------------------------------------------------------------------------------------------------
+PostProcessParameters_t ClientModeCSNormal::ms_postProcessParams[NUM_POST_EFFECTS] =
+{
+	//{ 0.5f, 0.0f, 0.8f, 1.1f, 0.0f, 0.0f },	// default
+	//{ 2.5f, 0.0f, 0.8f, 1.1f, 0.0f, 0.0f },	// low_health
+	//{ 1.8f, -1.0f, 0.6f, 0.95f, 0.0f, 0.0f },	// in_buy_menu
+	//{ -0.4f, 0.0f, 0.8f, 1.1f, 0.0f, 0.0f },	// death_cam
+	//{ -0.4f, 0.0f, 0.8f, 1.1f, 0.0f, 0.0f },	// spectating
+	//{ 1.25f,-.65f, 0.4f, .85f, 0.0f, 0.0f }	// in fire
+};
+
 ConVar mat_blur_strength( "mat_blur_strength", "1.0", FCVAR_ARCHIVE );
 ConVar mat_blur_desaturate( "mat_blur_desaturate", "0.5", FCVAR_ARCHIVE );
 
@@ -294,6 +341,15 @@ ClientModeCSNormal::ClientModeCSNormal()
 	m_CCFreezePeriodHandle_T = INVALID_CLIENT_CCHANDLE;
 	m_CCFreezePeriodPercent_T = 0.0f;
 
+	m_activePostProcessEffect = POST_EFFECT_DEFAULT;
+	m_lastPostProcessEffect = POST_EFFECT_DEFAULT;
+	m_pActivePostProcessController = NULL;
+	m_postProcessLerpStartParams = ms_postProcessParams[ POST_EFFECT_DEFAULT ];
+	m_postProcessLerpEndParams = ms_postProcessParams[ POST_EFFECT_DEFAULT ];
+	m_postProcessCurrentParams = ms_postProcessParams[ POST_EFFECT_DEFAULT ];
+
+	m_iRoundStatus = ROUND_UNKNOWN;
+
 	HOOK_MESSAGE( MatchEndConditions );
 }
 
@@ -344,6 +400,8 @@ void ClientModeCSNormal::Init()
 		m_CCFreezePeriodHandle_T = g_pColorCorrectionMgr->AddColorCorrection( szRawFile );
 	}
 
+	LoadPostProcessParamsFromFile();
+
 	m_fDelayedCTWinTime = -1.0f;
 	m_nRoundMVP = 0;
 }
@@ -363,6 +421,15 @@ void ClientModeCSNormal::LevelShutdown( void )
 {
 	BaseClass::LevelShutdown();
 
+	// reset all of the post process effects
+	m_lastPostProcessEffect = POST_EFFECT_DEFAULT;
+	m_activePostProcessEffect = POST_EFFECT_DEFAULT;
+	m_pActivePostProcessController = NULL;
+	m_postProcessEffectCountdown.Reset();
+	m_postProcessLerpEndParams = ms_postProcessParams[POST_EFFECT_DEFAULT];
+	m_postProcessLerpStartParams = ms_postProcessParams[POST_EFFECT_DEFAULT];
+	m_postProcessCurrentParams = ms_postProcessParams[POST_EFFECT_DEFAULT];
+
 	// Remove any lingering debug overlays, since it's possible they won't get cleaned up automatically later.
 	// This is in response to anecdotal reports that players can 'mark' the world with showimpacts or grenade trajectories,
 	// then use them to their advantage on subsequent games played immediately on the same map.
@@ -373,6 +440,8 @@ void ClientModeCSNormal::LevelShutdown( void )
 void ClientModeCSNormal::Update()
 {
 	BaseClass::Update();
+
+	UpdatePostProcessingEffects();
 
 	// Override the hud's visibility if this is a logo (like E3 demo) map.
 	if ( CSGameRules() && CSGameRules()->IsLogoMap() )
@@ -521,6 +590,323 @@ void ClientModeCSNormal::OnColorCorrectionWeightsReset( void )
 	g_pColorCorrectionMgr->SetColorCorrectionWeight( m_CCDeathHandle, m_CCDeathPercent );
 	g_pColorCorrectionMgr->SetColorCorrectionWeight( m_CCFreezePeriodHandle_CT, m_CCFreezePeriodPercent_CT );
 	g_pColorCorrectionMgr->SetColorCorrectionWeight( m_CCFreezePeriodHandle_T, m_CCFreezePeriodPercent_T );
+}
+
+//--------------------------------------------------------------------------------------------------------
+PostProcessEffect_t ClientModeCSNormal::PostProcessEffectFromName( const char* pName ) const
+{
+	for ( int i = 0; i < NUM_POST_EFFECTS; i++ )
+	{
+		if ( V_stricmp( pName, ms_postProcessEffectNames[i] ) == 0 )
+		{
+			return PostProcessEffect_t( i );
+		}
+	}
+	return NUM_POST_EFFECTS;
+}
+
+
+//--------------------------------------------------------------------------------------------------------
+void ClientModeCSNormal::LoadPostProcessParamsFromFile( const char* pFileName )
+{
+	if ( !pFileName )
+	{
+		pFileName = "scripts/postprocess.txt";
+	}
+
+	KeyValues *pPPKeys = new KeyValues( "post_process" );
+	if ( pPPKeys->LoadFromFile( g_pFullFileSystem, pFileName ) == false )
+	{
+		Warning( "Error loading postprocessing params from file %s\n" , pFileName );
+		pPPKeys->deleteThis();
+		return;
+	}
+
+	for ( KeyValues* pSubKeys = pPPKeys->GetFirstTrueSubKey(); pSubKeys; pSubKeys = pSubKeys->GetNextTrueSubKey() )
+	{
+		PostProcessEffect_t effect = PostProcessEffectFromName( pSubKeys->GetName() );
+		if ( effect == NUM_POST_EFFECTS )
+		{
+			Warning( "Unknown postprocess effect type: %s\n", pSubKeys->GetName() );
+			continue;
+		}
+
+		ms_postProcessParams[effect].m_flParameters[PPPN_FADE_TIME]						= pSubKeys->GetFloat( "fadetime", 0.5f );
+		ms_postProcessParams[effect].m_flParameters[PPPN_LOCAL_CONTRAST_STRENGTH]		= pSubKeys->GetFloat( "localcontrast", 0.0f );
+		ms_postProcessParams[effect].m_flParameters[PPPN_LOCAL_CONTRAST_EDGE_STRENGTH]	= pSubKeys->GetFloat( "edgelocalcontrast", 0.0f );
+		ms_postProcessParams[effect].m_flParameters[PPPN_VIGNETTE_START]				= pSubKeys->GetFloat( "vignettestart", 1.0f );
+		ms_postProcessParams[effect].m_flParameters[PPPN_VIGNETTE_END]					= pSubKeys->GetFloat( "vignetteend", 2.0f );
+		ms_postProcessParams[effect].m_flParameters[PPPN_VIGNETTE_BLUR_STRENGTH]		= pSubKeys->GetFloat( "vignetteblur", 0.0f );
+		ms_postProcessParams[effect].m_flParameters[PPPN_FADE_TO_BLACK_STRENGTH]		= pSubKeys->GetFloat( "fadetoblack", 0.0f );
+		ms_postProcessParams[effect].m_flParameters[PPPN_DEPTH_BLUR_FOCAL_DISTANCE]		= pSubKeys->GetFloat( "depthblur_focaldist", 0.0f );
+		ms_postProcessParams[effect].m_flParameters[PPPN_DEPTH_BLUR_STRENGTH]			= pSubKeys->GetFloat( "depthblur_strength", 0.0f );
+		ms_postProcessParams[effect].m_flParameters[PPPN_SCREEN_BLUR_STRENGTH]			= pSubKeys->GetFloat( "screenblur_strength", 0.0f );
+		ms_postProcessParams[effect].m_flParameters[PPPN_FILM_GRAIN_STRENGTH]			= pSubKeys->GetFloat( "filmgrain_strength", 0.0f );
+	}
+
+	// update the currently active postprocess type with the new params
+	if ( m_activePostProcessEffect < NUM_POST_EFFECTS )
+	{
+		m_postProcessLerpEndParams = ms_postProcessParams[m_activePostProcessEffect];
+	}
+
+	pPPKeys->deleteThis();
+}
+
+
+//--------------------------------------------------------------------------------------------------------
+void ClientModeCSNormal::UpdatePostProcessingEffects()
+{
+	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+	C_CSPlayer* pPlayer = ToCSPlayer(pLocalPlayer);
+
+	// If we set off the bomb, run the bomb round end post process effect.
+	if ( pPlayer && m_iRoundStatus == ROUND_ENDED_VIA_BOMBING && (pPlayer->GetObserverMode() == OBS_MODE_DEATHCAM || ( pPlayer->GetObserverTarget() && !pPlayer->GetObserverTarget()->IsPlayer() ) ) )
+	{
+		PostProcessLerpTo( POST_EFFECT_ROUND_END_VIA_BOMBING, 1.0f );
+	}
+	else if ( !pPlayer )
+	{
+		PostProcessLerpTo( POST_EFFECT_DEFAULT );
+	}
+	else if ( pPlayer->GetViewEntity() != NULL )
+	{
+		// Our view is on a camera
+		PostProcessLerpTo( POST_EFFECT_DEFAULT );
+	}
+	else if ( pPlayer->GetObserverInterpState() == C_CSPlayer::OBSERVER_INTERP_TRAVELING )
+	{		
+		PostProcessLerpTo( POST_EFFECT_SPEC_CAMERA_LERPING, 0.1f );
+	}
+	else if ( false ) // PiMoN: Currently in progress...
+	{
+		PostProcessLerpTo( POST_EFFECT_IN_BUY_MENU, 0.1f );
+	}
+	else if ( false ) // [msmith]: Currently in progress...
+	{
+		PostProcessLerpTo( POST_EFFECT_UNDER_WATER, 0.1f );
+	}
+	else if ( pPlayer->IsAlive() && pPlayer->GetFOV() != pPlayer->GetDefaultFOV() && pPlayer->m_bIsScoped )
+	{
+		CWeaponCSBase *pWeapon = pPlayer->GetActiveCSWeapon();
+		if ( pWeapon && pWeapon->GetWeaponType() == WEAPONTYPE_SNIPER_RIFLE )
+		{
+			float flBaseAccuracy = pWeapon->GetCSWpnData().m_fInaccuracyStand[pWeapon->m_weaponMode];
+			float flInacc = MAX( pWeapon->GetInaccuracy() - flBaseAccuracy, 0 );
+			if ( flInacc * 100 > 5 )
+				PostProcessLerpTo( POST_EFFECT_ZOOMED_SNIPER_MOVING, 0.01f );
+			else
+				PostProcessLerpTo( POST_EFFECT_ZOOMED_SNIPER, 0.01f );
+		}
+		else if ( pWeapon )
+		{
+			PostProcessLerpTo( POST_EFFECT_ZOOMED_RIFLE, 0.01f );
+		}
+	}
+	else if ( !pPlayer->IsAlive() && pPlayer->m_iDeathPostEffect > 0 && mp_forcecamera.GetInt() != OBS_ALLOW_ALL )
+	{
+		PostProcessEffect_t post_effect = ( PostProcessEffect_t ) pPlayer->m_iDeathPostEffect;
+
+		if ( post_effect == POST_EFFECT_DEATH_CAM_BODYSHOT )
+		{
+			extern ConVar	spec_freeze_time;
+			PostProcessLerpTo( POST_EFFECT_DEATH_CAM_BODYSHOT, spec_freeze_time.GetInt() );
+		}
+		else if ( post_effect == POST_EFFECT_DEATH_CAM_HEADSHOT )
+		{
+			PostProcessLerpTo( POST_EFFECT_DEATH_CAM_HEADSHOT, 1.0f );
+		}
+	}
+	else if ( !pPlayer->IsAlive() && pPlayer->GetObserverTarget() == NULL && pPlayer->GetObserverMode() == OBS_MODE_DEATHCAM )
+	{
+		PostProcessLerpTo( POST_EFFECT_DEATH_CAM );
+	}
+
+	
+	/*
+	else if ( pPlayer && pPlayer->GetHealth() <= pPlayer->GetMaxHealth()/3 )
+	{
+		float flStartHealthFrac = (pPlayer->GetMaxHealth()/3) * 0.01;
+		float fHealthFrac = clamp( (float)pPlayer->GetHealth() / (float)pPlayer->GetMaxHealth(), 0.0f, 1.0f );
+		float flFXFrac = fHealthFrac / flStartHealthFrac;
+		PostProcessParameters_t incapParams;
+
+		// lerp target params based on health state, then let DoPostProcessParamLerp() do the rest
+
+		LerpPostProcessParam( 1.0f - flFXFrac, incapParams, ms_postProcessParams[POST_EFFECT_LOW_HEATH], ms_postProcessParams[POST_EFFECT_VERY_LOW_HEATH] );
+
+		PostProcessLerpTo( POST_EFFECT_DEFAULT, 0.5f, &incapParams );
+	}
+	else if ( pPlayer->GetEffectEntity() != NULL )
+	{
+		PostProcessLerpTo( POST_EFFECT_IN_FIRE );
+	}*/
+	else
+	{
+		C_PostProcessController* pPPCtrl = pPlayer->GetActivePostProcessController();
+
+		float flFadeTime = 0.5f;
+		if ( m_activePostProcessEffect == POST_EFFECT_ZOOMED_SNIPER_MOVING || m_activePostProcessEffect == POST_EFFECT_ZOOMED_SNIPER ||
+			 m_activePostProcessEffect == POST_EFFECT_ZOOMED_RIFLE )
+		{
+			flFadeTime = 0.0f;
+		}
+		else if ( m_activePostProcessEffect == POST_EFFECT_SPEC_CAMERA_LERPING )
+		{
+			flFadeTime = 0.1f;
+		}
+		else if ( !pPPCtrl && engine->IsLevelMainMenuBackground() )
+		{
+			// FIXME: In the main menu the server is unable to set up the postprocess controller for the player for some reason.
+			// Just use the master controller for now.
+			pPPCtrl = C_PostProcessController::GetMasterController();
+		}
+
+		if ( !pPPCtrl )
+		{
+			PostProcessLerpTo( POST_EFFECT_DEFAULT, flFadeTime);
+		}
+		else
+		{
+			PostProcessLerpTo( POST_EFFECT_MAP_CONTROLLED, pPPCtrl );
+		}
+	}
+
+	DoPostProcessParamLerp();
+
+	// Apply params to postprocessing code
+	PostProcessParameters_t currentParams = m_postProcessCurrentParams;
+
+	SetPostProcessParams( &currentParams );
+}
+
+//--------------------------------------------------------------------------------------------------------
+void ClientModeCSNormal::PostProcessLerpTo( PostProcessEffect_t effectID, float fFadeDuration, const PostProcessParameters_t* pTargetParams )
+{
+	if ( m_activePostProcessEffect == effectID )
+	{
+		// the target params might still be updated
+		if ( pTargetParams )
+		{
+			m_postProcessLerpEndParams = *pTargetParams;
+		}
+		return;
+	}
+
+	m_lastPostProcessEffect = m_activePostProcessEffect;
+	m_activePostProcessEffect = effectID;
+	m_pActivePostProcessController = NULL;
+	m_postProcessEffectCountdown.Start( fFadeDuration );
+	m_postProcessLerpStartParams = m_postProcessCurrentParams;
+	if ( pTargetParams )
+	{
+		m_postProcessLerpEndParams = *pTargetParams;
+	}
+	else
+	{
+		m_postProcessLerpEndParams = ms_postProcessParams[ effectID ];
+	}
+}
+
+
+//--------------------------------------------------------------------------------------------------------
+void ClientModeCSNormal::PostProcessLerpTo( PostProcessEffect_t effectID, const C_PostProcessController* pPostProcessController )
+{
+	Assert( pPostProcessController );
+
+	m_lastPostProcessEffect = m_activePostProcessEffect;
+	m_activePostProcessEffect = effectID;
+
+	if ( m_pActivePostProcessController != pPostProcessController )
+	{
+		float flFade = pPostProcessController->m_PostProcessParameters.m_flParameters[PPPN_FADE_TIME];
+		// we force the fade back time to be short when coming from the buy menu
+		if ( m_lastPostProcessEffect == POST_EFFECT_IN_BUY_MENU )
+			flFade = 0.25;
+		else if ( m_lastPostProcessEffect == POST_EFFECT_ZOOMED_RIFLE || m_lastPostProcessEffect == POST_EFFECT_ZOOMED_SNIPER || m_lastPostProcessEffect == POST_EFFECT_ZOOMED_SNIPER_MOVING )
+			flFade = 0.01;
+		else if ( m_lastPostProcessEffect == POST_EFFECT_SPEC_CAMERA_LERPING )
+			flFade = 0.1;
+		else if ( m_lastPostProcessEffect == POST_EFFECT_DEATH_CAM_BODYSHOT || m_lastPostProcessEffect == POST_EFFECT_DEATH_CAM_HEADSHOT )
+			flFade = 0.01;
+		m_pActivePostProcessController = pPostProcessController;
+		m_postProcessEffectCountdown.Start( flFade );
+		m_postProcessLerpStartParams = m_postProcessCurrentParams;
+	}
+
+	m_postProcessLerpEndParams = pPostProcessController->m_PostProcessParameters;
+
+}
+
+
+//--------------------------------------------------------------------------------------------------------
+void ClientModeCSNormal::DoPostProcessParamLerp()
+{
+	float fAmount = 1.0f - m_postProcessEffectCountdown.GetRemainingRatio();
+
+	// just force it
+	if ( fAmount == 1 )
+		m_postProcessCurrentParams = m_postProcessLerpEndParams;
+	else
+	{
+#define PP_LERP(x) m_postProcessCurrentParams.x = Lerp( fAmount, m_postProcessLerpStartParams.x, m_postProcessLerpEndParams.x )
+		PP_LERP( m_flParameters[PPPN_FADE_TO_BLACK_STRENGTH] );
+		PP_LERP( m_flParameters[PPPN_LOCAL_CONTRAST_EDGE_STRENGTH] );
+		PP_LERP( m_flParameters[PPPN_LOCAL_CONTRAST_STRENGTH] );
+		PP_LERP( m_flParameters[PPPN_VIGNETTE_BLUR_STRENGTH] );
+		PP_LERP( m_flParameters[PPPN_VIGNETTE_END] );
+		PP_LERP( m_flParameters[PPPN_VIGNETTE_START] );
+		PP_LERP( m_flParameters[PPPN_DEPTH_BLUR_FOCAL_DISTANCE] );
+		PP_LERP( m_flParameters[PPPN_DEPTH_BLUR_STRENGTH] );
+		PP_LERP( m_flParameters[PPPN_SCREEN_BLUR_STRENGTH] );
+		PP_LERP( m_flParameters[PPPN_FILM_GRAIN_STRENGTH] );
+#undef PP_LERP
+	}
+}
+
+//--------------------------------------------------------------------------------------------------------
+void ClientModeCSNormal::LerpPostProcessParam( float fAmount, PostProcessParameters_t& result, const PostProcessParameters_t& from,
+	const PostProcessParameters_t& to ) const
+{
+#define PP_LERP(x) result.x = Lerp( fAmount, from.x, to.x )
+	PP_LERP( m_flParameters[PPPN_FADE_TO_BLACK_STRENGTH] );
+	PP_LERP( m_flParameters[PPPN_LOCAL_CONTRAST_EDGE_STRENGTH] );
+	PP_LERP( m_flParameters[PPPN_LOCAL_CONTRAST_STRENGTH] );
+	PP_LERP( m_flParameters[PPPN_VIGNETTE_BLUR_STRENGTH] );
+	PP_LERP( m_flParameters[PPPN_VIGNETTE_END] );
+	PP_LERP( m_flParameters[PPPN_VIGNETTE_START] );
+	PP_LERP( m_flParameters[PPPN_DEPTH_BLUR_FOCAL_DISTANCE] );
+	PP_LERP( m_flParameters[PPPN_DEPTH_BLUR_STRENGTH] );
+	PP_LERP( m_flParameters[PPPN_SCREEN_BLUR_STRENGTH] );
+	PP_LERP( m_flParameters[PPPN_FILM_GRAIN_STRENGTH] );
+#undef PP_LERP
+}
+
+
+//--------------------------------------------------------------------------------------------------------
+void ClientModeCSNormal::GetDefaultPostProcessingParams( C_CSPlayer* pPlayer, PostProcessEffectParams_t* pParams )
+{
+	Assert( pParams );
+
+	C_PostProcessController* pPPCtrl = NULL;
+	if ( pPlayer )
+	{
+		pPPCtrl = pPlayer->GetActivePostProcessController();
+	}
+
+	if ( pPPCtrl )
+	{
+		pParams->fLocalContrastStrength = pPPCtrl->m_PostProcessParameters.m_flParameters[PPPN_LOCAL_CONTRAST_STRENGTH];
+		pParams->fLocalContrastEdgeStrength = pPPCtrl->m_PostProcessParameters.m_flParameters[PPPN_LOCAL_CONTRAST_EDGE_STRENGTH];
+		pParams->fVignetteStart = pPPCtrl->m_PostProcessParameters.m_flParameters[PPPN_VIGNETTE_START];
+		pParams->fVignetteEnd = pPPCtrl->m_PostProcessParameters.m_flParameters[PPPN_VIGNETTE_END];
+		pParams->fVignetteBlurStrength = pPPCtrl->m_PostProcessParameters.m_flParameters[PPPN_VIGNETTE_BLUR_STRENGTH];
+		pParams->fFadeToBlackStrength= pPPCtrl->m_PostProcessParameters.m_flParameters[PPPN_FADE_TO_BLACK_STRENGTH];
+	}
+	else
+	{
+		memcpy( pParams, &ms_postProcessParams[ POST_EFFECT_DEFAULT ], sizeof( PostProcessEffectParams_t ) );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -777,6 +1163,15 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 
 		int winningTeam = event->GetInt("winner");
 		int reason = event->GetInt("reason");
+
+		if ( Target_Bombed == reason )
+		{
+			m_iRoundStatus = ROUND_ENDED_VIA_BOMBING;
+		}
+		else
+		{
+			m_iRoundStatus = ROUND_ENDED;
+		}
 
 		if ( reason != Game_Commencing )
 		{

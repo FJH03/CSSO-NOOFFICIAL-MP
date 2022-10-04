@@ -309,9 +309,13 @@ END_RECV_TABLE()
 		RecvPropInt		(RECVINFO(m_iObserverMode), 0, RecvProxy_ObserverMode ),
 		RecvPropEHandle	(RECVINFO(m_hObserverTarget), RecvProxy_ObserverTarget ),
 		RecvPropArray	( RecvPropEHandle( RECVINFO( m_hViewModel[0] ) ), m_hViewModel ),
+
+		RecvPropInt	(RECVINFO( m_iDeathPostEffect ) ),
 		
 
 		RecvPropString( RECVINFO(m_szLastPlaceName) ),
+
+		RecvPropEHandle( RECVINFO( m_hPostProcessCtrl ) ),		// Send to everybody - for spectating
 
 #if defined USES_ECON_ITEMS
 		RecvPropUtlVector( RECVINFO_UTLVECTOR( m_hMyWearables ), MAX_WEARABLES_SENT_FROM_SERVER,	RecvPropEHandle(NULL, 0, 0) ),
@@ -456,6 +460,8 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 	m_bResampleWaterSurface = true;
 	
 	ResetObserverMode();
+
+	m_iDeathPostEffect = 0;
 
 	m_vecPredictionError.Init();
 	m_flPredictionErrorTime = 0;
@@ -3017,6 +3023,14 @@ void C_BasePlayer::UpdateFogBlend( void )
 				
 		}
 	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+C_PostProcessController* C_BasePlayer::GetActivePostProcessController() const
+{
+	return m_hPostProcessCtrl.Get();
 }
 
 //-----------------------------------------------------------------------------

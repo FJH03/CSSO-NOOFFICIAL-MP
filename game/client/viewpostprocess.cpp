@@ -1377,6 +1377,11 @@ void SetOverrideTonemapScale( bool bEnableOverride, float flTonemapScale )
 	GetCurrentTonemappingSystem()->SetOverrideTonemapScale( bEnableOverride, flTonemapScale );
 }
 
+void SetPostProcessParams( const PostProcessParameters_t *pPostProcessParameters )
+{
+	s_LocalPostProcessParameters = *pPostProcessParameters;
+}
+
 void SetViewFadeParams( byte r, byte g, byte b, byte a, bool bModulate )
 {
 	s_viewFadeColor.Init( float(r)/255.0f, float(g)/255.0f, float(b)/255.0f, float(a)/255.0f );
