@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright � 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -10,6 +10,9 @@
 
 #include "Downsample_ps20.inc"
 #include "Downsample_ps20b.inc"
+
+// NOTE: This has to be the last file included!
+#include "tier0/memdbgon.h"
 
 
 BEGIN_VS_SHADER_FLAGS( Downsample, "Help for Downsample", SHADER_NOT_EDITABLE )
@@ -23,17 +26,12 @@ BEGIN_VS_SHADER_FLAGS( Downsample, "Help for Downsample", SHADER_NOT_EDITABLE )
 	
 	SHADER_FALLBACK
 	{
-		// Requires DX9 + above
-		if ( !g_pHardwareConfig->SupportsVertexAndPixelShaders() )
-		{
-//			Assert( 0 );
-			return "Wireframe";
-		}
 		return 0;
 	}
 
 	SHADER_DRAW
 	{
+		bool bForceSRGBReadAndWrite = false;
 		SHADOW_STATE
 		{
 			pShaderShadow->EnableDepthWrites( false );
@@ -41,8 +39,7 @@ BEGIN_VS_SHADER_FLAGS( Downsample, "Help for Downsample", SHADER_NOT_EDITABLE )
 
 			pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );
 
-			// Render targets are pegged as sRGB on OSX GL, so just force these reads and writes
-			bool bForceSRGBReadAndWrite = IsOSX() && g_pHardwareConfig->CanDoSRGBReadFromRTs();
+			// Render targets are pegged as sRGB on togl OSX, so just force these reads and writes
 			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, bForceSRGBReadAndWrite );
 			pShaderShadow->EnableSRGBWrite( bForceSRGBReadAndWrite );
 

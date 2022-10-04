@@ -125,243 +125,99 @@ ConVar mat_blur_r( "mat_blur_r", "0.5", FCVAR_ARCHIVE );
 ConVar mat_blur_g( "mat_blur_g", "0.5", FCVAR_ARCHIVE );
 ConVar mat_blur_b( "mat_blur_b", "0.5", FCVAR_ARCHIVE );
 
-extern ConVar localplayer_visionflags;
 
-enum PostProcessingCondition {
-	PPP_ALWAYS,
-	PPP_IF_COND_VAR,
-	PPP_IF_NOT_COND_VAR
-};
+//=====================================================================================================================
+// Downsample material proxy ============================================================================================
+//=====================================================================================================================
 
-struct PostProcessingPass {
-	PostProcessingCondition ppp_test;
-	ConVar const *cvar_to_test;
-	char const *material_name;								// terminate list with null
-	char const *dest_rendering_target;
-	char const *src_rendering_target;						// can be null. needed for source scaling
-	int xdest_scale,ydest_scale;							// allows scaling down
-	int xsrc_scale,ysrc_scale;								// allows scaling down
-	CMaterialReference m_mat_ref;							// so we don't have to keep searching
-};
-
-#define PPP_PROCESS_PARTIAL_SRC(srcmatname,dest_rt_name,src_tname,scale) \
-{PPP_ALWAYS,0,srcmatname,dest_rt_name,src_tname,1,1,scale,scale}
-#define PPP_PROCESS_PARTIAL_DEST(srcmatname,dest_rt_name,src_tname,scale) \
-{PPP_ALWAYS,0,srcmatname,dest_rt_name,src_tname,scale,scale,1,1}
-#define PPP_PROCESS_PARTIAL_SRC_PARTIAL_DEST(srcmatname,dest_rt_name,src_tname,srcscale,destscale) \
-{PPP_ALWAYS,0,srcmatname,dest_rt_name,src_tname,destscale,destscale,srcscale,srcscale}
-#define PPP_END 	{PPP_ALWAYS,0,NULL,NULL,0,0,0,0,0}
-#define PPP_PROCESS(srcmatname,dest_rt_name) {PPP_ALWAYS,0,srcmatname,dest_rt_name,0,1,1,1,1}
-#define PPP_PROCESS_IF_CVAR(cvarptr,srcmatname,dest_rt_name) \
-{PPP_IF_COND_VAR,cvarptr,srcmatname,dest_rt_name,0,1,1,1,1}
-#define PPP_PROCESS_IF_NOT_CVAR(cvarptr,srcmatname,dest_rt_name) \
-{PPP_IF_NOT_COND_VAR,cvarptr,srcmatname,dest_rt_name,0,1,1,1,1}
-#define PPP_PROCESS_IF_NOT_CVAR_SRCTEXTURE(cvarptr,srcmatname,src_tname,dest_rt_name) \
-{PPP_IF_NOT_COND_VAR,cvarptr,srcmatname,dest_rt_name,src_tname,1,1,1,1}
-#define PPP_PROCESS_IF_CVAR_SRCTEXTURE(cvarptr,srcmatname,src_txtrname,dest_rt_name) \
-{PPP_IF_COND_VAR,cvarptr,srcmatname,dest_rt_name,src_txtrname,1,1,1,1}
-#define PPP_PROCESS_SRCTEXTURE(srcmatname,src_tname,dest_rt_name) \
-{PPP_ALWAYS,0,srcmatname,dest_rt_name,src_tname,1,1,1,1}
-
-struct ClipBox
+class CDownsampleMaterialProxy : public CEntityMaterialProxy
 {
-	int m_minx, m_miny;
-	int m_maxx, m_maxy;
+public:
+	CDownsampleMaterialProxy();
+	virtual ~CDownsampleMaterialProxy() {};
+	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
+	virtual void OnBind( C_BaseEntity *pEntity );
+	virtual IMaterial *GetMaterial();
+
+public:
+	static IMaterial *GetDownsampleMaterial( IMaterialSystem * materials );
+	static void	SetupDownsampleMaterial( float flBloomExponent, float flBloomSaturation );
+
+private:
+	static IMaterialVar	*s_pMaterialParam_bloomexp;
+	static IMaterialVar	*s_pMaterialParam_bloomsaturation;
+
+	static float		s_bloomexp;
+	static float		s_bloomsaturation;
+
+	static IMaterial	*s_pDownsampleMaterial;
 };
 
-static void DrawClippedScreenSpaceRectangle( 
-	IMaterial *pMaterial,
-	int destx, int desty,
-	int width, int height,
-	float src_texture_x0, float src_texture_y0,			// which texel you want to appear at
-	// destx/y
-	float src_texture_x1, float src_texture_y1,			// which texel you want to appear at
-	// destx+width-1, desty+height-1
-	int src_texture_width, int src_texture_height,		// needed for fixup
-	ClipBox const *clipbox,
-	void *pClientRenderable = NULL )
+IMaterialVar *CDownsampleMaterialProxy::s_pMaterialParam_bloomexp = NULL;
+IMaterialVar *CDownsampleMaterialProxy::s_pMaterialParam_bloomsaturation = NULL;
+ 
+float CDownsampleMaterialProxy::s_bloomexp			= 2.5f;
+float CDownsampleMaterialProxy::s_bloomsaturation	= 1.0f;
+ 
+IMaterial	*CDownsampleMaterialProxy::s_pDownsampleMaterial = NULL;
+
+
+CDownsampleMaterialProxy::CDownsampleMaterialProxy()
 {
-	if (clipbox)
+	s_pMaterialParam_bloomexp		 = NULL;
+	s_pMaterialParam_bloomsaturation = NULL;
+
+	s_pDownsampleMaterial			 = NULL;
+}
+
+bool CDownsampleMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
+{
+	bool bFoundVar = false;
+
+	s_pMaterialParam_bloomexp		 = pMaterial->FindVar( "$bloomexp", &bFoundVar, false );
+	s_pMaterialParam_bloomsaturation = pMaterial->FindVar( "$bloomsaturation", &bFoundVar, false );
+
+	s_bloomexp = 2.5f;
+	s_bloomsaturation = 1.0f;
+
+	return true;
+}
+
+void CDownsampleMaterialProxy::OnBind( C_BaseEntity *pEnt )
+{
+}
+
+IMaterial *CDownsampleMaterialProxy::GetMaterial()
+{
+	if ( s_pMaterialParam_bloomexp == NULL)
+		return NULL;
+
+	return s_pMaterialParam_bloomexp->GetOwningMaterial();
+}
+
+IMaterial *CDownsampleMaterialProxy::GetDownsampleMaterial( IMaterialSystem * materials )
+{
+	if( s_pDownsampleMaterial == NULL)
 	{
-		if ( (destx > clipbox->m_maxx ) || ( desty > clipbox->m_maxy ))
-			return;
-		if ( (destx + width - 1 < clipbox->m_minx ) || ( desty + height - 1 < clipbox->m_miny ))
-			return;
-		// left clip
-		if ( destx < clipbox->m_minx )
-		{
-			src_texture_x0 = FLerp( src_texture_x0, src_texture_x1, destx, destx + width - 1, clipbox->m_minx );
-			width -= ( clipbox->m_minx - destx );
-			destx = clipbox->m_minx;
-		}
-		// top clip
-		if ( desty < clipbox->m_miny )
-		{
-			src_texture_y0 = FLerp( src_texture_y0, src_texture_y1, desty, desty + height - 1, clipbox->m_miny );
-			height -= ( clipbox->m_miny - desty );
-			desty = clipbox->m_miny;
-		}
-		// right clip
-		if ( destx + width - 1 > clipbox->m_maxx )
-		{
-			src_texture_x1 = FLerp( src_texture_x0, src_texture_x1, destx, destx + width - 1, clipbox->m_maxx );
-			width = clipbox->m_maxx - destx;
-		}
-		// bottom clip
-		if ( desty + height - 1 > clipbox->m_maxy )
-		{
-			src_texture_y1 = FLerp( src_texture_y0, src_texture_y1, desty, desty + height - 1, clipbox->m_maxy );
-			height = clipbox->m_maxy - desty;
-		}
+		// FIXME: doesn't support dev/downsample (bFloathdr == true) path on PS3 here yet...
+		s_pDownsampleMaterial = materials->FindMaterial( "dev/downsample_non_hdr", TEXTURE_GROUP_OTHER, true );
 	}
-	CMatRenderContextPtr pRenderContext( materials );
-	pRenderContext->DrawScreenSpaceRectangle( pMaterial, destx, desty, width, height, src_texture_x0,
-											  src_texture_y0, src_texture_x1, src_texture_y1,
-											  src_texture_width, src_texture_height, pClientRenderable );
+
+	return s_pDownsampleMaterial;
+}
+
+void CDownsampleMaterialProxy::SetupDownsampleMaterial( float flBloomExponent, float flBloomSaturation )
+{
+	s_bloomexp			= flBloomExponent;
+	s_bloomsaturation	= flBloomSaturation;
+
+	s_pMaterialParam_bloomexp->SetFloatValue( s_bloomexp );
+	s_pMaterialParam_bloomsaturation->SetFloatValue( s_bloomsaturation );
 }
 
 
-void ApplyPostProcessingPasses(PostProcessingPass *pass_list, // table of effects to apply
-							   ClipBox const *clipbox=0,	// clipping box for these effects
-							   ClipBox *dest_coords_out=0)	// receives dest coords of last blit
-{
-	CMatRenderContextPtr pRenderContext( materials );
-	ITexture *pSaveRenderTarget = pRenderContext->GetRenderTarget();
-	int pcount=0;
-	if ( debug_postproc.GetInt() == 1 ) 
-	{
-		pRenderContext->SetRenderTarget(NULL);
-		int dest_width,dest_height;
-		pRenderContext->GetRenderTargetDimensions( dest_width, dest_height );
-		pRenderContext->Viewport( 0, 0, dest_width, dest_height );
-		pRenderContext->ClearColor3ub(255,0,0);
-		//		pRenderContext->ClearBuffers(true,true);
-	}
+EXPOSE_MATERIAL_PROXY( CDownsampleMaterialProxy, downsample_non_hdr );
 
-	while(pass_list->material_name)
-	{
-		bool do_it=true;
-
-		switch(pass_list->ppp_test)
-		{
-		case PPP_IF_COND_VAR:
-			do_it=(pass_list->cvar_to_test)->GetBool();
-			break;
-		case PPP_IF_NOT_COND_VAR:
-			do_it=! ((pass_list->cvar_to_test)->GetBool());
-			break;
-		}
-		if ((pass_list->dest_rendering_target==0) && (debug_postproc.GetInt() == 1))
-			do_it=0;
-		if (do_it)
-		{
-			ClipBox const *cb=0;
-			if (pass_list->dest_rendering_target==0)
-			{
-				cb=clipbox;
-			}
-
-			IMaterial *src_mat=pass_list->m_mat_ref;
-			if (! src_mat)
-			{
-				src_mat=materials->FindMaterial(pass_list->material_name,
-					TEXTURE_GROUP_OTHER,true);
-				if (src_mat)
-				{
-					pass_list->m_mat_ref.Init(src_mat);
-				}
-			}
-			if (pass_list->dest_rendering_target)
-			{
-				ITexture *dest_rt=materials->FindTexture(pass_list->dest_rendering_target,
-					TEXTURE_GROUP_RENDER_TARGET );
-				pRenderContext->SetRenderTarget( dest_rt);
-			}
-			else
-			{
-				pRenderContext->SetRenderTarget( NULL );
-			}
-			int dest_width,dest_height;
-			pRenderContext->GetRenderTargetDimensions( dest_width, dest_height );
-			pRenderContext->Viewport( 0, 0, dest_width, dest_height );
-			dest_width/=pass_list->xdest_scale;
-			dest_height/=pass_list->ydest_scale;
-
-			if (pass_list->src_rendering_target)
-			{
-				ITexture *src_rt=materials->FindTexture(pass_list->src_rendering_target,
-					TEXTURE_GROUP_RENDER_TARGET );
-				int src_width=src_rt->GetActualWidth();
-				int src_height=src_rt->GetActualHeight();
-				int ssrc_width=(src_width-1)/pass_list->xsrc_scale;
-				int ssrc_height=(src_height-1)/pass_list->ysrc_scale;
-				DrawClippedScreenSpaceRectangle(
-					src_mat,0,0,dest_width,dest_height,
-					0,0,ssrc_width,ssrc_height,src_width,src_height,cb);
-				if ((pass_list->dest_rendering_target) && (debug_postproc.GetInt() == 1))
-				{
-					pRenderContext->SetRenderTarget(NULL);
-					int row=pcount/2;
-					int col=pcount %2;
-					int vdest_width,vdest_height;
-					pRenderContext->GetRenderTargetDimensions( vdest_width, vdest_height );
-					pRenderContext->Viewport( 0, 0, vdest_width, vdest_height );
-					pRenderContext->DrawScreenSpaceRectangle(
-						src_mat,col*400,200+row*300,dest_width,dest_height,
-						0,0,ssrc_width,ssrc_height,src_width,src_height);
-				}
-			}
-			else
-			{
-				DrawClippedScreenSpaceRectangle(src_mat,0,0,dest_width,dest_height,
-					0,0,1,1,1,1,cb);
-				if ((pass_list->dest_rendering_target) && (debug_postproc.GetInt() == 1))
-				{
-					pRenderContext->SetRenderTarget(NULL);
-					int row=pcount/4;
-					int col=pcount %4;
-					//int dest_width,dest_height;
-					pRenderContext->GetRenderTargetDimensions( dest_width, dest_height );
-					pRenderContext->Viewport( 0, 0, dest_width, dest_height );
-					DrawClippedScreenSpaceRectangle(src_mat,10+col*220,10+row*220,
-						200,200,
-						0,0,1,1,1,1,cb);
-				}	
-			}
-			if (dest_coords_out)
-			{
-				dest_coords_out->m_minx=0;
-				dest_coords_out->m_maxx=dest_width-1;
-				dest_coords_out->m_miny=0;
-				dest_coords_out->m_maxy=dest_height-1;
-			}
-		}
-		pass_list++;
-		pcount++;
-	}
-	pRenderContext->SetRenderTarget(pSaveRenderTarget);
-}
-
-PostProcessingPass HDRFinal_Float[] =
-{
-	PPP_PROCESS_SRCTEXTURE( "dev/downsample", "_rt_FullFrameFB", "_rt_SmallFB0" ),
-	PPP_PROCESS_SRCTEXTURE( "dev/blurfilterx", "_rt_SmallFB0", "_rt_SmallFB1" ),
- 	PPP_PROCESS_SRCTEXTURE( "dev/blurfiltery", "_rt_SmallFB1", "_rt_SmallFB0" ),
- 	PPP_PROCESS_SRCTEXTURE("dev/floattoscreen_combine","_rt_FullFrameFB",NULL),
-	PPP_END
-};
-
-PostProcessingPass HDRFinal_Float_NoBloom[] =
-{
-	PPP_PROCESS_SRCTEXTURE("dev/copyfullframefb", "_rt_FullFrameFB",NULL),
-	PPP_END
-};
-
-PostProcessingPass HDRSimulate_NonHDR[] =
-{
-	PPP_PROCESS("dev/copyfullframefb_vanilla",NULL),
-	PPP_END
-};
 
 static void SetRenderTargetAndViewPort(ITexture *rt)
 {
@@ -370,45 +226,6 @@ static void SetRenderTargetAndViewPort(ITexture *rt)
 	CMatRenderContextPtr pRenderContext( materials );
 	pRenderContext->SetRenderTarget(rt);
 	pRenderContext->Viewport(0,0,rt->GetActualWidth(),rt->GetActualHeight());
-}
-
-#define FILTER_KERNEL_SLOP 20
-
-// Note carefully about the downsampling: the first downsampling samples from the full rendertarget
-// down to a temp. When doing this sampling, the texture source clamping will take care of the out
-// of bounds sampling done because of the filter kernels's width. However, on any of the subsequent
-// sampling operations, we will be sampling from a partially filled render target. So, texture
-// coordinate clamping cannot help us here. So, we need to always render a few more pixels to the
-// destination than we actually intend to, so as to replicate the border pixels so that garbage
-// pixels do not get sucked into the sampling. To deal with this, we always add FILTER_KERNEL_SLOP
-// to our widths/heights if there is room for them in the destination.
-static void DrawScreenSpaceRectangleWithSlop( 
-	ITexture *dest_rt,
-	IMaterial *pMaterial,
-	int destx, int desty,
-	int width, int height,
-	float src_texture_x0, float src_texture_y0,			// which texel you want to appear at
-	// destx/y
-	float src_texture_x1, float src_texture_y1,			// which texel you want to appear at
-	// destx+width-1, desty+height-1
-	int src_texture_width, int src_texture_height		// needed for fixup
-	)
-{
-	// add slop
-	int slopwidth = width + FILTER_KERNEL_SLOP; //min(dest_rt->GetActualWidth()-destx,width+FILTER_KERNEL_SLOP);
-	int slopheight = height + FILTER_KERNEL_SLOP; //min(dest_rt->GetActualHeight()-desty,height+FILTER_KERNEL_SLOP);
-
-	// adjust coordinates for slop
-	src_texture_x1 = FLerp( src_texture_x0, src_texture_x1, destx, destx + width - 1, destx + slopwidth - 1 );
-	src_texture_y1 = FLerp( src_texture_y0, src_texture_y1, desty, desty + height - 1, desty + slopheight - 1 );
-	width = slopwidth;
-	height = slopheight;
-
-	CMatRenderContextPtr pRenderContext( materials );
-	pRenderContext->DrawScreenSpaceRectangle( pMaterial, destx, desty, width, height,
-											  src_texture_x0, src_texture_y0,
-											  src_texture_x1, src_texture_y1,
-											  src_texture_width, src_texture_height );
 }
 
 enum HistogramEntryState_t

@@ -23,6 +23,12 @@ VS_OUTPUT main( const VS_INPUT v )
 
 	o.projPos = float4( v.vPos, 1.0f );
 
+#ifdef _PS3
+	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
+	o.projPos.y = -o.projPos.y;
+	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
+#endif // _PS3
+
 	o.coordTap0    = v.vBaseTexCoord + vsTapOffs[0];
 	o.coordTap1    = v.vBaseTexCoord + vsTapOffs[1];
 	o.coordTap2    = v.vBaseTexCoord + vsTapOffs[2];
