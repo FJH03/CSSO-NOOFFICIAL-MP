@@ -2029,15 +2029,14 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 
 		RenderPlayerSprites();
 
-		// Image-space motion blur
-		if ( !building_cubemaps.GetBool() && viewRender.m_bDoBloomAndToneMapping ) // We probably should use a different view. variable here
+		if ( !building_cubemaps.GetBool() )
 		{
-			if ( ( mat_motion_blur_enabled.GetInt() ) && ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 90 ) )
+			if ( mat_motion_blur_enabled.GetInt() && !m_rbTakeFreezeFrame[viewRender.m_eStereoEye] )
 			{
 				pRenderContext.GetFrom( materials );
 				{
-					PIXEVENT( pRenderContext, "DoImageSpaceMotionBlur" );
-					DoImageSpaceMotionBlur( viewRender, viewRender.x, viewRender.y, viewRender.width, viewRender.height );
+					PIXEVENT( pRenderContext, "DoImageSpaceMotionBlur()" );
+					DoImageSpaceMotionBlur( viewRender );
 				}
 				pRenderContext.SafeRelease();
 			}
@@ -2066,8 +2065,6 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 #endif
 
 		// Overlay screen fade on entire screen
-		IMaterial* pMaterial = blend ? m_ModulateSingleColor : m_TranslucentSingleColor;
-		render->ViewDrawFade( color, pMaterial );
 		PerformScreenOverlay( viewRender.x, viewRender.y, viewRender.width, viewRender.height );
 
 		// Prevent sound stutter if going slow
@@ -2078,6 +2075,12 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 			pRenderContext.GetFrom( materials );
 			pRenderContext->SetToneMappingScaleLinear(Vector(1,1,1));
 			pRenderContext.SafeRelease();
+		}
+
+		if ( r_drawothermodels.GetInt() == 1 )
+		{
+			//apply the finished blur effect over the screen, while masking out the scope lens
+			ApplyIronSightScopeEffect( viewRender.x, viewRender.y, viewRender.width, viewRender.height, &m_CurrentView );
 		}
 	
 		if ( !building_cubemaps.GetBool() && viewRender.m_bDoBloomAndToneMapping )
@@ -2095,12 +2098,6 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 				DoEnginePostProcessing( viewRender.x, viewRender.y, viewRender.width, viewRender.height, bFlashlightIsOn );
 			}
 			pRenderContext.SafeRelease();
-		}
-
-		if ( r_drawothermodels.GetInt() == 1 )
-		{
-			//apply the finished blur effect over the screen, while masking out the scope lens
-			ApplyIronSightScopeEffect( viewRender.x, viewRender.y, viewRender.width, viewRender.height, &m_CurrentView );
 		}
 
 		// And here are the screen-space effects

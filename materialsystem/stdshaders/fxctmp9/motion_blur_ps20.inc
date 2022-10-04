@@ -18,43 +18,43 @@ public:
 class motion_blur_ps20_Dynamic_Index
 {
 private:
-	int m_nQUALITY;
+	int m_nD_NUM_BLUR_SAMPLES;
 #ifdef _DEBUG
-	bool m_bQUALITY;
+	bool m_bD_NUM_BLUR_SAMPLES;
 #endif
 public:
-	void SetQUALITY( int i )
+	void SetD_NUM_BLUR_SAMPLES( int i )
 	{
-		Assert( i >= 0 && i <= 3 );
-		m_nQUALITY = i;
+		Assert( i >= 0 && i <= 14 );
+		m_nD_NUM_BLUR_SAMPLES = i;
 #ifdef _DEBUG
-		m_bQUALITY = true;
+		m_bD_NUM_BLUR_SAMPLES = true;
 #endif
 	}
-	void SetQUALITY( bool i )
+	void SetD_NUM_BLUR_SAMPLES( bool i )
 	{
-		m_nQUALITY = i ? 1 : 0;
+		m_nD_NUM_BLUR_SAMPLES = i ? 1 : 0;
 #ifdef _DEBUG
-		m_bQUALITY = true;
+		m_bD_NUM_BLUR_SAMPLES = true;
 #endif
 	}
 public:
 	motion_blur_ps20_Dynamic_Index()
 	{
 #ifdef _DEBUG
-		m_bQUALITY = false;
+		m_bD_NUM_BLUR_SAMPLES = false;
 #endif // _DEBUG
-		m_nQUALITY = 0;
+		m_nD_NUM_BLUR_SAMPLES = 0;
 	}
 	int GetIndex()
 	{
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllDynamicVarsDefined = m_bQUALITY;
+		bool bAllDynamicVarsDefined = m_bD_NUM_BLUR_SAMPLES;
 		Assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
-		return ( 1 * m_nQUALITY ) + 0;
+		return ( 1 * m_nD_NUM_BLUR_SAMPLES ) + 0;
 	}
 };
-#define shaderDynamicTest_motion_blur_ps20 psh_forgot_to_set_dynamic_QUALITY + 0
+#define shaderDynamicTest_motion_blur_ps20 psh_forgot_to_set_dynamic_D_NUM_BLUR_SAMPLES + 0
