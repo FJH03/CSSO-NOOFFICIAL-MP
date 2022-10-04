@@ -1699,30 +1699,19 @@ static void DownsampleFBQuarterSize( IMatRenderContext *pRenderContext, int nSrc
 	Assert( pDest->GetActualWidth()  == nSrcWidth  / 4 );
 	Assert( pDest->GetActualHeight() == nSrcHeight / 4 );
 
-	IMaterial *downsample_mat;
-#if defined(_PS3)
-	if( mat_PS3_findpostvarsfast.GetInt() )
+	IMaterial *downsample_mat = materials->FindMaterial( bFloatHDR ? "dev/downsample" : "dev/downsample_non_hdr", TEXTURE_GROUP_OTHER, true );
+
+	bool bFound;
+	IMaterialVar *pbloomexpvar = downsample_mat->FindVar( "$bloomexp", &bFound, false );
+	if ( bFound )
 	{
-		downsample_mat = CDownsampleMaterialProxy::GetDownsampleMaterial( materials );
-		CDownsampleMaterialProxy::SetupDownsampleMaterial( g_flBloomExponent, g_flBloomSaturation );
+		pbloomexpvar->SetFloatValue( g_flBloomExponent );
 	}
-	else
-#endif
+
+	IMaterialVar *pbloomsaturationvar = downsample_mat->FindVar( "$bloomsaturation", &bFound, false );
+	if ( bFound )
 	{
-		downsample_mat = materials->FindMaterial( bFloatHDR ? "dev/downsample" : "dev/downsample_non_hdr", TEXTURE_GROUP_OTHER, true );
-
-		bool bFound;
-		IMaterialVar *pbloomexpvar = downsample_mat->FindVar( "$bloomexp", &bFound, false );
-		if ( bFound )
-		{
-			pbloomexpvar->SetFloatValue( g_flBloomExponent );
-		}
-
-		IMaterialVar *pbloomsaturationvar = downsample_mat->FindVar( "$bloomsaturation", &bFound, false );
-		if ( bFound )
-		{
-			pbloomsaturationvar->SetFloatValue( g_flBloomSaturation );
-		}
+		pbloomsaturationvar->SetFloatValue( g_flBloomSaturation );
 	}
 
 
@@ -1751,43 +1740,18 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext,
 
 
 
-	ITexture *pSrc;
-	IMaterial *xblur_mat;
-	IMaterial *yblur_mat;
-	ITexture *dest_rt0;
-	ITexture *dest_rt1;
-
-#if defined(_PS3)
-	if( mat_PS3_findpostvarsfast.GetInt() )
+	ITexture *pSrc = materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
+	IMaterial *xblur_mat = materials->FindMaterial( "dev/blurfilterx_nohdr", TEXTURE_GROUP_OTHER, true );
+	IMaterial *yblur_mat = NULL;
+	ITexture *dest_rt0 = materials->FindTexture( "_rt_SmallFB0", TEXTURE_GROUP_RENDER_TARGET );
+	ITexture *dest_rt1 = materials->FindTexture( "_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET );
+	if ( bClearRGB )
 	{
-		pSrc = CEnginePostMaterialProxy::GetSrcTexture( materials );
-
-		// FIXME: assumes bClearRGB = false here
-
-		xblur_mat = CXBlurMaterialProxy::GetXBlurMaterial( materials );
-		yblur_mat = CYBlurMaterialProxy::GetYBlurMaterial( materials );
-
-		dest_rt0 = CEnginePostMaterialProxy::GetDstRT0Texture( materials );
-		dest_rt1 = CEnginePostMaterialProxy::GetDstRT1Texture( materials );
+		yblur_mat = materials->FindMaterial( "dev/blurfiltery_nohdr_clear", TEXTURE_GROUP_OTHER, true );
 	}
 	else
-#endif
 	{
-		pSrc = materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
-
-		xblur_mat = materials->FindMaterial( "dev/blurfilterx_nohdr", TEXTURE_GROUP_OTHER, true );
-		yblur_mat = NULL;
-		if ( bClearRGB )
-		{
-			yblur_mat = materials->FindMaterial( "dev/blurfiltery_nohdr_clear", TEXTURE_GROUP_OTHER, true );
-		}
-		else
-		{
-			yblur_mat = materials->FindMaterial( "dev/blurfiltery_nohdr", TEXTURE_GROUP_OTHER, true );
-		}
-
-		dest_rt0 = materials->FindTexture( "_rt_SmallFB0", TEXTURE_GROUP_RENDER_TARGET );
-		dest_rt1 = materials->FindTexture( "_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET );
+		yblur_mat = materials->FindMaterial( "dev/blurfiltery_nohdr", TEXTURE_GROUP_OTHER, true );
 	}
 
 
@@ -2792,6 +2756,7 @@ void DoBlurFade( float flStrength, float flDesaturate, int x, int y, int w, int 
 
 // Motion Blur Material Proxy =========================================================================================
 static float g_vMotionBlurValues[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+static float g_vMotionBlurViewportValues[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
 class CMotionBlurMaterialProxy : public CEntityMaterialProxy
 {
 public:
@@ -2803,11 +2768,13 @@ public:
 
 private:
 	IMaterialVar *m_pMaterialParam;
+	IMaterialVar *m_pMaterialParamViewport;
 };
+
 
 CMotionBlurMaterialProxy::CMotionBlurMaterialProxy()
 {
-	m_pMaterialParam = NULL;
+	m_pMaterialParam		= NULL;
 }
 
 CMotionBlurMaterialProxy::~CMotionBlurMaterialProxy()
@@ -2823,6 +2790,10 @@ bool CMotionBlurMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues
 	if ( bFoundVar == false)
 		return false;
 
+	m_pMaterialParamViewport = pMaterial->FindVar( "$MotionBlurViewportInternal", &bFoundVar, false );
+	if ( bFoundVar == false)
+		return false;
+
 	return true;
 }
 
@@ -2831,6 +2802,11 @@ void CMotionBlurMaterialProxy::OnBind( C_BaseEntity *pEnt )
 	if ( m_pMaterialParam != NULL )
 	{
 		m_pMaterialParam->SetVecValue( g_vMotionBlurValues, 4 );
+	}
+
+	if ( m_pMaterialParamViewport != NULL )
+	{
+		m_pMaterialParamViewport->SetVecValue( g_vMotionBlurViewportValues, 4 );
 	}
 }
 
@@ -2856,15 +2832,38 @@ ConVar mat_motion_blur_falling_intensity( "mat_motion_blur_falling_intensity", "
 ConVar mat_motion_blur_rotation_intensity( "mat_motion_blur_rotation_intensity", "1.0" );
 ConVar mat_motion_blur_strength( "mat_motion_blur_strength", "1.0" );
 
-void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, int h )
+struct MotionBlurHistory_t
 {
-#ifdef CSS_PERF_TEST
-	return;
-#endif
-	if ( ( !mat_motion_blur_enabled.GetInt() ) || ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 90 ) )
+	MotionBlurHistory_t()
+	{
+		m_flLastTimeUpdate = 0.0f;
+		m_flPreviousPitch = 0.0f;
+		m_flPreviousYaw = 0.0f;
+		m_vPreviousPositon.Init( 0.0f, 0.0f, 0.0f );
+		m_mPreviousFrameBasisVectors;
+		m_flNoRotationalMotionBlurUntil = 0.0f;
+		SetIdentityMatrix( m_mPreviousFrameBasisVectors );
+	}
+
+	float m_flLastTimeUpdate;
+	float m_flPreviousPitch;
+	float m_flPreviousYaw;
+	Vector m_vPreviousPositon;
+	matrix3x4_t m_mPreviousFrameBasisVectors;
+	float m_flNoRotationalMotionBlurUntil;
+};
+
+void DoImageSpaceMotionBlur( const CViewSetup &view )
+{
+	if ( !mat_motion_blur_enabled.GetBool() )
 	{
 		return;
 	}
+
+	int x = view.x;
+	int y = view.y;
+	int w = view.width;
+	int h = view.height;
 
 	//======================================================================================================//
 	// Get these convars here to make it easier to remove them later and to default each client differently //
@@ -2884,22 +2883,20 @@ void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, in
 		//=====================//
 		// Previous frame data //
 		//=====================//
-		static float s_flLastTimeUpdate = 0.0f;
-		static float s_flPreviousPitch = 0.0f;
-		static float s_flPreviousYaw = 0.0f;
-		static float s_vPreviousPositon[3] = { 0.0f, 0.0f, 0.0f };
-		static matrix3x4_t s_mPreviousFrameBasisVectors;
-		static float s_flNoRotationalMotionBlurUntil = 0.0f;
+		static MotionBlurHistory_t s_History;
+
 		//float vPreviousSideVec[3] = { s_mPreviousFrameBasisVectors[0][1], s_mPreviousFrameBasisVectors[1][1], s_mPreviousFrameBasisVectors[2][1] };
 		//float vPreviousForwardVec[3] = { s_mPreviousFrameBasisVectors[0][0], s_mPreviousFrameBasisVectors[1][0], s_mPreviousFrameBasisVectors[2][0] };
 		//float vPreviousUpVec[3] = { s_mPreviousFrameBasisVectors[0][2], s_mPreviousFrameBasisVectors[1][2], s_mPreviousFrameBasisVectors[2][2] };
 
-		float flTimeElapsed = gpGlobals->realtime - s_flLastTimeUpdate;
+		float flTimeElapsed;
+
+		flTimeElapsed = gpGlobals->realtime - s_History.m_flLastTimeUpdate;
 
 		//===================================//
 		// Get current pitch & wrap to +-180 //
 		//===================================//
-		float flCurrentPitch = viewBlur.angles[PITCH];
+		float flCurrentPitch = view.angles[PITCH];
 		while ( flCurrentPitch > 180.0f )
 			flCurrentPitch -= 360.0f;
 		while ( flCurrentPitch < -180.0f )
@@ -2908,35 +2905,39 @@ void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, in
 		//=================================//
 		// Get current yaw & wrap to +-180 //
 		//=================================//
-		float flCurrentYaw = viewBlur.angles[YAW];
+		float flCurrentYaw = view.angles[YAW];
 		while ( flCurrentYaw > 180.0f )
 			flCurrentYaw -= 360.0f;
 		while ( flCurrentYaw < -180.0f )
 			flCurrentYaw += 360.0f;
 
-		//engine->Con_NPrintf( 0, "Blur Pitch: %6.2f   Yaw: %6.2f", flCurrentPitch, flCurrentYaw );
-		//engine->Con_NPrintf( 1, "Blur FOV: %6.2f   Aspect: %6.2f   Ortho: %s", view.fov, view.m_flAspectRatio, view.m_bOrtho ? "Yes" : "No" );
+
+		/*engine->Con_NPrintf( 0, "Blur Pitch: %6.2f   Yaw: %6.2f", flCurrentPitch, flCurrentYaw );
+		engine->Con_NPrintf( 1, "Blur FOV: %6.2f   Aspect: %6.2f   Ortho: %s", view.fov, view.m_flAspectRatio, view.m_bOrtho ? "Yes" : "No" );
+		engine->Con_NPrintf( 2, "View Angles: %6.2f %6.2f %6.2f", XYZ(view.angles) );*/
 
 		//===========================//
 		// Get current basis vectors //
 		//===========================//
 		matrix3x4_t mCurrentBasisVectors;
-		AngleMatrix( viewBlur.angles, mCurrentBasisVectors );
 
-		float vCurrentSideVec[3] = { mCurrentBasisVectors[0][1], mCurrentBasisVectors[1][1], mCurrentBasisVectors[2][1] };
-		float vCurrentForwardVec[3] = { mCurrentBasisVectors[0][0], mCurrentBasisVectors[1][0], mCurrentBasisVectors[2][0] };
-		//float vCurrentUpVec[3] = { mCurrentBasisVectors[0][2], mCurrentBasisVectors[1][2], mCurrentBasisVectors[2][2] };
+		AngleMatrix( view.angles, mCurrentBasisVectors );
 
-		//======================//
-		// Get current position //
-		//======================//
-		float vCurrentPosition[3] = { viewBlur.origin.x, viewBlur.origin.y, viewBlur.origin.z };
+
+		Vector vCurrentSideVec(  mCurrentBasisVectors[0][1], mCurrentBasisVectors[1][1], mCurrentBasisVectors[2][1] );
+		Vector vCurrentForwardVec( mCurrentBasisVectors[0][0], mCurrentBasisVectors[1][0], mCurrentBasisVectors[2][0] );
+		//Vector vCurrentUpVec( mCurrentBasisVectors[0][2], mCurrentBasisVectors[1][2], mCurrentBasisVectors[2][2] );
+
+		//===========================================================================//
+		// Get current position (shutter close time when SFM is driving motion blur) //
+		//===========================================================================//
+		Vector vCurrentPosition = view.origin;
 
 		//===============================================================//
 		// Evaluate change in position to determine if we need to update //
 		//===============================================================//
-		float vPositionChange[3] = { 0.0f, 0.0f, 0.0f };
-		VectorSubtract( s_vPreviousPositon, vCurrentPosition, vPositionChange );
+		Vector vPositionChange( 0.0f, 0.0f, 0.0f );
+		VectorSubtract( s_History.m_vPreviousPositon, vCurrentPosition, vPositionChange );
 		if ( ( VectorLength( vPositionChange ) > 30.0f ) && ( flTimeElapsed >= 0.5f ) )
 		{
 			//=======================================================//
@@ -2950,7 +2951,7 @@ void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, in
 			g_vMotionBlurValues[2] = 0.0f;
 			g_vMotionBlurValues[3] = 0.0f;
 		}
-		else if ( flTimeElapsed > ( 1.0f / 15.0f ) )
+		else if ( ( flTimeElapsed > ( 1.0f / 15.0f ) ) )
 		{
 			//==========================================//
 			// If slower than 15 fps, don't motion blur //
@@ -2960,7 +2961,7 @@ void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, in
 			g_vMotionBlurValues[2] = 0.0f;
 			g_vMotionBlurValues[3] = 0.0f;
 		}
-		else if ( VectorLength( vPositionChange ) > 50.0f )
+		else if ( ( VectorLength( vPositionChange ) > 50.0f ) )
 		{
 			//================================================================================//
 			// We moved a far distance in a frame, use the same motion blur as last frame	  //
@@ -2968,7 +2969,7 @@ void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, in
 			//================================================================================//
 			//engine->Con_NPrintf( 8, " Position changed %f units @ %.2f time ", VectorLength( vPositionChange ), gpGlobals->realtime );
 
-			s_flNoRotationalMotionBlurUntil = gpGlobals->realtime + 1.0f; // Wait a second until the portal craziness calms down
+			s_History.m_flNoRotationalMotionBlurUntil = gpGlobals->realtime + 1.0f; // Wait a second until the portal craziness calms down
 		}
 		else
 		{
@@ -2976,8 +2977,8 @@ void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, in
 			// Normal update path //
 			//====================//
 			// Compute horizontal and vertical fov
-			float flHorizontalFov = viewBlur.fov;
-			float flVerticalFov = (viewBlur.m_flAspectRatio <= 0.0f) ? (viewBlur.fov) : (viewBlur.fov  / viewBlur.m_flAspectRatio);
+			float flHorizontalFov = view.fov;
+			float flVerticalFov = ( view.m_flAspectRatio <= 0.0f ) ? ( view.fov ) : ( view.fov  / view.m_flAspectRatio );
 			//engine->Con_NPrintf( 2, "Horizontal Fov: %6.2f   Vertical Fov: %6.2f", flHorizontalFov, flVerticalFov );
 
 			//=====================//
@@ -2993,10 +2994,10 @@ void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, in
 			// Yaw (Compensate for circle strafe) //
 			//====================================//
 			float flSideDotMotion = DotProduct( vCurrentSideVec, vPositionChange );
-			float flYawDiffOriginal = s_flPreviousYaw - flCurrentYaw;
-			if ( ( ( s_flPreviousYaw - flCurrentYaw > 180.0f ) || ( s_flPreviousYaw - flCurrentYaw < -180.0f ) ) &&
-				 ( ( s_flPreviousYaw + flCurrentYaw > -180.0f ) && ( s_flPreviousYaw + flCurrentYaw < 180.0f ) ) )
-				flYawDiffOriginal = s_flPreviousYaw + flCurrentYaw;
+			float flYawDiffOriginal = s_History.m_flPreviousYaw - flCurrentYaw;
+			if ( ( ( s_History.m_flPreviousYaw - flCurrentYaw > 180.0f ) || ( s_History.m_flPreviousYaw - flCurrentYaw < -180.0f ) ) &&
+				 ( ( s_History.m_flPreviousYaw + flCurrentYaw > -180.0f ) && ( s_History.m_flPreviousYaw + flCurrentYaw < 180.0f ) ) )
+				flYawDiffOriginal = s_History.m_flPreviousYaw + flCurrentYaw;
 
 			float flYawDiffAdjusted = flYawDiffOriginal + ( flSideDotMotion / 3.0f ); // Yes, 3.0 is a magic number, sue me
 
@@ -3016,7 +3017,7 @@ void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, in
 			// Pitch (Compensate for forward motion) //
 			//=======================================//
 			float flPitchCompensateMask = 1.0f - ( ( 1.0f - fabs( vCurrentForwardVec[2] ) ) * ( 1.0f - fabs( vCurrentForwardVec[2] ) ) );
-			float flPitchDiffOriginal = s_flPreviousPitch - flCurrentPitch;
+			float flPitchDiffOriginal = s_History.m_flPreviousPitch - flCurrentPitch;
 			float flPitchDiffAdjusted = flPitchDiffOriginal;
 
 			if ( flCurrentPitch > 0.0f )
@@ -3066,7 +3067,7 @@ void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, in
 			//===============================================================//
 			// Dampen motion blur from 100%-0% as fps drops from 50fps-30fps //
 			//===============================================================//
-			if ( !IsX360() ) // I'm not doing this on the 360 yet since I can't test it
+			if ( !IsGameConsole() ) // I'm not doing this on the 360 yet since I can't test it.  SFM doesn't need it either
 			{
 				float flSlowFps = 30.0f;
 				float flFastFps = 50.0f;
@@ -3091,7 +3092,7 @@ void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, in
 		//============================================//
 		// Zero out blur if still in that time window //
 		//============================================//
-		if ( gpGlobals->realtime < s_flNoRotationalMotionBlurUntil )
+		if ( gpGlobals->realtime < s_History.m_flNoRotationalMotionBlurUntil )
 		{
 			//engine->Con_NPrintf( 9, " No Rotation @ %f ", gpGlobals->realtime );
 
@@ -3102,17 +3103,61 @@ void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, in
 		}
 		else
 		{
-			s_flNoRotationalMotionBlurUntil = 0.0f;
+			s_History.m_flNoRotationalMotionBlurUntil = 0.0f;
 		}
 
 		//====================================//
 		// Store current frame for next frame //
 		//====================================//
-		VectorCopy( vCurrentPosition, s_vPreviousPositon );
-		s_mPreviousFrameBasisVectors = mCurrentBasisVectors;
-		s_flPreviousPitch = flCurrentPitch;
-		s_flPreviousYaw = flCurrentYaw;
-		s_flLastTimeUpdate = gpGlobals->realtime;
+		VectorCopy( vCurrentPosition, s_History.m_vPreviousPositon );
+		s_History.m_mPreviousFrameBasisVectors = mCurrentBasisVectors;
+		s_History.m_flPreviousPitch = flCurrentPitch;
+		s_History.m_flPreviousYaw = flCurrentYaw;
+		s_History.m_flLastTimeUpdate = gpGlobals->realtime;
+	}
+
+	//engine->Con_NPrintf( 6, "Final values: { %6.2f%%, %6.2f%%, %6.2f%%, %6.2f%% }", g_vMotionBlurValues[0]*100.0f, g_vMotionBlurValues[1]*100.0f, g_vMotionBlurValues[2]*100.0f, g_vMotionBlurValues[3]*100.0f );
+
+	//==========================================//
+	// Set global g_vMotionBlurViewportValues[] //
+	//==========================================//
+	if ( true )
+	{
+		ITexture *pSrc = materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
+
+		float flSrcWidth = ( float )pSrc->GetActualWidth();
+		float flSrcHeight = ( float )pSrc->GetActualHeight();
+
+		// NOTE #1: float4 stored as ( minx, miny, maxy, maxx )...z&w have been swapped to save pixel shader instructions
+		// NOTE #2: This code should definitely work for 2 players (horizontal or vertical), or 4 players (4 corners), but
+		//          it might have to be modified if we ever want to support other split screen configurations
+
+		int nOffset; // Offset by one pixel to land in the correct half
+
+		// Left
+		nOffset = ( x > 0 ) ? 1 : 0;
+		g_vMotionBlurViewportValues[0] = ( float )( x + nOffset ) / ( flSrcWidth - 1 );
+
+		// Right
+		nOffset = ( x < ( flSrcWidth - 1 ) ) ? -1 : 0;
+		g_vMotionBlurViewportValues[3] = ( float )( x + w + nOffset ) / ( flSrcWidth - 1 );
+
+		// Top
+		nOffset = ( y > 0 ) ? 1 : 0; // Offset by one pixel to land in the correct half
+		g_vMotionBlurViewportValues[1] = ( float )( y + nOffset ) / ( flSrcHeight - 1 );
+
+		// Bottom
+		nOffset = ( y < ( flSrcHeight - 1 ) ) ? -1 : 0;
+		g_vMotionBlurViewportValues[2] = ( float )( y + h + nOffset ) / ( flSrcHeight - 1 );
+
+		// Only allow clamping to happen in the middle of the screen, so nudge the clamp values out if they're on the border of the screen
+		for ( int i = 0; i < 4; i++ )
+		{
+			if ( g_vMotionBlurViewportValues[i] <= 0.0f )
+				g_vMotionBlurViewportValues[i] = -1.0f;
+			else if ( g_vMotionBlurViewportValues[i] >= 1.0f )
+				g_vMotionBlurViewportValues[i] = 2.0f;
+		}
 	}
 
 	//=============================================================================================//
@@ -3121,35 +3166,33 @@ void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, in
 	if ( true )
 	{
 		CMatRenderContextPtr pRenderContext( materials );
-		//pRenderContext->PushRenderTargetAndViewport();
+					
 		ITexture *pSrc = materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
+
 		int nSrcWidth = pSrc->GetActualWidth();
 		int nSrcHeight = pSrc->GetActualHeight();
-		int dest_width, dest_height, nDummy;
-		pRenderContext->GetViewport( nDummy, nDummy, dest_width, dest_height );
+		int nViewportWidth, nViewportHeight, nDummy;
+		pRenderContext->GetViewport( nDummy, nDummy, nViewportWidth, nViewportHeight );
 
-		if ( g_pMaterialSystemHardwareConfig->GetHDRType() != HDR_TYPE_FLOAT )
-		{
-			UpdateScreenEffectTexture( 0, x, y, w, h, true ); // Do we need to check if we already did this?
-		}
-
+		UpdateScreenEffectTexture( 0, x, y, w, h, false );
+		
 		// Get material pointer
 		IMaterial *pMatMotionBlur = materials->FindMaterial( "dev/motion_blur", TEXTURE_GROUP_OTHER, true );
 
 		//SetRenderTargetAndViewPort( dest_rt0 );
 		//pRenderContext->PopRenderTargetAndViewport();
 
-		if ( pMatMotionBlur != NULL )
+		if ( pMatMotionBlur != NULL && nSrcWidth > 0 && nSrcHeight > 0 )
 		{
 			pRenderContext->DrawScreenSpaceRectangle(
 				pMatMotionBlur,
-				0, 0, dest_width, dest_height,
-				0, 0, nSrcWidth-1, nSrcHeight-1,
+				0, 0, nViewportWidth, nViewportHeight,
+				x, y, x + w-1, y + h-1,
 				nSrcWidth, nSrcHeight, GetClientWorldEntity()->GetClientRenderable() );
 
 			if ( g_bDumpRenderTargets )
 			{
-				DumpTGAofRenderTarget( 0, 0, dest_width, dest_height, "MotionBlur" );
+				DumpTGAofRenderTarget( 0, 0, nViewportWidth, nViewportHeight, "MotionBlur" );
 			}
 		}
 	}

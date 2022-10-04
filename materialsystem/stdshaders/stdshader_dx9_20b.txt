@@ -210,8 +210,8 @@ luminance_compare_ps2x.fxc
 //modulate_ps2x.fxc
 //MonitorScreen.psh
 //monitorscreen_ps2x.fxc
-//motion_blur_vs20.fxc
-//motion_blur_ps2x.fxc
+motion_blur_vs20.fxc
+motion_blur_ps2x.fxc
 //overlay_fit_ps11.psh
 //overlay_fit_vs11.vsh
 //particlesphere_ps11.fxc

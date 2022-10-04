@@ -14,7 +14,7 @@
 #include "postprocess_shared.h"
 
 void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, bool bPostVGui = false );
-void DoImageSpaceMotionBlur( const CViewSetup &view, int x, int y, int w, int h );
+void DoImageSpaceMotionBlur( const CViewSetup &view );
 void DumpTGAofRenderTarget( const int x, const int y, const int width, const int height, const char *pFilename );
 
 void UpdateMaterialSystemTonemapScalar();
