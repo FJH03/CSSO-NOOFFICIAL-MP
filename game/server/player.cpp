@@ -291,6 +291,8 @@ BEGIN_DATADESC( CBasePlayer )
 	DEFINE_AUTO_ARRAY( m_szAnimExtension, FIELD_CHARACTER ),
 //	DEFINE_CUSTOM_FIELD( m_Activity, ActivityDataOps() ),
 
+	DEFINE_FIELD( m_iDeathPostEffect, FIELD_INTEGER ),
+
 	DEFINE_FIELD( m_nUpdateRate, FIELD_INTEGER ),
 	DEFINE_FIELD( m_fLerpTime, FIELD_FLOAT ),
 	DEFINE_FIELD( m_bLagCompensation, FIELD_BOOLEAN ),
@@ -462,6 +464,8 @@ BEGIN_DATADESC( CBasePlayer )
 	DEFINE_FIELD( m_vecPreviouslyPredictedOrigin, FIELD_POSITION_VECTOR ), 
 
 	DEFINE_FIELD( m_nNumCrateHudHints, FIELD_INTEGER ),
+
+	DEFINE_FIELD( m_hPostProcessCtrl, FIELD_EHANDLE ),
 
 	DEFINE_FIELD( m_flDuckAmount, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flDuckSpeed, FIELD_FLOAT ),
@@ -644,6 +648,8 @@ CBasePlayer::CBasePlayer( )
 
 	// NVNT default to no haptics
 	m_bhasHaptics = false;
+
+	m_hPostProcessCtrl.Set( NULL );
 
 	m_vecConstraintCenter = vec3_origin;
 
@@ -4610,6 +4616,7 @@ void CBasePlayer::PostThink()
 	m_vecSmoothedVelocity = m_vecSmoothedVelocity * SMOOTHING_FACTOR + GetAbsVelocity() * ( 1 - SMOOTHING_FACTOR );
 
 	UpdateTonemapController();
+	UpdateFXVolume();
 
 	if ( !g_fGameOver && !m_iPlayerLocked )
 	{
@@ -5048,7 +5055,7 @@ void CBasePlayer::Spawn( void )
 	IncrementInterpolationFrame();
 
 	// Initialize the fog and postprocess controllers.
-	InitFogController();
+	UpdateMapEntityPointers();
 
 	m_DmgTake		= 0;
 	m_DmgSave		= 0;
@@ -5171,6 +5178,13 @@ void CBasePlayer::Spawn( void )
 
 	m_flDuckAmount = 0;
 	m_flDuckSpeed = CS_PLAYER_DUCK_SPEED_IDEAL;
+}
+
+void CBasePlayer::UpdateMapEntityPointers( void )
+{
+	// Initialize the fog and postprocess controllers.
+	InitFogController();
+	InitPostProcessController();
 }
 
 void CBasePlayer::Activate( void )
@@ -8113,6 +8127,11 @@ void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const voi
 		SendPropArray	( SendPropEHandle( SENDINFO_ARRAY( m_hViewModel ) ), m_hViewModel ),
 		SendPropString	(SENDINFO(m_szLastPlaceName) ),
 
+		SendPropInt		(SENDINFO( m_iDeathPostEffect ) ),
+		
+		// Postprocess data
+		SendPropEHandle		( SENDINFO(m_hPostProcessCtrl) ),
+
 #if defined USES_ECON_ITEMS
 		SendPropUtlVector( SENDINFO_UTLVECTOR( m_hMyWearables ), MAX_WEARABLES_SENT_FROM_SERVER, SendPropEHandle( NULL, 0 ) ),
 #endif // USES_ECON_ITEMS
@@ -8205,6 +8224,16 @@ unsigned int CBasePlayer::PlayerSolidMask( bool brushOnly ) const
 	}
 
 	return MASK_PLAYERSOLID;
+}
+
+//--------------------------------------------------------------------------------------------------------
+void CBasePlayer::UpdateFXVolume( void )
+{
+	CPostProcessController *pPostProcessController = PostProcessSystem()->GetMasterPostProcessController();
+	if ( pPostProcessController )
+	{
+		m_hPostProcessCtrl.Set( pPostProcessController );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -8864,6 +8893,15 @@ void CBasePlayer::InitFogController( void )
 {
 	// Setup with the default master controller.
 	m_Local.m_PlayerFog.m_hCtrl = FogSystem()->GetMasterFogController();
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+void CBasePlayer::InitPostProcessController( void )
+{
+	// Setup with the default master controller.
+	m_hPostProcessCtrl = PostProcessSystem()->GetMasterPostProcessController();
 }
 
 //-----------------------------------------------------------------------------

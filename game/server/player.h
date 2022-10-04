@@ -305,6 +305,9 @@ public:
 	void					MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
 	void					DoImpactEffect( trace_t &tr, int nDamageType );
 
+	// If a map clean up has been done after a respawn, this function will reassign the entity pointers to those map entities that were deleted.
+	void					UpdateMapEntityPointers( void );
+
 #if !defined( NO_ENTITY_PREDICTION )
 	void					AddToPlayerSimulationList( CBaseEntity *other );
 	void					RemoveFromPlayerSimulationList( CBaseEntity *other );
@@ -640,6 +643,8 @@ public:
 
 	virtual bool			ShouldAnnounceAchievement( void );
 
+	void					UpdateFXVolume( void );
+
 #if defined USES_ECON_ITEMS
 	// Wearables
 	virtual void			EquipWearable( CEconWearable *pItem );
@@ -878,6 +883,9 @@ public:
 	void OnTonemapTriggerEndTouch( CTonemapTrigger *pTonemapTrigger );
 	CUtlVector< CHandle< CTonemapTrigger > > m_hTriggerTonemapList;
 
+	CNetworkHandle( CPostProcessController, m_hPostProcessCtrl );	// active postprocessing controller
+	void InitPostProcessController( void );
+
 	// Used by env_soundscape_triggerable to manage when the player is touching multiple
 	// soundscape triggers simultaneously.
 	// The one at the HEAD of the list is always the current soundscape for the player.
@@ -1021,6 +1029,11 @@ protected:
 
 	virtual void UpdateTonemapController( void );
 	CNetworkHandle( CBaseEntity, m_hTonemapController );
+
+	bool m_bKilledByHeadshot;
+
+public:
+	CNetworkVar( int, m_iDeathPostEffect );		// which deathcam post effect to use
 
 private:
 	void HandleFuncTrain();

@@ -2517,6 +2517,8 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	{
 		ReleaseControlOfBot();
 	}
+
+	m_bKilledByHeadshot = (info.GetDamageType() & DMG_HEADSHOT) != 0;
 }
 
 bool CCSPlayer::IsCloseToActiveBomb( void )
@@ -7142,6 +7144,8 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 		m_iClass = (int)CS_CLASS_NONE;
 		m_iSkin = 0;
 
+		m_iDeathPostEffect = 0;
+
 		return true;
 	}
 
@@ -7721,6 +7725,15 @@ void CCSPlayer::State_Enter_DEATH_ANIM()
 		//Don't perform any freezecam stuff if we are fading to black
 		State_Transition( STATE_DEATH_WAIT_FOR_KEY );
 	}
+
+	if ( m_bKilledByHeadshot )
+	{
+		m_iDeathPostEffect = 15; // POST_EFFECT_DEATH_CAM_HEADSHOT;
+	}
+	else
+	{
+		m_iDeathPostEffect = 14; // POST_EFFECT_DEATH_CAM_BODYSHOT;
+	}
 }
 
 
@@ -7881,6 +7894,8 @@ void CCSPlayer::State_Enter_OBSERVER_MODE()
 		color32_s clr = { 0,0,0,255 };
 		UTIL_ScreenFade( this, clr, 0, 0, FFADE_IN | FFADE_PURGE );
 	}
+
+	m_iDeathPostEffect = 0;
 
 	int observerMode = m_iObserverLastMode;
 	if ( IsNetClient() )

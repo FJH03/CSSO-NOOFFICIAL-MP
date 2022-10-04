@@ -781,7 +781,18 @@ ConVarRef suitcharger( "sk_suitcharger" );
 		else if ( pScorer )
 		{
 			// if a player dies in a deathmatch game and the killer is a client, award the killer some points
-			pScorer->IncrementFragCount( IPointsForKill( pScorer, pVictim ) );
+			int numPointsPerKill = IPointsForKill( pScorer, pVictim );
+			int numHeadshots = ( ( numPointsPerKill == 1 ) && ( info.GetDamageType() & /*DMG_HEADSHOT*/(DMG_LASTGENERICFLAG<<1) ) ) ? 1 : 0;
+			pScorer->IncrementFragCount( numPointsPerKill );
+
+			if ( numHeadshots > 0 )
+			{
+				pVictim->m_iDeathPostEffect = 15; // POST_EFFECT_DEATH_CAM_HEADSHOT
+			}
+			else
+			{
+				pVictim->m_iDeathPostEffect = 14; // POST_EFFECT_DEATH_CAM_BODYSHOT
+			}
 			
 			// Allow the scorer to immediately paint a decal
 			pScorer->AllowImmediateDecalPainting();

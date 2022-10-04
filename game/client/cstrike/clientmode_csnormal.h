@@ -13,6 +13,46 @@
 #include "clientmode_shared.h"
 #include "counterstrikeviewport.h"
 #include "colorcorrectionmgr.h"
+#include "c_cs_player.h"
+
+enum PostProcessEffect_t
+{
+	POST_EFFECT_DEFAULT = 0,
+	POST_EFFECT_LOW_HEATH,			// 1st person	event
+	POST_EFFECT_VERY_LOW_HEATH,
+	POST_EFFECT_IN_BUY_MENU,		// 1st person	event
+	POST_EFFECT_DEATH_CAM,				// 1st person	event
+	POST_EFFECT_SPECTATING,					// 1st person	state
+	POST_EFFECT_IN_FIRE,
+	POST_EFFECT_ZOOMED_RIFLE,
+	POST_EFFECT_ZOOMED_SNIPER,
+	POST_EFFECT_ZOOMED_SNIPER_MOVING,
+	POST_EFFECT_UNDER_WATER,
+	POST_EFFECT_ROUND_END_VIA_BOMBING,
+	POST_EFFECT_SPEC_CAMERA_LERPING,
+	POST_EFFECT_MAP_CONTROLLED,
+	POST_EFFECT_DEATH_CAM_BODYSHOT,				// 1st person	event
+	POST_EFFECT_DEATH_CAM_HEADSHOT,				// 1st person	event
+	NUM_POST_EFFECTS
+};
+
+enum RoundStatus_t
+{
+	ROUND_UNKNOWN = 0,
+	ROUND_STARTED,
+	ROUND_ENDED,
+	ROUND_ENDED_VIA_BOMBING
+};
+
+struct PostProcessEffectParams_t
+{
+	float fLocalContrastStrength;
+	float fLocalContrastEdgeStrength;
+	float fVignetteStart;
+	float fVignetteEnd;
+	float fVignetteBlurStrength;
+	float fFadeToBlackStrength;
+};
 
 class ClientModeCSNormal : public ClientModeShared 
 {
@@ -52,6 +92,16 @@ public:
 	virtual void	UpdateColorCorrectionWeights( void );
 	virtual void	OnColorCorrectionWeightsReset( void );
 
+	void			LoadPostProcessParamsFromFile( const char* pFileName = NULL );
+	void			UpdatePostProcessingEffects();
+	void			PostProcessLerpTo( PostProcessEffect_t effectID, float fFadeDuration = 0.75f, const PostProcessParameters_t* pTargetParams = NULL );
+	void			PostProcessLerpTo( PostProcessEffect_t effectID, const C_PostProcessController* pPPController );
+	void			DoPostProcessParamLerp();
+	void			LerpPostProcessParam(	float fAmount, PostProcessParameters_t& result, const PostProcessParameters_t& from,
+		const PostProcessParameters_t& to ) const;
+	PostProcessEffect_t PostProcessEffectFromName( const char* pName ) const;
+	void			GetDefaultPostProcessingParams( C_CSPlayer* pPlayer, PostProcessEffectParams_t* pParams );
+
 	virtual void	OverrideView( CViewSetup* pSetup );
 
 private:
@@ -65,7 +115,19 @@ private:
 	ClientCCHandle_t	m_CCFreezePeriodHandle_T;
 	float				m_CCFreezePeriodPercent_T;
 
+	RoundStatus_t		m_iRoundStatus;
+
 	float				m_fDelayedCTWinTime;
+
+	static PostProcessParameters_t ms_postProcessParams[];
+	static const char* ms_postProcessEffectNames[];
+	PostProcessEffect_t m_activePostProcessEffect;
+	PostProcessEffect_t m_lastPostProcessEffect;
+	const C_PostProcessController* m_pActivePostProcessController;
+	CountdownTimer m_postProcessEffectCountdown;
+	PostProcessParameters_t m_postProcessLerpStartParams;
+	PostProcessParameters_t m_postProcessLerpEndParams;
+	PostProcessParameters_t m_postProcessCurrentParams;
 
 	int m_nRoundMVP;
 };
