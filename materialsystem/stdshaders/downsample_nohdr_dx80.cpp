@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -6,7 +6,7 @@
 
 #include "BaseVSShader.h"
 #include "common_hlsl_cpp_consts.h"
-#include "convar.h"
+#include "ConVar.h"
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -24,10 +24,6 @@ BEGIN_VS_SHADER_FLAGS( Downsample_nohdr_DX80, "Help for Downsample_nohdr_DX80", 
 
 	SHADER_FALLBACK
 	{
-		if ( g_pHardwareConfig->GetDXSupportLevel() < 80 )
-		{
-			return "Wireframe";
-		}
 		return 0;
 	}
 
@@ -51,10 +47,10 @@ BEGIN_VS_SHADER_FLAGS( Downsample_nohdr_DX80, "Help for Downsample_nohdr_DX80", 
 
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE, -1 );
-			BindTexture( SHADER_SAMPLER1, BASETEXTURE, -1 );
-			BindTexture( SHADER_SAMPLER2, BASETEXTURE, -1 );
-			BindTexture( SHADER_SAMPLER3, BASETEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER0, false, BASETEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER1, false, BASETEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER2, false, BASETEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER3, false, BASETEXTURE, -1 );
 
 			int width, height;
 			pShaderAPI->GetBackBufferDimensions( width, height );

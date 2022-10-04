@@ -1,13 +1,20 @@
-// STATIC: "SRGB_ADAPTER"		"0..1"  [ps20b] [PC]
-// STATIC: "CONVERT_TO_SRGB"	"0..1"	[ps20b] [= g_pHardwareConfig->NeedsShaderSRGBConversion()] [PC]
-// STATIC: "CONVERT_TO_SRGB"	"0..0"	[= 0] [XBOX]
-// STATIC: "CSTRIKE"			"0..1"
+//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
 
-#define HDRTYPE HDR_TYPE_NONE
+// STATIC: "BLOOMTYPE"				"0..1"
+// STATIC: "PS3REGCOUNT48"			"0..0"
+// STATIC: "SRGB_INPUT_ADAPTER"		"0..1"	[ps20b]
+
+// DYNAMIC: "FLOAT_BACK_BUFFER"		"0..1"	[ps20b] [ps30]
+
+// SKIP: ( $FLOAT_BACK_BUFFER == 1 ) && ( $SRGB_INPUT_ADAPTER == 1 )
+
 #include "common_ps_fxc.h"
 
 sampler TexSampler	: register( s0 );
 float4 params : register( c0 );
+float4 params2 : register( c1 );
+#define g_flBloomExp		params2.x
+#define g_flBloomSaturation params2.y
 
 struct PS_INPUT
 {
@@ -17,66 +24,64 @@ struct PS_INPUT
 	float2 coordTap3				: TEXCOORD3;
 };
 
-#if ( CSTRIKE == 0 )
-	//---------------------------------------//
-	// Everything but Counter-Strike: Source //
-	//---------------------------------------//
-	float4 Shape( float2 uv )
+float4 Shape( float4 cColor )
+{
+	#if ( BLOOMTYPE == 0 )
 	{
-		float4 pixel = tex2D( TexSampler, uv );
-
-		#if ( SRGB_ADAPTER == 1 )
-		{
-			pixel.rgb = LinearToGamma( pixel.rgb );
-		}
-		#endif
-
-		float lum = dot( pixel.xyz, params.xyz );
-		pixel.xyz = pow( pixel.xyz, params.w ) * lum;
-
-		#if ( SRGB_ADAPTER == 1 )
-		{
-			pixel.rgb = GammaToLinear( pixel.rgb );
-		}
-		#endif
-
-		return pixel;
+		float flLum = dot( cColor.xyz, params.xyz );
+		cColor.rgb = pow( cColor.xyz, params.w ) * flLum;
 	}
+	#endif
 
-	float4 main( PS_INPUT i ) : COLOR
+	#if ( BLOOMTYPE == 1 )
 	{
-		float4 s0, s1, s2, s3;
-
-		// Sample 4 taps
-		s0 = Shape( i.coordTap0 );
-		s1 = Shape( i.coordTap1 );
-		s2 = Shape( i.coordTap2 );
-		s3 = Shape( i.coordTap3 );
-
-		float4 avgColor = ( s0 + s1 + s2 + s3 ) * 0.25f;
-		return FinalOutput( avgColor, 0, PIXEL_FOG_TYPE_NONE, TONEMAP_SCALE_NONE );
+		float flScale = 1.55f; // Color scale
+		float flBias = -0.09f; // Color bias
+		float flBrightnessClamp = 0.59f; // After scale and bias, clamp RGB values brighter than this
+		float flExp = g_flBloomExp;
+		cColor.rgb = pow( saturate( min( flBrightnessClamp, ( cColor.rgb * flScale ) + flBias ) ), flExp );
 	}
-#else
-	//------------------------//
-	// Counter-Strike: Source //
-	//------------------------//
-	float3 Shape( float3 s )
+	#endif
+
+	return cColor;
+}
+
+float4 main( PS_INPUT i ) : COLOR
+{
+	// Sample 4 taps
+	float4 s0 = tex2D( TexSampler, i.coordTap0 );
+	float4 s1 = tex2D( TexSampler, i.coordTap1 );
+	float4 s2 = tex2D( TexSampler, i.coordTap2 );
+	float4 s3 = tex2D( TexSampler, i.coordTap3 );
+
+	#if ( ( SRGB_INPUT_ADAPTER == 1 ) || ( FLOAT_BACK_BUFFER == 1 ) )
 	{
-		float lum = ( 0.3f * s.x ) + ( 0.59f * s.y ) + ( 0.11f * s.z );
-		return lum * s;
+		s0.rgb = SrgbLinearToGamma( saturate( s0.rgb ) );
+		s1.rgb = SrgbLinearToGamma( saturate( s1.rgb ) );
+		s2.rgb = SrgbLinearToGamma( saturate( s2.rgb ) );
+		s3.rgb = SrgbLinearToGamma( saturate( s3.rgb ) );
 	}
+	#endif
 
-	float4 main( PS_INPUT i ) : COLOR
+	float4 avgColor = ( s0 + s1 + s2 + s3 ) * 0.25f;
+
+	float fAvgLuminance = dot( avgColor.rgb, float3( 0.299, 0.587, 0.114 ) );
+	avgColor = Shape( avgColor );
+
+	// Saturation
+	#if ( BLOOMTYPE == 1 )
 	{
-		float3 s0, s1, s2, s3;
-
-		// Sample 4 taps
-		s0 = Shape( GammaToLinear( tex2D( TexSampler, i.coordTap0 ) ) );
-		s1 = Shape( GammaToLinear( tex2D( TexSampler, i.coordTap1 ) ) );
-		s2 = Shape( GammaToLinear( tex2D( TexSampler, i.coordTap2 ) ) );
-		s3 = Shape( GammaToLinear( tex2D( TexSampler, i.coordTap3 ) ) );
-
-		float3 avgColor = ( s0 + s1 + s2 + s3 ) * 0.25f;
-		return float4( avgColor, 1.0f );
+		avgColor.rgb = lerp( dot( params.rgb, avgColor.rgb ), avgColor.rgb, g_flBloomSaturation );
 	}
-#endif
+	#endif
+
+	avgColor.a = fAvgLuminance;
+
+	#if ( SRGB_INPUT_ADAPTER == 1 )
+	{
+		avgColor.rgb = SrgbGammaToLinear( saturate( avgColor.rgb ) );
+	}
+	#endif
+
+	return FinalOutput( avgColor, 0, PIXEL_FOG_TYPE_NONE, TONEMAP_SCALE_NONE );
+}
