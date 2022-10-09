@@ -1041,6 +1041,8 @@ void CCSBuyMenu::ShowPanel( bool bShow )
 	g_bBuyMenuOpen = bShow;
 	bool bTouchEnable = (cvar->FindVar("touch_disable_on_buymenu")->GetInt() != 0);
 
+	g_bBuyMenuOpen = bShow;
+
 	if ( bShow )
 	{
 		// hide the system buttons
