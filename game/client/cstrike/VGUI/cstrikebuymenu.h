@@ -229,7 +229,6 @@ public:
 	virtual void ShowPanel( bool bShow );
 
 	// vgui overrides
-	virtual void PaintBackground();
 	virtual void OnCommand( const char* command );
 	virtual vgui::Panel* CreateControlByName( const char* controlName );
 	virtual void OnClose();

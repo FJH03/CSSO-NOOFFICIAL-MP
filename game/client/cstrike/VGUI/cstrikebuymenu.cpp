@@ -1031,13 +1031,14 @@ CCSBuyMenu::~CCSBuyMenu()
 	m_kvBuyMenuConfig->deleteThis();
 }
 
+bool g_bBuyMenuOpen = false;
 void CCSBuyMenu::ShowPanel( bool bShow )
 {
 	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if ( !pPlayer )
 		return;
 
-	bool bTouchEnable = (cvar->FindVar("touch_disable_on_buymenu")->GetInt() != 0);
+	g_bBuyMenuOpen = bShow;
 
 	if ( bShow )
 	{
@@ -1190,21 +1191,6 @@ void CCSBuyMenu::Update()
 			g_pVGuiLocalize->ConstructString( wszString, sizeof( wszString ), g_pVGuiLocalize->Find( "BuyMenu_TimerText" ), 1, wszTimer );
 
 		m_pBuyTimeLeftLabel->SetText( wszString );
-	}
-}
-
-extern ConVar mat_blur_strength;
-extern ConVar mat_blur_desaturate;
-void CCSBuyMenu::PaintBackground()
-{
-	if ( engine->GetDXSupportLevel() < 90 )
-		BaseClass::PaintBackground();
-	else
-	{
-		// do the blur here instead of clientmode because it needs to render over VGUI elements
-		int x, y, w, h;
-		GetBounds( x, y, w, h );
-		DoBlurFade( mat_blur_strength.GetFloat(), mat_blur_desaturate.GetFloat(), x, y, w, h );
 	}
 }
 
