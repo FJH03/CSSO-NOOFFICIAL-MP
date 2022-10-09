@@ -653,8 +653,8 @@ void ClientModeCSNormal::LoadPostProcessParamsFromFile( const char* pFileName )
 	pPPKeys->deleteThis();
 }
 
-
 //--------------------------------------------------------------------------------------------------------
+extern bool g_bBuyMenuOpen;
 void ClientModeCSNormal::UpdatePostProcessingEffects()
 {
 	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
@@ -678,9 +678,9 @@ void ClientModeCSNormal::UpdatePostProcessingEffects()
 	{		
 		PostProcessLerpTo( POST_EFFECT_SPEC_CAMERA_LERPING, 0.1f );
 	}
-	else if ( false ) // PiMoN: Currently in progress...
+	else if ( g_bBuyMenuOpen )
 	{
-		PostProcessLerpTo( POST_EFFECT_IN_BUY_MENU, 0.1f );
+		PostProcessLerpTo( POST_EFFECT_IN_BUY_MENU, 0.0f );
 	}
 	else if ( false ) // [msmith]: Currently in progress...
 	{
@@ -747,7 +747,7 @@ void ClientModeCSNormal::UpdatePostProcessingEffects()
 
 		float flFadeTime = 0.5f;
 		if ( m_activePostProcessEffect == POST_EFFECT_ZOOMED_SNIPER_MOVING || m_activePostProcessEffect == POST_EFFECT_ZOOMED_SNIPER ||
-			 m_activePostProcessEffect == POST_EFFECT_ZOOMED_RIFLE )
+			 m_activePostProcessEffect == POST_EFFECT_ZOOMED_RIFLE || m_activePostProcessEffect == POST_EFFECT_IN_BUY_MENU )
 		{
 			flFadeTime = 0.0f;
 		}
@@ -764,7 +764,7 @@ void ClientModeCSNormal::UpdatePostProcessingEffects()
 
 		if ( !pPPCtrl )
 		{
-			PostProcessLerpTo( POST_EFFECT_DEFAULT, flFadeTime);
+			PostProcessLerpTo( POST_EFFECT_DEFAULT, flFadeTime );
 		}
 		else
 		{
