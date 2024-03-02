@@ -22,6 +22,7 @@
 	#include "hud_crosshair.h"
 	#include "c_te_effect_dispatch.h"
 	#include "c_te_legacytempents.h"
+	#include "predicted_viewmodel.h"
 
 	extern IVModelInfoClient* modelinfo;
 
@@ -1615,19 +1616,256 @@ bool CWeaponCSBase::IsUseable()
 
 #if defined( CLIENT_DLL )
 
-	float	g_lateralBob = 0;
-	float	g_verticalBob = 0;
+float	g_lateralBob = 0;
+float	g_verticalBob = 0;
 
-	static ConVar	cl_bobcycle( "cl_bobcycle","0.8", FCVAR_CHEAT );
-	static ConVar	cl_bob( "cl_bob","0.002", FCVAR_CHEAT );
-	static ConVar	cl_bobup( "cl_bobup","0.5", FCVAR_CHEAT );
+static ConVar	cl_bob_version( "cl_bob_version", "0", FCVAR_CHEAT );
+static ConVar	cl_bobcycle( "cl_bobcycle", "0.98", FCVAR_CHEAT, "the frequency at which the viewmodel bobs.", true, 0.1, true, 2.0 );
+static ConVar	cl_bobup( "cl_bobup", "0.5", FCVAR_CHEAT );
 
+ConVar	cmod_new_bobbing( "cmod_new_bobbing", "1", FCVAR_ARCHIVE, "What viewbob style to use: CS:S (0) or CS:GO (1)." );
+static ConVar	cl_bobamt_vert( "cl_bobamt_vert", "0.25", FCVAR_ARCHIVE, "The amount the viewmodel moves up and down when running", true, 0.1, true, 2 );
+static ConVar	cl_bobamt_lat( "cl_bobamt_lat", "0.4", FCVAR_ARCHIVE, "The amount the viewmodel moves side to side when running", true, 0.1, true, 2 );
+static ConVar	cl_bob_lower_amt( "cl_bob_lower_amt", "21", FCVAR_ARCHIVE, "The amount the viewmodel lowers when running", true, 5, true, 30 );
+
+static ConVar	cl_viewmodel_shift_left_amt( "cl_viewmodel_shift_left_amt", "1.5", FCVAR_ARCHIVE, "The amount the viewmodel shifts to the left when shooting accuracy increases.", true, 0.5, true, 2.0 );
+static ConVar	cl_viewmodel_shift_right_amt( "cl_viewmodel_shift_right_amt", "0.75", FCVAR_ARCHIVE, "The amount the viewmodel shifts to the right when shooting accuracy decreases.", true, 0.25, true, 2.0 );
+
+//-----------------------------------------------------------------------------
+// Purpose: Helper function to calculate head bob
+//-----------------------------------------------------------------------------
+float CalcNewViewModelBobbing( CBasePlayer *player, BobState_t *pBobState, int nVMIndex )
+{
+	if ( cmod_new_bobbing.GetBool() == false )
+		return 0;
+
+	Assert( pBobState );
+	if ( !pBobState )
+		return 0;
+
+	float	cycle;
+
+	//NOTENOTE: For now, let this cycle continue when in the air, because it snaps badly without it
+
+	if ( (!gpGlobals->frametime) || (player == NULL) )
+	{
+		//NOTENOTE: We don't use this return value in our case (need to restructure the calculation function setup!)
+		return 0.0f;// just use old value
+	}
+
+	//Find the speed of the player
+	float speed = player->GetLocalVelocity().Length2D();
+
+	// do the dip before speed gets clamped
+	float flSpeedFactor;
+
+	float flRunAddAmt = 0.0f;
+
+	float flmaxSpeedDelta = MAX( 0, (gpGlobals->curtime - pBobState->m_flLastBobTime) * 640.0f );//320
+
+	//	Msg( "speed raw = %f\n", speed );
+
+	// don't allow too big speed changes
+	speed = clamp( speed, pBobState->m_flLastSpeed - flmaxSpeedDelta, pBobState->m_flLastSpeed + flmaxSpeedDelta );
+	speed = clamp( speed, -320.0f, 320.0f );
+
+	pBobState->m_flLastSpeed = speed;
+
+	C_BaseViewModel *pViewModel = player ? player->GetViewModel( nVMIndex ) : NULL;
+	bool bShouldIgnoreOffsetAndAccuracy = (pViewModel && pViewModel->m_bShouldIgnoreOffsetAndAccuracy);
+
+	// when the player is moving forward, the gun lowers a bit -mtw
+	C_CSPlayer *pPlayer = ToCSPlayer( player );
+	if ( pPlayer && !pPlayer->IsZoomed() )
+	{
+		flSpeedFactor = speed * 0.006f;
+		clamp( flSpeedFactor, 0.0f, 0.5f );
+		float flLowerAmt = cl_bob_lower_amt.GetFloat() * 0.2;
+
+		// HACK until we get 'ACT_VM_IDLE_LOWERED' anims
+		//if ( pPlayer->m_Shared.IsSprinting() )
+		//flLowerAmt *= 10.0f;
+
+		if ( bShouldIgnoreOffsetAndAccuracy )
+			flLowerAmt *= 0.1;
+
+		flRunAddAmt = (flLowerAmt * flSpeedFactor);
+	}
+
+	//FIXME: This maximum speed value must come from the server.
+	//		 MaxSpeed() is not sufficient for dealing with sprinting - jdw
+
+	float bob_offset = RemapVal( speed, 0.0f, 320.0f, 0.0f, 1.0f );
+
+	pBobState->m_flBobTime += (gpGlobals->curtime - pBobState->m_flLastBobTime) * bob_offset;
+	pBobState->m_flLastBobTime = gpGlobals->curtime;
+
+	//Msg( "speed = %f\n", speed );
+
+	float flBobCycle = 0.5f;
+	float flAccuracyDiff = 0;
+	float flGunAccPos = 0;
+
+
+	CWeaponCSBase *pWeapon = ((bShouldIgnoreOffsetAndAccuracy || !pPlayer) ? NULL : pPlayer->GetActiveCSWeapon());
+	if ( pPlayer && pWeapon )
+	{
+		float flMaxSpeed = pWeapon->GetMaxSpeed();
+		flBobCycle = (((1000.0f - flMaxSpeed) / 3.5f) * 0.001f) * cl_bobcycle.GetFloat();
+
+		float flAccuracy = 0.0f;
+
+		bool bIsElites = (pWeapon->GetWeaponID() == WEAPON_ELITE) ? true : false;
+
+		// don't move the gun around based on accuracy when reloading
+		if ( !pWeapon->m_bInReload && !bIsElites )
+		{
+			// move the gun left or right based on the players current accuracy
+			float flCrouchAccuracy = pWeapon->GetCSWpnData().m_fInaccuracyCrouch[pWeapon->m_weaponMode];
+			float flBaseAccuracy = pWeapon->GetCSWpnData().m_fInaccuracyStand[pWeapon->m_weaponMode];
+			if ( pPlayer->m_Local.m_bDucking || pPlayer->m_Local.m_bDucked )
+				flAccuracy = flCrouchAccuracy;
+			else
+				flAccuracy = pWeapon->GetInaccuracy();
+				bool bIsSniper = (pWeapon->GetCSWpnData().m_WeaponType != WEAPONTYPE_SNIPER_RIFLE) ? true : false;
+
+
+			float flMultiplier = 1;
+			if ( flAccuracy < flBaseAccuracy )
+			{
+				if ( !bIsSniper )
+					flMultiplier = 18;
+				else
+					flMultiplier = 0.15;
+
+				flMultiplier *= cl_viewmodel_shift_left_amt.GetFloat();
+			}
+			else
+			{
+				flAccuracy = MIN( flAccuracy, 0.082f );
+				flMultiplier *= cl_viewmodel_shift_right_amt.GetFloat();
+			}
+
+			// clamp the crouch accuracy
+			flAccuracyDiff = MAX( (flAccuracy - flBaseAccuracy) * flMultiplier, -0.1 );
+		}
+
+		/*
+		if ( pWeapon->m_flGunAccuracyPosition > 0.0f )
+		Msg( "m_flGunAccuracyPosition1 = %f, flAccuracy = %f\n", pWeapon->m_flGunAccuracyPosition, flAccuracy );
+		pWeapon->m_flGunAccuracyPosition = Lerp( ( gpGlobals->frametime / 0.02f ), (flAccuracyDiff*20), pWeapon->m_flGunAccuracyPosition );
+		if ( pWeapon->m_flGunAccuracyPosition > 0.0f )
+		Msg( "m_flGunAccuracyPosition1 = %f, flAccuracy = %f\n", pWeapon->m_flGunAccuracyPosition, flAccuracy );
+		*/
+
+	}
+	else
+	{
+		flBobCycle = (((1000.0f - 150) / 3.5f) * 0.001f) * cl_bobcycle.GetFloat();
+	}
+
+	//Msg( "flBobCycle = %f\n", flBobCycle );
+	//Calculate the vertical bob
+	cycle = pBobState->m_flBobTime - (int)(pBobState->m_flBobTime / flBobCycle)*flBobCycle;
+	cycle /= flBobCycle;
+
+	if ( cycle < cl_bobup.GetFloat() )
+	{
+		cycle = M_PI * cycle / cl_bobup.GetFloat();
+	}
+	else
+	{
+		cycle = M_PI + M_PI*(cycle - cl_bobup.GetFloat()) / (1.0 - cl_bobup.GetFloat());
+	}
+	float flBobMultiplier = 0.00625f;
+	// if we're in the air, slow our bob down a bit
+	if ( player->GetGroundEntity() == NULL )
+		flBobMultiplier = 0.00125f;
+
+	float flBobVert = bShouldIgnoreOffsetAndAccuracy ? 0.3 : cl_bobamt_vert.GetFloat();
+	pBobState->m_flVerticalBob = speed*(flBobMultiplier * flBobVert);
+	pBobState->m_flVerticalBob = (pBobState->m_flVerticalBob*0.3 + pBobState->m_flVerticalBob*0.7*sin( cycle ));
+	pBobState->m_flRawVerticalBob = pBobState->m_flVerticalBob;
+
+	pBobState->m_flVerticalBob = clamp( (pBobState->m_flVerticalBob - (flRunAddAmt - (flGunAccPos*0.2))), -7.0f, 4.0f );
+
+	//Msg( "pBobState->m_flVerticalBob = %f, cycle = %f, pBobState->m_flBobTime = %f\n", pBobState->m_flVerticalBob, cycle, pBobState->m_flBobTime );
+
+	//Calculate the lateral bob
+	cycle = pBobState->m_flBobTime - (int)(pBobState->m_flBobTime / flBobCycle * 2)*flBobCycle * 2;
+	cycle /= flBobCycle * 2;
+
+	if ( cycle < cl_bobup.GetFloat() )
+	{
+		cycle = M_PI * cycle / cl_bobup.GetFloat();
+	}
+	else
+	{
+		cycle = M_PI + M_PI*(cycle - cl_bobup.GetFloat()) / (1.0 - cl_bobup.GetFloat());
+	}
+
+	float flBobLat = bShouldIgnoreOffsetAndAccuracy ? 0.5 : cl_bobamt_lat.GetFloat();
+	if ( pPlayer && pWeapon )
+	{
+		pBobState->m_flLateralBob = speed*(flBobMultiplier * flBobLat);
+		pBobState->m_flLateralBob = pBobState->m_flLateralBob*0.3 + pBobState->m_flLateralBob*0.7*sin( cycle );
+		pBobState->m_flRawLateralBob = pBobState->m_flLateralBob;
+
+		pBobState->m_flLateralBob = clamp( (pBobState->m_flLateralBob + flGunAccPos*0.25), -8.0f, 8.0f );
+		//Msg( "flAccuracyDiff = %f\n", flAccuracyDiff );
+	}
+
+	//NOTENOTE: We don't use this return value in our case (need to restructure the calculation function setup!)
+	return 0.0f;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Helper function to add head bob
+//-----------------------------------------------------------------------------
+void AddNewViewModelBobbing( Vector &origin, QAngle &angles, BobState_t *pBobState )
+{
+	if ( cmod_new_bobbing.GetBool() == false )
+		return;
+
+	Assert( pBobState );
+	if ( !pBobState )
+		return;
+
+	Vector	forward, right;
+	AngleVectors( angles, &forward, &right, NULL );
+
+	// Apply bob, but scaled down to 40%
+	VectorMA( origin, pBobState->m_flVerticalBob * 0.4f, forward, origin );
+
+	// Z bob a bit more
+	origin[2] += pBobState->m_flVerticalBob * 0.1f;
+
+	// bob the angles
+	angles[ROLL] += pBobState->m_flVerticalBob * 0.5f;
+	angles[PITCH] -= pBobState->m_flVerticalBob * 0.4f;
+	angles[YAW] -= pBobState->m_flLateralBob  * 0.3f;
+
+	VectorMA( origin, pBobState->m_flLateralBob * 0.2f, right, origin );
+}
 	//-----------------------------------------------------------------------------
 	// Purpose:
 	// Output : float
 	//-----------------------------------------------------------------------------
 	float CWeaponCSBase::CalcViewmodelBob( void )
 	{
+		if ( cmod_new_bobbing.GetBool() == true )
+		{
+			CBasePlayer *player = ToBasePlayer( GetOwner() );
+			//Assert( player );
+			BobState_t *pBobState = GetBobState();
+			if ( pBobState )
+			{
+				return ::CalcNewViewModelBobbing( player, pBobState );
+			}
+			else
+				return 0;
+		}
+
 		static	float bobtime;
 		static	float lastbobtime;
 		static  float lastspeed;
@@ -1716,6 +1954,18 @@ bool CWeaponCSBase::IsUseable()
 	//-----------------------------------------------------------------------------
 	void CWeaponCSBase::AddViewmodelBob( CBaseViewModel *viewmodel, Vector &origin, QAngle &angles )
 	{
+		if ( cmod_new_bobbing.GetBool() == true )
+		{
+			// call helper functions to do the calculation
+			BobState_t *pBobState = GetBobState();
+			if ( pBobState )
+			{
+				CalcViewmodelBob();
+				::AddNewViewModelBobbing( origin, angles, pBobState );
+			}
+			return;
+		}
+
 		Vector	forward, right;
 		AngleVectors( angles, &forward, &right, NULL );
 
@@ -1734,6 +1984,30 @@ bool CWeaponCSBase::IsUseable()
 		angles[ YAW ]	-= g_lateralBob  * 0.3f;
 
 	//	VectorMA( origin, g_lateralBob * 0.2f, right, origin );
+	}
+
+	//-----------------------------------------------------------------------------
+	// Purpose: Returns the head bob state for this weapon, which is stored
+	//			in the view model.  Note that this this function can return
+	//			NULL if the player is dead or the view model is otherwise not present.
+	//-----------------------------------------------------------------------------
+	BobState_t *CWeaponCSBase::GetBobState()
+	{
+		// get the view model for this weapon
+		CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
+		if ( pOwner == NULL )
+			return NULL;
+		CBaseViewModel *baseViewModel = pOwner->GetViewModel( m_nViewModelIndex );
+		if ( baseViewModel == NULL )
+			return NULL;
+		CPredictedViewModel *viewModel = dynamic_cast<CPredictedViewModel *>(baseViewModel);
+		if ( viewModel == NULL )
+			return NULL;
+
+		//Assert( viewModel );
+
+		// get the bob state out of the view model
+		return &(viewModel->GetBobState());
 	}
 
 #else

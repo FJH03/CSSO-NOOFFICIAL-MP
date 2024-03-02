@@ -61,6 +61,34 @@ enum CSWeaponMode
 	WeaponMode_MAX
 };
 
+// structure to encapsulate state of head bob
+struct BobState_t
+{
+	BobState_t()
+	{
+		m_flBobTime = 0;
+		m_flLastBobTime = 0;
+		m_flLastSpeed = 0;
+		m_flVerticalBob = 0;
+		m_flLateralBob = 0;
+		m_flRawVerticalBob = 0;
+		m_flRawLateralBob = 0;
+	}
+
+	float m_flBobTime;
+	float m_flLastBobTime;
+	float m_flLastSpeed;
+	float m_flVerticalBob;
+	float m_flLateralBob;
+	float m_flRawVerticalBob;
+	float m_flRawLateralBob;
+};
+
+#ifdef CLIENT_DLL
+float CalcNewViewModelBobbing( CBasePlayer *player, BobState_t *pBobState, int nVMIndex = 0 );
+void AddNewViewModelBobbing( Vector &origin, QAngle &angles, BobState_t *pBobState );
+#endif
+
 #if defined( CLIENT_DLL )
 
 	//--------------------------------------------------------------------------------------------------------------
@@ -122,6 +150,8 @@ public:
 	virtual bool	Holster( CBaseCombatWeapon *pSwitchingTo );
 	virtual void	AddViewmodelBob( CBaseViewModel *viewmodel, Vector &origin, QAngle &angles );
 	virtual	float	CalcViewmodelBob( void );
+	BobState_t		*GetBobState();
+
 	// All predicted weapons need to implement and return true
 	virtual bool	IsPredicted() const;
 

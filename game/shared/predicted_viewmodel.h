@@ -16,6 +16,13 @@
 #include "baseplayer_shared.h"
 #include "shared_classnames.h"
 
+#ifdef CSTRIKE_DLL
+#include "weapon_csbase.h" 
+    #ifdef CLIENT_DLL
+             #include "c_cs_player.h" 
+     #endif //client_dll
+#endif //cstrike_dll
+
 #if defined( CLIENT_DLL )
 #define CPredictedViewModel C_PredictedViewModel
 #endif
@@ -31,6 +38,11 @@ public:
 	virtual ~CPredictedViewModel( void );
 							
 	virtual void CalcViewModelLag( Vector& origin, QAngle& angles, QAngle& original_angles );
+	virtual void AddViewModelBob( CBasePlayer *owner, Vector& eyePosition, QAngle& eyeAngles );
+
+#if defined( CLIENT_DLL )
+	BobState_t	&GetBobState() { return m_BobState;}
+#endif //CLIENT_DLL
 
 #if defined( CLIENT_DLL )
 	virtual bool ShouldPredict( void )
@@ -51,6 +63,10 @@ private:
 	QAngle m_vLagAngles;
 
 	CPredictedViewModel( const CPredictedViewModel & ); // not defined, not accessible
+#ifdef CSTRIKE_DLL 
+     protected: 
+         BobState_t                m_BobState;                // view model head bob state
+#endif //cstrike_dll
 
 #endif
 };
