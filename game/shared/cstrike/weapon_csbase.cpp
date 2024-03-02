@@ -314,19 +314,31 @@ LINK_ENTITY_TO_CLASS( weapon_cs_base, CWeaponCSBase );
 #endif
 
 #if defined( CLIENT_DLL )
-	ConVar cl_crosshaircolor( "cl_crosshaircolor", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Set crosshair color: 0=green, 1=red, 2=blue, 3=yellow, 4=cyan, 5=custom" );
-	ConVar cl_dynamiccrosshair( "cl_dynamiccrosshair", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Enables dynamic crosshair; 0=off, 1=normal behavior (based on actual weapon accuracy), 2=legacy simulated dynamic behavior, 3=legacy simulated static behavior" );
-	ConVar cl_crosshairspreadscale( "cl_crosshairspreadscale", "0.3", FCVAR_CLIENTDLL | FCVAR_ARCHIVE);
+	ConVar cl_crosshairstyle( "cl_crosshairstyle", "2", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "0 = DEFAULT, 1 = DEFAULT STATIC, 2 = ACCURATE SPLIT (accurate recoil/spread feedback with a fixed inner part), 3 = ACCURATE DYNAMIC (accurate recoil/spread feedback), 4 = CLASSIC STATIC, 5 = OLD CS STYLE (fake recoil - inaccurate feedback)" );
+	ConVar cl_crosshaircolor( "cl_crosshaircolor", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Set crosshair color as defined in game_options.consoles.txt" );
+	ConVar cl_dynamiccrosshair( "cl_dynamiccrosshair", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE ); 
 	ConVar cl_scalecrosshair( "cl_scalecrosshair", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Enable crosshair scaling (deprecated)" );
 	ConVar cl_crosshairscale( "cl_crosshairscale", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Crosshair scaling factor (deprecated)" );
 	ConVar cl_crosshairalpha( "cl_crosshairalpha", "200", FCVAR_CLIENTDLL | FCVAR_ARCHIVE );
 	ConVar cl_crosshairusealpha( "cl_crosshairusealpha", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE );
+	ConVar cl_crosshairgap( "cl_crosshairgap", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE );
+	ConVar cl_crosshairgap_useweaponvalue( "cl_crosshairgap_useweaponvalue", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If set to 1, the gap will update dynamically based on which weapon is currently equipped" );
 	ConVar cl_crosshairsize( "cl_crosshairsize", "5", FCVAR_CLIENTDLL | FCVAR_ARCHIVE );
 	ConVar cl_crosshairthickness( "cl_crosshairthickness", "0.5", FCVAR_CLIENTDLL | FCVAR_ARCHIVE );
-	ConVar cl_crosshairdot( "cl_crosshairdot", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE );
+	ConVar cl_crosshairdot( "cl_crosshairdot", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE );
 	ConVar cl_crosshaircolor_r( "cl_crosshaircolor_r", "50", FCVAR_CLIENTDLL | FCVAR_ARCHIVE );
 	ConVar cl_crosshaircolor_g( "cl_crosshaircolor_g", "250", FCVAR_CLIENTDLL | FCVAR_ARCHIVE );
 	ConVar cl_crosshaircolor_b( "cl_crosshaircolor_b", "50", FCVAR_CLIENTDLL | FCVAR_ARCHIVE );
+	ConVar weapon_debug_spread_show( "weapon_debug_spread_show", "0", FCVAR_CLIENTDLL | FCVAR_CHEAT, "Enables display of weapon accuracy; 1: show accuracy box, 3: show accuracy with dynamic crosshair" );
+	ConVar weapon_debug_spread_gap( "weapon_debug_spread_gap", "0.67", FCVAR_CLIENTDLL | FCVAR_CHEAT );
+	ConVar cl_crosshair_drawoutline( "cl_crosshair_drawoutline", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Draws a black outline around the crosshair for better visibility" );
+	ConVar cl_crosshair_outlinethickness( "cl_crosshair_outlinethickness", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Set how thick you want your crosshair outline to draw (0.1-3)", true, 0.1, true, 3 );
+	ConVar cl_crosshair_t( "cl_crosshair_t", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "T style crosshair" );
+
+	ConVar cl_crosshair_dynamic_splitdist("cl_crosshair_dynamic_splitdist", "7", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If using cl_crosshairstyle 2, this is the distance that the crosshair pips will split into 2. (default is 7)"/*, true, 10, true, 3*/);
+	ConVar cl_crosshair_dynamic_splitalpha_innermod("cl_crosshair_dynamic_splitalpha_innermod", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If using cl_crosshairstyle 2, this is the alpha modification that will be used for the INNER crosshair pips once they've split. [0 - 1]", true, 0, true, 1);
+	ConVar cl_crosshair_dynamic_splitalpha_outermod("cl_crosshair_dynamic_splitalpha_outermod", "0.5", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If using cl_crosshairstyle 2, this is the alpha modification that will be used for the OUTER crosshair pips once they've split. [0.3 - 1]", true, 0.3, true, 1);
+	ConVar cl_crosshair_dynamic_maxdist_splitratio("cl_crosshair_dynamic_maxdist_splitratio", "0.35", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If using cl_crosshairstyle 2, this is the ratio used to determine how long the inner and outer xhair pips will be. [inner = cl_crosshairsize*(1-cl_crosshair_dynamic_maxdist_splitratio), outer = cl_crosshairsize*cl_crosshair_dynamic_maxdist_splitratio]  [0 - 1]", true, 0, true, 1);
 
 #if ALLOW_WEAPON_SPREAD_DISPLAY
 	ConVar weapon_debug_spread_show( "weapon_debug_spread_show", "0", FCVAR_CLIENTDLL | FCVAR_DEVELOPMENTONLY, "Enables display of weapon accuracy; 1: show accuracy box, 2: show box with recoil offset" );
@@ -340,8 +352,17 @@ LINK_ENTITY_TO_CLASS( weapon_cs_base, CWeaponCSBase );
 	// use old scaling behavior
 	ConVar cl_legacy_crosshair_scale( "cl_legacy_crosshair_scale", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Enable legacy crosshair scaling");
 
-void DrawCrosshairRect( int x0, int y0, int x1, int y1, bool bAdditive )
+void DrawCrosshairRect( int r, int g, int b, int a, int x0, int y0, int x1, int y1, bool bAdditive )
 {
+	if ( cl_crosshair_drawoutline.GetBool() )
+	{
+		float flThick = cl_crosshair_outlinethickness.GetFloat();
+		vgui::surface()->DrawSetColor( 0, 0, 0, a );
+		vgui::surface()->DrawFilledRect( x0-flThick, y0-flThick, x1+flThick, y1+flThick );
+	}
+
+	vgui::surface()->DrawSetColor( r, g, b, a );
+
 	if ( bAdditive )
 	{
 		vgui::surface()->DrawTexturedRect( x0, y0, x1, y1 );
@@ -352,6 +373,7 @@ void DrawCrosshairRect( int x0, int y0, int x1, int y1, bool bAdditive )
 		vgui::surface()->DrawFilledRect( x0, y0, x1, y1 );
 	}
 }
+
 
 #endif
 
@@ -1007,45 +1029,42 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 	{
 		if ( !crosshair.GetInt() )
 			return;
-
 		CHudCrosshair *pCrosshair = GET_HUDELEMENT( CHudCrosshair );
 
+		// clear old hud crosshair
 		if ( !pCrosshair )
 			return;
-
-		// clear crosshair
 		pCrosshair->SetCrosshair( 0, Color( 255, 255, 255, 255 ) );
 
-		CCSPlayer* pPlayer = (CCSPlayer*)C_BasePlayer::GetLocalPlayer();
+		CCSPlayer* pPlayer = (CCSPlayer*) C_BasePlayer::GetLocalPlayer();
 
-		if ( !pPlayer )
+		if ( !pPlayer || GetPlayerOwner() == NULL )
 			return;
 
-		// localplayer must be owner if not in Spec mode
-		Assert( (pPlayer == GetPlayerOwner()) || ( pPlayer->GetObserverMode()==OBS_MODE_IN_EYE) );
-
-		// Draw the targeting zone around the pCrosshair
+		Assert( (pPlayer == GetPlayerOwner()) || (pPlayer->GetObserverMode() == OBS_MODE_IN_EYE) );
 		if ( pPlayer->IsInVGuiInputMode() )
 			return;
+
+
 
 		int	r, g, b;
 		switch ( cl_crosshaircolor.GetInt() )
 		{
-		case 0 :	r = 50;		g = 250;	b = 50;		break;
-		case 1 :	r = 250;	g = 50;		b = 50;		break;
-		case 2 :	r = 50;		g = 50;		b = 250;	break;
-		case 3 :	r = 250;	g = 250;	b = 50;		break;
-		case 4 :	r = 50;		g = 250;	b = 250;	break;
-		case 5 :
-			r = cl_crosshaircolor_r.GetInt();
-			g = cl_crosshaircolor_g.GetInt();
-			b = cl_crosshaircolor_b.GetInt();
-			break;
-		default :	r = 50;		g = 250;	b = 50;		break;
+			case 0:	r = 250;	g = 50;		b = 50;		break;
+			case 1:	r = 50;		g = 250;	b = 50;		break;
+			case 2:	r = 250;	g = 250;	b = 50;		break;
+			case 3:	r = 50;		g = 50;		b = 250;	break;
+			case 4:	r = 50;		g = 250;	b = 250;	break;
+			case 5:
+				r = cl_crosshaircolor_r.GetInt();
+				g = cl_crosshaircolor_g.GetInt();
+				b = cl_crosshaircolor_b.GetInt();
+				break;
+			default:	r = 50;		g = 250;	b = 50;		break;
 		}
 
 		// if user is using nightvision, make the crosshair red.
-		if (pPlayer->m_bNightVisionOn)
+		if ( pPlayer->m_bNightVisionOn )
 		{
 			r = 250;
 			g = 50;
@@ -1053,7 +1072,6 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 		}
 
 		int alpha = clamp( cl_crosshairalpha.GetInt(), 0, 255 );
-		vgui::surface()->DrawSetColor( r, g, b, alpha );
 
 		if ( !m_iCrosshairTextureID )
 		{
@@ -1067,222 +1085,275 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 		bool bAdditive = !cl_crosshairusealpha.GetBool() && !pPlayer->m_bNightVisionOn;
 		if ( bAdditive )
 		{
-			vgui::surface()->DrawSetColor( r, g, b, 200 );
 			vgui::surface()->DrawSetTexture( m_iCrosshairTextureID );
+			alpha = 200;
 		}
 
-		if ( pPlayer->HasShield() && pPlayer->IsShieldDrawn() == true )
-			 return;
 
-		// no crosshair for sniper rifles
 		bool bCrosshairVisible = crosshair.GetBool() && GetCSWpnData().m_WeaponType != WEAPONTYPE_SNIPER_RIFLE;
 
-		if ( !bCrosshairVisible 
-#if ALLOW_WEAPON_SPREAD_DISPLAY
-			&& !weapon_debug_spread_show.GetBool()
-#endif
-			)
+		if ( pPlayer->HasShield() && pPlayer->IsShieldDrawn() == true )
+			return;
+		if ( !bCrosshairVisible )
 			 return;
 
-		float fHalfFov = DEG2RAD(pPlayer->GetFOV()) * 0.5f;
+		float fHalfFov = DEG2RAD( pPlayer->GetFOV() ) * 0.5f;
+		float flInaccuracy = GetInaccuracy();
+		float flSpread = GetSpread();
+
+		//	float flCrossDistanceScale = cl_crosshair_dynamic_distancescale.GetFloat();
+		float fSpreadDistance = ((flInaccuracy + flSpread) * 320.0f / tanf( fHalfFov ))/* * flCrossDistanceScale*/;
+		float flCappedSpreadDistance = fSpreadDistance;
+		float flMaxCrossDistance = cl_crosshair_dynamic_splitdist.GetFloat();
+		if ( fSpreadDistance > flMaxCrossDistance )
+		{
+			// 		bHitMax = true;
+			// 		//flLineAlpha = alpha * MAX(0, 1 - ((fSpreadDistance - flMaxCrossDistance) / 20));
+			flCappedSpreadDistance = flMaxCrossDistance;
+		}
+
+		int iSpreadDistance = cl_crosshairstyle.GetInt() < 4 ? RoundFloatToInt( YRES( fSpreadDistance ) ) : 2;
+		int iCappedSpreadDistance = cl_crosshairstyle.GetInt() < 4 ? RoundFloatToInt( YRES( flCappedSpreadDistance ) ) : 2;
+
+		int iDeltaDistance = GetCSWpnData().m_iCrosshairDeltaDistance; // Amount by which the crosshair expands when shooting ( per frame )
+		float fCrosshairDistanceGoal = cl_crosshairgap_useweaponvalue.GetBool() ? GetCSWpnData().m_iCrosshairMinDistance : 4; // The minimum distance the crosshair can achieve...
+
+		//0 = default
+		//1 = default static
+		//2 = classic standard
+		//3 = classic dynamic
+		//4 = classic static
+		//if ( cl_dynamiccrosshair.GetBool() )
+		if ( cl_crosshairstyle.GetInt() != 4 && (cl_crosshairstyle.GetInt() == 2 || cl_crosshairstyle.GetInt() == 3) )
+		{
+			if ( !(pPlayer->GetFlags() & FL_ONGROUND) )
+				fCrosshairDistanceGoal *= 2.0f;
+			else if ( pPlayer->GetFlags() & FL_DUCKING )
+				fCrosshairDistanceGoal *= 0.5f;
+			else if ( pPlayer->GetAbsVelocity().Length() > 100 )
+				fCrosshairDistanceGoal *= 1.5f;
+		}
+
+		// [jpaquin] changed to only bump up the crosshair size if the player is still shooting or is spectating someone else
+		if ( pPlayer->m_iShotsFired > m_iAmmoLastCheck && (pPlayer->m_nButtons & (IN_ATTACK | IN_ATTACK2)) && m_iClip1 >= 0 )
+		{
+			 if ( cl_crosshairstyle.GetInt() != 4 )
+				fCrosshairDistanceGoal += iDeltaDistance;
+		}
+
+		m_iAmmoLastCheck = pPlayer->m_iShotsFired;
+
+		if ( m_flCrosshairDistance > fCrosshairDistanceGoal )
+		{
+			if ( cl_crosshairstyle.GetInt() == 5 )
+			{
+				//float flPer = ( gpGlobals->frametime / 0.025f );
+				//m_flCrosshairDistance -= (0.11 + ( m_flCrosshairDistance * 0.01 )) * gpGlobals->frametime;
+				m_flCrosshairDistance -= 42.0 * gpGlobals->frametime;
+			}
+			else
+				m_flCrosshairDistance = Lerp( (gpGlobals->frametime / 0.025f), fCrosshairDistanceGoal, m_flCrosshairDistance );
+		}
+
+		// clamp max crosshair expansion
+		m_flCrosshairDistance = clamp( m_flCrosshairDistance, fCrosshairDistanceGoal, 25.0f );
 
 		int iCrosshairDistance;
-		int iBarSize = RoundFloatToInt(YRES(cl_crosshairsize.GetFloat()));
-		int iBarThickness = MAX( 1, RoundFloatToInt(YRES(cl_crosshairthickness.GetFloat())));
+		int iCappedCrosshairDistance = 0;
+		int iBarSize;
+		int iBarThickness;
 
-		switch ( cl_dynamiccrosshair.GetInt() )
+		iCrosshairDistance = RoundFloatToInt( (m_flCrosshairDistance * ScreenHeight() / 1200.0f) + cl_crosshairgap.GetFloat() );
+		iBarSize = RoundFloatToInt( YRES( cl_crosshairsize.GetFloat() ) );
+		iBarThickness = MAX( 1, RoundFloatToInt( YRES( cl_crosshairthickness.GetFloat() ) ) );
+
+		//0 = default
+		//1 = default static
+		//2 = classic standard
+		//3 = classic dynamic
+		//4 = classic static
+		//if ( weapon_debug_spread_show.GetInt() == 2 )
+		if ( weapon_debug_spread_show.GetInt() == 2 || (iSpreadDistance > 0 && (cl_crosshairstyle.GetInt() == 2 || cl_crosshairstyle.GetInt() == 3)) )
 		{
-		case 0:
-		default:
-			{
-				// static crosshair
-				float fSpread = (GetCSWpnData().m_fSpread[m_weaponMode] + GetCSWpnData().m_fInaccuracyStand[m_weaponMode]) * 320.0f / tanf(fHalfFov);
-				iCrosshairDistance = MAX( 0, RoundFloatToInt( YRES( fSpread * cl_crosshairspreadscale.GetFloat() ) ) );
-			}
-			break;
+			iCrosshairDistance = iSpreadDistance + cl_crosshairgap.GetFloat();
 
-		case 1:
-			{
-				float fSpread = (GetInaccuracy() + GetSpread()) * 320.0f / tanf(fHalfFov);
-				iCrosshairDistance = MAX( 0, RoundFloatToInt( YRES( fSpread * cl_crosshairspreadscale.GetFloat() ) ) );
-			}
-			break;
-
-		case 2:
-		case 3:
-			{
-				float fCrosshairDistanceGoal = GetCSWpnData().m_iCrosshairMinDistance; // The minimum distance the crosshair can achieve...
-
-				// legacy dynamic crosshair
-				if ( cl_dynamiccrosshair.GetInt() == 2 )
-				{
-					if ( !( pPlayer->GetFlags() & FL_ONGROUND ) )
-						fCrosshairDistanceGoal *= 2.0f;
-					else if ( pPlayer->GetFlags() & FL_DUCKING )
-						fCrosshairDistanceGoal *= 0.5f;
-					else if ( pPlayer->GetAbsVelocity().Length() > 100 )
-						fCrosshairDistanceGoal *= 1.5f;
-				}
-
-				// [jpaquin] changed to only bump up the crosshair size if the player is still shooting or is spectating someone else
-				int iDeltaDistance = GetCSWpnData().m_iCrosshairDeltaDistance; // Amount by which the crosshair expands when shooting (per frame)
-				if ( pPlayer->m_iShotsFired > m_iAmmoLastCheck && (pPlayer->m_nButtons & (IN_ATTACK|IN_ATTACK2)) )
-					fCrosshairDistanceGoal += iDeltaDistance;
-
-				m_iAmmoLastCheck = pPlayer->m_iShotsFired;
-
-				if ( m_flCrosshairDistance > fCrosshairDistanceGoal )
-				{
-					// [jpaquin] if we're not in legacy crosshair mode, use an exponential decay function so
-					// that the crosshair shrinks at the same rate regardless of the frame rate
-					if ( !cl_legacy_crosshair_recoil.GetBool() )
-					{
-						// .44888 on the next line makes the decay very close to what old method produces at 100fps.
-						m_flCrosshairDistance = Lerp(expf(-gpGlobals->frametime / 0.44888f), fCrosshairDistanceGoal, m_flCrosshairDistance);
-					}
-					else
-					{
-						m_flCrosshairDistance -= 0.1f + m_flCrosshairDistance * 0.013;
-					}
-				}
-
-				// clamp max crosshair expansion
-				m_flCrosshairDistance = clamp(m_flCrosshairDistance, fCrosshairDistanceGoal, 25.0f);
-
-				if ( cl_legacy_crosshair_scale.GetBool() )
-				{
-					//scale bar size to the resolution
-					int crosshairScale = cl_crosshairscale.GetInt();
-					if ( crosshairScale < 1 )
-					{
-						if ( ScreenHeight() <= 600 )
-						{
-							crosshairScale = 600;
-						}
-						else if ( ScreenHeight() <= 768 )
-						{
-							crosshairScale = 768;
-						}
-						else
-						{
-							crosshairScale = 1200;
-						}
-					}
-
-					float scale;
-					if( cl_scalecrosshair.GetBool() == false )
-					{
-						scale = 1.0f;
-					}
-					else
-					{
-						scale = (float)ScreenHeight() / (float)crosshairScale;
-					}
-
-					// calculate the inner distance of the crosshair in current screen units
-					iCrosshairDistance = (int)ceil( m_flCrosshairDistance * scale );
-
-					iBarSize = XRES(5); //  + (iCrosshairDistance - fCrosshairDistanceGoal) / 2;
-					iBarSize = MAX( 1, (int)( (float)iBarSize * scale ) );
-					iBarThickness = MAX( 1, (int)floor( scale + 0.5f ) );
-				}
-				else
-				{
-					iCrosshairDistance = RoundFloatToInt(m_flCrosshairDistance * ScreenHeight() / 1200.0f);
-				}
-			}
-			break;
+			if ( cl_crosshairstyle.GetInt() == 2 )
+				iCappedCrosshairDistance = iCappedSpreadDistance + cl_crosshairgap.GetFloat();
+		}
+		else if ( cl_crosshairstyle.GetInt() == 4 || (iSpreadDistance == 0 && (cl_crosshairstyle.GetInt() == 2 || cl_crosshairstyle.GetInt() == 3)) )
+		{
+			iCrosshairDistance = fCrosshairDistanceGoal + cl_crosshairgap.GetFloat();
+			iCappedCrosshairDistance = 4 + cl_crosshairgap.GetFloat();
 		}
 
+#ifdef SIXENSE
+		int iCenterX;
+		int iCenterY;
+
+		if ( g_pSixenseInput->IsEnabled() )
+		{
+			// Never autoaim a predicted weapon (for now)
+			Vector	aimVector;
+			AngleVectors( CurrentViewAngles() - g_pSixenseInput->GetViewAngleOffset(), &aimVector );
+
+			// calculate where the bullet would go so we can draw the cross appropriately
+			Vector vecStart = pPlayer->Weapon_ShootPosition();
+			Vector vecEnd = pPlayer->Weapon_ShootPosition() + aimVector * MAX_TRACE_LENGTH;
+
+
+			trace_t tr;
+			UTIL_TraceLine( vecStart, vecEnd, MASK_SHOT, pPlayer, COLLISION_GROUP_NONE, &tr );
+
+			Vector screen;
+			screen.Init();
+			ScreenTransform( tr.endpos, screen );
+
+			iCenterX = ScreenWidth() / 2;
+			iCenterY = ScreenHeight() / 2;
+
+			iCenterX += 0.5 * screen[0] * ScreenWidth() + 0.5;
+			iCenterY += 0.5 * screen[1] * ScreenHeight() + 0.5;
+			iCenterY = ScreenHeight() - iCenterY;
+
+		}
+		else
+		{
+			iCenterX = ScreenWidth() / 2;
+			iCenterY = ScreenHeight() / 2;
+		}
+
+#else
 		int iCenterX = ScreenWidth() / 2;
 		int iCenterY = ScreenHeight() / 2;
+#endif
 
-		if ( bCrosshairVisible )
+		float flAngleToScreenPixel = 0;
+
+
+
+		/*
+		// Optionally subtract out viewangle since it doesn't affect shooting.
+		if ( cl_flinch_compensate_crosshair.GetBool() )
 		{
+		QAngle viewPunch = pPlayer->GetViewPunchAngle();
+
+		if ( viewPunch.x != 0 || viewPunch.y != 0 )
+		{
+		if ( flAngleToScreenPixel == 0 )
+		flAngleToScreenPixel = VIEWPUNCH_COMPENSATE_MAGIC_SCALAR * 2 * ( ScreenHeight() / ( 2.0f * tanf(DEG2RAD( pPlayer->GetFOV() ) / 2.0f) ) );
+
+		iCenterY -= flAngleToScreenPixel * sinf( DEG2RAD( viewPunch.x ) );
+		iCenterX += flAngleToScreenPixel * sinf( DEG2RAD( viewPunch.y ) );
+		}
+		}
+		*/
+
+		float flAlphaSplitInner = cl_crosshair_dynamic_splitalpha_innermod.GetFloat();
+		float flAlphaSplitOuter = cl_crosshair_dynamic_splitalpha_outermod.GetFloat();
+		float flSplitRatio = cl_crosshair_dynamic_maxdist_splitratio.GetFloat();
+		int iInnerCrossDist = iCrosshairDistance;
+		float flLineAlphaInner = alpha;
+		float flLineAlphaOuter = alpha;
+		int iBarSizeInner = iBarSize;
+		int iBarSizeOuter = iBarSize;
+
+		// draw the crosshair that splits off from the main xhair
+		if ( cl_crosshairstyle.GetInt() == 2 && fSpreadDistance > flMaxCrossDistance )
+		{
+			iInnerCrossDist = iCappedCrosshairDistance;
+			flLineAlphaInner = alpha * flAlphaSplitInner;
+			flLineAlphaOuter = alpha * flAlphaSplitOuter;
+			iBarSizeInner = ceil( (float) iBarSize * (1.0f - flSplitRatio) );
+			iBarSizeOuter = floor( (float) iBarSize * flSplitRatio );
+
 			// draw horizontal crosshair lines
-			int iInnerLeft	= iCenterX - iCrosshairDistance - iBarThickness / 2;
-			int iInnerRight	= iInnerLeft + 2 * iCrosshairDistance + iBarThickness;
-			int iOuterLeft	= iInnerLeft - iBarSize;
-			int iOuterRight	= iInnerRight + iBarSize;
+			int iInnerLeft = (iCenterX - iCrosshairDistance - iBarThickness / 2) - iBarSizeInner;
+			int iInnerRight = iInnerLeft + 2 * (iCrosshairDistance + iBarSizeInner) + iBarThickness;
+			int iOuterLeft = iInnerLeft - iBarSizeOuter;
+			int iOuterRight = iInnerRight + iBarSizeOuter;
 			int y0 = iCenterY - iBarThickness / 2;
 			int y1 = y0 + iBarThickness;
-			DrawCrosshairRect( iOuterLeft, y0, iInnerLeft, y1, bAdditive );
-			DrawCrosshairRect( iInnerRight, y0, iOuterRight, y1, bAdditive );
+			DrawCrosshairRect( r, g, b, flLineAlphaOuter, iOuterLeft, y0, iInnerLeft, y1, bAdditive );
+			DrawCrosshairRect( r, g, b, flLineAlphaOuter, iInnerRight, y0, iOuterRight, y1, bAdditive );
 
 			// draw vertical crosshair lines
-			int iInnerTop		= iCenterY - iCrosshairDistance - iBarThickness / 2;
-			int iInnerBottom	= iInnerTop + 2 * iCrosshairDistance + iBarThickness;
-			int iOuterTop		= iInnerTop - iBarSize;
-			int iOuterBottom	= iInnerBottom + iBarSize;
+			int iInnerTop = (iCenterY - iCrosshairDistance - iBarThickness / 2) - iBarSizeInner;
+			int iInnerBottom = iInnerTop + 2 * (iCrosshairDistance + iBarSizeInner) + iBarThickness;
+			int iOuterTop = iInnerTop - iBarSizeOuter;
+			int iOuterBottom = iInnerBottom + iBarSizeOuter;
 			int x0 = iCenterX - iBarThickness / 2;
 			int x1 = x0 + iBarThickness;
-			DrawCrosshairRect( x0, iOuterTop, x1, iInnerTop, bAdditive );
-			DrawCrosshairRect( x0, iInnerBottom, x1, iOuterBottom, bAdditive );
-
-			// draw dot
-			if ( cl_crosshairdot.GetBool() )
-			{
-				int x0 = iCenterX - iBarThickness / 2;
-				int x1 = x0 + iBarThickness;
-				int y0 = iCenterY - iBarThickness / 2;
-				int y1 = y0 + iBarThickness;
-				DrawCrosshairRect( x0, y0, x1, y1, bAdditive );
-			}
+			if ( !cl_crosshair_t.GetBool() )
+				DrawCrosshairRect( r, g, b, flLineAlphaOuter, x0, iOuterTop, x1, iInnerTop, bAdditive );
+			DrawCrosshairRect( r, g, b, flLineAlphaOuter, x0, iInnerBottom, x1, iOuterBottom, bAdditive );
 		}
 
-#if ALLOW_WEAPON_SPREAD_DISPLAY
-		// show accuracy brackets
-		if ( weapon_debug_spread_show.GetInt() == 1 || weapon_debug_spread_show.GetInt() == 2 )
+		// draw horizontal crosshair lines
+		int iInnerLeft = iCenterX - iInnerCrossDist - iBarThickness / 2;
+		int iInnerRight = iInnerLeft + 2 * iInnerCrossDist + iBarThickness;
+		int iOuterLeft = iInnerLeft - iBarSizeInner;
+		int iOuterRight = iInnerRight + iBarSizeInner;
+		int y0 = iCenterY - iBarThickness / 2;
+		int y1 = y0 + iBarThickness;
+		DrawCrosshairRect( r, g, b, flLineAlphaInner, iOuterLeft, y0, iInnerLeft, y1, bAdditive );
+		DrawCrosshairRect( r, g, b, flLineAlphaInner, iInnerRight, y0, iOuterRight, y1, bAdditive );
+
+		// draw vertical crosshair lines
+		int iInnerTop = iCenterY - iInnerCrossDist - iBarThickness / 2;
+		int iInnerBottom = iInnerTop + 2 * iInnerCrossDist + iBarThickness;
+		int iOuterTop = iInnerTop - iBarSizeInner;
+		int iOuterBottom = iInnerBottom + iBarSizeInner;
+		int x0 = iCenterX - iBarThickness / 2;
+		int x1 = x0 + iBarThickness;
+		if ( !cl_crosshair_t.GetBool() )
+			DrawCrosshairRect( r, g, b, flLineAlphaInner, x0, iOuterTop, x1, iInnerTop, bAdditive );
+		DrawCrosshairRect( r, g, b, flLineAlphaInner, x0, iInnerBottom, x1, iOuterBottom, bAdditive );
+
+		// draw dot
+		if ( cl_crosshairdot.GetBool() )
 		{
-			if ( weapon_debug_spread_show.GetInt() == 2 )
-			{
-				const QAngle& punchAngles = pPlayer->GetPunchAngle();
-				Vector vecDirShooting;
-				AngleVectors( punchAngles, &vecDirShooting );
+			int x0 = iCenterX - iBarThickness / 2;
+			int x1 = x0 + iBarThickness;
+			int y0 = iCenterY - iBarThickness / 2;
+			int y1 = y0 + iBarThickness;
+			DrawCrosshairRect( r, g, b, alpha, x0, y0, x1, y1, bAdditive );
+		}
 
-				float iOffsetX = RoundFloatToInt(YRES(vecDirShooting.y * 320.0f / tanf(fHalfFov)));
-				float iOffsetY = RoundFloatToInt(YRES(vecDirShooting.z * 320.0f / tanf(fHalfFov)));
-
-				iCenterX -= iOffsetX;
-				iCenterY -= iOffsetY;
-			}
-
+		if ( weapon_debug_spread_show.GetInt() == 1 )
+		{
 			// colors
 			r = 250;
 			g = 250;
 			b = 50;
-			vgui::surface()->DrawSetColor( r, g, b, alpha );
+			//vgui::surface()->DrawSetColor( r, g, b, alpha );
 
-			int iBarThickness = MAX( 1, RoundFloatToInt(YRES(cl_crosshairthickness.GetFloat())));
-
-			float fSpreadDistance = (GetInaccuracy() + GetSpread()) * 320.0f / tanf(fHalfFov);
-			int iSpreadDistance = RoundFloatToInt(YRES(fSpreadDistance));
+			int iBarThickness = MAX( 1, RoundFloatToInt( YRES( cl_crosshairthickness.GetFloat() ) ) );
 
 			// draw vertical spread lines
-			int iInnerLeft	= iCenterX - iSpreadDistance;
-			int iInnerRight	= iCenterX + iSpreadDistance;
-			int iOuterLeft	= iInnerLeft - iBarThickness;
-			int iOuterRight	= iInnerRight + iBarThickness;
-			int iInnerTop		= iCenterY - iSpreadDistance;
-			int iInnerBottom	= iCenterY + iSpreadDistance;
-			int iOuterTop		= iInnerTop - iBarThickness;
-			int iOuterBottom	= iInnerBottom + iBarThickness;
+			int iInnerLeft = iCenterX - iSpreadDistance;
+			int iInnerRight = iCenterX + iSpreadDistance;
+			int iOuterLeft = iInnerLeft - iBarThickness;
+			int iOuterRight = iInnerRight + iBarThickness;
+			int iInnerTop = iCenterY - iSpreadDistance;
+			int iInnerBottom = iCenterY + iSpreadDistance;
+			int iOuterTop = iInnerTop - iBarThickness;
+			int iOuterBottom = iInnerBottom + iBarThickness;
 
-			int iGap = RoundFloatToInt(weapon_debug_spread_gap.GetFloat() * iSpreadDistance);
+			int iGap = RoundFloatToInt( weapon_debug_spread_gap.GetFloat() * iSpreadDistance );
 
 			// draw horizontal lines
-			DrawCrosshairRect( iOuterLeft, iOuterTop, iCenterX - iGap, iInnerTop, bAdditive );
-			DrawCrosshairRect( iCenterX + iGap, iOuterTop, iOuterRight, iInnerTop, bAdditive );
-			DrawCrosshairRect( iOuterLeft, iInnerBottom, iCenterX - iGap, iOuterBottom, bAdditive );
-			DrawCrosshairRect( iCenterX + iGap, iInnerBottom, iOuterRight, iOuterBottom, bAdditive );
+			DrawCrosshairRect( r, g, b, alpha, iOuterLeft, iOuterTop, iCenterX - iGap, iInnerTop, bAdditive );
+			DrawCrosshairRect( r, g, b, alpha, iCenterX + iGap, iOuterTop, iOuterRight, iInnerTop, bAdditive );
+			DrawCrosshairRect( r, g, b, alpha, iOuterLeft, iInnerBottom, iCenterX - iGap, iOuterBottom, bAdditive );
+			DrawCrosshairRect( r, g, b, alpha, iCenterX + iGap, iInnerBottom, iOuterRight, iOuterBottom, bAdditive );
 
 			// draw vertical lines
-			DrawCrosshairRect( iOuterLeft, iOuterTop, iInnerLeft, iCenterY - iGap, bAdditive );
-			DrawCrosshairRect( iOuterLeft, iCenterY + iGap, iInnerLeft, iOuterBottom, bAdditive );
-			DrawCrosshairRect( iInnerRight, iOuterTop, iOuterRight, iCenterY - iGap, bAdditive );
-			DrawCrosshairRect( iInnerRight, iCenterY + iGap, iOuterRight, iOuterBottom, bAdditive );
+			DrawCrosshairRect( r, g, b, alpha, iOuterLeft, iOuterTop, iInnerLeft, iCenterY - iGap, bAdditive );
+			DrawCrosshairRect( r, g, b, alpha, iOuterLeft, iCenterY + iGap, iInnerLeft, iOuterBottom, bAdditive );
+			DrawCrosshairRect( r, g, b, alpha, iInnerRight, iOuterTop, iOuterRight, iCenterY - iGap, bAdditive );
+			DrawCrosshairRect( r, g, b, alpha, iInnerRight, iCenterY + iGap, iOuterRight, iOuterBottom, bAdditive );
 		}
-#endif
+
 	}
 
 	void CWeaponCSBase::OnDataChanged( DataUpdateType_t type )
