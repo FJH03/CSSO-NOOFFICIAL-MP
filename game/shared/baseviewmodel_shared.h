@@ -88,6 +88,9 @@ public:
 
 	Vector					m_vecLastFacing;
 
+	CNetworkVar( bool, m_bShouldIgnoreOffsetAndAccuracy );
+	virtual void			SetShouldIgnoreOffsetAndAccuracy( bool bIgnore ) { m_bShouldIgnoreOffsetAndAccuracy = bIgnore; }
+
 	// Only support prediction in TF2 for now
 #if defined( INVASION_DLL ) || defined( INVASION_CLIENT_DLL )
 	// All predicted weapons need to implement and return true

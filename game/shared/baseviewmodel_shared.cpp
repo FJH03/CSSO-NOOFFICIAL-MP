@@ -33,6 +33,12 @@ extern ConVar in_forceuser;
 #define VIEWMODEL_ANIMATION_PARITY_BITS 3
 #define SCREEN_OVERLAY_MATERIAL "vgui/screens/vgui_overlay"
 
+#if defined( CLIENT_DLL )
+ConVar viewmodel_offset_x( "viewmodel_offset_x", "0.0", FCVAR_ARCHIVE );	 // the viewmodel offset from default in X
+ConVar viewmodel_offset_y( "viewmodel_offset_y", "0.0", FCVAR_ARCHIVE );	 // the viewmodel offset from default in Y
+ConVar viewmodel_offset_z( "viewmodel_offset_z", "0.0", FCVAR_ARCHIVE );	 // the viewmodel offset from default in Z
+#endif
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -42,6 +48,8 @@ CBaseViewModel::CBaseViewModel()
 	// NOTE: We do this here because the color is never transmitted for the view model.
 	m_nOldAnimationParity = 0;
 	m_EntClientFlags |= ENTCLIENTFLAG_ALWAYS_INTERPOLATE;
+
+	m_bShouldIgnoreOffsetAndAccuracy = false;
 #endif
 	SetRenderColor( 255, 255, 255, 255 );
 
@@ -390,6 +398,31 @@ void CBaseViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& eyePos
 	QAngle vmangles = eyeAngles;
 	Vector vmorigin = eyePosition;
 
+	Vector vecRight;
+	Vector vecUp;
+	Vector vecForward;
+	AngleVectors( vmangoriginal, &vecForward, &vecRight, &vecUp );
+
+	if ( !m_bShouldIgnoreOffsetAndAccuracy )
+	{
+#if IRONSIGHT
+		CWeaponCSBase *pIronSightWeapon = (CWeaponCSBase*)owner->GetActiveWeapon();
+		if ( pIronSightWeapon )
+		{
+			CIronSightController* pIronSightController = pIronSightWeapon->GetIronSightController();
+			if ( pIronSightController && pIronSightController->IsInIronSight() )
+			{
+				float flInvIronSightAmount = ( 1.0f - pIronSightController->GetIronSightAmount() );
+
+				vecForward *= flInvIronSightAmount;
+				vecUp *= flInvIronSightAmount;
+				vecRight *=	flInvIronSightAmount;
+			}
+		}
+#endif
+		vmorigin += ( viewmodel_offset_y.GetFloat() * vecForward ) + ( viewmodel_offset_z.GetFloat() * vecUp ) + ( viewmodel_offset_x.GetFloat() * vecRight );
+	}
+
 	CBaseCombatWeapon *pWeapon = m_hWeapon.Get();
 	//Allow weapon lagging
 	if ( pWeapon != NULL )
@@ -590,6 +623,7 @@ BEGIN_NETWORK_TABLE_NOBASE(CBaseViewModel, DT_BaseViewModel)
 	RecvPropInt( RECVINFO( m_nNewSequenceParity )),
 	RecvPropInt( RECVINFO( m_nResetEventsParity )),
 	RecvPropInt( RECVINFO( m_nMuzzleFlashParity )),
+	RecvPropBool( RECVINFO( m_bShouldIgnoreOffsetAndAccuracy ) ),
 
 #if !defined( INVASION_DLL ) && !defined( INVASION_CLIENT_DLL )
 	RecvPropArray(RecvPropFloat(RECVINFO(m_flPoseParameter[0]) ), m_flPoseParameter ),
