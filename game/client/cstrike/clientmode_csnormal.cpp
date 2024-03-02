@@ -57,6 +57,7 @@
 // [tj] We need to forward declare this, since the definition is all inside the implementation file 
 class CHudHintDisplay;
  
+ extern ConVar v_viewmodel_fov;
 //=============================================================================
 // HPE_END
 //=============================================================================
@@ -439,7 +440,7 @@ ClientModeCSNormal* GetClientModeCSNormal()
 
 float ClientModeCSNormal::GetViewModelFOV( void )
 {
-	return 74.0f;
+	return v_viewmodel_fov.GetFloat();
 }
 
 int ClientModeCSNormal::GetDeathMessageStartHeight( void )
