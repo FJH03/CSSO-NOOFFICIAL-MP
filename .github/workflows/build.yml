@@ -1,111 +1,33 @@
 name: Build
 
-on: [push, pull_request]
+on: push
 
 jobs:
-  build-linux-i386:
+  Build-apk-for-android:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
-    - name: Build linux-i386
+    - name: Cloning modlaucher repo and preparing for building
       run: |
-        scripts/build-ubuntu-i386.sh
-
-  build-linux-amd64:
-    runs-on: ubuntu-20.04
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build linux-amd64
-      run: |
-        scripts/build-ubuntu-amd64.sh
-
-  build-android-armv7a:
-    runs-on: ubuntu-20.04
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build android-armv7a
+        git clone https://github.com/DMK95/Srceng-mod-launcher/
+        sudo apt-get update
+        sudo apt-get install -f -y openjdk-8-jre zip apksigner
+    - name: Build Android (32 bit)
       run: |
         scripts/build-android-armv7a.sh
-
-  build-windows-i386:
-    runs-on: windows-2019
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build windows-i386
+    - name: Build Android (64 bit)
       run: |
-        git submodule init && git submodule update
-        ./waf.bat configure -T debug --32bits
-        ./waf.bat build
-
-  build-windows-amd64:
-    runs-on: windows-2019
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build windows-amd64
+        scripts/build-android-aarch64.sh    
+    - name: Build APK
       run: |
-        git submodule init && git submodule update
-        ./waf.bat configure -T debug
-        ./waf.bat build
-
-  build-dedicated-windows-i386:
-    runs-on: windows-2019
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build dedicated windows-i386
+        scripts/build-apk.sh 
+    - name: Rename APK
       run: |
-        git submodule init && git submodule update
-        ./waf.bat configure -T debug -d
-        ./waf.bat build
+         mv Srceng-mod-launcher/build/android/mod-signed.apk clientmod-release.apk
 
-  build-dedicated-windows-amd64:
-    runs-on: windows-2019
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build dedicated windows-amd64
-      run: |
-        git submodule init && git submodule update
-        ./waf.bat configure -T debug -d
-        ./waf.bat build
-
-  build-dedicated-linux-i386:
-    runs-on: ubuntu-20.04
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build dedicated linux-i386
-      run: |
-        scripts/build-ubuntu-i386.sh -d
-
-  build-dedicated-linux-amd64:
-    runs-on: ubuntu-20.04
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build dedicated linux-amd64
-      run: |
-        scripts/build-ubuntu-amd64.sh -d
-
-  build-macos-amd64:
-    runs-on: macos-latest
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build macos-amd64
-      run: |
-        scripts/build-macos-amd64.sh
-
-  build-dedicated-macos-amd64:
-    runs-on: macos-latest
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build dedicated macos-amd64
-      run: |
-        scripts/build-macos-amd64.sh -d
+    - name: 'Upload Artifact'
+      uses: actions/upload-artifact@v3
+      with:
+        name: clientmod-apk
+        path: clientmod-release.apk
