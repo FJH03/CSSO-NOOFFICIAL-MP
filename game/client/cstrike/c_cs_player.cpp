@@ -777,6 +777,11 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropBool( RECVINFO( m_bResumeZoom ) ),
 	RecvPropInt( RECVINFO( m_iLastZoom ) ),
 
+	//imunity
+	RecvPropFloat( RECVINFO( m_fImmuneToDamageTime ) ),
+	RecvPropBool( RECVINFO( m_bImmunity ) ),
+	RecvPropBool( RECVINFO( m_bHasMovedSinceSpawn ) ),
+
 #ifdef CS_SHIELD_ENABLED
 	RecvPropBool( RECVINFO( m_bHasShield ) ),
 	RecvPropBool( RECVINFO( m_bShieldDrawn ) ),
@@ -1304,6 +1309,30 @@ void C_CSPlayer::ClientThink()
 	{
 		PerformObstaclePushaway( this );
 		m_fNextThinkPushAway =  gpGlobals->curtime + PUSHAWAY_THINK_INTERVAL;
+	}
+
+	ConVarRef mp_respawn_immunitytime( "mp_respawn_immunitytime" );
+	float flImmuneTime = mp_respawn_immunitytime.GetFloat();
+	if ( flImmuneTime > 0 || CSGameRules()->IsWarmupPeriod() )
+	{
+		if ( m_bImmunity )
+		{
+			SetRenderMode( kRenderTransAlpha );
+			SetRenderColorA( 128 );
+		}
+		else
+		{
+			SetRenderMode( kRenderNormal, true );
+			SetRenderColorA( 255 );
+		}
+	}
+	else
+	{
+		if ( GetRenderColor().a < 255 )
+		{
+			SetRenderMode( kRenderNormal, true );
+			SetRenderColorA( 255 );
+		}
 	}
 
 	// NVNT - check for spectating forces

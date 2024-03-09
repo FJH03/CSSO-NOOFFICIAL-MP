@@ -54,5 +54,12 @@ ConVar mp_fadetoblack(
 	FCVAR_REPLICATED | FCVAR_NOTIFY, 
 	"fade a player's screen to black when he dies" );
 
+ConVar mp_teammates_are_enemies(
+	"mp_teammates_are_enemies",
+	"0",
+	FCVAR_REPLICATED | FCVAR_NOTIFY,
+	"When set, your teammates act as enemies and all players are valid targets."
+	);
+
 
 ConVar sv_hudhint_sound( "sv_hudhint_sound", "1", FCVAR_REPLICATED );

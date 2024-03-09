@@ -34,11 +34,25 @@
 
 ConVar sv_showimpacts("sv_showimpacts", "0", FCVAR_REPLICATED, "Shows client (red) and server (blue) bullet impact point (1=both, 2=client-only, 3=server-only)" );
 ConVar sv_showplayerhitboxes( "sv_showplayerhitboxes", "0", FCVAR_REPLICATED, "Show lag compensated hitboxes for the specified player index whenever a player fires." );
+extern ConVar mp_respawn_on_death_ct;
+extern ConVar mp_respawn_on_death_t;
 
 #define	CS_MASK_SHOOT (MASK_SOLID|CONTENTS_DEBRIS)
 
 void DispatchEffect( const char *pName, const CEffectData &data );
 
+bool CCSPlayer::IsAbleToInstantRespawn( void )
+{
+	if ( CSGameRules() )
+	{
+		if ( CSGameRules()->IsWarmupPeriod() )
+			return true;
+	}
+
+	// if we use respawn waves AND the next respawn wave is past AND our team is able to respawn OR it is the warmup period
+	return (	CSGameRules() && ( ( mp_respawn_on_death_ct.GetBool() && GetTeamNumber() == TEAM_CT ) || 
+		( mp_respawn_on_death_t.GetBool() && GetTeamNumber() == TEAM_TERRORIST ) ) );
+}
 
 #ifdef _DEBUG
 

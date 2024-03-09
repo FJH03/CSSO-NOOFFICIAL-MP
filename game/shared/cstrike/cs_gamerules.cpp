@@ -112,6 +112,9 @@ REGISTER_GAMERULES_CLASS( CCSGameRules );
 BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 	#ifdef CLIENT_DLL
 		RecvPropBool( RECVINFO( m_bFreezePeriod ) ),
+		RecvPropBool( RECVINFO( m_bWarmupPeriod ) ),
+        RecvPropFloat( RECVINFO( m_fWarmupPeriodEnd ) ), // DUMMY VAR FOR DEMOS		
+        RecvPropFloat( RECVINFO( m_fWarmupPeriodStart ) ),
 		RecvPropInt( RECVINFO( m_iRoundTime ) ),
 		RecvPropFloat( RECVINFO( m_fRoundStartTime ) ),
 		RecvPropFloat( RECVINFO( m_flGameStartTime ) ),
@@ -121,6 +124,9 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropBool( RECVINFO( m_bLogoMap ) ),
 		RecvPropBool( RECVINFO( m_bBlackMarket ) )
 	#else
+		SendPropBool( SENDINFO( m_bWarmupPeriod ) ),
+        SendPropFloat( SENDINFO( m_fWarmupPeriodEnd ) ), // DUMMY VAR FOR DEMOS	
+        SendPropFloat( SENDINFO( m_fWarmupPeriodStart ) ),
 		SendPropBool( SENDINFO( m_bFreezePeriod ) ),
 		SendPropInt( SENDINFO( m_iRoundTime ), 16 ),
 		SendPropFloat( SENDINFO( m_fRoundStartTime ), 32, SPROP_NOSCALE ),
@@ -191,6 +197,78 @@ ConVar mp_buytime(
 	true, 0.25,
 	false, 0 );
 
+ConVar mp_do_warmup_period(
+	"mp_do_warmup_period",
+	"0",
+	FCVAR_REPLICATED,
+	"Whether or not to do a warmup period at the start of a match(def:off).",
+	true, 0,
+	true, 1 );
+
+ConVar mp_respawn_immunitytime("mp_respawn_immunitytime", "4.0", FCVAR_REPLICATED, "How many seconds after respawn immunity lasts." );
+#ifndef CLIENT_DLL
+CON_COMMAND( mp_warmup_start, "Start warmup." )
+{
+	if ( !UTIL_IsCommandIssuedByServerAdmin() )
+		return;
+
+	if ( CSGameRules() )
+	{
+		CSGameRules()->StartWarmup();
+	}
+}
+CON_COMMAND( mp_warmup_end, "End warmup immediately." )
+{
+	if ( !UTIL_IsCommandIssuedByServerAdmin() )
+	{
+		return;
+	}
+
+	if ( CSGameRules() )
+	{
+		CSGameRules()->EndWarmup();
+	}
+}
+#endif
+static void mpwarmuptime_f( IConVar *pConVar, const char *pOldString, float flOldValue )
+{
+	if ( CSGameRules() )
+	{
+		CSGameRules()->SetWarmupPeriodStartTime( gpGlobals->curtime );
+	}
+}
+ConVar mp_respawn_on_death_t(
+	"mp_respawn_on_death_t",
+	"0",
+	FCVAR_REPLICATED,
+	"When set to 1, terrorists will respawn after dying." );
+
+ConVar mp_respawn_on_death_ct(
+	"mp_respawn_on_death_ct",
+	"0",
+	FCVAR_REPLICATED,
+	"When set to 1, counter-terrorists will respawn after dying." );
+ConVar mp_warmuptime(
+	"mp_warmuptime",
+	"300",
+	FCVAR_REPLICATED,
+	"How long the warmup period lasts. Changing this value resets warmup.",
+	true, 5,
+	false, 0,
+	mpwarmuptime_f );
+
+ConVar mp_warmuptime_all_players_connected(
+	"mp_warmuptime_all_players_connected",
+	"60",
+	FCVAR_REPLICATED,
+	"Warmup time to use when all players have connected in official competitive. 0 to disable." );
+
+ConVar mp_warmup_pausetimer(
+	"mp_warmup_pausetimer",
+	"0",
+	FCVAR_REPLICATED,
+	"Set to 1 to stay in warmup indefinitely. Set to 0 to resume the timer." );
+
 ConVar mp_playerid(
 	"mp_playerid",
 	"0",
@@ -228,6 +306,8 @@ ConVar sv_allowminmodels(
 	"1",
 	FCVAR_REPLICATED | FCVAR_NOTIFY,
 	"Allow or disallow the use of cl_minmodels on this server." );
+
+extern ConVar mp_teammates_are_enemies;
 
 #ifdef CLIENT_DLL
 
@@ -346,7 +426,15 @@ ConVar cl_autohelp(
 		FCVAR_REPLICATED | FCVAR_NOTIFY,
 		"amount of money each player gets when they reset",
 		true, 800,
-		true, 16000 );	
+		true, 16000 );
+
+	ConVar mp_maxmoney(
+	"mp_maxmoney",
+	"16000",
+	FCVAR_REPLICATED,
+	"maximum amount of money allowed in a player's account",
+	true, 0,
+	false, 0 );
 
 	ConVar mp_roundtime( 
 		"mp_roundtime",
@@ -570,6 +658,7 @@ ConVar cl_autohelp(
 
 	CCSGameRules::CCSGameRules()
 	{
+		m_flLastThinkTime = gpGlobals->curtime;
 		m_iRoundTime = 0;
 		m_iRoundWinStatus = WINNER_NONE;
 		m_iFreezeTime = 0;
@@ -698,6 +787,9 @@ ConVar cl_autohelp(
 			g_flGameStatsUpdateTime = CS_GAME_STATS_UPDATE; //Next update is between 22 and 24 hours.
 		}
 #endif
+		m_bWarmupPeriod = mp_do_warmup_period.GetBool();
+		m_fWarmupNextChatNoticeTime = 0;
+		m_fWarmupPeriodStart = gpGlobals->curtime;
 	}
 
 	void CCSGameRules::AddPricesToTable( weeklyprice_t prices )
@@ -1696,7 +1788,7 @@ ConVar cl_autohelp(
 		}
 
 		// If a winner has already been determined.. then get the heck out of here
-		if (m_iRoundWinStatus != WINNER_NONE)
+		if (IsWarmupPeriod() || ( m_iRoundWinStatus != WINNER_NONE ))
 		{
 			// still check if we lost players to where we need to do a full reset next round...
 			int NumDeadCT, NumDeadTerrorist, NumAliveTerrorist, NumAliveCT;
@@ -2078,59 +2170,98 @@ ConVar cl_autohelp(
 		bool bNeededPlayers
 	)
 	{
+		bool bCTsRespawn = mp_respawn_on_death_ct.GetBool();
+		bool bTsRespawn = mp_respawn_on_death_t.GetBool();
+
 		if ( ( m_iNumCT > 0 && m_iNumSpawnableCT > 0 ) && ( m_iNumTerrorist > 0 && m_iNumSpawnableTerrorist > 0 ) )
 		{
-			if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && m_iNumSpawnableCT > 0 )
+			// this checks for last man standing rules
+			if ( mp_teammates_are_enemies.GetBool() )
 			{
-				bool nowin = false;
-					
-				for ( int iGrenade=0; iGrenade < g_PlantedC4s.Count(); iGrenade++ )
+				// last CT alive
+				if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && !bTsRespawn && NumAliveCT == 1 )
 				{
-					CPlantedC4 *pC4 = g_PlantedC4s[iGrenade];
-
-					if ( pC4->IsBombActive() )
-						nowin = true;
+					m_iNumCTWins++;
+					//m_iNumCTWinsThisPhase++;
+					// Update the clients team score
+					UpdateTeamScores();
+					TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
+					return true;
 				}
 
-				if ( !nowin )
+				if ( NumAliveCT == 0 && NumDeadCT != 0 && !bCTsRespawn && NumAliveTerrorist == 1 )
+				{
+					m_iNumTerroristWins++;
+					//m_iNumTerroristWinsThisPhase++;
+					// Update the clients team score
+					UpdateTeamScores();
+					TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
+					return true;
+				}
+
+				if ( NumAliveCT == 0 && !bCTsRespawn && NumAliveTerrorist == 0 && !bTsRespawn && (m_iNumTerrorist > 0 || m_iNumCT > 0) )
+				{
+					TerminateRound( mp_round_restart_delay.GetFloat(), Round_Draw );
+					return true;
+				}
+			}
+			else
+			{
+				// CTs WON (if they don't respawn)
+				if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && !bTsRespawn && m_iNumSpawnableCT > 0 )
+				{
+					bool nowin = false;
+					
+					for ( int iGrenade=0; iGrenade < g_PlantedC4s.Count(); iGrenade++ )
+					{
+						CPlantedC4 *pC4 = g_PlantedC4s[iGrenade];
+
+						if ( pC4->IsBombActive() )
+							nowin = true;
+					}
+
+					if ( !nowin )
+					{
+						if ( m_bMapHasBombTarget )
+							m_iAccountCT += 3250;
+						else
+							m_iAccountCT += 3000;
+
+						if ( !bNeededPlayers )
+						{
+							m_iNumCTWins++;
+							//m_iNumCTWinsThisPhase++;
+							// Update the clients team score
+							UpdateTeamScores();
+						}
+
+						TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
+						return true;
+					}
+				}
+		
+				// Terrorists WON (if they don't respawn)
+				if ( NumAliveCT == 0 && NumDeadCT != 0 && !bCTsRespawn && m_iNumSpawnableTerrorist > 0 )
 				{
 					if ( m_bMapHasBombTarget )
-						m_iAccountCT += 3250;
+						m_iAccountTerrorist += 3250;
 					else
-						m_iAccountCT += 3000;
+						m_iAccountTerrorist += 3000;
 
 					if ( !bNeededPlayers )
 					{
-						m_iNumCTWins++;
+						m_iNumTerroristWins++;
+						//m_iNumTerroristWinsThisPhase++;
 						// Update the clients team score
 						UpdateTeamScores();
 					}
 
-					TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
+					TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
 					return true;
 				}
 			}
-		
-			// Terrorists WON
-			if ( NumAliveCT == 0 && NumDeadCT != 0 && m_iNumSpawnableTerrorist > 0 )
-			{
-				if ( m_bMapHasBombTarget )
-					m_iAccountTerrorist += 3250;
-				else
-					m_iAccountTerrorist += 3000;
-
-				if ( !bNeededPlayers )
-				{
-					m_iNumTerroristWins++;
-					// Update the clients team score
-					UpdateTeamScores();
-				}
-
-				TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
-				return true;
-			}
 		}
-		else if ( NumAliveCT == 0 && NumAliveTerrorist == 0 )
+        else if ( NumAliveCT == 0 && !bCTsRespawn && NumAliveTerrorist == 0 && !bTsRespawn && ( m_iNumTerrorist > 0 || m_iNumCT > 0 ) )
 		{
 			TerminateRound( mp_round_restart_delay.GetFloat(), Round_Draw );
 			return true;
@@ -2235,8 +2366,8 @@ ConVar cl_autohelp(
 
 	void CCSGameRules::ReadMultiplayCvars()
 	{
-		m_iRoundTime = (int)(mp_roundtime.GetFloat() * 60);
-		m_iFreezeTime = mp_freezetime.GetInt();
+		m_iRoundTime = IsWarmupPeriod() ? 999 : (int) (mp_roundtime.GetFloat() * 60);
+		m_iFreezeTime = IsWarmupPeriod() ? 2 : mp_freezetime.GetInt();
 	}
 
 
@@ -2758,7 +2889,7 @@ ConVar cl_autohelp(
 		}
 
 		// Give C4 to the terrorists
-		if (m_bMapHasBombTarget == true	)
+		if (m_bMapHasBombTarget == true	&& !IsWarmupPeriod())
 			GiveC4();
 
 		// Reset game variables
@@ -2954,8 +3085,63 @@ ConVar cl_autohelp(
 		{
 			return;
 		}
+		if ( IsWarmupPeriod() )
+        {
+#ifdef GAME_DLL
+			if ( IsWarmupPeriodPaused() && ( GetWarmupPeriodEndTime() - 6 >= gpGlobals->curtime) ) // Ignore warmup pause if within 6s of end.
+			{
+				// push out the timers indefinitely.
+				m_fWarmupPeriodStart += gpGlobals->curtime - m_flLastThinkTime;
 
-		
+				m_fWarmupNextChatNoticeTime += gpGlobals->curtime - m_flLastThinkTime;
+			}
+
+			if ( m_fWarmupNextChatNoticeTime < gpGlobals->curtime )
+            {
+                m_fWarmupNextChatNoticeTime = gpGlobals->curtime + 10;
+
+                CBroadcastRecipientFilter filter;
+
+				UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Match_Will_Start_Chat" );
+            }
+#endif
+            //bool bIsPlayingProgressive = CSGameRules() && CSGameRules()->IsPlayingGunGameProgressive();
+
+			extern ConVar mp_do_warmup_period;
+
+            if ( ( UTIL_HumansInGame( true ) > 0 && ( GetWarmupPeriodEndTime() - 5 < gpGlobals->curtime) ) || !mp_do_warmup_period.GetBool() )
+            {
+				extern ConVar mp_warmup_pausetimer;
+				mp_warmup_pausetimer.SetValue( 0 ); // Timer is unpausable within 5 seconds of its end.
+
+				if (GetWarmupPeriodEndTime() <= gpGlobals->curtime)
+				{
+					// when the warmup period ends, set the round to restart in 3 seconds
+					if (!m_bCompleteReset)
+					{
+						//GetGlobalTeam( TEAM_CT )->ResetScores();
+						//GetGlobalTeam( TEAM_TERRORIST )->ResetScores();
+
+						m_flRestartRoundTime = gpGlobals->curtime + 4.0;
+						m_bCompleteReset = true;
+						FreezePlayers();
+
+						{
+							CReliableBroadcastRecipientFilter filter;
+							UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Warmup_Has_Ended" );
+							m_fWarmupNextChatNoticeTime = gpGlobals->curtime + 10;
+						}
+                    }
+
+                    // when the round resets, turn off the warmup period
+                    if ( m_flRestartRoundTime <= gpGlobals->curtime )
+                    {
+                        m_bWarmupPeriod = false;
+                    }
+                }
+            }
+        }
+
 		// Check for the end of the round.
 		if ( IsFreezePeriod() )
 		{
@@ -2970,38 +3156,65 @@ ConVar cl_autohelp(
 		
 		if ( m_flRestartRoundTime > 0.0f && m_flRestartRoundTime <= gpGlobals->curtime )
 		{
-			bool botSpeaking = false;
-			for ( int i=1; i <= gpGlobals->maxClients; ++i )
-			{
-				CBasePlayer *player = UTIL_PlayerByIndex( i );
-				if (player == NULL)
-					continue;
+			if ( IsWarmupPeriod() && GetWarmupPeriodEndTime() <= gpGlobals->curtime && UTIL_HumansInGame( false ) && m_flGameStartTime != 0 )
+            {
+                m_bCompleteReset = true;
+                m_flRestartRoundTime = gpGlobals->curtime + 1;
+                mp_restartgame.SetValue( 5 );
+                
+                m_bWarmupPeriod = false;
+            }
+            else
+            {
+                bool botSpeaking = false;
+                for ( int i=1; i <= gpGlobals->maxClients; ++i )
+                {
+                    CBasePlayer *player = UTIL_PlayerByIndex( i );
+                    if (player == NULL)
+                        continue;
 
-				if (!player->IsBot())
-					continue;
-				
-				CCSBot *bot = dynamic_cast< CCSBot * >(player);
-				if ( !bot )
-					continue;
+                    if (!player->IsBot())
+                        continue;
 
-				if ( bot->IsUsingVoice() )
+                    CCSBot *bot = dynamic_cast< CCSBot * >(player);
+                    if ( !bot )
+                        continue;
+
+                    // restart only if no bots are speaking
+					if ( !botSpeaking )
+                    {
+                        if ( gpGlobals->curtime > m_flRestartRoundTime + 10.0f )
+                        {
+                            Msg( "Ignoring speaking bot %s at round end\n", bot->GetPlayerName() );
+                        }
+                        else
+                        {
+                            botSpeaking = true;
+                            break;
+                        }
+                    }
+                }
+
+				if ( !botSpeaking )
 				{
-					if ( gpGlobals->curtime > m_flRestartRoundTime + 10.0f )
-					{
-						Msg( "Ignoring speaking bot %s at round end\n", bot->GetPlayerName() );
-					}
-					else
-					{
-						botSpeaking = true;
-						break;
-					}
+
+					// Don't call RoundEnd() before the first round of a match
+					if (IsWarmupPeriod() &&
+							(GetWarmupPeriodEndTime() <= gpGlobals->curtime) &&
+							UTIL_HumansInGame(false))
+						{
+							m_bCompleteReset = true;
+							m_flRestartRoundTime = gpGlobals->curtime + 1;
+							mp_restartgame.SetValue(5);
+
+							m_bWarmupPeriod = false;
+							return;
+						}
 				}
 			}
 
-			if ( !botSpeaking )
-			{
-				RestartRound();
-			}
+			RestartRound();
+			
 		}
 		
 		if ( gpGlobals->curtime > m_tmNextPeriodicThink )
@@ -3009,6 +3222,7 @@ ConVar cl_autohelp(
 			CheckRestartRound();
 			m_tmNextPeriodicThink = gpGlobals->curtime + 1.0;
 		}
+	m_flLastThinkTime = gpGlobals->curtime;
 	}
 
 
@@ -3213,7 +3427,7 @@ ConVar cl_autohelp(
 
 	void CCSGameRules::CheckRoundTimeExpired()
 	{
-		if ( mp_ignore_round_win_conditions.GetBool() )
+		if ( mp_ignore_round_win_conditions.GetBool() || IsWarmupPeriod() )
 			return;
 
 		if ( GetRoundRemainingTime() > 0 || m_iRoundWinStatus != WINNER_NONE ) 
@@ -4028,7 +4242,14 @@ ConVar cl_autohelp(
 			Error( "FPlayerCanRespawn: pPlayer=0" );
 
 		// Player cannot respawn twice in a round
-		if ( pPlayer->m_iNumSpawns > 0 && m_bFirstConnected )
+		if ( !pPlayer->IsAbleToInstantRespawn() && !IsWarmupPeriod() )
+		{
+			if ( pPlayer->m_iNumSpawns > 0 && m_bFirstConnected )
+				return false;
+		}
+
+		// Player cannot respawn twice in a round
+		if ( pPlayer->m_iNumSpawns > 0 && m_bFirstConnected && !IsWarmupPeriod() )
 			return false;
 
 		// If they're dead after the map has ended, and it's about to start the next round,
@@ -4044,6 +4265,7 @@ ConVar cl_autohelp(
 		if ( pPlayer->GetClass() == CS_CLASS_NONE )
 			return false;
 
+		if ( !pPlayer->IsAbleToInstantRespawn() && !IsWarmupPeriod() )
 		// Player cannot respawn until next round if more than 20 seconds in
 
 		// Tabulate the number of players on each team.
@@ -4270,6 +4492,11 @@ ConVar cl_autohelp(
 		{
 			UTIL_LogPrintf("World triggered \"Intermission_Time_Limit\"\n");
 			GoToIntermission();
+		}
+
+		if ( iReason == Game_Commencing )
+		{
+			m_bWarmupPeriod = true;
 		}
 	}
 
@@ -4998,6 +5225,54 @@ bool CCSGameRules::IsFreezePeriod()
 	return m_bFreezePeriod;
 }
 
+bool CCSGameRules::IsWarmupPeriod() const
+{
+	return m_bWarmupPeriod;
+}
+
+float CCSGameRules::GetWarmupPeriodEndTime() const
+{
+	return m_fWarmupPeriodStart + mp_warmuptime.GetFloat();
+}
+
+bool CCSGameRules::IsWarmupPeriodPaused()
+{
+	return mp_warmup_pausetimer.GetBool();
+}
+
+float CCSGameRules::GetWarmupRemainingTime()
+{
+	return (float) GetWarmupPeriodEndTime() - gpGlobals->curtime;
+}
+
+#ifndef CLIENT_DLL
+void CCSGameRules::StartWarmup( void )
+{
+	if ( !UTIL_IsCommandIssuedByServerAdmin() )
+		return;
+
+	m_bWarmupPeriod = true;
+	m_bCompleteReset = true;
+	m_fWarmupPeriodStart = gpGlobals->curtime;
+
+	RestartRound();
+}
+
+void CCSGameRules::EndWarmup( void )
+{
+	if ( !UTIL_IsCommandIssuedByServerAdmin() )
+		return;
+
+	if ( !m_bWarmupPeriod )
+		return;
+
+	m_bWarmupPeriod = false;
+	m_bCompleteReset = true;
+	m_fWarmupPeriodStart = -1;
+
+	RestartRound();
+}
+#endif
 
 bool CCSGameRules::IsVIPMap() const
 {
@@ -5021,13 +5296,24 @@ bool CCSGameRules::IsLogoMap() const
 	return m_bLogoMap;
 }
 
-float CCSGameRules::GetBuyTimeLength() const
+float CCSGameRules::GetBuyTimeLength()
 {
+	if ( IsWarmupPeriod() )
+	{
+		if ( IsWarmupPeriodPaused() )
+			return GetWarmupPeriodEndTime() - m_fWarmupPeriodStart;
+
+		if ( mp_buytime.GetFloat() < GetWarmupPeriodEndTime() )
+			return GetWarmupPeriodEndTime();
+	}
 	return ( mp_buytime.GetFloat() * 60 );
 }
 
 bool CCSGameRules::IsBuyTimeElapsed()
 {
+	if ( IsWarmupPeriod() && IsWarmupPeriodPaused() )
+		return false;
+
 	return ( GetRoundElapsedTime() > GetBuyTimeLength() );
 }
 
@@ -5401,7 +5687,7 @@ int CCSGameRules::GetStartMoney( void )
 		return atoi( mp_startmoney.GetDefault() );
 	}
 
-	return mp_startmoney.GetInt();
+	return IsWarmupPeriod() ? mp_maxmoney.GetInt() : mp_startmoney.GetInt();
 }
 
 
@@ -5483,6 +5769,18 @@ void CCSGameRules::PlayerTookDamage(CCSPlayer* player, const CTakeDamageInfo &da
 	}
 }
 
+void CCSGameRules::FreezePlayers( void )
+{
+	for ( int i = 1; i <= MAX_PLAYERS; i++ )
+	{
+		CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+
+		if ( pPlayer )
+		{
+			pPlayer->AddFlag( FL_FROZEN );
+		}
+	}
+}
 
 //=============================================================================
 // HPE_END

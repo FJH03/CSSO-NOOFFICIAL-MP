@@ -5300,6 +5300,14 @@ void CBasePlayer::NotifyNearbyRadiationSource( float flRange )
 
 void CBasePlayer::AllowImmediateDecalPainting()
 {
+#ifdef CSTRIKE_DLL
+	// No decal expediting during warmup
+	if ( CSGameRules() )
+	{
+		if ( CSGameRules()->IsWarmupPeriod() )
+			return;
+	}
+#endif
 	m_flNextDecalTime = gpGlobals->curtime;
 }
 

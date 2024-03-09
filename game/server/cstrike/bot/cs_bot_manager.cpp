@@ -40,6 +40,7 @@ ConVar bot_show_battlefront( "bot_show_battlefront", "0", FCVAR_GAMEDLL | FCVAR_
 
 int UTIL_CSSBotsInGame( void );
 
+ConVar bot_join_in_warmup( "bot_join_in_warmup", "1", FCVAR_GAMEDLL, "Prevents bots from joining the server while warmup phase is active." );
 ConVar bot_join_delay( "bot_join_delay", "0", FCVAR_GAMEDLL, "Prevents bots from joining the server for this many seconds after a map change." );
 
 /**
@@ -1189,6 +1190,13 @@ void CCSBotManager::MaintainBotQuota( void )
 	// wait until the map has been loaded for a bit, to allow players to transition across
 	// the transition without missing the pistol round
 	if ( bot_join_delay.GetInt() > CSGameRules()->GetMapElapsedTime() )
+	{
+		desiredBotCount = 0;
+	}
+	
+	// If the match is in warmup phase and we don't want any bots in warmup then don't have
+	// the bots joining the match during warmup
+	if ( !bot_join_in_warmup.GetBool() && CSGameRules()->IsWarmupPeriod() )
 	{
 		desiredBotCount = 0;
 	}

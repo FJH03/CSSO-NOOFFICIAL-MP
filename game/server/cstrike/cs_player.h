@@ -681,6 +681,12 @@ public:
 	// Reset after prediction (in PostThink).
 	CNetworkVar( bool, m_bInBombZone );
 	CNetworkVar( bool, m_bInBuyZone );
+
+	//imunity
+	CNetworkVar( bool, m_bHasMovedSinceSpawn ); // Whether player has moved from spawn position
+	CNetworkVar( float, m_fImmuneToDamageTime );	// When gun game spawn damage immunity will expire
+	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune in gun game
+
 	int m_iBombSiteIndex;
 
 	bool IsInBuyZone();
@@ -727,8 +733,9 @@ public:
 	void SurpressLadderChecks( const Vector& pos, const Vector& normal );
 	bool CanGrabLadder( const Vector& pos, const Vector& normal );
 
+	void ClearImmunity( void );
 	CNetworkVar( bool, m_bDetected );
-
+	bool IsAbleToInstantRespawn( void );
 private:
 	CountdownTimer m_ladderSurpressionTimer;
 	Vector m_lastLadderNormal;

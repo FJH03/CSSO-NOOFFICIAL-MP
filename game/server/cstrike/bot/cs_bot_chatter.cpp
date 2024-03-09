@@ -1191,6 +1191,12 @@ bool BotStatement::Update( void )
 
 				case REMAINING_ENEMY_COUNT:
 				{
+					// dont say how many enemies left in a warmup
+					if ( CSGameRules()->IsWarmupPeriod() )
+					{
+						phrase = NULL;
+						break;
+					}
 					static const char *speak[] = 
 					{
 						"NoEnemiesLeft", "OneEnemyLeft", "TwoEnemiesLeft", "ThreeEnemiesLeft"

@@ -91,6 +91,17 @@ public:
 
 	// Stuff that is shared between client and server.
 	bool IsFreezePeriod();
+	bool IsWarmupPeriod() const;
+	float GetWarmupPeriodEndTime() const;	
+	bool IsWarmupPeriodPaused();
+	void SetWarmupPeriodStartTime( float fl )	{ m_fWarmupPeriodStart = fl; }
+	float GetWarmupPeriodStartTime( void )	{ return m_fWarmupPeriodStart; }
+	float GetWarmupRemainingTime();
+
+	void StartWarmup( void );
+	void EndWarmup( void );
+
+	void SetIsWarmupPeriod( bool bIsWarmup ) { m_bWarmupPeriod = bIsWarmup; }
 
 	virtual bool ShouldCollide( int collisionGroup0, int collisionGroup1 );
 
@@ -99,7 +110,7 @@ public:
 	float GetRoundRemainingTime();	// time till end of round
 	float GetRoundStartTime();		// When this round started.
 	float GetRoundElapsedTime();	// How much time has elapsed since the round started.
-	float GetBuyTimeLength() const;
+	float GetBuyTimeLength();
 	int GetRoundLength() const { return m_iRoundTime; }
 	int   SelectDefaultTeam( bool ignoreBots = false );
 	int   GetHumanTeam();			// TEAM_UNASSIGNED if no restrictions
@@ -129,6 +140,9 @@ private:
 	float GetAmountOfEntityVisible(Vector & src, CBaseEntity *player); // returns a value from 0 to 1 that is the percentage of player visible from src.
 
 	CNetworkVar( bool, m_bFreezePeriod );	 // TRUE at beginning of round, set to FALSE when the period expires
+	CNetworkVar( bool, m_bWarmupPeriod );	 // 
+	CNetworkVar( float, m_fWarmupPeriodEnd ); // OBSOLETE. LEFT IN FOR DEMO COMPATIBILITY.
+	CNetworkVar( float, m_fWarmupPeriodStart );
 	CNetworkVar( int, m_iRoundTime );		 // (From mp_roundtime) - How many seconds long this round is.
 	CNetworkVar( float, m_fRoundStartTime ); // time round has started
 	CNetworkVar( float, m_flGameStartTime );
@@ -170,6 +184,7 @@ public:
 	virtual void PlayerKilled( CBasePlayer *pVictim, const CTakeDamageInfo &info );
 	virtual void Think();
 
+	void FreezePlayers( void );
 	// Called at the end of GameFrame (i.e. after all game logic has run this frame)
 	virtual void EndGameFrame( void );
 
@@ -393,6 +408,7 @@ public:
 	int m_iLoserBonus;			// SupraFiend: the amount of money the losing team gets. This scales up as they lose more rounds in a row
 	float m_tmNextPeriodicThink;
 
+	float m_fWarmupNextChatNoticeTime;
 
 	// HOSTAGE RESCUE VARIABLES
 	int		m_iHostagesRescued;
@@ -479,6 +495,7 @@ private:
 	// Don't allow switching weapons while gaining new technologies
 	bool			m_bAllowWeaponSwitch;
 
+	float			m_flLastThinkTime;
 public:
 
 
