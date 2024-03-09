@@ -200,6 +200,10 @@ private:
 #if defined( CLIENT_DLL )
 	int						m_nOldAnimationParity;
 #endif
+	public:
+	float					m_fCycleOffset;
+
+private:
 
 
 	typedef CHandle< CBaseCombatWeapon > CBaseCombatWeaponHandle;

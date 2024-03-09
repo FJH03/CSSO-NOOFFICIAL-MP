@@ -641,6 +641,7 @@ public:
 	bool  ShouldGoSouth( Vector vNPCForward, Vector vNPCRight ); //Such a bad name.
 
 	void SetOldPlayerZ( float flOld ) { m_flOldPlayerZ = flOld;	}
+	virtual bool IsHoldingLookAtWeapon( void ) const { return false; }
 };
 
 EXTERN_RECV_TABLE(DT_BasePlayer);

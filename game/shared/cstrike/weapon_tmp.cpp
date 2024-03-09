@@ -31,7 +31,7 @@ public:
 
 	virtual void PrimaryAttack();
 	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_TMP; }
-	virtual bool IsSilenced( void ) const				{ return true; }
+	virtual bool IsSilenced( void ) const				{ return false; }
 
  	virtual float GetInaccuracy() const;
 

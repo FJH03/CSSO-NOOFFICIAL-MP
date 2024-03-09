@@ -11,6 +11,9 @@
 #include "weapon_csbase.h"
 #include "ammodef.h"
 #include "cs_gamerules.h"
+#include "basegrenade_shared.h"
+#include "npcevent.h"
+#include "eventlist.h"
 
 #define ALLOW_WEAPON_SPREAD_DISPLAY	0
 
@@ -544,11 +547,43 @@ bool CWeaponCSBase::SendWeaponAnim( int iActivity )
 			vm->SendViewModelMatchingSequence( idealSequence );
 		}
 	}
+
+#endif
+
+#ifndef CLIENT_DLL
+ // firing or reloading should interrupt weapon inspection
+ 	if ( iActivity == ACT_VM_PRIMARYATTACK || iActivity == ACT_VM_RELOAD || iActivity == ACT_SECONDARY_VM_RELOAD || iActivity == ACT_VM_ATTACH_SILENCER || iActivity == ACT_VM_DETACH_SILENCER )
+ 	{
+ 	 if ( CCSPlayer *pPlayer = GetPlayerOwner() )
+ 		{
+  			pPlayer->StopLookingAtWeapon();
+ 		}
+	}
 #endif
 
 	return BaseClass::SendWeaponAnim( iActivity );
 }
 
+void CWeaponCSBase::SendViewModelAnim( int nSequence )
+{
+ CCSPlayer *pPlayer = GetPlayerOwner();
+ if ( !pPlayer || pPlayer->IsLookingAtWeapon() )
+  return;
+
+ CBaseViewModel *vm = pPlayer->GetViewModel( m_nViewModelIndex );
+ if ( vm )
+ 	{
+ 	 bool bIsLookingAt = (vm->GetSequence() != ACT_INVALID && V_stristr( vm->GetSequenceName( vm->GetSequence() ), "lookat" ));
+
+ 	 if ( vm->GetCycle() < 0.98f && bIsLookingAt && V_stristr( vm->GetSequenceName( nSequence ), "idle" ) )
+ 		 {
+  		 // Don't switch from taunt to idle
+  		 return;
+ 		 }
+  }
+
+ BaseClass::SendViewModelAnim( nSequence );
+}
 
 void CWeaponCSBase::ItemPostFrame()
 {
@@ -706,6 +741,80 @@ void CWeaponCSBase::ItemPostFrame()
 	}
 }
 
+void CWeaponCSBase::CallWeaponIronsight()
+{
+ CCSPlayer *pPlayer = GetPlayerOwner();
+ if ( !pPlayer )
+  return;
+
+#if IRONSIGHT
+ if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
+ {
+  CIronSightController* pIronSightController = pPlayer->GetActiveCSWeapon()->GetIronSightController();
+  if ( pIronSightController )
+  {
+   pPlayer->GetActiveCSWeapon()->UpdateIronSightController();
+   pPlayer->SetFOV( pPlayer, pIronSightController->GetIronSightIdealFOV(), pIronSightController->GetIronSightPullUpDuration() );
+   pIronSightController->SetState( IronSight_should_approach_sighted );
+
+   //stop looking at weapon when going into ironsights
+#ifndef CLIENT_DLL
+   pPlayer->StopLookingAtWeapon();
+
+   //force idle animation
+   CBaseViewModel* pViewModel = pPlayer->GetViewModel();
+   if ( pViewModel )
+   {
+    int nSequence = pViewModel->LookupSequence( "idle" );
+    if ( nSequence != ACTIVITY_NOT_AVAILABLE )
+    {
+     pViewModel->ForceCycle( 0 );
+     pViewModel->ResetSequence( nSequence );
+    }
+   }
+#endif
+   m_weaponMode = Secondary_Mode;
+   WeaponSound( SPECIAL3 ); // Zoom in sound
+  }
+ }
+ else
+ {
+  CIronSightController* pIronSightController = pPlayer->GetActiveCSWeapon()->GetIronSightController();
+  if ( pIronSightController )
+  {
+   pPlayer->GetActiveCSWeapon()->UpdateIronSightController();
+   int iFOV = pPlayer->GetDefaultFOV();
+   pPlayer->SetFOV( pPlayer, iFOV, pIronSightController->GetIronSightPutDownDuration() );
+   pIronSightController->SetState( IronSight_should_approach_unsighted );
+   SendWeaponAnim( ACT_VM_FIDGET );
+   m_weaponMode = Primary_Mode;
+   if ( GetPlayerOwner() )
+   {
+    WeaponSound( SPECIAL2 ); // Zoom out sound
+   }
+  }
+ }
+#else
+
+ if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
+ {
+  pPlayer->SetFOV( pPlayer, 45, 0.10f );
+  m_weaponMode = Secondary_Mode;
+ }
+ else if ( pPlayer->GetFOV() == 45 )
+ {
+  pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.06f );
+  m_weaponMode = Primary_Mode;
+ }
+ else 
+ {
+  pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV() );
+  m_weaponMode = Primary_Mode;
+ }
+#endif
+
+ m_flNextSecondaryAttack = gpGlobals->curtime + 0.3;
+}
 
 void CWeaponCSBase::ItemBusyFrame()
 {
@@ -1574,12 +1683,39 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 		}
 	}
 
+	void CWeaponCSBase::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator )
+{
+	int nEvent = pEvent->event;
+
+	 if ( nEvent == AE_BEGIN_TAUNT_LOOP )
+	{
+		CCSPlayer *pPlayer = GetPlayerOwner();
+
+		if ( pPlayer && pPlayer->IsLookingAtWeapon() && pPlayer->IsHoldingLookAtWeapon() )
+			{
+				CBaseViewModel *pViewModel = pPlayer->GetViewModel();
+
+				float flPrevCycle = pViewModel->GetCycle();
+				float flNewCycle = V_atof( pEvent->options );
+				pViewModel->SetCycle( flNewCycle );
+
+				float flSequenceDuration = pViewModel->SequenceDuration( pViewModel->GetSequence() );
+				pPlayer->ModifyTauntDuration( (flNewCycle - flPrevCycle) * flSequenceDuration );
+			}
+
+		return;
+
+	}
+	BaseClass::Operator_HandleAnimEvent( pEvent, pOperator );
+}
+
 	bool CWeaponCSBase::Reload()
 	{
 		CCSPlayer *pPlayer = GetPlayerOwner();
 		if ( !pPlayer )
 			return false;
-
+		
+		pPlayer->StopLookingAtWeapon();
 		pPlayer->m_iShotsFired = 0;
 
 		bool retval = BaseClass::Reload();

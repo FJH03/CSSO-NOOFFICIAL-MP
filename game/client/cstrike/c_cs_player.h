@@ -131,6 +131,9 @@ public:
 	virtual void SetServerIntendedCycle( float intended ) { m_serverIntendedCycle = intended; }
 	virtual float GetServerIntendedCycle( void ) { return m_serverIntendedCycle; }
 
+	virtual bool IsLookingAtWeapon( void ) const { return m_bIsLookingAtWeapon; }
+	virtual bool IsHoldingLookAtWeapon( void ) const { return m_bIsHoldingLookAtWeapon; }
+
 	virtual bool ShouldReceiveProjectedTextures( int flags )
 	{
 		return ( this != C_BasePlayer::GetLocalPlayer() );
@@ -394,7 +397,9 @@ private:
 
     CNetworkArray( bool, m_bPlayerDominated, MAX_PLAYERS+1 );		// array of state per other player whether player is dominating other players
     CNetworkArray( bool, m_bPlayerDominatingMe, MAX_PLAYERS+1 );	// array of state per other player whether other players are dominating this player
-
+	CNetworkVar( bool, m_bIsLookingAtWeapon );
+	CNetworkVar( bool, m_bIsHoldingLookAtWeapon );
+	
     //=============================================================================
     // HPE_END
     //=============================================================================

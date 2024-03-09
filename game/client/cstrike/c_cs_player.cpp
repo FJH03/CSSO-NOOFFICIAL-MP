@@ -794,6 +794,8 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropFloat( RECVINFO( m_flProgressBarStartTime ) ),
 	RecvPropEHandle( RECVINFO( m_hRagdoll ) ),
 	RecvPropInt( RECVINFO( m_cycleLatch ), 0, &C_CSPlayer::RecvProxy_CycleLatch ),
+	RecvPropBool( RECVINFO( m_bIsLookingAtWeapon ) ),
+	RecvPropBool( RECVINFO( m_bIsHoldingLookAtWeapon ) ),
 	RecvPropBool( RECVINFO( m_bIsWalking ) ),
 	RecvPropFloat( RECVINFO( m_flGroundAccelLinearFracLastTime ) ),
 END_RECV_TABLE()

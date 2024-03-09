@@ -371,6 +371,8 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropBool( SENDINFO( m_bHasDefuser ) ),
 	SendPropBool( SENDINFO( m_bNightVisionOn ) ),	//send as int so we can use a RecvProxy on the client
 	SendPropBool( SENDINFO( m_bHasNightVision ) ),
+	SendPropBool( SENDINFO( m_bIsLookingAtWeapon ) ),
+	SendPropBool( SENDINFO( m_bIsHoldingLookAtWeapon ) ),
 	SendPropBool( SENDINFO( m_bIsWalking ) ),
 	SendPropFloat( SENDINFO( m_flGroundAccelLinearFracLastTime ), 0, SPROP_CHANGES_OFTEN ),
 
@@ -672,6 +674,34 @@ void CCSPlayer::PlayerRunCommand( CUserCmd *ucmd, IMoveHelper *moveHelper )
 	if ( IsBot() && bot_crouch.GetInt() )
 		ucmd->buttons |= IN_DUCK;
 
+	if ( IsLookingAtWeapon() )
+	{
+		if ( (ucmd->buttons & (IN_ATTACK | IN_ATTACK2 | IN_RELOAD)) != 0 /*|| ucmd->forwardmove || ucmd->sidemove || ucmd->upmove*/ )
+		{
+			StopLookingAtWeapon();
+
+			if ( (ucmd->buttons & IN_ATTACK2) != 0 && (ucmd->buttons & (IN_ATTACK | IN_RELOAD)) == 0 )
+			{
+				CWeaponCSBase *pWeapon = GetActiveCSWeapon();
+				if ( pWeapon && pWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_SNIPER_RIFLE )
+				{
+					// Force the animation back to idle since changing zoom has no specific animation
+					CBaseViewModel *pViewModel = GetViewModel();
+					if ( pViewModel )
+					{
+						int nSequence = pViewModel->LookupSequence( "idle" );
+
+						if ( nSequence != ACTIVITY_NOT_AVAILABLE )
+						{
+							pViewModel->SetCycle( 0 );
+							pViewModel->ResetSequence( nSequence );
+						}
+					}
+				}
+			}
+		}
+	}
+
 	BaseClass::PlayerRunCommand( ucmd, moveHelper );
 }
 
@@ -941,6 +971,8 @@ void CCSPlayer::Spawn()
 
 	m_cycleLatch = 0;
 	m_cycleLatchTimer.Start( RandomFloat( 0.0f, CycleLatchInterval ) );
+	StopLookingAtWeapon();
+	m_bIsHoldingLookAtWeapon = false;
 
 	// If we're constantly respawning then reset damage stats on spawn. Otherwise this'll happen on roundrespawn after damage is reported.
 	if ( IsAbleToInstantRespawn() )
@@ -1655,6 +1687,11 @@ void CCSPlayer::UpdateMouseoverHints()
 void CCSPlayer::PostThink()
 {
 	BaseClass::PostThink();
+	if ( IsLookingAtWeapon() )
+ 	{
+	  if ( gpGlobals->curtime >= m_flLookWeaponEndTime )
+ 	  StopLookingAtWeapon();
+	}
 
 	UpdateAddonBits();
 
@@ -1728,6 +1765,11 @@ void CCSPlayer::PushawayThink()
 //-----------------------------------------------------------------------------
 bool CCSPlayer::Weapon_CanSwitchTo( CBaseCombatWeapon *pWeapon )
 {
+	if ( IsLookingAtWeapon() )
+ 	{
+ 		StopLookingAtWeapon();
+	}
+
 	if ( !pWeapon->CanDeploy() )
 		return false;
 
@@ -4712,8 +4754,71 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 		*/
 		return true;
 	}
+	else if ( FStrEq( pcmd, "+lookatweapon" ) )
+ 	{
+  	m_bIsHoldingLookAtWeapon = true;
 
-	return BaseClass::ClientCommand( args );
+ 	 if ( ShouldRunRateLimitedCommand( args ) )
+  		{
+ 		  LookAtHeldWeapon();
+ 		 }
+
+  return true;
+ }
+ else if ( FStrEq( pcmd, "-lookatweapon" ) )
+ {
+   m_bIsHoldingLookAtWeapon = false;
+
+  return true;
+ }
+
+return BaseClass::ClientCommand( args );
+}
+void CCSPlayer::LookAtHeldWeapon( void )
+{
+	if ( IsLookingAtWeapon() )
+		return;
+
+	int nSequence = ACTIVITY_NOT_AVAILABLE;
+
+	// Need a weapon to taunt
+	CWeaponCSBase *pActiveWeapon = GetActiveCSWeapon();
+	if ( !pActiveWeapon )
+		return;
+
+	// Can't taunt while  reloading, or switching silencer
+	if (   pActiveWeapon->m_bInReload  )
+		return;
+
+	// don't let me inspect a shotgun that's reloading
+	/*if ( pActiveWeapon->GetWeaponType() == WEAPONTYPE_SHOTGUN && pActiveWeapon->GetShotgunReloadState() != 0 )
+	{
+		return;
+	}*/
+
+#if IRONSIGHT
+	if ( pActiveWeapon->m_iIronSightMode == IronSight_should_approach_sighted )
+		return;
+#endif
+
+	CBaseViewModel *pViewModel = GetViewModel();
+	if ( pViewModel )
+	{
+		nSequence = pViewModel->SelectWeightedSequence( ACT_VM_IDLE_LOWERED );
+
+		if ( nSequence == ACT_INVALID )
+			nSequence = pViewModel->LookupSequence( "lookat01" );
+
+		if ( nSequence != ACTIVITY_NOT_AVAILABLE )
+		{
+			m_flLookWeaponEndTime = gpGlobals->curtime + pViewModel->SequenceDuration( nSequence );
+			m_bIsLookingAtWeapon = true;
+
+			pViewModel->SetCycle( 0 );
+			pViewModel->ResetSequence( nSequence ) ;
+		}
+	}
+
 }
 
 
