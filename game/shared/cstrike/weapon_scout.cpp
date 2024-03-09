@@ -82,16 +82,19 @@ void CWeaponScout::SecondaryAttack()
 		pPlayer->SetFOV( pPlayer, cScoutMidZoomFOV, kZoomTime );
 		m_weaponMode = Secondary_Mode;
 		m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyAltSwitch;
+		pPlayer->m_bIsScoped = true;
 	}
 	else if (pPlayer->GetFOV() == cScoutMidZoomFOV)
 	{
 		pPlayer->SetFOV( pPlayer, cScoutMaxZoomFOV, kZoomTime );
 		m_weaponMode = Secondary_Mode;
+		pPlayer->m_bIsScoped = true;
 	}
 	else if (pPlayer->GetFOV() == cScoutMaxZoomFOV)
 	{
 		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), kZoomTime );
 		m_weaponMode = Primary_Mode;
+		pPlayer->m_bIsScoped = false;
 	}
 
 	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3f;   
