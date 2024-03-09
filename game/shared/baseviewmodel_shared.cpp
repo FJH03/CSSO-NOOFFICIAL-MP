@@ -37,6 +37,7 @@ extern ConVar in_forceuser;
 ConVar viewmodel_offset_x( "viewmodel_offset_x", "0.0", FCVAR_ARCHIVE );	 // the viewmodel offset from default in X
 ConVar viewmodel_offset_y( "viewmodel_offset_y", "0.0", FCVAR_ARCHIVE );	 // the viewmodel offset from default in Y
 ConVar viewmodel_offset_z( "viewmodel_offset_z", "0.0", FCVAR_ARCHIVE );	 // the viewmodel offset from default in Z
+ConVar viewmodel_recoil( "viewmodel_recoil", "1.0", FCVAR_ARCHIVE, "Amount of weapon recoil/aimpunch to display on viewmodel", true, 0.0f, true, 2.0f );
 #endif
 
 //-----------------------------------------------------------------------------
@@ -421,6 +422,7 @@ void CBaseViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& eyePos
 		}
 #endif
 		vmorigin += ( viewmodel_offset_y.GetFloat() * vecForward ) + ( viewmodel_offset_z.GetFloat() * vecUp ) + ( viewmodel_offset_x.GetFloat() * vecRight );
+		vmangles += (owner->m_Local.m_vecPunchAngle * viewmodel_recoil.GetFloat() * 0.3f);//Not verified
 	}
 
 	CBaseCombatWeapon *pWeapon = m_hWeapon.Get();
