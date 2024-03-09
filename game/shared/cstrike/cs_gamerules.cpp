@@ -428,14 +428,6 @@ ConVar cl_autohelp(
 		true, 800,
 		true, 16000 );
 
-	ConVar mp_maxmoney(
-	"mp_maxmoney",
-	"16000",
-	FCVAR_REPLICATED,
-	"maximum amount of money allowed in a player's account",
-	true, 0,
-	false, 0 );
-
 	ConVar mp_roundtime( 
 		"mp_roundtime",
 		"2.5",
@@ -5682,12 +5674,13 @@ void CreateBlackMarketString( void )
 
 int CCSGameRules::GetStartMoney( void )
 {
-	if ( IsBlackMarket() )
-	{
-		return atoi( mp_startmoney.GetDefault() );
-	}
+	if (IsWarmupPeriod())
+		return mp_startmoney.GetInt() +16000 ;
 
-	return IsWarmupPeriod() ? mp_maxmoney.GetInt() : mp_startmoney.GetInt();
+	if ( IsBlackMarket() )
+		return atoi( mp_startmoney.GetDefault() );
+
+	return mp_startmoney.GetInt();
 }
 
 
