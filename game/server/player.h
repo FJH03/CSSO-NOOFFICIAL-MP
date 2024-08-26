@@ -827,6 +827,10 @@ public:
 	
 	// FIXME: Make these protected or private!
 
+	CNetworkVar( float, m_flDuckAmount );
+	CNetworkVar( float, m_flDuckSpeed );
+	Vector2D m_vecLastPositionAtFullCrouchSpeed;
+
 	// This player's data that should only be replicated to 
 	//  the player and not to other players.
 	CNetworkVarEmbedded( CPlayerLocalData, m_Local );
@@ -1076,6 +1080,7 @@ private:
 	int						m_nImpulse;
 	float					m_flSwimSoundTime;
 	Vector					m_vecLadderNormal;
+	bool					m_bHasWalkMovedSinceLastJump;
 
 	float					m_flFlashTime;
 	int						m_nDrownDmgRate;		// Drowning damage in points per second without air.

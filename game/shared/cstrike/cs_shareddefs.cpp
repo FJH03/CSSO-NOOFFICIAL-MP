@@ -18,6 +18,8 @@ const float CS_PLAYER_SPEED_DUCK_MODIFIER	= 0.34f;
 const float CS_PLAYER_SPEED_WALK_MODIFIER	= 0.52f;
 const float CS_PLAYER_SPEED_CLIMB_MODIFIER	= 0.34f;
 
+const float CS_PLAYER_DUCK_SPEED_IDEAL = 8.0f;
+
 
 CCSClassInfo g_ClassInfos[] =
 {

@@ -61,6 +61,8 @@ extern const float CS_PLAYER_SPEED_DUCK_MODIFIER;
 extern const float CS_PLAYER_SPEED_WALK_MODIFIER;
 extern const float CS_PLAYER_SPEED_CLIMB_MODIFIER;
 
+extern const float CS_PLAYER_DUCK_SPEED_IDEAL;
+
 
 template< class T >
 class CUtlVectorInitialized : public CUtlVector< T >

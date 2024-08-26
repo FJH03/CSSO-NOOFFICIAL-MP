@@ -54,6 +54,10 @@
 #include "econ_wearable.h"
 #endif
 
+#ifdef CSTRIKE_DLL
+#include "cs_shareddefs.h"
+#endif
+
 // NVNT haptics system interface
 #include "haptics/ihaptics.h"
 
@@ -149,6 +153,7 @@ BEGIN_RECV_TABLE_NOBASE( CPlayerLocalData, DT_Local )
 	
 	RecvPropInt		(RECVINFO(m_bDucked)),
 	RecvPropInt		(RECVINFO(m_bDucking)),
+	RecvPropFloat   (RECVINFO(m_flLastDuckTime)),
 	RecvPropInt		(RECVINFO(m_bInDuckJump)),
 	RecvPropFloat	(RECVINFO(m_flDucktime)),
 	RecvPropFloat	(RECVINFO(m_flDuckJumpTime)),
@@ -297,6 +302,9 @@ END_RECV_TABLE()
 		RecvPropUtlVector( RECVINFO_UTLVECTOR( m_hMyWearables ), MAX_WEARABLES_SENT_FROM_SERVER,	RecvPropEHandle(NULL, 0, 0) ),
 #endif
 
+	RecvPropFloat	(RECVINFO(m_flDuckAmount)),
+	RecvPropFloat	(RECVINFO(m_flDuckSpeed)),
+
 	END_RECV_TABLE()
 
 BEGIN_PREDICTION_DATA_NO_BASE( CPlayerState )
@@ -331,6 +339,7 @@ BEGIN_PREDICTION_DATA_NO_BASE( CPlayerLocalData )
 
 	DEFINE_PRED_FIELD( m_bDucked, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_bDucking, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_flLastDuckTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_bInDuckJump, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flDucktime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flDuckJumpTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
@@ -371,6 +380,7 @@ BEGIN_PREDICTION_DATA( C_BasePlayer )
 	DEFINE_FIELD( m_flStepSoundTime, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flSwimSoundTime, FIELD_FLOAT ),
 	DEFINE_FIELD( m_vecLadderNormal, FIELD_VECTOR ),
+	DEFINE_FIELD( m_bHasWalkMovedSinceLastJump, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_flPhysics, FIELD_INTEGER ),
 	DEFINE_AUTO_ARRAY( m_szAnimExtension, FIELD_CHARACTER ),
 	DEFINE_FIELD( m_afButtonLast, FIELD_INTEGER ),
@@ -393,6 +403,9 @@ BEGIN_PREDICTION_DATA( C_BasePlayer )
 	DEFINE_PRED_ARRAY( m_hViewModel, FIELD_EHANDLE, MAX_VIEWMODELS, FTYPEDESC_INSENDTABLE ),
 
 	DEFINE_FIELD( m_surfaceFriction, FIELD_FLOAT ),
+
+	DEFINE_PRED_FIELD( m_flDuckAmount, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_flDuckSpeed, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 
 END_PREDICTION_DATA()
 
@@ -438,6 +451,12 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 	m_nForceVisionFilterFlags = 0;
 
 	ListenForGameEvent( "base_player_teleported" );
+
+	m_flDuckAmount = 0.0f;
+	m_flDuckSpeed = CS_PLAYER_DUCK_SPEED_IDEAL;
+	m_vecLastPositionAtFullCrouchSpeed = vec2_origin;
+
+	m_bHasWalkMovedSinceLastJump = false;
 }
 
 //-----------------------------------------------------------------------------

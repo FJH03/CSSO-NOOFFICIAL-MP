@@ -51,6 +51,10 @@
 #include "sixense/in_sixense.h"
 #endif
 
+#ifdef CSTRIKE_DLL
+#include "cs_shareddefs.h"
+#endif
+
 // NVNT haptic utils
 #include "haptics/haptic_utils.h"
 // memdbgon must be the last include file in a .cpp file!!!
@@ -1854,6 +1858,9 @@ void CBasePlayer::SharedSpawn()
 	if(IsLocalPlayer() &&haptics)
 		haptics->LocalPlayerReset();
 #endif
+
+	m_flDuckAmount = 0;
+	m_flDuckSpeed = CS_PLAYER_DUCK_SPEED_IDEAL;
 }
 
 

@@ -591,6 +591,7 @@ protected:
 
 public:
 
+	CNetworkVar( bool, m_bIsWalking );
 	// Predicted variables.
 	CNetworkVar( bool, m_bResumeZoom );
 	CNetworkVar( int , m_iLastZoom ); // after firing a shot, set the FOV to 90, and after showing the animation, bring the FOV back to last zoom level.
@@ -695,6 +696,7 @@ public:
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_ArmorValue );
 
 	CNetworkVar( float, m_flVelocityModifier );
+	CNetworkVar( float, m_flGroundAccelLinearFracLastTime );
 
 	int	m_iHostagesKilled;
 

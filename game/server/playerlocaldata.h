@@ -47,6 +47,8 @@ public:
 	CNetworkVar( bool, m_bDucked );
 	// In process of ducking
 	CNetworkVar( bool, m_bDucking );
+	// Last time the user pressed duck (to handle duck-spam)
+	CNetworkVar( float, m_flLastDuckTime );
 	// In process of duck-jumping
 	CNetworkVar( bool, m_bInDuckJump );
 	// During ducking process, amount of time before full duc

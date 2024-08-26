@@ -33,6 +33,8 @@ public:
 		m_iv_vecPunchAngle.Setup( &m_vecPunchAngle.m_Value, LATCH_SIMULATION_VAR );
 		m_iv_vecPunchAngleVel.Setup( &m_vecPunchAngleVel.m_Value, LATCH_SIMULATION_VAR );
 		m_flFOVRate = 0;
+
+		m_flLastDuckTime = -1.0f;
 	}
 
 	unsigned char			m_chAreaBits[MAX_AREA_STATE_BYTES];				// Area visibility flags.
@@ -45,6 +47,7 @@ public:
 
 	bool					m_bDucked;
 	bool					m_bDucking;
+	float					m_flLastDuckTime;	// last time the player pressed duck
 	bool					m_bInDuckJump;
 	float					m_flDucktime;
 	float					m_flDuckJumpTime;

@@ -369,6 +369,8 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropBool( SENDINFO( m_bHasDefuser ) ),
 	SendPropBool( SENDINFO( m_bNightVisionOn ) ),	//send as int so we can use a RecvProxy on the client
 	SendPropBool( SENDINFO( m_bHasNightVision ) ),
+	SendPropBool( SENDINFO( m_bIsWalking ) ),
+	SendPropFloat( SENDINFO( m_flGroundAccelLinearFracLastTime ), 0, SPROP_CHANGES_OFTEN ),
 
 	//=============================================================================
 	// HPE_BEGIN:
@@ -849,11 +851,9 @@ void CCSPlayer::Spawn()
 
 	m_bIsDefusing = false;
 
-	//=============================================================================
-	// HPE_BEGIN
-	// [dwenger] Reset hostage-related variables
-	//=============================================================================
+	m_bIsWalking = false;
 
+	// [dwenger] Reset hostage-related variables
 	m_bIsRescuing = false;
 	m_bInjuredAHostage = false;
 	m_iNumFollowers = 0;
@@ -863,10 +863,6 @@ void CCSPlayer::Spawn()
 	{
 		m_wasNotKilledNaturally = false;
 	}
-
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 	m_iShotsFired = 0;
 	m_iDirection = 0;
@@ -885,6 +881,7 @@ void CCSPlayer::Spawn()
 	ClearFlashbangScreenFade();
 
 	m_flVelocityModifier = 1.0f;
+	m_flGroundAccelLinearFracLastTime = 0.0f;
 
 	ResetStamina();
 

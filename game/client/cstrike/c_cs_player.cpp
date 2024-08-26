@@ -35,6 +35,7 @@
 #include "fx_cs_blood.h"
 #include "c_cs_playerresource.h"
 #include "c_team.h"
+#include "prediction.h"
 
 #include "history_resource.h"
 #include "ragdoll_shared.h"
@@ -153,6 +154,7 @@ BEGIN_PREDICTION_DATA( C_CSPlayer )
 	DEFINE_PRED_FIELD( m_flCycle, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_PRIVATE | FTYPEDESC_NOERRORCHECK ),
 	DEFINE_PRED_FIELD( m_iShotsFired, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_iDirection, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_bIsWalking, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_bResumeZoom, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_iLastZoom, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 
@@ -784,7 +786,8 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropFloat( RECVINFO( m_flProgressBarStartTime ) ),
 	RecvPropEHandle( RECVINFO( m_hRagdoll ) ),
 	RecvPropInt( RECVINFO( m_cycleLatch ), 0, &C_CSPlayer::RecvProxy_CycleLatch ),
-
+	RecvPropBool( RECVINFO( m_bIsWalking ) ),
+	RecvPropFloat( RECVINFO( m_flGroundAccelLinearFracLastTime ) ),
 END_RECV_TABLE()
 
 
@@ -1414,6 +1417,16 @@ bool C_CSPlayer::Interpolate( float currentTime )
 	}
 
 	return true;
+}
+
+void C_CSPlayer::PlayClientJumpSound( void )
+{
+	// during prediction play footstep sounds only once
+	if ( prediction->InPrediction() && !prediction->IsFirstTimePredicted() )
+		return;
+
+	CLocalPlayerFilter filter;
+	EmitSound( filter, entindex(), "Default.WalkJump" );
 }
 
 int	C_CSPlayer::GetMaxHealth() const

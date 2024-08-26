@@ -404,6 +404,10 @@ protected:
 
 public:
 	int m_StuckLast;
+
+	CNetworkVar( float, m_flDuckAmount );
+	CNetworkVar( float, m_flDuckSpeed );
+	Vector2D m_vecLastPositionAtFullCrouchSpeed;
 	
 	// Data for only the local player
 	CNetworkVarEmbedded( CPlayerLocalData, m_Local );
@@ -512,6 +516,7 @@ private:
 
 	float			m_flSwimSoundTime;
 	Vector			m_vecLadderNormal;
+	bool			m_bHasWalkMovedSinceLastJump;
 	
 	QAngle			m_vecOldViewAngles;
 

@@ -29,6 +29,7 @@ BEGIN_SEND_TABLE_NOBASE( CPlayerLocalData, DT_Local )
 	SendPropFloat	(SENDINFO(m_flFOVRate), 0, SPROP_NOSCALE ),
 	SendPropInt		(SENDINFO(m_bDucked),	1, SPROP_UNSIGNED ),
 	SendPropInt		(SENDINFO(m_bDucking),	1, SPROP_UNSIGNED ),
+	SendPropFloat	(SENDINFO(m_flLastDuckTime), -1, SPROP_NOSCALE ),
 	SendPropInt		(SENDINFO(m_bInDuckJump),	1, SPROP_UNSIGNED ),
 	SendPropFloat	(SENDINFO(m_flDucktime), 12, SPROP_ROUNDDOWN|SPROP_CHANGES_OFTEN, 0.0f, 2048.0f ),
 	SendPropFloat	(SENDINFO(m_flDuckJumpTime), 12, SPROP_ROUNDDOWN, 0.0f, 2048.0f ),
@@ -141,6 +142,7 @@ BEGIN_SIMPLE_DATADESC( CPlayerLocalData )
 	DEFINE_FIELD( m_vecOverViewpoint, FIELD_VECTOR ),
 	DEFINE_FIELD( m_bDucked, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bDucking, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_flLastDuckTime, FIELD_FLOAT ),
 	DEFINE_FIELD( m_bInDuckJump, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_flDucktime, FIELD_TIME ),
 	DEFINE_FIELD( m_flDuckJumpTime, FIELD_TIME ),
@@ -185,6 +187,8 @@ CPlayerLocalData::CPlayerLocalData()
 	m_audio.ent.Set( NULL );
 	m_pOldSkyCamera = NULL;
 	m_bDrawViewmodel = true;
+
+	m_flLastDuckTime = -1.0f;
 }
 
 

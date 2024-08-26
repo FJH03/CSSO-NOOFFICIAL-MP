@@ -684,12 +684,26 @@ void CCSPlayer::FireBullet(
 
 void CCSPlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOrigin, const Vector &vecVelocity  )
 {
-	float speedSqr = vecVelocity.AsVector2D().LengthSqr();
+	if (!IsAlive())
+		return;
 
-	// the fastest walk is 135 ( scout ), see CCSGameMovement::CheckParameters()
-	if ( speedSqr < 150.0 * 150.0 ) 
+	float speedSqr = vecVelocity.LengthSqr();
+
+	float flWalkSpeed = (CS_PLAYER_SPEED_RUN * CS_PLAYER_SPEED_WALK_MODIFIER);
+
+	if ( ( speedSqr < flWalkSpeed * flWalkSpeed ) || m_bIsWalking )
+	{
+		if ( speedSqr < 10.0 )
+		{
+			// If we stop, reset the step sound tracking.
+			// This makes step sounds play a consistent time after
+			// we start running making it easier to co-ordinate suit and
+			// step sounds.
+			SetStepSoundTime( STEPSOUNDTIME_NORMAL, false );
+		} 
 		return; // player is not running, no footsteps
-
+	}
+	
 	BaseClass::UpdateStepSound( psurface, vecOrigin, vecVelocity  );
 }
 

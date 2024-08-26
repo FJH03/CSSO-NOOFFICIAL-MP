@@ -82,6 +82,10 @@
 #include "weapon_physcannon.h"
 #endif
 
+#ifdef CSTRIKE_DLL
+#include "cs_shareddefs.h"
+#endif
+
 ConVar autoaim_max_dist( "autoaim_max_dist", "2160" ); // 2160 = 180 feet
 ConVar autoaim_max_deflect( "autoaim_max_deflect", "0.99" );
 
@@ -385,6 +389,7 @@ BEGIN_DATADESC( CBasePlayer )
 	DEFINE_FIELD( m_nImpulse, FIELD_INTEGER ),
 	DEFINE_FIELD( m_flSwimSoundTime, FIELD_TIME ),
 	DEFINE_FIELD( m_vecLadderNormal, FIELD_VECTOR ),
+	DEFINE_FIELD( m_bHasWalkMovedSinceLastJump, FIELD_BOOLEAN ),
 
 	DEFINE_FIELD( m_flFlashTime, FIELD_TIME ),
 	DEFINE_FIELD( m_nDrownDmgRate, FIELD_INTEGER ),
@@ -452,7 +457,8 @@ BEGIN_DATADESC( CBasePlayer )
 
 	DEFINE_FIELD( m_nNumCrateHudHints, FIELD_INTEGER ),
 
-
+	DEFINE_FIELD( m_flDuckAmount, FIELD_FLOAT ),
+	DEFINE_FIELD( m_flDuckSpeed, FIELD_FLOAT ),
 
 	// DEFINE_FIELD( m_nBodyPitchPoseParam, FIELD_INTEGER ),
 	// DEFINE_ARRAY( m_StepSoundCache, StepSoundCache_t,  2  ),
@@ -635,6 +641,11 @@ CBasePlayer::CBasePlayer( )
 
 	m_flLastUserCommandTime = 0.f;
 	m_flMovementTimeForUserCmdProcessingRemaining = 0.0f;
+
+	m_flDuckAmount = 0.0f;
+	m_flDuckSpeed = CS_PLAYER_DUCK_SPEED_IDEAL;
+	m_vecLastPositionAtFullCrouchSpeed = vec2_origin;
+	m_bHasWalkMovedSinceLastJump = false;
 }
 
 CBasePlayer::~CBasePlayer( )
@@ -2262,6 +2273,8 @@ bool CBasePlayer::StartObserverMode(int mode)
 	SetGroundEntity( (CBaseEntity *)NULL );
 	
 	RemoveFlag( FL_DUCKING );
+	m_Local.m_bDucking = m_Local.m_bDucked = false;
+	m_flDuckAmount = 0.0f;
 	
     AddSolidFlags( FSOLID_NOT_SOLID );
 
@@ -5050,6 +5063,9 @@ void CBasePlayer::Spawn( void )
 	UpdateLastKnownArea();
 
 	m_weaponFiredTimer.Invalidate();
+
+	m_flDuckAmount = 0;
+	m_flDuckSpeed = CS_PLAYER_DUCK_SPEED_IDEAL;
 }
 
 void CBasePlayer::Activate( void )
@@ -5469,6 +5485,7 @@ bool CBasePlayer::GetInVehicle( IServerVehicle *pVehicle, int nRole )
 	// saves our view offset for restoration when we exit the vehicle.
 	RemoveFlag( FL_DUCKING );
 	SetViewOffset( VEC_VIEW_SCALED( this ) );
+	m_flDuckAmount = 0.0f;
 	m_Local.m_bDucked = false;
 	m_Local.m_bDucking  = false;
 	m_Local.m_flDucktime = 0.0f;
@@ -8009,6 +8026,9 @@ void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const voi
 #if defined USES_ECON_ITEMS
 		SendPropUtlVector( SENDINFO_UTLVECTOR( m_hMyWearables ), MAX_WEARABLES_SENT_FROM_SERVER, SendPropEHandle( NULL, 0 ) ),
 #endif // USES_ECON_ITEMS
+
+		SendPropFloat	(SENDINFO(m_flDuckAmount), 0, SPROP_CHANGES_OFTEN ),
+		SendPropFloat	(SENDINFO(m_flDuckSpeed), 0, SPROP_CHANGES_OFTEN ),
 
 		// Data that only gets sent to the local player.
 		SendPropDataTable( "localdata", 0, &REFERENCE_SEND_TABLE(DT_LocalPlayerExclusive), SendProxy_SendLocalDataTable ),

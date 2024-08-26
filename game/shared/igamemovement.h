@@ -58,6 +58,8 @@ public:
 	// Variables from the player edict (sv_player) or entvars on the client.
 	// These are copied in here before calling and copied out after calling.
 	Vector			m_vecVelocity;		// edict::velocity		// Current movement direction.
+	Vector			m_vecTrailingVelocity;
+	float			m_flTrailingVelocityTime;
 	QAngle			m_vecAngles;		// edict::angles
 	QAngle			m_vecOldAngles;
 	
