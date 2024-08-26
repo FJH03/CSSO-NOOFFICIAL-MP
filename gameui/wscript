@@ -97,7 +97,9 @@ def build(bld):
 		'ModOptionsDialog.cpp',
 		'ModOptionsSubCrosshair.cpp',
 		'ModOptionsSubGameplay.cpp',
-		'ModOptionsSubHUD.cpp',
+		'ModOptionsSubKnives.cpp',
+		'ModOptionsSubAgents.cpp',
+		'ModOptionsSubGloves.cpp',
 	]
 
 	if bld.env.DEST_OS == 'win32':

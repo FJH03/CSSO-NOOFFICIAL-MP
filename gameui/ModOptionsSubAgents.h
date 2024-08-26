@@ -5,31 +5,32 @@
 // $NoKeywords: $
 //=============================================================================//
 
-#ifndef ModOptionsSubHUD_H
-#define ModOptionsSubHUD_H
+#ifndef MODOPTIONSSUBAGENTS_H
+#define MODOPTIONSSUBAGENTS_H
 #ifdef _WIN32
 #pragma once
 #endif
 
 #include <vgui_controls/PropertyPage.h>
-#include <vgui_controls/Label.h>
 
 class CLabeledCommandComboBox;
+class CBitmapImagePanel;
 
-class CModOptionsSubHUD;
+class CModOptionsSubAgents;
 
 //-----------------------------------------------------------------------------
 // Purpose: crosshair options property page
 //-----------------------------------------------------------------------------
-class CModOptionsSubHUD: public vgui::PropertyPage
+class CModOptionsSubAgents: public vgui::PropertyPage
 {
-	DECLARE_CLASS_SIMPLE( CModOptionsSubHUD, vgui::PropertyPage );
+	DECLARE_CLASS_SIMPLE( CModOptionsSubAgents, vgui::PropertyPage );
 
 public:
-	CModOptionsSubHUD( vgui::Panel *parent );
-	~CModOptionsSubHUD();
+	CModOptionsSubAgents( vgui::Panel *parent );
+	~CModOptionsSubAgents();
 
 	MESSAGE_FUNC( OnControlModified, "ControlModified" );
+	MESSAGE_FUNC_PTR( OnTextChanged, "TextChanged", panel );
 
 protected:
 	// Called when page is loaded.  Data should be reloaded from document into controls.
@@ -38,9 +39,12 @@ protected:
 	virtual void OnApplyChanges();
 
 private:
-	CLabeledCommandComboBox*	m_pPlayerCountPos;
-	CLabeledCommandComboBox*	m_pHealthAmmoStyle;
-	CLabeledCommandComboBox*	m_pSimplePlayerModelLighting;
+	void					RemapAgentsImage();
+	CBitmapImagePanel		*m_pAgentImageCT;
+	CBitmapImagePanel		*m_pAgentImageT;
+
+	CLabeledCommandComboBox *m_pLoadoutAgentCTComboBox;
+	CLabeledCommandComboBox *m_pLoadoutAgentTComboBox;
 };
 
-#endif // ModOptionsSubHUD_H
+#endif // MODOPTIONSSUBAGENTS_H

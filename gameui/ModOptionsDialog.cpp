@@ -22,7 +22,9 @@
 #include "KeyValues.h"
 #include "ModOptionsSubGameplay.h"
 #include "ModOptionsSubCrosshair.h"
-#include "ModOptionsSubHUD.h"
+#include "ModOptionsSubKnives.h"
+#include "ModOptionsSubAgents.h"
+#include "ModOptionsSubGloves.h"
 #include "ModInfo.h"
 
 using namespace vgui;
@@ -53,7 +55,9 @@ CModOptionsDialog::CModOptionsDialog(vgui::Panel *parent) : PropertyDialog(paren
 
 	AddPage(new CModOptionsSubGameplay(this), "#GameUI_Gameplay");
 	AddPage(new CModOptionsSubCrosshair(this), "#GameUI_Crosshair");
-	AddPage(new CModOptionsSubHUD(this), "#GameUI_HUD");
+	AddPage(new CModOptionsSubKnives(this), "#GameUI_Knives");
+	AddPage(new CModOptionsSubAgents(this), "#GameUI_Agents");
+	AddPage(new CModOptionsSubGloves(this), "#GameUI_Gloves");
 
 	SetApplyButtonVisible(true);
 	GetPropertySheet()->SetTabWidth(84);
