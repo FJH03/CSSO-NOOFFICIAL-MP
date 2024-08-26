@@ -76,6 +76,7 @@ public:
 
 extern CUtlVectorInitialized< const char * > CTPlayerModels;
 extern CUtlVectorInitialized< const char * > TerroristPlayerModels;
+extern CUtlVectorInitialized< const char* > KnivesEntities;
 
 
 // These go in CCSPlayer::m_iAddonBits and get sent to the client so it can create
@@ -89,7 +90,7 @@ extern CUtlVectorInitialized< const char * > TerroristPlayerModels;
 #define ADDON_PRIMARY			0x040
 #define ADDON_PISTOL			0x080
 #define ADDON_PISTOL2			0x100
-#define NUM_ADDON_BITS			9
+#define NUM_ADDON_BITS			10
 
 
 // Indices of each weapon slot.

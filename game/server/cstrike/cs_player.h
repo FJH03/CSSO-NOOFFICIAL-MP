@@ -742,6 +742,9 @@ public:
 
 	void ClearImmunity( void );
 	CNetworkVar( bool, m_bDetected );
+
+	int m_iLoadoutSlotKnifeWeaponCT;
+	int m_iLoadoutSlotKnifeWeaponT;
 	bool IsAbleToInstantRespawn( void );
 private:
 	CountdownTimer m_ladderSurpressionTimer;

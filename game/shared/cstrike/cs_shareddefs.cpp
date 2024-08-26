@@ -65,5 +65,29 @@ const char *TerroristPlayerModelStrings[] =
 	"models/player/t_arctic.mdl",
 	"models/player/t_guerilla.mdl",
 };
+const char *KnivesEntitiesStrings[] =
+{
+	"weapon_knife",
+	"weapon_knife_t",
+	"weapon_knife_css",
+	"weapon_knife_karambit",
+	"weapon_knife_flip",
+	"weapon_knife_bayonet",
+	"weapon_knife_m9_bayonet",
+	"weapon_knife_butterfly",
+	"weapon_knife_gut",
+	"weapon_knife_tactical",
+	"weapon_knife_falchion",
+	"weapon_knife_survival_bowie",
+	"weapon_knife_canis",
+	"weapon_knife_cord",
+	"weapon_knife_gypsy_jackknife",
+	"weapon_knife_outdoor",
+	"weapon_knife_skeleton",
+	"weapon_knife_stiletto",
+	"weapon_knife_ursus",
+	"weapon_knife_widowmaker",
+};
 CUtlVectorInitialized< const char * > CTPlayerModels( CTPlayerModelStrings, ARRAYSIZE( CTPlayerModelStrings ) );
 CUtlVectorInitialized< const char * > TerroristPlayerModels( TerroristPlayerModelStrings, ARRAYSIZE( TerroristPlayerModelStrings ) );
+CUtlVectorInitialized< const char * > KnivesEntities( KnivesEntitiesStrings, ARRAYSIZE( KnivesEntitiesStrings ) );

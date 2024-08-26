@@ -17,7 +17,7 @@
 #include "weapon_csbase.h"
 #include "baseparticleentity.h"
 #include "beamdraw.h"
-
+#include "cs_loadout.h"
 
 class C_PhysicsProp;
 

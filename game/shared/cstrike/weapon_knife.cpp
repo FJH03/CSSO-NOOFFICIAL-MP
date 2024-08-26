@@ -514,4 +514,779 @@ bool CKnife::CanDrop()
 	return false;
 }
 
+//knifes massive
 
+// ----------------------------------------------------------------------------- //
+// CKnifeT implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeT, DT_WeaponKnifeT )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeT, DT_LocalActiveWeaponKnifeTData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeT, DT_WeaponKnifeT )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeTData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeTData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeT )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_t, CKnifeT );
+PRECACHE_WEAPON_REGISTER( weapon_knife_t );
+
+#ifndef CLIENT_DLL
+
+	BEGIN_DATADESC( CKnifeT )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeCSS implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeCSS, DT_WeaponKnifeCSS )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeCSS, DT_LocalActiveWeaponKnifeCSSData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeCSS, DT_WeaponKnifeCSS )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeCSSData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeCSSData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeCSS )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_css, CKnifeCSS );
+PRECACHE_WEAPON_REGISTER( weapon_knife_css );
+
+#ifndef CLIENT_DLL
+
+	BEGIN_DATADESC( CKnifeCSS )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeKarambit implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeKarambit, DT_WeaponKnifeKarambit )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeKarambit, DT_LocalActiveWeaponKnifeKarambitData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeKarambit, DT_WeaponKnifeKarambit )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeKarambitData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeKarambitData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeKarambit )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_karambit, CKnifeKarambit );
+PRECACHE_WEAPON_REGISTER( weapon_knife_karambit );
+
+#ifndef CLIENT_DLL
+
+	BEGIN_DATADESC( CKnifeKarambit )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeFlip implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeFlip, DT_WeaponKnifeFlip )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeFlip, DT_LocalActiveWeaponKnifeFlipData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeFlip, DT_WeaponKnifeFlip )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeFlipData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeFlipData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeFlip )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_flip, CKnifeFlip );
+PRECACHE_WEAPON_REGISTER( weapon_knife_flip );
+
+#ifndef CLIENT_DLL
+
+	BEGIN_DATADESC( CKnifeFlip )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeBayonet implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeBayonet, DT_WeaponKnifeBayonet )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeBayonet, DT_LocalActiveWeaponKnifeBayonetData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeBayonet, DT_WeaponKnifeBayonet )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeBayonetData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeBayonetData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeBayonet )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_bayonet, CKnifeBayonet );
+PRECACHE_WEAPON_REGISTER( weapon_knife_bayonet );
+
+#ifndef CLIENT_DLL
+
+	BEGIN_DATADESC( CKnifeBayonet )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeM9Bayonet implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeM9Bayonet, DT_WeaponKnifeM9Bayonet )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeM9Bayonet, DT_LocalActiveWeaponKnifeM9BayonetData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeM9Bayonet, DT_WeaponKnifeM9Bayonet )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeM9BayonetData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeM9BayonetData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeM9Bayonet )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_m9_bayonet, CKnifeM9Bayonet );
+PRECACHE_WEAPON_REGISTER( weapon_knife_m9_bayonet );
+
+#ifndef CLIENT_DLL
+
+	BEGIN_DATADESC( CKnifeM9Bayonet )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeButterfly implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeButterfly, DT_WeaponKnifeButterfly )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeButterfly, DT_LocalActiveWeaponKnifeButterflyData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeButterfly, DT_WeaponKnifeButterfly )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeButterflyData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeButterflyData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeButterfly )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_butterfly, CKnifeButterfly );
+PRECACHE_WEAPON_REGISTER( weapon_knife_butterfly );
+
+#ifndef CLIENT_DLL
+
+	BEGIN_DATADESC( CKnifeButterfly )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeGut implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeGut, DT_WeaponKnifeGut )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeGut, DT_LocalActiveWeaponKnifeGutData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeGut, DT_WeaponKnifeGut )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeGutData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeGutData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeGut )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_gut, CKnifeGut );
+PRECACHE_WEAPON_REGISTER( weapon_knife_gut );
+
+#ifndef CLIENT_DLL
+
+	BEGIN_DATADESC( CKnifeGut )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeTactical implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeTactical, DT_WeaponKnifeTactical )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeTactical, DT_LocalActiveWeaponKnifeTacticalData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeTactical, DT_WeaponKnifeTactical )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeTacticalData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeTacticalData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeTactical )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_tactical, CKnifeTactical );
+PRECACHE_WEAPON_REGISTER( weapon_knife_tactical );
+
+#ifndef CLIENT_DLL
+	BEGIN_DATADESC( CKnifeTactical )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeFalchion implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeFalchion, DT_WeaponKnifeFalchion )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeFalchion, DT_LocalActiveWeaponKnifeFalchionData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeFalchion, DT_WeaponKnifeFalchion )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeFalchionData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeFalchionData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeFalchion )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_falchion, CKnifeFalchion );
+PRECACHE_WEAPON_REGISTER( weapon_knife_falchion );
+
+#ifndef CLIENT_DLL
+	BEGIN_DATADESC( CKnifeFalchion )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeSurvivalBowie implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeSurvivalBowie, DT_WeaponKnifeSurvivalBowie )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeSurvivalBowie, DT_LocalActiveWeaponKnifeSurvivalBowieData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeSurvivalBowie, DT_WeaponKnifeSurvivalBowie )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeSurvivalBowieData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeSurvivalBowieData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeSurvivalBowie )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_survival_bowie, CKnifeSurvivalBowie );
+PRECACHE_WEAPON_REGISTER( weapon_knife_survival_bowie );
+
+#ifndef CLIENT_DLL
+	BEGIN_DATADESC( CKnifeSurvivalBowie )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeCanis implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeCanis, DT_WeaponKnifeCanis )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeCanis, DT_LocalActiveWeaponKnifeCanisData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeCanis, DT_WeaponKnifeCanis )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeCanisData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeCanisData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeCanis )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_canis, CKnifeCanis );
+PRECACHE_WEAPON_REGISTER( weapon_knife_canis );
+
+#ifndef CLIENT_DLL
+BEGIN_DATADESC( CKnifeCanis )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeCord implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeCord, DT_WeaponKnifeCord )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeCord, DT_LocalActiveWeaponKnifeCordData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeCord, DT_WeaponKnifeCord )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeCordData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeCordData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeCord )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_cord, CKnifeCord );
+PRECACHE_WEAPON_REGISTER( weapon_knife_cord );
+
+#ifndef CLIENT_DLL
+BEGIN_DATADESC( CKnifeCord )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeGypsy implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeGypsy, DT_WeaponKnifeGypsy )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeGypsy, DT_LocalActiveWeaponKnifeGypsyData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeGypsy, DT_WeaponKnifeGypsy )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeGypsyData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeGypsyData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeGypsy )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_gypsy_jackknife, CKnifeGypsy );
+PRECACHE_WEAPON_REGISTER( weapon_knife_gypsy_jackknife );
+
+#ifndef CLIENT_DLL
+BEGIN_DATADESC( CKnifeGypsy )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeOutdoor implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeOutdoor, DT_WeaponKnifeOutdoor )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeOutdoor, DT_LocalActiveWeaponKnifeOutdoorData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeOutdoor, DT_WeaponKnifeOutdoor )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeOutdoorData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeOutdoorData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeOutdoor )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_outdoor, CKnifeOutdoor );
+PRECACHE_WEAPON_REGISTER( weapon_knife_outdoor );
+
+#ifndef CLIENT_DLL
+BEGIN_DATADESC( CKnifeOutdoor )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeSkeleton implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeSkeleton, DT_WeaponKnifeSkeleton )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeSkeleton, DT_LocalActiveWeaponKnifeSkeletonData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeSkeleton, DT_WeaponKnifeSkeleton )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeSkeletonData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeSkeletonData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeSkeleton )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_skeleton, CKnifeSkeleton );
+PRECACHE_WEAPON_REGISTER( weapon_knife_skeleton );
+
+#ifndef CLIENT_DLL
+BEGIN_DATADESC( CKnifeSkeleton )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeStiletto implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeStiletto, DT_WeaponKnifeStiletto )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeStiletto, DT_LocalActiveWeaponKnifeStilettoData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeStiletto, DT_WeaponKnifeStiletto )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeStilettoData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeStilettoData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeStiletto )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_stiletto, CKnifeStiletto );
+PRECACHE_WEAPON_REGISTER( weapon_knife_stiletto );
+
+#ifndef CLIENT_DLL
+BEGIN_DATADESC( CKnifeStiletto )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeUrsus implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeUrsus, DT_WeaponKnifeUrsus )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeUrsus, DT_LocalActiveWeaponKnifeUrsusData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeUrsus, DT_WeaponKnifeUrsus )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeUrsusData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeUrsusData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeUrsus )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_ursus, CKnifeUrsus );
+PRECACHE_WEAPON_REGISTER( weapon_knife_ursus );
+
+#ifndef CLIENT_DLL
+BEGIN_DATADESC( CKnifeUrsus )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+#endif
+
+
+// ----------------------------------------------------------------------------- //
+// CKnifeWidowmaker implementation.
+// ----------------------------------------------------------------------------- //
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeWidowmaker, DT_WeaponKnifeWidowmaker )
+
+BEGIN_NETWORK_TABLE_NOBASE( CKnifeWidowmaker, DT_LocalActiveWeaponKnifeWidowmakerData )
+	#if !defined( CLIENT_DLL )
+		SendPropTime( SENDINFO( m_flSmackTime ) ),
+	#else
+		RecvPropTime( RECVINFO( m_flSmackTime ) ),
+	#endif
+END_NETWORK_TABLE()
+
+
+BEGIN_NETWORK_TABLE( CKnifeWidowmaker, DT_WeaponKnifeWidowmaker )
+	#if !defined( CLIENT_DLL )
+		SendPropDataTable("LocalActiveWeaponKnifeData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponKnifeWidowmakerData), SendProxy_SendActiveLocalKnifeDataTable ),
+	#else
+		RecvPropDataTable("LocalActiveWeaponKnifeData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponKnifeWidowmakerData)),
+	#endif
+END_NETWORK_TABLE()
+
+
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CKnifeWidowmaker )
+	DEFINE_PRED_FIELD( m_flSmackTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+END_PREDICTION_DATA()
+#endif
+
+
+LINK_ENTITY_TO_CLASS( weapon_knife_widowmaker, CKnifeWidowmaker );
+PRECACHE_WEAPON_REGISTER( weapon_knife_widowmaker );
+
+#ifndef CLIENT_DLL
+BEGIN_DATADESC( CKnifeWidowmaker )
+		DEFINE_THINKFUNC( Smack )
+	END_DATADESC()
+#endif

@@ -40,6 +40,7 @@
 #include "history_resource.h"
 #include "ragdoll_shared.h"
 #include "collisionutils.h"
+#include "cs_loadout.h"
 
 // NVNT - haptics system for spectating
 #include "haptics/haptic_utils.h"
@@ -111,6 +112,7 @@ CAddonInfo g_AddonInfo[] =
 	{ "primary",	0,						0, 0 },	// Primary addon model is looked up based on m_iPrimaryAddon
 	{ "pistol",		0,						0, 0 },	// Pistol addon model is looked up based on m_iSecondaryAddon
 	{ "eholster",	0,						"models/weapons/w_eq_eholster_elite.mdl", "models/weapons/w_eq_eholster.mdl" },
+	{ "knife",		0,						0, 0 },
 };
 
 // -------------------------------------------------------------------------------- //

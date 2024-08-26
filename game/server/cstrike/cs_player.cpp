@@ -54,6 +54,7 @@
 #include "npcevent.h"
 #include "cs_gamestats.h"
 #include "gamestats.h"
+#include "cs_loadout.h"
 #include "holiday_gift.h"
 #include "../../shared/cstrike/cs_achievement_constants.h"
 
@@ -849,6 +850,9 @@ void CCSPlayer::SetModelFromClass( void )
 
 void CCSPlayer::Spawn()
 {
+	m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "cm_loadout_knife_weapon_ct" ) );
+	m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "cm_loadout_knife_weapon_t" ) );
+
 	m_RateLimitLastCommandTimes.Purge();
 
 	// Get rid of the progress bar...
@@ -1041,13 +1045,21 @@ void CCSPlayer::GiveDefaultItems()
 
 	if ( GetTeamNumber() == TEAM_CT )
 	{
-		GiveNamedItem( "weapon_knife" );
+		if ( m_iLoadoutSlotKnifeWeaponCT == 0 )
+			GiveNamedItem( "weapon_knife" );
+		else
+			GiveNamedItem( KnivesEntities[m_iLoadoutSlotKnifeWeaponCT + 1] );
+
 		GiveNamedItem( "weapon_usp" );
 		GiveAmmo( 24, BULLET_PLAYER_45ACP );
 	}
 	else if ( GetTeamNumber() == TEAM_TERRORIST )
 	{
-		GiveNamedItem( "weapon_knife" );
+		if ( m_iLoadoutSlotKnifeWeaponT == 0 )
+			GiveNamedItem( "weapon_knife_t" );
+		else
+			GiveNamedItem( KnivesEntities[m_iLoadoutSlotKnifeWeaponT + 1] );
+
 		GiveNamedItem( "weapon_glock" );
 		GiveAmmo( 40, BULLET_PLAYER_9MM );
 	}
