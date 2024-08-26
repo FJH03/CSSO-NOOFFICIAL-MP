@@ -24,6 +24,7 @@ class CVGuiScreen;
 #if defined( CLIENT_DLL )
 #define CBaseViewModel C_BaseViewModel
 #define CBaseCombatWeapon C_BaseCombatWeapon
+class C_ViewmodelAttachmentModel;
 #endif
 
 #define VIEWMODEL_INDEX_BITS 1
@@ -162,6 +163,13 @@ public:
 	// (inherited from C_BaseAnimating)
 	virtual void			FormatViewModelAttachment( int nAttachment, matrix3x4_t &attachmentToWorld );
 	virtual bool			IsViewModel() const;
+
+	void					UpdateAllViewmodelAddons( void );
+
+#if defined ( CLIENT_DLL )
+	C_ViewmodelAttachmentModel *AddViewmodelArmModel( const char *pszModel, int nSkintoneIndex = -1 );
+	void					RemoveViewmodelArmModels( void );
+#endif
 	
 	CBaseCombatWeapon		*GetWeapon() const { return m_hWeapon.Get(); }
 
@@ -212,6 +220,22 @@ private:
 	// Control panel
 	typedef CHandle<CVGuiScreen>	ScreenHandle_t;
 	CUtlVector<ScreenHandle_t>	m_hScreens;
+
+private:
+#ifdef CLIENT_DLL
+	CUtlVector< CHandle< C_ViewmodelAttachmentModel > > m_vecViewmodelArmModels; // gloves, sleeves, etc
+#endif
 };
+
+#ifdef CLIENT_DLL
+class C_ViewmodelAttachmentModel: public CBaseViewModel
+{
+	DECLARE_CLASS( C_ViewmodelAttachmentModel, CBaseViewModel );
+
+public:
+	bool InitializeAsClientEntity( const char *pszModelName, RenderGroup_t renderGroup );
+	virtual int InternalDrawModel( int flags );
+};
+#endif
 
 #endif // BASEVIEWMODEL_SHARED_H

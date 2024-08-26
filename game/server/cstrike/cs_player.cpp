@@ -593,6 +593,18 @@ void CCSPlayer::Precache()
 		engine->ForceModelBounds( TerroristPlayerModels[i], mins, maxs );
 	}
 
+	for ( i=0; i<ARRAYSIZE( s_playerViewmodelArmConfigs ); ++i )
+	{
+	if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedGloveModel ) )
+			PrecacheModel( s_playerViewmodelArmConfigs[i].szAssociatedGloveModel );
+
+		if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModelGloveOverride ) )
+			PrecacheModel( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModelGloveOverride );
+
+		if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModel ) )
+			PrecacheModel( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModel );
+	}
+
 	// Sigh - have to force identical VMTs for the player models.  I'm just going to hard-code these
 	// strings here, rather than have char***'s or the CUtlVector<CUtlVector<>> equivalent.
 	engine->ForceSimpleMaterial( "materials/models/player/ct_urban/ct_urban.vmt" );

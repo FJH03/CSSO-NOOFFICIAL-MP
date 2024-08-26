@@ -36,6 +36,21 @@ CCSClassInfo g_ClassInfos[] =
 	{ "GIGN" }
 };
 
+const PlayerViewmodelArmConfig *GetPlayerViewmodelArmConfigForPlayerModel( const char* szPlayerModel )
+{
+	if ( szPlayerModel != NULL )
+	{
+		for ( int i=0; i<ARRAYSIZE(s_playerViewmodelArmConfigs); i++ )
+		{
+			if ( V_stristr( szPlayerModel, s_playerViewmodelArmConfigs[i].szPlayerModelSearchSubStr ) )
+				return &s_playerViewmodelArmConfigs[i];
+		}
+	}
+
+	AssertMsg1( false, "Could not determine viewmodel config for character model: %s", szPlayerModel );
+	return &s_playerViewmodelArmConfigs[0];
+}
+
 const CCSClassInfo* GetCSClassInfo( int i )
 {
 	Assert( i >= 0 && i < ARRAYSIZE( g_ClassInfos ) );

@@ -139,6 +139,41 @@ extern CUtlVectorInitialized< const char* > KnivesEntities;
 //--------------
 #define DMG_HEADSHOT		(DMG_LASTGENERICFLAG<<1)
 
+enum PlayerViewmodelSkinTone
+{
+	BARE_ARM_133 = 0,
+	BARE_ARM_55,
+	BARE_ARM_66,
+	BARE_ARM_103,
+	BARE_ARM_78,
+	BARE_ARM_PRO_VARF,
+};
+
+struct PlayerViewmodelArmConfig
+{
+	const char	*szPlayerModelSearchSubStr;
+	int			 iSkintoneIndex;
+	const char	*szAssociatedGloveModel;
+	const char	*szAssociatedSleeveModel;
+	const char	*szAssociatedSleeveModelGloveOverride;
+};
+
+static PlayerViewmodelArmConfig s_playerViewmodelArmConfigs[] =
+{
+//ct
+{ "ct_urban",BARE_ARM_55,"models/weapons/arms/urban_glove.mdl","models/weapons/arms/urban_sleeve.mdl","" },
+{ "ct_gsg9",BARE_ARM_55,"models/weapons/arms/gsg9_glove.mdl","models/weapons/arms/gsg9_sleeve.mdl","" },
+{ "ct_sas",BARE_ARM_55,"models/weapons/arms/sas_glove.mdl","models/weapons/arms/sas_sleeve.mdl","" },
+{ "ct_gign",BARE_ARM_55,"models/weapons/arms/gign_glove.mdl","models/weapons/arms/gign_sleeve.mdl","" },
+
+//t
+{ "t_phoenix",BARE_ARM_55,"models/weapons/arms/phoenix_glove.mdl","models/weapons/arms/phoenix_sleeve.mdl","" },
+{ "t_leet",BARE_ARM_55,"models/weapons/arms/leet_glove.mdl","models/weapons/arms/leet_sleeve.mdl","" },
+{ "t_arctic",BARE_ARM_55,"models/weapons/arms/arctic_glove.mdl","models/weapons/arms/arctic_sleeve.mdl","" },
+{ "t_guerilla",BARE_ARM_55,"models/weapons/arms/guerilla_glove.mdl","models/weapons/arms/guerilla_sleeve.mdl","" },
+};
+
+const PlayerViewmodelArmConfig *GetPlayerViewmodelArmConfigForPlayerModel( const char* szPlayerModel );
 
 // The various states the player can be in during the join game process.
 enum CSPlayerState

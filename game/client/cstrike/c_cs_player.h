@@ -240,6 +240,9 @@ public:
 	CNetworkVar( bool, m_bInBombZone );
 	CNetworkVar( bool, m_bInBuyZone );
 	CNetworkVar( int, m_iThrowGrenadeCounter );	// used to trigger grenade throw animations.
+
+	const PlayerViewmodelArmConfig *m_pViewmodelArmConfig;
+
 	CNetworkVar( bool, m_bHasMovedSinceSpawn ); // Whether player has moved from spawn position
 	CNetworkVar( float, m_fImmuneToDamageTime );	// When gun game spawn damage immunity will expire
 	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune in gun game
@@ -338,6 +341,7 @@ private:
 	void UpdateAddonModels();
 
 	void PushawayThink();
+	void FireGameEvent( IGameEvent *event );
 
 	int		m_iAccount;
 	bool	m_bHasHelmet;

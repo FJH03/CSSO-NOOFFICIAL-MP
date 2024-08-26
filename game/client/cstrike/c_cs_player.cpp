@@ -1230,6 +1230,28 @@ void C_CSPlayer::RemoveAddonModels()
 	UpdateAddonModels();
 }
 
+void C_CSPlayer::FireGameEvent( IGameEvent *event )
+{
+	const char *name = event->GetName();
+	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+	int EventUserID = event->GetInt( "userid", -1 );
+
+	if ( Q_strcmp( "player_spawn", name ) == 0 )
+	{
+		if ( pLocalPlayer && pLocalPlayer->GetUserID() == EventUserID )
+		{
+			m_iIDEntIndex = 0;
+			m_delayTargetIDTimer.Reset();
+			m_iOldIDEntIndex = 0;
+			m_holdTargetIDTimer.Reset();
+
+			UpdateAddonModels();
+
+			m_pViewmodelArmConfig = NULL;
+		}
+
+	}
+}
 
 void C_CSPlayer::NotifyShouldTransmit( ShouldTransmitState_t state )
 {
@@ -1786,6 +1808,29 @@ void C_CSPlayer::UpdateClientSideAnimation()
 	{
 		// latch old values
 		OnLatchInterpolatedVariables( LATCH_ANIMATION_VAR );
+	}
+	if ( IsLocalPlayer() )
+	{
+		CWeaponCSBase *pWeapon = GetActiveCSWeapon();
+		if ( pWeapon )
+		{
+			C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>( GetViewModel( pWeapon->m_nViewModelIndex ) );
+			if ( pViewModel )
+			{
+				pViewModel->UpdateAllViewmodelAddons();
+			}
+		}
+		else
+		{
+			for ( int i=0; i<MAX_VIEWMODELS; ++i )
+			{
+				C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>( GetViewModel( i ) );
+				if ( pViewModel )
+				{
+					pViewModel->RemoveViewmodelArmModels();
+				}
+			}
+		}
 	}
 }
 
