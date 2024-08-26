@@ -382,6 +382,8 @@ public:
 	void ObserverRoundRespawn( void );
 	void CheckTKPunishment( void );
 
+	CNetworkVar( bool, m_bNeedToChangeGloves );
+
 	// Add money to this player's account.
 	void AddAccount( int amount, bool bTrackChange=true, bool bItemBought=false, const char *pItemName = NULL );
 
@@ -742,6 +744,8 @@ public:
 
 	void ClearImmunity( void );
 	CNetworkVar( bool, m_bDetected );
+	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
+	CNetworkVar( int, m_iLoadoutSlotGlovesT );
 
 	int m_iLoadoutSlotKnifeWeaponCT;
 	int m_iLoadoutSlotKnifeWeaponT;

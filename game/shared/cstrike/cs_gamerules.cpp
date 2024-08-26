@@ -509,6 +509,20 @@ ConVar cl_autohelp(
 		"Which weapon to use in knife slot for Ts.\n 0 - Default T knife\n 1 - CS:S knife\n 2 - Karambit\n 3 - Flip\n 4 - Bayonet\n 5 - M9 Bayonet\n 6 - Butterfly\n 7 - Gut\n 8 - Huntsman\n 9 - Falchion\n 10 - Bowie\n 11 - Survival\n 12 - Paracord\n 13 - Navaja\n 14 - Nomad\n 15 - Skeleton\n 16 - Stiletto\n 17 - Ursus\n 18 - Talon",
 		true, 0, true, MAX_KNIVES );
 
+	ConVar loadout_slot_gloves_ct(
+		"loadout_slot_gloves_ct",
+		"0",
+		FCVAR_ARCHIVE | FCVAR_USERINFO,
+		"Which glove to use for CTs.",
+		true, 0, true, MAX_GLOVES );
+
+	ConVar loadout_slot_gloves_t(
+		"loadout_slot_gloves_t",
+		"0",
+		FCVAR_ARCHIVE | FCVAR_USERINFO,
+		"Which glove to use for Ts.",
+		true, 0, true, MAX_GLOVES );
+
 	ConCommand EndRound( "endround", &CCSGameRules::EndRound, "End the current round.", FCVAR_CHEAT );
 
 
@@ -5582,6 +5596,14 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 	}
 	pCSPlayer->m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_knife_weapon_ct" ) );
 	pCSPlayer->m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_knife_weapon_t" ) );
+
+	int m_iNewGloveCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_glove_ct" ) );
+	int m_iNewGloveT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_glove_t" ) );
+	// change the gloves in the next round if needed
+	if ( ( m_iNewGloveCT != pCSPlayer->m_iLoadoutSlotGlovesCT ) || ( m_iNewGloveT != pCSPlayer->m_iLoadoutSlotGlovesT ) )
+	{
+		pCSPlayer->m_bNeedToChangeGloves = true;
+	}
 }
 
 bool CCSGameRules::FAllowNPCs( void )

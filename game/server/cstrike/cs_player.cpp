@@ -408,7 +408,9 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropFloat( SENDINFO( m_flProgressBarStartTime ), 0, SPROP_NOSCALE ),
 	SendPropEHandle( SENDINFO( m_hRagdoll ) ),
 	SendPropInt( SENDINFO( m_cycleLatch ), 4, SPROP_UNSIGNED ),
-
+	SendPropBool( SENDINFO( m_bNeedToChangeGloves ) ),
+	SendPropInt( SENDINFO( m_iLoadoutSlotGlovesCT ) ),
+	SendPropInt( SENDINFO( m_iLoadoutSlotGlovesT ) ),
 
 END_SEND_TABLE()
 
@@ -551,6 +553,7 @@ CCSPlayer::CCSPlayer()
 	m_bImmunity = false;
 	m_bHasMovedSinceSpawn = false;
 	m_wasNotKilledNaturally = false;
+	m_bNeedToChangeGloves = true;
 	 
 	//=============================================================================
 	// HPE_END
@@ -603,6 +606,14 @@ void CCSPlayer::Precache()
 
 		if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModel ) )
 			PrecacheModel( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModel );
+	}
+
+	for ( i=0; i<MAX_GLOVES+1; ++i)
+	{
+		if ( !engine->IsModelPrecached( GetGlovesInfo( i )->szViewModel ) )
+			PrecacheModel( GetGlovesInfo( i )->szViewModel );
+		if ( !engine->IsModelPrecached( GetGlovesInfo( i )->szWorldModel ) )
+			PrecacheModel( GetGlovesInfo( i )->szWorldModel );
 	}
 
 	// Sigh - have to force identical VMTs for the player models.  I'm just going to hard-code these
@@ -869,6 +880,13 @@ void CCSPlayer::Spawn()
 
 	// Get rid of the progress bar...
 	SetProgressBarTime( 0 );
+
+	if ( m_bNeedToChangeGloves )
+	{
+		m_iLoadoutSlotGlovesCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_gloves_ct" ) );
+		m_iLoadoutSlotGlovesT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_gloves_t" ) );
+		m_bNeedToChangeGloves = false;
+	}
 
 	CreateViewModel( 1 );
 

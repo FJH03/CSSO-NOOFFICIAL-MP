@@ -283,6 +283,7 @@ public:
 
     CNetworkVar( float, m_flVelocityModifier );
 	CNetworkVar( float, m_flGroundAccelLinearFracLastTime );
+	CNetworkVar( bool, m_bNeedToChangeGloves );
 
 	bool		m_bDetected;
 
@@ -408,7 +409,9 @@ private:
     // HPE_END
     //=============================================================================
 
-
+public:
+	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
+	CNetworkVar( int, m_iLoadoutSlotGlovesT );
 
 	C_CSPlayer( const C_CSPlayer & );
 };

@@ -29,6 +29,8 @@ public:
 	// check if the given weapon is actually a knife
 	bool			IsKnife( CSWeaponID weaponid ) { return (weaponid >= WEAPON_KNIFE) && (weaponid <= WEAPON_KNIFE + MAX_KNIVES + 1); }
 
+	bool			HasGlovesSet( CCSPlayer* pPlayer, int team );
+	int			GetGlovesForPlayer( CCSPlayer* pPlayer, int team );
 };
 extern CCSLoadout *g_pCSLoadout;
 

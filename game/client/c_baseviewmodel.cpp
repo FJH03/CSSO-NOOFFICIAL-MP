@@ -24,6 +24,7 @@
 	#include "weapon_basecsgrenade.h"
 	#include "cs_shareddefs.h"
 	#include "c_cs_player.h"
+	#include "cs_loadout.h"
 #endif
 
 #if defined( REPLAY_ENABLED )
@@ -337,6 +338,23 @@ int C_BaseViewModel::DrawModel( int flags )
 			pWeapon->ViewModelDrawn( this );
 		}
 	}
+	if ( flags )
+	{
+		FOR_EACH_VEC( m_vecViewmodelArmModels, i )
+		{
+			if ( m_vecViewmodelArmModels[i] )
+			{
+
+				if ( m_vecViewmodelArmModels[i]->GetMoveParent() != this )
+				{
+					m_vecViewmodelArmModels[i]->SetEFlags( EF_BONEMERGE );
+					m_vecViewmodelArmModels[i]->SetParent( this );
+				}
+
+				m_vecViewmodelArmModels[i]->DrawModel( flags );
+			}
+		}
+	}
 
 	return ret;
 }
@@ -524,11 +542,25 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 		}
 	}
 
+	if ( pPlayer->m_bNeedToChangeGloves )
+		RemoveViewmodelArmModels();
+
 	// add gloves and sleeves
 	if ( m_vecViewmodelArmModels.Count() == 0 )
 	{
-		AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedGloveModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex );
-		AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModel );
+		if ( CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
+		{
+			AddViewmodelArmModel( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szViewModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex );
+			if ( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModelGloveOverride[0] != NULL )
+				AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModelGloveOverride );
+			else
+				AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModel );
+		}
+		else
+		{
+			AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedGloveModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex );
+			AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModel );
+		}
 	}
 }
 
@@ -552,7 +584,7 @@ C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *p
 		pEnt->UpdatePartitionListEntry();
 		pEnt->CollisionProp()->MarkPartitionHandleDirty();
 		pEnt->UpdateVisibility();
-		pEnt->RemoveEffects( EF_NODRAW );
+		RemoveEffects( EF_NODRAW );
 		return pEnt;
 	}	
 

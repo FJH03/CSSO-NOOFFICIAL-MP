@@ -36,6 +36,25 @@ CCSClassInfo g_ClassInfos[] =
 	{ "GIGN" }
 };
 
+static PlayerGloves s_playerGloves[MAX_GLOVES+1] =
+{
+	{ NULL, NULL },
+	{ "models/weapons/arms/custom/v_glove_bloodhound.mdl",NULL},
+	{ "models/weapons/arms/custom/v_glove_brokenfang.mdl",NULL},
+	{ "models/weapons/arms/custom/v_glove_driver.mdl",NULL},
+	{ "models/weapons/arms/custom/v_glove_handwraps.mdl",NULL},
+	{ "models/weapons/arms/custom/v_glove_hydra.mdl",NULL},
+	{ "models/weapons/arms/custom/v_glove_motorcycle.mdl",NULL},
+	{ "models/weapons/arms/custom/v_glove_specialist.mdl",NULL},
+	{ "models/weapons/arms/custom/v_glove_sporty.mdl",NULL},
+};
+
+const PlayerGloves* GetGlovesInfo( int i )
+{
+	Assert( i >= 0 && i < ARRAYSIZE( s_playerGloves ) );
+	return &s_playerGloves[i];
+}
+
 const PlayerViewmodelArmConfig *GetPlayerViewmodelArmConfigForPlayerModel( const char* szPlayerModel )
 {
 	if ( szPlayerModel != NULL )
