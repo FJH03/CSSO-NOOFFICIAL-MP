@@ -1855,7 +1855,7 @@ static ConVar	cl_bob_version( "cl_bob_version", "0", FCVAR_CHEAT );
 static ConVar	cl_bobcycle( "cl_bobcycle", "0.98", FCVAR_CHEAT, "the frequency at which the viewmodel bobs.", true, 0.1, true, 2.0 );
 static ConVar	cl_bobup( "cl_bobup", "0.5", FCVAR_CHEAT );
 
-ConVar	cmod_new_bobbing( "cmod_new_bobbing", "1", FCVAR_ARCHIVE, "What viewbob style to use: CS:S (0) or CS:GO (1)." );
+ConVar	cl_use_new_headbob( "cl_use_new_headbob", "1", FCVAR_ARCHIVE, "What viewbob style to use: CS:S (0) or CS:GO (1)." );
 static ConVar	cl_bobamt_vert( "cl_bobamt_vert", "0.25", FCVAR_ARCHIVE, "The amount the viewmodel moves up and down when running", true, 0.1, true, 2 );
 static ConVar	cl_bobamt_lat( "cl_bobamt_lat", "0.4", FCVAR_ARCHIVE, "The amount the viewmodel moves side to side when running", true, 0.1, true, 2 );
 static ConVar	cl_bob_lower_amt( "cl_bob_lower_amt", "21", FCVAR_ARCHIVE, "The amount the viewmodel lowers when running", true, 5, true, 30 );
@@ -1868,7 +1868,7 @@ static ConVar	cl_viewmodel_shift_right_amt( "cl_viewmodel_shift_right_amt", "0.7
 //-----------------------------------------------------------------------------
 float CalcNewViewModelBobbing( CBasePlayer *player, BobState_t *pBobState, int nVMIndex )
 {
-	if ( cmod_new_bobbing.GetBool() == false )
+	if ( cl_use_new_headbob.GetBool() == false )
 		return 0;
 
 	Assert( pBobState );
@@ -2056,7 +2056,7 @@ float CalcNewViewModelBobbing( CBasePlayer *player, BobState_t *pBobState, int n
 //-----------------------------------------------------------------------------
 void AddNewViewModelBobbing( Vector &origin, QAngle &angles, BobState_t *pBobState )
 {
-	if ( cmod_new_bobbing.GetBool() == false )
+	if ( cl_use_new_headbob.GetBool() == false )
 		return;
 
 	Assert( pBobState );
@@ -2085,7 +2085,7 @@ void AddNewViewModelBobbing( Vector &origin, QAngle &angles, BobState_t *pBobSta
 	//-----------------------------------------------------------------------------
 	float CWeaponCSBase::CalcViewmodelBob( void )
 	{
-		if ( cmod_new_bobbing.GetBool() == true )
+		if ( cl_use_new_headbob.GetBool() == true )
 		{
 			CBasePlayer *player = ToBasePlayer( GetOwner() );
 			//Assert( player );
@@ -2186,7 +2186,7 @@ void AddNewViewModelBobbing( Vector &origin, QAngle &angles, BobState_t *pBobSta
 	//-----------------------------------------------------------------------------
 	void CWeaponCSBase::AddViewmodelBob( CBaseViewModel *viewmodel, Vector &origin, QAngle &angles )
 	{
-		if ( cmod_new_bobbing.GetBool() == true )
+		if ( cl_use_new_headbob.GetBool() == true )
 		{
 			// call helper functions to do the calculation
 			BobState_t *pBobState = GetBobState();

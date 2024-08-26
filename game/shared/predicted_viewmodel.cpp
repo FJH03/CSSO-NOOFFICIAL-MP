@@ -51,7 +51,7 @@ ConVar cl_wpn_sway_interp( "cl_wpn_sway_interp", "0.1", FCVAR_CLIENTDLL );
 ConVar cl_wpn_sway_scale( "cl_wpn_sway_scale", "1.0", FCVAR_CLIENTDLL|FCVAR_CHEAT );
 
 #ifdef CSTRIKE_DLL
- extern ConVar        cmod_new_bobbing; 
+ extern ConVar        cl_use_new_headbob; 
 #endif //cstrike_dll 
 #endif //client_dll
 
@@ -62,7 +62,7 @@ ConVar cl_wpn_sway_scale( "cl_wpn_sway_scale", "1.0", FCVAR_CLIENTDLL|FCVAR_CHEA
  { 
  #ifdef CSTRIKE_DLL
  #ifdef CLIENT_DLL 
-         if ( cmod_new_bobbing.GetBool() == false ) 
+         if ( cl_use_new_headbob.GetBool() == false ) 
                  return; 
 
          // if we are an off hand view model (index 1) and we have a model, add head bob. 
