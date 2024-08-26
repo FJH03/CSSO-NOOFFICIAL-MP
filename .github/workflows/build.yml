@@ -24,7 +24,7 @@ jobs:
         scripts/build-apk.sh 
     - name: Rename APK
       run: |
-         mv Srceng-mod-launcher/build/android/mod-signed.apk clientmod-release.apk
+         mv Srceng-mod-launcher/build/android/mod-signed.apk csso-release.apk
 
     - name: 'Upload Artifact'
       uses: actions/upload-artifact@v3
