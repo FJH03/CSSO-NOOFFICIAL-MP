@@ -850,8 +850,8 @@ void CCSPlayer::SetModelFromClass( void )
 
 void CCSPlayer::Spawn()
 {
-	m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "cm_loadout_knife_weapon_ct" ) );
-	m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "cm_loadout_knife_weapon_t" ) );
+	m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_knife_weapon_ct" ) );
+	m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_knife_weapon_t" ) );
 
 	m_RateLimitLastCommandTimes.Purge();
 

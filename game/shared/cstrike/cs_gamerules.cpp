@@ -495,15 +495,15 @@ ConVar cl_autohelp(
 		FCVAR_REPLICATED,
 		"Ignore conditions which would end the current round");
 
-	ConVar cm_loadout_knife_weapon_ct(
-		"cm_loadout_knife_weapon_ct",
+	ConVar loadout_knife_weapon_ct(
+		"loadout_knife_weapon_ct",
 		"0",
 		FCVAR_ARCHIVE | FCVAR_USERINFO,
 		"Which weapon to use in knife slot for CTs.\n 0 - Default CT knife\n 1 - CS:S knife\n 2 - Karambit\n 3 - Flip\n 4 - Bayonet\n 5 - M9 Bayonet\n 6 - Butterfly\n 7 - Gut\n 8 - Huntsman\n 9 - Falchion\n 10 - Bowie\n 11 - Survival\n 12 - Paracord\n 13 - Navaja\n 14 - Nomad\n 15 - Skeleton\n 16 - Stiletto\n 17 - Ursus\n 18 - Talon",
 		true, 0, true, MAX_KNIVES );
 
-	ConVar cm_loadout_knife_weapon_t(
-		"cm_loadout_knife_weapon_t",
+	ConVar loadout_knife_weapon_t(
+		"loadout_knife_weapon_t",
 		"0",
 		FCVAR_ARCHIVE | FCVAR_USERINFO,
 		"Which weapon to use in knife slot for Ts.\n 0 - Default T knife\n 1 - CS:S knife\n 2 - Karambit\n 3 - Flip\n 4 - Bayonet\n 5 - M9 Bayonet\n 6 - Butterfly\n 7 - Gut\n 8 - Huntsman\n 9 - Falchion\n 10 - Bowie\n 11 - Survival\n 12 - Paracord\n 13 - Navaja\n 14 - Nomad\n 15 - Skeleton\n 16 - Stiletto\n 17 - Ursus\n 18 - Talon",
@@ -5580,8 +5580,8 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 			pCSPlayer->m_bShowHints = false;
 		}
 	}
-	pCSPlayer->m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "cm_loadout_knife_weapon_ct" ) );
-	pCSPlayer->m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "cm_loadout_knife_weapon_t" ) );
+	pCSPlayer->m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_knife_weapon_ct" ) );
+	pCSPlayer->m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_knife_weapon_t" ) );
 }
 
 bool CCSGameRules::FAllowNPCs( void )
