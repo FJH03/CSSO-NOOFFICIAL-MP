@@ -70,6 +70,11 @@
 #include "vote_controller.h"
 #include "ai_speech.h"
 
+#ifdef CSTRIKE_DLL
+#include "weapon_c4.h"
+#include "cs_gamerules.h"
+#endif
+
 #if defined USES_ECON_ITEMS
 #include "econ_wearable.h"
 #endif
