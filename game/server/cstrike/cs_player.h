@@ -382,6 +382,10 @@ public:
 	void ObserverRoundRespawn( void );
 	void CheckTKPunishment( void );
 
+	bool	HasAgentSet( int team );
+	int		GetAgentID( int team );
+	bool	m_bNeedToChangeAgent;
+
 	CNetworkVar( bool, m_bNeedToChangeGloves );
 
 	// Add money to this player's account.
@@ -607,6 +611,9 @@ public:
 	CNetworkVar( int , m_iLastZoom ); // after firing a shot, set the FOV to 90, and after showing the animation, bring the FOV back to last zoom level.
 	CNetworkVar( bool, m_bIsDefusing );			// tracks whether this player is currently defusing a bomb
 	int m_LastHitGroup;			// the last body region that took damage
+
+	bool m_bIsFemale;
+
 	//=============================================================================
 	// HPE_BEGIN:
 	// [menglish] Adding two variables, keeping track of damage to the player
@@ -749,6 +756,8 @@ public:
 
 	int m_iLoadoutSlotKnifeWeaponCT;
 	int m_iLoadoutSlotKnifeWeaponT;
+	int m_iLoadoutSlotAgentCT;
+	int m_iLoadoutSlotAgentT;
 	bool IsAbleToInstantRespawn( void );
 private:
 	CountdownTimer m_ladderSurpressionTimer;
@@ -770,6 +779,7 @@ protected:
 
 	void SetModelFromClass( void );
 	CNetworkVar( int, m_iClass ); // One of the CS_CLASS_ enums.
+	int m_iSkin;
 
 	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield = true, bool bThrow = false );
 	bool DropRifle( bool fromDeath = false );

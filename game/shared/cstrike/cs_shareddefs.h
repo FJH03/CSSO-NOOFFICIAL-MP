@@ -74,8 +74,21 @@ public:
 	}
 };
 
-extern CUtlVectorInitialized< const char * > CTPlayerModels;
-extern CUtlVectorInitialized< const char * > TerroristPlayerModels;
+extern CUtlVectorInitialized< const char * > TPhoenixPlayerModels;
+extern CUtlVectorInitialized< const char * > TLeetPlayerModels;
+extern CUtlVectorInitialized< const char * > TSeparatistPlayerModels;
+extern CUtlVectorInitialized< const char * > TBalkanPlayerModels;
+extern CUtlVectorInitialized< const char * > TProfessionalPlayerModels;
+extern CUtlVectorInitialized< const char * > TAnarchistPlayerModels;
+extern CUtlVectorInitialized< const char * > TPiratePlayerModels;
+
+extern CUtlVectorInitialized< const char * > CTST6PlayerModels;
+extern CUtlVectorInitialized< const char * > CTGSG9PlayerModels;
+extern CUtlVectorInitialized< const char * > CTSASPlayerModels;
+extern CUtlVectorInitialized< const char * > CTGIGNPlayerModels;
+extern CUtlVectorInitialized< const char * > CTFBIPlayerModels;
+extern CUtlVectorInitialized< const char * > CTIDFPlayerModels;
+extern CUtlVectorInitialized< const char * > CTSWATPlayerModels;
 extern CUtlVectorInitialized< const char* > KnivesEntities;
 
 
@@ -241,14 +254,20 @@ enum
 	// Terrorist classes (keep in sync with FIRST_T_CLASS/LAST_T_CLASS).
 	CS_CLASS_PHOENIX_CONNNECTION,
 	CS_CLASS_L337_KREW,
-	CS_CLASS_ARCTIC_AVENGERS,
-	CS_CLASS_GUERILLA_WARFARE,
+	CS_CLASS_SEPARATIST,
+	CS_CLASS_BALKAN,
+	CS_CLASS_PROFESSIONAL,
+	CS_CLASS_ANARCHIST,
+	CS_CLASS_PIRATE,
 
 	// CT classes (keep in sync with FIRST_CT_CLASS/LAST_CT_CLASS).
 	CS_CLASS_SEAL_TEAM_6,
 	CS_CLASS_GSG_9,
 	CS_CLASS_SAS,
 	CS_CLASS_GIGN,
+	CS_CLASS_FBI,
+	CS_CLASS_IDF,
+	CS_CLASS_SWAT,
 
 	CS_NUM_CLASSES
 };
@@ -286,22 +305,36 @@ enum CSMvpReason_t
 
 // Keep these in sync with CSClasses.
 #define FIRST_T_CLASS	CS_CLASS_PHOENIX_CONNNECTION
-#define LAST_T_CLASS	CS_CLASS_GUERILLA_WARFARE
+#define LAST_T_CLASS	CS_CLASS_PIRATE
 
 #define FIRST_CT_CLASS	CS_CLASS_SEAL_TEAM_6
-#define LAST_CT_CLASS	CS_CLASS_GIGN
+#define LAST_CT_CLASS	CS_CLASS_SWAT
 
 #define CS_MUZZLEFLASH_NONE -1
 #define CS_MUZZLEFLASH_NORM	0
 #define CS_MUZZLEFLASH_X	1
 
-class CCSClassInfo
+struct CCSClassInfo
 {
-public:
-	const char		*m_pClassName;
+	const char		*m_szClassName;
+	const char		*m_szRadioPrefix;
 };
 
 const CCSClassInfo* GetCSClassInfo( int i );
+
+#define MAX_AGENTS_CT 20
+#define MAX_AGENTS_T 26
+
+struct CCSAgentInfo
+{
+	const char		*m_szModel;
+	const char		*m_szRadioPrefix;
+	int				m_iClass;
+	bool			m_bIsFemale;		// added for a separate death sound
+};
+
+const CCSAgentInfo* GetCSAgentInfoCT( int i );
+const CCSAgentInfo* GetCSAgentInfoT( int i );
 
 extern const char *pszWinPanelCategoryHeaders[];
 

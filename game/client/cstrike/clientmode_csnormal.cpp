@@ -790,16 +790,6 @@ void UpdateClassImageEntity(
 	const char *pWeaponSequence = "Walk_Upper_AK";
 
 	int i;
-	for ( i=0; i<CTPlayerModels.Count(); ++i )
-	{
-		if ( Q_strcasecmp( pModelName, CTPlayerModels[i] ) == 0 )
-		{
-			// give CTs a M4
-			pWeaponName = "models/weapons/w_rif_m4a1.mdl";
-			pWeaponSequence = "Walk_Upper_M4";
-			break;
-		}
-	}
 
 	if ( pLocalPlayer->IsAlive() && pLocalPlayer->GetActiveWeapon() )
 	{

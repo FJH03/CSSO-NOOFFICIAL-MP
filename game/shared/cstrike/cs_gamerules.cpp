@@ -495,19 +495,33 @@ ConVar cl_autohelp(
 		FCVAR_REPLICATED,
 		"Ignore conditions which would end the current round");
 
-	ConVar loadout_knife_weapon_ct(
-		"loadout_knife_weapon_ct",
+	ConVar loadout_slot_knife_weapon_ct(
+		"loadout_slot_knife_weapon_ct",
 		"0",
 		FCVAR_ARCHIVE | FCVAR_USERINFO,
 		"Which weapon to use in knife slot for CTs.\n 0 - Default CT knife\n 1 - CS:S knife\n 2 - Karambit\n 3 - Flip\n 4 - Bayonet\n 5 - M9 Bayonet\n 6 - Butterfly\n 7 - Gut\n 8 - Huntsman\n 9 - Falchion\n 10 - Bowie\n 11 - Survival\n 12 - Paracord\n 13 - Navaja\n 14 - Nomad\n 15 - Skeleton\n 16 - Stiletto\n 17 - Ursus\n 18 - Talon",
 		true, 0, true, MAX_KNIVES );
 
-	ConVar loadout_knife_weapon_t(
-		"loadout_knife_weapon_t",
+	ConVar loadout_slot_knife_weapon_t(
+		"loadout_slot_knife_weapon_t",
 		"0",
 		FCVAR_ARCHIVE | FCVAR_USERINFO,
 		"Which weapon to use in knife slot for Ts.\n 0 - Default T knife\n 1 - CS:S knife\n 2 - Karambit\n 3 - Flip\n 4 - Bayonet\n 5 - M9 Bayonet\n 6 - Butterfly\n 7 - Gut\n 8 - Huntsman\n 9 - Falchion\n 10 - Bowie\n 11 - Survival\n 12 - Paracord\n 13 - Navaja\n 14 - Nomad\n 15 - Skeleton\n 16 - Stiletto\n 17 - Ursus\n 18 - Talon",
 		true, 0, true, MAX_KNIVES );
+
+	ConVar loadout_slot_agent_ct(
+		"loadout_slot_agent_ct",
+		"0",
+		FCVAR_ARCHIVE | FCVAR_USERINFO,
+		"Which agent to use for CTs.",
+		true, 0, true, MAX_AGENTS_CT );
+
+	ConVar loadout_slot_agent_t(
+		"loadout_slot_agent_t",
+		"0",
+		FCVAR_ARCHIVE | FCVAR_USERINFO,
+		"Which agent to use for Ts.",
+		true, 0, true, MAX_AGENTS_T );
 
 	ConVar loadout_slot_gloves_ct(
 		"loadout_slot_gloves_ct",
@@ -522,6 +536,12 @@ ConVar cl_autohelp(
 		FCVAR_ARCHIVE | FCVAR_USERINFO,
 		"Which glove to use for Ts.",
 		true, 0, true, MAX_GLOVES );
+
+	ConVar mp_use_official_map_factions(
+		"mp_use_official_map_factions",
+		"0",
+		FCVAR_REPLICATED | FCVAR_NOTIFY,
+		"Determines wheter to use official factions for the current map or make faction selections free for everyone.\n 0 - Disable\n 1 - Enable for everyone\n 2 - Enable for bots only" );
 
 	ConCommand EndRound( "endround", &CCSGameRules::EndRound, "End the current round.", FCVAR_CHEAT );
 
@@ -808,6 +828,9 @@ ConVar cl_autohelp(
 			g_flGameStatsUpdateTime = CS_GAME_STATS_UPDATE; //Next update is between 22 and 24 hours.
 		}
 #endif
+		m_iMapFactionCT = -1;
+		m_iMapFactionT = -1;
+
 		m_bWarmupPeriod = mp_do_warmup_period.GetBool();
 		m_fWarmupNextChatNoticeTime = 0;
 		m_fWarmupPeriodStart = gpGlobals->curtime;
@@ -5267,6 +5290,40 @@ float CCSGameRules::GetWarmupRemainingTime()
 }
 
 #ifndef CLIENT_DLL
+bool CCSGameRules::UseMapFactionsForThisPlayer( CBasePlayer* pPlayer )
+{
+	// im not sure that its even possible
+	if ( !pPlayer )
+		return false;
+
+	// 1 means enable for everyone
+	if ( mp_use_official_map_factions.GetInt() == 1 )
+		return true;
+
+	// 2 means enable for bots only
+	if ( mp_use_official_map_factions.GetInt() == 2 )
+		return pPlayer->IsBot();
+
+	return false;
+}
+int CCSGameRules::GetMapFactionsForThisPlayer( CBasePlayer* pPlayer )
+{
+	if ( !UseMapFactionsForThisPlayer(pPlayer) )
+		return -1;
+
+	switch ( pPlayer->GetTeamNumber() )
+	{
+		case TEAM_CT:
+			return m_iMapFactionCT;
+		case TEAM_TERRORIST:
+			return m_iMapFactionT;
+	}
+
+	return -1;
+}
+#endif
+
+#ifndef CLIENT_DLL
 void CCSGameRules::StartWarmup( void )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
@@ -5594,8 +5651,16 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 			pCSPlayer->m_bShowHints = false;
 		}
 	}
-	pCSPlayer->m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_knife_weapon_ct" ) );
-	pCSPlayer->m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_knife_weapon_t" ) );
+	pCSPlayer->m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_knife_weapon_ct" ) );
+	pCSPlayer->m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_knife_weapon_t" ) );
+
+	int m_iNewAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_agent_ct" ) );
+	int m_iNewAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_agent_t" ) );
+	// change the agent in the next round if needed
+	if ( ( m_iNewAgentCT != pCSPlayer->m_iLoadoutSlotAgentCT ) || ( m_iNewAgentT != pCSPlayer->m_iLoadoutSlotAgentT ) )
+	{
+		pCSPlayer->m_bNeedToChangeAgent = true;
+	}
 
 	int m_iNewGloveCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_glove_ct" ) );
 	int m_iNewGloveT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_glove_t" ) );

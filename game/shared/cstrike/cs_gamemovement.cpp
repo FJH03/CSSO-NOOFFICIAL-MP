@@ -18,7 +18,7 @@
 	#include "vguicenterprint.h"
 #else
 	#include "cs_player.h"
-	#include "keyvalues.h"
+	#include "KeyValues.h"
 #endif
 
 // NOTE: This has to be the last file included!

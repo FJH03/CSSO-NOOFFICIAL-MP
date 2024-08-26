@@ -220,8 +220,6 @@ public:
 		return SHADOWS_NONE;
 	}
 
-	virtual void ValidateModelIndex( void );
-
 private:
 
 	C_CSRagdoll( const C_CSRagdoll & ) {}
@@ -338,33 +336,6 @@ void C_CSRagdoll::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCu
 
 	m_pRagdoll->ResetRagdollSleepAfterTime();
 }
-
-
-void C_CSRagdoll::ValidateModelIndex( void )
-{
-	if ( sv_allowminmodels.GetBool() && cl_minmodels.GetBool() )
-	{
-		if ( GetTeamNumber() == TEAM_CT )
-		{
-			int index = cl_min_ct.GetInt() - 1;
-			if ( index >= 0 && index < CTPlayerModels.Count() )
-			{
-				m_nModelIndex = modelinfo->GetModelIndex(CTPlayerModels[index]);
-			}
-		}
-		else if ( GetTeamNumber() == TEAM_TERRORIST )
-		{
-			int index = cl_min_t.GetInt() - 1;
-			if ( index >= 0 && index < TerroristPlayerModels.Count() )
-			{
-				m_nModelIndex = modelinfo->GetModelIndex(TerroristPlayerModels[index]);
-			}
-		}
-	}
-
-	BaseClass::ValidateModelIndex();
-}
-
 
 void C_CSRagdoll::CreateLowViolenceRagdoll( void )
 {
@@ -1294,31 +1265,7 @@ void C_CSPlayer::UpdateSoundEvents()
 //-----------------------------------------------------------------------------
 void C_CSPlayer::UpdateMinModels( void )
 {
-	int modelIndex = m_nModelIndex;
-
-	// cl_minmodels convar dependent on sv_allowminmodels convar
-
-	if ( !IsVIP() && sv_allowminmodels.GetBool() && cl_minmodels.GetBool() && !IsLocalPlayer() )
-	{
-		if ( GetTeamNumber() == TEAM_CT )
-		{
-			int index = cl_min_ct.GetInt() - 1;
-			if ( index >= 0 && index < CTPlayerModels.Count() )
-			{
-				modelIndex = modelinfo->GetModelIndex( CTPlayerModels[index] );
-			}
-		}
-		else if ( GetTeamNumber() == TEAM_TERRORIST )
-		{
-			int index = cl_min_t.GetInt() - 1;
-			if ( index >= 0 && index < TerroristPlayerModels.Count() )
-			{
-				modelIndex = modelinfo->GetModelIndex( TerroristPlayerModels[index] );
-			}
-		}
-	}
-
-	SetModelByIndex( modelIndex );
+	SetModelByIndex( m_nModelIndex );
 }
 
 // NVNT gate for spectating.

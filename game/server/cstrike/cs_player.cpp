@@ -465,6 +465,7 @@ CCSPlayer::CCSPlayer()
 
 	m_bIsVIP = false;
 	m_iClass = (int)CS_CLASS_NONE;
+	m_iSkin = 0;
 	m_angEyeAngles.Init();
 
 	SetViewOffset( VEC_VIEW_SCALED( this ) );
@@ -553,6 +554,8 @@ CCSPlayer::CCSPlayer()
 	m_bImmunity = false;
 	m_bHasMovedSinceSpawn = false;
 	m_wasNotKilledNaturally = false;
+
+	m_bNeedToChangeAgent = true;
 	m_bNeedToChangeGloves = true;
 	 
 	//=============================================================================
@@ -585,15 +588,133 @@ void CCSPlayer::Precache()
 	Vector maxs( 13, 13, 75 );
 
 	int i;
-	for ( i=0; i<CTPlayerModels.Count(); ++i )
+	for ( i=0; i<CTST6PlayerModels.Count(); ++i )
 	{
-		PrecacheModel( CTPlayerModels[i] );
-		engine->ForceModelBounds( CTPlayerModels[i], mins, maxs );
+		if ( !engine->IsModelPrecached( CTST6PlayerModels[i] ) )
+		{
+			PrecacheModel( CTST6PlayerModels[i] );
+			engine->ForceModelBounds( CTST6PlayerModels[i], mins, maxs );
+		}
 	}
-	for ( i=0; i<TerroristPlayerModels.Count(); ++i )
+	for ( i=0; i<CTGSG9PlayerModels.Count(); ++i )
 	{
-		PrecacheModel( TerroristPlayerModels[i] );
-		engine->ForceModelBounds( TerroristPlayerModels[i], mins, maxs );
+		if ( !engine->IsModelPrecached( CTGSG9PlayerModels[i] ) )
+		{
+			PrecacheModel( CTGSG9PlayerModels[i] );
+			engine->ForceModelBounds( CTGSG9PlayerModels[i], mins, maxs );
+		}
+	}
+	for ( i=0; i<CTSASPlayerModels.Count(); ++i )
+	{
+		if ( !engine->IsModelPrecached( CTSASPlayerModels[i] ) )
+		{
+			PrecacheModel( CTSASPlayerModels[i] );
+			engine->ForceModelBounds( CTSASPlayerModels[i], mins, maxs );
+		}
+	}
+	for ( i=0; i<CTGIGNPlayerModels.Count(); ++i )
+	{
+		if ( !engine->IsModelPrecached( CTGIGNPlayerModels[i] ) )
+		{
+			PrecacheModel( CTGIGNPlayerModels[i] );
+			engine->ForceModelBounds( CTGIGNPlayerModels[i], mins, maxs );
+		}
+	}
+	for ( i=0; i<CTFBIPlayerModels.Count(); ++i )
+	{
+		if ( !engine->IsModelPrecached( CTFBIPlayerModels[i] ) )
+		{
+			PrecacheModel( CTFBIPlayerModels[i] );
+			engine->ForceModelBounds( CTFBIPlayerModels[i], mins, maxs );
+		}
+	}
+	for ( i=0; i<CTIDFPlayerModels.Count(); ++i )
+	{
+		if ( !engine->IsModelPrecached( CTIDFPlayerModels[i] ) )
+		{
+			PrecacheModel( CTIDFPlayerModels[i] );
+			engine->ForceModelBounds( CTIDFPlayerModels[i], mins, maxs );
+		}
+	}
+	for ( i=0; i<CTSWATPlayerModels.Count(); ++i )
+	{
+		if ( !engine->IsModelPrecached( CTSWATPlayerModels[i] ) )
+		{
+			PrecacheModel( CTSWATPlayerModels[i] );
+			engine->ForceModelBounds( CTSWATPlayerModels[i], mins, maxs );
+		}
+	}
+
+	for ( i=0; i<TPhoenixPlayerModels.Count(); ++i )
+	{
+		if ( !engine->IsModelPrecached( TPhoenixPlayerModels[i] ) )
+		{
+			PrecacheModel( TPhoenixPlayerModels[i] );
+			engine->ForceModelBounds( TPhoenixPlayerModels[i], mins, maxs );
+		}
+	}
+	for ( i=0; i<TLeetPlayerModels.Count(); ++i )
+	{
+		if ( !engine->IsModelPrecached( TLeetPlayerModels[i] ) )
+		{
+			PrecacheModel( TLeetPlayerModels[i] );
+			engine->ForceModelBounds( TLeetPlayerModels[i], mins, maxs );
+		}
+	}
+	for ( i=0; i<TSeparatistPlayerModels.Count(); ++i )
+	{
+		if ( !engine->IsModelPrecached( TSeparatistPlayerModels[i] ) )
+		{
+			PrecacheModel( TSeparatistPlayerModels[i] );
+			engine->ForceModelBounds( TSeparatistPlayerModels[i], mins, maxs );
+		}
+	}
+	for ( i=0; i<TBalkanPlayerModels.Count(); ++i )
+	{
+		if ( !engine->IsModelPrecached( TBalkanPlayerModels[i] ) )
+		{
+			PrecacheModel( TBalkanPlayerModels[i] );
+			engine->ForceModelBounds( TBalkanPlayerModels[i], mins, maxs );
+		}
+	}
+	for ( i=0; i<TProfessionalPlayerModels.Count(); ++i )
+	{
+		if ( !engine->IsModelPrecached( TProfessionalPlayerModels[i] ) )
+		{
+			PrecacheModel( TProfessionalPlayerModels[i] );
+			engine->ForceModelBounds( TProfessionalPlayerModels[i], mins, maxs );
+		}
+	}
+	for ( i=0; i<TAnarchistPlayerModels.Count(); ++i )
+	{
+		if ( !engine->IsModelPrecached( TAnarchistPlayerModels[i] ) )
+		{
+			PrecacheModel( TAnarchistPlayerModels[i] );
+			engine->ForceModelBounds( TAnarchistPlayerModels[i], mins, maxs );
+		}
+	}
+	for ( i=0; i<TPiratePlayerModels.Count(); ++i )
+	{
+		if ( !engine->IsModelPrecached( TPiratePlayerModels[i] ) )
+		{
+			PrecacheModel( TPiratePlayerModels[i] );
+			engine->ForceModelBounds( TPiratePlayerModels[i], mins, maxs );
+		}
+	}
+
+	for ( i=0; i<MAX_AGENTS_CT+1; ++i )
+	{
+		if ( !engine->IsModelPrecached( GetCSAgentInfoCT( i )->m_szModel ) )
+		{
+			PrecacheModel( GetCSAgentInfoCT( i )->m_szModel );
+		}
+	}
+	for ( i=0; i<MAX_AGENTS_T+1; ++i )
+	{
+		if ( !engine->IsModelPrecached( GetCSAgentInfoT( i )->m_szModel ) )
+		{
+			PrecacheModel( GetCSAgentInfoT( i )->m_szModel );
+		}
 	}
 
 	for ( i=0; i<ARRAYSIZE( s_playerViewmodelArmConfigs ); ++i )
@@ -845,42 +966,144 @@ void CCSPlayer::InitialSpawn( void )
 
 void CCSPlayer::SetModelFromClass( void )
 {
+	if ( HasAgentSet( GetTeamNumber() ))
+	{
+		if ( GetTeamNumber() == TEAM_CT )
+		{
+			SetModel( GetCSAgentInfoCT( GetAgentID( GetTeamNumber() ) )->m_szModel );
+			return;
+		}
+		else if ( GetTeamNumber() == TEAM_TERRORIST )
+		{
+			SetModel( GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_szModel );
+			return;
+		}
+	}
+
 	if ( GetTeamNumber() == TEAM_TERRORIST )
 	{
 		int index = m_iClass - FIRST_T_CLASS;
-		if ( index < 0 || index >= TerroristPlayerModels.Count() )
+		if ( index < 0 || index >= LAST_T_CLASS )
 		{
-			index = RandomInt( 0, TerroristPlayerModels.Count() - 1 );
+			index = RandomInt( 0, LAST_T_CLASS - 1 );
 			m_iClass = index + FIRST_T_CLASS; // clean up players who selected a higher class than we support yet
 		}
-		SetModel( TerroristPlayerModels[index] );
+		
+		switch ( m_iClass )
+		{
+			case CS_CLASS_PHOENIX_CONNNECTION:
+			{
+				SetModel( TPhoenixPlayerModels[m_iSkin] );
+				break;
+			}
+			case CS_CLASS_L337_KREW:
+			{
+				SetModel( TLeetPlayerModels[m_iSkin] );
+				break;
+			}
+			case CS_CLASS_SEPARATIST:
+			{
+				SetModel( TSeparatistPlayerModels[m_iSkin] );
+				break;
+			}
+			case CS_CLASS_BALKAN:
+			{
+				SetModel( TBalkanPlayerModels[m_iSkin] );
+				break;
+			}
+			case CS_CLASS_PROFESSIONAL:
+			{
+				SetModel( TProfessionalPlayerModels[m_iSkin] );
+				break;
+			}
+			case CS_CLASS_ANARCHIST:
+			{
+				SetModel( TAnarchistPlayerModels[m_iSkin] );
+				break;
+			}
+			case CS_CLASS_PIRATE:
+			{
+				SetModel( TPiratePlayerModels[m_iSkin] );
+				break;
+			}
+			default:
+			{
+				Assert( false ); // we shouldn't be here
+				break;
+			}
+		}
 	}
 	else if ( GetTeamNumber() == TEAM_CT )
 	{
 		int index = m_iClass - FIRST_CT_CLASS;
-		if ( index < 0 || index >= CTPlayerModels.Count() )
+		if ( index < 0 || index >= (LAST_CT_CLASS - FIRST_CT_CLASS + 1) )
 		{
-			index = RandomInt( 0, CTPlayerModels.Count() - 1 );
+			index = RandomInt( 0, LAST_CT_CLASS - FIRST_CT_CLASS );
 			m_iClass = index + FIRST_CT_CLASS; // clean up players who selected a higher class than we support yet
 		}
-		SetModel( CTPlayerModels[index] );
+
+		switch ( m_iClass )
+		{
+			case CS_CLASS_SEAL_TEAM_6:
+			{
+				SetModel( CTST6PlayerModels[m_iSkin] );
+				break;
+			}
+			case CS_CLASS_GSG_9:
+			{
+				SetModel( CTGSG9PlayerModels[m_iSkin] );
+				break;
+			}
+			case CS_CLASS_SAS:
+			{
+				SetModel( CTSASPlayerModels[m_iSkin] );
+				break;
+			}
+			case CS_CLASS_GIGN:
+			{
+				SetModel( CTGIGNPlayerModels[m_iSkin] );
+				break;
+			}
+			case CS_CLASS_FBI:
+			{
+				SetModel( CTFBIPlayerModels[m_iSkin] );
+				break;
+			}
+			case CS_CLASS_IDF:
+			{
+				SetModel( CTIDFPlayerModels[m_iSkin] );
+				break;
+			}
+			case CS_CLASS_SWAT:
+			{
+				SetModel( CTSWATPlayerModels[m_iSkin] );
+				break;
+			}
+			default:
+			{
+				Assert( false ); // we shouldn't be here
+				break;
+			}
+		}
 	}
 	else
 	{
-		SetModel( CTPlayerModels[0] );
+		// todo: can we actually get here?
+		Assert( false ); // we shouldn't be here
+		//SetModel( CTST6PlayerModels[0] );
 	}
 }
 
 void CCSPlayer::Spawn()
 {
-	m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_knife_weapon_ct" ) );
-	m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_knife_weapon_t" ) );
-
-	m_RateLimitLastCommandTimes.Purge();
-
-	// Get rid of the progress bar...
-	SetProgressBarTime( 0 );
-
+	m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_knife_weapon_ct" ) );
+	m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_knife_weapon_t" ) );
+	if ( m_bNeedToChangeAgent )
+	{
+		m_iLoadoutSlotAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_ct" ) );
+		m_iLoadoutSlotAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_t" ) );
+		m_bNeedToChangeAgent = false;
+	}
 	if ( m_bNeedToChangeGloves )
 	{
 		m_iLoadoutSlotGlovesCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_gloves_ct" ) );
@@ -888,7 +1111,27 @@ void CCSPlayer::Spawn()
 		m_bNeedToChangeGloves = false;
 	}
 
+	m_RateLimitLastCommandTimes.Purge();
+
+	// Get rid of the progress bar...
+	SetProgressBarTime( 0 );
+
 	CreateViewModel( 1 );
+
+	// we need to do that because player can change their agent but the class won't
+	// change and it won't change arms as well
+	if ( HasAgentSet( GetTeamNumber() ) )
+	{
+		if ( GetTeamNumber() == TEAM_CT )
+			m_iClass = GetCSAgentInfoCT( GetAgentID( GetTeamNumber() ) )->m_iClass;
+		if ( GetTeamNumber() == TEAM_TERRORIST )
+			m_iClass = GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_iClass;
+	}
+	// PiMoN: placing it here since the server can change the varriable mid-game
+	else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && CSGameRules()->GetMapFactionsForThisPlayer(this) > -1 )
+	{
+		m_iClass = CSGameRules()->GetMapFactionsForThisPlayer(this);
+	}
 
 	// Set their player model.
 	SetModelFromClass();
@@ -1005,14 +1248,6 @@ void CCSPlayer::Spawn()
 
 	m_cycleLatch = 0;
 	m_cycleLatchTimer.Start( RandomFloat( 0.0f, CycleLatchInterval ) );
-	StopLookingAtWeapon();
-	m_bIsHoldingLookAtWeapon = false;
-
-	// If we're constantly respawning then reset damage stats on spawn. Otherwise this'll happen on roundrespawn after damage is reported.
-	if ( IsAbleToInstantRespawn() )
-	{
-		ResetDamageCounters();
-	}
 
 	StockPlayerAmmo();
 	// Calculate timeout for immunity
@@ -1033,6 +1268,20 @@ void CCSPlayer::Spawn()
 		m_fImmuneToDamageTime = 0.0f;
 		m_bImmunity = false;
 	}
+
+	StopLookingAtWeapon();
+	m_bIsHoldingLookAtWeapon = false;
+
+	// If we're constantly respawning then reset damage stats on spawn. Otherwise this'll happen on roundrespawn after damage is reported.
+	if ( IsAbleToInstantRespawn() )
+	{
+		ResetDamageCounters();
+	}
+
+	if ( GetTeamNumber() == TEAM_CT )
+		m_bIsFemale = (HasAgentSet( TEAM_CT )) ? (GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_bIsFemale) : false;
+	else
+		m_bIsFemale = (HasAgentSet( TEAM_TERRORIST )) ? (GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_bIsFemale) : false;
 }
 
 void CCSPlayer::ShowViewPortPanel( const char * name, bool bShow, KeyValues *data )
@@ -1443,6 +1692,12 @@ void CCSPlayer::DeathSound( const CTakeDamageInfo &info )
 	}
 	else
 	{
+		if ( m_bIsFemale )
+		{
+			EmitSound( "Player.DeathFem" );
+			return;
+		}
+
 		EmitSound( "Player.Death" );
 	}
 }
@@ -4174,8 +4429,22 @@ void CCSPlayer::Radio( const char *pszRadioSound, const char *pszRadioText )
 		}
 	}
 
+	// god damm this looks like a 3 year old's code
+	char strRadioSound[256];
+
+	// special case for agents
+	if ( HasAgentSet( GetTeamNumber() ) )
+	{
+		if ( GetTeamNumber() == TEAM_CT )
+			Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s%s", GetCSAgentInfoCT( GetAgentID( GetTeamNumber() ) )->m_szRadioPrefix, pszRadioSound );
+		if ( GetTeamNumber() == TEAM_TERRORIST )
+			Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s%s", GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_szRadioPrefix, pszRadioSound );
+	}
+	else
+		Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s%s", GetCSClassInfo( m_iClass )->m_szRadioPrefix, pszRadioSound );
+
 	UserMessageBegin ( filter, "SendAudio" );
-		WRITE_STRING( pszRadioSound );
+		WRITE_STRING( strRadioSound  );
 	MessageEnd();
 
 	//icon over the head for teammates
@@ -4963,41 +5232,29 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 
 	if ( team == GetTeamNumber() )
 	{
-		// Let people change class (skin) by re-joining the same team
-		if ( GetTeamNumber() == TEAM_TERRORIST && TerroristPlayerModels.Count() > 1 )
+		// if we don't have an agent and also map factions are disabled (or there are no default factions for current map) let the players choose a faction
+		if ( !HasAgentSet( GetTeamNumber() ) && (!CSGameRules()->UseMapFactionsForThisPlayer(this) || CSGameRules()->GetMapFactionsForThisPlayer(this) == -1) )
 		{
-			ShowViewPortPanel( PANEL_CLASS_TER );
-		}
-		else if ( GetTeamNumber() == TEAM_CT && CTPlayerModels.Count() > 1 )
-		{
-			ShowViewPortPanel( PANEL_CLASS_CT );
-		}
-		return true;	// we wouldn't change the team
-	}
-
-	if ( mp->TeamFull( team ) )
-	{
-		// attempt to kick a bot to make room for this player
-		bool madeRoom = false;
-		if (cv_bot_auto_vacate.GetBool() && !IsBot())
-		{
-			if (UTIL_KickBotFromTeam( team ))
-				madeRoom = true;
-		}
-
-		if (!madeRoom)
-		{
-			if ( team == TEAM_TERRORIST )
+			// Let people change class (skin) by re-joining the same team
+			if ( GetTeamNumber() == TEAM_TERRORIST )
 			{
-				ClientPrint( this, HUD_PRINTCENTER, "#Terrorists_Full" );
+				ShowViewPortPanel( PANEL_CLASS_TER );
 			}
-			else if ( team == TEAM_CT )
+			else if ( GetTeamNumber() == TEAM_CT )
 			{
-				ClientPrint( this, HUD_PRINTCENTER, "#CTs_Full" );
+				ShowViewPortPanel( PANEL_CLASS_CT );
 			}
-
-			ShowViewPortPanel( PANEL_TEAM );
-			return false;
+			return true;	// we wouldn't change the team
+		}
+		else
+		{
+			if ( HasAgentSet(GetTeamNumber()) )
+				HandleCommand_JoinClass( GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_iClass );
+			else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && CSGameRules()->GetMapFactionsForThisPlayer(this) > -1 )
+			{
+				HandleCommand_JoinClass( CSGameRules()->GetMapFactionsForThisPlayer(this) );
+			}
+			return true;
 		}
 	}
 
@@ -5042,6 +5299,7 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 
 		ChangeTeam( TEAM_SPECTATOR );
 		m_iClass = (int)CS_CLASS_NONE;
+		m_iSkin = 0;
 
 		if ( !(m_iDisplayHistoryBits & DHF_SPEC_DUCK) )
 		{
@@ -5140,7 +5398,90 @@ bool CCSPlayer::HandleCommand_JoinClass( int iClass )
 		CommitSuicide();
 	}
 
-	m_iClass = iClass;
+	if ( !HasAgentSet( GetTeamNumber() ) )
+	{
+		m_iClass = iClass;
+		switch ( m_iClass )
+		{
+			case CS_CLASS_PHOENIX_CONNNECTION:
+			{
+				m_iSkin = RandomInt( 0, TPhoenixPlayerModels.Count() - 1 );
+				break;
+			}
+			case CS_CLASS_L337_KREW:
+			{
+				m_iSkin = RandomInt( 0, TLeetPlayerModels.Count() - 1 );
+				break;
+			}
+			case CS_CLASS_SEPARATIST:
+			{
+				m_iSkin = RandomInt( 0, TSeparatistPlayerModels.Count() - 1 );
+				break;
+			}
+			case CS_CLASS_BALKAN:
+			{
+				m_iSkin = RandomInt( 0, TBalkanPlayerModels.Count() - 1 );
+				break;
+			}
+			case CS_CLASS_PROFESSIONAL:
+			{
+				m_iSkin = RandomInt( 0, TProfessionalPlayerModels.Count() - 1 );
+				break;
+			}
+			case CS_CLASS_ANARCHIST:
+			{
+				m_iSkin = RandomInt( 0, TAnarchistPlayerModels.Count() - 1 );
+				break;
+			}
+			case CS_CLASS_PIRATE:
+			{
+				m_iSkin = RandomInt( 0, TPiratePlayerModels.Count() - 1 );
+				break;
+			}
+			case CS_CLASS_SEAL_TEAM_6:
+			{
+				m_iSkin = RandomInt( 0, CTST6PlayerModels.Count() - 1 );
+				break;
+			}
+			case CS_CLASS_GSG_9:
+			{
+				m_iSkin = RandomInt( 0, CTGSG9PlayerModels.Count() - 1 );
+				break;
+			}
+			case CS_CLASS_SAS:
+			{
+				m_iSkin = RandomInt( 0, CTSASPlayerModels.Count() - 1 );
+				break;
+			}
+			case CS_CLASS_GIGN:
+			{
+				m_iSkin = RandomInt( 0, CTGIGNPlayerModels.Count() - 1 );
+				break;
+			}
+			case CS_CLASS_FBI:
+			{
+				m_iSkin = RandomInt( 0, CTFBIPlayerModels.Count() - 1 );
+				break;
+			}
+			case CS_CLASS_IDF:
+			{
+				m_iSkin = RandomInt( 0, CTIDFPlayerModels.Count() - 1 );
+				break;
+			}
+			case CS_CLASS_SWAT:
+			{
+				m_iSkin = RandomInt( 0, CTSWATPlayerModels.Count() - 1 );
+				break;
+			}
+		}
+	}
+	else
+	{
+		if ( GetTeamNumber() == TEAM_CT )
+			m_iClass = GetCSAgentInfoCT( GetAgentID(GetTeamNumber()) )->m_iClass;
+		if ( GetTeamNumber() == TEAM_TERRORIST )
+			m_iClass = GetCSAgentInfoT( GetAgentID(GetTeamNumber()) )->m_iClass;
+	}
 
 	if (State_Get() == STATE_PICKINGCLASS)
 	{
@@ -5760,18 +6101,31 @@ void CCSPlayer::State_Enter_PICKINGCLASS()
 
 	PhysObjectSleep();
 
-	// show the class menu:
-	if ( GetTeamNumber() == TEAM_TERRORIST && TerroristPlayerModels.Count() > 1 )
+	if ( CSGameRules()->GetMapFactionsForThisPlayer(this) > -1 )
 	{
-		ShowViewPortPanel( PANEL_CLASS_TER );
-	}
-	else if ( GetTeamNumber() == TEAM_CT && CTPlayerModels.Count() > 1 )
-	{
-		ShowViewPortPanel( PANEL_CLASS_CT );
+		HandleCommand_JoinClass( CSGameRules()->GetMapFactionsForThisPlayer(this) );
 	}
 	else
 	{
-		HandleCommand_JoinClass( 0 );
+		// show the class menu:
+		if ( GetTeamNumber() == TEAM_TERRORIST )
+		{
+			if ( HasAgentSet( TEAM_TERRORIST ) )
+				HandleCommand_JoinClass( GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_iClass );
+			else
+				ShowViewPortPanel( PANEL_CLASS_TER );
+		}
+		else if ( GetTeamNumber() == TEAM_CT )
+		{
+			if ( HasAgentSet( TEAM_CT ) )
+				HandleCommand_JoinClass( GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_iClass );
+			else
+				ShowViewPortPanel( PANEL_CLASS_CT );
+		}
+		else
+		{
+			HandleCommand_JoinClass( 0 );
+		}
 	}
 }
 
@@ -7210,6 +7564,7 @@ void CCSPlayer::ChangeTeam( int iTeamNum )
 
 	//reset class
 	m_iClass = (int)CS_CLASS_NONE;
+	m_iSkin = 0;
 
 	// update client state
 
@@ -7309,11 +7664,20 @@ void CCSPlayer::SwitchTeam( int iTeamNum )
 	case CS_CLASS_L337_KREW:
 		m_iClass = (int)CS_CLASS_GSG_9;
 		break;
-	case CS_CLASS_ARCTIC_AVENGERS:
+	case CS_CLASS_SEPARATIST:
 		m_iClass = (int)CS_CLASS_SAS;
 		break;
-	case CS_CLASS_GUERILLA_WARFARE:
+	case CS_CLASS_BALKAN:
 		m_iClass = (int)CS_CLASS_GIGN;
+		break;
+	case CS_CLASS_PROFESSIONAL:
+		m_iClass = (int)CS_CLASS_FBI;
+		break;
+	case CS_CLASS_ANARCHIST:
+		m_iClass = (int)CS_CLASS_IDF;
+		break;
+	case CS_CLASS_PIRATE:
+		m_iClass = (int)CS_CLASS_SWAT;
 		break;
 
 	// CT -> Terrorist
@@ -7324,10 +7688,19 @@ void CCSPlayer::SwitchTeam( int iTeamNum )
 		m_iClass = (int)CS_CLASS_L337_KREW;
 		break;
 	case CS_CLASS_SAS:
-		m_iClass = (int)CS_CLASS_ARCTIC_AVENGERS;
+		m_iClass = (int)CS_CLASS_SEPARATIST;
 		break;
 	case CS_CLASS_GIGN:
-		m_iClass = (int)CS_CLASS_GUERILLA_WARFARE;
+		m_iClass = (int)CS_CLASS_BALKAN;
+		break;
+	case CS_CLASS_FBI:
+		m_iClass = (int)CS_CLASS_PROFESSIONAL;
+		break;
+	case CS_CLASS_IDF:
+		m_iClass = (int)CS_CLASS_ANARCHIST;
+		break;
+	case CS_CLASS_SWAT:
+		m_iClass = (int)CS_CLASS_PIRATE;
 		break;
 
 	case CS_CLASS_NONE:
@@ -8490,6 +8863,26 @@ int CCSPlayer::GetNumEnemiesDamaged()
 //=============================================================================
 // HPE_END
 //=============================================================================
+
+bool CCSPlayer::HasAgentSet( int team )
+{
+	if ( team == TEAM_CT )
+		return ( m_iLoadoutSlotAgentCT > 0 );
+	if ( team == TEAM_TERRORIST )
+		return ( m_iLoadoutSlotAgentT > 0 );
+
+	return false;
+}
+
+int CCSPlayer::GetAgentID( int team )
+{
+	if ( team == TEAM_CT )
+		return m_iLoadoutSlotAgentCT;
+	if ( team == TEAM_TERRORIST )
+		return m_iLoadoutSlotAgentT;
+
+	return 0;
+}
 
 void UTIL_AwardMoneyToTeam( int iAmount, int iTeam, CBaseEntity *pIgnore )
 {
