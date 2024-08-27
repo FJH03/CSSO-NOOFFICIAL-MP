@@ -809,6 +809,8 @@ C_CSPlayer::C_CSPlayer() :
 	view->SetScreenOverlayMaterial( NULL );
 
     m_bPlayingFreezeCamSound = false;
+
+	ListenForGameEvent( "player_spawn" );
 }
 
 
