@@ -99,6 +99,9 @@ public:
 	char					szAmmo1[MAX_WEAPON_AMMO_NAME];			// "primary" ammo type
 	char					szAmmo2[MAX_WEAPON_AMMO_NAME];			// "secondary" ammo type
 
+	int						iPrimaryReserveAmmoCount;
+	int						iSecondaryReserveAmmoCount;
+
 	// Sound blocks
 	char					aShootSounds[NUM_SHOOT_SOUND_TYPES][MAX_WEAPON_STRING];	
 

@@ -10,10 +10,14 @@
 #pragma once
 #endif
 
+#ifdef CLIENT_DLL
+	#define CWeaponCSBase C_WeaponCSBase
+#endif
 
 #include "weapon_parse.h"
 #include "networkvar.h"
 
+class CWeaponCSBase;
 
 //--------------------------------------------------------------------------------------------------------
 enum CSWeaponType
@@ -27,6 +31,7 @@ enum CSWeaponType
 	WEAPONTYPE_MACHINEGUN,
 	WEAPONTYPE_C4,
 	WEAPONTYPE_GRENADE,
+	WEAPONTYPE_EQUIPMENT,
 	WEAPONTYPE_UNKNOWN
 
 };
@@ -37,9 +42,9 @@ enum CSWeaponID
 {
 	WEAPON_NONE = 0,
 
-	WEAPON_P228,
+	WEAPON_P250,
 	WEAPON_GLOCK,
-	WEAPON_SCOUT,
+	WEAPON_SSG08,
 	WEAPON_HEGRENADE,
 	WEAPON_XM1014,
 	WEAPON_C4,
@@ -49,21 +54,21 @@ enum CSWeaponID
 	WEAPON_ELITE,
 	WEAPON_FIVESEVEN,
 	WEAPON_UMP45,
-	WEAPON_SG550,
+	WEAPON_SCAR20,
 
-	WEAPON_GALIL,
+	WEAPON_GALILAR,
 	WEAPON_FAMAS,
 	WEAPON_USP,
 	WEAPON_AWP,
-	WEAPON_MP5NAVY,
+	WEAPON_MP5SD,
 	WEAPON_M249,
-	WEAPON_M3,
+	WEAPON_NOVA,
 	WEAPON_M4A1,
-	WEAPON_TMP,
+	WEAPON_MP9,
 	WEAPON_G3SG1,
 	WEAPON_FLASHBANG,
 	WEAPON_DEAGLE,
-	WEAPON_SG552,
+	WEAPON_SG556,
 	WEAPON_AK47,
 	WEAPON_P90,
 	//knifes massive
@@ -89,6 +94,18 @@ enum CSWeaponID
 	WEAPON_KNIFE_URSUS,
 	WEAPON_KNIFE_WIDOWMAKER,
 
+	WEAPON_HKP2000,
+	WEAPON_TEC9,
+	WEAPON_M4A4,
+	WEAPON_REVOLVER,
+	WEAPON_CZ75,
+	WEAPON_MAG7,
+	WEAPON_SAWEDOFF,
+	WEAPON_NEGEV,
+	WEAPON_MP7,
+	WEAPON_BIZON,
+	WEAPON_TASER,
+
 	WEAPON_SHIELDGUN,	// BOTPORT: Is this still needed?
 
 	WEAPON_KEVLAR,
@@ -101,6 +118,36 @@ enum CSWeaponID
 #define MAX_EQUIPMENT (WEAPON_MAX - WEAPON_KEVLAR)
 
 void PrepareEquipmentInfo( void );
+
+class WeaponRecoilData
+{
+public:
+
+	WeaponRecoilData();
+	~WeaponRecoilData();
+
+	void GetRecoilOffsets( CWeaponCSBase *pWeapon, int iMode, int iIndex, float& fAngle, float &fMagnitude );
+	void GenerateRecoilPattern( CSWeaponID id );
+
+private:
+
+	struct RecoilOffset
+	{
+		float	fAngle;
+		float	fMagnitude;
+	};
+
+	struct RecoilData
+	{
+		CSWeaponID					iWeaponID;
+		RecoilOffset				recoilTable[2][64];
+	};
+
+	CUtlMap< CSWeaponID, RecoilData* > m_mapRecoilTables;
+
+	void GenerateRecoilTable( RecoilData *data );
+
+};
 
 //--------------------------------------------------------------------------------------------------------
 const char * WeaponClassAsString( CSWeaponType weaponType );
@@ -168,7 +215,7 @@ public:
 	float	m_flRange;
 	float	m_flRangeModifier;
 	int		m_iBullets;
-	float	m_flCycleTime;
+	float	m_flCycleTime[2];
 
 	// Variables that control how fast the weapon's accuracy changes as it is fired.
 	bool	m_bAccuracyQuadratic;
@@ -181,18 +228,35 @@ public:
 	float m_fInaccuracyCrouch[2];
 	float m_fInaccuracyStand[2];
 	float m_fInaccuracyJump[2];
+	float m_fInaccuracyJumpInitial;
 	float m_fInaccuracyLand[2];
 	float m_fInaccuracyLadder[2];
 	float m_fInaccuracyImpulseFire[2];
 	float m_fInaccuracyMove[2];
 	float m_fRecoveryTimeStand;
+	float m_fRecoveryTimeStandFinal;
 	float m_fRecoveryTimeCrouch;
+	float m_fRecoveryTimeCrouchFinal;
 	float m_fInaccuracyReload;
 	float m_fInaccuracyAltSwitch;
+	float m_fRecoilAngle[2];
+	float m_fRecoilAngleVariance[2];
+	float m_fRecoilMagnitude[2];
+	float m_fRecoilMagnitudeVariance[2];
+	int   m_iRecoilSeed;
+
+	int   m_iRecoveryTransitionStartBullet;
+	int   m_iRecoveryTransitionEndBullet;
 
 	// Delay until the next idle animation after shooting.
 	float	m_flTimeToIdleAfterFire;
 	float	m_flIdleInterval;
+
+	// muzzle flashes
+	char	m_szMuzzleFlash1stPerson[MAX_WEAPON_STRING];
+	char	m_szMuzzleFlash1stPersonAlt[MAX_WEAPON_STRING];
+	char	m_szMuzzleFlash3rdPerson[MAX_WEAPON_STRING];
+	char	m_szMuzzleFlash3rdPersonAlt[MAX_WEAPON_STRING];
    
 	int		GetWeaponPrice( void ) const;
 	int		GetDefaultPrice( void );

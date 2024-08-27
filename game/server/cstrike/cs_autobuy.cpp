@@ -10,30 +10,41 @@
 // Weapon class information for each weapon including the class name and the buy command alias.
 AutoBuyInfoStruct g_autoBuyInfo[] = 
 {
-	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_RIFLE), "galil", "weapon_galil" }, // galil
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_RIFLE), "ak47", "weapon_ak47" },  // ak47
-	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SNIPERRIFLE), "scout", "weapon_scout" }, // scout
-	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_RIFLE), "sg552", "weapon_sg552" }, // sg552
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_RIFLE), "galilar", "weapon_galilar" }, // galilar
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SNIPERRIFLE), "awp", "weapon_awp" }, // awp
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SNIPERRIFLE), "g3sg1", "weapon_g3sg1" }, // g3sg1
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_RIFLE), "m4a4", "weapon_m4a4" }, // m4a4
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_RIFLE), "m4a1_silencer", "weapon_m4a1_silencer" }, // m4a1_silencer
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_RIFLE), "famas", "weapon_famas" }, // famas
-	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_RIFLE), "m4a1", "weapon_m4a1" }, // m4a1
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_RIFLE), "aug", "weapon_aug" }, // aug
-	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SNIPERRIFLE), "sg550", "weapon_sg550" }, // sg550
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_RIFLE), "sg556", "weapon_sg556" }, // sg556
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SNIPERRIFLE), "scar20", "weapon_scar20" }, // scar20
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SNIPERRIFLE), "ssg08", "weapon_ssg08" }, // ssg08
 	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "glock", "weapon_glock" }, // glock
-	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "usp", "weapon_usp" }, // usp
-	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "p228", "weapon_p228" }, // p228
+	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "usp_silencer", "weapon_usp_silencer" }, // usp
 	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "deagle", "weapon_deagle" }, // deagle
+	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "revolver", "weapon_revolver" }, // revolver
 	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "elite", "weapon_elite" },	// elites
 	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "fn57", "weapon_fiveseven" },	// fn57
-	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SHOTGUN), "m3", "weapon_m3" }, // m3
+	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "hkp2000", "weapon_hkp2000" }, // hkp2000
+	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "p250", "weapon_p250" }, // p250
+	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "cz75", "weapon_cz75" },	// cz75
+	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "tec9", "weapon_tec9" },	// tec9
+	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL),	"taser", "weapon_taser" },	// taser
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SHOTGUN), "nova", "weapon_nova" }, // nova
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SHOTGUN), "xm1014", "weapon_xm1014" },	// xm1014
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SHOTGUN), "mag7", "weapon_mag7" }, // mag7
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SHOTGUN), "sawedoff", "weapon_sawedoff" }, // sawedoff
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SMG), "mac10", "weapon_mac10" },	// mac10
-	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SMG), "tmp", "weapon_tmp" },	// tmp
-	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SMG), "mp5navy", "weapon_mp5navy" },	// mp5navy
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SMG), "ump45", "weapon_ump45" },	// ump45
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SMG), "p90", "weapon_p90" },	// p90
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SMG), "bizon", "weapon_bizon" },	// bizon
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SMG), "mp7", "weapon_mp7" },	// mp7
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SMG), "mp5sd", "weapon_mp5sd" },	// mp5sd
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SMG), "mp9", "weapon_mp9" },	// mp9
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_MACHINEGUN), "m249", "weapon_m249" },	// m249
+	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_MACHINEGUN), "negev", "weapon_negev" },	// negev
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_AMMO), "primammo", "primammo" },	// primammo
 	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_AMMO), "secammo", "secammo" }, // secmmo
 	{ (AutoBuyClassType)(AUTOBUYCLASS_ARMOR), "vest", "item_kevlar" }, // vest

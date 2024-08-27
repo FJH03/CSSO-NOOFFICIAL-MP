@@ -164,7 +164,7 @@ bool CGameRules::CanHaveAmmo( CBaseCombatCharacter *pPlayer, int iAmmoIndex )
 	if ( iAmmoIndex > -1 )
 	{
 		// Get the max carrying capacity for this ammo
-		int iMaxCarry = GetAmmoDef()->MaxCarry( iAmmoIndex );
+		int iMaxCarry = GetAmmoDef()->MaxCarry( iAmmoIndex, pPlayer );
 
 		// Does the player have room for more of this type of ammo?
 		if ( pPlayer->GetAmmoCount( iAmmoIndex ) < iMaxCarry )
@@ -192,9 +192,9 @@ CBaseEntity *CGameRules::GetPlayerSpawnSpot( CBasePlayer *pPlayer )
 	pPlayer->SetLocalOrigin( pSpawnSpot->GetAbsOrigin() + Vector(0,0,1) );
 	pPlayer->SetAbsVelocity( vec3_origin );
 	pPlayer->SetLocalAngles( pSpawnSpot->GetLocalAngles() );
-	pPlayer->m_Local.m_vecPunchAngle = vec3_angle;
-	pPlayer->m_Local.m_vecPunchAngleVel = vec3_angle;
-	pPlayer->SnapEyeAngles( pSpawnSpot->GetLocalAngles() );
+	pPlayer->m_Local.m_viewPunchAngle = vec3_angle;
+	pPlayer->m_Local.m_aimPunchAngle = vec3_angle;
+	pPlayer->m_Local.m_aimPunchAngleVel = vec3_angle;
 
 	return pSpawnSpot;
 }

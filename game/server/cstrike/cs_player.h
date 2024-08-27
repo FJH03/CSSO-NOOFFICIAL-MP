@@ -308,14 +308,12 @@ public:
 		bool bDoEffects,
 		float xSpread, float ySpread );
 
+	virtual QAngle	GetAimPunchAngle( void );
+	QAngle	GetRawAimPunchAngle( void ) const;
+
 	void KickBack(
-		float up_base,
-		float lateral_base,
-		float up_modifier,
-		float lateral_modifier,
-		float up_max,
-		float lateral_max,
-		int direction_change );
+		float fAngle,
+		float fMagnitude );
 
 	void GetBulletTypeParameters( 
 		int iBulletType, 
@@ -759,6 +757,7 @@ public:
 	int m_iLoadoutSlotAgentCT;
 	int m_iLoadoutSlotAgentT;
 	bool IsAbleToInstantRespawn( void );
+	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield = true, bool bThrow = false );
 private:
 	CountdownTimer m_ladderSurpressionTimer;
 	Vector m_lastLadderNormal;
@@ -781,7 +780,6 @@ protected:
 	CNetworkVar( int, m_iClass ); // One of the CS_CLASS_ enums.
 	int m_iSkin;
 
-	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield = true, bool bThrow = false );
 	bool DropRifle( bool fromDeath = false );
 	bool DropPistol( bool fromDeath = false );
 	

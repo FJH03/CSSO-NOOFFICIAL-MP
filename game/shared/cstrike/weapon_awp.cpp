@@ -55,7 +55,6 @@ public:
 	virtual void PrimaryAttack();
 	virtual void SecondaryAttack();
 
- 	virtual float GetInaccuracy() const;
 	virtual float GetMaxSpeed() const;
 	virtual bool IsAwp() const;
 	virtual bool Reload();
@@ -168,52 +167,13 @@ void CWeaponAWP::SecondaryAttack()
 
 }
 
-float CWeaponAWP::GetInaccuracy() const
-{
-	if ( weapon_accuracy_model.GetInt() == 1 )
-	{
-		CCSPlayer *pPlayer = GetPlayerOwner();
-		if ( !pPlayer )
-			return 0.0f;
-	
-		float fSpread = 0.0f;
-	
-		if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-			fSpread = 0.85f;
-	
-		else if ( pPlayer->GetAbsVelocity().Length2D() > 140 )
-			fSpread = 0.25f;
-	
-		else if ( pPlayer->GetAbsVelocity().Length2D() > 10 )
-			fSpread = 0.10f;
-	
-		else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-			fSpread = 0.0f;
-	
-		else
-			fSpread = 0.001f;
-	
-		// If we are not zoomed in, or we have very recently zoomed and are still transitioning, the bullet diverts more.
-		if (pPlayer->GetFOV() == pPlayer->GetDefaultFOV() || (gpGlobals->curtime < m_zoomFullyActiveTime))
-		{
-			fSpread += 0.08f;
-		}
-	
-		return fSpread;
-	}
-	else
-	{
-		return BaseClass::GetInaccuracy();
-	}
-}
-
 void CWeaponAWP::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
 
-	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, m_weaponMode ) )
+	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], m_weaponMode ) )
 		return;
 
 	if ( m_weaponMode == Secondary_Mode )
@@ -238,10 +198,6 @@ void CWeaponAWP::PrimaryAttack()
 			m_weaponMode = Primary_Mode;
 		#endif
 	}
-
-	QAngle angle = pPlayer->GetPunchAngle();
-	angle.x -= 2;
-	pPlayer->SetPunchAngle( angle );
 }
 
 #ifdef AWP_UNZOOM

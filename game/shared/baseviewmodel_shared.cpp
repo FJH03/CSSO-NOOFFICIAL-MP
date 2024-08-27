@@ -422,7 +422,7 @@ void CBaseViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& eyePos
 		}
 #endif
 		vmorigin += ( viewmodel_offset_y.GetFloat() * vecForward ) + ( viewmodel_offset_z.GetFloat() * vecUp ) + ( viewmodel_offset_x.GetFloat() * vecRight );
-		vmangles += (owner->m_Local.m_vecPunchAngle * viewmodel_recoil.GetFloat() * 0.3f);//Not verified
+		vmangles += (owner->m_Local.m_aimPunchAngle * viewmodel_recoil.GetFloat() * 0.3f);//Not verified
 	}
 
 	CBaseCombatWeapon *pWeapon = m_hWeapon.Get();

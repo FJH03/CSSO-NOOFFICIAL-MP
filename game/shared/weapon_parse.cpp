@@ -446,6 +446,9 @@ void FileWeaponInfo_t::Parse( KeyValues *pKeyValuesData, const char *szWeaponNam
 		Q_strncpy( szAmmo2, pAmmo, sizeof( szAmmo2 )  );
 	iAmmo2Type = GetAmmoDef()->Index( szAmmo2 );
 
+	iPrimaryReserveAmmoCount = pKeyValuesData->GetInt( "ammo_primary_reserve_max", 0 );
+	iSecondaryReserveAmmoCount = pKeyValuesData->GetInt( "ammo_secondary_reserve_max", 0 );
+
 	// Now read the weapon sounds
 	memset( aShootSounds, 0, sizeof( aShootSounds ) );
 	KeyValues *pSoundData = pKeyValuesData->FindKey( "SoundData" );

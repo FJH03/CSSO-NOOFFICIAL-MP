@@ -58,7 +58,7 @@ void CCSBot::OnWeaponFire( IGameEvent *event )
 
 		// quiet
 		case WEAPON_KNIFE:
-		case WEAPON_TMP:
+		case WEAPON_MP5SD:
 			range = ShortRange;
 			break;
 
