@@ -692,7 +692,16 @@ void CWeaponCSBase::ItemPostFrame()
 		m_bInReload = false;
 	}
 
-	if ((pPlayer->m_nButtons & IN_ATTACK2) && (m_flNextSecondaryAttack <= gpGlobals->curtime))
+	if ( (pPlayer->m_nButtons & IN_ATTACK ) && ( m_flNextPrimaryAttack <= gpGlobals->curtime ) )
+	{
+		ItemPostFrame_ProcessPrimaryAttack( pPlayer );
+	}
+	else if ( ( pPlayer->m_nButtons & IN_ZOOM ) && ( m_flNextSecondaryAttack <= gpGlobals->curtime ) )
+	{
+		if ( ItemPostFrame_ProcessZoomAction( pPlayer ) )
+			pPlayer->m_nButtons &= ~IN_ZOOM;
+	}
+	else if ((pPlayer->m_nButtons & IN_ATTACK2) && (m_flNextSecondaryAttack <= gpGlobals->curtime))
 	{
 		if ( pPlayer->HasShield() )
 			CWeaponCSBase::SecondaryAttack();
@@ -911,6 +920,19 @@ void CWeaponCSBase::ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer )
 #ifndef CLIENT_DLL
 	pPlayer->ClearImmunity();
 #endif
+}
+
+bool CWeaponCSBase::ItemPostFrame_ProcessZoomAction( CCSPlayer *pPlayer )
+{
+	if ( IsRevolver() )	// Revolver treats zoom as secondary fire
+		return ItemPostFrame_ProcessSecondaryAttack( pPlayer );
+
+	if ( IsKindOf( WEAPONTYPE_SNIPER_RIFLE ) || IsKindOf( WEAPONTYPE_KNIFE ) ) //need test sensitivity on snipers
+	{
+		CallSecondaryAttack();
+	}
+
+	return true;
 }
 
 void CWeaponCSBase::CallWeaponIronsight()

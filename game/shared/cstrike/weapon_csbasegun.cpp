@@ -37,6 +37,8 @@ void CWeaponCSBaseGun::Spawn()
 	m_zoomFullyActiveTime = -1.0f;
 
 	BaseClass::Spawn();
+
+	ResetPostponeFireReadyTime();
 }
 
 

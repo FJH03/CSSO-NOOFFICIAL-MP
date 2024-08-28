@@ -251,6 +251,7 @@ public:
 	virtual bool IsRevolver() const { return GetWeaponID() == WEAPON_REVOLVER; }
 
 	void			ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer );
+	bool			ItemPostFrame_ProcessZoomAction( CCSPlayer *pPlayer );
 	bool			ItemPostFrame_ProcessSecondaryAttack( CCSPlayer *pPlayer );
 	void			ItemPostFrame_ProcessIdleNoAction( CCSPlayer *pPlayer );
 
