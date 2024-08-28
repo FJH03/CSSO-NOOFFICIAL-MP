@@ -41,7 +41,7 @@ public:
 
 	virtual bool IsRevolver() const { return true; }
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_REVOLVER; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_REVOLVER; }
 
 private:
 	CRevolver( const CRevolver & );

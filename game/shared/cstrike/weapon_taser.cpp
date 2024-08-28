@@ -42,7 +42,7 @@ public:
 	const char* GetMuzzleFlashEffectName( bool bThirdPerson );
 #endif
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_TASER; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_TASER; }
 
 private:
 	CWeaponTaser( const CWeaponTaser& );

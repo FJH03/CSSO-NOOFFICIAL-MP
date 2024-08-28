@@ -40,7 +40,7 @@ public:
 	virtual void Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
 #endif
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_CZ75; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_CZ75; }
 
 private:
 	

@@ -355,6 +355,7 @@ BEGIN_PREDICTION_DATA( CWeaponCSBase )
 	DEFINE_PRED_FIELD_TOL( m_fAccuracyPenalty, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.00005f ),
 	DEFINE_PRED_FIELD( m_fLastShotTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flPostponeFireReadyTime, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
+	DEFINE_PRED_FIELD( m_fLastShotTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flRecoilIndex, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 END_PREDICTION_DATA()
 #endif
@@ -2853,16 +2854,6 @@ void CWeaponCSBase::UpdateAccuracyPenalty()
 		float fDecayFactor = logf( 10.0f ) / GetRecoveryTime( );
 
 		m_fAccuracyPenalty = Lerp( expf( TICK_INTERVAL * -fDecayFactor ), fNewPenalty, ( float ) m_fAccuracyPenalty );
-	}
-
-#define WEAPON_RECOIL_DECAY_THRESHOLD 1.10	
-	// Decay the recoil index if a little more than cycle time has elapsed since the last shot. In other words,
-	// don't decay if we're firing full-auto.
-	if ( gpGlobals->curtime > m_fLastShotTime + ( GetCSWpnData().m_flCycleTime[m_weaponMode] * WEAPON_RECOIL_DECAY_THRESHOLD ) )
-	{
-		float fDecayFactor = logf( 10.0f ) * weapon_recoil_decay_coefficient.GetFloat( );
-
-		m_flRecoilIndex = Lerp( expf( TICK_INTERVAL * -fDecayFactor ), 0.0f, ( float ) m_flRecoilIndex );
 	}
 }
 
