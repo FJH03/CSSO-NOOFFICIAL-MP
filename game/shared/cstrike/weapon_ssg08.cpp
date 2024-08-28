@@ -36,7 +36,6 @@ public:
 	virtual void PrimaryAttack();
 	virtual void SecondaryAttack();
 
- 	virtual float GetInaccuracy() const;
 	virtual float GetMaxSpeed() const;
 	virtual bool Reload();
 	virtual bool Deploy();
@@ -129,37 +128,6 @@ void CWeaponSSG08::SecondaryAttack()
 #endif
 }
 
-float CWeaponSSG08::GetInaccuracy() const
-{
-	if ( weapon_accuracy_model.GetInt() == 1 )
-	{
-		CCSPlayer *pPlayer = GetPlayerOwner();
-		if (pPlayer == NULL)
-			return 0.0f;
-	
-		float fSpread = 0.0f;
-	
-		if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-			fSpread = 0.2f;
-		else if (pPlayer->GetAbsVelocity().Length2D() > 170)
-			fSpread = 0.075f;
-		else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-			fSpread = 0.0f;
-		else
-			fSpread = 0.007f;
-	
-		// If we are not zoomed in, or we have very recently zoomed and are still transitioning, the bullet diverts more.
-		if (pPlayer->GetFOV() == pPlayer->GetDefaultFOV() || (gpGlobals->curtime < m_zoomFullyActiveTime))
-		{
-			fSpread += 0.025;
-		}
-	
-		return fSpread;
-	}
-	else
-		return BaseClass::GetInaccuracy();
-}
-
 void CWeaponSSG08::PrimaryAttack( void )
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
@@ -189,10 +157,6 @@ void CWeaponSSG08::PrimaryAttack( void )
 			m_weaponMode = Primary_Mode;
 // 		#endif
 	}
-
-	QAngle angle = pPlayer->GetPunchAngle();
-	angle.x -= 2;
-	pPlayer->SetPunchAngle( angle );
 }
 
 

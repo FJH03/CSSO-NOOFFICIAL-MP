@@ -308,14 +308,12 @@ public:
 		bool bDoEffects,
 		float xSpread, float ySpread );
 
+	virtual QAngle	GetAimPunchAngle( void );
+	QAngle	GetRawAimPunchAngle( void ) const;
+
 	void KickBack(
-		float up_base,
-		float lateral_base,
-		float up_modifier,
-		float lateral_modifier,
-		float up_max,
-		float lateral_max,
-		int direction_change );
+		float fAngle,
+		float fMagnitude );
 
 	void GetBulletTypeParameters( 
 		int iBulletType, 

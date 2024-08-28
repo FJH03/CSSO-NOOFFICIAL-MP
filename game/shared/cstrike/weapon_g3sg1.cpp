@@ -36,7 +36,6 @@ public:
 	virtual bool Reload();
 	virtual bool Deploy();
 
- 	virtual float GetInaccuracy() const;
 	virtual float GetMaxSpeed();
 
 	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_G3SG1; }
@@ -71,7 +70,6 @@ CWeaponG3SG1::CWeaponG3SG1()
 void CWeaponG3SG1::Spawn()
 {
 	BaseClass::Spawn();
-	m_flAccuracy = 0.98;
 }
 
 
@@ -132,57 +130,17 @@ void CWeaponG3SG1::SecondaryAttack()
 	m_zoomFullyActiveTime = gpGlobals->curtime + 0.3; // The worst zoom time from above.  
 }
 
-float CWeaponG3SG1::GetInaccuracy() const
-{
-	if ( weapon_accuracy_model.GetInt() == 1 )
-	{
-		CCSPlayer *pPlayer = GetPlayerOwner();
-		if ( !pPlayer )
-			return 0.0f;
-	
-		float fSpread = 0.0f;
-	
-		if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-			fSpread = 0.45f * (1.0f - m_flAccuracy);
-		else if (pPlayer->GetAbsVelocity().Length2D() > 5)
-			fSpread = 0.15f;
-		else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-			fSpread = 0.035f * (1.0f - m_flAccuracy);
-		else
-			fSpread = 0.055f * (1.0f - m_flAccuracy);
-	
-		// If we are not zoomed in, or we have very recently zoomed and are still transitioning, the bullet diverts more.
-		if (pPlayer->GetFOV() == pPlayer->GetDefaultFOV() || (gpGlobals->curtime < m_zoomFullyActiveTime))
-			fSpread += 0.025;
-	
-		return fSpread;
-	}
-	else
-		return BaseClass::GetInaccuracy();
-}
-
 void CWeaponG3SG1::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
 	
-	// Mark the time of this shot and determine the accuracy modifier based on the last shot fired...
-	m_flAccuracy = 0.55 + (0.3) * (gpGlobals->curtime - m_flLastFire);	
-
-	if (m_flAccuracy > 0.98)
-		m_flAccuracy = 0.98;
-
 	m_flLastFire = gpGlobals->curtime;
 
 	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, m_weaponMode ) )
 		return;
 
-	// Adjust the punch angle.
-	QAngle angle = pPlayer->GetPunchAngle();
-	angle.x -= SharedRandomFloat("G3SG1PunchAngleX", 0.75, 1.75 ) + ( angle.x / 4 );
-	angle.y += SharedRandomFloat("G3SG1PunchAngleY", -0.75, 0.75 );
-	pPlayer->SetPunchAngle( angle );
 }
 
 
@@ -190,7 +148,6 @@ bool CWeaponG3SG1::Reload()
 {
 	bool ret = BaseClass::Reload();
 	
-	m_flAccuracy = 0.98;
 	m_weaponMode = Primary_Mode;
 	
 	return ret;
@@ -200,7 +157,6 @@ bool CWeaponG3SG1::Deploy()
 {
 	bool ret = BaseClass::Deploy();
 	
-	m_flAccuracy = 0.98;
 	m_weaponMode = Primary_Mode;
 	
 	return ret;

@@ -38,8 +38,6 @@ public:
 	virtual bool Reload();
 	virtual void WeaponIdle();
 
- 	virtual float GetInaccuracy() const;
-
 	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_P250; }
 
 private:
@@ -71,16 +69,12 @@ CWeaponP250::CWeaponP250()
 
 void CWeaponP250::Spawn( )
 {
-	m_flAccuracy = 0.9;
-	
 	BaseClass::Spawn();
 }
 
 
 bool CWeaponP250::Deploy( )
 {
-	m_flAccuracy = 0.9;
-
 	return BaseClass::Deploy();
 }
 
@@ -89,42 +83,11 @@ IMPLEMENT_NETWORKCLASS_ALIASED( WeaponP250, DT_WeaponP250 )
 BEGIN_NETWORK_TABLE( CWeaponP250, DT_WeaponP250 )
 END_NETWORK_TABLE()
 
-
-float CWeaponP250::GetInaccuracy() const
-{
-	if ( weapon_accuracy_model.GetInt() == 1 )
-	{
-		CCSPlayer *pPlayer = GetPlayerOwner();
-		if ( !pPlayer )
-			return 0.0f;
-
-		if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-			return 1.5f * (1 - m_flAccuracy);
-		else if (pPlayer->GetAbsVelocity().Length2D() > 5)
-			return 0.255f * (1 - m_flAccuracy);
-		else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-			return 0.075f * (1 - m_flAccuracy);
-		else
-			return 0.15f * (1 - m_flAccuracy);
-	}
-	else
-		return BaseClass::GetInaccuracy();
-}
-
-
 void CWeaponP250::PrimaryAttack( void )
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
-
-	// Mark the time of this shot and determine the accuracy modifier based on the last shot fired...
-	m_flAccuracy -= (0.3)*(0.325 - (gpGlobals->curtime - m_flLastFire));
-
-	if (m_flAccuracy > 0.9)
-		m_flAccuracy = 0.9;
-	else if (m_flAccuracy < 0.6)
-		m_flAccuracy = 0.6;
 
 	m_flLastFire = gpGlobals->curtime;
 	
@@ -156,7 +119,7 @@ void CWeaponP250::PrimaryAttack( void )
 	FX_FireBullets(
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(),
-		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(),
+		pPlayer->GetFinalAimAngle(),
 		GetWeaponID(),
 		Primary_Mode,
 		CBaseEntity::GetPredictionRandomSeed() & 255,
@@ -175,22 +138,16 @@ void CWeaponP250::PrimaryAttack( void )
 
 	//ResetPlayerShieldAnim();
 
-	// update accuracy
-	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[Primary_Mode];
+	// table driven recoil
+	Recoil( m_weaponMode );
 
-	QAngle angle = pPlayer->GetPunchAngle();
-	angle.x -= 2;
-	pPlayer->SetPunchAngle( angle );
+	m_flRecoilIndex += 1.0f;
 }
 
 
 bool CWeaponP250::Reload()
 {
-	if ( !DefaultPistolReload() )
-		return false;
-
-	m_flAccuracy = 0.9;
-	return true;
+	return DefaultPistolReload();
 }
 
 void CWeaponP250::WeaponIdle()

@@ -36,7 +36,6 @@ public:
 	virtual bool Reload();
 	virtual bool Deploy();
 
- 	virtual float GetInaccuracy() const;
 	virtual float GetMaxSpeed() const;
 
 	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_SCAR20; }
@@ -75,7 +74,6 @@ CWeaponSCAR20::CWeaponSCAR20()
 void CWeaponSCAR20::Spawn()
 {
 	BaseClass::Spawn();
-	m_flAccuracy = 0.98;
 }
 
 
@@ -137,63 +135,22 @@ void CWeaponSCAR20::SecondaryAttack()
 	m_zoomFullyActiveTime = gpGlobals->curtime + 0.3; // The worst zoom time from above.  
 }
 
-float CWeaponSCAR20::GetInaccuracy() const
-{
-	if ( weapon_accuracy_model.GetInt() == 1 )
-	{
-		CCSPlayer *pPlayer = GetPlayerOwner();
-		if ( !pPlayer )
-			return 0.0f;
-	
-		float fSpread = 0.0f;
-	
-		if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-			fSpread = 0.45f * (1 - m_flAccuracy);
-		else if (pPlayer->GetAbsVelocity().Length2D() > 5)
-			fSpread = 0.15f;
-		else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-			fSpread = 0.04f * (1 - m_flAccuracy);
-		else
-			fSpread = 0.05f * (1 - m_flAccuracy);
-	
-		// If we are not zoomed in, or we have very recently zoomed and are still transitioning, the bullet diverts more.
-		if (pPlayer->GetFOV() == pPlayer->GetDefaultFOV() || (gpGlobals->curtime < m_zoomFullyActiveTime))
-			fSpread += 0.025;
-	
-		return fSpread;
-	}
-	else
-		return BaseClass::GetInaccuracy();
-}
-
 void CWeaponSCAR20::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
 
-	// Mark the time of this shot and determine the accuracy modifier based on the last shot fired...
-	m_flAccuracy = 0.65 + (0.35) * (gpGlobals->curtime - m_flLastFire);	
-
-	if (m_flAccuracy > 0.98)
-		m_flAccuracy = 0.98;
-
 	m_flLastFire = gpGlobals->curtime;
 
 	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, m_weaponMode ) )
 		return;
-
-	QAngle angle = pPlayer->GetPunchAngle();
-	angle.x -= SharedRandomFloat("SG550PunchAngleX", 0.75, 1.25 ) + ( angle.x / 4 );
-	angle.y += SharedRandomFloat("SG550PunchAngleY", -0.75, 0.75 );
-	pPlayer->SetPunchAngle( angle );
 }
 
 bool CWeaponSCAR20::Reload()
 {
 	bool ret = BaseClass::Reload();
-	
-	m_flAccuracy = 0.98;
+
 	m_weaponMode = Primary_Mode;
 	
 	return ret;
@@ -202,8 +159,7 @@ bool CWeaponSCAR20::Reload()
 bool CWeaponSCAR20::Deploy()
 {
 	bool ret = BaseClass::Deploy();
-	
-	m_flAccuracy = 0.98;
+
 	m_weaponMode = Primary_Mode;
 	
 	return ret;

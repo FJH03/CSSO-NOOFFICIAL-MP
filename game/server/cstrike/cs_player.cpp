@@ -780,6 +780,9 @@ void CCSPlayer::Precache()
 	PrecacheModel ( "sprites/glow01.vmt" );
 	PrecacheModel ( "models/items/cs_gift.mdl" );
 
+	PrecacheParticleSystem( "csblood" );
+	PrecacheParticleSystem( "impact_helmet_headshot" );
+
 	BaseClass::Precache();
 }
 
@@ -1283,6 +1286,8 @@ void CCSPlayer::Spawn()
 	else
 		m_bIsFemale = (HasAgentSet( TEAM_TERRORIST )) ? (GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_bIsFemale) : false;
 }
+
+ConVar mp_flinch_punch_scale( "mp_flinch_punch_scale", "3", FCVAR_REPLICATED | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Scalar for first person view punch when getting hit." );
 
 void CCSPlayer::ShowViewPortPanel( const char * name, bool bShow, KeyValues *data )
 {
@@ -2609,13 +2614,13 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 		if ( bShouldBleed == true )
 		{
 			// punch view if we have no armor
-			QAngle punchAngle = GetPunchAngle();
+			QAngle punchAngle = GetRawAimPunchAngle();
 			punchAngle.x = flDamage * -0.1;
 
 			if ( punchAngle.x < -4 )
 				punchAngle.x = -4;
 
-			SetPunchAngle( punchAngle );
+			SetAimPunchAngle( punchAngle );
 		}
 	}
 	else
@@ -2651,7 +2656,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 			if ( !m_bHasHelmet )
 			{
-				QAngle punchAngle = GetPunchAngle();
+				QAngle punchAngle = GetRawAimPunchAngle();
 				punchAngle.x = flDamage * -0.5;
 
 				if ( punchAngle.x < -12 )
@@ -2665,7 +2670,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 				else if ( punchAngle.z > 9 )
 					punchAngle.z = 9;
 
-				SetPunchAngle( punchAngle );
+				SetAimPunchAngle( punchAngle );
 			}
 
 			bHeadShot = true;
@@ -2678,13 +2683,13 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 			if ( ArmorValue() <= 0 )
 			{
-				QAngle punchAngle = GetPunchAngle();
+				QAngle punchAngle = GetRawAimPunchAngle();
 				punchAngle.x = flDamage * -0.1;
 
 				if ( punchAngle.x < -4 )
 					punchAngle.x = -4;
 
-				SetPunchAngle( punchAngle );
+				SetAimPunchAngle( punchAngle );
 			}
 			break;
 
@@ -2694,13 +2699,13 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 			if ( ArmorValue() <= 0 )
 			{
-				QAngle punchAngle = GetPunchAngle();
+				QAngle punchAngle = GetRawAimPunchAngle();
 				punchAngle.x = flDamage * -0.1;
 
 				if ( punchAngle.x < -4 )
 					punchAngle.x = -4;
 
-				SetPunchAngle( punchAngle );
+				SetAimPunchAngle( punchAngle );
 			}
 
 			break;
@@ -2747,7 +2752,11 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 	if ( ( ptr->hitgroup == HITGROUP_HEAD || bHitShield ) && bShouldSpark ) // they hit a helmet
 	{
 		// show metal spark effect
-		g_pEffects->Sparks( ptr->endpos, 1, 1, &ptr->plane.normal );
+		//g_pEffects->Sparks( ptr->endpos, 1, 1, &ptr->plane.normal );
+
+		QAngle angle;
+		VectorAngles( ptr->plane.normal, angle );
+		DispatchParticleEffect( "impact_helmet_headshot", ptr->endpos, angle );
 	}
 
 	if ( !bHitShield )
@@ -4834,7 +4843,7 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 	{
 		float flDamage = 100;
 
-		QAngle punchAngle = GetPunchAngle();
+		QAngle punchAngle = GetViewPunchAngle();
 
 		punchAngle.x = flDamage * random->RandomFloat ( -0.15, 0.15 );
 		punchAngle.y = flDamage * random->RandomFloat ( -0.15, 0.15 );
@@ -4854,7 +4863,7 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 			punchAngle.z = atof(args[3]);
 		}
 
-		SetPunchAngle( punchAngle );
+		SetViewPunchAngle( punchAngle );
 
 		return true;
 	}

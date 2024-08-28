@@ -104,7 +104,7 @@ void CWeaponMAG7::PrimaryAttack()
 	FX_FireBullets(
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(),
-		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(),
+		pPlayer->GetFinalAimAngle(),
 		GetWeaponID(),
 		Primary_Mode,
 		CBaseEntity::GetPredictionRandomSeed() & 255, // wrap it for network traffic so it's the same between client and server
@@ -126,17 +126,6 @@ void CWeaponMAG7::PrimaryAttack()
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[Primary_Mode];
 
-	// Update punch angles.
-	QAngle angle = pPlayer->GetPunchAngle();
-
-	if ( pPlayer->GetFlags() & FL_ONGROUND )
-	{
-		angle.x -= SharedRandomInt( "MAG7PunchAngleGround", 3, 5 );
-	}
-	else
-	{
-		angle.x -= SharedRandomInt( "MAG7PunchAngleAir", 7, 10 );
-	}
-
-	pPlayer->SetPunchAngle( angle );
+	// table driven recoil
+	Recoil( m_weaponMode );
 }

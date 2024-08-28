@@ -10,10 +10,14 @@
 #pragma once
 #endif
 
+#ifdef CLIENT_DLL
+	#define CWeaponCSBase C_WeaponCSBase
+#endif
 
 #include "weapon_parse.h"
 #include "networkvar.h"
 
+class CWeaponCSBase;
 
 //--------------------------------------------------------------------------------------------------------
 enum CSWeaponType
@@ -115,6 +119,36 @@ enum CSWeaponID
 
 void PrepareEquipmentInfo( void );
 
+class WeaponRecoilData
+{
+public:
+
+	WeaponRecoilData();
+	~WeaponRecoilData();
+
+	void GetRecoilOffsets( CWeaponCSBase *pWeapon, int iMode, int iIndex, float& fAngle, float &fMagnitude );
+	void GenerateRecoilPattern( CSWeaponID id );
+
+private:
+
+	struct RecoilOffset
+	{
+		float	fAngle;
+		float	fMagnitude;
+	};
+
+	struct RecoilData
+	{
+		CSWeaponID					iWeaponID;
+		RecoilOffset				recoilTable[2][64];
+	};
+
+	CUtlMap< CSWeaponID, RecoilData* > m_mapRecoilTables;
+
+	void GenerateRecoilTable( RecoilData *data );
+
+};
+
 //--------------------------------------------------------------------------------------------------------
 const char * WeaponClassAsString( CSWeaponType weaponType );
 
@@ -195,14 +229,25 @@ public:
 	float m_fInaccuracyCrouch[2];
 	float m_fInaccuracyStand[2];
 	float m_fInaccuracyJump[2];
+	float m_fInaccuracyJumpInitial;
 	float m_fInaccuracyLand[2];
 	float m_fInaccuracyLadder[2];
 	float m_fInaccuracyImpulseFire[2];
 	float m_fInaccuracyMove[2];
 	float m_fRecoveryTimeStand;
+	float m_fRecoveryTimeStandFinal;
 	float m_fRecoveryTimeCrouch;
+	float m_fRecoveryTimeCrouchFinal;
 	float m_fInaccuracyReload;
 	float m_fInaccuracyAltSwitch;
+	float m_fRecoilAngle[2];
+	float m_fRecoilAngleVariance[2];
+	float m_fRecoilMagnitude[2];
+	float m_fRecoilMagnitudeVariance[2];
+	int   m_iRecoilSeed;
+
+	int   m_iRecoveryTransitionStartBullet;
+	int   m_iRecoveryTransitionEndBullet;
 
 	// Delay until the next idle animation after shooting.
 	float	m_flTimeToIdleAfterFire;

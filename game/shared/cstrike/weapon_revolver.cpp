@@ -85,10 +85,6 @@ void CRevolver::PrimaryAttack()
 	if ( !CSBaseGunFire( flCycleTime, m_weaponMode ) )								// <--	'PEW PEW' HAPPENS HERE
 		return;
 
-	QAngle punchAngle = pPlayer->GetPunchAngle();
-	punchAngle.x -= 3;
-	pPlayer->SetPunchAngle( punchAngle );
-
 	m_flNextPrimaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime;
 }
 
@@ -109,11 +105,6 @@ void CRevolver::SecondaryAttack()
 		
 		if ( !CSBaseGunFire( flCycleTimeAlt, m_weaponMode ) )								// <--	'PEW PEW' HAPPENS HERE
 			return;
-
-		QAngle punchAngle = pPlayer->GetPunchAngle();
-		punchAngle.x -= 3;
-		pPlayer->SetPunchAngle( punchAngle );
-
 		return;
 	}
 

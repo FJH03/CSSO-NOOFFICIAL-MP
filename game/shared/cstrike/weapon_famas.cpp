@@ -34,8 +34,6 @@ public:
 	virtual void SecondaryAttack();
 	virtual bool Deploy();
 
- 	virtual float GetInaccuracy() const;
-
 	virtual void ItemPostFrame();
 
 	void FamasFire( float flSpread, bool bFireBurst );
@@ -87,7 +85,6 @@ bool CWeaponFamas::Deploy( )
 {
 	m_iBurstShotsRemaining = 0;
 	m_fNextBurstShot = 0.0f;
-	m_flAccuracy = 0.9f;
 
 	return BaseClass::Deploy();
 }
@@ -114,30 +111,6 @@ void CWeaponFamas::SecondaryAttack()
 	}
 	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3;
 }
-
-float CWeaponFamas::GetInaccuracy() const
-{
-	if ( weapon_accuracy_model.GetInt() == 1 )
-	{
-		float fAutoPenalty = m_bBurstMode ? 0.0f : 0.01f;
-
-		CCSPlayer *pPlayer = GetPlayerOwner();
-		if ( !pPlayer )
-			return 0.0f;
-	
-		if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )	// if player is in air
-			return 0.03f + 0.3f * m_flAccuracy + fAutoPenalty;
-	
-		else if ( pPlayer->GetAbsVelocity().Length2D() > 140 )	// if player is moving
-			return 0.03f + 0.07f * m_flAccuracy + fAutoPenalty;
-		/* new code */
-		else
-			return 0.02f * m_flAccuracy + fAutoPenalty;
-	}
-	else
-		return BaseClass::GetInaccuracy();
-}
-
 
 void CWeaponFamas::ItemPostFrame()
 {
@@ -170,7 +143,7 @@ void CWeaponFamas::FireRemaining()
 	FX_FireBullets(
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(),
-		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(),
+		pPlayer->GetFinalAimAngle(),
 		GetWeaponID(),
 		Secondary_Mode,
 		CBaseEntity::GetPredictionRandomSeed() & 255,
@@ -193,6 +166,11 @@ void CWeaponFamas::FireRemaining()
 
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[Secondary_Mode];
+
+	// table driven recoil
+	Recoil( Secondary_Mode );
+
+	m_flRecoilIndex += 1.0f;
 }
 
 
@@ -226,18 +204,6 @@ void CWeaponFamas::PrimaryAttack()
 
 	if ( !CSBaseGunFire( flCycleTime, m_weaponMode ) )
 		return;
-	
-	if ( pPlayer->GetAbsVelocity().Length2D() > 5 )
-		pPlayer->KickBack ( 1, 0.45, 0.275, 0.05, 4, 2.5, 7 );
-	
-	else if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-		pPlayer->KickBack ( 1.25, 0.45, 0.22, 0.18, 5.5, 4, 5 );
-	
-	else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-		pPlayer->KickBack ( 0.575, 0.325, 0.2, 0.011, 3.25, 2, 8 );
-	
-	else
-		pPlayer->KickBack ( 0.625, 0.375, 0.25, 0.0125, 3.5, 2.25, 8 );
 }
 
 

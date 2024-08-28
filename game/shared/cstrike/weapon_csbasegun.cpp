@@ -33,7 +33,6 @@ CWeaponCSBaseGun::CWeaponCSBaseGun()
 
 void CWeaponCSBaseGun::Spawn()
 {
-	m_flAccuracy = 0.2;
 	m_bDelayFire = false;
 	m_zoomFullyActiveTime = -1.0f;
 
@@ -47,7 +46,6 @@ bool CWeaponCSBaseGun::Deploy()
 	if ( !pPlayer )
 		return false;
 
-	m_flAccuracy = 0.2;
 	pPlayer->m_iShotsFired = 0;
 	m_bDelayFire = false;
 	m_zoomFullyActiveTime = -1.0f;
@@ -158,30 +156,8 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 
 	m_bDelayFire = true;
 
-	if ( m_iClip1 > 0 )
+	if ( m_iClip1 == 0 )
 	{
-		pPlayer->m_iShotsFired++;
-	
-		// These modifications feed back into flSpread eventually.
-		if ( pCSInfo.m_flAccuracyDivisor != -1 )
-		{
-			int iShotsFired = pPlayer->m_iShotsFired;
-
-			if ( pCSInfo.m_bAccuracyQuadratic )
-				iShotsFired = iShotsFired * iShotsFired;
-			else
-				iShotsFired = iShotsFired * iShotsFired * iShotsFired;
-
-			m_flAccuracy = ( iShotsFired / pCSInfo.m_flAccuracyDivisor ) + pCSInfo.m_flAccuracyOffset;
-			
-			if ( m_flAccuracy > pCSInfo.m_flMaxInaccuracy )
-				m_flAccuracy = pCSInfo.m_flMaxInaccuracy;
-		}
-	}
-	else
-	{
-		m_flAccuracy = 0;
-
 		if ( m_bFireOnEmpty )
 		{
 			PlayEmptySound();
@@ -227,7 +203,7 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 	FX_FireBullets(
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(),
-		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(),
+		pPlayer->GetFinalAimAngle(),
 		GetWeaponID(),
 		weaponMode,
 		CBaseEntity::GetPredictionRandomSeed() & 255,
@@ -241,6 +217,11 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[weaponMode];
+
+	// table driven recoil
+	Recoil( weaponMode );
+
+	m_flRecoilIndex += 1.0f;
 
 	return true;
 }
@@ -278,7 +259,6 @@ bool CWeaponCSBaseGun::Reload()
 		pPlayer->m_bIsScoped = false;
 	}
 
-	m_flAccuracy = 0.2;
 	pPlayer->m_iShotsFired = 0;
 	m_bDelayFire = false;
 

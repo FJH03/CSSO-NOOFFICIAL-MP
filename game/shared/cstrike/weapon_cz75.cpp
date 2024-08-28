@@ -99,7 +99,7 @@ void CWeaponCZ75::PrimaryAttack()
 	FX_FireBullets(
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(),
-		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(),
+		pPlayer->GetFinalAimAngle(),
 		GetWeaponID(),
 		Primary_Mode,
 		CBaseEntity::GetPredictionRandomSeed() & 255,
@@ -119,9 +119,10 @@ void CWeaponCZ75::PrimaryAttack()
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[Primary_Mode];
 
-	QAngle angle = pPlayer->GetPunchAngle();
-	angle.x -= 1.5;
-	pPlayer->SetPunchAngle( angle );
+	// table driven recoil
+	Recoil( m_weaponMode );
+
+	m_flRecoilIndex += 1.0f;
 }
 
 Activity CWeaponCZ75::GetDeployActivity()
