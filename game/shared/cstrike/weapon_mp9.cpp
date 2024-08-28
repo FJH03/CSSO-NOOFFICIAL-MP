@@ -10,7 +10,7 @@
 
 #if defined( CLIENT_DLL )
 
-	#define CWeaponTMP C_WeaponTMP
+	#define CWeaponMP9 C_WeaponMP9
 	#include "c_cs_player.h"
 
 #else
@@ -20,46 +20,49 @@
 #endif
 
 
-class CWeaponTMP : public CWeaponCSBaseGun
+class CWeaponMP9 : public CWeaponCSBaseGun
 {
 public:
-	DECLARE_CLASS( CWeaponTMP, CWeaponCSBaseGun );
+	DECLARE_CLASS( CWeaponMP9, CWeaponCSBaseGun );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CWeaponTMP();
+	CWeaponMP9();
 
 	virtual void PrimaryAttack();
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_TMP; }
+	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_MP9; }
 	virtual bool IsSilenced( void ) const				{ return false; }
 
  	virtual float GetInaccuracy() const;
 
 private:
 
-	CWeaponTMP( const CWeaponTMP & );
+	CWeaponMP9( const CWeaponMP9 & );
 
 	void DoFireEffects( void );
 };
 
-IMPLEMENT_NETWORKCLASS_ALIASED( WeaponTMP, DT_WeaponTMP )
+IMPLEMENT_NETWORKCLASS_ALIASED( WeaponMP9, DT_WeaponMP9 )
 
-BEGIN_NETWORK_TABLE( CWeaponTMP, DT_WeaponTMP )
+BEGIN_NETWORK_TABLE( CWeaponMP9, DT_WeaponMP9 )
 END_NETWORK_TABLE()
 
-BEGIN_PREDICTION_DATA( CWeaponTMP )
+BEGIN_PREDICTION_DATA( CWeaponMP9 )
 END_PREDICTION_DATA()
 
-LINK_ENTITY_TO_CLASS( weapon_tmp, CWeaponTMP );
-PRECACHE_WEAPON_REGISTER( weapon_tmp );
+LINK_ENTITY_TO_CLASS( weapon_mp9, CWeaponMP9 );
+#ifdef GAME_DLL
+LINK_ENTITY_TO_CLASS( weapon_tmp, CWeaponMP9 ); // for backwards compatibility
+#endif
+PRECACHE_WEAPON_REGISTER( weapon_mp9 );
 
 
-CWeaponTMP::CWeaponTMP()
+CWeaponMP9::CWeaponMP9()
 {
 }
 
 
-float CWeaponTMP::GetInaccuracy() const
+float CWeaponMP9::GetInaccuracy() const
 {
 	if ( weapon_accuracy_model.GetInt() == 1 )
 	{
@@ -76,7 +79,7 @@ float CWeaponTMP::GetInaccuracy() const
 		return BaseClass::GetInaccuracy();
 }
 
-void CWeaponTMP::PrimaryAttack( void )
+void CWeaponMP9::PrimaryAttack( void )
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
@@ -100,7 +103,7 @@ void CWeaponTMP::PrimaryAttack( void )
 		pPlayer->KickBack (0.725, 0.375, 0.15, 0.025, 2.75, 2.25, 9);
 }
 
-void CWeaponTMP::DoFireEffects( void )
+void CWeaponMP9::DoFireEffects( void )
 {
 	// TMP is silenced, so do nothing
 }

@@ -109,7 +109,7 @@ void WeaponImageInfo::SetWeapon( const BuyPresetWeapon *pWeapon, bool isPrimary,
 		int numClips = pWeapon->GetAmmoAmount();
 		if ( info )
 		{
-			int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType );
+			int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType, C_CSPlayer::GetLocalCSPlayer() );
 			int buyClipSize = GetCSAmmoDef()->GetBuySize( info->iAmmoType );
 
 			int maxClips = (buyClipSize > 0) ? ceil(maxRounds/(float)buyClipSize) : 0;

@@ -610,7 +610,7 @@ bool CBaseCombatWeapon::HasAmmo( void )
 	CBasePlayer *player = ToBasePlayer( GetOwner() );
 	if ( !player )
 		return false;
-	return ( m_iClip1 > 0 || player->GetAmmoCount( m_iPrimaryAmmoType ) || m_iClip2 > 0 || player->GetAmmoCount( m_iSecondaryAmmoType ) );
+	return ( m_iClip1 > 0 || GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) || m_iClip2 > 0 || GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -906,11 +906,8 @@ bool CBaseCombatWeapon::ShouldDisplayReloadHUDHint()
 	if( pOwner != NULL && pOwner->IsPlayer() && UsesClipsForAmmo1() && m_iClip1 < (GetMaxClip1() / 2) )
 	{
 		// I'm owned by a player, I use clips, I have less then half a clip loaded. Now, does the player have more ammo?
-		if ( pOwner )
-		{
-			if ( pOwner->GetAmmoCount( m_iPrimaryAmmoType ) > 0 ) 
-				return true;
-		}
+		if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) > 0 )
+			return true;
 	}
 
 	return false;
@@ -1228,18 +1225,8 @@ bool CBaseCombatWeapon::HasPrimaryAmmo( void )
 	}
 
 	// Otherwise, I have ammo if I have some in my ammo counts
-	CBaseCombatCharacter		*pOwner = GetOwner();
-	if ( pOwner )
-	{
-		if ( pOwner->GetAmmoCount( m_iPrimaryAmmoType ) > 0 ) 
-			return true;
-	}
-	else
-	{
-		// No owner, so return how much primary ammo I have along with me.
-		if( GetPrimaryAmmoCount() > 0 )
-			return true;
-	}
+	if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) > 0 )
+		return true;
 
 	return false;
 }
@@ -1258,12 +1245,8 @@ bool CBaseCombatWeapon::HasSecondaryAmmo( void )
 	}
 
 	// Otherwise, I have ammo if I have some in my ammo counts
-	CBaseCombatCharacter		*pOwner = GetOwner();
-	if ( pOwner )
-	{
-		if ( pOwner->GetAmmoCount( m_iSecondaryAmmoType ) > 0 ) 
-			return true;
-	}
+	if ( GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) > 0 )
+		return true;
 
 	return false;
 }
@@ -1670,7 +1653,7 @@ void CBaseCombatWeapon::ItemPostFrame( void )
 	// Secondary attack has priority
 	if ((pOwner->m_nButtons & IN_ATTACK2) && (m_flNextSecondaryAttack <= gpGlobals->curtime))
 	{
-		if (UsesSecondaryAmmo() && pOwner->GetAmmoCount(m_iSecondaryAmmoType)<=0 )
+		if ( UsesSecondaryAmmo() && GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) <= 0 )
 		{
 			if (m_flNextEmptySoundTime < gpGlobals->curtime)
 			{
@@ -1706,7 +1689,7 @@ void CBaseCombatWeapon::ItemPostFrame( void )
 				// reload clip2 if empty
 				if (m_iClip2 < 1)
 				{
-					pOwner->RemoveAmmo( 1, m_iSecondaryAmmoType );
+					GiveReserveAmmo( AMMO_POSITION_SECONDARY, -1 );
 					m_iClip2 = m_iClip2 + 1;
 				}
 			}
@@ -1717,7 +1700,7 @@ void CBaseCombatWeapon::ItemPostFrame( void )
 	{
 		// Clip empty? Or out of ammo on a no-clip weapon?
 		if ( !IsMeleeWeapon() &&  
-			(( UsesClipsForAmmo1() && m_iClip1 <= 0) || ( !UsesClipsForAmmo1() && pOwner->GetAmmoCount(m_iPrimaryAmmoType)<=0 )) )
+			(( UsesClipsForAmmo1() && m_iClip1 <= 0) || ( !UsesClipsForAmmo1() && GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 )) )
 		{
 			HandleFireOnEmpty();
 		}
@@ -1964,7 +1947,7 @@ bool CBaseCombatWeapon::DefaultReload( int iClipSize1, int iClipSize2, int iActi
 		return false;
 
 	// If I don't have any spare ammo, I can't reload
-	if ( pOwner->GetAmmoCount(m_iPrimaryAmmoType) <= 0 )
+	if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 )
 		return false;
 
 	bool bReload = false;
@@ -1973,7 +1956,7 @@ bool CBaseCombatWeapon::DefaultReload( int iClipSize1, int iClipSize2, int iActi
 	if ( UsesClipsForAmmo1() )
 	{
 		// need to reload primary clip?
-		int primary	= MIN(iClipSize1 - m_iClip1, pOwner->GetAmmoCount(m_iPrimaryAmmoType));
+		int primary = MIN( iClipSize1 - m_iClip1, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
 		if ( primary != 0 )
 		{
 			bReload = true;
@@ -1983,7 +1966,7 @@ bool CBaseCombatWeapon::DefaultReload( int iClipSize1, int iClipSize2, int iActi
 	if ( UsesClipsForAmmo2() )
 	{
 		// need to reload secondary clip?
-		int secondary = MIN(iClipSize2 - m_iClip2, pOwner->GetAmmoCount(m_iSecondaryAmmoType));
+		int secondary = MIN( iClipSize2 - m_iClip2, GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) );
 		if ( secondary != 0 )
 		{
 			bReload = true;
@@ -2107,7 +2090,7 @@ void CBaseCombatWeapon::CheckReload( void )
 			}
 
 			// If out of ammo end reload
-			if (pOwner->GetAmmoCount(m_iPrimaryAmmoType) <=0)
+			if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 )
 			{
 				FinishReload();
 				return;
@@ -2117,7 +2100,7 @@ void CBaseCombatWeapon::CheckReload( void )
 			{
 				// Add them to the clip
 				m_iClip1 += 1;
-				pOwner->RemoveAmmo( 1, m_iPrimaryAmmoType );
+				GiveReserveAmmo( AMMO_POSITION_PRIMARY, -1 );
 
 				Reload();
 				return;
@@ -2156,17 +2139,17 @@ void CBaseCombatWeapon::FinishReload( void )
 		// If I use primary clips, reload primary
 		if ( UsesClipsForAmmo1() )
 		{
-			int primary	= MIN( GetMaxClip1() - m_iClip1, pOwner->GetAmmoCount(m_iPrimaryAmmoType));	
+			int primary = MIN( GetMaxClip1() - m_iClip1, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
 			m_iClip1 += primary;
-			pOwner->RemoveAmmo( primary, m_iPrimaryAmmoType);
+			GiveReserveAmmo( AMMO_POSITION_PRIMARY, -primary );
 		}
 
 		// If I use secondary clips, reload secondary
 		if ( UsesClipsForAmmo2() )
 		{
-			int secondary = MIN( GetMaxClip2() - m_iClip2, pOwner->GetAmmoCount(m_iSecondaryAmmoType));
+			int secondary = MIN( GetMaxClip2() - m_iClip2, GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) );
 			m_iClip2 += secondary;
-			pOwner->RemoveAmmo( secondary, m_iSecondaryAmmoType );
+			GiveReserveAmmo( AMMO_POSITION_SECONDARY, -secondary );
 		}
 
 		if ( m_bReloadsSingly )
@@ -2285,8 +2268,8 @@ void CBaseCombatWeapon::PrimaryAttack( void )
 	// Make sure we don't fire more than the amount in the clip
 	if ( UsesClipsForAmmo1() )
 	{
-		info.m_iShots = MIN( info.m_iShots, m_iClip1 );
-		m_iClip1 -= info.m_iShots;
+		info.m_iShots = MIN( info.m_iShots, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
+		GiveReserveAmmo( AMMO_POSITION_PRIMARY, -info.m_iShots );
 	}
 	else
 	{
@@ -2308,7 +2291,7 @@ void CBaseCombatWeapon::PrimaryAttack( void )
 
 	pPlayer->FireBullets( info );
 
-	if (!m_iClip1 && pPlayer->GetAmmoCount(m_iPrimaryAmmoType) <= 0)
+	if ( !m_iClip1 && GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 )
 	{
 		// HEV suit - indicate out of ammo condition
 		pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0); 
@@ -2804,3 +2787,138 @@ BEGIN_NETWORK_TABLE(CBaseCombatWeapon, DT_BaseCombatWeapon)
 	RecvPropEHandle( RECVINFO(m_hOwner ) ),
 #endif
 END_NETWORK_TABLE()
+
+int CBaseCombatWeapon::GetReserveAmmoCount( AmmoPosition_t nAmmoPosition, CBaseCombatCharacter * pForcedOwner/* = NULL*/ )
+{
+	// LEGACY SUPPORT HERE 
+	// Except for exhaustible weapons ( i.e. grenades ) we now store ammo on the weapon and not the player
+
+	bool bForceSetAmmoOnPlayer = pForcedOwner ? true : false;
+
+	CBaseCombatCharacter * pPlayer = pForcedOwner ? pForcedOwner : GetOwner();
+	if ( pPlayer )
+	{
+		int nAmmoType = -1;
+
+		switch ( nAmmoPosition )
+		{
+			case AMMO_POSITION_PRIMARY: nAmmoType = GetPrimaryAmmoType(); break;
+			case AMMO_POSITION_SECONDARY: nAmmoType = GetSecondaryAmmoType(); break;
+		}
+
+		if ( nAmmoType > -1 )
+		{
+			if ( pPlayer->GetAmmoCount( nAmmoType ) || bForceSetAmmoOnPlayer )
+				return pPlayer->GetAmmoCount( nAmmoType );
+		}
+	}
+	// /LEGACY
+
+	switch ( nAmmoPosition )
+	{
+		case AMMO_POSITION_PRIMARY: return m_iPrimaryReserveAmmoCount;
+		case AMMO_POSITION_SECONDARY: return m_iSecondaryReserveAmmoCount;
+		default: return -1;
+	}
+}
+
+int CBaseCombatWeapon::SetReserveAmmoCount( AmmoPosition_t nAmmoPosition, int nCount, bool bSuppressSound /* = false */, CBaseCombatCharacter * pForcedOwner/* = NULL*/ )
+{
+	int iAdd = 0;
+
+	// LEGACY SUPPORT HERE 
+	// Except for exhaustible weapons ( i.e. grenades ) we now store ammo on the weapon and not the player
+
+	bool bForceSetAmmoOnPlayer = pForcedOwner ? true : false;
+	CBaseCombatCharacter * pPlayer = pForcedOwner ? pForcedOwner : GetOwner();
+	if ( pPlayer )
+	{
+		int nAmmoType = -1;
+
+		switch ( nAmmoPosition )
+		{
+			case AMMO_POSITION_PRIMARY: nAmmoType = GetPrimaryAmmoType(); break;
+			case AMMO_POSITION_SECONDARY: nAmmoType = GetSecondaryAmmoType(); break;
+		}
+
+		if ( nAmmoType > -1 )
+		{
+			// use player ammo if a player entity was passed in or if there already is ammo in this position
+			if ( pPlayer->GetAmmoCount( nAmmoType ) || bForceSetAmmoOnPlayer )
+			{
+				int iMax = GetAmmoDef()->MaxCarry( nAmmoType, pPlayer );
+				iAdd = MIN( nCount, iMax - pPlayer->GetAmmoCount( nAmmoType ) );
+				int iTotal = MIN( nCount, iMax );
+
+				pPlayer->SetAmmoCount( iTotal, nAmmoType );
+				return iAdd;
+			}
+		}
+	}
+	// /LEGACY
+
+	iAdd = MIN( nCount, GetReserveAmmoMax( nAmmoPosition ) - GetReserveAmmoCount( nAmmoPosition ) );
+
+	switch ( nAmmoPosition )
+	{
+		case AMMO_POSITION_PRIMARY: m_iPrimaryReserveAmmoCount = MIN( nCount, GetReserveAmmoMax( AMMO_POSITION_PRIMARY ) ); break;
+		case AMMO_POSITION_SECONDARY: m_iSecondaryReserveAmmoCount = MIN( nCount, GetReserveAmmoMax( AMMO_POSITION_SECONDARY ) ); break;
+		default: return 0;
+	}
+
+	// Ammo pickup sound
+	if ( !bSuppressSound )
+	{
+		EmitSound( "BaseCombatCharacter.AmmoPickup" );
+	}
+
+	return iAdd;
+}
+
+int CBaseCombatWeapon::GiveReserveAmmo( AmmoPosition_t nAmmoPosition, int nCount, bool bSuppressSound /* = false */, CBaseCombatCharacter * pForcedOwner/* = NULL*/ )
+{
+	if ( nCount <= 0 )
+	{
+		extern ConVar sv_infinite_ammo;
+		if ( sv_infinite_ammo.GetInt() == 2 ) // infinite total ammo but magazine reloads are still required.
+			return 0;
+
+		// supress ammo pickup sound when we're depleting ammo
+		bSuppressSound = true;
+	}
+
+	return SetReserveAmmoCount( nAmmoPosition, GetReserveAmmoCount( nAmmoPosition, pForcedOwner ) + nCount, bSuppressSound, pForcedOwner );
+}
+
+int CBaseCombatWeapon::GetReserveAmmoMax( AmmoPosition_t nAmmoPosition ) const
+{
+	// LEGACY SUPPORT HERE 
+	// Except for exhaustible weapons ( i.e. grenades ) we now store ammo on the weapon and not the player
+	CBaseCombatCharacter * pPlayer = GetOwner();
+	if ( pPlayer )
+	{
+		int nAmmoType = -1;
+
+		switch ( nAmmoPosition )
+		{
+			case AMMO_POSITION_PRIMARY: nAmmoType = GetPrimaryAmmoType(); break;
+			case AMMO_POSITION_SECONDARY: nAmmoType = GetSecondaryAmmoType(); break;
+		}
+
+		if ( nAmmoType > -1 )
+		{
+			// use player ammo if there already is ammo in this position
+			if ( pPlayer->GetAmmoCount( nAmmoType ) )
+			{
+				return GetAmmoDef()->MaxCarry( nAmmoType, pPlayer );
+			}
+		}
+	}
+
+	switch ( nAmmoPosition )
+	{
+		case AMMO_POSITION_PRIMARY: return GetWpnData().iPrimaryReserveAmmoCount;
+		case AMMO_POSITION_SECONDARY: return GetWpnData().iSecondaryReserveAmmoCount;
+		default: Assert( 0 ); return 0;
+	}
+}

@@ -96,30 +96,42 @@ struct WeaponAliasInfo
 
 WeaponAliasInfo s_weaponAliasInfo[] =
 {
-	{ WEAPON_P228,				"p228" },
+	{ WEAPON_P250,				"p250" },
 	{ WEAPON_GLOCK,				"glock" },
-	{ WEAPON_SCOUT,				"scout" },
+	{ WEAPON_SSG08,				"ssg08" },
 	{ WEAPON_XM1014,			"xm1014" },
 	{ WEAPON_MAC10,				"mac10" },
 	{ WEAPON_AUG,				"aug" },
 	{ WEAPON_ELITE,				"elite" },
 	{ WEAPON_FIVESEVEN,			"fiveseven" },
 	{ WEAPON_UMP45,				"ump45" },
-	{ WEAPON_SG550,				"sg550" },
-	{ WEAPON_GALIL,				"galil" },
+	{ WEAPON_SCAR20,				"scar20" },
+	{ WEAPON_GALILAR,			"galilar" },
 	{ WEAPON_FAMAS,				"famas" },
-	{ WEAPON_USP,				"usp" },
+	{ WEAPON_USP,				"usp_silencer" },
 	{ WEAPON_AWP,				"awp" },
-	{ WEAPON_MP5NAVY,			"mp5navy" },
+	{ WEAPON_MP5SD,				"mp5sd" },
 	{ WEAPON_M249,				"m249" },
-	{ WEAPON_M3,				"m3" },
-	{ WEAPON_M4A1,				"m4a1" },
-	{ WEAPON_TMP,				"tmp" },
+	{ WEAPON_NOVA,				"nova" },
+	{ WEAPON_M4A1,				"m4a1_silencer" },
+	{ WEAPON_MP9,				"mp9" },
 	{ WEAPON_G3SG1,				"g3sg1" },
 	{ WEAPON_DEAGLE,			"deagle" },
-	{ WEAPON_SG552,				"sg552" },
+	{ WEAPON_SG556,				"sg556" },
 	{ WEAPON_AK47,				"ak47" },
 	{ WEAPON_P90,				"p90" },
+
+	{ WEAPON_HKP2000,			"hkp2000" },
+	{ WEAPON_TEC9,				"tec9" },
+	{ WEAPON_M4A4,				"m4a4" },
+	{ WEAPON_REVOLVER,			"revolver" },
+	{ WEAPON_CZ75,				"cz75" },
+	{ WEAPON_MAG7,				"mag7" },
+	{ WEAPON_SAWEDOFF,			"sawedoff" },
+	{ WEAPON_NEGEV,				"negev" },
+	{ WEAPON_MP7,				"mp7" },
+	{ WEAPON_BIZON,				"bizon" },
+	{ WEAPON_TASER,				"taser" },
 
 	//knife massive
 	{ WEAPON_KNIFE,				"weapon_knife" },
@@ -303,10 +315,16 @@ SendPropFloat(SENDINFO(m_fAccuracyPenalty) ),
 // world weapon models have no aminations
 SendPropExclude( "DT_AnimTimeMustBeFirst", "m_flAnimTime" ),
 SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
+SendPropTime( SENDINFO( m_flPostponeFireReadyTime ) ),
+SendPropBool( SENDINFO( m_bReloadVisuallyComplete ) ),
+SendPropFloat( SENDINFO( m_fLastShotTime ) ),
 //	SendPropExclude( "DT_LocalActiveWeaponData", "m_flTimeWeaponIdle" ),
 #else
 RecvPropInt( RECVINFO( m_weaponMode ) ),
 RecvPropFloat( RECVINFO(m_fAccuracyPenalty)),
+RecvPropTime( RECVINFO( m_flPostponeFireReadyTime ) ),
+RecvPropBool( RECVINFO( m_bReloadVisuallyComplete ) ),
+RecvPropFloat( RECVINFO( m_fLastShotTime ) ),
 #endif
 END_NETWORK_TABLE()
 
@@ -319,6 +337,9 @@ BEGIN_PREDICTION_DATA( CWeaponCSBase )
 	DEFINE_PRED_FIELD( m_flAccuracy, FIELD_FLOAT, 0 ),
 	DEFINE_PRED_FIELD( m_weaponMode, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD_TOL( m_fAccuracyPenalty, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.00005f ),
+	DEFINE_PRED_FIELD( m_fLastShotTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_flPostponeFireReadyTime, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
+	DEFINE_PRED_FIELD( m_fLastShotTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 END_PREDICTION_DATA()
 #endif
 
@@ -426,7 +447,11 @@ CWeaponCSBase::CWeaponCSBase()
 
 	m_fAccuracyPenalty = 0.0f;
 
+	m_fLastShotTime = 0.0f;
+
 	m_weaponMode = Primary_Mode;
+
+	m_bReloadVisuallyComplete = false;
 }
 
 
@@ -606,6 +631,25 @@ void CWeaponCSBase::SendViewModelAnim( int nSequence )
  BaseClass::SendViewModelAnim( nSequence );
 }
 
+// Common code put here to support separate zoom from silencer/burst
+void CWeaponCSBase::CallSecondaryAttack()
+{
+	CCSPlayer *pPlayer = GetPlayerOwner();
+
+	if ( !pPlayer )
+		return;
+
+	if ( m_iClip2 != -1 && !GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) )
+	{
+		m_bFireOnEmpty = TRUE;
+	}
+
+	if ( pPlayer->HasShield() )
+		CWeaponCSBase::SecondaryAttack();
+	else
+		SecondaryAttack();
+}
+
 void CWeaponCSBase::ItemPostFrame()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
@@ -617,14 +661,14 @@ void CWeaponCSBase::ItemPostFrame()
 
 	UpdateShieldState();
 
-	if ((m_bInReload) && (pPlayer->m_flNextAttack <= gpGlobals->curtime))
+	if ( ( m_bInReload ) && ( pPlayer->m_flNextAttack <= gpGlobals->curtime ))
 	{
-		// complete the reload.
-		int j = MIN( GetMaxClip1() - m_iClip1, pPlayer->GetAmmoCount( m_iPrimaryAmmoType ) );
+		// the AE_WPN_COMPLETE_RELOAD event should handle the stocking the clip, but in case it's missing, we can do it here as well
+		int j = MIN( GetMaxClip1() - m_iClip1, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );	
 
 		// Add them to the clip
 		m_iClip1 += j;
-		pPlayer->RemoveAmmo( j, m_iPrimaryAmmoType );
+		GiveReserveAmmo( AMMO_POSITION_PRIMARY, -j, true );
 
 		m_bInReload = false;
 	}
@@ -762,6 +806,93 @@ void CWeaponCSBase::ItemPostFrame()
 	}
 }
 
+void CWeaponCSBase::ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer )
+{
+	if ( (m_iClip1 == 0) || (GetMaxClip1() == -1 && !GetReserveAmmoCount( AMMO_POSITION_PRIMARY )) )
+	{
+		m_bFireOnEmpty = TRUE;
+	}
+
+	if ( CSGameRules()->IsFreezePeriod() )	// Can't shoot during the freeze period
+		return;
+
+	if ( pPlayer->m_bIsDefusing )
+		return;
+
+	if ( pPlayer->State_Get() != STATE_ACTIVE )
+		return;
+
+	if ( pPlayer->IsShieldDrawn() )
+		return;
+
+	// don't repeat fire if this is not a full auto weapon or it's clip is empty
+	if ( pPlayer->m_iShotsFired > 0 && (!IsFullAuto() || m_iClip1 == 0) )
+		return;
+
+#if !defined(CLIENT_DLL)
+	// allow the bots to react to the gunfire
+	if ( GetCSWpnData().m_WeaponType != WEAPONTYPE_GRENADE )
+	{
+		IGameEvent * event = gameeventmanager->CreateEvent( (HasAmmo()) ? "weapon_fire" : "weapon_fire_on_empty" );
+		if ( event )
+		{
+			const char *weaponName = STRING( m_iClassname );
+			if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
+			{
+				weaponName += 7;
+			}
+
+			event->SetInt( "userid", pPlayer->GetUserID() );
+			event->SetString( "weapon", weaponName );
+			event->SetBool( "silenced", IsSilenced() );
+			gameeventmanager->FireEvent( event );
+		}
+	}
+#endif
+
+	if ( IsRevolver() ) // holding primary, will fire when time is elapsed
+	{
+
+		// don't allow a rapid fire shot instantly in the middle of a haul back hold, let the hammer return first
+		m_flNextSecondaryAttack = gpGlobals->curtime + 0.25f;
+
+		if ( GetActivity() != ACT_VM_HAULBACK )
+		{
+			ResetPostponeFireReadyTime();
+			BaseClass::SendWeaponAnim( ACT_VM_HAULBACK );
+			return;
+		}
+
+		m_weaponMode = Primary_Mode;
+
+		if ( !IsPostponFireReadyTimeElapsed() )
+			return;
+
+		if ( m_bFireOnEmpty )
+		{
+			ResetPostponeFireReadyTime();
+			m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->curtime + 0.5f;
+		}
+
+		// we're going to fire after this point
+
+	}
+
+	PrimaryAttack();
+	m_fLastShotTime = gpGlobals->curtime;
+
+	if ( IsRevolver() )
+	{
+		// we just fired.
+		// there's a bit of a cool-off before you can alt-fire at normal alt-fire rate
+		m_flNextSecondaryAttack = gpGlobals->curtime + (GetCSWpnData().m_flCycleTimeAlt * 1.7f);
+	}
+
+#ifndef CLIENT_DLL
+	pPlayer->ClearImmunity();
+#endif
+}
+
 void CWeaponCSBase::CallWeaponIronsight()
 {
  CCSPlayer *pPlayer = GetPlayerOwner();
@@ -835,6 +966,115 @@ void CWeaponCSBase::CallWeaponIronsight()
 #endif
 
  m_flNextSecondaryAttack = gpGlobals->curtime + 0.3;
+}
+
+bool CWeaponCSBase::ItemPostFrame_ProcessSecondaryAttack( CCSPlayer *pPlayer )
+{
+	if ( IsRevolver() )
+	{
+		if ( CSGameRules()->IsFreezePeriod() )	// you can't fire the revolver in freezetime
+			return false;
+
+		if ( pPlayer->m_bIsDefusing )
+			return false;
+
+		if ( pPlayer->State_Get() != STATE_ACTIVE )
+			return false;
+
+		if ( ( m_iClip1 == 0 ) || ( GetMaxClip1() == -1 && !GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) ) )
+		{
+			m_bFireOnEmpty = TRUE;
+		}
+
+		m_weaponMode = Secondary_Mode;
+
+		if ( !m_bFireOnEmpty )
+		{
+			ResetPostponeFireReadyTime();
+
+			if ( GetActivity() == ACT_VM_HAULBACK )
+			{
+				BaseClass::SendWeaponAnim( ACT_VM_IDLE );
+				return false;
+			}
+		}
+
+		if ( pPlayer->m_iShotsFired > 0 ) // revolver secondary isn't full-auto even though primary is
+			return false; // shots fired is zeroed when the buttons release
+
+		if ( m_bFireOnEmpty )
+		{
+			if ( GetActivity() != ACT_VM_HAULBACK )
+			{
+				ResetPostponeFireReadyTime();
+				BaseClass::SendWeaponAnim( ACT_VM_HAULBACK );
+				return false;
+			}
+
+			if ( !IsPostponFireReadyTimeElapsed() )
+				return false;
+		}
+	}
+
+#if !defined(CLIENT_DLL)
+	// allow the chickens to react to the knife
+	if ( GetCSWpnData().m_WeaponType == WEAPONTYPE_KNIFE )
+	{
+		IGameEvent * event = gameeventmanager->CreateEvent("weapon_fire");
+		if ( event )
+		{
+			const char *weaponName = STRING( m_iClassname );
+			if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
+			{
+				weaponName += 7;
+			}
+
+			event->SetInt( "userid", pPlayer->GetUserID() );
+			event->SetString( "weapon", weaponName );
+			event->SetBool( "silenced", false );
+			gameeventmanager->FireEvent( event );
+		}
+	}
+#endif
+
+#ifndef CLIENT_DLL
+	pPlayer->ClearImmunity();
+#endif
+
+	return true;
+}
+
+void CWeaponCSBase::ItemPostFrame_ProcessIdleNoAction( CCSPlayer *pPlayer )
+{
+	ItemPostFrame_RevolverResetHaulback();
+
+	// no fire buttons down
+	m_bFireOnEmpty = FALSE;
+
+	// set the shots fired to 0 after the player releases a button
+	pPlayer->m_iShotsFired = 0;
+
+	if ( gpGlobals->curtime > m_flNextPrimaryAttack && m_iClip1 == 0 && IsUseable() && !( GetWeaponFlags() & ITEM_FLAG_NOAUTORELOAD ) && !m_bInReload )
+	{
+		// Reload if current clip is empty and weapon has waited as long as it has to after firing
+		Reload();
+		return;
+	}
+
+	WeaponIdle();
+}
+
+void CWeaponCSBase::ItemPostFrame_RevolverResetHaulback()
+{
+	if ( IsRevolver() ) // not holding any weapon buttons
+	{
+		m_weaponMode = Secondary_Mode;
+		ResetPostponeFireReadyTime();
+		if ( GetActivity() == ACT_VM_HAULBACK )
+		{
+			BaseClass::SendWeaponAnim( ACT_VM_IDLE );
+		}
+	}
 }
 
 void CWeaponCSBase::ItemBusyFrame()
@@ -927,6 +1167,15 @@ void CWeaponCSBase::Precache( void )
 		 PrecacheModel( GetCSWpnData().m_szShieldViewModel );
 	}
 #endif
+
+	if ( GetCSWpnData().m_szMuzzleFlash1stPerson[0] != 0 )
+		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash1stPerson );
+	if ( GetCSWpnData().m_szMuzzleFlash1stPersonAlt[0] != 0 )
+		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash1stPersonAlt );
+	if ( GetCSWpnData().m_szMuzzleFlash3rdPerson[0] != 0 )
+		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash3rdPerson );
+	if ( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt[0] != 0 )
+		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt );
 
 	PrecacheScriptSound( "Default.ClipEmpty_Pistol" );
 	PrecacheScriptSound( "Default.ClipEmpty_Rifle" );
@@ -1136,6 +1385,8 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 
 	SetOwnerEntity( NULL );
 	SetOwner( NULL );
+
+	m_bReloadVisuallyComplete = false;
 #endif
 }
 
@@ -1509,6 +1760,47 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 		// This is handled from the player's animstate, so it can match up to the beginning of the fire animation
 	}
 
+#ifdef CLIENT_DLL
+	int CWeaponCSBase::GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson )
+	{
+		if ( pAnimating )
+		{
+			if ( IsSilenced() )
+				return pAnimating->LookupAttachment( "muzzle_flash2" );
+
+			if ( isThirdPerson )
+				return pAnimating->LookupAttachment( "muzzle_flash" );
+			else
+				return pAnimating->LookupAttachment( "1" );
+		}
+		return -1;
+	}
+
+	const char* CWeaponCSBase::GetMuzzleFlashEffectName( bool bThirdPerson )
+	{
+		if ( IsSilenced() )
+		{
+			return bThirdPerson ? GetCSWpnData().m_szMuzzleFlash3rdPersonAlt : GetCSWpnData().m_szMuzzleFlash1stPersonAlt;
+		}
+		else
+		{
+			return bThirdPerson ? GetCSWpnData().m_szMuzzleFlash3rdPerson : GetCSWpnData().m_szMuzzleFlash1stPerson;
+		}
+	}
+
+	int CWeaponCSBase::GetEjectBrassAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson )
+	{
+		if ( pAnimating )
+		{
+			if ( isThirdPerson )
+				return pAnimating->LookupAttachment( "shell_eject" );
+			else
+				return pAnimating->LookupAttachment( "2" );
+		}
+
+		return -1;
+	}
+#endif
 
 	bool CWeaponCSBase::OnFireEvent( C_BaseViewModel *pViewModel, const Vector& origin, const QAngle& angles, int event, const char *options )
 	{
@@ -1708,30 +2000,198 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 {
 	int nEvent = pEvent->event;
 
-	 if ( nEvent == AE_BEGIN_TAUNT_LOOP )
-	{
-		CCSPlayer *pPlayer = GetPlayerOwner();
-
-		if ( pPlayer && pPlayer->IsLookingAtWeapon() && pPlayer->IsHoldingLookAtWeapon() )
+	 if ( (pEvent->type & AE_TYPE_NEWEVENTSYSTEM) && (pEvent->type & AE_TYPE_SERVER) )
+		{
+			if ( nEvent == AE_WPN_COMPLETE_RELOAD )
 			{
-				CBaseViewModel *pViewModel = pPlayer->GetViewModel();
+				m_bReloadVisuallyComplete = true;
+				CCSPlayer *pPlayer = GetPlayerOwner();
 
-				float flPrevCycle = pViewModel->GetCycle();
-				float flNewCycle = V_atof( pEvent->options );
-				pViewModel->SetCycle( flNewCycle );
+				if ( pPlayer )
+				{
+					int j = MIN( GetMaxClip1() - m_iClip1, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
 
-				float flSequenceDuration = pViewModel->SequenceDuration( pViewModel->GetSequence() );
-				pPlayer->ModifyTauntDuration( (flNewCycle - flPrevCycle) * flSequenceDuration );
+					// Add them to the clip
+					m_iClip1 += j;
+					GiveReserveAmmo( AMMO_POSITION_PRIMARY, -j, true );
+				}
 			}
 
-		return;
+		else if ( nEvent == AE_BEGIN_TAUNT_LOOP )
+		{
+			CCSPlayer *pPlayer = GetPlayerOwner();
 
-	}
+			if ( pPlayer && pPlayer->IsLookingAtWeapon() && pPlayer->IsHoldingLookAtWeapon() )
+				{
+					CBaseViewModel *pViewModel = pPlayer->GetViewModel();
+
+					float flPrevCycle = pViewModel->GetCycle();
+					float flNewCycle = V_atof( pEvent->options );
+					pViewModel->SetCycle( flNewCycle );
+
+					float flSequenceDuration = pViewModel->SequenceDuration( pViewModel->GetSequence() );
+					pPlayer->ModifyTauntDuration( (flNewCycle - flPrevCycle) * flSequenceDuration );
+				}
+
+			return;
+
+		}
+		//update the bullet bodygroup on the client
+			else if ( nEvent == AE_CL_BODYGROUP_SET_TO_CLIP )
+			{
+				CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() );
+				if ( pOwner )
+				{
+					CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
+					if ( vm )
+					{
+						int iNumBodygroupIndices = vm->GetNumBodyGroups();
+
+						for ( int iGroup=1; iGroup<iNumBodygroupIndices; iGroup++ )
+						{
+							vm->SetBodygroup( iGroup, (m_iClip1 >= iGroup) ? 0 : 1 );
+						}
+					}
+				}
+			}
+			else if ( nEvent == AE_CL_BODYGROUP_SET_TO_NEXTCLIP )
+			{
+				CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() );
+				if ( pOwner )
+				{
+					CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
+					if ( vm )
+					{
+						int iNextClip = MIN( GetMaxClip1(), m_iClip1 + GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
+						int iNumBodygroupIndices = vm->GetNumBodyGroups();
+						for ( int iGroup=1; iGroup<iNumBodygroupIndices; iGroup++ )
+						{
+							vm->SetBodygroup( iGroup, (iNextClip >= iGroup) ? 0 : 1 );
+						}
+					}
+				}
+			}
+			else if ( nEvent == AE_WPN_NEXTCLIP_TO_POSEPARAM )
+			{
+				// sets the given pose param to a 0..1 value representing the clip amount after an impending reload
+				CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() );
+				if ( pOwner )
+				{
+					CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
+					if ( vm )
+					{
+						int iNextClip = MIN( GetMaxClip1(), m_iClip1 + GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
+						vm->SetPoseParameter( pEvent->options, 1.0f - (((float) iNextClip) / ((float) GetMaxClip1())) );
+					}
+				}
+			}
+			else if ( nEvent == AE_WPN_CLIP_TO_POSEPARAM )
+			{
+				// sets the given pose param to a 0..1 value representing the clip amount
+				CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() );
+				if ( pOwner )
+				{
+					CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
+					if ( vm )
+					{
+						vm->SetPoseParameter( pEvent->options, 1.0f - (((float) m_iClip1) / ((float) GetMaxClip1())) );
+					}
+				}
+			}
+			else if ( nEvent == AE_CL_EJECT_MAG )
+			{
+				SetBodygroup( FindBodygroupByName( "magazine" ), 1 );
+			}
+			else if ( nEvent == AE_CL_EJECT_MAG_UNHIDE )
+			{
+				SetBodygroup( FindBodygroupByName( "magazine" ), 0 );
+			}
+			else if ( nEvent == AE_WPN_PRIMARYATTACK )
+			{
+				// delay time
+				const char *p = pEvent->options;
+				char token[256];
+				p = nexttoken( token, p, ' ' );
+				if ( token )
+				{
+					SetPostponeFireReadyTime( gpGlobals->curtime + atof( token ) );
+
+					// play the prepare warning sound to other players
+					CCSPlayer *pCSPlayer = GetPlayerOwner();
+					if ( pCSPlayer )
+					{
+						Vector soundPosition = pCSPlayer->GetAbsOrigin() + Vector( 0, 0, 50 );
+						CPASAttenuationFilter filter( soundPosition );
+						filter.RemoveRecipient( pCSPlayer );
+
+						// remove anyone that is first person spectating this player, since the viewmodel should play this sound for them on their client.
+						int i;
+						CBasePlayer *pPlayer;
+						for ( i = 1; i <= gpGlobals->maxClients; i++ )
+						{
+							pPlayer = UTIL_PlayerByIndex( i );
+
+							if ( !pPlayer )
+								continue;
+
+							if ( pPlayer->GetObserverMode() == OBS_MODE_IN_EYE && pPlayer->GetObserverTarget() == pCSPlayer )
+							{
+								filter.RemoveRecipient( pPlayer );
+							}
+						}
+
+						EmitSound( filter, entindex(), "Weapon_Revolver.Prepare" );
+					}
+
+				}
+
+				return;
+			}
+			else if ( nEvent == AE_CL_BODYGROUP_SET_VALUE )
+			{
+				CCSPlayer *pCSPlayer = GetPlayerOwner();
+				if ( pCSPlayer && pCSPlayer->GetActiveCSWeapon() )
+				{
+					if ( CBaseViewModel *vm = pCSPlayer->GetViewModel( m_nViewModelIndex ) )
+					{
+						char szBodygroupName[256];
+						int value = 0;
+
+						char token[256];
+
+						const char *p = pEvent->options;
+
+						// Bodygroup Name
+						p = nexttoken( token, p, ' ' );
+						if ( token )
+						{
+							Q_strncpy( szBodygroupName, token, sizeof( szBodygroupName ) );
+						}
+
+						// Get the desired value
+						p = nexttoken( token, p, ' ' );
+						if ( token )
+						{
+							value = atoi( token );
+						}
+
+						int index = vm->FindBodygroupByName( szBodygroupName );
+						if ( index >= 0 )
+						{
+							vm->SetBodygroup( index, value );
+						}
+					}
+				}
+				return;
+			}
+		}
 	BaseClass::Operator_HandleAnimEvent( pEvent, pOperator );
 }
 
 	bool CWeaponCSBase::Reload()
 	{
+		m_bReloadVisuallyComplete = false;
+
 		CCSPlayer *pPlayer = GetPlayerOwner();
 		if ( !pPlayer )
 			return false;
@@ -1816,7 +2276,7 @@ bool CWeaponCSBase::DefaultPistolReload()
 	if ( !pPlayer )
 		return false;
 
-	if (pPlayer->GetAmmoCount( GetPrimaryAmmoType() ) <= 0)
+	if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 )
 		return true;
 
 	if ( !DefaultReload( GetCSWpnData().iDefaultClip1, 0, ACT_VM_RELOAD ) )
@@ -1835,7 +2295,7 @@ bool CWeaponCSBase::IsUseable()
 
 	if ( Clip1() <= 0 )
 	{
-		if ( pPlayer->GetAmmoCount( GetPrimaryAmmoType() ) <= 0 && GetMaxClip1() != -1 )
+		if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 && GetMaxClip1() != -1 )
 		{
 			// clip is empty (or nonexistant) and the player has no more ammo of this type.
 			return false;

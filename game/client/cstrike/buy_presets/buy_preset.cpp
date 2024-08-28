@@ -485,7 +485,7 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 					const CCSWeaponInfo *info = GetWeaponInfo( id );
 					if ( info )
 					{
-						int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType );
+						int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType, C_CSPlayer::GetLocalCSPlayer() );
 						int ammoCost = GetCSAmmoDef()->GetCost( info->iAmmoType );
 						int ammoBuySize = GetCSAmmoDef()->GetBuySize( info->iAmmoType );
 						int roundsLeft = maxRounds - ammo[info->iAmmoType];
@@ -514,7 +514,7 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 					const CCSWeaponInfo *info = GetWeaponInfo( weaponID );
 					if ( info )
 					{
-						int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType );
+						int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType, C_CSPlayer::GetLocalCSPlayer() );
 						int ammoCost = GetCSAmmoDef()->GetCost( info->iAmmoType );
 						int ammoBuySize = GetCSAmmoDef()->GetBuySize( info->iAmmoType );
 						int roundsLeft = maxRounds - ammo[info->iAmmoType];
@@ -760,8 +760,8 @@ const char *ImageFnameFromWeaponID( CSWeaponID weaponID, bool isPrimary )
 	{
 	case WEAPON_NONE:
 		return "gfx/vgui/defaultweapon";
-	case WEAPON_SCOUT:
-		return "gfx/vgui/scout";
+	case WEAPON_SSG08:
+		return "gfx/vgui/ssg08";
 	case WEAPON_XM1014:
 		return "gfx/vgui/xm1014";
 	case WEAPON_MAC10:
@@ -770,47 +770,70 @@ const char *ImageFnameFromWeaponID( CSWeaponID weaponID, bool isPrimary )
 		return "gfx/vgui/aug";
 	case WEAPON_UMP45:
 		return "gfx/vgui/ump45";
-	case WEAPON_SG550:
-		return "gfx/vgui/sg550";
-	case WEAPON_GALIL:
-		return "gfx/vgui/galil";
+	case WEAPON_SCAR20:
+		return "gfx/vgui/scar20";
+	case WEAPON_GALILAR:
+		return "gfx/vgui/galilar";
 	case WEAPON_FAMAS:
 		return "gfx/vgui/famas";
 	case WEAPON_AWP:
 		return "gfx/vgui/awp";
-	case WEAPON_MP5NAVY:
-		return "gfx/vgui/mp5";
+	case WEAPON_MP5SD:
+		return "gfx/vgui/mp5sd";
 	case WEAPON_M249:
 		return "gfx/vgui/m249";
-	case WEAPON_M3:
-		return "gfx/vgui/m3";
+	case WEAPON_NOVA:
+		return "gfx/vgui/nova";
 	case WEAPON_M4A1:
-		return "gfx/vgui/m4a1";
-	case WEAPON_TMP:
-		return "gfx/vgui/tmp";
+		return "gfx/vgui/m4a1_silencer";
+	case WEAPON_M4A4:
+		return "gfx/vgui/m4a4";
+	case WEAPON_MP9:
+		return "gfx/vgui/mp9";
 	case WEAPON_G3SG1:
 		return "gfx/vgui/g3sg1";
-	case WEAPON_SG552:
-		return "gfx/vgui/sg552";
+	case WEAPON_SG556:
+		return "gfx/vgui/sg556";
 	case WEAPON_AK47:
 		return "gfx/vgui/ak47";
 	case WEAPON_P90:
 		return "gfx/vgui/p90";
+	case WEAPON_MAG7:
+		return "gfx/vgui/mag7";
+	case WEAPON_SAWEDOFF:
+		return "gfx/vgui/sawedoff";
+	case WEAPON_NEGEV:
+		return "gfx/vgui/negev";
+	case WEAPON_MP7:
+		return "gfx/vgui/mp7";
+	case WEAPON_BIZON:
+		return "gfx/vgui/bizon";
+	case WEAPON_TASER:
+		return "gfx/vgui/taser";
 	case WEAPON_SHIELDGUN:
 		return "gfx/vgui/shield";
 
+	
 	case WEAPON_USP:
-		return "gfx/vgui/usp45";
+		return "gfx/vgui/usp";
 	case WEAPON_GLOCK:
 		return "gfx/vgui/glock18";
 	case WEAPON_DEAGLE:
 		return "gfx/vgui/deserteagle";
 	case WEAPON_ELITE:
 		return "gfx/vgui/elites";
-	case WEAPON_P228:
-		return "gfx/vgui/p228";
+	case WEAPON_P250:
+		return "gfx/vgui/p250";
 	case WEAPON_FIVESEVEN:
 		return "gfx/vgui/fiveseven";
+	case WEAPON_HKP2000:
+		return "gfx/vgui/hkp2000";
+	case WEAPON_TEC9:
+		return "gfx/vgui/tec9";
+	case WEAPON_REVOLVER:
+		return "gfx/vgui/revolver";
+	case WEAPON_CZ75:
+		return "gfx/vgui/cz75";
 
 	default:
 		return "";
@@ -902,7 +925,7 @@ static void ParseWeaponString( const char *str, BuyPresetWeaponList& weapons, bo
 			const CCSWeaponInfo *info = GetWeaponInfo( weaponID );
 			if ( info )
 			{
-				int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType );
+				int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType, C_CSPlayer::GetLocalCSPlayer() );
 				int buySize = GetCSAmmoDef()->GetBuySize( info->iAmmoType );
 				numClips = MIN(ceil(maxRounds/(float)buySize), MAX(0, numClips));
 				if ( ((!isPrimary) ^ IsPrimaryWeapon( weaponID )) == 0 )

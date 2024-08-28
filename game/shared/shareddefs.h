@@ -180,6 +180,13 @@ enum CastVote
 	VOTE_UNCAST
 };
 
+
+enum AmmoPosition_t
+{
+	AMMO_POSITION_PRIMARY = 1,
+	AMMO_POSITION_SECONDARY = 2
+};
+
 //===================================================================================================================
 // Close caption flags
 #define CLOSE_CAPTION_WARNIFMISSING	( 1<<0 )

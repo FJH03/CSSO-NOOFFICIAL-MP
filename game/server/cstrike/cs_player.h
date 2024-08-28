@@ -759,6 +759,7 @@ public:
 	int m_iLoadoutSlotAgentCT;
 	int m_iLoadoutSlotAgentT;
 	bool IsAbleToInstantRespawn( void );
+	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield = true, bool bThrow = false );
 private:
 	CountdownTimer m_ladderSurpressionTimer;
 	Vector m_lastLadderNormal;
@@ -781,7 +782,6 @@ protected:
 	CNetworkVar( int, m_iClass ); // One of the CS_CLASS_ enums.
 	int m_iSkin;
 
-	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield = true, bool bThrow = false );
 	bool DropRifle( bool fromDeath = false );
 	bool DropPistol( bool fromDeath = false );
 	

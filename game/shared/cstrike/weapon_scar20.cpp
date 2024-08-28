@@ -10,7 +10,7 @@
 
 #if defined( CLIENT_DLL )
 
-	#define CWeaponScout C_WeaponScout
+	#define CWeaponSCAR20 C_WeaponSCAR20
 	#include "c_cs_player.h"
 
 #else
@@ -20,85 +20,93 @@
 
 #endif
 
-const int cScoutMidZoomFOV = 40;
-const int cScoutMaxZoomFOV = 15;
 
-
-class CWeaponScout : public CWeaponCSBaseGun
+class CWeaponSCAR20 : public CWeaponCSBaseGun
 {
 public:
-	DECLARE_CLASS( CWeaponScout, CWeaponCSBaseGun );
+	DECLARE_CLASS( CWeaponSCAR20, CWeaponCSBaseGun );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CWeaponScout();
+	CWeaponSCAR20();
 
-	virtual void PrimaryAttack();
+	virtual void Spawn();
 	virtual void SecondaryAttack();
-
- 	virtual float GetInaccuracy() const;
-	virtual float GetMaxSpeed() const;
+	virtual void PrimaryAttack();
 	virtual bool Reload();
 	virtual bool Deploy();
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_SCOUT; }
+ 	virtual float GetInaccuracy() const;
+	virtual float GetMaxSpeed() const;
+
+	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_SCAR20; }
 
 
 private:
-	
-	CWeaponScout( const CWeaponScout & );
+	CWeaponSCAR20( const CWeaponSCAR20 & );
+
+	float m_flLastFire;
 };
 
-IMPLEMENT_NETWORKCLASS_ALIASED( WeaponScout, DT_WeaponScout )
+IMPLEMENT_NETWORKCLASS_ALIASED( WeaponSCAR20, DT_WeaponSCAR20 )
 
-BEGIN_NETWORK_TABLE( CWeaponScout, DT_WeaponScout )
+BEGIN_NETWORK_TABLE( CWeaponSCAR20, DT_WeaponSCAR20 )
 END_NETWORK_TABLE()
 
-BEGIN_PREDICTION_DATA( CWeaponScout )
+#if defined CLIENT_DLL
+BEGIN_PREDICTION_DATA( CWeaponSCAR20 )
+	DEFINE_FIELD( m_flLastFire, FIELD_FLOAT ),
 END_PREDICTION_DATA()
+#endif
 
-LINK_ENTITY_TO_CLASS( weapon_scout, CWeaponScout );
-PRECACHE_WEAPON_REGISTER( weapon_scout );
+LINK_ENTITY_TO_CLASS( weapon_scar20, CWeaponSCAR20 );
+#ifdef GAME_DLL
+LINK_ENTITY_TO_CLASS( weapon_sg550, CWeaponSCAR20 ); // for backwards compatibility
+#endif
+PRECACHE_WEAPON_REGISTER( weapon_scar20 );
 
 
 
-CWeaponScout::CWeaponScout()
+CWeaponSCAR20::CWeaponSCAR20()
 {
+	m_flLastFire = gpGlobals->curtime;
 }
 
-void CWeaponScout::SecondaryAttack()
+void CWeaponSCAR20::Spawn()
+{
+	BaseClass::Spawn();
+	m_flAccuracy = 0.98;
+}
+
+
+void CWeaponSCAR20::SecondaryAttack()
 {
 	const float kZoomTime = 0.10f;
 
 	CCSPlayer *pPlayer = GetPlayerOwner();
-	if (pPlayer == NULL)
-	{
-		Assert(pPlayer != NULL);
+	if ( !pPlayer )
 		return;
-	}
 
 	if (pPlayer->GetFOV() == pPlayer->GetDefaultFOV())
 	{
-		pPlayer->SetFOV( pPlayer, cScoutMidZoomFOV, kZoomTime );
+		pPlayer->SetFOV( pPlayer, 40, kZoomTime );
 		m_weaponMode = Secondary_Mode;
 		m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyAltSwitch;
 		pPlayer->m_bIsScoped = true;
 	}
-	else if (pPlayer->GetFOV() == cScoutMidZoomFOV)
+	else if (pPlayer->GetFOV() == 40)
 	{
-		pPlayer->SetFOV( pPlayer, cScoutMaxZoomFOV, kZoomTime );
+		pPlayer->SetFOV( pPlayer, 15, kZoomTime );
 		m_weaponMode = Secondary_Mode;
 		pPlayer->m_bIsScoped = true;
 	}
-	else if (pPlayer->GetFOV() == cScoutMaxZoomFOV)
+	else if (pPlayer->GetFOV() == 15)
 	{
 		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), kZoomTime );
 		m_weaponMode = Primary_Mode;
 		pPlayer->m_bIsScoped = false;
 	}
 
-	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3f;   
-	m_zoomFullyActiveTime = gpGlobals->curtime + 0.15; // The worst zoom time from above.  
 
 #ifndef CLIENT_DLL
 	// If this isn't guarded, the sound will be emitted twice, once by the server and once by the client.
@@ -111,7 +119,7 @@ void CWeaponScout::SecondaryAttack()
 	//=============================================================================
 	if ( GetPlayerOwner() )
 	{
-		GetPlayerOwner()->EmitSound( "Default.Zoom" ); // zoom sound
+		GetPlayerOwner()->EmitSound( "Default.Zoom" ); // zoom sound.
 	}
 	//=============================================================================
 	// HPE_END
@@ -124,32 +132,33 @@ void CWeaponScout::SecondaryAttack()
 		gameeventmanager->FireEvent( event );
 	}
 #endif
+
+	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3f;
+	m_zoomFullyActiveTime = gpGlobals->curtime + 0.3; // The worst zoom time from above.  
 }
 
-float CWeaponScout::GetInaccuracy() const
+float CWeaponSCAR20::GetInaccuracy() const
 {
 	if ( weapon_accuracy_model.GetInt() == 1 )
 	{
 		CCSPlayer *pPlayer = GetPlayerOwner();
-		if (pPlayer == NULL)
+		if ( !pPlayer )
 			return 0.0f;
 	
 		float fSpread = 0.0f;
 	
 		if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-			fSpread = 0.2f;
-		else if (pPlayer->GetAbsVelocity().Length2D() > 170)
-			fSpread = 0.075f;
+			fSpread = 0.45f * (1 - m_flAccuracy);
+		else if (pPlayer->GetAbsVelocity().Length2D() > 5)
+			fSpread = 0.15f;
 		else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-			fSpread = 0.0f;
+			fSpread = 0.04f * (1 - m_flAccuracy);
 		else
-			fSpread = 0.007f;
+			fSpread = 0.05f * (1 - m_flAccuracy);
 	
 		// If we are not zoomed in, or we have very recently zoomed and are still transitioning, the bullet diverts more.
 		if (pPlayer->GetFOV() == pPlayer->GetDefaultFOV() || (gpGlobals->curtime < m_zoomFullyActiveTime))
-		{
 			fSpread += 0.025;
-		}
 	
 		return fSpread;
 	}
@@ -157,67 +166,55 @@ float CWeaponScout::GetInaccuracy() const
 		return BaseClass::GetInaccuracy();
 }
 
-void CWeaponScout::PrimaryAttack( void )
+void CWeaponSCAR20::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
-	if (pPlayer == NULL)
+	if ( !pPlayer )
 		return;
+
+	// Mark the time of this shot and determine the accuracy modifier based on the last shot fired...
+	m_flAccuracy = 0.65 + (0.35) * (gpGlobals->curtime - m_flLastFire);	
+
+	if (m_flAccuracy > 0.98)
+		m_flAccuracy = 0.98;
+
+	m_flLastFire = gpGlobals->curtime;
 
 	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, m_weaponMode ) )
 		return;
 
-	if ( m_weaponMode == Secondary_Mode )
-	{	
-		float	midFOVdistance = fabs( pPlayer->GetFOV() - (float)cScoutMidZoomFOV );
-		float	farFOVdistance = fabs( pPlayer->GetFOV() - (float)cScoutMaxZoomFOV );
-
-		if ( midFOVdistance < farFOVdistance )
-		{
-			pPlayer->m_iLastZoom = cScoutMidZoomFOV;
-		}
-		else
-		{
-			pPlayer->m_iLastZoom = cScoutMaxZoomFOV;
-		}
-		
-// 		#ifndef CLIENT_DLL
-			pPlayer->m_bResumeZoom = true;
-			pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.05f );
-			m_weaponMode = Primary_Mode;
-// 		#endif
-	}
-
 	QAngle angle = pPlayer->GetPunchAngle();
-	angle.x -= 2;
+	angle.x -= SharedRandomFloat("SG550PunchAngleX", 0.75, 1.25 ) + ( angle.x / 4 );
+	angle.y += SharedRandomFloat("SG550PunchAngleY", -0.75, 0.75 );
 	pPlayer->SetPunchAngle( angle );
 }
 
+bool CWeaponSCAR20::Reload()
+{
+	bool ret = BaseClass::Reload();
+	
+	m_flAccuracy = 0.98;
+	m_weaponMode = Primary_Mode;
+	
+	return ret;
+}
 
-float CWeaponScout::GetMaxSpeed() const
+bool CWeaponSCAR20::Deploy()
+{
+	bool ret = BaseClass::Deploy();
+	
+	m_flAccuracy = 0.98;
+	m_weaponMode = Primary_Mode;
+	
+	return ret;
+}
+
+float CWeaponSCAR20::GetMaxSpeed() const
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
-	if (pPlayer == NULL)
-	{
-		Assert(pPlayer != NULL);
-		return BaseClass::GetMaxSpeed();
-	}
 
-	if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
+	if ( !pPlayer || pPlayer->GetFOV() == 90 )
 		return BaseClass::GetMaxSpeed();
 	else
-		return 220;	// zoomed in.
-}
-
-
-bool CWeaponScout::Reload()
-{
-	m_weaponMode = Primary_Mode;
-	return BaseClass::Reload();
-
-}
-
-bool CWeaponScout::Deploy()
-{
-	m_weaponMode = Primary_Mode;
-	return BaseClass::Deploy();
+		return 150; // zoomed in
 }

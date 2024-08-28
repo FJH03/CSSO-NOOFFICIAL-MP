@@ -63,7 +63,7 @@ void IdleState::OnUpdate( CCSBot *me )
 		if (!me->EquipGrenade())
 		{
 			// high-skill bots run with the knife, unless using the Scout (which moves faster)
-			if (me->GetProfile()->GetSkill() > 0.33f && !me->IsUsing( WEAPON_SCOUT ))
+			if (me->GetProfile()->GetSkill() > 0.33f)
 			{
 				me->EquipKnife();
 			}

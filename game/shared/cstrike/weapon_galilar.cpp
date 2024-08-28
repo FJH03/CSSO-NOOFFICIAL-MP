@@ -10,7 +10,7 @@
 
 #if defined( CLIENT_DLL )
 
-	#define CWeaponGalil C_WeaponGalil
+	#define CWeaponGalilAR  C_WeaponGalilAR
 	#include "c_cs_player.h"
 
 #else
@@ -20,47 +20,50 @@
 #endif
 
 
-class CWeaponGalil : public CWeaponCSBaseGun
+class CWeaponGalilAR : public CWeaponCSBaseGun
 {
 public:
-	DECLARE_CLASS( CWeaponGalil, CWeaponCSBaseGun );
+	DECLARE_CLASS( CWeaponGalilAR, CWeaponCSBaseGun );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CWeaponGalil();
+	CWeaponGalilAR();
 
 	virtual void PrimaryAttack();
 
  	virtual float GetInaccuracy() const;
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_GALIL; }
+	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_GALILAR; }
 
 private:
 
-	CWeaponGalil( const CWeaponGalil & );
+	CWeaponGalilAR( const CWeaponGalilAR  & );
 
 	void GalilFire( float flSpread );
 
 };
 
-IMPLEMENT_NETWORKCLASS_ALIASED( WeaponGalil, DT_WeaponGalil )
+IMPLEMENT_NETWORKCLASS_ALIASED( WeaponGalilAR, DT_WeaponGalilAR )
 
-BEGIN_NETWORK_TABLE( CWeaponGalil, DT_WeaponGalil )
+BEGIN_NETWORK_TABLE( CWeaponGalilAR, DT_WeaponGalilAR )
 END_NETWORK_TABLE()
 
-BEGIN_PREDICTION_DATA( CWeaponGalil )
+BEGIN_PREDICTION_DATA( CWeaponGalilAR )
 END_PREDICTION_DATA()
 
-LINK_ENTITY_TO_CLASS( weapon_galil, CWeaponGalil );
-PRECACHE_WEAPON_REGISTER( weapon_galil );
+LINK_ENTITY_TO_CLASS( weapon_galilar, CWeaponGalilAR );
+#ifdef GAME_DLL
+LINK_ENTITY_TO_CLASS( weapon_galil, CWeaponGalilAR ); // for backwards compatibility
+#endif
+PRECACHE_WEAPON_REGISTER( weapon_galilar );
 
 
 
-CWeaponGalil::CWeaponGalil()
+CWeaponGalilAR::CWeaponGalilAR()
 {
 }
 
-float CWeaponGalil::GetInaccuracy() const
+float CWeaponGalilAR::GetInaccuracy() const
 {
 	if ( weapon_accuracy_model.GetInt() == 1 )
 	{
@@ -79,7 +82,7 @@ float CWeaponGalil::GetInaccuracy() const
 		return BaseClass::GetInaccuracy();
 }
 
-void CWeaponGalil::PrimaryAttack()
+void CWeaponGalilAR::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )

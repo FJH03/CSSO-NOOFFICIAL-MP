@@ -10,7 +10,7 @@
 
 #if defined( CLIENT_DLL )
 
-	#define CWeaponMP5Navy C_WeaponMP5Navy
+	#define CWeaponMP5SD C_WeaponMP5SD
 	#include "c_cs_player.h"
 
 #else
@@ -20,14 +20,14 @@
 #endif
 
 
-class CWeaponMP5Navy : public CWeaponCSBaseGun
+class CWeaponMP5SD : public CWeaponCSBaseGun
 {
 public:
-	DECLARE_CLASS( CWeaponMP5Navy, CWeaponCSBaseGun );
+	DECLARE_CLASS( CWeaponMP5SD, CWeaponCSBaseGun );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CWeaponMP5Navy();
+	CWeaponMP5SD();
 
 	virtual void Spawn();
 	virtual void PrimaryAttack();
@@ -36,31 +36,34 @@ public:
 
  	virtual float GetInaccuracy() const;
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_MP5NAVY; }
+	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_MP5SD; }
 
 
 private:
-	CWeaponMP5Navy( const CWeaponMP5Navy & );
+	CWeaponMP5SD( const CWeaponMP5SD & );
 };
 
-IMPLEMENT_NETWORKCLASS_ALIASED( WeaponMP5Navy, DT_WeaponMP5Navy )
+IMPLEMENT_NETWORKCLASS_ALIASED( WeaponMP5SD, DT_WeaponMP5SD )
 
-BEGIN_NETWORK_TABLE( CWeaponMP5Navy, DT_WeaponMP5Navy )
+BEGIN_NETWORK_TABLE( CWeaponMP5SD, DT_WeaponMP5SD )
 END_NETWORK_TABLE()
 
-BEGIN_PREDICTION_DATA( CWeaponMP5Navy )
+BEGIN_PREDICTION_DATA( CWeaponMP5SD )
 END_PREDICTION_DATA()
 
-LINK_ENTITY_TO_CLASS( weapon_mp5navy, CWeaponMP5Navy );
-PRECACHE_WEAPON_REGISTER( weapon_mp5navy );
+LINK_ENTITY_TO_CLASS( weapon_mp5sd, CWeaponMP5SD );
+#ifdef GAME_DLL
+LINK_ENTITY_TO_CLASS( weapon_mp5navy, CWeaponMP5SD ); // for backwards compatibility
+#endif
+PRECACHE_WEAPON_REGISTER( weapon_mp5sd );
 
 
 
-CWeaponMP5Navy::CWeaponMP5Navy()
+CWeaponMP5SD::CWeaponMP5SD()
 {
 }
 
-void CWeaponMP5Navy::Spawn()
+void CWeaponMP5SD::Spawn()
 {
 	BaseClass::Spawn();
 
@@ -68,7 +71,7 @@ void CWeaponMP5Navy::Spawn()
 }
 
 
-bool CWeaponMP5Navy::Deploy( )
+bool CWeaponMP5SD::Deploy( )
 {
 	bool ret = BaseClass::Deploy();
 
@@ -77,7 +80,7 @@ bool CWeaponMP5Navy::Deploy( )
 	return ret;
 }
 
-bool CWeaponMP5Navy::Reload( )
+bool CWeaponMP5SD::Reload( )
 {
 	bool ret = BaseClass::Reload();
 
@@ -86,7 +89,7 @@ bool CWeaponMP5Navy::Reload( )
 	return ret;
 }
 
-float CWeaponMP5Navy::GetInaccuracy() const
+float CWeaponMP5SD::GetInaccuracy() const
 {
 	if ( weapon_accuracy_model.GetInt() == 1 )
 	{
@@ -103,7 +106,7 @@ float CWeaponMP5Navy::GetInaccuracy() const
 		return BaseClass::GetInaccuracy();
 }
 
-void CWeaponMP5Navy::PrimaryAttack( void )
+void CWeaponMP5SD::PrimaryAttack( void )
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )

@@ -402,9 +402,9 @@ void CCSBaseBuyMenu::UpdateBuyPresets( bool showDefaultPanel )
 const char *g_pWeaponNames[] =
 {
 	" ",
-	"#Cstrike_TitlesTXT_P228",
+	"#Cstrike_TitlesTXT_P250",
 	"#Cstrike_TitlesTXT_Glock18",
-	"#Cstrike_TitlesTXT_Scout",
+	"#Cstrike_TitlesTXT_SSG08",
 	"#Cstrike_TitlesTXT_HE_Grenade",
 	"#Cstrike_TitlesTXT_XM1014",
 	" ",
@@ -414,20 +414,20 @@ const char *g_pWeaponNames[] =
 	"#Cstrike_TitlesTXT_Dual40",
 	"#Cstrike_TitlesTXT_FiveSeven",
 	"#Cstrike_TitlesTXT_UMP45",
-	"#Cstrike_TitlesTXT_SG550",
-	"#Cstrike_TitlesTXT_Galil",
+	"#Cstrike_TitlesTXT_SCAR20",
+	"#Cstrike_TitlesTXT_GalilAR",
 	"#Cstrike_TitlesTXT_Famas",
 	"#Cstrike_TitlesTXT_USP45",
 	"#Cstrike_TitlesTXT_Magnum",
-	"#Cstrike_TitlesTXT_mp5navy",
+	"#Cstrike_TitlesTXT_MP5SD",
 	"#Cstrike_TitlesTXT_ESM249",
-	"#Cstrike_TitlesTXT_Leone12",
+	"#Cstrike_TitlesTXT_NOVA",
 	"#Cstrike_TitlesTXT_M4A1",
-	"#Cstrike_TitlesTXT_tmp",
+	"#Cstrike_TitlesTXT_MP9",
 	"#Cstrike_TitlesTXT_G3SG1",
 	"#Cstrike_TitlesTXT_Flashbang",
 	"#Cstrike_TitlesTXT_DesertEagle",
-	"#Cstrike_TitlesTXT_SG552",
+	"#Cstrike_TitlesTXT_SG556",
 	"#Cstrike_TitlesTXT_AK47",
 	" ",
 	"#Cstrike_TitlesTXT_FNP90",
@@ -878,6 +878,5 @@ void CCSBuySubMenu::HandleBlackMarket( void )
 		pButtonBargain->SetBargainButton( true );
 	}
 }
-
 
 

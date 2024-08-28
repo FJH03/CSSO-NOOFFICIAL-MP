@@ -10,7 +10,7 @@
 
 #if defined( CLIENT_DLL )
 
-	#define CWeaponSG550 C_WeaponSG550
+	#define CWeaponSSG08 C_WeaponSSG08
 	#include "c_cs_player.h"
 
 #else
@@ -20,90 +20,88 @@
 
 #endif
 
+const int cSSG08MidZoomFOV = 40;
+const int cSSG08MaxZoomFOV = 15;
 
-class CWeaponSG550 : public CWeaponCSBaseGun
+
+class CWeaponSSG08 : public CWeaponCSBaseGun
 {
 public:
-	DECLARE_CLASS( CWeaponSG550, CWeaponCSBaseGun );
+	DECLARE_CLASS( CWeaponSSG08, CWeaponCSBaseGun );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CWeaponSG550();
+	CWeaponSSG08();
 
-	virtual void Spawn();
-	virtual void SecondaryAttack();
 	virtual void PrimaryAttack();
-	virtual bool Reload();
-	virtual bool Deploy();
+	virtual void SecondaryAttack();
 
  	virtual float GetInaccuracy() const;
 	virtual float GetMaxSpeed() const;
+	virtual bool Reload();
+	virtual bool Deploy();
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_SG550; }
+	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_SSG08; }
 
 
 private:
-	CWeaponSG550( const CWeaponSG550 & );
-
-	float m_flLastFire;
+	
+	CWeaponSSG08( const CWeaponSSG08 & );
 };
 
-IMPLEMENT_NETWORKCLASS_ALIASED( WeaponSG550, DT_WeaponSG550 )
+IMPLEMENT_NETWORKCLASS_ALIASED( WeaponSSG08, DT_WeaponSSG08 )
 
-BEGIN_NETWORK_TABLE( CWeaponSG550, DT_WeaponSG550 )
+BEGIN_NETWORK_TABLE( CWeaponSSG08, DT_WeaponSSG08 )
 END_NETWORK_TABLE()
 
-#if defined CLIENT_DLL
-BEGIN_PREDICTION_DATA( CWeaponSG550 )
-	DEFINE_FIELD( m_flLastFire, FIELD_FLOAT ),
+BEGIN_PREDICTION_DATA( CWeaponSSG08 )
 END_PREDICTION_DATA()
+
+LINK_ENTITY_TO_CLASS( weapon_ssg08, CWeaponSSG08 );
+#ifdef GAME_DLL
+LINK_ENTITY_TO_CLASS( weapon_scout, CWeaponSSG08 );
 #endif
-
-LINK_ENTITY_TO_CLASS( weapon_sg550, CWeaponSG550 );
-PRECACHE_WEAPON_REGISTER( weapon_sg550 );
+PRECACHE_WEAPON_REGISTER( weapon_ssg08 );
 
 
 
-CWeaponSG550::CWeaponSG550()
+CWeaponSSG08::CWeaponSSG08()
 {
-	m_flLastFire = gpGlobals->curtime;
 }
 
-void CWeaponSG550::Spawn()
-{
-	BaseClass::Spawn();
-	m_flAccuracy = 0.98;
-}
-
-
-void CWeaponSG550::SecondaryAttack()
+void CWeaponSSG08::SecondaryAttack()
 {
 	const float kZoomTime = 0.10f;
 
 	CCSPlayer *pPlayer = GetPlayerOwner();
-	if ( !pPlayer )
+	if (pPlayer == NULL)
+	{
+		Assert(pPlayer != NULL);
 		return;
+	}
 
 	if (pPlayer->GetFOV() == pPlayer->GetDefaultFOV())
 	{
-		pPlayer->SetFOV( pPlayer, 40, kZoomTime );
+		pPlayer->SetFOV( pPlayer, cSSG08MidZoomFOV, kZoomTime );
 		m_weaponMode = Secondary_Mode;
 		m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyAltSwitch;
 		pPlayer->m_bIsScoped = true;
 	}
-	else if (pPlayer->GetFOV() == 40)
+	else if (pPlayer->GetFOV() == cSSG08MidZoomFOV)
 	{
-		pPlayer->SetFOV( pPlayer, 15, kZoomTime );
+		pPlayer->SetFOV( pPlayer, cSSG08MaxZoomFOV, kZoomTime );
 		m_weaponMode = Secondary_Mode;
 		pPlayer->m_bIsScoped = true;
 	}
-	else if (pPlayer->GetFOV() == 15)
+	else if (pPlayer->GetFOV() == cSSG08MaxZoomFOV)
 	{
 		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), kZoomTime );
 		m_weaponMode = Primary_Mode;
 		pPlayer->m_bIsScoped = false;
 	}
 
+	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3f;   
+	m_zoomFullyActiveTime = gpGlobals->curtime + 0.15; // The worst zoom time from above.  
 
 #ifndef CLIENT_DLL
 	// If this isn't guarded, the sound will be emitted twice, once by the server and once by the client.
@@ -116,7 +114,7 @@ void CWeaponSG550::SecondaryAttack()
 	//=============================================================================
 	if ( GetPlayerOwner() )
 	{
-		GetPlayerOwner()->EmitSound( "Default.Zoom" ); // zoom sound.
+		GetPlayerOwner()->EmitSound( "Default.Zoom" ); // zoom sound
 	}
 	//=============================================================================
 	// HPE_END
@@ -129,33 +127,32 @@ void CWeaponSG550::SecondaryAttack()
 		gameeventmanager->FireEvent( event );
 	}
 #endif
-
-	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3f;
-	m_zoomFullyActiveTime = gpGlobals->curtime + 0.3; // The worst zoom time from above.  
 }
 
-float CWeaponSG550::GetInaccuracy() const
+float CWeaponSSG08::GetInaccuracy() const
 {
 	if ( weapon_accuracy_model.GetInt() == 1 )
 	{
 		CCSPlayer *pPlayer = GetPlayerOwner();
-		if ( !pPlayer )
+		if (pPlayer == NULL)
 			return 0.0f;
 	
 		float fSpread = 0.0f;
 	
 		if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-			fSpread = 0.45f * (1 - m_flAccuracy);
-		else if (pPlayer->GetAbsVelocity().Length2D() > 5)
-			fSpread = 0.15f;
+			fSpread = 0.2f;
+		else if (pPlayer->GetAbsVelocity().Length2D() > 170)
+			fSpread = 0.075f;
 		else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-			fSpread = 0.04f * (1 - m_flAccuracy);
+			fSpread = 0.0f;
 		else
-			fSpread = 0.05f * (1 - m_flAccuracy);
+			fSpread = 0.007f;
 	
 		// If we are not zoomed in, or we have very recently zoomed and are still transitioning, the bullet diverts more.
 		if (pPlayer->GetFOV() == pPlayer->GetDefaultFOV() || (gpGlobals->curtime < m_zoomFullyActiveTime))
+		{
 			fSpread += 0.025;
+		}
 	
 		return fSpread;
 	}
@@ -163,55 +160,67 @@ float CWeaponSG550::GetInaccuracy() const
 		return BaseClass::GetInaccuracy();
 }
 
-void CWeaponSG550::PrimaryAttack()
+void CWeaponSSG08::PrimaryAttack( void )
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
-	if ( !pPlayer )
+	if (pPlayer == NULL)
 		return;
-
-	// Mark the time of this shot and determine the accuracy modifier based on the last shot fired...
-	m_flAccuracy = 0.65 + (0.35) * (gpGlobals->curtime - m_flLastFire);	
-
-	if (m_flAccuracy > 0.98)
-		m_flAccuracy = 0.98;
-
-	m_flLastFire = gpGlobals->curtime;
 
 	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, m_weaponMode ) )
 		return;
 
+	if ( m_weaponMode == Secondary_Mode )
+	{	
+		float	midFOVdistance = fabs( pPlayer->GetFOV() - (float)cSSG08MidZoomFOV );
+		float	farFOVdistance = fabs( pPlayer->GetFOV() - (float)cSSG08MaxZoomFOV );
+
+		if ( midFOVdistance < farFOVdistance )
+		{
+			pPlayer->m_iLastZoom = cSSG08MidZoomFOV;
+		}
+		else
+		{
+			pPlayer->m_iLastZoom = cSSG08MaxZoomFOV;
+		}
+		
+// 		#ifndef CLIENT_DLL
+			pPlayer->m_bResumeZoom = true;
+			pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.05f );
+			m_weaponMode = Primary_Mode;
+// 		#endif
+	}
+
 	QAngle angle = pPlayer->GetPunchAngle();
-	angle.x -= SharedRandomFloat("SG550PunchAngleX", 0.75, 1.25 ) + ( angle.x / 4 );
-	angle.y += SharedRandomFloat("SG550PunchAngleY", -0.75, 0.75 );
+	angle.x -= 2;
 	pPlayer->SetPunchAngle( angle );
 }
 
-bool CWeaponSG550::Reload()
-{
-	bool ret = BaseClass::Reload();
-	
-	m_flAccuracy = 0.98;
-	m_weaponMode = Primary_Mode;
-	
-	return ret;
-}
 
-bool CWeaponSG550::Deploy()
-{
-	bool ret = BaseClass::Deploy();
-	
-	m_flAccuracy = 0.98;
-	m_weaponMode = Primary_Mode;
-	
-	return ret;
-}
-
-float CWeaponSG550::GetMaxSpeed() const
+float CWeaponSSG08::GetMaxSpeed() const
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
+	if (pPlayer == NULL)
+	{
+		Assert(pPlayer != NULL);
+		return BaseClass::GetMaxSpeed();
+	}
 
-	if ( !pPlayer || pPlayer->GetFOV() == 90 )
+	if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
 		return BaseClass::GetMaxSpeed();
 	else
-		return 150; // zoomed in
+		return 220;	// zoomed in.
+}
+
+
+bool CWeaponSSG08::Reload()
+{
+	m_weaponMode = Primary_Mode;
+	return BaseClass::Reload();
+
+}
+
+bool CWeaponSSG08::Deploy()
+{
+	m_weaponMode = Primary_Mode;
+	return BaseClass::Deploy();
 }

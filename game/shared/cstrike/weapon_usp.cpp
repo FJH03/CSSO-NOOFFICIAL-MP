@@ -91,8 +91,11 @@ BEGIN_PREDICTION_DATA( CWeaponUSP )
 END_PREDICTION_DATA()
 #endif
 
-LINK_ENTITY_TO_CLASS( weapon_usp, CWeaponUSP );
-PRECACHE_WEAPON_REGISTER( weapon_usp );
+LINK_ENTITY_TO_CLASS( weapon_usp_silencer, CWeaponUSP );
+#ifdef GAME_DLL
+LINK_ENTITY_TO_CLASS( weapon_usp, CWeaponUSP ); // for backwards compatibility
+#endif
+PRECACHE_WEAPON_REGISTER( weapon_usp_silencer );
 
 
 Activity g_SilencedTranslations[][2] =

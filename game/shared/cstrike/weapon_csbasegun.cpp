@@ -107,6 +107,47 @@ void CWeaponCSBaseGun::PrimaryAttack()
 	Assert( false );
 }
 
+void CWeaponCSBaseGun::SecondaryAttack()
+{
+	CCSPlayer *pPlayer = GetPlayerOwner();
+	if ( pPlayer == NULL )
+	{
+		Assert( pPlayer != NULL );
+		return;
+	}
+	else
+	{
+		if ( IsRevolver() && m_flNextSecondaryAttack < gpGlobals->curtime )
+		{
+			float flCycletimeAlt = GetCSWpnData().m_flCycleTimeAlt;
+			m_weaponMode = Secondary_Mode;
+			UpdateAccuracyPenalty();
+#ifndef CLIENT_DLL
+			// Logic for weapon_fire event mimics weapon_csbase.cpp CWeaponCSBase::ItemPostFrame() primary fire implementation
+			IGameEvent * event = gameeventmanager->CreateEvent( (HasAmmo()) ? "weapon_fire" : "weapon_fire_on_empty" );
+			if ( event )
+			{
+				const char *weaponName = STRING( m_iClassname );
+				if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
+				{
+					weaponName += 7;
+				}
+
+				event->SetInt( "userid", pPlayer->GetUserID() );
+				event->SetString( "weapon", weaponName );
+				event->SetBool( "silenced", IsSilenced() );
+				gameeventmanager->FireEvent( event );
+			}
+#endif
+			CSBaseGunFire( flCycletimeAlt, Secondary_Mode );								// <--	'PEW PEW' HAPPENS HERE
+			m_flNextSecondaryAttack = gpGlobals->curtime + flCycletimeAlt;
+			return;
+		}
+
+		BaseClass::SecondaryAttack();
+	}
+}
+
 bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode )
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
@@ -148,8 +189,16 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 			// NOTE[pmf]: we don't want to actually play the dry fire animations, as most seem to depict the weapon actually firing.
 			// SendWeaponAnim( ACT_VM_DRYFIRE );
 
+			//++pPlayer->m_iShotsFired;	// don't play "auto" empty clicks -- make the player release the trigger before clicking again
+			m_flNextPrimaryAttack = gpGlobals->curtime + 0.2f;
+
+			if ( IsRevolver() )
+			{
+				m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->curtime + ((weaponMode == Primary_Mode) ? (GetCSWpnData().m_flCycleTime) : (GetCSWpnData().m_flCycleTimeAlt));
+				BaseClass::SendWeaponAnim( ACT_VM_DRYFIRE ); // empty!
+			}
+
 			m_bFireOnEmpty = false;
-			m_flNextPrimaryAttack = gpGlobals->curtime + 0.1f;
 		}
 
 		return false;
@@ -157,7 +206,18 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 
 	float flCurAttack = CalculateNextAttackTime( flCycleTime );
 
-	SendWeaponAnim( ACT_VM_PRIMARYATTACK );
+	if ( (IsRevolver() && weaponMode == Secondary_Mode) )
+	{
+		SendWeaponAnim( ACT_VM_SECONDARYATTACK );
+	}
+	else if ( IsRevolver() )
+	{
+		BaseClass::SendWeaponAnim( ACT_VM_PRIMARYATTACK );
+	}
+	else
+	{
+		SendWeaponAnim( ACT_VM_PRIMARYATTACK );
+	}
 
 	m_iClip1--;
 
@@ -201,7 +261,7 @@ bool CWeaponCSBaseGun::Reload()
 	if ( !pPlayer )
 		return false;
 
-	if (pPlayer->GetAmmoCount( GetPrimaryAmmoType() ) <= 0)
+	if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 )
 		return false;
 
 	pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.0f );
@@ -237,4 +297,23 @@ void CWeaponCSBaseGun::WeaponIdle()
 		SetWeaponIdleTime( gpGlobals->curtime + GetCSWpnData().m_flIdleInterval );
 		SendWeaponAnim( ACT_VM_IDLE );
 	}
+}
+
+bool CWeaponCSBaseGun::Holster( CBaseCombatWeapon *pSwitchingTo )
+{
+	/* re-deploying the weapon is punishment enough for canceling a silencer attach/detach before completion
+	if ( (GetActivity() == ACT_VM_ATTACH_SILENCER && m_bSilencerOn == false) ||
+		 (GetActivity() == ACT_VM_DETACH_SILENCER && m_bSilencerOn == true) )
+	{
+		m_flDoneSwitchingSilencer = gpGlobals->curtime;
+		m_flNextSecondaryAttack = gpGlobals->curtime;
+		m_flNextPrimaryAttack = gpGlobals->curtime;
+	}*/
+
+	// not sure we want to fully support animation cancelling
+	if ( m_bInReload && !m_bReloadVisuallyComplete )
+	{
+		m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->curtime;
+	}
+	return BaseClass::Holster( pSwitchingTo );
 }

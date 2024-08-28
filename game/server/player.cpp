@@ -218,7 +218,7 @@ void CC_GiveCurrentAmmo( void )
 				if( ammoIndex != -1 )
 				{
 					int giveAmount;
-					giveAmount = GetAmmoDef()->MaxCarry(ammoIndex);
+					giveAmount = GetAmmoDef()->MaxCarry( ammoIndex, pPlayer );
 					pPlayer->GiveAmmo( giveAmount, GetAmmoDef()->GetAmmoOfIndex(ammoIndex)->pName );
 				}
 			}
@@ -233,7 +233,7 @@ void CC_GiveCurrentAmmo( void )
 				if( ammoIndex != -1 )
 				{
 					int giveAmount;
-					giveAmount = GetAmmoDef()->MaxCarry(ammoIndex);
+					giveAmount = GetAmmoDef()->MaxCarry( ammoIndex, pPlayer );
 					pPlayer->GiveAmmo( giveAmount, GetAmmoDef()->GetAmmoOfIndex(ammoIndex)->pName );
 				}
 			}

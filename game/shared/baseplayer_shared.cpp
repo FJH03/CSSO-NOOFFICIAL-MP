@@ -9,6 +9,7 @@
 #include "movevars_shared.h"
 #include "util_shared.h"
 #include "datacache/imdlcache.h"
+#include "cs_ammodef.h"
 #if defined ( TF_DLL ) || defined ( TF_CLIENT_DLL )
 #include "tf_gamerules.h"
 #endif
@@ -90,6 +91,8 @@
 		}
 	};
 #endif
+
+ConVar sv_infinite_ammo( "sv_infinite_ammo", "0", FCVAR_REPLICATED, "Player's active weapon will never run out of ammo. If set to 2 then player has infinite total ammo but still has to reload the magazine." );
 
 #ifdef CLIENT_DLL
 ConVar mp_usehwmmodels( "mp_usehwmmodels", "0", NULL, "Enable the use of the hw morph models. (-1 = never, 1 = always, 0 = based upon GPU)" ); // -1 = never, 0 = if hasfastvertextextures, 1 = always
@@ -298,6 +301,34 @@ void CBasePlayer::ItemPostFrame()
 	// remove this line and call ImpulseCommands instead.
 	m_nImpulse = 0;
 #endif
+
+	extern ConVar sv_infinite_ammo;
+	if ( (sv_infinite_ammo.GetInt() == 1) && (GetActiveWeapon() != NULL) )
+	{
+		CBaseCombatWeapon *pWeapon = GetActiveWeapon();
+
+		pWeapon->m_iClip1 = pWeapon->GetMaxClip1();
+		pWeapon->m_iClip2 = pWeapon->GetMaxClip2();
+
+#if defined( GAME_DLL )
+
+		if ( pWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE )
+		{
+			int iPrimaryAmmoType = pWeapon->GetPrimaryAmmoType();
+			if ( iPrimaryAmmoType >= 0 )
+				SetAmmoCount( GetAmmoDef()->MaxCarry( iPrimaryAmmoType, this ), iPrimaryAmmoType );
+
+			int iSecondaryAmmoType = pWeapon->GetSecondaryAmmoType();
+			if ( iSecondaryAmmoType >= 0 )
+				SetAmmoCount( GetAmmoDef()->MaxCarry( iSecondaryAmmoType, this ), iSecondaryAmmoType );
+		}
+		else
+		{
+			pWeapon->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, pWeapon->GetReserveAmmoMax( AMMO_POSITION_PRIMARY ), true );
+			pWeapon->SetReserveAmmoCount( AMMO_POSITION_SECONDARY, pWeapon->GetReserveAmmoMax( AMMO_POSITION_SECONDARY ), true );
+		}
+#endif
+	}
 }
 
 

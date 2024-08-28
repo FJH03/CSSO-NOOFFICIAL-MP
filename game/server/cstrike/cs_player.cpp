@@ -4043,7 +4043,9 @@ BuyResult_e CCSPlayer::BuyGunAmmo( CBaseCombatWeapon *pWeapon, bool bBlinkMoney 
 	}
 
 	// Can only buy if the player does not already have full ammo
-	if ( GetAmmoCount( nAmmo ) >= GetAmmoDef()->MaxCarry( nAmmo ) )
+	int maxcarry = pWeapon->GetReserveAmmoMax( AMMO_POSITION_PRIMARY );
+
+	if ( pWeapon->GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) >= maxcarry )
 	{
 		return BUY_ALREADY_HAVE;
 	}
@@ -4957,40 +4959,47 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 			int msg_dest = HUD_PRINTCONSOLE;
 
 			ClientPrint( this, msg_dest, "usage: buy <item>\n" );
-			ClientPrint( this, msg_dest, "  primammo\n" );
-			ClientPrint( this, msg_dest, "  secammo\n" );
-			ClientPrint( this, msg_dest, "  vest\n" );
-			ClientPrint( this, msg_dest, "  vesthelm\n" );
-			ClientPrint( this, msg_dest, "  defuser\n" );
-			//ClientPrint( this, msg_dest, "  shield\n" );
-			ClientPrint( this, msg_dest, "  nvgs\n" );
-			ClientPrint( this, msg_dest, "  flashbang\n" );
-			ClientPrint( this, msg_dest, "  hegrenade\n" );
-			ClientPrint( this, msg_dest, "  smokegrenade\n" );
-			ClientPrint( this, msg_dest, "  galil\n" );
-			ClientPrint( this, msg_dest, "  ak47\n" );
-			ClientPrint( this, msg_dest, "  scout\n" );
-			ClientPrint( this, msg_dest, "  sg552\n" );
-			ClientPrint( this, msg_dest, "  awp\n" );
-			ClientPrint( this, msg_dest, "  g3sg1\n" );
-			ClientPrint( this, msg_dest, "  famas\n" );
-			ClientPrint( this, msg_dest, "  m4a1\n" );
-			ClientPrint( this, msg_dest, "  aug\n" );
-			ClientPrint( this, msg_dest, "  sg550\n" );
+			//ClientPrint( this, msg_dest, "  primammo\n" );
+			//ClientPrint( this, msg_dest, "  secammo\n" );
 			ClientPrint( this, msg_dest, "  glock\n" );
-			ClientPrint( this, msg_dest, "  usp\n" );
-			ClientPrint( this, msg_dest, "  p228\n" );
-			ClientPrint( this, msg_dest, "  deagle\n" );
-			ClientPrint( this, msg_dest, "  elite\n" );
-			ClientPrint( this, msg_dest, "  fiveseven\n" );
-			ClientPrint( this, msg_dest, "  m3\n" );
 			ClientPrint( this, msg_dest, "  xm1014\n" );
 			ClientPrint( this, msg_dest, "  mac10\n" );
-			ClientPrint( this, msg_dest, "  tmp\n" );
-			ClientPrint( this, msg_dest, "  mp5navy\n" );
 			ClientPrint( this, msg_dest, "  ump45\n" );
 			ClientPrint( this, msg_dest, "  p90\n" );
+			ClientPrint( this, msg_dest, "  aug\n" );
+			ClientPrint( this, msg_dest, "  elite\n" );
+			ClientPrint( this, msg_dest, "  fiveseven\n" );
+			ClientPrint( this, msg_dest, "  galilar\n" );
+			ClientPrint( this, msg_dest, "  famas\n" );
+			ClientPrint( this, msg_dest, "  usp_silencer\n" );
+			ClientPrint( this, msg_dest, "  awp\n" );
 			ClientPrint( this, msg_dest, "  m249\n" );
+			ClientPrint( this, msg_dest, "  nova\n" );
+			ClientPrint( this, msg_dest, "  m4a4\n" );
+			ClientPrint( this, msg_dest, "  m4a1_silencer\n" );
+			ClientPrint( this, msg_dest, "  g3sg1\n" );
+			ClientPrint( this, msg_dest, "  deagle\n" );
+			ClientPrint( this, msg_dest, "  ak47\n" );
+			ClientPrint( this, msg_dest, "  p90\n" );
+			ClientPrint( this, msg_dest, "  bizon\n" );
+			ClientPrint( this, msg_dest, "  mag7\n" );
+			ClientPrint( this, msg_dest, "  negev\n" );
+			ClientPrint( this, msg_dest, "  sawedoff\n" );
+			ClientPrint( this, msg_dest, "  tec9\n" );
+			ClientPrint( this, msg_dest, "  taser\n" );
+			ClientPrint( this, msg_dest, "  hkp2000\n" );
+			ClientPrint( this, msg_dest, "  mp5sd\n" );
+			ClientPrint( this, msg_dest, "  mp7\n" );
+			ClientPrint( this, msg_dest, "  mp9\n" );
+			ClientPrint( this, msg_dest, "  nova\n" );
+			ClientPrint( this, msg_dest, "  p250\n" );
+			ClientPrint( this, msg_dest, "  scar20\n" );
+			ClientPrint( this, msg_dest, "  sg556\n" );
+			ClientPrint( this, msg_dest, "  ssg08\n" );
+
+			ClientPrint( this, msg_dest, "  flashbang\n" );
+			ClientPrint( this, msg_dest, "  smokegrenade\n" );
+			ClientPrint( this, msg_dest, "  hegrenade\n" );
 		}
 
 		return true;
@@ -6276,7 +6285,7 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 		 return false;
 
 	// Check ammo counts for grenades, and don't try to pick up more grenades than we can carry
-	if ( bPickupGrenade )
+	/*if ( bPickupGrenade )
 	{
 		CBaseCombatWeapon *pOwnedGrenade = Weapon_OwnsThisType( pWeapon->GetClassname() );
 
@@ -6297,7 +6306,7 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 				return false;
 			}
 		}
-	}
+	}*/
 
 	if( bPickupGrenade || !Weapon_SlotOccupied( pWeapon ) )
 	{

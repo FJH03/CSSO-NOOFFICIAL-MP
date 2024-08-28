@@ -10,7 +10,7 @@
 
 #if defined( CLIENT_DLL )
 
-	#define CWeaponSG552 C_WeaponSG552
+	#define CWeaponSG556 C_WeaponSG556
 	#include "c_cs_player.h"
 
 #else
@@ -20,14 +20,14 @@
 #endif
 
 
-class CWeaponSG552 : public CWeaponCSBaseGun
+class CWeaponSG556 : public CWeaponCSBaseGun
 {
 public:
-	DECLARE_CLASS( CWeaponSG552, CWeaponCSBaseGun );
+	DECLARE_CLASS( CWeaponSG556, CWeaponCSBaseGun );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CWeaponSG552();
+	CWeaponSG556();
 
 	virtual void SecondaryAttack();
 	virtual void PrimaryAttack();
@@ -37,7 +37,7 @@ public:
 	virtual bool Reload();
 	virtual bool Deploy();
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_SG552; }
+	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_SG556; }
 
 #ifdef CLIENT_DLL
 	virtual bool	HideViewModelWhenZoomed( void ) { return false; }
@@ -45,31 +45,31 @@ public:
 
 private:
 
-	CWeaponSG552( const CWeaponSG552 & );
+	CWeaponSG556( const CWeaponSG556 & );
 
-	void SG552Fire( float flSpread, bool bZoomed );
+	void SG556Fire( float flSpread, bool bZoomed );
 
 };
 
-IMPLEMENT_NETWORKCLASS_ALIASED( WeaponSG552, DT_WeaponSG552 )
+IMPLEMENT_NETWORKCLASS_ALIASED( WeaponSG556, DT_WeaponSG556 )
 
-BEGIN_NETWORK_TABLE( CWeaponSG552, DT_WeaponSG552 )
+BEGIN_NETWORK_TABLE( CWeaponSG556, DT_WeaponSG556 )
 END_NETWORK_TABLE()
 
-BEGIN_PREDICTION_DATA( CWeaponSG552 )
+BEGIN_PREDICTION_DATA( CWeaponSG556 )
 END_PREDICTION_DATA()
 
-LINK_ENTITY_TO_CLASS( weapon_sg552, CWeaponSG552 );
-PRECACHE_WEAPON_REGISTER( weapon_sg552 );
+LINK_ENTITY_TO_CLASS( weapon_sg556, CWeaponSG556 );
+PRECACHE_WEAPON_REGISTER( weapon_sg556 );
 
 
 
-CWeaponSG552::CWeaponSG552()
+CWeaponSG556::CWeaponSG556()
 {
 }
 
 
-void CWeaponSG552::SecondaryAttack()
+void CWeaponSG556::SecondaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
@@ -95,7 +95,7 @@ void CWeaponSG552::SecondaryAttack()
 	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3;
 }
 
-float CWeaponSG552::GetInaccuracy() const
+float CWeaponSG556::GetInaccuracy() const
 {
 	if ( weapon_accuracy_model.GetInt() == 1 )
 	{
@@ -114,7 +114,7 @@ float CWeaponSG552::GetInaccuracy() const
 		return BaseClass::GetInaccuracy();
 }
 
-void CWeaponSG552::PrimaryAttack()
+void CWeaponSG556::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
@@ -146,7 +146,7 @@ void CWeaponSG552::PrimaryAttack()
 }
 
 
-float CWeaponSG552::GetMaxSpeed() const
+float CWeaponSG556::GetMaxSpeed() const
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 
@@ -157,13 +157,13 @@ float CWeaponSG552::GetMaxSpeed() const
 }	
 
 
-bool CWeaponSG552::Reload()
+bool CWeaponSG556::Reload()
 {
 	m_weaponMode = Primary_Mode;
 	return BaseClass::Reload();
 }
 
-bool CWeaponSG552::Deploy()
+bool CWeaponSG556::Deploy()
 {
 	m_weaponMode = Primary_Mode;
 	return BaseClass::Deploy();

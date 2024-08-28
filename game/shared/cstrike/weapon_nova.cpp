@@ -11,7 +11,7 @@
 
 #if defined( CLIENT_DLL )
 
-	#define CWeaponM3 C_WeaponM3
+	#define CWeaponNova C_WeaponNova
 	#include "c_cs_player.h"
 
 #else
@@ -22,14 +22,14 @@
 #endif
 
 
-class CWeaponM3 : public CWeaponCSBase
+class CWeaponNova : public CWeaponCSBase
 {
 public:
-	DECLARE_CLASS( CWeaponM3, CWeaponCSBase );
+	DECLARE_CLASS( CWeaponNova, CWeaponCSBase );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CWeaponM3();
+	CWeaponNova();
 
 	virtual void PrimaryAttack();
 	virtual bool Reload();
@@ -38,20 +38,20 @@ public:
  	virtual float GetInaccuracy() const;
 	virtual float GetSpread() const;
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_M3; }
+	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_NOVA; }
 
 private:
 
-	CWeaponM3( const CWeaponM3 & );
+	CWeaponNova( const CWeaponNova & );
 
 	float m_flPumpTime;
 	CNetworkVar( int, m_reloadState );
 
 };
 
-IMPLEMENT_NETWORKCLASS_ALIASED( WeaponM3, DT_WeaponM3 )
+IMPLEMENT_NETWORKCLASS_ALIASED( WeaponNova, DT_WeaponNova )
 
-BEGIN_NETWORK_TABLE( CWeaponM3, DT_WeaponM3 )
+BEGIN_NETWORK_TABLE( CWeaponNova, DT_WeaponNova )
 #ifdef CLIENT_DLL
 	RecvPropInt( RECVINFO( m_reloadState ) )
 #else
@@ -60,23 +60,26 @@ BEGIN_NETWORK_TABLE( CWeaponM3, DT_WeaponM3 )
 END_NETWORK_TABLE()
 
 #if defined(CLIENT_DLL)
-BEGIN_PREDICTION_DATA( CWeaponM3 )
+BEGIN_PREDICTION_DATA( CWeaponNova )
 DEFINE_PRED_FIELD( m_reloadState, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 END_PREDICTION_DATA()
 #endif
 
-LINK_ENTITY_TO_CLASS( weapon_m3, CWeaponM3 );
-PRECACHE_WEAPON_REGISTER( weapon_m3 );
+LINK_ENTITY_TO_CLASS( weapon_nova, CWeaponNova );
+#ifdef GAME_DLL
+LINK_ENTITY_TO_CLASS( weapon_m3, CWeaponNova );
+#endif
+PRECACHE_WEAPON_REGISTER( weapon_nova );
 
 
 
-CWeaponM3::CWeaponM3()
+CWeaponNova::CWeaponNova()
 {
 	m_flPumpTime = 0;
 	m_reloadState = 0;
 }
 
-float CWeaponM3::GetInaccuracy() const
+float CWeaponNova::GetInaccuracy() const
 {
 	if ( weapon_accuracy_model.GetInt() == 1 )
 	{
@@ -86,7 +89,7 @@ float CWeaponM3::GetInaccuracy() const
 		return BaseClass::GetInaccuracy();
 }
 
-float CWeaponM3::GetSpread() const
+float CWeaponNova::GetSpread() const
 {
 	if ( weapon_accuracy_model.GetInt() == 1 )
 		return 0.0675f;
@@ -94,7 +97,7 @@ float CWeaponM3::GetSpread() const
 	return GetCSWpnData().m_fSpread[Primary_Mode];
 }
 
-void CWeaponM3::PrimaryAttack()
+void CWeaponNova::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
@@ -178,7 +181,7 @@ void CWeaponM3::PrimaryAttack()
 }
 
 
-bool CWeaponM3::Reload()
+bool CWeaponNova::Reload()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
@@ -250,7 +253,7 @@ bool CWeaponM3::Reload()
 }
 
 
-void CWeaponM3::WeaponIdle()
+void CWeaponNova::WeaponIdle()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )

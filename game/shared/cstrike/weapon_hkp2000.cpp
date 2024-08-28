@@ -7,28 +7,29 @@
 #include "cbase.h"
 #include "weapon_csbase.h"
 #include "fx_cs_shared.h"
+#include "npcevent.h"
 
 
 #if defined( CLIENT_DLL )
 
-	#define CWeaponP228 C_WeaponP228
-	#include "c_cs_player.h"
+#define CWeaponHKP2000 C_WeaponHKP2000
+#include "c_cs_player.h"
 
 #else
 
-	#include "cs_player.h"
+#include "cs_player.h"
 
 #endif
 
 
-class CWeaponP228 : public CWeaponCSBase
+class CWeaponHKP2000 : public CWeaponCSBase
 {
 public:
-	DECLARE_CLASS( CWeaponP228, CWeaponCSBase );
-	DECLARE_NETWORKCLASS(); 
+	DECLARE_CLASS( CWeaponHKP2000, CWeaponCSBase );
+	DECLARE_NETWORKCLASS();
 	DECLARE_PREDICTABLE();
-	
-	CWeaponP228();
+
+	CWeaponHKP2000();
 
 	virtual void Spawn();
 
@@ -38,78 +39,55 @@ public:
 	virtual bool Reload();
 	virtual void WeaponIdle();
 
- 	virtual float GetInaccuracy() const;
-
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_P228; }
+	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_HKP2000; }
 
 private:
-	
-	CWeaponP228( const CWeaponP228 & );
+	CWeaponHKP2000( const CWeaponHKP2000 & );
 
 	float m_flLastFire;
 };
 
-#if defined CLIENT_DLL
-BEGIN_PREDICTION_DATA( CWeaponP228 )
-	DEFINE_FIELD( m_flLastFire, FIELD_FLOAT ),
+IMPLEMENT_NETWORKCLASS_ALIASED( WeaponHKP2000, DT_WeaponHKP2000 )
+
+BEGIN_NETWORK_TABLE( CWeaponHKP2000, DT_WeaponHKP2000 )
+END_NETWORK_TABLE()
+
+#ifdef CLIENT_DLL
+BEGIN_PREDICTION_DATA( CWeaponHKP2000 )
+DEFINE_FIELD( m_flLastFire, FIELD_FLOAT ),
 END_PREDICTION_DATA()
 #endif
 
-LINK_ENTITY_TO_CLASS( weapon_p228, CWeaponP228 );
-PRECACHE_WEAPON_REGISTER( weapon_p228 );
+LINK_ENTITY_TO_CLASS( weapon_hkp2000, CWeaponHKP2000 );
+PRECACHE_WEAPON_REGISTER( weapon_hkp2000 );
 
 
 
-CWeaponP228::CWeaponP228()
+CWeaponHKP2000::CWeaponHKP2000()
 {
 	m_flLastFire = gpGlobals->curtime;
 }
 
 
-void CWeaponP228::Spawn( )
+void CWeaponHKP2000::Spawn()
 {
-	m_flAccuracy = 0.9;
-	
 	BaseClass::Spawn();
+
+	//m_iDefaultAmmo = 12;
+	m_flAccuracy = 0.88;
+
+	//FallInit();// get ready to fall down.
 }
 
 
-bool CWeaponP228::Deploy( )
+bool CWeaponHKP2000::Deploy()
 {
-	m_flAccuracy = 0.9;
+	m_flAccuracy = 0.88;
 
 	return BaseClass::Deploy();
 }
 
-IMPLEMENT_NETWORKCLASS_ALIASED( WeaponP228, DT_WeaponP228 )
-
-BEGIN_NETWORK_TABLE( CWeaponP228, DT_WeaponP228 )
-END_NETWORK_TABLE()
-
-
-float CWeaponP228::GetInaccuracy() const
-{
-	if ( weapon_accuracy_model.GetInt() == 1 )
-	{
-		CCSPlayer *pPlayer = GetPlayerOwner();
-		if ( !pPlayer )
-			return 0.0f;
-
-		if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-			return 1.5f * (1 - m_flAccuracy);
-		else if (pPlayer->GetAbsVelocity().Length2D() > 5)
-			return 0.255f * (1 - m_flAccuracy);
-		else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-			return 0.075f * (1 - m_flAccuracy);
-		else
-			return 0.15f * (1 - m_flAccuracy);
-	}
-	else
-		return BaseClass::GetInaccuracy();
-}
-
-
-void CWeaponP228::PrimaryAttack( void )
+void CWeaponHKP2000::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
@@ -181,24 +159,23 @@ void CWeaponP228::PrimaryAttack( void )
 }
 
 
-bool CWeaponP228::Reload()
+bool CWeaponHKP2000::Reload()
 {
 	if ( !DefaultPistolReload() )
 		return false;
 
-	m_flAccuracy = 0.9;
+	m_flAccuracy = 0.88;
 	return true;
 }
 
-void CWeaponP228::WeaponIdle()
+void CWeaponHKP2000::WeaponIdle()
 {
-	if (m_flTimeWeaponIdle > gpGlobals->curtime)
+	if ( m_flTimeWeaponIdle > gpGlobals->curtime )
 		return;
 
 	// only idle if the slid isn't back
-	if (m_iClip1 != 0)
-	{	
-		SetWeaponIdleTime( gpGlobals->curtime + 3.0 ) ;
-		SendWeaponAnim( ACT_VM_IDLE );
+	if ( m_iClip1 != 0 )
+	{
+		SetWeaponIdleTime( gpGlobals->curtime + 6.0 );
 	}
 }

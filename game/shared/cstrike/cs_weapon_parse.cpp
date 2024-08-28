@@ -39,6 +39,7 @@ WeaponTypeInfo s_weaponTypeInfo[] =
 	{ WEAPONTYPE_MACHINEGUN,	"mg" },
 	{ WEAPONTYPE_C4,			"C4" },
 	{ WEAPONTYPE_GRENADE,		"Grenade" },
+	{ WEAPONTYPE_EQUIPMENT,		"Equipment" },
 };
 
 
@@ -50,9 +51,9 @@ struct WeaponNameInfo
 
 WeaponNameInfo s_weaponNameInfo[] =
 {
-	{ WEAPON_P228,				"weapon_p228" },
+	{ WEAPON_P250,				"weapon_p250" },
 	{ WEAPON_GLOCK,				"weapon_glock" },
-	{ WEAPON_SCOUT,				"weapon_scout" },
+	{ WEAPON_SSG08,				"weapon_ssg08" },
 	{ WEAPON_HEGRENADE,			"weapon_hegrenade" },
 	{ WEAPON_XM1014,			"weapon_xm1014" },
 	{ WEAPON_C4,				"weapon_c4" },
@@ -62,21 +63,21 @@ WeaponNameInfo s_weaponNameInfo[] =
 	{ WEAPON_ELITE,				"weapon_elite" },
 	{ WEAPON_FIVESEVEN,			"weapon_fiveseven" },
 	{ WEAPON_UMP45,				"weapon_ump45" },
-	{ WEAPON_SG550,				"weapon_sg550" },
+	{ WEAPON_SCAR20,			"weapon_scar20" },
 
-	{ WEAPON_GALIL,				"weapon_galil" },
+	{ WEAPON_GALILAR,			"weapon_galilar" },
 	{ WEAPON_FAMAS,				"weapon_famas" },
-	{ WEAPON_USP,				"weapon_usp" },
+	{ WEAPON_USP,				"weapon_usp_silencer" },
 	{ WEAPON_AWP,				"weapon_awp" },
-	{ WEAPON_MP5NAVY,			"weapon_mp5navy" },
+	{ WEAPON_MP5SD,				"weapon_mp5sd" },
 	{ WEAPON_M249,				"weapon_m249" },
-	{ WEAPON_M3,				"weapon_m3" },
-	{ WEAPON_M4A1,				"weapon_m4a1" },
-	{ WEAPON_TMP,				"weapon_tmp" },
+	{ WEAPON_NOVA,				"weapon_nova" },
+	{ WEAPON_M4A1,				"weapon_m4a1_silencer" },
+	{ WEAPON_MP9,				"weapon_mp9" },
 	{ WEAPON_G3SG1,				"weapon_g3sg1" },
 	{ WEAPON_FLASHBANG,			"weapon_flashbang" },
 	{ WEAPON_DEAGLE,			"weapon_deagle" },
-	{ WEAPON_SG552,				"weapon_sg552" },
+	{ WEAPON_SG556,				"weapon_sg556" },
 	{ WEAPON_AK47,				"weapon_ak47" },
 	{ WEAPON_P90,				"weapon_p90" },
 
@@ -101,6 +102,19 @@ WeaponNameInfo s_weaponNameInfo[] =
 	{ WEAPON_KNIFE_STILETTO,	"weapon_knife_stiletto" },
 	{ WEAPON_KNIFE_URSUS,		"weapon_knife_ursus" },
 	{ WEAPON_KNIFE_WIDOWMAKER,	"weapon_knife_widowmaker" },
+
+	// new weapons
+	{ WEAPON_HKP2000,			"weapon_hkp2000" },
+	{ WEAPON_TEC9,				"weapon_tec9" },
+	{ WEAPON_M4A4,				"weapon_m4a4" },
+	{ WEAPON_REVOLVER,			"weapon_revolver" },
+	{ WEAPON_CZ75,				"weapon_cz75" },
+	{ WEAPON_MAG7,				"weapon_mag7" },
+	{ WEAPON_SAWEDOFF,			"weapon_sawedoff" },
+	{ WEAPON_NEGEV,				"weapon_negev" },
+	{ WEAPON_MP7,				"weapon_mp7" },
+	{ WEAPON_BIZON,				"weapon_bizon" },
+	{ WEAPON_TASER,				"weapon_taser" },
 
 	// not sure any of these are needed
 	{ WEAPON_SHIELDGUN,			"weapon_shieldgun" },
@@ -341,27 +355,16 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_bCanUseWithShield			= !!pKeyValuesData->GetInt( "CanEquipWithShield", false );
 	m_flMuzzleScale				= pKeyValuesData->GetFloat( "MuzzleFlashScale", 1 );
 
-	const char *pMuzzleFlashStyle = pKeyValuesData->GetString( "MuzzleFlashStyle", "CS_MUZZLEFLASH_NORM" );
-	
-	if( pMuzzleFlashStyle )
-	{
-		if ( Q_stricmp( pMuzzleFlashStyle, "CS_MUZZLEFLASH_X" ) == 0 )
-		{
-			m_iMuzzleFlashStyle = CS_MUZZLEFLASH_X;
-		}
-		else if ( Q_stricmp( pMuzzleFlashStyle, "CS_MUZZLEFLASH_NONE" ) == 0 )
-		{
-			m_iMuzzleFlashStyle = CS_MUZZLEFLASH_NONE;
-		}
-		else
-		{
-			m_iMuzzleFlashStyle = CS_MUZZLEFLASH_NORM;
-		}
-	}
-	else
-	{
-		Assert( false );
-	}
+	// muzzle flash
+	const char* pTemp = pKeyValuesData->GetString( "MuzzleFlash1stPerson", "" );
+	Q_strncpy( m_szMuzzleFlash1stPerson, pTemp, sizeof( m_szMuzzleFlash1stPerson ) );
+	pTemp = pKeyValuesData->GetString( "MuzzleFlash1stPersonAlt", m_szMuzzleFlash1stPerson );
+	Q_strncpy( m_szMuzzleFlash1stPersonAlt, pTemp, sizeof( m_szMuzzleFlash1stPersonAlt ) );
+
+	pTemp = pKeyValuesData->GetString( "MuzzleFlash3rdPerson", "" );
+	Q_strncpy( m_szMuzzleFlash3rdPerson, pTemp, sizeof( m_szMuzzleFlash3rdPerson ) );
+	pTemp = pKeyValuesData->GetString( "MuzzleFlash3rdPersonAlt", m_szMuzzleFlash3rdPerson );
+	Q_strncpy( m_szMuzzleFlash3rdPersonAlt, pTemp, sizeof( m_szMuzzleFlash3rdPersonAlt ) );
 
 	m_iPenetration		= pKeyValuesData->GetInt( "Penetration", 1 );
 	m_iDamage			= pKeyValuesData->GetInt( "Damage", 42 ); // Douglas Adams 1952 - 2001
@@ -369,6 +372,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_flRangeModifier	= pKeyValuesData->GetFloat( "RangeModifier", 0.98f );
 	m_iBullets			= pKeyValuesData->GetInt( "Bullets", 1 );
 	m_flCycleTime		= pKeyValuesData->GetFloat( "CycleTime", 0.15 );
+	m_flCycleTimeAlt	= pKeyValuesData->GetFloat( "CycleTimeAlt", 0.15 );
 	m_bAccuracyQuadratic= pKeyValuesData->GetInt( "AccuracyQuadratic", 0 );
 	m_flAccuracyDivisor	= pKeyValuesData->GetFloat( "AccuracyDivisor", -1 ); // -1 = off
 	m_flAccuracyOffset	= pKeyValuesData->GetFloat( "AccuracyOffset", 0 );

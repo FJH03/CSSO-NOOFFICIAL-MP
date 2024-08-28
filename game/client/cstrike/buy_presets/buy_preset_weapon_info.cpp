@@ -31,31 +31,42 @@ struct WeaponDisplayNameInfo
 // NOTE: Array must be NULL-terminated
 static WeaponDisplayNameInfo weaponDisplayNameInfo[] = 
 {
-	{ WEAPON_P228,		"#Cstrike_TitlesTXT_P228" },
+	{ WEAPON_P250,		"#Cstrike_TitlesTXT_P250" },
 	{ WEAPON_GLOCK,		"#Cstrike_TitlesTXT_Glock18" },
-	{ WEAPON_SCOUT,		"#Cstrike_TitlesTXT_Scout" },
+	{ WEAPON_SSG08,		"#Cstrike_TitlesTXT_SSG08" },
 	{ WEAPON_XM1014,	"#Cstrike_TitlesTXT_AutoShotgun" },
 	{ WEAPON_MAC10,		"#Cstrike_TitlesTXT_Mac10_Short" },
 	{ WEAPON_AUG,		"#Cstrike_TitlesTXT_Aug" },
 	{ WEAPON_ELITE,		"#Cstrike_TitlesTXT_Beretta96G" },
 	{ WEAPON_FIVESEVEN,	"#Cstrike_TitlesTXT_ESFiveSeven" },
 	{ WEAPON_UMP45,		"#Cstrike_TitlesTXT_KMUMP45" },
-	{ WEAPON_SG550,		"#Cstrike_TitlesTXT_SG550" },
-	{ WEAPON_GALIL,		"#Cstrike_TitlesTXT_Galil" },
+	{ WEAPON_SCAR20,	"#Cstrike_TitlesTXT_SCAR20" },
+	{ WEAPON_GALILAR,	"#Cstrike_TitlesTXT_GalilAR" },
 	{ WEAPON_FAMAS,		"#Cstrike_TitlesTXT_Famas" },
 	{ WEAPON_USP,		"#Cstrike_TitlesTXT_USP45" },
 	{ WEAPON_AWP,		"#Cstrike_TitlesTXT_ArcticWarfareMagnum" },
-	{ WEAPON_MP5NAVY,	"#Cstrike_TitlesTXT_mp5navy" },
+	{ WEAPON_MP5SD,		"#Cstrike_TitlesTXT_MP5SD" },
 	{ WEAPON_M249,		"#Cstrike_TitlesTXT_ESM249" },
-	{ WEAPON_M3,		"#Cstrike_TitlesTXT_Leone12" },
+	{ WEAPON_NOVA,		"#Cstrike_TitlesTXT_Nova" },
 	{ WEAPON_M4A1,		"#Cstrike_TitlesTXT_M4A1_Short" },
-	{ WEAPON_TMP,		"#Cstrike_TitlesTXT_tmp" },
+	{ WEAPON_MP9,		"#Cstrike_TitlesTXT_MP9" },
 	{ WEAPON_G3SG1,		"#Cstrike_TitlesTXT_G3SG1" },
 	{ WEAPON_DEAGLE,	"#Cstrike_TitlesTXT_DesertEagle" },
-	{ WEAPON_SG552,		"#Cstrike_TitlesTXT_SG552" },
+	{ WEAPON_SG556,		"#Cstrike_TitlesTXT_SG556" },
 	{ WEAPON_AK47,		"#Cstrike_TitlesTXT_AK47" },
 	{ WEAPON_P90,		"#Cstrike_TitlesTXT_ESC90" },
 	{ WEAPON_SHIELDGUN,	"#Cstrike_TitlesTXT_TactShield" },
+	{ WEAPON_HKP2000,	"#Cstrike_TitlesTXT_HKP2000" },
+	{ WEAPON_TEC9,		"#Cstrike_TitlesTXT_Tec9" },
+	{ WEAPON_M4A4,		"#Cstrike_TitlesTXT_M4A4" },
+	{ WEAPON_REVOLVER,	"#Cstrike_TitlesTXT_Revolver" },
+	{ WEAPON_CZ75,		"#Cstrike_TitlesTXT_CZ75" },
+	{ WEAPON_MAG7,		"#Cstrike_TitlesTXT_MAG7" },
+	{ WEAPON_SAWEDOFF,	"#Cstrike_TitlesTXT_SawedOff" },
+	{ WEAPON_NEGEV,		"#Cstrike_TitlesTXT_Negev" },
+	{ WEAPON_MP7,		"#Cstrike_TitlesTXT_MP7" },
+	{ WEAPON_BIZON,		"#Cstrike_TitlesTXT_Bizon" },
+	{ WEAPON_TASER,		"#Cstrike_TitlesTXT_Taser" },
 
 	{ WEAPON_NONE,		"#Cstrike_CurrentWeapon" }
 };
@@ -131,7 +142,7 @@ int CalcClipsNeeded( const BuyPresetWeapon *pWeapon, const CCSWeaponInfo *pInfo,
 	if ( !pWeapon || !pInfo )
 		return 0;
 
-	int maxRounds = GetCSAmmoDef()->MaxCarry( pInfo->iAmmoType );
+	int maxRounds = GetCSAmmoDef()->MaxCarry( pInfo->iAmmoType, C_CSPlayer::GetLocalCSPlayer() );
 	int buySize = GetCSAmmoDef()->GetBuySize( pInfo->iAmmoType );
 
 	int numClips = 0;
