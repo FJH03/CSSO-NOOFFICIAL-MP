@@ -599,17 +599,8 @@ public:
 
 	virtual void 			ModifyOrAppendPlayerCriteria( AI_CriteriaSet& set );
 
-	virtual QAngle			GetViewPunchAngle();
-	void					SetViewPunchAngle( const QAngle &punchAngle );
-	void					SetViewPunchAngle( int axis, float value );
-	virtual QAngle			GetAimPunchAngle();
-	void					SetAimPunchAngle( const QAngle &angle );
-	void					SetAimPunchAngleVelocity( const QAngle &punchAngleVelocity );
-
-	// Returns the eye or pointer angle plus the punch angle.
-	QAngle					GetFinalAimAngle();
-
-	void					PropagatePunchAnglesToObservers( void );
+	const QAngle& GetPunchAngle();
+	void SetPunchAngle( const QAngle &punchAngle );
 
 	virtual void DoMuzzleFlash();
 

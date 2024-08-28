@@ -780,9 +780,6 @@ void CCSPlayer::Precache()
 	PrecacheModel ( "sprites/glow01.vmt" );
 	PrecacheModel ( "models/items/cs_gift.mdl" );
 
-	PrecacheParticleSystem( "csblood" );
-	PrecacheParticleSystem( "impact_helmet_headshot" );
-
 	BaseClass::Precache();
 }
 
@@ -1286,8 +1283,6 @@ void CCSPlayer::Spawn()
 	else
 		m_bIsFemale = (HasAgentSet( TEAM_TERRORIST )) ? (GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_bIsFemale) : false;
 }
-
-ConVar mp_flinch_punch_scale( "mp_flinch_punch_scale", "3", FCVAR_REPLICATED | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Scalar for first person view punch when getting hit." );
 
 void CCSPlayer::ShowViewPortPanel( const char * name, bool bShow, KeyValues *data )
 {
@@ -2614,13 +2609,13 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 		if ( bShouldBleed == true )
 		{
 			// punch view if we have no armor
-			QAngle punchAngle = GetRawAimPunchAngle();
+			QAngle punchAngle = GetPunchAngle();
 			punchAngle.x = flDamage * -0.1;
 
 			if ( punchAngle.x < -4 )
 				punchAngle.x = -4;
 
-			SetAimPunchAngle( punchAngle );
+			SetPunchAngle( punchAngle );
 		}
 	}
 	else
@@ -2656,7 +2651,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 			if ( !m_bHasHelmet )
 			{
-				QAngle punchAngle = GetRawAimPunchAngle();
+				QAngle punchAngle = GetPunchAngle();
 				punchAngle.x = flDamage * -0.5;
 
 				if ( punchAngle.x < -12 )
@@ -2670,7 +2665,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 				else if ( punchAngle.z > 9 )
 					punchAngle.z = 9;
 
-				SetAimPunchAngle( punchAngle );
+				SetPunchAngle( punchAngle );
 			}
 
 			bHeadShot = true;
@@ -2683,13 +2678,13 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 			if ( ArmorValue() <= 0 )
 			{
-				QAngle punchAngle = GetRawAimPunchAngle();
+				QAngle punchAngle = GetPunchAngle();
 				punchAngle.x = flDamage * -0.1;
 
 				if ( punchAngle.x < -4 )
 					punchAngle.x = -4;
 
-				SetAimPunchAngle( punchAngle );
+				SetPunchAngle( punchAngle );
 			}
 			break;
 
@@ -2699,13 +2694,13 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 			if ( ArmorValue() <= 0 )
 			{
-				QAngle punchAngle = GetRawAimPunchAngle();
+				QAngle punchAngle = GetPunchAngle();
 				punchAngle.x = flDamage * -0.1;
 
 				if ( punchAngle.x < -4 )
 					punchAngle.x = -4;
 
-				SetAimPunchAngle( punchAngle );
+				SetPunchAngle( punchAngle );
 			}
 
 			break;
@@ -2751,11 +2746,8 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 	}
 	if ( ( ptr->hitgroup == HITGROUP_HEAD || bHitShield ) && bShouldSpark ) // they hit a helmet
 	{
-		//g_pEffects->Sparks( ptr->endpos, 1, 1, &ptr->plane.normal );
-
-		QAngle angle;
-		VectorAngles( ptr->plane.normal, angle );
-		DispatchParticleEffect( "impact_helmet_headshot", ptr->endpos, angle );
+		// show metal spark effect
+		g_pEffects->Sparks( ptr->endpos, 1, 1, &ptr->plane.normal );
 	}
 
 	if ( !bHitShield )
@@ -3321,7 +3313,7 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 			pCSWeapon->SetWeaponModelIndex( pCSWeapon->GetCSWpnData().szWorldModel );
 
 			//Find out the index of the ammo type
-			/*int iAmmoIndex = pCSWeapon->GetPrimaryAmmoType();
+			int iAmmoIndex = pCSWeapon->GetPrimaryAmmoType();
 
 			//If it has an ammo type, find out how much the player has
 			if( iAmmoIndex != -1 )
@@ -3351,7 +3343,7 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 					//Remove all ammo of this type from the player
 					SetAmmoCount( 0, iAmmoIndex );
 				}
-			}*/
+			}
 		}
 
 		//=========================================
@@ -4051,9 +4043,7 @@ BuyResult_e CCSPlayer::BuyGunAmmo( CBaseCombatWeapon *pWeapon, bool bBlinkMoney 
 	}
 
 	// Can only buy if the player does not already have full ammo
-	int maxcarry = pWeapon->GetReserveAmmoMax( AMMO_POSITION_PRIMARY );
-
-	if ( pWeapon->GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) >= maxcarry )
+	if ( GetAmmoCount( nAmmo ) >= GetAmmoDef()->MaxCarry( nAmmo ) )
 	{
 		return BUY_ALREADY_HAVE;
 	}
@@ -4842,7 +4832,7 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 	{
 		float flDamage = 100;
 
-		QAngle punchAngle = GetViewPunchAngle();
+		QAngle punchAngle = GetPunchAngle();
 
 		punchAngle.x = flDamage * random->RandomFloat ( -0.15, 0.15 );
 		punchAngle.y = flDamage * random->RandomFloat ( -0.15, 0.15 );
@@ -4862,7 +4852,7 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 			punchAngle.z = atof(args[3]);
 		}
 
-		SetViewPunchAngle( punchAngle );
+		SetPunchAngle( punchAngle );
 
 		return true;
 	}
@@ -4967,46 +4957,40 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 			int msg_dest = HUD_PRINTCONSOLE;
 
 			ClientPrint( this, msg_dest, "usage: buy <item>\n" );
-			//ClientPrint( this, msg_dest, "  primammo\n" );
-			//ClientPrint( this, msg_dest, "  secammo\n" );
-			ClientPrint( this, msg_dest, "  glock\n" );
-			ClientPrint( this, msg_dest, "  xm1014\n" );
-			ClientPrint( this, msg_dest, "  mac10\n" );
+			ClientPrint( this, msg_dest, "  primammo\n" );
+			ClientPrint( this, msg_dest, "  secammo\n" );
+			ClientPrint( this, msg_dest, "  vest\n" );
+			ClientPrint( this, msg_dest, "  vesthelm\n" );
+			ClientPrint( this, msg_dest, "  defuser\n" );
+			//ClientPrint( this, msg_dest, "  shield\n" );
+			ClientPrint( this, msg_dest, "  nvgs\n" );
+			ClientPrint( this, msg_dest, "  flashbang\n" );
+			ClientPrint( this, msg_dest, "  hegrenade\n" );
+			ClientPrint( this, msg_dest, "  smokegrenade\n" );
+			ClientPrint( this, msg_dest, "  galil\n" );
+			ClientPrint( this, msg_dest, "  ak47\n" );
+			ClientPrint( this, msg_dest, "  scout\n" );
+			ClientPrint( this, msg_dest, "  sg552\n" );
+			ClientPrint( this, msg_dest, "  awp\n" );
+			ClientPrint( this, msg_dest, "  g3sg1\n" );
+			ClientPrint( this, msg_dest, "  famas\n" );
+			ClientPrint( this, msg_dest, "  m4a1\n" );
 			ClientPrint( this, msg_dest, "  aug\n" );
+			ClientPrint( this, msg_dest, "  sg550\n" );
+			ClientPrint( this, msg_dest, "  glock\n" );
+			ClientPrint( this, msg_dest, "  usp\n" );
+			ClientPrint( this, msg_dest, "  p228\n" );
+			ClientPrint( this, msg_dest, "  deagle\n" );
 			ClientPrint( this, msg_dest, "  elite\n" );
 			ClientPrint( this, msg_dest, "  fiveseven\n" );
+			ClientPrint( this, msg_dest, "  m3\n" );
+			ClientPrint( this, msg_dest, "  xm1014\n" );
+			ClientPrint( this, msg_dest, "  mac10\n" );
+			ClientPrint( this, msg_dest, "  tmp\n" );
+			ClientPrint( this, msg_dest, "  mp5navy\n" );
 			ClientPrint( this, msg_dest, "  ump45\n" );
-			ClientPrint( this, msg_dest, "  galilar\n" );
-			ClientPrint( this, msg_dest, "  famas\n" );
-			ClientPrint( this, msg_dest, "  usp_silencer\n" );
-			ClientPrint( this, msg_dest, "  awp\n" );
-			ClientPrint( this, msg_dest, "  m249\n" );
-			ClientPrint( this, msg_dest, "  nova\n" );
-			ClientPrint( this, msg_dest, "  m4a4\n" );
-			ClientPrint( this, msg_dest, "  m4a1_silencer\n" );
-			ClientPrint( this, msg_dest, "  g3sg1\n" );
-			ClientPrint( this, msg_dest, "  deagle\n" );
-			ClientPrint( this, msg_dest, "  ak47\n" );
 			ClientPrint( this, msg_dest, "  p90\n" );
-			ClientPrint( this, msg_dest, "  bizon\n" );
-			ClientPrint( this, msg_dest, "  mag7\n" );
-			ClientPrint( this, msg_dest, "  negev\n" );
-			ClientPrint( this, msg_dest, "  sawedoff\n" );
-			ClientPrint( this, msg_dest, "  tec9\n" );
-			ClientPrint( this, msg_dest, "  taser\n" );
-			ClientPrint( this, msg_dest, "  hkp2000\n" );
-			ClientPrint( this, msg_dest, "  mp5sd\n" );
-			ClientPrint( this, msg_dest, "  mp7\n" );
-			ClientPrint( this, msg_dest, "  mp9\n" );
-			ClientPrint( this, msg_dest, "  nova\n" );
-			ClientPrint( this, msg_dest, "  p250\n" );
-			ClientPrint( this, msg_dest, "  scar20\n" );
-			ClientPrint( this, msg_dest, "  sg556\n" );
-			ClientPrint( this, msg_dest, "  ssg08\n" );
-
-			ClientPrint( this, msg_dest, "  flashbang\n" );
-			ClientPrint( this, msg_dest, "  smokegrenade\n" );
-			ClientPrint( this, msg_dest, "  hegrenade\n" );
+			ClientPrint( this, msg_dest, "  m249\n" );
 		}
 
 		return true;
@@ -6291,7 +6275,7 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 	if ( HasShield() && pWeapon->GetCSWpnData().m_bCanUseWithShield == false )
 		 return false;
 
-	/*// Check ammo counts for grenades, and don't try to pick up more grenades than we can carry
+	// Check ammo counts for grenades, and don't try to pick up more grenades than we can carry
 	if ( bPickupGrenade )
 	{
 		CBaseCombatWeapon *pOwnedGrenade = Weapon_OwnsThisType( pWeapon->GetClassname() );
@@ -6313,7 +6297,7 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 				return false;
 			}
 		}
-	}*/
+	}
 
 	if( bPickupGrenade || !Weapon_SlotOccupied( pWeapon ) )
 	{

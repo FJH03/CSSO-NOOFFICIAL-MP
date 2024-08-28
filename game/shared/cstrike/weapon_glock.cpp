@@ -45,6 +45,8 @@ public:
 
 	virtual void WeaponIdle();
 
+ 	virtual float GetInaccuracy() const;
+
 	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_GLOCK; }
 
 private:
@@ -98,12 +100,14 @@ void CWeaponGlock::Spawn( )
 	m_bBurstMode = false;
 	m_iBurstShotsRemaining = 0;
 	m_fNextBurstShot = 0.0f;
+	m_flAccuracy = 0.9f;
 }
 
 bool CWeaponGlock::Deploy( )
 {
 	m_iBurstShotsRemaining = 0;
 	m_fNextBurstShot = 0.0f;
+	m_flAccuracy = 0.9f;
 
 	return BaseClass::Deploy();
 }
@@ -130,13 +134,63 @@ void CWeaponGlock::SecondaryAttack()
 	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3;
 }
 
+float CWeaponGlock::GetInaccuracy() const
+{
+	if ( weapon_accuracy_model.GetInt() == 1 )
+	{
+		CCSPlayer *pPlayer = GetPlayerOwner();
+		if ( !pPlayer )
+			return 0.0f;
+
+		if ( m_bBurstMode )
+		{
+			if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
+				return 1.2f * (1 - m_flAccuracy);
+
+			else if (pPlayer->GetAbsVelocity().Length2D() > 5)
+				return 0.185f * (1 - m_flAccuracy);
+
+			else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
+				return 0.095f * (1 - m_flAccuracy);
+
+			else
+				return 0.3f * (1 - m_flAccuracy);
+		}
+		else
+		{
+			if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
+				return 1.0f * (1 - m_flAccuracy);
+
+			else if (pPlayer->GetAbsVelocity().Length2D() > 5)
+				return 0.165f * (1 - m_flAccuracy);
+
+			else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
+				return 0.075f * (1 - m_flAccuracy);
+
+			else
+				return 0.1f * (1 - m_flAccuracy);
+		}
+	}
+	else
+		return BaseClass::GetInaccuracy();
+}
+
+
 void CWeaponGlock::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
 
-	float flCycleTime = m_bBurstMode ? 0.5f : GetCSWpnData().m_flCycleTime[m_weaponMode];
+	float flCycleTime = m_bBurstMode ? 0.5f : GetCSWpnData().m_flCycleTime;
+
+	// Mark the time of this shot and determine the accuracy modifier based on the last shot fired...
+	m_flAccuracy -= (0.275)*(0.325 - (gpGlobals->curtime - m_flLastFire));
+
+	if (m_flAccuracy > 0.9)
+		m_flAccuracy = 0.9;
+	else if (m_flAccuracy < 0.6)
+		m_flAccuracy = 0.6;
 
 	m_flLastFire = gpGlobals->curtime;
 
@@ -171,7 +225,7 @@ void CWeaponGlock::PrimaryAttack()
 	FX_FireBullets( 
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(), 
-		pPlayer->GetFinalAimAngle(),
+		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(), 
 		GetWeaponID(),
 		Primary_Mode,
 		CBaseEntity::GetPredictionRandomSeed() & 255, // wrap it for network traffic so it's the same between client and server
@@ -206,11 +260,6 @@ void CWeaponGlock::PrimaryAttack()
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[m_weaponMode];
 
 	//ResetPlayerShieldAnim();
-
-	// table driven recoil
-	Recoil( m_weaponMode );
-
-	m_flRecoilIndex += 1.0f;
 }
 
 
@@ -243,7 +292,7 @@ void CWeaponGlock::FireRemaining( float fSpread )
 	FX_FireBullets( 
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(), 
-		pPlayer->GetFinalAimAngle(), 
+		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(), 
 		GetWeaponID(),
 		Secondary_Mode,
 		CBaseEntity::GetPredictionRandomSeed() & 255, // wrap it for network traffic so it's the same between client and server
@@ -263,11 +312,6 @@ void CWeaponGlock::FireRemaining( float fSpread )
 
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[Secondary_Mode];
-	
-	// table driven recoil
-	Recoil( Secondary_Mode );
-
-	m_flRecoilIndex += 1.0f;
 }
 
 
@@ -290,7 +334,11 @@ bool CWeaponGlock::Reload()
 	if ( m_iBurstShotsRemaining != 0 )
 		return true;
 
-	return DefaultPistolReload();
+	if ( !DefaultPistolReload() )
+		return false;
+
+	m_flAccuracy = 0.9;
+	return true;
 }
 
 void CWeaponGlock::WeaponIdle()

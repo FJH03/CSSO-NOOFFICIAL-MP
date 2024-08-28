@@ -96,7 +96,6 @@ def build(bld):
 		'../public/tier0/memoverride.cpp',
 		'ModOptionsDialog.cpp',
 		'ModOptionsSubCrosshair.cpp',
-		'ModOptionsSubLoadout.cpp',
 		'ModOptionsSubGameplay.cpp',
 		'ModOptionsSubKnives.cpp',
 		'ModOptionsSubAgents.cpp',

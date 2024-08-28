@@ -1040,8 +1040,8 @@ void CCSGameStats::Event_PlayerKilledOther( CBasePlayer *pAttacker, CBaseEntity 
 	{
 		// Were we using a sniper rifle?
 		bool bUsingSniper = (	weaponId == WEAPON_AWP ||
-								weaponId == WEAPON_SSG08 ||
-								weaponId == WEAPON_SCAR20 ||
+								weaponId == WEAPON_SCOUT ||
+								weaponId == WEAPON_SG550 ||
 								weaponId == WEAPON_G3SG1 );
 			
 		// If we're zoomed in

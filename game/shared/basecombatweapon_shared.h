@@ -345,7 +345,6 @@ public:
 	virtual int				GetMaxClip2( void ) const;
 	virtual int				GetDefaultClip1( void ) const;
 	virtual int				GetDefaultClip2( void ) const;
-	virtual int				GetReserveAmmoMax( AmmoPosition_t nAmmoPos ) const;
 	virtual int				GetWeight( void ) const;
 	virtual bool			AllowsAutoSwitchTo( void ) const;
 	virtual bool			AllowsAutoSwitchFrom( void ) const;
@@ -376,10 +375,6 @@ public:
 
 	int GetSecondaryAmmoCount() { return m_iSecondaryAmmoCount; }
 	void SetSecondaryAmmoCount( int count ) { m_iSecondaryAmmoCount = count; }
-
-	int GetReserveAmmoCount( AmmoPosition_t nAmmoPosition, CBaseCombatCharacter * pForcedOwner = NULL );
-	int SetReserveAmmoCount( AmmoPosition_t nAmmoPosition, int nCount, bool bSuppressSound = false, CBaseCombatCharacter * pOwner = NULL );
-	int GiveReserveAmmo( AmmoPosition_t nAmmoPosition, int nCount, bool bSuppressSound = false, CBaseCombatCharacter * pOwner = NULL );
 
 	virtual CHudTexture const	*GetSpriteActive( void ) const;
 	virtual CHudTexture const	*GetSpriteInactive( void ) const;
@@ -590,10 +585,6 @@ public:
 	CNetworkVar( int, m_iSecondaryAmmoType );	// "secondary" ammo index into the ammo info array
 	CNetworkVar( int, m_iClip1 );				// number of shots left in the primary weapon clip, -1 it not used
 	CNetworkVar( int, m_iClip2 );				// number of shots left in the secondary weapon clip, -1 it not used
-
-	CNetworkVar( int, m_iPrimaryReserveAmmoCount );	// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
-	CNetworkVar( int, m_iSecondaryReserveAmmoCount );	// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
-	
 	bool					m_bFiresUnderwater;		// true if this weapon can fire underwater
 	bool					m_bAltFiresUnderwater;		// true if this weapon can fire underwater
 	float					m_fMinRange1;			// What's the closest this weapon can be used?

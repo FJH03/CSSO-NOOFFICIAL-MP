@@ -34,12 +34,10 @@ public:
 	CWeaponCSBaseGun();
 
 	virtual void PrimaryAttack();
-	virtual void SecondaryAttack();
 	virtual void Spawn();
 	virtual bool Deploy();
 	virtual bool Reload();
 	virtual void WeaponIdle();
-	virtual bool Holster( CBaseCombatWeapon *pSwitchingTo );
 
 	// Derived classes call this to fire a bullet.
 	bool CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode );

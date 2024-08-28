@@ -74,7 +74,6 @@ int g_nKillCamTarget1 = 0;
 int g_nKillCamTarget2 = 0;
 
 extern ConVar mp_forcecamera; // in gamevars_shared.h
-extern ConVar view_recoil_tracking;
 
 #define FLASHLIGHT_DISTANCE		1000
 #define MAX_VGUI_INPUT_MODE_SPEED 30
@@ -162,19 +161,15 @@ BEGIN_RECV_TABLE_NOBASE( CPlayerLocalData, DT_Local )
 	RecvPropFloat	(RECVINFO(m_flFallVelocity)),
 
 #if PREDICTION_ERROR_CHECK_LEVEL > 1 
-	RecvPropFloat	(RECVINFO_NAME( m_viewPunchAngle.m_Value[0], m_viewPunchAngle[0])),
-	RecvPropFloat	(RECVINFO_NAME( m_viewPunchAngle.m_Value[1], m_viewPunchAngle[1])),
-	RecvPropFloat	(RECVINFO_NAME( m_viewPunchAngle.m_Value[2], m_viewPunchAngle[2] )),
-	RecvPropFloat	(RECVINFO_NAME( m_aimPunchAngle.m_Value[0], m_aimPunchAngle[0])),
-	RecvPropFloat	(RECVINFO_NAME( m_aimPunchAngle.m_Value[1], m_aimPunchAngle[1])),
-	RecvPropFloat	(RECVINFO_NAME( m_aimPunchAngle.m_Value[2], m_aimPunchAngle[2] )),
-	RecvPropFloat	(RECVINFO_NAME( m_aimPunchAngleVel.m_Value[0], m_aimPunchAngleVel[0] )),
-	RecvPropFloat	(RECVINFO_NAME( m_aimPunchAngleVel.m_Value[1], m_aimPunchAngleVel[1] )),
-	RecvPropFloat	(RECVINFO_NAME( m_aimPunchAngleVel.m_Value[2], m_aimPunchAngleVel[2] )),
+	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngle.m_Value[0], m_vecPunchAngle[0])),
+	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngle.m_Value[1], m_vecPunchAngle[1])),
+	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngle.m_Value[2], m_vecPunchAngle[2] )),
+	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngleVel.m_Value[0], m_vecPunchAngleVel[0] )),
+	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngleVel.m_Value[1], m_vecPunchAngleVel[1] )),
+	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngleVel.m_Value[2], m_vecPunchAngleVel[2] )),
 #else
-	RecvPropVector	(RECVINFO(m_viewPunchAngle)),
-	RecvPropVector	(RECVINFO(m_aimPunchAngle)),
-	RecvPropVector	(RECVINFO(m_aimPunchAngleVel)),
+	RecvPropVector	(RECVINFO(m_vecPunchAngle)),
+	RecvPropVector	(RECVINFO(m_vecPunchAngleVel)),
 #endif
 
 	RecvPropInt		(RECVINFO(m_bDrawViewmodel)),
@@ -331,13 +326,11 @@ BEGIN_PREDICTION_DATA_NO_BASE( CPlayerLocalData )
 
 	DEFINE_PRED_FIELD( m_iHideHUD, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 #if PREDICTION_ERROR_CHECK_LEVEL > 1
-	DEFINE_PRED_FIELD( m_viewPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_aimPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_aimPunchAngleVel, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_vecPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_vecPunchAngleVel, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
 #else
-	DEFINE_PRED_FIELD_TOL( m_viewPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f ),
-	DEFINE_PRED_FIELD_TOL( m_aimPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f ),
-	DEFINE_PRED_FIELD_TOL( m_aimPunchAngleVel, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f ),
+	DEFINE_PRED_FIELD_TOL( m_vecPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f ),
+	DEFINE_PRED_FIELD_TOL( m_vecPunchAngleVel, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f ),
 #endif
 	DEFINE_PRED_FIELD( m_bDrawViewmodel, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_bWearingSuit, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
@@ -1728,10 +1721,7 @@ void C_BasePlayer::CalcInEyeCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 	eyeOrigin = target->GetAbsOrigin();
 
 	// Apply punch angle
-	VectorAdd( eyeAngles, GetViewPunchAngle(), eyeAngles );
-
-	// Apply aim punch angle
-	VectorAdd( eyeAngles, GetAimPunchAngle() * view_recoil_tracking.GetFloat(), eyeAngles );
+	VectorAdd( eyeAngles, GetPunchAngle(), eyeAngles );
 
 #if defined( REPLAY_ENABLED )
 	if( engine->IsHLTV() || g_pEngineClientReplay->IsPlayingReplayDemo() )
@@ -2208,7 +2198,7 @@ Vector C_BasePlayer::GetAutoaimVector( float flScale )
 {
 	// Never autoaim a predicted weapon (for now)
 	Vector	forward;
-	AngleVectors( GetAbsAngles() + m_Local.m_viewPunchAngle, &forward );
+	AngleVectors( GetAbsAngles() + m_Local.m_vecPunchAngle, &forward );
 	return	forward;
 }
 
@@ -2346,34 +2336,15 @@ void C_BasePlayer::PhysicsSimulate( void )
 #endif
 }
 
-QAngle C_BasePlayer::GetViewPunchAngle()
+const QAngle& C_BasePlayer::GetPunchAngle()
 {
-	return m_Local.m_viewPunchAngle.Get();
+	return m_Local.m_vecPunchAngle.Get();
 }
 
-void C_BasePlayer::SetViewPunchAngle( const QAngle &angle )
-{
-	m_Local.m_viewPunchAngle = angle;
-}
 
-QAngle C_BasePlayer::GetAimPunchAngle()
+void C_BasePlayer::SetPunchAngle( const QAngle &angle )
 {
-	return m_Local.m_aimPunchAngle.Get();
-}
-
-void C_BasePlayer::SetAimPunchAngle( const QAngle &angle )
-{
-	m_Local.m_aimPunchAngle = angle;
-}
-
-void C_BasePlayer::SetAimPunchAngleVelocity( const QAngle &angleVelocity )
-{
-	m_Local.m_aimPunchAngleVel = angleVelocity;
-}
-
-QAngle C_BasePlayer::GetFinalAimAngle()
-{
-	return EyeAngles() + GetAimPunchAngle();
+	m_Local.m_vecPunchAngle = angle;
 }
 
 

@@ -10,7 +10,7 @@
 
 #if defined( CLIENT_DLL )
 
-	#define CWeaponSSG08 C_WeaponSSG08
+	#define CWeaponScout C_WeaponScout
 	#include "c_cs_player.h"
 
 #else
@@ -20,54 +20,53 @@
 
 #endif
 
-const int cSSG08MidZoomFOV = 40;
-const int cSSG08MaxZoomFOV = 15;
+const int cScoutMidZoomFOV = 40;
+const int cScoutMaxZoomFOV = 15;
 
 
-class CWeaponSSG08 : public CWeaponCSBaseGun
+class CWeaponScout : public CWeaponCSBaseGun
 {
 public:
-	DECLARE_CLASS( CWeaponSSG08, CWeaponCSBaseGun );
+	DECLARE_CLASS( CWeaponScout, CWeaponCSBaseGun );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CWeaponSSG08();
+	CWeaponScout();
 
 	virtual void PrimaryAttack();
 	virtual void SecondaryAttack();
 
+ 	virtual float GetInaccuracy() const;
 	virtual float GetMaxSpeed() const;
 	virtual bool Reload();
 	virtual bool Deploy();
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_SSG08; }
+	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_SCOUT; }
 
 
 private:
 	
-	CWeaponSSG08( const CWeaponSSG08 & );
+	CWeaponScout( const CWeaponScout & );
 };
 
-IMPLEMENT_NETWORKCLASS_ALIASED( WeaponSSG08, DT_WeaponSSG08 )
+IMPLEMENT_NETWORKCLASS_ALIASED( WeaponScout, DT_WeaponScout )
 
-BEGIN_NETWORK_TABLE( CWeaponSSG08, DT_WeaponSSG08 )
+BEGIN_NETWORK_TABLE( CWeaponScout, DT_WeaponScout )
 END_NETWORK_TABLE()
 
-BEGIN_PREDICTION_DATA( CWeaponSSG08 )
+BEGIN_PREDICTION_DATA( CWeaponScout )
 END_PREDICTION_DATA()
 
-LINK_ENTITY_TO_CLASS( weapon_ssg08, CWeaponSSG08 );
-#ifdef GAME_DLL
-LINK_ENTITY_TO_CLASS( weapon_scout, CWeaponSSG08 );
-#endif
-PRECACHE_WEAPON_REGISTER( weapon_ssg08 );
+LINK_ENTITY_TO_CLASS( weapon_scout, CWeaponScout );
+PRECACHE_WEAPON_REGISTER( weapon_scout );
 
 
-CWeaponSSG08::CWeaponSSG08()
+
+CWeaponScout::CWeaponScout()
 {
 }
 
-void CWeaponSSG08::SecondaryAttack()
+void CWeaponScout::SecondaryAttack()
 {
 	const float kZoomTime = 0.10f;
 
@@ -80,18 +79,18 @@ void CWeaponSSG08::SecondaryAttack()
 
 	if (pPlayer->GetFOV() == pPlayer->GetDefaultFOV())
 	{
-		pPlayer->SetFOV( pPlayer, cSSG08MidZoomFOV, kZoomTime );
+		pPlayer->SetFOV( pPlayer, cScoutMidZoomFOV, kZoomTime );
 		m_weaponMode = Secondary_Mode;
 		m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyAltSwitch;
 		pPlayer->m_bIsScoped = true;
 	}
-	else if (pPlayer->GetFOV() == cSSG08MidZoomFOV)
+	else if (pPlayer->GetFOV() == cScoutMidZoomFOV)
 	{
-		pPlayer->SetFOV( pPlayer, cSSG08MaxZoomFOV, kZoomTime );
+		pPlayer->SetFOV( pPlayer, cScoutMaxZoomFOV, kZoomTime );
 		m_weaponMode = Secondary_Mode;
 		pPlayer->m_bIsScoped = true;
 	}
-	else if (pPlayer->GetFOV() == cSSG08MaxZoomFOV)
+	else if (pPlayer->GetFOV() == cScoutMaxZoomFOV)
 	{
 		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), kZoomTime );
 		m_weaponMode = Primary_Mode;
@@ -127,27 +126,58 @@ void CWeaponSSG08::SecondaryAttack()
 #endif
 }
 
-void CWeaponSSG08::PrimaryAttack( void )
+float CWeaponScout::GetInaccuracy() const
+{
+	if ( weapon_accuracy_model.GetInt() == 1 )
+	{
+		CCSPlayer *pPlayer = GetPlayerOwner();
+		if (pPlayer == NULL)
+			return 0.0f;
+	
+		float fSpread = 0.0f;
+	
+		if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
+			fSpread = 0.2f;
+		else if (pPlayer->GetAbsVelocity().Length2D() > 170)
+			fSpread = 0.075f;
+		else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
+			fSpread = 0.0f;
+		else
+			fSpread = 0.007f;
+	
+		// If we are not zoomed in, or we have very recently zoomed and are still transitioning, the bullet diverts more.
+		if (pPlayer->GetFOV() == pPlayer->GetDefaultFOV() || (gpGlobals->curtime < m_zoomFullyActiveTime))
+		{
+			fSpread += 0.025;
+		}
+	
+		return fSpread;
+	}
+	else
+		return BaseClass::GetInaccuracy();
+}
+
+void CWeaponScout::PrimaryAttack( void )
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if (pPlayer == NULL)
 		return;
 
-	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], m_weaponMode ) )
+	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, m_weaponMode ) )
 		return;
 
 	if ( m_weaponMode == Secondary_Mode )
 	{	
-		float	midFOVdistance = fabs( pPlayer->GetFOV() - (float)cSSG08MidZoomFOV );
-		float	farFOVdistance = fabs( pPlayer->GetFOV() - (float)cSSG08MaxZoomFOV );
+		float	midFOVdistance = fabs( pPlayer->GetFOV() - (float)cScoutMidZoomFOV );
+		float	farFOVdistance = fabs( pPlayer->GetFOV() - (float)cScoutMaxZoomFOV );
 
 		if ( midFOVdistance < farFOVdistance )
 		{
-			pPlayer->m_iLastZoom = cSSG08MidZoomFOV;
+			pPlayer->m_iLastZoom = cScoutMidZoomFOV;
 		}
 		else
 		{
-			pPlayer->m_iLastZoom = cSSG08MaxZoomFOV;
+			pPlayer->m_iLastZoom = cScoutMaxZoomFOV;
 		}
 		
 // 		#ifndef CLIENT_DLL
@@ -156,10 +186,14 @@ void CWeaponSSG08::PrimaryAttack( void )
 			m_weaponMode = Primary_Mode;
 // 		#endif
 	}
+
+	QAngle angle = pPlayer->GetPunchAngle();
+	angle.x -= 2;
+	pPlayer->SetPunchAngle( angle );
 }
 
 
-float CWeaponSSG08::GetMaxSpeed() const
+float CWeaponScout::GetMaxSpeed() const
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if (pPlayer == NULL)
@@ -175,14 +209,14 @@ float CWeaponSSG08::GetMaxSpeed() const
 }
 
 
-bool CWeaponSSG08::Reload()
+bool CWeaponScout::Reload()
 {
 	m_weaponMode = Primary_Mode;
 	return BaseClass::Reload();
 
 }
 
-bool CWeaponSSG08::Deploy()
+bool CWeaponScout::Deploy()
 {
 	m_weaponMode = Primary_Mode;
 	return BaseClass::Deploy();

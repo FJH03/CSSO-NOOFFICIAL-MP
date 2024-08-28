@@ -10,7 +10,7 @@
 
 #if defined( CLIENT_DLL )
 
-	#define CWeaponSCAR20 C_WeaponSCAR20
+	#define CWeaponSG550 C_WeaponSG550
 	#include "c_cs_player.h"
 
 #else
@@ -21,14 +21,14 @@
 #endif
 
 
-class CWeaponSCAR20 : public CWeaponCSBaseGun
+class CWeaponSG550 : public CWeaponCSBaseGun
 {
 public:
-	DECLARE_CLASS( CWeaponSCAR20, CWeaponCSBaseGun );
+	DECLARE_CLASS( CWeaponSG550, CWeaponCSBaseGun );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CWeaponSCAR20();
+	CWeaponSG550();
 
 	virtual void Spawn();
 	virtual void SecondaryAttack();
@@ -36,48 +36,47 @@ public:
 	virtual bool Reload();
 	virtual bool Deploy();
 
+ 	virtual float GetInaccuracy() const;
 	virtual float GetMaxSpeed() const;
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_SCAR20; }
+	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_SG550; }
 
 
 private:
-	CWeaponSCAR20( const CWeaponSCAR20 & );
+	CWeaponSG550( const CWeaponSG550 & );
 
 	float m_flLastFire;
 };
 
-IMPLEMENT_NETWORKCLASS_ALIASED( WeaponSCAR20, DT_WeaponSCAR20 )
+IMPLEMENT_NETWORKCLASS_ALIASED( WeaponSG550, DT_WeaponSG550 )
 
-BEGIN_NETWORK_TABLE( CWeaponSCAR20, DT_WeaponSCAR20 )
+BEGIN_NETWORK_TABLE( CWeaponSG550, DT_WeaponSG550 )
 END_NETWORK_TABLE()
 
 #if defined CLIENT_DLL
-BEGIN_PREDICTION_DATA( CWeaponSCAR20 )
+BEGIN_PREDICTION_DATA( CWeaponSG550 )
 	DEFINE_FIELD( m_flLastFire, FIELD_FLOAT ),
 END_PREDICTION_DATA()
 #endif
 
-LINK_ENTITY_TO_CLASS( weapon_scar20, CWeaponSCAR20 );
-#ifdef GAME_DLL
-LINK_ENTITY_TO_CLASS( weapon_sg550, CWeaponSCAR20 ); // for backwards compatibility
-#endif
-PRECACHE_WEAPON_REGISTER( weapon_scar20 );
+LINK_ENTITY_TO_CLASS( weapon_sg550, CWeaponSG550 );
+PRECACHE_WEAPON_REGISTER( weapon_sg550 );
 
 
 
-CWeaponSCAR20::CWeaponSCAR20()
+CWeaponSG550::CWeaponSG550()
 {
 	m_flLastFire = gpGlobals->curtime;
 }
 
-void CWeaponSCAR20::Spawn()
+void CWeaponSG550::Spawn()
 {
 	BaseClass::Spawn();
+	m_flAccuracy = 0.98;
 }
 
 
-void CWeaponSCAR20::SecondaryAttack()
+void CWeaponSG550::SecondaryAttack()
 {
 	const float kZoomTime = 0.10f;
 
@@ -135,37 +134,79 @@ void CWeaponSCAR20::SecondaryAttack()
 	m_zoomFullyActiveTime = gpGlobals->curtime + 0.3; // The worst zoom time from above.  
 }
 
-void CWeaponSCAR20::PrimaryAttack()
+float CWeaponSG550::GetInaccuracy() const
+{
+	if ( weapon_accuracy_model.GetInt() == 1 )
+	{
+		CCSPlayer *pPlayer = GetPlayerOwner();
+		if ( !pPlayer )
+			return 0.0f;
+	
+		float fSpread = 0.0f;
+	
+		if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
+			fSpread = 0.45f * (1 - m_flAccuracy);
+		else if (pPlayer->GetAbsVelocity().Length2D() > 5)
+			fSpread = 0.15f;
+		else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
+			fSpread = 0.04f * (1 - m_flAccuracy);
+		else
+			fSpread = 0.05f * (1 - m_flAccuracy);
+	
+		// If we are not zoomed in, or we have very recently zoomed and are still transitioning, the bullet diverts more.
+		if (pPlayer->GetFOV() == pPlayer->GetDefaultFOV() || (gpGlobals->curtime < m_zoomFullyActiveTime))
+			fSpread += 0.025;
+	
+		return fSpread;
+	}
+	else
+		return BaseClass::GetInaccuracy();
+}
+
+void CWeaponSG550::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
 
+	// Mark the time of this shot and determine the accuracy modifier based on the last shot fired...
+	m_flAccuracy = 0.65 + (0.35) * (gpGlobals->curtime - m_flLastFire);	
+
+	if (m_flAccuracy > 0.98)
+		m_flAccuracy = 0.98;
+
 	m_flLastFire = gpGlobals->curtime;
 
-	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], m_weaponMode ) )
+	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, m_weaponMode ) )
 		return;
+
+	QAngle angle = pPlayer->GetPunchAngle();
+	angle.x -= SharedRandomFloat("SG550PunchAngleX", 0.75, 1.25 ) + ( angle.x / 4 );
+	angle.y += SharedRandomFloat("SG550PunchAngleY", -0.75, 0.75 );
+	pPlayer->SetPunchAngle( angle );
 }
 
-bool CWeaponSCAR20::Reload()
+bool CWeaponSG550::Reload()
 {
 	bool ret = BaseClass::Reload();
 	
+	m_flAccuracy = 0.98;
 	m_weaponMode = Primary_Mode;
 	
 	return ret;
 }
 
-bool CWeaponSCAR20::Deploy()
+bool CWeaponSG550::Deploy()
 {
 	bool ret = BaseClass::Deploy();
 	
+	m_flAccuracy = 0.98;
 	m_weaponMode = Primary_Mode;
 	
 	return ret;
 }
 
-float CWeaponSCAR20::GetMaxSpeed() const
+float CWeaponSG550::GetMaxSpeed() const
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 

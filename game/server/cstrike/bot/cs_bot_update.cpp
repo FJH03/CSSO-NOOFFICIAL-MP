@@ -166,7 +166,7 @@ void CCSBot::Upkeep( void )
 			VectorAngles( to, idealAngle );
 
 			// adjust aim angle for recoil, based on bot skill
-			const QAngle &punchAngles = GetAimPunchAngle();
+			const QAngle &punchAngles = GetPunchAngle();
 			idealAngle -= punchAngles * GetProfile()->GetSkill();
 
 			SetLookAngles( idealAngle.y, idealAngle.x );

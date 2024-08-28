@@ -117,11 +117,7 @@ void CBaseCombatCharacter::RemoveAmmo( int iCount, int iAmmoIndex )
 		return;
 
 	// Infinite ammo?
-	if ( GetAmmoDef()->CanCarryInfiniteAmmo( iAmmoIndex ) )
-		return;
-
-	extern ConVar sv_infinite_ammo;
-	if ( sv_infinite_ammo.GetInt() == 2 ) // infinite total ammo but magazine reloads are still required.
+	if ( GetAmmoDef()->MaxCarry( iAmmoIndex ) == INFINITE_AMMO )
 		return;
 
 	// Ammo pickup sound
@@ -165,7 +161,7 @@ int CBaseCombatCharacter::GetAmmoCount( int iAmmoIndex ) const
 		return 0;
 
 	// Infinite ammo?
-	if ( GetAmmoDef()->CanCarryInfiniteAmmo( iAmmoIndex ) )
+	if ( GetAmmoDef()->MaxCarry( iAmmoIndex ) == INFINITE_AMMO )
 		return 999;
 
 	return m_iAmmo[ iAmmoIndex ];

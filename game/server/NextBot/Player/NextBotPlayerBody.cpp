@@ -128,7 +128,7 @@ void PlayerBody::Upkeep( void )
 	CBasePlayer *player = ( CBasePlayer * )GetBot()->GetEntity();
 
 	// get current view angles
-	QAngle currentAngles = player->GetFinalAimAngle();
+	QAngle currentAngles = player->EyeAngles() + player->GetPunchAngle();
 
 	// track when our head is "steady"
 	bool isSteady = true;
@@ -316,7 +316,7 @@ void PlayerBody::Upkeep( void )
 	angles.z = 0.0f;
 
 	// back out "punch angle"
-	angles -= player->GetAimPunchAngle();
+	angles -= player->GetPunchAngle();
 
 	angles.x = AngleNormalize( angles.x );
 	angles.y = AngleNormalize( angles.y );

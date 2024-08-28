@@ -495,20 +495,6 @@ ConVar cl_autohelp(
 		FCVAR_REPLICATED,
 		"Ignore conditions which would end the current round");
 
-	ConVar loadout_slot_m4_weapon(
-		"loadout_slot_m4_weapon",
-		"0",
-		FCVAR_ARCHIVE | FCVAR_USERINFO,
-		"Which weapon to use in M4 slot.\n 0 - M4A4\n 1 - M4A1-S",
-		true, 0, true, 1 );
-
-	ConVar loadout_slot_hkp2000_weapon(
-		"loadout_slot_hkp2000_weapon",
-		"0",
-		FCVAR_ARCHIVE | FCVAR_USERINFO,
-		"Which weapon to use in HKP2000 slot.\n 0 - HKP2000\n 1 - USP-S",
-		true, 0, true, 1 );
-
 	ConVar loadout_slot_knife_weapon_ct(
 		"loadout_slot_knife_weapon_ct",
 		"0",
@@ -522,48 +508,6 @@ ConVar cl_autohelp(
 		FCVAR_ARCHIVE | FCVAR_USERINFO,
 		"Which weapon to use in knife slot for Ts.\n 0 - Default T knife\n 1 - CS:S knife\n 2 - Karambit\n 3 - Flip\n 4 - Bayonet\n 5 - M9 Bayonet\n 6 - Butterfly\n 7 - Gut\n 8 - Huntsman\n 9 - Falchion\n 10 - Bowie\n 11 - Survival\n 12 - Paracord\n 13 - Navaja\n 14 - Nomad\n 15 - Skeleton\n 16 - Stiletto\n 17 - Ursus\n 18 - Talon",
 		true, 0, true, MAX_KNIVES );
-
-	ConVar loadout_slot_fiveseven_weapon(
-		"loadout_slot_fiveseven_weapon",
-		"0",
-		FCVAR_ARCHIVE | FCVAR_USERINFO,
-		"Which weapon to use in Five-SeveN slot.\n 0 - Five-SeveN\n 1 - CZ-75",
-		true, 0, true, 1 );
-
-	ConVar loadout_slot_tec9_weapon(
-		"loadout_slot_tec9_weapon",
-		"0",
-		FCVAR_ARCHIVE | FCVAR_USERINFO,
-		"Which weapon to use in Tec-9 slot.\n 0 - Tec-9\n 1 - CZ-75",
-		true, 0, true, 1 );
-
-	ConVar loadout_slot_mp7_weapon_ct(
-		"loadout_slot_mp7_weapon_ct",
-		"0",
-		FCVAR_ARCHIVE | FCVAR_USERINFO,
-		"Which weapon to use in MP7 slot for CTs.\n 0 - MP7\n 1 - MP5SD",
-		true, 0, true, 1 );
-
-	ConVar loadout_slot_mp7_weapon_t(
-		"loadout_slot_mp7_weapon_t",
-		"0",
-		FCVAR_ARCHIVE | FCVAR_USERINFO,
-		"Which weapon to use in MP7 slot for Ts.\n 0 - MP7\n 1 - MP5SD",
-		true, 0, true, 1 );
-
-	ConVar loadout_slot_deagle_weapon_ct(
-		"loadout_slot_deagle_weapon_ct",
-		"0",
-		FCVAR_ARCHIVE | FCVAR_USERINFO,
-		"Which weapon to use in Deagle slot for CTs.\n 0 - Deagle\n 1 - R8 Revolver",
-		true, 0, true, 1 );
-
-	ConVar loadout_slot_deagle_weapon_t(
-		"loadout_slot_deagle_weapon_t",
-		"0",
-		FCVAR_ARCHIVE | FCVAR_USERINFO,
-		"Which weapon to use in Deagle slot for Ts.\n 0 - Deagle\n 1 - R8 Revolver",
-		true, 0, true, 1 );
 
 	ConVar loadout_slot_agent_ct(
 		"loadout_slot_agent_ct",
@@ -5027,7 +4971,7 @@ ConVar cl_autohelp(
 
 		// Move the player to the place it said.
 		pPlayer->Teleport( &pSpawnSpot->GetAbsOrigin(), &pSpawnSpot->GetLocalAngles(), &vec3_origin );
-		pPlayer->m_Local.m_viewPunchAngle = vec3_angle;
+		pPlayer->m_Local.m_vecPunchAngle = vec3_angle;
 		
 		return pSpawnSpot;
 	}

@@ -39,6 +39,8 @@ public:
 	virtual bool Holster( CBaseCombatWeapon *pSwitchingTo );
 	virtual void Drop( const Vector &vecVelocity );
 
+ 	virtual float GetInaccuracy() const;
+
 	virtual bool Reload();
 	virtual void WeaponIdle();
 
@@ -89,11 +91,8 @@ BEGIN_PREDICTION_DATA( CWeaponUSP )
 END_PREDICTION_DATA()
 #endif
 
-LINK_ENTITY_TO_CLASS( weapon_usp_silencer, CWeaponUSP );
-#ifdef GAME_DLL
-LINK_ENTITY_TO_CLASS( weapon_usp, CWeaponUSP ); // for backwards compatibility
-#endif
-PRECACHE_WEAPON_REGISTER( weapon_usp_silencer );
+LINK_ENTITY_TO_CLASS( weapon_usp, CWeaponUSP );
+PRECACHE_WEAPON_REGISTER( weapon_usp );
 
 
 Activity g_SilencedTranslations[][2] =
@@ -116,10 +115,8 @@ CWeaponUSP::CWeaponUSP()
 
 void CWeaponUSP::Spawn()
 {
-	SetClassname( "weapon_usp_silencer" ); // for backwards compatibility
-	BaseClass::Spawn();
-	
 	//m_iDefaultAmmo = 12;
+	m_flAccuracy = 0.92;
 	m_bSilencerOn = false;
 	m_weaponMode = Primary_Mode;
 	m_flDoneSwitchingSilencer = 0.0f;
@@ -167,6 +164,7 @@ const char * CWeaponUSP::GetWorldModel( void ) const
 
 bool CWeaponUSP::Deploy()
 {
+	m_flAccuracy = 0.92;
 	m_flDoneSwitchingSilencer = 0.0f;
 
 	return BaseClass::Deploy();
@@ -231,13 +229,58 @@ void CWeaponUSP::SecondaryAttack()
 	SetWeaponModelIndex( GetWorldModel() );
 }
 
+
+float CWeaponUSP::GetInaccuracy() const
+{
+	if ( weapon_accuracy_model.GetInt() == 1 )
+	{
+		CCSPlayer *pPlayer = GetPlayerOwner();
+		if ( !pPlayer )
+			return 0.0f;
+
+		if ( m_bSilencerOn )
+		{
+			if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
+				return 1.3f * (1 - m_flAccuracy);
+			else if (pPlayer->GetAbsVelocity().Length2D() > 5)
+				return 0.25f * (1 - m_flAccuracy);
+			else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
+				return 0.125f * (1 - m_flAccuracy);
+			else
+				return 0.15f * (1 - m_flAccuracy);
+		}
+		else
+		{
+			if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
+				return 1.2f * (1 - m_flAccuracy );
+			else if (pPlayer->GetAbsVelocity().Length2D() > 5)
+				return 0.225f * (1 - m_flAccuracy);
+			else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
+				return 0.08f * (1 - m_flAccuracy);
+			else
+				return 0.1f * (1 - m_flAccuracy);
+		}
+	}
+	else
+		return BaseClass::GetInaccuracy();
+}
+
+
 void CWeaponUSP::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
 
-	float flCycleTime =  GetCSWpnData().m_flCycleTime[m_weaponMode];
+	float flCycleTime =  GetCSWpnData().m_flCycleTime;
+
+	// Mark the time of this shot and determine the accuracy modifier based on the last shot fired...
+	m_flAccuracy -= (0.275)*(0.3 - (gpGlobals->curtime - m_flLastFire));
+
+	if (m_flAccuracy > 0.92)
+		m_flAccuracy = 0.92;
+	else if (m_flAccuracy < 0.6)
+		m_flAccuracy = 0.6;
 
 	m_flLastFire = gpGlobals->curtime;
 
@@ -273,7 +316,7 @@ void CWeaponUSP::PrimaryAttack()
 	FX_FireBullets(
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(),
-		pPlayer->GetFinalAimAngle(),
+		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(),
 		GetWeaponID(),
 		m_weaponMode,
 		CBaseEntity::GetPredictionRandomSeed() & 255,
@@ -291,14 +334,19 @@ void CWeaponUSP::PrimaryAttack()
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[m_weaponMode];
 
-	// table driven recoil
-	Recoil( m_weaponMode );
+	QAngle angle = pPlayer->GetPunchAngle();
+	angle.x -= 2;
+	pPlayer->SetPunchAngle( angle );
 }
 
 
 bool CWeaponUSP::Reload()
 {
-	return DefaultPistolReload();
+	if ( !DefaultPistolReload() )
+		return false;
+	
+	m_flAccuracy = 0.92;
+	return true;
 }
 
 void CWeaponUSP::WeaponIdle()

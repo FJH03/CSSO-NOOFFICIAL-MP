@@ -33,6 +33,7 @@ CWeaponCSBaseGun::CWeaponCSBaseGun()
 
 void CWeaponCSBaseGun::Spawn()
 {
+	m_flAccuracy = 0.2;
 	m_bDelayFire = false;
 	m_zoomFullyActiveTime = -1.0f;
 
@@ -46,6 +47,7 @@ bool CWeaponCSBaseGun::Deploy()
 	if ( !pPlayer )
 		return false;
 
+	m_flAccuracy = 0.2;
 	pPlayer->m_iShotsFired = 0;
 	m_bDelayFire = false;
 	m_zoomFullyActiveTime = -1.0f;
@@ -105,47 +107,6 @@ void CWeaponCSBaseGun::PrimaryAttack()
 	Assert( false );
 }
 
-void CWeaponCSBaseGun::SecondaryAttack()
-{
-	CCSPlayer *pPlayer = GetPlayerOwner();
-	if ( pPlayer == NULL )
-	{
-		Assert( pPlayer != NULL );
-		return;
-	}
-	else
-	{
-		if ( IsRevolver() && m_flNextSecondaryAttack < gpGlobals->curtime )
-		{
-			float flCycletimeAlt = GetCSWpnData().m_flCycleTime[Secondary_Mode];
-			m_weaponMode = Secondary_Mode;
-			UpdateAccuracyPenalty();
-#ifndef CLIENT_DLL
-			// Logic for weapon_fire event mimics weapon_csbase.cpp CWeaponCSBase::ItemPostFrame() primary fire implementation
-			IGameEvent * event = gameeventmanager->CreateEvent( (HasAmmo()) ? "weapon_fire" : "weapon_fire_on_empty" );
-			if ( event )
-			{
-				const char *weaponName = STRING( m_iClassname );
-				if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
-				{
-					weaponName += 7;
-				}
-
-				event->SetInt( "userid", pPlayer->GetUserID() );
-				event->SetString( "weapon", weaponName );
-				event->SetBool( "silenced", IsSilenced() );
-				gameeventmanager->FireEvent( event );
-			}
-#endif
-			CSBaseGunFire( flCycletimeAlt, Secondary_Mode );								// <--	'PEW PEW' HAPPENS HERE
-			m_flNextSecondaryAttack = gpGlobals->curtime + flCycletimeAlt;
-			return;
-		}
-
-		BaseClass::SecondaryAttack();
-	}
-}
-
 bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode )
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
@@ -156,8 +117,30 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 
 	m_bDelayFire = true;
 
-	if ( m_iClip1 == 0 )
+	if ( m_iClip1 > 0 )
 	{
+		pPlayer->m_iShotsFired++;
+	
+		// These modifications feed back into flSpread eventually.
+		if ( pCSInfo.m_flAccuracyDivisor != -1 )
+		{
+			int iShotsFired = pPlayer->m_iShotsFired;
+
+			if ( pCSInfo.m_bAccuracyQuadratic )
+				iShotsFired = iShotsFired * iShotsFired;
+			else
+				iShotsFired = iShotsFired * iShotsFired * iShotsFired;
+
+			m_flAccuracy = ( iShotsFired / pCSInfo.m_flAccuracyDivisor ) + pCSInfo.m_flAccuracyOffset;
+			
+			if ( m_flAccuracy > pCSInfo.m_flMaxInaccuracy )
+				m_flAccuracy = pCSInfo.m_flMaxInaccuracy;
+		}
+	}
+	else
+	{
+		m_flAccuracy = 0;
+
 		if ( m_bFireOnEmpty )
 		{
 			PlayEmptySound();
@@ -165,38 +148,17 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 			// NOTE[pmf]: we don't want to actually play the dry fire animations, as most seem to depict the weapon actually firing.
 			// SendWeaponAnim( ACT_VM_DRYFIRE );
 
-			//++pPlayer->m_iShotsFired;	// don't play "auto" empty clicks -- make the player release the trigger before clicking again
-			m_flNextPrimaryAttack = gpGlobals->curtime + 0.2f;
-
-			if ( IsRevolver() )
-			{
-				m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime[weaponMode];
-				BaseClass::SendWeaponAnim( ACT_VM_DRYFIRE ); // empty!
-			}
 			m_bFireOnEmpty = false;
+			m_flNextPrimaryAttack = gpGlobals->curtime + 0.1f;
 		}
 
 		return false;
 	}
-	
 
 	float flCurAttack = CalculateNextAttackTime( flCycleTime );
 
-	if ( (IsRevolver() && weaponMode == Secondary_Mode) )
-	{
-		SendWeaponAnim( ACT_VM_SECONDARYATTACK );
-	}
-	else if ( IsRevolver() )
-	{
-		BaseClass::SendWeaponAnim( ACT_VM_PRIMARYATTACK );
-	}
-	else
-	{
-		SendWeaponAnim( ACT_VM_PRIMARYATTACK );
-	}
+	SendWeaponAnim( ACT_VM_PRIMARYATTACK );
 
-	// table driven recoil
-	Recoil( weaponMode );
 	m_iClip1--;
 
 	// player "shoot" animation
@@ -205,7 +167,7 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 	FX_FireBullets(
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(),
-		pPlayer->GetFinalAimAngle(),
+		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(),
 		GetWeaponID(),
 		weaponMode,
 		CBaseEntity::GetPredictionRandomSeed() & 255,
@@ -219,11 +181,6 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[weaponMode];
-
-	// table driven recoil
-	Recoil( weaponMode );
-
-	m_flRecoilIndex += 1.0f;
 
 	return true;
 }
@@ -244,7 +201,7 @@ bool CWeaponCSBaseGun::Reload()
 	if ( !pPlayer )
 		return false;
 
-	if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 )
+	if (pPlayer->GetAmmoCount( GetPrimaryAmmoType() ) <= 0)
 		return false;
 
 	pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.0f );
@@ -261,6 +218,7 @@ bool CWeaponCSBaseGun::Reload()
 		pPlayer->m_bIsScoped = false;
 	}
 
+	m_flAccuracy = 0.2;
 	pPlayer->m_iShotsFired = 0;
 	m_bDelayFire = false;
 
@@ -279,23 +237,4 @@ void CWeaponCSBaseGun::WeaponIdle()
 		SetWeaponIdleTime( gpGlobals->curtime + GetCSWpnData().m_flIdleInterval );
 		SendWeaponAnim( ACT_VM_IDLE );
 	}
-}
-
-bool CWeaponCSBaseGun::Holster( CBaseCombatWeapon *pSwitchingTo )
-{
-	/* re-deploying the weapon is punishment enough for canceling a silencer attach/detach before completion
-	if ( (GetActivity() == ACT_VM_ATTACH_SILENCER && m_bSilencerOn == false) ||
-		 (GetActivity() == ACT_VM_DETACH_SILENCER && m_bSilencerOn == true) )
-	{
-		m_flDoneSwitchingSilencer = gpGlobals->curtime;
-		m_flNextSecondaryAttack = gpGlobals->curtime;
-		m_flNextPrimaryAttack = gpGlobals->curtime;
-	}*/
-
-	// not sure we want to fully support animation cancelling
-	if ( m_bInReload && !m_bReloadVisuallyComplete )
-	{
-		m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->curtime;
-	}
-	return BaseClass::Holster( pSwitchingTo );
 }

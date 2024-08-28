@@ -409,7 +409,7 @@ CCareerQueryBox::~CCareerQueryBox()
 }
 
 // sorted order weapon list -----------------------------------------------------------------------
-const int NUM_SECONDARY_WEAPONS = 11;
+const int NUM_SECONDARY_WEAPONS = 7;
 static CSWeaponID s_secondaryWeapons[NUM_SECONDARY_WEAPONS] =
 {
 	WEAPON_NONE,
@@ -417,54 +417,44 @@ static CSWeaponID s_secondaryWeapons[NUM_SECONDARY_WEAPONS] =
 	WEAPON_GLOCK,
 	WEAPON_DEAGLE,
 	WEAPON_ELITE,
-	WEAPON_P250,
+	WEAPON_P228,
 	WEAPON_FIVESEVEN,
-	WEAPON_HKP2000,
-	WEAPON_TEC9,
-	WEAPON_REVOLVER,
-	WEAPON_CZ75,
 };
 
-const int NUM_PRIMARY_WEAPONS = 29;
+const int NUM_PRIMARY_WEAPONS = 23;
 static CSWeaponID s_primaryWeapons[NUM_PRIMARY_WEAPONS] =
 {
 	WEAPON_NONE,
 
 	// Assault Rifles
 	CSWeaponID(-WEAPONTYPE_RIFLE),
-	WEAPON_SG556,
+	WEAPON_SG552,
 	WEAPON_AUG,
 	WEAPON_AK47,
 	WEAPON_M4A1,
-	WEAPON_M4A4,
-	WEAPON_GALILAR,
+	WEAPON_GALIL,
 	WEAPON_FAMAS,
 
 	// Snipers
 	CSWeaponID(-WEAPONTYPE_SNIPER_RIFLE),
 	WEAPON_AWP,
-	WEAPON_SCAR20,
+	WEAPON_SG550,
 	WEAPON_G3SG1,
-	WEAPON_SSG08,
+	WEAPON_SCOUT,
 
 	// SMG
 	CSWeaponID(-WEAPONTYPE_SUBMACHINEGUN),
 	WEAPON_P90,
 	WEAPON_UMP45,
-	WEAPON_MP5SD,
+	WEAPON_MP5NAVY,
 	WEAPON_MAC10,
-	WEAPON_MP9,
-	WEAPON_MP7,
-	WEAPON_BIZON,
+	WEAPON_TMP,
 
 	// Heavy
 	CSWeaponID(-WEAPONTYPE_SHOTGUN),
 	WEAPON_M249,
 	WEAPON_XM1014,
-	WEAPON_NOVA,
-	WEAPON_MAG7,
-	WEAPON_SAWEDOFF,
-	WEAPON_NEGEV,
+	WEAPON_M3,
 //	WEAPON_SHIELDGUN,
 };
 
@@ -765,7 +755,7 @@ CWeaponSelectBox::CWeaponSelectBox(vgui::Panel *parent, WeaponSet *pWeaponSet, b
 	const CCSWeaponInfo *info = GetWeaponInfo( weapon->GetWeaponID() );
 	if ( info )
 	{
-		int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType, C_CSPlayer::GetLocalCSPlayer() );
+		int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType );
 		int buyClipSize = GetCSAmmoDef()->GetBuySize( info->iAmmoType );
 		maxClips = (buyClipSize > 0) ? ceil(maxRounds/(float)buyClipSize) : 0;
 	}
@@ -859,7 +849,7 @@ void CWeaponSelectBox::PopulateControls()
 	const CCSWeaponInfo *info = GetWeaponInfo( weapon->GetWeaponID() );
 	if ( info )
 	{
-		int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType, C_CSPlayer::GetLocalCSPlayer() );
+		int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType );
 		int buyClipSize = GetCSAmmoDef()->GetBuySize( info->iAmmoType );
 		maxClips = (buyClipSize > 0) ? ceil(maxRounds/(float)buyClipSize) : 0;
 	}
@@ -942,7 +932,7 @@ void CWeaponSelectBox::UpdateClips()
 	const CCSWeaponInfo *info = GetWeaponInfo( weapon->GetWeaponID() );
 	if ( info )
 	{
-		int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType, C_CSPlayer::GetLocalCSPlayer() );
+		int maxRounds = GetCSAmmoDef()->MaxCarry( info->iAmmoType );
 		int buyClipSize = GetCSAmmoDef()->GetBuySize( info->iAmmoType );
 		m_pBullets->SetVisible( true );
 

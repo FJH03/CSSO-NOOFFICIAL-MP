@@ -39,6 +39,8 @@ public:
 	virtual bool Holster( CBaseCombatWeapon *pSwitchingTo );
 	virtual void Drop( const Vector &vecVelocity );
 
+ 	virtual float GetInaccuracy() const;
+
 	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_M4A1; }
 
 	// return true if this weapon has a silencer equipped
@@ -81,11 +83,8 @@ END_NETWORK_TABLE()
 BEGIN_PREDICTION_DATA( CWeaponM4A1 )
 END_PREDICTION_DATA()
 
-LINK_ENTITY_TO_CLASS( weapon_m4a1_silencer, CWeaponM4A1 );
-#ifdef GAME_DLL
-LINK_ENTITY_TO_CLASS( weapon_m4a1, CWeaponM4A1 ); // for backwards compatibility
-#endif
-PRECACHE_WEAPON_REGISTER( weapon_m4a1_silencer );
+LINK_ENTITY_TO_CLASS( weapon_m4a1, CWeaponM4A1 );
+PRECACHE_WEAPON_REGISTER( weapon_m4a1 );
 
 
 
@@ -215,17 +214,63 @@ void CWeaponM4A1::SecondaryAttack()
 	SetWeaponModelIndex( GetWorldModel() );
 }
 
+float CWeaponM4A1::GetInaccuracy() const
+{
+	if ( weapon_accuracy_model.GetInt() == 1 )
+	{
+		CCSPlayer *pPlayer = GetPlayerOwner();
+		if ( !pPlayer )
+			return 0.0f;
+
+		if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
+		{
+			return 0.035f + 0.4f * m_flAccuracy;
+		}
+		else if (pPlayer->GetAbsVelocity().Length2D() > 140)
+		{
+			return 0.035f + 0.07f * m_flAccuracy;
+		}
+		else
+		{
+			if ( m_bSilencerOn )
+				return 0.025f * m_flAccuracy;
+			else
+				return 0.02f * m_flAccuracy;
+		}
+	}
+	else
+	{
+		return BaseClass::GetInaccuracy();
+	}
+}
+
+
 void CWeaponM4A1::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
 
-	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], m_weaponMode ) )
+	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, m_weaponMode ) )
 		return;
 
 	if ( m_bSilencerOn )
 		 SendWeaponAnim( ACT_VM_PRIMARYATTACK_SILENCED );
+
+	pPlayer = GetPlayerOwner();
+
+	// CSBaseGunFire can kill us, forcing us to drop our weapon, if we shoot something that explodes
+	if ( !pPlayer )
+		return;
+
+	if (pPlayer->GetAbsVelocity().Length2D() > 5)
+		pPlayer->KickBack (1.0, 0.45, 0.28, 0.045, 3.75, 3, 7);
+	else if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
+		pPlayer->KickBack (1.2, 0.5, 0.23, 0.15, 5.5, 3.5, 6);
+	else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
+		pPlayer->KickBack (0.6, 0.3, 0.2, 0.0125, 3.25, 2, 7);
+	else
+		pPlayer->KickBack (0.65, 0.35, 0.25, 0.015, 3.5, 2.25, 7);
 }
 
 
@@ -267,6 +312,7 @@ bool CWeaponM4A1::Reload()
 		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV() );
 	}
 
+	m_flAccuracy = 0.2;
 	pPlayer->m_iShotsFired = 0;
 	m_bDelayFire = false;
 	return true;

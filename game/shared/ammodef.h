@@ -75,8 +75,7 @@ public:
 	int					Index(const char *psz);
 	int					PlrDamage(int nAmmoIndex);
 	int					NPCDamage(int nAmmoIndex);
-	int					MaxCarry(int nAmmoIndex, const CBaseCombatCharacter *owner);
-	bool				CanCarryInfiniteAmmo(int nAmmoIndex);
+	int					MaxCarry(int nAmmoIndex);
 	int					DamageType(int nAmmoIndex);
 	int					TracerType(int nAmmoIndex);
 	float				DamageForce(int nAmmoIndex);

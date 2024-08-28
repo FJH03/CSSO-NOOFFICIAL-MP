@@ -46,7 +46,6 @@ class CCSPlayer;
 #define AMMO_TYPE_HEGRENADE		"AMMO_TYPE_HEGRENADE"
 #define AMMO_TYPE_FLASHBANG		"AMMO_TYPE_FLASHBANG"
 #define AMMO_TYPE_SMOKEGRENADE	"AMMO_TYPE_SMOKEGRENADE"
-#define AMMO_TYPE_TASERCHARGE	"AMMO_TYPE_TASERCHARGE"
 
 #define CROSSHAIR_CONTRACT_PIXELS_PER_SECOND	7.0f
 
@@ -177,12 +176,6 @@ public:
 	// return true if this weapon is a kinf of the given weapon type (ie: "IsKindOf" WEAPONTYPE_RIFLE )
 	bool IsKindOf( CSWeaponType type ) const			{ return GetCSWpnData().m_WeaponType == type; }
 
-#ifdef CLIENT_DLL
-	virtual int GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
-	virtual const char* GetMuzzleFlashEffectName( bool bThirdPerson );
-	virtual int GetEjectBrassAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
-#endif
-
 	// return true if this weapon has a silencer equipped
 	virtual bool IsSilenced( void ) const				{ return false; }
 
@@ -192,9 +185,6 @@ public:
 	virtual void OnJump( float fImpulse );
 	virtual void OnLand( float fVelocity );
 
-	float GetRecoveryTime( void );
-
-	void			CallSecondaryAttack();
 	void CallWeaponIronsight();
 
 public:
@@ -248,16 +238,9 @@ public:
 	virtual void	ItemBusyFrame();
 	virtual const char		*GetViewModel( int viewmodelindex = 0 ) const;
 
-	virtual bool IsRevolver() const { return GetWeaponID() == WEAPON_REVOLVER; }
-
-	void			ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer );
-	bool			ItemPostFrame_ProcessSecondaryAttack( CCSPlayer *pPlayer );
-	void			ItemPostFrame_ProcessIdleNoAction( CCSPlayer *pPlayer );
-
-	void			ItemPostFrame_RevolverResetHaulback();
-
 
 	bool	m_bDelayFire;			// This variable is used to delay the time between subsequent button pressing.
+	float	m_flAccuracy;
 
 	//=============================================================================
 	// HPE_BEGIN:
@@ -272,12 +255,6 @@ public:
 	virtual void UpdateAccuracyPenalty();
 
 	CNetworkVar( float, m_fAccuracyPenalty );
-	CNetworkVar( float, m_flRecoilIndex );
-
-	CNetworkVar( float, m_flPostponeFireReadyTime );
-	void ResetPostponeFireReadyTime( void ) { m_flPostponeFireReadyTime = FLT_MAX; }
-	void SetPostponeFireReadyTime( float flFutureTime ) { m_flPostponeFireReadyTime = flFutureTime; }
-	bool IsPostponFireReadyTimeElapsed( void ) { return (m_flPostponeFireReadyTime < gpGlobals->curtime); }
 
 	//=============================================================================
 	// HPE_END
@@ -285,9 +262,6 @@ public:
 	
 	void SetExtraAmmoCount( int count ) { m_iExtraPrimaryAmmo = count; }
 	int GetExtraAmmoCount( void ) { return m_iExtraPrimaryAmmo; }
-
-	virtual bool IsReloadVisuallyComplete() { return m_bReloadVisuallyComplete; }
-	CNetworkVar( bool, m_bReloadVisuallyComplete );
 
 	//=============================================================================
 	// HPE_BEGIN:	
@@ -314,7 +288,6 @@ public:
 protected:
 
 	float	CalculateNextAttackTime( float flCycleTime );
-	void Recoil( CSWeaponMode weaponMode );
 
 private:
 
@@ -340,17 +313,11 @@ private:
     CHandle<CCSPlayer> m_donor;
     bool m_donated;
 
-	CNetworkVar( float, m_fLastShotTime );
-
     //=============================================================================
     // HPE_END
     //=============================================================================
 };
 
 extern ConVar weapon_accuracy_model;
-extern ConVar weapon_recoil_decay2_exp;
-extern ConVar weapon_recoil_decay2_lin;
-extern ConVar weapon_recoil_vel_decay;
-extern ConVar weapon_recoil_scale;
 
 #endif // WEAPON_CSBASE_H

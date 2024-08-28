@@ -11,7 +11,7 @@
 
 #if defined( CLIENT_DLL )
 
-	#define CWeaponSawedOff C_WeaponSawedOff
+	#define CWeaponM3 C_WeaponM3
 	#include "c_cs_player.h"
 
 #else
@@ -22,33 +22,36 @@
 #endif
 
 
-class CWeaponSawedOff : public CWeaponCSBase
+class CWeaponM3 : public CWeaponCSBase
 {
 public:
-	DECLARE_CLASS( CWeaponSawedOff, CWeaponCSBase );
+	DECLARE_CLASS( CWeaponM3, CWeaponCSBase );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CWeaponSawedOff();
+	CWeaponM3();
 
 	virtual void PrimaryAttack();
 	virtual bool Reload();
 	virtual void WeaponIdle();
 
-	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_SAWEDOFF; }
+ 	virtual float GetInaccuracy() const;
+	virtual float GetSpread() const;
+
+	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_M3; }
 
 private:
 
-	CWeaponSawedOff( const CWeaponSawedOff & );
+	CWeaponM3( const CWeaponM3 & );
 
 	float m_flPumpTime;
 	CNetworkVar( int, m_reloadState );
 
 };
 
-IMPLEMENT_NETWORKCLASS_ALIASED( WeaponSawedOff, DT_WeaponSawedOff )
+IMPLEMENT_NETWORKCLASS_ALIASED( WeaponM3, DT_WeaponM3 )
 
-BEGIN_NETWORK_TABLE( CWeaponSawedOff, DT_WeaponSawedOff )
+BEGIN_NETWORK_TABLE( CWeaponM3, DT_WeaponM3 )
 #ifdef CLIENT_DLL
 	RecvPropInt( RECVINFO( m_reloadState ) )
 #else
@@ -57,29 +60,47 @@ BEGIN_NETWORK_TABLE( CWeaponSawedOff, DT_WeaponSawedOff )
 END_NETWORK_TABLE()
 
 #if defined(CLIENT_DLL)
-BEGIN_PREDICTION_DATA( CWeaponSawedOff )
+BEGIN_PREDICTION_DATA( CWeaponM3 )
 DEFINE_PRED_FIELD( m_reloadState, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 END_PREDICTION_DATA()
 #endif
 
-LINK_ENTITY_TO_CLASS( weapon_sawedoff, CWeaponSawedOff );
-PRECACHE_WEAPON_REGISTER( weapon_sawedoff );
+LINK_ENTITY_TO_CLASS( weapon_m3, CWeaponM3 );
+PRECACHE_WEAPON_REGISTER( weapon_m3 );
 
 
 
-CWeaponSawedOff::CWeaponSawedOff()
+CWeaponM3::CWeaponM3()
 {
 	m_flPumpTime = 0;
 	m_reloadState = 0;
 }
 
-void CWeaponSawedOff::PrimaryAttack()
+float CWeaponM3::GetInaccuracy() const
+{
+	if ( weapon_accuracy_model.GetInt() == 1 )
+	{
+		return 0.0f;
+	}
+	else
+		return BaseClass::GetInaccuracy();
+}
+
+float CWeaponM3::GetSpread() const
+{
+	if ( weapon_accuracy_model.GetInt() == 1 )
+		return 0.0675f;
+
+	return GetCSWpnData().m_fSpread[Primary_Mode];
+}
+
+void CWeaponM3::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
 
-	float flCycleTime = GetCSWpnData().m_flCycleTime[m_weaponMode];
+	float flCycleTime = GetCSWpnData().m_flCycleTime;
 
 	// don't fire underwater
 	if (pPlayer->GetWaterLevel() == 3)
@@ -114,8 +135,8 @@ void CWeaponSawedOff::PrimaryAttack()
 	float flCurAttack = CalculateNextAttackTime( flCycleTime );
 	FX_FireBullets( 
 		pPlayer->entindex(),
-		pPlayer->Weapon_ShootPosition(),
-		pPlayer->GetFinalAimAngle(),
+		pPlayer->Weapon_ShootPosition(), 
+		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(), 
 		GetWeaponID(),
 		Primary_Mode,
 		CBaseEntity::GetPredictionRandomSeed() & 255, // wrap it for network traffic so it's the same between client and server
@@ -141,18 +162,29 @@ void CWeaponSawedOff::PrimaryAttack()
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[Primary_Mode];
 
-	// table driven recoil
-	Recoil( Primary_Mode );
+	// Update punch angles.
+	QAngle angle = pPlayer->GetPunchAngle();
+
+	if ( pPlayer->GetFlags() & FL_ONGROUND )
+	{
+		angle.x -= SharedRandomInt( "M3PunchAngleGround", 4, 6 );
+	}
+	else
+	{
+		angle.x -= SharedRandomInt( "M3PunchAngleAir", 8, 11 );
+	}
+
+	pPlayer->SetPunchAngle( angle );
 }
 
 
-bool CWeaponSawedOff::Reload()
+bool CWeaponM3::Reload()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return false;
 
-	if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 || m_iClip1 == GetMaxClip1() )
+	if (pPlayer->GetAmmoCount( m_iPrimaryAmmoType ) <= 0 || m_iClip1 == GetMaxClip1())
 		return true;
 
 	// don't reload until recoil is done
@@ -205,8 +237,12 @@ bool CWeaponSawedOff::Reload()
 #ifdef GAME_DLL
 		SendReloadEvents();
 #endif
+		
+		CCSPlayer *pPlayer = GetPlayerOwner();
 
-		GiveReserveAmmo( AMMO_POSITION_PRIMARY, -1, true );
+		if ( pPlayer )
+			 pPlayer->RemoveAmmo( 1, m_iPrimaryAmmoType );
+
 		m_reloadState = 1;
 	}
 
@@ -214,7 +250,7 @@ bool CWeaponSawedOff::Reload()
 }
 
 
-void CWeaponSawedOff::WeaponIdle()
+void CWeaponM3::WeaponIdle()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
@@ -228,15 +264,15 @@ void CWeaponSawedOff::WeaponIdle()
 
 	if (m_flTimeWeaponIdle < gpGlobals->curtime)
 	{
-		if ( m_iClip1 == 0 && m_reloadState == 0 && GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) )
+		if (m_iClip1 == 0 && m_reloadState == 0 && pPlayer->GetAmmoCount( m_iPrimaryAmmoType ))
 		{
-			Reload();
+			Reload( );
 		}
 		else if (m_reloadState != 0)
 		{
-			if ( m_iClip1 != 7 && GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) )
+			if (m_iClip1 != 8 && pPlayer->GetAmmoCount( m_iPrimaryAmmoType ))
 			{
-				Reload();
+				Reload( );
 			}
 			else
 			{

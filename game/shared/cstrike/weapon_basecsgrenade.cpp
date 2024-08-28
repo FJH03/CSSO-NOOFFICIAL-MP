@@ -108,7 +108,7 @@ bool CBaseCSGrenade::Deploy()
 bool CBaseCSGrenade::Holster( CBaseCombatWeapon *pSwitchingTo )
 {
 	m_bRedraw = false;
-	m_bPinPulled = false; // when this is holstered make sure the pin isnï¿½t pulled.
+	m_bPinPulled = false; // when this is holstered make sure the pin isn’t pulled.
 	m_fThrowTime = 0;
 
 #ifndef CLIENT_DLL
@@ -343,7 +343,7 @@ void CBaseCSGrenade::ItemPostFrame()
 			return;
 		}
 
-		QAngle angThrow = pPlayer->GetFinalAimAngle();
+		QAngle angThrow = pPlayer->LocalEyeAngles();
 
 		Vector vForward, vRight, vUp;
 

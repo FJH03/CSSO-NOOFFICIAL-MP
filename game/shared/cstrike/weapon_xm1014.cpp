@@ -36,6 +36,7 @@ public:
 	virtual bool Reload();
 	virtual void WeaponIdle();
 
+ 	virtual float GetInaccuracy() const;
 	virtual float GetSpread() const;
 
 	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_XM1014; }
@@ -82,6 +83,14 @@ void CWeaponXM1014::Spawn()
 	BaseClass::Spawn();
 }
 
+float CWeaponXM1014::GetInaccuracy() const
+{
+	if ( weapon_accuracy_model.GetInt() == 1 )
+		return 0.0f;
+	else
+		return BaseClass::GetInaccuracy();
+}
+
 float CWeaponXM1014::GetSpread() const
 {
 	if ( weapon_accuracy_model.GetInt() == 1 )
@@ -96,7 +105,7 @@ void CWeaponXM1014::PrimaryAttack()
 	if ( !pPlayer )
 		return;
 
-	float flCycleTime = GetCSWpnData().m_flCycleTime[m_weaponMode];
+	float flCycleTime = GetCSWpnData().m_flCycleTime;
 
 	// don't fire underwater
 	if (pPlayer->GetWaterLevel() == 3)
@@ -134,8 +143,8 @@ void CWeaponXM1014::PrimaryAttack()
 	float flCurAttack = CalculateNextAttackTime( flCycleTime );
 	FX_FireBullets( 
 		pPlayer->entindex(),
-		pPlayer->Weapon_ShootPosition(),
-		pPlayer->GetFinalAimAngle(),
+		pPlayer->Weapon_ShootPosition(), 
+		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(), 
 		GetWeaponID(),
 		Primary_Mode,
 		CBaseEntity::GetPredictionRandomSeed() & 255, // wrap it for network traffic so it's the same between client and server
@@ -161,10 +170,19 @@ void CWeaponXM1014::PrimaryAttack()
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[Primary_Mode];
 
-	// table driven recoil
-	Recoil( Primary_Mode );
+	// Update punch angles.
+	QAngle angle = pPlayer->GetPunchAngle();
 
-	m_flRecoilIndex += 1.0f;
+	if ( pPlayer->GetFlags() & FL_ONGROUND )
+	{
+		angle.x -= SharedRandomInt( "XM1014PunchAngleGround", 3, 5 );
+	}
+	else
+	{
+		angle.x -= SharedRandomInt( "XM1014PunchAngleAir", 7, 10 );
+	}
+
+	pPlayer->SetPunchAngle( angle );
 }
 
 
