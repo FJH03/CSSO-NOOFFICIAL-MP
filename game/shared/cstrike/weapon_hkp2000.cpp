@@ -39,7 +39,7 @@ public:
 	virtual bool Reload();
 	virtual void WeaponIdle();
 
-	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_HKP2000; }
+	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_HKP2000; }
 
 private:
 	CWeaponHKP2000( const CWeaponHKP2000 & );
