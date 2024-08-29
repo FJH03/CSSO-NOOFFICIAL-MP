@@ -128,6 +128,8 @@ public:
 	// HPE_END
 	//=============================================================================
 
+	virtual void	OnColorCorrectionWeightsReset( void ) = 0;
+	
 	virtual bool	DoPostScreenSpaceEffects( const CViewSetup *pSetup ) = 0;
 
 	virtual void	DisplayReplayMessage( const char *pLocalizeName, float flDuration, bool bUrgent,

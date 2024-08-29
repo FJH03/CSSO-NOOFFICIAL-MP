@@ -36,7 +36,8 @@ public:
 	void RemoveColorCorrection( ClientCCHandle_t );
 
 	// Modify color correction weights
-	void SetColorCorrectionWeight( ClientCCHandle_t h, float flWeight );
+	void SetColorCorrectionWeight( ClientCCHandle_t h, float flWeight, bool bExclusive = false );
+	void UpdateColorCorrection();
 	void ResetColorCorrectionWeights();
 	void SetResetable( ClientCCHandle_t h, bool bResetable );
 
@@ -45,6 +46,19 @@ public:
 
 private:
 	int m_nActiveWeightCount;
+	bool m_bHaveExclusiveWeight;
+	float m_flExclusiveWeight;
+
+	struct SetWeightParams_t
+	{
+		ClientCCHandle_t handle;
+		float flWeight;
+		bool bExclusive;
+	};
+
+	CUtlVector< SetWeightParams_t > m_colorCorrectionWeights;
+
+	void CommitColorCorrectionWeights();
 };
 
 

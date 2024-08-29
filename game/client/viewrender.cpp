@@ -53,6 +53,7 @@
 #include "clientmode_shared.h"
 #include "sourcevr/isourcevirtualreality.h"
 #include "client_virtualreality.h"
+#include "colorcorrectionmgr.h"
 
 #ifdef PORTAL
 //#include "C_Portal_Player.h"
@@ -1967,6 +1968,8 @@ void CViewRender::RenderView( const CViewSetup &view, int nClearFlags, int whatT
 
 		// Must be first 
 		render->SceneBegin();
+
+		g_pColorCorrectionMgr->UpdateColorCorrection();
 
 		pRenderContext.GetFrom( materials );
 		pRenderContext->TurnOnToneMapping();
