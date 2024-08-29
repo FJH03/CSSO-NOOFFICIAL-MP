@@ -1320,12 +1320,6 @@ void CCSPlayer::GiveDefaultItems()
 {
 	// Always give the player the knife.
 	CBaseCombatWeapon *pistol = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
-	if ( pistol )
-	{
-		return;
-	}
-
-	m_bUsingDefaultPistol = true;
 
 	if ( GetTeamNumber() == TEAM_CT )
 	{
@@ -1354,8 +1348,11 @@ void CCSPlayer::GiveDefaultItems()
 		else
 			GiveNamedItem( KnivesEntities[m_iLoadoutSlotKnifeWeaponT + 1] );
 
-		GiveNamedItem( "weapon_glock" );
-		GiveAmmo( 40, BULLET_PLAYER_9MM );
+		if ( !pistol )
+		{
+			GiveNamedItem( "weapon_glock" );
+			m_bUsingDefaultPistol = true;
+		}
 	}
 }
 
