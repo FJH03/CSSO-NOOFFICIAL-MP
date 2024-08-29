@@ -1334,8 +1334,18 @@ void CCSPlayer::GiveDefaultItems()
 		else
 			GiveNamedItem( KnivesEntities[m_iLoadoutSlotKnifeWeaponCT + 1] );
 
-		GiveNamedItem( "weapon_usp" );
-		GiveAmmo( 24, BULLET_PLAYER_45ACP );
+		if ( !pistol )
+		{
+			if ( IsBot() )
+				GiveNamedItem( "weapon_hkp2000" );
+			else
+			{
+				char weapon[32];
+				Q_snprintf( weapon, sizeof( weapon ), "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, SLOT_HKP2000 ) );
+				GiveNamedItem( weapon );
+			}
+			m_bUsingDefaultPistol = true;
+		}
 	}
 	else if ( GetTeamNumber() == TEAM_TERRORIST )
 	{
@@ -3837,7 +3847,11 @@ BuyResult_e CCSPlayer::AttemptToBuyNightVision( void )
 //=============================================================================
 
 BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item )
-{    
+{
+	const char* loadoutItem = CSLoadout()->GetWeaponFromSlot( this, CSLoadout()->GetSlotFromWeapon( this, item ) );
+	if ( loadoutItem != NULL )
+		item = loadoutItem;
+
 	BuyResult_e result = HandleCommand_Buy_Internal(item);
 	if (result == BUY_BOUGHT)
 	{
@@ -6604,6 +6618,13 @@ void CCSPlayer::PostAutoBuyCommandProcessing(const AutoBuyInfoStruct *commandInf
 	{
 		return;
 	}
+
+	char classname[64];
+	Q_strcpy( classname, commandInfo->m_classname );
+
+	const char* loadoutWeapon = CSLoadout()->GetWeaponFromSlot( this, CSLoadout()->GetSlotFromWeapon( this, commandInfo->m_command ) );
+	if ( loadoutWeapon != NULL )
+		Q_snprintf( classname, sizeof( classname ), "weapon_%s", loadoutWeapon );
 
 	CBaseCombatWeapon *pPrimary = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
 	CBaseCombatWeapon *pSecondary = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
