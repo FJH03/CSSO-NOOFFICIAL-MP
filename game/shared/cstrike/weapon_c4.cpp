@@ -13,6 +13,7 @@
 #include "KeyValues.h"
 #include "fx_cs_shared.h"
 #include "obstacle_pushaway.h"
+#include "particle_parse.h"
 
 #if defined( CLIENT_DLL )
 	#include "c_cs_player.h"
@@ -133,7 +134,7 @@ END_PREDICTION_DATA()
 
 		engine->ForceModelBounds( PLANTED_C4_MODEL, Vector( -7, -13, -3 ), Vector( 9, 12, 11 ) );
 
-		PrecacheParticleSystem( "bomb_explosion_huge" );
+	    PrecacheParticleSystem( "explosion_c4_500" );
 	}
 
 	void CPlantedC4::GetControlPanelInfo( int nPanelIndex, const char *&pPanelName )
@@ -611,6 +612,9 @@ END_PREDICTION_DATA()
 				TE_EXPLFLAG_NONE,
 				flBombRadius * 3.5,
 				200 );
+			// Try using the new particle system instead of temp ents
+			QAngle	vecAngles;
+			DispatchParticleEffect( "explosion_c4_500", pos, vecAngles, (CBaseEntity *) NULL );
 		}
 
 		// Sound! for everyone
