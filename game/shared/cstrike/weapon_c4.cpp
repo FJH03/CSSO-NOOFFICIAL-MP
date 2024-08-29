@@ -322,7 +322,11 @@ END_PREDICTION_DATA()
 		}
 				
 
-		SetNextThink( gpGlobals->curtime + 0.12 );
+		bool bCloseToExplode = (m_flC4Blow - 3.0 <= gpGlobals->curtime);
+		if ( bCloseToExplode || m_bStartDefuse )
+			SetNextThink( gpGlobals->curtime );
+		else
+			SetNextThink( gpGlobals->curtime + 0.12 );
 
 #ifndef CLIENT_DLL
 		// let the bots hear the bomb beeping
