@@ -4160,33 +4160,37 @@ const char *RadioEventName[ RADIO_NUM_EVENTS+1 ] =
 
 	"EVENT_START_RADIO_1",
 
-	"EVENT_RADIO_COVER_ME",
-	"EVENT_RADIO_YOU_TAKE_THE_POINT",
-	"EVENT_RADIO_HOLD_THIS_POSITION",
-	"EVENT_RADIO_REGROUP_TEAM",
-	"EVENT_RADIO_FOLLOW_ME",
-	"EVENT_RADIO_TAKING_FIRE",
-
-	"EVENT_START_RADIO_2",
-
 	"EVENT_RADIO_GO_GO_GO",
 	"EVENT_RADIO_TEAM_FALL_BACK",
 	"EVENT_RADIO_STICK_TOGETHER_TEAM",
-	"EVENT_RADIO_GET_IN_POSITION_AND_WAIT",
-	"EVENT_RADIO_STORM_THE_FRONT",
-	"EVENT_RADIO_REPORT_IN_TEAM",
+	"EVENT_RADIO_HOLD_THIS_POSITION",
+	"EVENT_RADIO_FOLLOW_ME",
+
+	"EVENT_START_RADIO_2",
+
+	"EVENT_RADIO_AFFIRMATIVE",
+	"EVENT_RADIO_NEGATIVE",
+	"EVENT_RADIO_CHEER",
+	"EVENT_RADIO_COMPLIMENT",
+	"EVENT_RADIO_THANKS",
 
 	"EVENT_START_RADIO_3",
 
-	"EVENT_RADIO_AFFIRMATIVE",
 	"EVENT_RADIO_ENEMY_SPOTTED",
 	"EVENT_RADIO_NEED_BACKUP",
+	"EVENT_RADIO_YOU_TAKE_THE_POINT",
 	"EVENT_RADIO_SECTOR_CLEAR",
 	"EVENT_RADIO_IN_POSITION",
+
+	// unused
+	"EVENT_RADIO_COVER_ME",
+	"EVENT_RADIO_REGROUP_TEAM",
+	"EVENT_RADIO_TAKING_FIRE",
+	"EVENT_RADIO_REPORT_IN_TEAM",
 	"EVENT_RADIO_REPORTING_IN",
 	"EVENT_RADIO_GET_OUT_OF_THERE",
-	"EVENT_RADIO_NEGATIVE",
 	"EVENT_RADIO_ENEMY_DOWN",
+	"EVENT_RADIO_STORM_THE_FRONT",
 
 	"EVENT_RADIO_END",
 
@@ -4220,27 +4224,27 @@ void CCSPlayer::HandleMenu_Radio1( int slot )
 
 	switch ( slot )
 	{
-		case 1 :
+		case RADIO_COVER_ME :
 			Radio( "Radio.CoverMe",   "#Cstrike_TitlesTXT_Cover_me" );
 			break;
 
-		case 2 :
+		case RADIO_YOU_TAKE_THE_POINT :
 			Radio( "Radio.YouTakeThePoint", "#Cstrike_TitlesTXT_You_take_the_point" );
 			break;
 
-		case 3 :
+		case RADIO_HOLD_THIS_POSITION :
 			Radio( "Radio.HoldPosition",  "#Cstrike_TitlesTXT_Hold_this_position" );
 			break;
 
-		case 4 :
+		case RADIO_REGROUP_TEAM :
 			Radio( "Radio.Regroup",   "#Cstrike_TitlesTXT_Regroup_team" );
 			break;
 
-		case 5 :
+		case RADIO_FOLLOW_ME :
 			Radio( "Radio.FollowMe",  "#Cstrike_TitlesTXT_Follow_me" );
 			break;
 
-		case 6 :
+		case RADIO_TAKING_FIRE :
 			Radio( "Radio.TakingFire", "#Cstrike_TitlesTXT_Taking_fire" );
 			break;
 	}
@@ -4250,7 +4254,7 @@ void CCSPlayer::HandleMenu_Radio1( int slot )
 	if ( event )
 	{
 		event->SetInt("userid", GetUserID() );
-		event->SetInt("slot", RADIO_START_1 + slot );
+		event->SetInt("slot", slot );
 		gameeventmanager->FireEvent( event );
 	}
 }
@@ -4268,29 +4272,33 @@ void CCSPlayer::HandleMenu_Radio2( int slot )
 
 	switch ( slot )
 	{
-		case 1 :
-			Radio( "Radio.GoGoGo",			"#Cstrike_TitlesTXT_Go_go_go" );
-			break;
+		case RADIO_GO_GO_GO:
+		Radio( "Radio.GoGoGo", "#Cstrike_TitlesTXT_Go_go_go" );
+		break;
 
-		case 2 :
-			Radio( "Radio.TeamFallBack",	"#Cstrike_TitlesTXT_Team_fall_back" );
-			break;
+		case RADIO_TEAM_FALL_BACK:
+		Radio( "Radio.TeamFallBack", "#Cstrike_TitlesTXT_Team_fall_back" );
+		break;
 
-		case 3 :
-			Radio( "Radio.StickTogether",	"#Cstrike_TitlesTXT_Stick_together_team" );
-			break;
+		case RADIO_STICK_TOGETHER_TEAM:
+		Radio( "Radio.StickTogether", "#Cstrike_TitlesTXT_Stick_together_team" );
+		break;
 
-		case 4 :
-			Radio( "Radio.GetInPosition",   "#Cstrike_TitlesTXT_Get_in_position_and_wait" );
-			break;
+		case RADIO_THANKS:
+		Radio( "Radio.Thanks", "#Cstrike_TitlesTXT_Thanks" );
+		break;
 
-		case 5 :
-			Radio( "Radio.StormFront",		"#Cstrike_TitlesTXT_Storm_the_front" );
-			break;
+		case RADIO_CHEER:
+		Radio( "Radio.Cheer", "#Cstrike_TitlesTXT_Cheer" );
+		break;
 
-		case 6 :
-			Radio( "Radio.ReportInTeam",	"#Cstrike_TitlesTXT_Report_in_team" );
-			break;
+		case RADIO_COMPLIMENT:
+		Radio( "Radio.Compliment", "#Cstrike_TitlesTXT_Compliment" );
+		break;
+
+		case RADIO_REPORT_IN_TEAM:
+		Radio( "Radio.ReportInTeam", "#Cstrike_TitlesTXT_Report_in_team" );
+		break;
 	}
 
 	// tell bots about radio message
@@ -4298,7 +4306,7 @@ void CCSPlayer::HandleMenu_Radio2( int slot )
 	if ( event )
 	{
 		event->SetInt("userid", GetUserID() );
-		event->SetInt("slot", RADIO_START_2 + slot );
+		event->SetInt("slot", slot );
 		gameeventmanager->FireEvent( event );
 	}
 }
@@ -4316,45 +4324,45 @@ void CCSPlayer::HandleMenu_Radio3( int slot )
 
 	switch ( slot )
 	{
-		case 1 :
-			if ( random->RandomInt( 0,1 ) )
-				Radio( "Radio.Affirmitive",	"#Cstrike_TitlesTXT_Affirmative" );
-			else
-				Radio( "Radio.Roger",		"#Cstrike_TitlesTXT_Roger_that" );
+		case RADIO_AFFIRMATIVE:
+		if ( random->RandomInt( 0, 1 ) )
+			Radio( "Radio.Affirmitive", "#Cstrike_TitlesTXT_Affirmative" );
+		else
+			Radio( "Radio.Roger", "#Cstrike_TitlesTXT_Roger_that" );
 
-			break;
+		break;
 
-		case 2 :
-			Radio( "Radio.EnemySpotted",	"#Cstrike_TitlesTXT_Enemy_spotted" );
-			break;
+		case RADIO_ENEMY_SPOTTED:
+		Radio( "Radio.EnemySpotted", "#Cstrike_TitlesTXT_Enemy_spotted" );
+		break;
 
-		case 3 :
-			Radio( "Radio.NeedBackup",		"#Cstrike_TitlesTXT_Need_backup" );
-			break;
+		case RADIO_NEED_BACKUP:
+		Radio( "Radio.NeedBackup", "#Cstrike_TitlesTXT_Need_backup" );
+		break;
 
-		case 4 :
-			Radio( "Radio.SectorClear",		"#Cstrike_TitlesTXT_Sector_clear" );
-			break;
+		case RADIO_SECTOR_CLEAR:
+		Radio( "Radio.SectorClear", "#Cstrike_TitlesTXT_Sector_clear" );
+		break;
 
-		case 5 :
-			Radio( "Radio.InPosition",		"#Cstrike_TitlesTXT_In_position" );
-			break;
+		case RADIO_IN_POSITION:
+		Radio( "Radio.InPosition", "#Cstrike_TitlesTXT_In_position" );
+		break;
 
-		case 6 :
-			Radio( "Radio.ReportingIn",		"#Cstrike_TitlesTXT_Reporting_in" );
-			break;
+		case RADIO_REPORTING_IN:
+		Radio( "Radio.ReportingIn", "#Cstrike_TitlesTXT_Reporting_in" );
+		break;
 
-		case 7 :
-			Radio( "Radio.GetOutOfThere",	"#Cstrike_TitlesTXT_Get_out_of_there" );
-			break;
+		case RADIO_GET_OUT_OF_THERE:
+		Radio( "Radio.GetOutOfThere", "#Cstrike_TitlesTXT_Get_out_of_there" );
+		break;
 
-		case 8 :
-			Radio( "Radio.Negative",		"#Cstrike_TitlesTXT_Negative" );
-			break;
+		case RADIO_NEGATIVE:
+		Radio( "Radio.Negative", "#Cstrike_TitlesTXT_Negative" );
+		break;
 
-		case 9 :
-			Radio( "Radio.EnemyDown",		"#Cstrike_TitlesTXT_Enemy_down" );
-			break;
+		case RADIO_ENEMY_DOWN:
+		Radio( "Radio.EnemyDown", "#Cstrike_TitlesTXT_Enemy_down" );
+		break;
 	}
 
 	// tell bots about radio message
@@ -4362,7 +4370,7 @@ void CCSPlayer::HandleMenu_Radio3( int slot )
 	if ( event )
 	{
 		event->SetInt("userid", GetUserID() );
-		event->SetInt("slot", RADIO_START_3 + slot );
+		event->SetInt("slot", slot );
 		gameeventmanager->FireEvent( event );
 	}
 }
@@ -4648,116 +4656,131 @@ bool HandleRadioAliasCommands( CCSPlayer *pPlayer, const char *pszCommand )
 	bool bRetVal = false;
 
 	// don't execute them if we are not alive or are an observer
-	if( !pPlayer->IsAlive() || pPlayer->IsObserver() )
+	if ( !pPlayer->IsAlive() || pPlayer->IsObserver() )
 		return false;
 
 	// Radio1 commands
 	if ( FStrEq( pszCommand, "coverme" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio1( 1 );
+		pPlayer->HandleMenu_Radio1( RADIO_COVER_ME );
 	}
 	else if ( FStrEq( pszCommand, "takepoint" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio1( 2 );
+		pPlayer->HandleMenu_Radio1( RADIO_YOU_TAKE_THE_POINT );
 	}
 	else if ( FStrEq( pszCommand, "holdpos" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio1( 3 );
+		pPlayer->HandleMenu_Radio1( RADIO_HOLD_THIS_POSITION );
 	}
 	else if ( FStrEq( pszCommand, "regroup" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio1( 4 );
+		pPlayer->HandleMenu_Radio1( RADIO_REGROUP_TEAM );
 	}
 	else if ( FStrEq( pszCommand, "followme" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio1( 5 );
+		pPlayer->HandleMenu_Radio1( RADIO_FOLLOW_ME );
 	}
 	else if ( FStrEq( pszCommand, "takingfire" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio1( 6 );
+		pPlayer->HandleMenu_Radio1( RADIO_TAKING_FIRE );
 	}
 	// Radio2 commands
 	else if ( FStrEq( pszCommand, "go" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio2( 1 );
+		pPlayer->HandleMenu_Radio2( RADIO_GO_GO_GO );
 	}
 	else if ( FStrEq( pszCommand, "fallback" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio2( 2 );
+		pPlayer->HandleMenu_Radio2( RADIO_TEAM_FALL_BACK );
 	}
 	else if ( FStrEq( pszCommand, "sticktog" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio2( 3 );
+		pPlayer->HandleMenu_Radio2( RADIO_STICK_TOGETHER_TEAM );
 	}
-	else if ( FStrEq( pszCommand, "getinpos" ) )
+	else if ( FStrEq( pszCommand, "cheer" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio2( 4 );
+		pPlayer->HandleMenu_Radio2( RADIO_CHEER );
 	}
-	else if ( FStrEq( pszCommand, "stormfront" ) )
+	else if ( FStrEq( pszCommand, "thanks" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio2( 5 );
+		pPlayer->HandleMenu_Radio2( RADIO_THANKS );
 	}
+	else if ( FStrEq( pszCommand, "compliment" ) )
+	{
+		bRetVal = true;
+		pPlayer->HandleMenu_Radio2( RADIO_COMPLIMENT );
+	}
+	//else if ( FStrEq( pszCommand, "getinpos" ) )
+	//{
+	//	bRetVal = true;
+	//	pPlayer->HandleMenu_Radio2( 4 );
+	//}
+	//else if ( FStrEq( pszCommand, "stormfront" ) )
+	//{
+	//	bRetVal = true;
+	//	pPlayer->HandleMenu_Radio2( 5 );
+	//}
 	else if ( FStrEq( pszCommand, "report" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio2( 6 );
+		pPlayer->HandleMenu_Radio2( RADIO_REPORT_IN_TEAM );
 	}
 	// Radio3 commands
 	else if ( FStrEq( pszCommand, "roger" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio3( 1 );
+		pPlayer->HandleMenu_Radio3( RADIO_AFFIRMATIVE );
 	}
 	else if ( FStrEq( pszCommand, "enemyspot" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio3( 2 );
+		pPlayer->HandleMenu_Radio3( RADIO_ENEMY_SPOTTED );
 	}
 	else if ( FStrEq( pszCommand, "needbackup" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio3( 3 );
+		pPlayer->HandleMenu_Radio3( RADIO_NEED_BACKUP );
 	}
 	else if ( FStrEq( pszCommand, "sectorclear" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio3( 4 );
+		pPlayer->HandleMenu_Radio3( RADIO_SECTOR_CLEAR );
 	}
 	else if ( FStrEq( pszCommand, "inposition" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio3( 5 );
+		pPlayer->HandleMenu_Radio3( RADIO_IN_POSITION );
 	}
 	else if ( FStrEq( pszCommand, "reportingin" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio3( 6 );
+		pPlayer->HandleMenu_Radio3( RADIO_REPORTING_IN );
 	}
 	else if ( FStrEq( pszCommand, "getout" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio3( 7 );
+		pPlayer->HandleMenu_Radio3( RADIO_GET_OUT_OF_THERE );
 	}
 	else if ( FStrEq( pszCommand, "negative" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio3( 8 );
+		pPlayer->HandleMenu_Radio3( RADIO_NEGATIVE );
 	}
 	else if ( FStrEq( pszCommand, "enemydown" ) )
 	{
 		bRetVal = true;
-		pPlayer->HandleMenu_Radio3( 9 );
+		pPlayer->HandleMenu_Radio3( RADIO_ENEMY_DOWN );
 	}
 
 	return bRetVal;

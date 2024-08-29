@@ -85,7 +85,7 @@ void OpenRadioMenu( int index )
 		pMenu->ShowMenu( "#RadioB", 0x23f );
 		break;
 	case 3:
-		pMenu->ShowMenu( "#RadioC", 0x3ff );
+		pMenu->ShowMenu( "#RadioC", 0x23f );
 		break;
 	default:
 		g_whichMenu = 0;
@@ -129,22 +129,19 @@ CON_COMMAND_F( menuselect, "menuselect", FCVAR_CLIENTCMD_CAN_EXECUTE )
 			switch( whichEntry )
 			{
 			case 1: // coverme
-				engine->ClientCmd( "coverme" );
+				engine->ClientCmd( "go" );
 				break;
 			case 2: // takepoint
-				engine->ClientCmd( "takepoint" );
+				engine->ClientCmd( "fallback" );
 				break;
 			case 3: // holdpos
-				engine->ClientCmd( "holdpos" );
+				engine->ClientCmd( "sticktog" );
 				break;
 			case 4: // regroup
-				engine->ClientCmd( "regroup" );
+				engine->ClientCmd( "holdpos" );
 				break;
 			case 5: // followme
 				engine->ClientCmd( "followme" );
-				break;
-			case 6: // takingfire
-				engine->ClientCmd( "takingfire" );
 				break;
 			}
 		}
@@ -155,22 +152,19 @@ CON_COMMAND_F( menuselect, "menuselect", FCVAR_CLIENTCMD_CAN_EXECUTE )
 			switch( whichEntry )
 			{
 			case 1: // go
-				engine->ClientCmd( "go" );
+				engine->ClientCmd( "roger" );
 				break;
 			case 2: // fallback
-				engine->ClientCmd( "fallback" );
+				engine->ClientCmd( "negative" );
 				break;
 			case 3: // sticktog
-				engine->ClientCmd( "sticktog" );
+				engine->ClientCmd( "cheer" );
 				break;
 			case 4: // getinpos
-				engine->ClientCmd( "getinpos" );
+				engine->ClientCmd( "compliment" );
 				break;
 			case 5: // stormfront
-				engine->ClientCmd( "stormfront" );
-				break;
-			case 6: // report
-				engine->ClientCmd( "report" );
+				engine->ClientCmd( "thanks" );
 				break;
 			}
 		}
@@ -181,31 +175,19 @@ CON_COMMAND_F( menuselect, "menuselect", FCVAR_CLIENTCMD_CAN_EXECUTE )
 			switch( whichEntry )
 			{
 			case 1: // roger
-				engine->ClientCmd( "roger" );
-				break;
-			case 2: // enemyspot
 				engine->ClientCmd( "enemyspot" );
 				break;
-			case 3: // needbackup
+			case 2: // enemyspot
 				engine->ClientCmd( "needbackup" );
+				break;
+			case 3: // needbackup
+				engine->ClientCmd( "takepoint" );
 				break;
 			case 4: // sectorclear
 				engine->ClientCmd( "sectorclear" );
 				break;
 			case 5: // inposition
 				engine->ClientCmd( "inposition" );
-				break;
-			case 6: // reportingin
-				engine->ClientCmd( "reportingin" );
-				break;
-			case 7: // getout
-				engine->ClientCmd( "getout" );
-				break;
-			case 8: // negative
-				engine->ClientCmd( "negative" );
-				break;
-			case 9: // enemydown
-				engine->ClientCmd( "enemydown" );
 				break;
 			}
 		}
