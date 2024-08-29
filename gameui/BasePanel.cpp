@@ -1299,7 +1299,7 @@ void CBasePanel::SetBackgroundRenderState(EBackgroundState state)
 		// make the menus visible
 		m_bFadingInMenus = true;
 		m_flFadeMenuStartTime = frametime;
-		m_flFadeMenuEndTime = frametime + 3.0f;
+		m_flFadeMenuEndTime = frametime + 0.5f;
 
 		if ( state == BACKGROUND_MAINMENU )
 		{
