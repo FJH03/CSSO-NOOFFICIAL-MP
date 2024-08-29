@@ -116,7 +116,6 @@ public: // IViewPortPanel interface:
 	virtual void Reset();
 	virtual void OnThink();
 	virtual void Update();
-	virtual bool NeedsUpdate( void );
 	virtual bool HasInputElements( void ) { return false; }
 	virtual void ShowPanel( bool bShow );
 	virtual void Init( void );
@@ -153,7 +152,6 @@ public:
 
 	// general settings:
 	virtual void SetMap(const char * map);
-	virtual void SetTime( float time );
 	virtual void SetMode( int mode );
 	virtual bool SetTeamColor(int team, Color color);
 	virtual void SetFollowAngle(bool state);
@@ -260,10 +258,7 @@ protected:
 	Vector2D m_ViewOrigin;	// map coordinates that are in the center of the pverview panel
 	Vector2D m_MapCenter;	// map coordinates that are in the center of the pverview panel
 
-	float	m_fNextUpdateTime;
 	float	m_fViewAngle;	// rotation of overview map
-	float	m_fWorldTime;	// current world time
-	float   m_fNextTrailUpdate; // next time to update player trails
 	float	m_fTrailUpdateInterval; // if -1 don't show trails
 	bool	m_bFollowAngle;	// if true, map rotates with view angle
 

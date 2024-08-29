@@ -287,11 +287,6 @@ void CMapOverview::UpdatePlayers()
 
 void CMapOverview::UpdatePlayerTrails()
 {
-	if ( m_fNextTrailUpdate > m_fWorldTime )
-		return;
-
-	m_fNextTrailUpdate = m_fWorldTime + 1.0f; // update once a second
-
 	for (int i=0; i<MAX_PLAYERS; i++)
 	{
 		MapPlayer_t *p = &m_Players[i];
@@ -448,16 +443,7 @@ void CMapOverview::ShowPanel(bool bShow)
 
 void CMapOverview::OnThink( void )
 {
-	if ( NeedsUpdate() )
-	{
-		Update();
-		m_fNextUpdateTime = gpGlobals->curtime + 0.2f; // update 5 times a second
-	}
-}
-
-bool CMapOverview::NeedsUpdate( void )
-{
-	return m_fNextUpdateTime < gpGlobals->curtime;
+	Update();
 }
 
 void CMapOverview::Update( void )
@@ -467,8 +453,6 @@ void CMapOverview::Update( void )
 	m_bShowHealth = overview_health.GetBool() && ( GetMode() != MAP_MODE_RADAR );
 	m_bFollowAngle = ( GetMode() != MAP_MODE_RADAR  && !overview_locked.GetBool() ) || ( GetMode() == MAP_MODE_RADAR  &&  !IsRadarLocked() );
 	m_fTrailUpdateInterval = overview_tracks.GetInt() && ( GetMode() != MAP_MODE_RADAR );
-
-	m_fWorldTime = gpGlobals->curtime;
 
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 
@@ -491,7 +475,6 @@ void CMapOverview::Update( void )
 
 void CMapOverview::Reset( void )
 {
-	m_fNextUpdateTime = 0;
 }
 
 void CMapOverview::SetData(KeyValues *data)
@@ -819,18 +802,11 @@ Vector2D CMapOverview::MapToPanel( const Vector2D &mappos )
 	return panelpos;
 }
 
-void CMapOverview::SetTime( float time )
-{
-	m_fWorldTime = time;
-}
-
 void CMapOverview::SetMap(const char * levelname)
 {
 	// Reset players and objects, even if the map is the same as the previous one
 	m_Objects.RemoveAll();
 	
-	m_fNextTrailUpdate = 0;// Set to 0 for immediate update.  Our WorldTime var hasn't been updated to 0 for the new map yet
-	m_fWorldTime = 0;// In release, we occasionally race and get this bug again if we gt a paint before an update.  Reset this before the old value gets in to the timer.
 	// Please note, UpdatePlayerTrails comes from PAINT, not UPDATE.
 
 	InitTeamColorsAndIcons();
