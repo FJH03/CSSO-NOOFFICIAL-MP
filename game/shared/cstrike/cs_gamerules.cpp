@@ -308,6 +308,9 @@ ConVar sv_allowminmodels(
 	FCVAR_REPLICATED | FCVAR_NOTIFY,
 	"Allow or disallow the use of cl_minmodels on this server." );
 
+
+ConVar mp_c4timer( "mp_c4timer", "40", FCVAR_REPLICATED | FCVAR_NOTIFY, "how long from when the C4 is armed until it blows", true, 10, true, 90	);
+
 extern ConVar mp_teammates_are_enemies;
 
 #ifdef CLIENT_DLL
@@ -445,15 +448,6 @@ ConVar cl_autohelp(
 		"how many seconds to keep players frozen when the round starts",
 		true, 0,	// min value
 		true, 60	// max value
-		);
-
-	ConVar mp_c4timer( 
-		"mp_c4timer", 
-		"45", 
-		FCVAR_REPLICATED | FCVAR_NOTIFY,
-		"how long from when the C4 is armed until it blows",
-		true, 10,	// min value
-		true, 90	// max value
 		);
 
 	ConVar mp_limitteams( 
