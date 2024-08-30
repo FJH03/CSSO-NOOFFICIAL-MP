@@ -31,7 +31,7 @@ public:
 
 	CFlashbang() {}
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_FLASHBANG; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_FLASHBANG; }
 
 
 #ifdef CLIENT_DLL

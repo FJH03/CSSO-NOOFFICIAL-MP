@@ -113,6 +113,7 @@ CAddonInfo g_AddonInfo[] =
 	{ "pistol",		0,						0, 0 },	// Pistol addon model is looked up based on m_iSecondaryAddon
 	{ "eholster",	0,						"models/weapons/w_eq_eholster_elite.mdl", "models/weapons/w_eq_eholster.mdl" },
 	{ "knife",		0,						0, 0 },
+	{ "grenade4",	"weapon_decoy",			0, 0 },
 };
 
 // -------------------------------------------------------------------------------- //

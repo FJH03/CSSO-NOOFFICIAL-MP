@@ -39,7 +39,7 @@ public:
 	void FamasFire( float flSpread, bool bFireBurst );
 	void FireRemaining();
 	
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_FAMAS; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_FAMAS; }
 
 private:
 	

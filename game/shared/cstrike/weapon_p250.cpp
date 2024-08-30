@@ -38,7 +38,7 @@ public:
 	virtual bool Reload();
 	virtual void WeaponIdle();
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_P250; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_P250; }
 
 private:
 	

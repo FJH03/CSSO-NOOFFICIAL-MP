@@ -163,6 +163,8 @@ public:
 							CBaseCombatWeapon();
 	virtual 				~CBaseCombatWeapon();
 
+	virtual int GetWeaponID( void ) const { return 0; }
+
 	virtual bool			IsBaseCombatWeapon( void ) const { return true; }
 	virtual CBaseCombatWeapon *MyCombatWeaponPointer( void ) { return this; }
 

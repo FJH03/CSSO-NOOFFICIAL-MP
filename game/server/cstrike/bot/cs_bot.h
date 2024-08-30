@@ -411,6 +411,24 @@ private:
 
 
 //--------------------------------------------------------------------------------------------------------------
+/**
+ * When a bot is attempting to escape from a field of flames (probably from a Molotov)
+ */
+class EscapeFromFlamesState : public BotState
+{
+public:
+	virtual void OnEnter( CCSBot *bot );
+	virtual void OnUpdate( CCSBot *bot );
+	virtual void OnExit( CCSBot *bot );
+	virtual const char *GetName( void ) const		{ return "EscapeFromFlames"; }
+
+private:
+	CNavArea *FindNearestNonDamagingArea( CCSBot *bot ) const;
+	CountdownTimer m_searchTimer;
+	CNavArea *m_safeArea;
+};
+
+//--------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------
 /**
  * The Counter-strike Bot
@@ -881,6 +899,9 @@ public:
 	void OnHEGrenadeDetonate( IGameEvent *event );
 	void OnFlashbangDetonate( IGameEvent *event );
 	void OnSmokeGrenadeDetonate( IGameEvent *event );
+	void OnMolotovDetonate( IGameEvent *event );
+	void OnDecoyDetonate( IGameEvent *event );
+	void OnDecoyFiring( IGameEvent *event );
 	void OnGrenadeBounce( IGameEvent *event );
 
 	void OnNavBlocked( IGameEvent *event );

@@ -52,6 +52,8 @@ public:
 	bool IsPinPulled() const;
 	bool IsBeingThrown() const { return m_fThrowTime > 0; }
 
+	void SetLoopingSoundPlaying( bool bPlaying ) { m_bLoopingSoundPlaying = bPlaying; }
+
 #ifndef CLIENT_DLL
 	DECLARE_DATADESC();
 
@@ -67,6 +69,8 @@ protected:
 	CNetworkVar( bool, m_bRedraw );	// Draw the weapon again after throwing a grenade
 	CNetworkVar( bool, m_bPinPulled );	// Set to true when the pin has been pulled but the grenade hasn't been thrown yet.
 	CNetworkVar( float, m_fThrowTime ); // the time at which the grenade will be thrown.  If this value is 0 then the time hasn't been set yet.
+	
+	CNetworkVar( bool, m_bLoopingSoundPlaying );	// Set to true when the grenade is playing a looping sound
 
 private:
 	CBaseCSGrenade( const CBaseCSGrenade & ) {}

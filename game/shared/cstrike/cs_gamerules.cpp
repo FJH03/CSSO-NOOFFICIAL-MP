@@ -13,6 +13,7 @@
 #include "KeyValues.h"
 #include "cs_achievement_constants.h"
 #include "fmtstr.h"
+#include "molotov_projectile.h"
 
 #ifdef CLIENT_DLL
 
@@ -184,6 +185,8 @@ ConVar ammo_57mm_max( "ammo_57mm_max", "100", FCVAR_REPLICATED );
 ConVar ammo_hegrenade_max( "ammo_hegrenade_max", "1", FCVAR_REPLICATED );
 ConVar ammo_flashbang_max( "ammo_flashbang_max", "2", FCVAR_REPLICATED );
 ConVar ammo_smokegrenade_max( "ammo_smokegrenade_max", "1", FCVAR_REPLICATED );
+ConVar ammo_decoy_max( "ammo_decoy_max", "1", FCVAR_REPLICATED );
+ConVar ammo_molotov_max( "ammo_molotov_max", "1", FCVAR_REPLICATED );
 
 //ConVar mp_dynamicpricing( "mp_dynamicpricing", "0", FCVAR_REPLICATED, "Enables or Disables the dynamic weapon prices" );
 
@@ -308,6 +311,13 @@ ConVar sv_allowminmodels(
 	FCVAR_REPLICATED | FCVAR_NOTIFY,
 	"Allow or disallow the use of cl_minmodels on this server." );
 
+ConVar mp_molotovusedelay(
+	"mp_molotovusedelay",
+	"15.0",
+	FCVAR_REPLICATED,
+	"Number of seconds to delay before the molotov can be used after acquiring it",
+	true, 0.0,
+	true, 30.0 );
 
 ConVar mp_c4timer( "mp_c4timer", "40", FCVAR_REPLICATED | FCVAR_NOTIFY, "how long from when the C4 is armed until it blows", true, 10, true, 90	);
 
@@ -1416,6 +1426,18 @@ ConVar cl_autohelp(
 		else if( strncmp( killer_weapon_name, "flashbang", 9 ) == 0 )	//"flashbang_projectile"
 		{
 			killer_weapon_name = "flashbang";
+		}
+		else if( strncmp( killer_weapon_name, "decoy", 5 ) == 0 )	//"decoy_projectile"
+		{
+			killer_weapon_name = "decoy";
+		}
+		else if( strncmp( killer_weapon_name, "molotov", 5 ) == 0 )	//"molotov_projectile"
+		{
+			killer_weapon_name = "molotov";
+
+			CMolotovProjectile *pMolotovProjectile = dynamic_cast<CMolotovProjectile*>(pInflictor);
+			if ( pMolotovProjectile && pMolotovProjectile->IsIncGrenade() )
+				killer_weapon_name = "incgrenade";
 		}
 
 		IGameEvent * event = gameeventmanager->CreateEvent( "player_death" );
@@ -5401,6 +5423,8 @@ CAmmoDef* GetAmmoDef()
 		ammoDef.AddAmmoType( AMMO_TYPE_HEGRENADE,		DMG_BLAST,	TRACER_LINE, 0, 0, "ammo_hegrenade_max", 1, 0 );
 		ammoDef.AddAmmoType( AMMO_TYPE_FLASHBANG,		0,			TRACER_LINE, 0,	0, "ammo_flashbang_max", 1, 0 );
 		ammoDef.AddAmmoType( AMMO_TYPE_SMOKEGRENADE,	0,			TRACER_LINE, 0, 0, "ammo_smokegrenade_max", 1, 0 );
+		ammoDef.AddAmmoType( AMMO_TYPE_MOLOTOV,			DMG_BURN,	TRACER_NONE, 0, 0, "ammo_molotov_max", 0, 0, 0 );
+		 ammoDef.AddAmmoType( AMMO_TYPE_DECOY,			0,			TRACER_NONE, 0, 0, "ammo_decoy_max", 0, 0, 0 );
 
 		//Adrian: I set all the prices to 0 just so the rest of the buy code works
 		//This should be revisited.

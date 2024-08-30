@@ -32,7 +32,7 @@ public:
 
 	CHEGrenade() {}
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_HEGRENADE; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_HEGRENADE; }
 
 #ifdef CLIENT_DLL
 

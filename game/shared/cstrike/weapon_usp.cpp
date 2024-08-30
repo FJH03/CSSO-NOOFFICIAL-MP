@@ -45,7 +45,7 @@ public:
 	// We overload this so we can translate all weapon activities to silenced versions.
 	virtual bool SendWeaponAnim( int iActivity );
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_USP; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_USP; }
 
 	// return true if this weapon has a silencer equipped
 	virtual bool IsSilenced( void ) const				{ return m_bSilencerOn; }

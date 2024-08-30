@@ -37,7 +37,7 @@ public:
 
 	virtual float GetSpread() const;
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_NOVA; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_NOVA; }
 
 private:
 

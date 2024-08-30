@@ -34,7 +34,7 @@ public:
 	virtual bool Deploy();
 	virtual bool Reload();
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_UMP45; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_UMP45; }
 
 
 private:

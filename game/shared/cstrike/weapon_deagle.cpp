@@ -58,7 +58,7 @@ public:
 	void BeamUpdate ();
 	virtual bool UseDecrement() {return true;};
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_DEAGLE; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_DEAGLE; }
 
 public:
 	float m_flLastFire;

@@ -52,6 +52,9 @@ AutoBuyInfoStruct g_autoBuyInfo[] =
 	{ (AutoBuyClassType)(AUTOBUYCLASS_GRENADE), "flashbang", "weapon_flashbang" }, // flash
 	{ (AutoBuyClassType)(AUTOBUYCLASS_GRENADE), "hegrenade", "weapon_hegrenade" }, // hegren
 	{ (AutoBuyClassType)(AUTOBUYCLASS_GRENADE), "smokegrenade", "weapon_smokegrenade" }, // sgren
+	{ (AutoBuyClassType)(AUTOBUYCLASS_GRENADE), "molotov", "weapon_molotov" }, // molotov
+	{ (AutoBuyClassType)(AUTOBUYCLASS_GRENADE), "incgrenade", "weapon_incgrenade" }, // incgrenade
+	{ (AutoBuyClassType)(AUTOBUYCLASS_GRENADE), "decoy", "weapon_decoy" }, // decoy
 	{ (AutoBuyClassType)(AUTOBUYCLASS_NIGHTVISION), "nvgs", "nvgs" }, // nvgs
 	{ (AutoBuyClassType)(AUTOBUYCLASS_DEFUSER), "defuser", "defuser" }, // defuser
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SHIELD), "shield", "shield" }, // shield

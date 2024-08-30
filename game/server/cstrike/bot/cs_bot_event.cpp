@@ -26,9 +26,12 @@ void CCSBot::OnAudibleEvent( IGameEvent *event, CBasePlayer *player, float range
 	if (player == NULL)
 		return;
 
-	// don't pay attention to noise that friends make
-	if (!IsEnemy( player ))
-		return;
+	// don't pay attention to noise that friends make (unless it is a decoy)
+	if ( !IsEnemy( player ) )
+	{
+		if ( !event || !FStrEq( event->GetName(), "decoy_firing" ) )
+			return;
+	}
 
 	Vector playerOrigin = GetCentroid( player );
 	Vector myOrigin = GetCentroid( this );
@@ -161,6 +164,49 @@ void CCSBot::OnSmokeGrenadeDetonate( IGameEvent *event )
 	OnAudibleEvent( event, player, 1000.0f, PRIORITY_LOW, true ); // smokegrenade_detonate
 }
 
+//--------------------------------------------------------------------------------------------------------------
+void CCSBot::OnMolotovDetonate( IGameEvent *event )
+{
+	if ( !IsAlive() )
+		return;
+
+	// don't react to our own events
+	CBasePlayer *player = UTIL_PlayerByUserId( event->GetInt( "userid" ) );
+	if ( player == this )
+		return;
+
+	OnAudibleEvent( event, player, 99999.0f, PRIORITY_HIGH, true ); // molotov_detonate
+}
+
+//--------------------------------------------------------------------------------------------------------------
+void CCSBot::OnDecoyDetonate( IGameEvent *event )
+{
+	if ( !IsAlive() )
+		return;
+
+	// don't react to our own events
+	CBasePlayer *player = UTIL_PlayerByUserId( event->GetInt( "userid" ) );
+	if ( player == this )
+		return;
+
+	OnAudibleEvent( event, player, 99999.0f, PRIORITY_HIGH, true ); // decoy_detonate
+}
+
+//--------------------------------------------------------------------------------------------------------------
+void CCSBot::OnDecoyFiring( IGameEvent *event )
+{
+	if ( !IsAlive() )
+		return;
+
+	// don't react to our own events
+	CBasePlayer *thrower = UTIL_PlayerByUserId( event->GetInt( "userid" ) );
+	if ( thrower == this )
+		return;
+
+	Vector decoySpot( event->GetInt( "x" ), event->GetInt( "y" ), event->GetInt( "z" ) );
+
+	OnAudibleEvent( event, thrower, 99999.0f, PRIORITY_HIGH, true, false, &decoySpot );
+}
 
 //--------------------------------------------------------------------------------------------------------------
 void CCSBot::OnGrenadeBounce( IGameEvent *event )

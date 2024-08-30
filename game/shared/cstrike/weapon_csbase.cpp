@@ -176,6 +176,9 @@ WeaponAliasInfo s_weaponAliasInfo[] =
 	{ WEAPON_SMOKEGRENADE,		"sgren" },
 	{ WEAPON_HEGRENADE,			"hegrenade" },
 	{ WEAPON_HEGRENADE,			"hegren" },
+	{ WEAPON_MOLOTOV,			"molotov" },
+	{ WEAPON_INCGRENADE,		"incgrenade" },
+	{ WEAPON_DECOY,				"decoy" },
 
 	// not sure any of these are needed
 	{ WEAPON_SHIELDGUN,			"shield" },

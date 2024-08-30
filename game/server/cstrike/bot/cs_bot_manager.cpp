@@ -2033,6 +2033,25 @@ void CCSBotManager::OnSmokeGrenadeDetonate( IGameEvent *event )
 	CCSBOTMANAGER_ITERATE_BOTS( OnSmokeGrenadeDetonate, event );
 }
 
+//--------------------------------------------------------------------------------------------------------------
+void CCSBotManager::OnMolotovDetonate( IGameEvent *event )
+{
+	CCSBOTMANAGER_ITERATE_BOTS( OnMolotovDetonate, event );
+}
+
+
+//--------------------------------------------------------------------------------------------------------------
+void CCSBotManager::OnDecoyDetonate( IGameEvent *event )
+{
+	CCSBOTMANAGER_ITERATE_BOTS( OnDecoyDetonate, event );
+}
+
+
+//--------------------------------------------------------------------------------------------------------------
+void CCSBotManager::OnDecoyFiring( IGameEvent *event )
+{
+	CCSBOTMANAGER_ITERATE_BOTS( OnDecoyFiring, event );
+}
 
 //--------------------------------------------------------------------------------------------------------------
 void CCSBotManager::OnGrenadeBounce( IGameEvent *event )

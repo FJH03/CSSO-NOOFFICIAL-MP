@@ -190,6 +190,9 @@ BuyPresetEditPanel::BuyPresetEditPanel( Panel *parent, const char *panelName, co
 	m_pHEGrenade = new EquipmentLabel( this, "hegrenade" );
 	m_pSmokeGrenade = new EquipmentLabel( this, "smokegrenade" );
 	m_pFlashbangs = new EquipmentLabel( this, "flashbang" );
+	m_pDecoy = new EquipmentLabel( this, "decoy" );
+	m_pMolotov = new EquipmentLabel( this, "molotov" );
+	m_pIncGrenade = new EquipmentLabel( this, "incgrenade" );
 
 	m_pDefuser = new EquipmentLabel( this, "defuser" );
 	m_pNightvision = new EquipmentLabel( this, "nightvision" );
@@ -251,6 +254,12 @@ void BuyPresetEditPanel::SetWeaponSet( const WeaponSet *pWeaponSet, bool current
 			m_pSmokeGrenade->SetItem( "gfx/vgui/smokegrenade_square", 1 );
 		if ( pWeaponSet->m_flashbangs )
 			m_pFlashbangs->SetItem( "gfx/vgui/flashbang_square", pWeaponSet->m_flashbangs );
+		if ( pWeaponSet->m_decoy )
+			m_pDecoy->SetItem( "gfx/vgui/decoy_square", 1 );
+		if ( pWeaponSet->m_molotov )
+			m_pMolotov->SetItem( "gfx/vgui/molotov_square", 1 );
+		if ( pWeaponSet->m_incgrenade )
+			m_pIncGrenade->SetItem( "gfx/vgui/incgrenade_square", 1 );
 
 		if ( pWeaponSet->m_defuser )
 			m_pDefuser->SetItem( "gfx/vgui/defuser", 1 );
@@ -437,6 +446,9 @@ void BuyPresetEditPanel::Reset()
 	m_pHEGrenade->SetItem( NULL, 1 );
 	m_pSmokeGrenade->SetItem( NULL, 1 );
 	m_pFlashbangs->SetItem( NULL, 1 );
+	m_pDecoy->SetItem( NULL, 1 );
+	m_pMolotov->SetItem( NULL, 1 );
+	m_pIncGrenade->SetItem( NULL, 1 );
 
 	m_pDefuser->SetItem( NULL, 1 );
 	m_pNightvision->SetItem( NULL, 1 );

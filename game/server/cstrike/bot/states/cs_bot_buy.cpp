@@ -634,6 +634,8 @@ void BuyState::OnUpdate( CCSBot *me )
 			// buy a grenade if we wish, and we don't already have one
 			if (m_buyGrenade && !me->HasGrenade())
 			{
+				float rnd = RandomFloat( 0, 100 );
+				
 				if (UTIL_IsTeamAllBots( me->GetTeamNumber() ))
 				{
 					// only allow Flashbangs if everyone on the team is a bot (dont want to blind our friendly humans)
@@ -649,6 +651,19 @@ void BuyState::OnUpdate( CCSBot *me )
 						args.Tokenize( "buy flashbang" );
 						me->ClientCommand( args );	// flashbang
 					}
+					else if (rnd < 45)
+					{
+						args.Tokenize( "buy decoy" );
+						me->ClientCommand( args );	// decoy
+					}
+					else if (rnd < 65)
+					{
+						if ( me->GetTeamNumber() == TEAM_TERRORIST )
+							args.Tokenize( "buy molotov" );
+						else
+							args.Tokenize( "buy incgrenade" );
+						me->ClientCommand( args );	// molotov
+					}
 					else
 					{
 						args.Tokenize( "buy hegrenade" );
@@ -661,6 +676,19 @@ void BuyState::OnUpdate( CCSBot *me )
 					{
 						args.Tokenize( "buy smokegrenade" );	// smoke grenade
 						me->ClientCommand( args );
+					}
+					else if (rnd < 20)
+					{
+						args.Tokenize( "buy decoy" );	// decoy
+						me->ClientCommand( args );
+					}
+					else if ( rnd < 40 )
+					{
+						if ( me->GetTeamNumber() == TEAM_TERRORIST )
+							args.Tokenize( "buy molotov" );
+						else
+							args.Tokenize( "buy incgrenade" );
+						me->ClientCommand( args );	// molotov
 					}
 					else
 					{

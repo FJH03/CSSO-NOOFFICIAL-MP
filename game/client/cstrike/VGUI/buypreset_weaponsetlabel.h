@@ -286,6 +286,9 @@ protected:
 	EquipmentLabel *m_pHEGrenade;
 	EquipmentLabel *m_pSmokeGrenade;
 	EquipmentLabel *m_pFlashbangs;
+	EquipmentLabel *m_pDecoy;
+	EquipmentLabel *m_pMolotov;
+	EquipmentLabel *m_pIncGrenade;
 
 	EquipmentLabel *m_pDefuser;
 	EquipmentLabel *m_pNightvision;

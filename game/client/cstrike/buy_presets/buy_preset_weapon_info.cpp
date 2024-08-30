@@ -369,7 +369,7 @@ CSWeaponID GetClientWeaponID( bool primary )
 	if ( !pWeapon )
 		return WEAPON_NONE;
 
-	return pWeapon->GetWeaponID();
+	return pWeapon->GetCSWeaponID();
 }
 
 //--------------------------------------------------------------------------------------------------------------

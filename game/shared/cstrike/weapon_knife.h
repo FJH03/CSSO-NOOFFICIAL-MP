@@ -82,7 +82,7 @@ public:
 
 	void WeaponIdle();
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_KNIFE; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE; }
 
 public:
 	

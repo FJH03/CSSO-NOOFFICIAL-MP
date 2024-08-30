@@ -83,6 +83,7 @@ void CBaseViewModel::UpdateOnRemove( void )
 //-----------------------------------------------------------------------------
 void CBaseViewModel::Precache( void )
 {
+	PrecacheParticleSystem( MOLOTOV_PARTICLE_EFFECT_NAME );
 }
 
 //-----------------------------------------------------------------------------

@@ -46,6 +46,8 @@ class CCSPlayer;
 #define AMMO_TYPE_HEGRENADE		"AMMO_TYPE_HEGRENADE"
 #define AMMO_TYPE_FLASHBANG		"AMMO_TYPE_FLASHBANG"
 #define AMMO_TYPE_SMOKEGRENADE	"AMMO_TYPE_SMOKEGRENADE"
+#define AMMO_TYPE_DECOY			"AMMO_TYPE_DECOY"
+#define AMMO_TYPE_MOLOTOV		"AMMO_TYPE_MOLOTOV"
 #define AMMO_TYPE_TASERCHARGE	"AMMO_TYPE_TASERCHARGE"
 
 #define CROSSHAIR_CONTRACT_PIXELS_PER_SECOND	7.0f
@@ -169,7 +171,8 @@ public:
 	CCSWeaponInfo const	&GetCSWpnData() const;
 
 	// Get specific CS weapon ID (ie: WEAPON_AK47, etc)
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_NONE; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_NONE; }
+	virtual int GetWeaponID( void ) const { return GetCSWeaponID(); }
 
 	// return true if this weapon is an instance of the given weapon type (ie: "IsA" WEAPON_GLOCK)
 	bool IsA( CSWeaponID id ) const						{ return GetWeaponID() == id; }

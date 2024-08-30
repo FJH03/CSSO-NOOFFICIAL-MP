@@ -2910,6 +2910,11 @@ void C_BaseEntity::OnNewParticleEffect( const char *pszParticleName, CNewParticl
 	return;
 }
 
+void C_BaseEntity::OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect )
+{
+	return;
+}
+
 // Above this velocity and we'll assume a warp/teleport
 #define MAX_INTERPOLATE_VELOCITY 4000.0f
 #define MAX_INTERPOLATE_VELOCITY_PLAYER 1250.0f

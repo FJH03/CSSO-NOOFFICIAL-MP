@@ -617,6 +617,8 @@ public:
 
 	bool m_bIsFemale;
 
+	float m_fNextMolotovDamageSoundTime;
+
 	//=============================================================================
 	// HPE_BEGIN:
 	// [menglish] Adding two variables, keeping track of damage to the player
@@ -882,6 +884,8 @@ private:
 	BuyResult_e	RebuyHEGrenade();
 	BuyResult_e	RebuyFlashbang();
 	BuyResult_e	RebuySmokeGrenade();
+	BuyResult_e	RebuyDecoy();
+	BuyResult_e	RebuyMolotov();
 	BuyResult_e	RebuyDefuser();
 	BuyResult_e	RebuyNightVision();
 	BuyResult_e	RebuyArmor();

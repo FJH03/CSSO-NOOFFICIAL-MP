@@ -74,6 +74,15 @@ public:
 	}
 };
 
+#define CONSTANT_UNITS_SMOKEGRENADERADIUS 166
+#define CONSTANT_UNITS_GENERICGRENADERADIUS 115
+
+const float SmokeGrenadeRadius = CONSTANT_UNITS_SMOKEGRENADERADIUS;
+const float FlashbangGrenadeRadius = CONSTANT_UNITS_GENERICGRENADERADIUS;
+const float HEGrenadeRadius = CONSTANT_UNITS_GENERICGRENADERADIUS;
+const float MolotovGrenadeRadius = CONSTANT_UNITS_GENERICGRENADERADIUS;
+const float DecoyGrenadeRadius = CONSTANT_UNITS_GENERICGRENADERADIUS;
+
 extern CUtlVectorInitialized< const char * > TPhoenixPlayerModels;
 extern CUtlVectorInitialized< const char * > TLeetPlayerModels;
 extern CUtlVectorInitialized< const char * > TSeparatistPlayerModels;
@@ -103,7 +112,8 @@ extern CUtlVectorInitialized< const char* > KnivesEntities;
 #define ADDON_PRIMARY			0x040
 #define ADDON_PISTOL			0x080
 #define ADDON_PISTOL2			0x100
-#define NUM_ADDON_BITS			10
+#define ADDON_DECOY				0x400
+#define NUM_ADDON_BITS			11
 
 
 // Indices of each weapon slot.

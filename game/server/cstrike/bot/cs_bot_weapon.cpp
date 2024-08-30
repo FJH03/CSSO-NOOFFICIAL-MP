@@ -610,7 +610,10 @@ bool CCSBot::IsUsingGrenade( void ) const
 
 	if (weapon->IsA( WEAPON_FLASHBANG ) ||
 		weapon->IsA( WEAPON_SMOKEGRENADE ) ||
-		weapon->IsA( WEAPON_HEGRENADE ))
+		weapon->IsA( WEAPON_HEGRENADE ) ||
+		weapon->IsA( WEAPON_DECOY ) ||
+		weapon->IsA( WEAPON_MOLOTOV ) ||
+		weapon->IsA( WEAPON_INCGRENADE ) )
 		return true;
 
 	return false;

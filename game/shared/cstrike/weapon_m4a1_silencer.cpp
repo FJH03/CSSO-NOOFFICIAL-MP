@@ -39,7 +39,7 @@ public:
 	virtual bool Holster( CBaseCombatWeapon *pSwitchingTo );
 	virtual void Drop( const Vector &vecVelocity );
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_M4A1; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_M4A1; }
 
 	// return true if this weapon has a silencer equipped
 	virtual bool IsSilenced( void ) const				{ return m_bSilencerOn; }

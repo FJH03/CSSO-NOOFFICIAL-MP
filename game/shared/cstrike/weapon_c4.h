@@ -149,7 +149,7 @@ public:
 
 // 	virtual float GetSpread() const;
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_C4; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_C4; }
 
 	#ifdef CLIENT_DLL
 

@@ -701,6 +701,7 @@ public:
 	// Initialize things given a new model.
 	virtual CStudioHdr				*OnNewModel();
 	virtual void					OnNewParticleEffect( const char *pszParticleName, CNewParticleEffect *pNewParticleEffect );
+	virtual void					OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect );
 
 	bool							IsSimulatedEveryTick() const;
 	bool							IsAnimatedEveryTick() const;

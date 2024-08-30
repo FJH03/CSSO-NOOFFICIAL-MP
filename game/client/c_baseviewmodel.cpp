@@ -48,7 +48,98 @@
 	ConVar cl_flipviewmodels( "cl_flipviewmodels", "0", FCVAR_USERINFO | FCVAR_ARCHIVE | FCVAR_NOT_CONNECTED, "Flip view models." );
 #endif
 
+extern ConVar r_drawviewmodel;
+
 void PostToolMessage( HTOOLHANDLE hEntity, KeyValues *msg );
+
+void C_BaseViewModel::OnNewParticleEffect( const char *pszParticleName, CNewParticleEffect *pNewParticleEffect )
+{
+	if ( FStrEq( pszParticleName, MOLOTOV_PARTICLE_EFFECT_NAME ) )
+	{
+		m_viewmodelParticleEffect = pNewParticleEffect;
+	}
+}
+
+void C_BaseViewModel::OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect )
+{
+	BaseClass::OnParticleEffectDeleted( pParticleEffect );
+
+	if ( m_viewmodelParticleEffect == pParticleEffect )
+	{
+		m_viewmodelParticleEffect = NULL;
+	}
+}
+
+void C_BaseViewModel::UpdateParticles()
+{
+	C_BasePlayer *pPlayer = ToBasePlayer( GetOwner() );
+
+	if ( !pPlayer )
+		return;
+
+	if ( pPlayer->IsPlayerDead() )
+		return;
+
+	// Otherwise pass the event to our associated weapon
+	C_BaseCombatWeapon *pWeapon = GetOwningWeapon();
+	if ( !pWeapon )
+		return;
+
+	CWeaponCSBase *pCSWeapon = ( CWeaponCSBase* )pPlayer->GetActiveWeapon();
+	if ( !pCSWeapon )
+		return;
+
+	int iWeaponId = pCSWeapon->GetCSWeaponID();
+
+	bool shouldDrawPlayer = ( pPlayer->ShouldDraw() );
+	bool visible = r_drawviewmodel.GetBool() && pPlayer && !shouldDrawPlayer;
+
+	if ( visible && iWeaponId == WEAPON_MOLOTOV )
+	{
+		CBaseCSGrenade *pGren = dynamic_cast<CBaseCSGrenade*>( pPlayer->GetActiveWeapon() );
+
+		if ( pGren->IsPinPulled() )
+		{
+			//if ( !pGren->IsLoopingSoundPlaying() )
+			//{
+			//	pGren->SetLoopingSoundPlaying( true );
+			//	EmitSound( "Molotov.IdleLoop" );
+			//	//DevMsg( 1, "++++++++++>Playing Molotov.IdleLoop 2\n" );
+			//}
+
+			// TEST: [mlowrance] This is to test for attachment.
+			int iAttachment = -1;
+			if ( pWeapon && pWeapon->GetBaseAnimating() )
+				iAttachment = pWeapon->GetBaseAnimating()->LookupAttachment( "Wick" );
+
+			if ( iAttachment >= 0 )
+			{
+				if ( !m_viewmodelParticleEffect )
+				{
+					DispatchParticleEffect( MOLOTOV_PARTICLE_EFFECT_NAME, PATTACH_POINT_FOLLOW, this, "Wick" );
+				}
+			}
+		}
+	}
+	else
+	{
+		if ( m_viewmodelParticleEffect )
+		{
+			StopSound( "Molotov.IdleLoop" );
+			//DevMsg( 1, "---------->Stopping Molotov.IdleLoop 3\n" );
+			m_viewmodelParticleEffect->StopEmission( false, true );
+			m_viewmodelParticleEffect->SetRemoveFlag();
+			m_viewmodelParticleEffect = NULL;
+		}
+	}
+}
+
+void C_BaseViewModel::Simulate()
+{
+	UpdateParticles();
+	BaseClass::Simulate();
+	return;
+}
 
 void FormatViewModelAttachment( Vector &vOrigin, bool bInverse )
 {

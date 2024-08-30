@@ -45,7 +45,7 @@ public:
 
 	virtual void WeaponIdle();
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_GLOCK; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_GLOCK; }
 
 private:
 	

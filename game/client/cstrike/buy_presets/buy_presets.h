@@ -126,6 +126,9 @@ public:
 	int		m_flashbangs;
 	bool	m_defuser;
 	bool	m_nightvision;
+	bool	m_decoy;
+	bool	m_molotov;
+	bool	m_incgrenade;
 };
 
 typedef CUtlVector< WeaponSet > WeaponSetList;

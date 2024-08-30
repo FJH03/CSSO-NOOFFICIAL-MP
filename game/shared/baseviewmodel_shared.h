@@ -29,6 +29,9 @@ class C_ViewmodelAttachmentModel;
 
 #define VIEWMODEL_INDEX_BITS 1
 
+// [mlowrance] used for flame effect when pin pulled
+#define MOLOTOV_PARTICLE_EFFECT_NAME "weapon_molotov_fp"
+
 class CBaseViewModel : public CBaseAnimating, public IHasOwner
 {
 	DECLARE_CLASS( CBaseViewModel, CBaseAnimating );
@@ -184,9 +187,17 @@ public:
 	virtual bool			GetAttachmentVelocity( int number, Vector &originVel, Quaternion &angleVel );
 #endif
 
+	virtual void 			Simulate();
+
 private:
 	CBaseViewModel( const CBaseViewModel & ); // not defined, not accessible
 
+	void					UpdateParticles();
+
+	virtual void 			OnNewParticleEffect( const char *pszParticleName, CNewParticleEffect *pNewParticleEffect );
+	virtual void 			OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect );
+
+	CNewParticleEffect* m_viewmodelParticleEffect;
 #endif
 
 private:

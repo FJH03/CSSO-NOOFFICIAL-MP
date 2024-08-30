@@ -39,10 +39,12 @@ BEGIN_NETWORK_TABLE(CBaseCSGrenade, DT_BaseCSGrenade)
 	SendPropBool( SENDINFO(m_bRedraw) ),
 	SendPropBool( SENDINFO(m_bPinPulled) ),
 	SendPropFloat( SENDINFO(m_fThrowTime), 0, SPROP_NOSCALE ),
+	SendPropBool( SENDINFO( m_bLoopingSoundPlaying ) ),
 #else
 	RecvPropBool( RECVINFO(m_bRedraw) ),
 	RecvPropBool( RECVINFO(m_bPinPulled) ),
 	RecvPropFloat( RECVINFO(m_fThrowTime) ),
+	RecvPropBool( RECVINFO( m_bLoopingSoundPlaying ) ),
 #endif
 
 END_NETWORK_TABLE()
@@ -65,6 +67,7 @@ CBaseCSGrenade::CBaseCSGrenade()
 	m_bRedraw = false;
 	m_bPinPulled = false;
 	m_fThrowTime = 0;
+	m_bLoopingSoundPlaying = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -388,9 +391,43 @@ void CBaseCSGrenade::ItemPostFrame()
 
 		if( pCSPlayer )
 		{
+			int iWeaponId = GetWeaponID();
+
 			if ( !sv_ignoregrenaderadio.GetBool() )
 			{
-				pCSPlayer->Radio( "Radio.FireInTheHole",   "#Cstrike_TitlesTXT_Fire_in_the_hole" );
+				switch ( iWeaponId )
+				{
+					case WEAPON_HEGRENADE:
+					{
+						pCSPlayer->Radio( "Radio.FireInTheHole", "#Cstrike_TitlesTXT_Fire_in_the_hole" );
+						break;
+					}
+					case WEAPON_FLASHBANG:
+					{
+						pCSPlayer->Radio( "Radio.Flashbang", "#Cstrike_TitlesTXT_Flashbang_in_the_hole" );
+						break;
+					}
+					case WEAPON_SMOKEGRENADE:
+					{
+						pCSPlayer->Radio( "Radio.Smoke", "#Cstrike_TitlesTXT_Smoke_in_the_hole" );
+						break;
+					}
+					case WEAPON_MOLOTOV:
+					{
+						pCSPlayer->Radio( "Radio.Molotov", "#Cstrike_TitlesTXT_Molotov_in_the_hole" );
+						break;
+					}
+					case WEAPON_INCGRENADE:
+					{
+						pCSPlayer->Radio( "Radio.Incendiary", "#Cstrike_TitlesTXT_Incendiary_in_the_hole" );
+						break;
+					}
+					case WEAPON_DECOY:
+					{
+						pCSPlayer->Radio( "Radio.Decoy", "#Cstrike_TitlesTXT_Decoy_in_the_hole" );
+						break;
+					}
+				}
 			}
 			CCS_GameStats.IncrementStat(pCSPlayer, CSSTAT_GRENADES_THROWN, 1);
 		}

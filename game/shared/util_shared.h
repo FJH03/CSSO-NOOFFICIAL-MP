@@ -570,10 +570,125 @@ public:
 		return (m_timestamp - Now());
 	}
 
+	float GetTargetTime() const
+	{
+		return m_timestamp;
+	}
+
 	/// return original countdown time
 	float GetCountdownDuration( void ) const
 	{
 		return (m_timestamp > 0.0f) ? m_duration : 0.0f;
+	}
+
+	/// 1.0 for newly started, 0.0 for elapsed
+	float GetRemainingRatio( void ) const
+	{
+		if ( HasStarted() )
+		{
+			float left = GetRemainingTime() / m_duration;
+			if ( left < 0.0f )
+				return 0.0f;
+			if ( left > 1.0f )
+				return 1.0f;
+			return left;
+		}
+
+		return 0.0f;
+	}
+
+	float GetElapsedRatio() const
+	{
+		if ( HasStarted() )
+		{
+			float elapsed = GetElapsedTime() / m_duration;
+			if ( elapsed < 0.0f )
+				return 0.0f;
+			if ( elapsed > 1.0f )
+				return 1.0f;
+			return elapsed;
+		}
+
+		return 1.0f;
+	}
+
+	// Usage:
+	//    Declaration: CountdownTimer mTimer;
+	//    Think function:
+	//        while(mTimer.RunEvery( timerInterval ))
+	//        {
+	//			  do fixed-rate stuff
+	//        }
+	//
+	//        nextThinkTime = min(nextThinkTime, mTimer.GetTargetTime());
+	//
+	// This avoids 'losing' ticks on a repeating timer when
+	// the think rate is not a multiple of the timer duration,
+	// especially since SetNextThink rounds ticks up/down, causing
+	// even a timer that is running exactly at the think rate of
+	// the underlying class to not elapse correctly.
+	// 
+	// It also makes sure that ticks are never lost
+	bool RunEvery( float amount = -1.0f )
+	{
+		// First call starts the timer
+		if ( !HasStarted() )
+		{
+			if ( amount > 0.0f )
+				Start( amount );
+
+			return false;
+		}
+
+		if ( IsElapsed() )
+		{
+			if ( amount > 0.0f )
+				m_duration = amount;
+
+			m_timestamp += m_duration;
+			return true;
+		}
+
+		return false;
+	}
+
+	// Same as RunEvery() but only returns true once per 'tick', then guarantees being non-elapsed.
+	// Useful when "do fixed rate stuff" is idempotent, like updating something to match
+	// the current time.
+	bool Interval( float amount = -1.0f )
+	{
+		// First call starts the timer
+		if ( !HasStarted() )
+		{
+			if ( amount > 0.0f )
+				Start( amount );
+
+			return false;
+		}
+
+		if ( IsElapsed() )
+		{
+			if ( amount > 0.0f )
+				m_duration = amount;
+
+			m_timestamp += m_duration;
+
+			// If we are still expired, add a multiple of the interval 
+			// until we become non-elapsed
+			float remaining = GetRemainingTime();
+			if ( remaining < 0.0f )
+			{
+				float numIntervalsRequired = -floorf( remaining / m_duration );
+				m_timestamp += m_duration * numIntervalsRequired;
+			}
+
+			// We should no longer be elapsed
+			Assert( !IsElapsed() );
+
+			return true;
+		}
+
+		return false;
 	}
 
 private:

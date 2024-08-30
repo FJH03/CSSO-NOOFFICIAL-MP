@@ -30,7 +30,7 @@ public:
 	CWeaponMP9();
 
 	virtual void PrimaryAttack();
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_MP9; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_MP9; }
 	virtual bool IsSilenced( void ) const				{ return false; }
 
 private:

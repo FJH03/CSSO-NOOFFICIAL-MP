@@ -114,6 +114,9 @@ WeaponNameInfo s_weaponNameInfo[] =
 	{ WEAPON_NEGEV,				"weapon_negev" },
 	{ WEAPON_MP7,				"weapon_mp7" },
 	{ WEAPON_BIZON,				"weapon_bizon" },
+	{ WEAPON_DECOY,				"weapon_decoy" },
+	{ WEAPON_MOLOTOV,			"weapon_molotov" },
+	{ WEAPON_INCGRENADE,		"weapon_incgrenade" },
 	{ WEAPON_TASER,				"weapon_taser" },
 
 	// not sure any of these are needed
@@ -611,7 +614,7 @@ void WeaponRecoilData::GetRecoilOffsets( CWeaponCSBase *pWeapon, int iMode, int 
 	// Recoil offset tables are indexed by a weapon's definition index.
 	// Look for the existing table, otherwise generate it.
 
-	CSWeaponID id = pWeapon->GetWeaponID();
+	CSWeaponID id = pWeapon->GetCSWeaponID();
 
 	RecoilData *wepData = NULL;
 	CUtlMap< CSWeaponID, RecoilData* >::IndexType_t iMapLocation = m_mapRecoilTables.Find( id );

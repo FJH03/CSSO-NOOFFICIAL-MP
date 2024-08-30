@@ -54,6 +54,8 @@
 #include "npcevent.h"
 #include "cs_gamestats.h"
 #include "gamestats.h"
+#include "weapon_decoy.h"
+#include "molotov_projectile.h"
 #include "cs_loadout.h"
 #include "holiday_gift.h"
 #include "../../shared/cstrike/cs_achievement_constants.h"
@@ -148,6 +150,8 @@ extern ConVar spec_freeze_traveltime;
 extern ConVar ammo_hegrenade_max;
 extern ConVar ammo_flashbang_max;
 extern ConVar ammo_smokegrenade_max;
+extern ConVar ammo_decoy_max;
+extern ConVar ammo_molotov_max;
 
 
 #define THROWGRENADE_COUNTER_BITS 3
@@ -549,10 +553,15 @@ CCSPlayer::CCSPlayer()
 	m_maxGrenadeKills = 0;
 	m_grenadeDamageTakenThisRound = 0;
 
-	m_vLastHitLocationObjectSpace = Vector(0,0,0);
+	m_vLastHitLocationObjectSpace = Vector(0,0,0);\
+
 	m_fImmuneToDamageTime = 0.0f;
 	m_bImmunity = false;
+
 	m_bHasMovedSinceSpawn = false;
+
+	m_fNextMolotovDamageSoundTime = 0.0f;
+
 	m_wasNotKilledNaturally = false;
 
 	m_bNeedToChangeAgent = true;
@@ -1202,6 +1211,8 @@ void CCSPlayer::Spawn()
 
 	m_flLastRadarUpdateTime = 0.0f;
 
+	m_fNextMolotovDamageSoundTime = 0.0f;
+
 	m_iNumSpawns++;
 
 	if ( !engine->IsDedicatedServer() && CSGameRules()->m_iTotalRoundsPlayed < 2 && TheNavMesh->IsOutOfDate() && this == UTIL_GetListenServerHost() )
@@ -1484,6 +1495,21 @@ int CCSPlayer::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 		else if( strncmp( weaponName, "smokegrenade", 12 ) == 0 )	//"smokegrenade_projectile"
 		{
 			weaponName = "smokegrenade";
+		}
+		else if( strncmp( weaponName, "decoy", 5 ) == 0 )	//"decoy_projectile"
+		{
+			weaponName = "decoy";
+		}
+		else if( strncmp( weaponName, "molotov", 7 ) == 0 )	//"decoy_projectile"
+		{
+			CMolotovProjectile *pMolotovProjectile = dynamic_cast<CMolotovProjectile*>(info.GetInflictor());
+			if ( pMolotovProjectile )
+			{
+				if ( pMolotovProjectile->IsIncGrenade() )
+					weaponName = "incgrenade";
+				else
+					weaponName = "molotov";
+			}
 		}
 
 		event->SetString( "weapon", weaponName );
@@ -1826,6 +1852,12 @@ void CCSPlayer::UpdateAddonBits()
 		iNewBits |= ADDON_SMOKE_GRENADE;
 	}
 
+	if ( GetAmmoCount( GetAmmoDef()->Index( AMMO_TYPE_DECOY ) ) &&
+		!dynamic_cast< CDecoyGrenade* >( GetActiveWeapon() ) )
+	{
+		iNewBits |= ADDON_DECOY;
+	}
+
 	if ( HasC4() && !dynamic_cast< CC4* >( GetActiveWeapon() ) )
 		iNewBits |= ADDON_C4;
 
@@ -2154,6 +2186,23 @@ bool CCSPlayer::IsArmored( int nHitGroup )
 
 void CCSPlayer::Pain( bool bHasArmour )
 {
+	if ( (nDmgTypeBits & DMG_BURN) )
+	{
+		if ( m_fNextMolotovDamageSoundTime <= gpGlobals->curtime )
+		{
+			if ( bHasArmour == false )
+			{
+				EmitSound( "Player.BurnDamage" );
+			}
+			else
+			{
+				EmitSound( "Player.BurnDamageKevlar" );
+			}
+			m_fNextMolotovDamageSoundTime = gpGlobals->curtime + 1.0;
+		}
+		return;
+	}
+
 	switch (m_LastHitGroup)
 	{
 		case HITGROUP_HEAD:
@@ -2295,16 +2344,19 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 			}
 		}
 
-		if ( ShouldDoLargeFlinch( m_LastHitGroup, info.GetAttacker() ) )
+		if ( ( info.GetDamageType() & DMG_BURN ) == 0 )
 		{
-			if ( GetAbsVelocity().Length() < 300 )
+			if ( ShouldDoLargeFlinch( m_LastHitGroup, info.GetAttacker() ) )
 			{
-				m_flVelocityModifier = 0.65;
+				if ( GetAbsVelocity().Length() < 300 )
+				{
+					m_flVelocityModifier = 0.65;
+				}
 			}
-		}
-		else
-		{
-			m_flVelocityModifier = 0.5;
+			else
+			{
+				m_flVelocityModifier = 0.5;
+			}
 		}
 
 //=============================================================================
@@ -5041,6 +5093,9 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 			ClientPrint( this, msg_dest, "  flashbang\n" );
 			ClientPrint( this, msg_dest, "  smokegrenade\n" );
 			ClientPrint( this, msg_dest, "  hegrenade\n" );
+			ClientPrint( this, msg_dest, "  molotov\n" );
+			ClientPrint( this, msg_dest, "  incgrenade\n" );
+			ClientPrint( this, msg_dest, "  decoy\n" );
 		}
 
 		return true;
@@ -6905,6 +6960,25 @@ void CCSPlayer::BuildRebuyStruct()
 	else
 		m_rebuyStruct.m_smokeGrenade = 0;
 
+	// decoy
+	pGrenade = Weapon_OwnsThisType( "weapon_decoy" );
+	if ( pGrenade /*&& pGrenade->GetPrimaryAmmoType() != -1*/ )
+	{
+		m_rebuyStruct.m_decoy = 1; //GetAmmoCount(pGrenade->GetPrimaryAmmoType());
+	}
+	else
+		m_rebuyStruct.m_decoy = 0;
+
+	// incgrenade
+						pGrenade = Weapon_OwnsThisType( "weapon_incgrenade" );
+	CBaseCombatWeapon*	pMolotov = Weapon_OwnsThisType( "weapon_molotov" );
+	if ( pGrenade || pMolotov )
+	{
+		m_rebuyStruct.m_molotov = 1; //GetAmmoCount(pGrenade->GetPrimaryAmmoType());
+	}
+	else
+		m_rebuyStruct.m_molotov = 0;
+
 	// defuser
 	m_rebuyStruct.m_defuser = HasDefuser();
 
@@ -6967,6 +7041,14 @@ void CCSPlayer::Rebuy( void )
 		else if (!Q_strncmp(token, "SmokeGrenade", 13))
 		{
 			result = RebuySmokeGrenade();
+		}
+		else if (!Q_strncmp(token, "Decoy", 6))
+		{
+			result = RebuyDecoy();
+		}
+		else if (!Q_strncmp(token, "Molotov", 7))
+		{
+			result = RebuyMolotov();
 		}
 		else if (!Q_strncmp(token, "Defuser", 8))
 		{
@@ -7167,6 +7249,64 @@ BuyResult_e CCSPlayer::RebuySmokeGrenade()
 	for (int i = 0; i < numToBuy; ++i)
 	{
 		BuyResult_e result = HandleCommand_Buy("smokegrenade");
+		overallResult = CombineBuyResults( overallResult, result );
+	}
+
+	return overallResult;
+}
+
+BuyResult_e CCSPlayer::RebuyDecoy()
+{
+	CBaseCombatWeapon *pGrenade = Weapon_OwnsThisType( "weapon_decoy" );
+
+	int numGrenades = 0;
+
+	if( pGrenade )
+	{
+		int nAmmo = pGrenade->GetPrimaryAmmoType();
+		if ( nAmmo == -1 )
+		{
+			return BUY_ALREADY_HAVE;
+		}
+
+		numGrenades = GetAmmoCount( nAmmo );
+	}
+
+	BuyResult_e overallResult = BUY_ALREADY_HAVE;
+	int numToBuy = MAX( 0, m_rebuyStruct.m_decoy - numGrenades );
+	for (int i = 0; i < numToBuy; ++i)
+	{
+		BuyResult_e result = HandleCommand_Buy("decoy");
+		overallResult = CombineBuyResults( overallResult, result );
+	}
+
+	return overallResult;
+}
+
+BuyResult_e CCSPlayer::RebuyMolotov()
+{
+	CBaseCombatWeapon *pIncGrenade = Weapon_OwnsThisType( "weapon_incgrenade" );
+	CBaseCombatWeapon *pMolotov = Weapon_OwnsThisType( "weapon_molotov" );
+
+	int numGrenades = 0;
+
+	if ( pIncGrenade || pMolotov )
+	{
+		int nAmmoInc = pIncGrenade ? pIncGrenade->GetPrimaryAmmoType() : 0;
+		int nAmmoMol = pMolotov ? pMolotov->GetPrimaryAmmoType() : 0;
+		if ( nAmmoInc == -1 && nAmmoMol == -1 )
+		{
+			return BUY_ALREADY_HAVE;
+		}
+
+		numGrenades = GetAmmoCount( nAmmoInc + nAmmoMol ); // PiMoN: is it really working?
+	}
+
+	BuyResult_e overallResult = BUY_ALREADY_HAVE;
+	int numToBuy = MAX( 0, m_rebuyStruct.m_molotov - numGrenades );
+	for (int i = 0; i < numToBuy; ++i)
+	{
+		BuyResult_e result = HandleCommand_Buy( GetTeamNumber() == TEAM_CT ? "incgrenade" : "molotov" );
 		overallResult = CombineBuyResults( overallResult, result );
 	}
 
@@ -7505,52 +7645,73 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 			DropPistol( true );
 	}
 
+	// wills: note - this may seem counter-intuitive below,
+	// but the player can only play grenade-related animations 
+	// (like throwing) while 'holding' the grenade WEAPON. This means
+	// it's possible to still be holding the grenade WEAPON even
+	// after the actual grenade itself is flying away, so the
+	// player's throw anim can smoothly finish. That's why we need
+	// to check if the grenade has emitted a projectile; we don't
+	// want to drop a duplicate of the thrown grenade if we're killed
+	// AFTER the grenade is in flight but BEFORE the throw anim is over.
+
+	bool bGrenadeDropped = false;
+
 	// drop any live grenades so they explode
-	CBaseCSGrenade *pGrenade = dynamic_cast< CBaseCSGrenade * >(Weapon_OwnsThisType("weapon_hegrenade"));
-	if ( pGrenade && ( pGrenade->IsPinPulled() || pGrenade->IsBeingThrown() ) )
+	CBaseCSGrenade* pGrenade = dynamic_cast< CBaseCSGrenade* >( GetActiveCSWeapon() );
+
+	if ( pGrenade && pGrenade->m_bHasEmittedProjectile )
+		pGrenade = NULL; // the currently active grenade weapon, while active, is NOT eligible to drop because it has thrown a projectile into the world.
+
+	if ( pGrenade )
 	{
-		pGrenade->DropGrenade();
-		pGrenade->DecrementAmmo( this );
-	}
-	else
-	{
-		pGrenade = dynamic_cast< CBaseCSGrenade * >(Weapon_OwnsThisType("weapon_flashbang"));
-		if ( pGrenade && ( pGrenade->IsPinPulled() || pGrenade->IsBeingThrown() ) )
+		if ( pGrenade->IsPinPulled() || pGrenade->IsBeingThrown() )
 		{
-			pGrenade->DropGrenade();
-			pGrenade->DecrementAmmo( this );
-		}
-		else
-		{
-			pGrenade = dynamic_cast< CBaseCSGrenade * >(Weapon_OwnsThisType("weapon_smokegrenade"));
-			if ( pGrenade && ( pGrenade->IsPinPulled() || pGrenade->IsBeingThrown() ) )
+			// NOTE[pmf]: Molotov is excluded from this list. Consider making this a weapon property
+			if (
+				pGrenade->ClassMatches( "weapon_hegrenade" ) ||
+				pGrenade->ClassMatches( "weapon_flashbang" ) ||
+				pGrenade->ClassMatches( "weapon_smokegrenade" ) ||
+				pGrenade->ClassMatches( "weapon_decoy" ) )
 			{
 				pGrenade->DropGrenade();
 				pGrenade->DecrementAmmo( this );
+				bGrenadeDropped = true;
 			}
 		}
 	}
 
-	// drop the "best" grenade remaining
-	CBaseCombatWeapon *pWeapon = Weapon_OwnsThisType("weapon_hegrenade");
-	bool grenadeDrop = false;
-	if ( pWeapon && pWeapon->HasAmmo() )
+	if ( !bGrenadeDropped )
 	{
-		grenadeDrop = CSWeaponDrop(pWeapon, false);
-	}
-	else
-	{
-		pWeapon = Weapon_OwnsThisType("weapon_flashbang");
-		if ( pWeapon && pWeapon->HasAmmo() )
+		// drop the "best" grenade remaining according to the following priorities
+		const char* GrenadePriorities[] =
 		{
-			grenadeDrop = CSWeaponDrop(pWeapon, false);
+			"weapon_molotov",	// first slot might get overridden by player last held grenade type below
+			"weapon_molotov",
+			"weapon_incgrenade",
+			"weapon_smokegrenade",
+			"weapon_hegrenade",
+			"weapon_flashbang",
+			"weapon_decoy",
+		};
+
+		switch ( m_nPreferredGrenadeDrop )
+		{
+			case WEAPON_FLASHBANG: GrenadePriorities[0] = "weapon_flashbang"; break;
+			case WEAPON_MOLOTOV: GrenadePriorities[0] = "weapon_molotov"; break;
+			case WEAPON_INCGRENADE: GrenadePriorities[0] = "weapon_incgrenade"; break;
+			case WEAPON_HEGRENADE: GrenadePriorities[0] = "weapon_hegrenade"; break;
+			case WEAPON_SMOKEGRENADE: GrenadePriorities[0] = "weapon_smokegrenade"; break;
+			case WEAPON_DECOY: GrenadePriorities[0] = "weapon_decoy"; break;
 		}
-		else
+		m_nPreferredGrenadeDrop = 0; // after we drop a preferred grenade make sure we reset the field
+
+		for ( int i = 0; ( i < ARRAYSIZE( GrenadePriorities ) ) && !bGrenadeDropped; ++i )
 		{
-			pWeapon = Weapon_OwnsThisType("weapon_smokegrenade");
-			if ( pWeapon && pWeapon->HasAmmo() )
+			pGrenade = dynamic_cast< CBaseCSGrenade* >( Weapon_OwnsThisType( GrenadePriorities[i] ) );
+			if ( pGrenade && pGrenade->HasAmmo() && !pGrenade->m_bHasEmittedProjectile )
 			{
-				grenadeDrop = CSWeaponDrop(pWeapon, false);
+				bGrenadeDropped = CSWeaponDrop( pGrenade, false );
 			}
 		}
 	}
@@ -8220,7 +8381,7 @@ CSWeaponID CCSPlayer::GetWeaponIdCausingDamange( const CTakeDamageInfo &info )
 		if (!pAttackerWeapon)
 			return WEAPON_NONE;
 
-		return pAttackerWeapon->GetWeaponID();
+		return pAttackerWeapon->GetCSWeaponID();
 	}
 	else if (pInflictor && V_strcmp(pInflictor->GetClassname(), "hegrenade_projectile") == 0)
 	{
@@ -8243,7 +8404,7 @@ void CCSPlayer::PlayerUsedFirearm( CBaseCombatWeapon* pBaseWeapon )
 		if ( pWeapon )
 		{
 			CSWeaponType weaponType = pWeapon->GetCSWpnData().m_WeaponType;
-			CSWeaponID weaponID = pWeapon->GetWeaponID();
+			CSWeaponID weaponID = pWeapon->GetCSWeaponID();
 
 			if ( weaponType != WEAPONTYPE_KNIFE && weaponType != WEAPONTYPE_C4 && weaponType != WEAPONTYPE_GRENADE )
 			{
@@ -8501,7 +8662,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 
 		if (victimWeapon)
 		{
-			CSWeaponID victimWeaponID = victimWeapon->GetWeaponID();
+			CSWeaponID victimWeaponID = victimWeapon->GetCSWeaponID();
 
 			if (attackerWeaponId == WEAPON_ELITE && victimWeaponID == WEAPON_ELITE)
 			{

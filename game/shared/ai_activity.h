@@ -2107,6 +2107,9 @@ typedef enum
 	ACT_SPELL_VM_ARM, 
 	ACT_SPELL_VM_FIRE,
 
+	// CSGO action activities
+	ACT_CSGO_FLINCH_MOLOTOV,
+	
 	// this is the end of the global activities, private per-monster activities start here.
 	LAST_SHARED_ACTIVITY,
 } Activity;

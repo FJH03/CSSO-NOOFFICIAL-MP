@@ -366,6 +366,9 @@ private:
 	DECLARE_CSBOTMANAGER_EVENT_LISTENER( HEGrenadeDetonate,		hegrenade_detonate )
 	DECLARE_CSBOTMANAGER_EVENT_LISTENER( FlashbangDetonate,		flashbang_detonate )
 	DECLARE_CSBOTMANAGER_EVENT_LISTENER( SmokeGrenadeDetonate,	smokegrenade_detonate )
+	DECLARE_CSBOTMANAGER_EVENT_LISTENER( MolotovDetonate,		molotov_detonate )
+	DECLARE_CSBOTMANAGER_EVENT_LISTENER( DecoyDetonate,			decoy_detonate )
+	DECLARE_CSBOTMANAGER_EVENT_LISTENER( DecoyFiring,			decoy_firing )
 	DECLARE_CSBOTMANAGER_EVENT_LISTENER( GrenadeBounce,			grenade_bounce )
 
 	DECLARE_CSBOTMANAGER_EVENT_LISTENER( NavBlocked,			nav_blocked )

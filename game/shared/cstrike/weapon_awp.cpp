@@ -60,7 +60,7 @@ public:
 	virtual bool Reload();
 	virtual bool Deploy();
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_AWP; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_AWP; }
 
 private:
 

@@ -35,7 +35,7 @@ public:
 	virtual bool Reload();
 	virtual bool Deploy();
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_AUG; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_AUG; }
 
 #ifdef CLIENT_DLL
 	virtual bool	HideViewModelWhenZoomed( void ) { return false; }

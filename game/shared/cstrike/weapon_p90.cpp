@@ -31,7 +31,7 @@ public:
 
 	virtual void PrimaryAttack();
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_P90; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_P90; }
 
 
 private:

@@ -30,7 +30,7 @@ public:
 
 	virtual void PrimaryAttack();
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_AK47; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_AK47; }
 
 private:
 	CAK47( const CAK47 & );

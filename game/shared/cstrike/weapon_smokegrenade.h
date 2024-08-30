@@ -34,7 +34,7 @@ public:
 
 	CSmokeGrenade() {}
 
-	virtual CSWeaponID GetWeaponID( void ) const { return WEAPON_SMOKEGRENADE; }
+	virtual CSWeaponID GetCSWeaponID( void ) const { return WEAPON_SMOKEGRENADE; }
 
 #ifdef CLIENT_DLL
 

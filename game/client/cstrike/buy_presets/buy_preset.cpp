@@ -71,6 +71,24 @@ void BuyPresetManager::GetCurrentLoadout( WeaponSet *weaponSet )
 	ammoType = (pInfo)?pInfo->iAmmoType:0;
 	weaponSet->m_flashbangs = (!pWeapon) ? 0 : player->GetAmmoCount( ammoType );
 
+	// Grab current decoy
+	pWeapon = dynamic_cast< CWeaponCSBase * >(player->GetCSWeapon( WEAPON_DECOY ));
+	pInfo = GetWeaponInfo( WEAPON_DECOY );
+	ammoType = (pInfo)?pInfo->iAmmoType:0;
+	weaponSet->m_decoy = (pWeapon && player->GetAmmoCount( ammoType ));
+
+	// Grab current molotov
+	pWeapon = dynamic_cast< CWeaponCSBase * >(player->GetCSWeapon( WEAPON_MOLOTOV ));
+	pInfo = GetWeaponInfo( WEAPON_MOLOTOV );
+	ammoType = (pInfo)?pInfo->iAmmoType:0;
+	weaponSet->m_molotov = (pWeapon && player->GetAmmoCount( ammoType ));
+
+	// Grab current incgrenade
+	pWeapon = dynamic_cast< CWeaponCSBase * >(player->GetCSWeapon( WEAPON_INCGRENADE ));
+	pInfo = GetWeaponInfo( WEAPON_INCGRENADE );
+	ammoType = (pInfo)?pInfo->iAmmoType:0;
+	weaponSet->m_incgrenade = (pWeapon && player->GetAmmoCount( ammoType ));
+
 	// Grab current equipment
 	weaponSet->m_defuser = player->HasDefuser();
 	weaponSet->m_nightvision = player->HasNightVision();
@@ -132,6 +150,9 @@ void WeaponSet::Reset()
 	m_flashbangs = 0;
 	m_defuser = false;
 	m_nightvision = false;
+	m_decoy = false;
+	m_molotov = false;
+	m_incgrenade = false;
 }
 
 
@@ -237,6 +258,49 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 		ws.m_flashbangs = count;
 		numFlashbangs += count;
 	}
+
+	//-------------------------------------------------------------------------
+	// Decoy
+	pWeapon = dynamic_cast< CWeaponCSBase * >(player->GetCSWeapon( WEAPON_DECOY ));
+	pInfo = GetWeaponInfo( WEAPON_DECOY );
+	ammoType = (pInfo)?pInfo->iAmmoType:0;
+
+	bool hasDecoy = (pWeapon && player->GetAmmoCount( ammoType ));
+	if ( m_decoy && !hasDecoy )
+	{
+		cost += pInfo->GetWeaponPrice();
+		ws.m_decoy = true;
+		hasDecoy = true;
+	}
+
+	//-------------------------------------------------------------------------
+	// Molotov
+	pWeapon = dynamic_cast< CWeaponCSBase * >(player->GetCSWeapon( WEAPON_MOLOTOV ));
+	pInfo = GetWeaponInfo( WEAPON_MOLOTOV );
+	ammoType = (pInfo)?pInfo->iAmmoType:0;
+
+	bool hasMolotov = (pWeapon && player->GetAmmoCount( ammoType ));
+	if ( m_molotov && !hasMolotov )
+	{
+		cost += pInfo->GetWeaponPrice();
+		ws.m_molotov = true;
+		hasMolotov = true;
+	}
+
+	//-------------------------------------------------------------------------
+	// IncGrenade
+	pWeapon = dynamic_cast< CWeaponCSBase * >(player->GetCSWeapon( WEAPON_INCGRENADE ));
+	pInfo = GetWeaponInfo( WEAPON_INCGRENADE );
+	ammoType = (pInfo)?pInfo->iAmmoType:0;
+
+	bool hasIncGrenade = (pWeapon && player->GetAmmoCount( ammoType ));
+	if ( m_incgrenade && !hasIncGrenade )
+	{
+		cost += pInfo->GetWeaponPrice();
+		ws.m_incgrenade = true;
+		hasIncGrenade = true;
+	}
+
 
 	//-------------------------------------------------------------------------
 	// defuser
@@ -627,6 +691,27 @@ void WeaponSet::GetFromScratch( int& cost, WeaponSet& ws ) const
 		ws.m_HEGrenade = m_HEGrenade;
 	}
 
+	if ( m_decoy )
+	{
+		CCSWeaponInfo *pInfo = GetWeaponInfo( WEAPON_DECOY );
+		cost += ( pInfo ) ? pInfo->GetWeaponPrice() : 0;
+		ws.m_decoy = m_decoy;
+	}
+
+	if ( m_molotov )
+	{
+		CCSWeaponInfo *pInfo = GetWeaponInfo( WEAPON_MOLOTOV );
+		cost += ( pInfo ) ? pInfo->GetWeaponPrice() : 0;
+		ws.m_molotov = m_molotov;
+	}
+
+	if ( m_incgrenade )
+	{
+		CCSWeaponInfo *pInfo = GetWeaponInfo( WEAPON_INCGRENADE );
+		cost += ( pInfo ) ? pInfo->GetWeaponPrice() : 0;
+		ws.m_incgrenade = m_incgrenade;
+	}
+
 	CCSWeaponInfo *pInfo = GetWeaponInfo( WEAPON_FLASHBANG );
 	cost += ( pInfo ) ? pInfo->GetWeaponPrice() * m_flashbangs : 0;
 	ws.m_flashbangs = m_flashbangs;
@@ -730,6 +815,21 @@ void WeaponSet::GenerateBuyCommands( char command[BUY_PRESET_COMMAND_LEN] ) cons
 	if ( m_HEGrenade )
 	{
 		tmp = BufPrintf( tmp, remainder, "buy hegrenade\n" );
+	}
+
+	if ( m_decoy )
+	{
+		tmp = BufPrintf( tmp, remainder, "buy decoy\n" );
+	}
+
+	if ( m_molotov )
+	{
+		tmp = BufPrintf( tmp, remainder, "buy molotov\n" );
+	}
+
+	if ( m_incgrenade )
+	{
+		tmp = BufPrintf( tmp, remainder, "buy incgrenade\n" );
 	}
 
 	for ( i=0; i<m_flashbangs; ++i )
@@ -1051,6 +1151,18 @@ void BuyPreset::Parse( KeyValues *data )
 			{
 				ws.m_HEGrenade = (intVal > 0);
 			}
+			else if ( !strcmp( itemBuf, "decoy" ) )
+			{
+				ws.m_decoy = (intVal > 0);
+			}
+			else if ( !strcmp( itemBuf, "molotov" ) )
+			{
+				ws.m_molotov = (intVal > 0);
+			}
+			else if ( !strcmp( itemBuf, "incgrenade" ) )
+			{
+				ws.m_incgrenade = (intVal > 0);
+			}
 			else if ( !strcmp( itemBuf, "flash" ) )
 			{
 				ws.m_flashbangs = MIN( 2, MAX( 0, intVal ) );
@@ -1131,6 +1243,9 @@ void BuyPreset::Save( KeyValues *data )
 			(ws.m_helmet)?"helm":"", ws.m_armor,
 			ws.m_flashbangs,
 			ws.m_smokeGrenade,
+			ws.m_decoy,
+			ws.m_molotov,
+			ws.m_incgrenade,
 			ws.m_HEGrenade,
 			ws.m_defuser,
 			ws.m_nightvision

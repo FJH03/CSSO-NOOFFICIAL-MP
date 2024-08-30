@@ -398,7 +398,7 @@ void CCSGameStats::Event_ShotFired( CBasePlayer *pPlayer, CBaseCombatWeapon* pWe
 	    // Increment the individual weapon
 	    if( pCSWeapon )
 	    {
-			CSWeaponID weaponId = pCSWeapon->GetWeaponID();
+			CSWeaponID weaponId = pCSWeapon->GetCSWeaponID();
 		    for (int i = 0; WeaponName_StatId_Table[i].shotStatId != CSSTAT_UNDEFINED; ++i)
 		    {
 			    if ( WeaponName_StatId_Table[i].weaponId == weaponId )
@@ -432,7 +432,7 @@ void CCSGameStats::Event_ShotHit( CBasePlayer *pPlayer, const CTakeDamageInfo &i
 				CWeaponCSBase* pCSWeapon = dynamic_cast< CWeaponCSBase * >(pPlayer->GetActiveWeapon());
 				if (pCSWeapon)
 				{
-					CSWeaponID weaponId = pCSWeapon->GetWeaponID();
+					CSWeaponID weaponId = pCSWeapon->GetCSWeaponID();
 					for (int i = 0; WeaponName_StatId_Table[i].shotStatId != CSSTAT_UNDEFINED; ++i)
 					{
 						if ( WeaponName_StatId_Table[i].weaponId == weaponId )
@@ -480,8 +480,8 @@ void CCSGameStats::Event_PlayerKilled_PreWeaponDrop( CBasePlayer *pPlayer, const
 
 		if (attackerWeapon && victimWeapon)
 		{
-			CSWeaponID attackerWeaponID = attackerWeapon->GetWeaponID();
-			CSWeaponID victimWeaponID = victimWeapon->GetWeaponID();
+			CSWeaponID attackerWeaponID = attackerWeapon->GetCSWeaponID();
+			CSWeaponID victimWeaponID = victimWeapon->GetCSWeaponID();
 
 			if (attackerWeaponID == WEAPON_KNIFE && victimWeaponID == WEAPON_KNIFE)
 			{
@@ -941,7 +941,7 @@ void CCSGameStats::Event_PlayerKilledOther( CBasePlayer *pAttacker, CBaseEntity 
 				{
 					CWeaponCSBase* pCSWeapon = static_cast<CWeaponCSBase*>(weapon);
 
-					weaponId = pCSWeapon->GetWeaponID();
+					weaponId = pCSWeapon->GetCSWeaponID();
 
 					CCSWeaponInfo *info = GetWeaponInfo(weaponId);
 

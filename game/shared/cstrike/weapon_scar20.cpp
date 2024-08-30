@@ -38,7 +38,7 @@ public:
 
 	virtual float GetMaxSpeed() const;
 
-	virtual CSWeaponID GetWeaponID( void ) const		{ return WEAPON_SCAR20; }
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_SCAR20; }
 
 
 private:
