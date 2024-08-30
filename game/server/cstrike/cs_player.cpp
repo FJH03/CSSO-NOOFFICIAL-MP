@@ -1768,16 +1768,15 @@ void CCSPlayer::CheatImpulseCommands( int iImpulse )
 
 				AddAccount( 16000 );
 
-				GiveAmmo( 250, BULLET_PLAYER_50AE );
-				GiveAmmo( 250, BULLET_PLAYER_762MM );
-				GiveAmmo( 250, BULLET_PLAYER_338MAG );
-				GiveAmmo( 250, BULLET_PLAYER_556MM );
-				GiveAmmo( 250, BULLET_PLAYER_556MM_BOX );
-				GiveAmmo( 250, BULLET_PLAYER_9MM );
-				GiveAmmo( 250, BULLET_PLAYER_BUCKSHOT );
-				GiveAmmo( 250, BULLET_PLAYER_45ACP );
-				GiveAmmo( 250, BULLET_PLAYER_357SIG );
-				GiveAmmo( 250, BULLET_PLAYER_57MM );
+				for ( int i = 0; i < MAX_WEAPONS; ++i )
+				{
+					CBaseCombatWeapon *pWeapon = GetWeapon( i );
+					if ( pWeapon )
+					{
+						pWeapon->GiveReserveAmmo( AMMO_POSITION_PRIMARY, 999 );
+						pWeapon->GiveReserveAmmo( AMMO_POSITION_SECONDARY, 999 );
+					}
+				}
 
 				gEvilImpulse101 = false;
 			}

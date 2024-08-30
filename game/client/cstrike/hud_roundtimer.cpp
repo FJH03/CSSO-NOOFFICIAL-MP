@@ -89,12 +89,16 @@ bool CHudRoundTimer::ShouldDraw()
 {
 	//necessary?
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-	if ( pPlayer )
-	{
-		return !pPlayer->IsObserver();
-	}
+	if ( pPlayer && pPlayer->IsObserver() )
+		return false;
 
-	return false;
+	if ( g_PlantedC4s.Count() > 0 )
+		return false;
+
+	if ( CSGameRules() && CSGameRules()->IsWarmupPeriodPaused() )
+		return false;
+
+	return true;
 }
 
 void CHudRoundTimer::Think()
@@ -105,14 +109,15 @@ void CHudRoundTimer::Think()
 
 	int timer = (int)ceil( pRules->GetRoundRemainingTime() );
 
+	if ( pRules->IsWarmupPeriod() && !pRules->IsWarmupPeriodPaused() )
+	{
+		timer = (int)ceil( pRules->GetWarmupRemainingTime() );
+	}
 	if ( pRules->IsFreezePeriod() )
 	{
 		// in freeze period countdown to round start time
 		timer = (int)ceil(pRules->GetRoundStartTime()-gpGlobals->curtime);
 	}
-
-	//If the bomb is planted don't draw -- the timer is irrelevant
-	SetVisible(g_PlantedC4s.Count() == 0);
 
 	if(timer > 30)
 	{
@@ -201,6 +206,10 @@ void CHudRoundTimer::Paint()
 
 	int timer = (int)ceil( pRules->GetRoundRemainingTime() );
 
+	if ( pRules->IsWarmupPeriod() && !pRules->IsWarmupPeriodPaused() )
+	{
+		timer = (int)ceil( pRules->GetWarmupRemainingTime() );
+	}
 	if ( pRules->IsFreezePeriod() )
 	{
 		// in freeze period countdown to round start time
