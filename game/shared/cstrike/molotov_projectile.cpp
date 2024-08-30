@@ -17,7 +17,7 @@
 #else
 	#include "cs_player.h"
 	#include "smoke_trail.h"
-	#include "Effects/inferno.h"
+	#include "effects/inferno.h"
 	#include "bot_manager.h"
 #endif
 
