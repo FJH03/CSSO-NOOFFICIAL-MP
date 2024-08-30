@@ -207,6 +207,11 @@ void CCSGameMovement::CheckParameters( void )
 		mv->m_nButtons |= IN_DUCK;
 	}
 
+	if ( m_pCSPlayer->m_bDuckOverride )
+	{
+		mv->m_nButtons |= IN_DUCK;
+	}
+
 
 
 	// it would be nice to put this into the player->GetPlayerMaxSpeed() method, but
@@ -803,6 +808,9 @@ void CCSGameMovement::HandleDuckingSpeedCrop( float duckFraction )
 bool CCSGameMovement::CanUnduck()
 {
 
+	// Can't unduck if we are planting the bomb.
+	if ( m_pCSPlayer->m_bDuckOverride )
+		return false;
 
 	// Can always unduck if we are no-clipping
 	if ( player->GetMoveType() == MOVETYPE_NOCLIP )

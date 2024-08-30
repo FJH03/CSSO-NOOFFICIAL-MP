@@ -530,7 +530,11 @@ public:
 	// Black market
 	INetworkStringTable *m_StringTableBlackMarket;
 	const weeklyprice_t *m_pPrices;
+	float CheckTotalSmokedLength( float flRadius, Vector vecGrenadePos, Vector from, Vector to );
+
 };
+
+
 
 //-----------------------------------------------------------------------------
 // Gets us at the team fortress game rules

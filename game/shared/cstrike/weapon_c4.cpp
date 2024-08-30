@@ -934,6 +934,7 @@ void CC4::PrimaryAttack()
 			m_bStartedArming = true;
 			m_fArmedTime = gpGlobals->curtime + WEAPON_C4_ARM_TIME;
 			m_bBombPlacedAnimation = false;
+			pPlayer->m_bDuckOverride = true;
 
 
 #if !defined( CLIENT_DLL )			
@@ -1123,6 +1124,7 @@ void CC4::PrimaryAttack()
 			// No more c4!
 			pPlayer->Weapon_Drop( this, NULL, NULL );
 			UTIL_Remove( this );
+			pPlayer->m_bDuckOverride = false;
 #endif
 
 			//don't allow the planting to start over again next frame.
@@ -1354,4 +1356,5 @@ void CC4::AbortBombPlant()
 #endif 
 
 	FX_PlantBomb( pPlayer->entindex(), pPlayer->Weapon_ShootPosition(), PLANTBOMB_ABORT );
+	pPlayer->m_bDuckOverride = false;
 }

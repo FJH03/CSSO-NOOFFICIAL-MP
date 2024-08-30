@@ -260,7 +260,7 @@ public:
 
 	// When the progress bar should start.
 	CNetworkVar( float, m_flProgressBarStartTime );
-
+	CNetworkVar( bool, m_bDuckOverride );
 	CNetworkVar( float, m_flStamina );
 	CNetworkVar( int, m_iDirection );	// The current lateral kicking direction; 1 = right,  0 = left
 	CNetworkVar( int, m_iShotsFired );	// number of shots fired recently
@@ -431,6 +431,9 @@ namespace vgui
 
 vgui::IImage* GetDefaultAvatarImage( C_BasePlayer *pPlayer );
 
+void AddSmokeGrenadeHandle( EHANDLE hGrenade );
+void RemoveSmokeGrenadeHandle( EHANDLE hGrenade );
+bool LineGoesThroughSmoke( Vector from, Vector to, bool grenadeBloat );
 
 
 

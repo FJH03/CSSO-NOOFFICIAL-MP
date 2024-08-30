@@ -187,6 +187,12 @@ enum AmmoPosition_t
 	AMMO_POSITION_SECONDARY = 2
 };
 
+#define CONSTANT_UNITS_SMOKEGRENADERADIUS 166
+#define CONSTANT_UNITS_GENERICGRENADERADIUS 115
+
+const float SmokeGrenadeRadius = CONSTANT_UNITS_SMOKEGRENADERADIUS;
+const float FlashbangGrenadeRadius = CONSTANT_UNITS_GENERICGRENADERADIUS;
+const float HEGrenadeRadius = CONSTANT_UNITS_GENERICGRENADERADIUS;
 //===================================================================================================================
 // Close caption flags
 #define CLOSE_CAPTION_WARNIFMISSING	( 1<<0 )

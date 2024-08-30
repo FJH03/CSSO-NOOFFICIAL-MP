@@ -41,6 +41,7 @@
 #include "ragdoll_shared.h"
 #include "collisionutils.h"
 #include "cs_loadout.h"
+#include "../../shared/shareddefs.h"
 
 // NVNT - haptics system for spectating
 #include "haptics/haptic_utils.h"
@@ -48,7 +49,7 @@
 #include "steam/steam_api.h"
 
 #include "cs_blackmarket.h"				// for vest/helmet prices
-
+//#include "../../shared/cstrike/bot/bot_manager.h"
 #if defined( CCSPlayer )
 	#undef CCSPlayer
 #endif
@@ -116,6 +117,45 @@ CAddonInfo g_AddonInfo[] =
 	{ "grenade4",	"weapon_decoy",			0, 0 },
 };
 
+bool LineGoesThroughSmoke( Vector from, Vector to, bool grenadeBloat )
+{
+	float totalSmokedLength = 0.0f;	// distance along line of sight covered by smoke
+
+	// compute unit vector and length of line of sight segment
+	//Vector sightDir = to - from;
+	//float sightLength = sightDir.NormalizeInPlace();
+
+	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+
+	if ( !pPlayer )
+		return false;
+
+	const float smokeRadiusSq = SmokeGrenadeRadius * SmokeGrenadeRadius * grenadeBloat * grenadeBloat;
+	C_BaseParticleEntity *ent;
+	for ( int i=0; i < pPlayer->m_SmokeGrenades.Count(); i++ )
+	{
+		float flLengthAdd = 0;
+		if ( CSGameRules() )
+		{
+			ent = pPlayer->m_SmokeGrenades[i];
+			if ( !ent || ent->IsEFlagSet(EFL_DORMANT) ) // PiMoN: is EFL_DORMANT check actually needed?
+				continue;
+
+			flLengthAdd = CSGameRules()->CheckTotalSmokedLength( smokeRadiusSq, ent->GetAbsOrigin(), from, to );
+			// get the totalSmokedLength and check to see if the line starts or stops in smoke.  If it does this will return -1 and we should just bail early
+			if ( flLengthAdd == -1 )
+				return true;
+
+			totalSmokedLength += flLengthAdd;
+		}
+	}
+
+	// define how much smoke a bot can see thru
+	const float maxSmokedLength = 0.7f * SmokeGrenadeRadius;
+
+	// return true if the total length of smoke-covered line-of-sight is too much
+	return (totalSmokedLength > maxSmokedLength);
+}
 // -------------------------------------------------------------------------------- //
 // Player animation event. Sent to the client when a player fires, jumps, reloads, etc..
 // -------------------------------------------------------------------------------- //
@@ -774,6 +814,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropBool( RECVINFO( m_bIsLookingAtWeapon ) ),
 	RecvPropBool( RECVINFO( m_bIsHoldingLookAtWeapon ) ),
 	RecvPropBool( RECVINFO( m_bIsWalking ) ),
+	RecvPropBool( RECVINFO( m_bDuckOverride ) ),
 	RecvPropFloat( RECVINFO( m_flGroundAccelLinearFracLastTime ) ),
 END_RECV_TABLE()
 
