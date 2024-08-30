@@ -68,6 +68,10 @@ CBaseCSGrenade::CBaseCSGrenade()
 	m_bPinPulled = false;
 	m_fThrowTime = 0;
 	m_bLoopingSoundPlaying = false;
+
+#ifndef CLIENT_DLL
+	m_bHasEmittedProjectile = false;
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -384,6 +388,8 @@ void CBaseCSGrenade::ItemPostFrame()
 
 		EmitGrenade( vecSrc, vec3_angle, vecThrow, AngularImpulse(600,random->RandomInt(-1200,1200),0), pPlayer );
 
+		m_bHasEmittedProjectile = true; // Flag the grenade weapon as having emitted a projectile. The 'grenade' is now flying away from the player, so we don't want to drop *this* grenade on death (that'll make a duplicate)
+		
 		m_bRedraw = true;
 		m_fThrowTime = 0.0f;
 

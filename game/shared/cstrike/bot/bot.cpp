@@ -12,6 +12,7 @@
 
 #include "bot.h"
 #include "bot_util.h"
+#include "cs_shareddefs.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"

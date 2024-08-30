@@ -564,6 +564,8 @@ CCSPlayer::CCSPlayer()
 
 	m_wasNotKilledNaturally = false;
 
+	m_nPreferredGrenadeDrop = 0;
+
 	m_bNeedToChangeAgent = true;
 	m_bNeedToChangeGloves = true;
 	 
@@ -1593,6 +1595,8 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	// HPE_END
 	//=============================================================================
 
+	m_nPreferredGrenadeDrop = 0;
+
 	m_bHasHelmet = false;
 
 	m_flFlashDuration = 0.0f;
@@ -2184,7 +2188,7 @@ bool CCSPlayer::IsArmored( int nHitGroup )
 	return bApplyArmor;
 }
 
-void CCSPlayer::Pain( bool bHasArmour )
+void CCSPlayer::Pain( bool bHasArmour, int nDmgTypeBits )
 {
 	if ( (nDmgTypeBits & DMG_BURN) )
 	{
@@ -2199,6 +2203,19 @@ void CCSPlayer::Pain( bool bHasArmour )
 				EmitSound( "Player.BurnDamageKevlar" );
 			}
 			m_fNextMolotovDamageSoundTime = gpGlobals->curtime + 1.0;
+		}
+		return;
+	}
+
+	if ( nDmgTypeBits & DMG_CLUB )
+	{
+		if ( bHasArmour == false )
+		{
+			EmitSound( "Flesh.BulletImpact" );
+		}
+		else
+		{
+			EmitSound( "Player.DamageKevlar" );
 		}
 		return;
 	}
@@ -2465,14 +2482,14 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 			if ( ArmorValue() <= 0.0)
 				m_bHasHelmet = false;
 
-			if( !(info.GetDamageType() & DMG_FALL) )
-				Pain( true /*has armor*/ );
+			if( !(info.GetDamageType() & DMG_FALL ) && !(info.GetDamageType() & DMG_BURN ) && !(info.GetDamageType() & DMG_BLAST ) )
+				Pain( true /*has armor*/, info.GetDamageType() );
 		}
 		else
 		{
 			m_lastDamageArmor = 0;
 			if( !(info.GetDamageType() & DMG_FALL) )
-				Pain( false /*no armor*/ );
+				Pain( false /*no armor*/, info.GetDamageType() );
 		}
 
 		// round damage to integer
@@ -3100,6 +3117,8 @@ void CCSPlayer::RemoveAllItems( bool removeSuit )
 
 	m_bPickedUpDefuser = false;
 	m_bDefusedWithPickedUpKit = false;
+
+	m_nPreferredGrenadeDrop = 0;
 
 	//=============================================================================
 	// HPE_END
@@ -7720,12 +7739,7 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 	// HPE_BEGIN:
 	// [menglish] Add whichever, if any, grenade was dropped
 	//=============================================================================
-
-	if( pWeapon && grenadeDrop )
-	{
-		m_hDroppedEquipment[DROPPED_GRENADE] = static_cast<CBaseEntity *>(pWeapon);
-	}
-
+	
 	//=============================================================================
 	// HPE_END
 	//=============================================================================

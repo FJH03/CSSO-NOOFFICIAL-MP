@@ -63,6 +63,8 @@ public:
 	
 	// Each derived grenade class implements this.
 	virtual void EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer );
+
+	bool m_bHasEmittedProjectile;
 #endif
 
 protected:

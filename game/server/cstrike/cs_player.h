@@ -509,7 +509,7 @@ public:
 
 	void ResetStamina( void );
 	bool IsArmored( int nHitGroup );
-	void Pain( bool HasArmour );
+	void Pain( bool HasArmour, int nDmgTypeBits );
 	
 	void DeathSound( const CTakeDamageInfo &info );
 	
@@ -838,7 +838,8 @@ private:
 
     bool                        m_bPickedUpDefuser;         // Did player pick up the defuser kit as opposed to buying it?
     bool                        m_bDefusedWithPickedUpKit;  // Did player defuse the bomb with a picked-up defuse kit?
-
+	int							m_nPreferredGrenadeDrop;
+	
     //=============================================================================
     // HPE_END
     //=============================================================================
