@@ -26,9 +26,6 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-const int DOMINATION_DRAW_HEIGHT = 20;
-const int DOMINATION_DRAW_WIDTH = 20;
-
 static ConVar hud_deathnotice_time( "hud_deathnotice_time", "6", 0 );
 
 // Player entries in a death notice
@@ -45,11 +42,18 @@ struct DeathNoticeItem
 {
 	DeathNoticePlayer	Killer;
 	DeathNoticePlayer   Victim;
+	DeathNoticePlayer   Assister;
 	CHudTexture *iconDeath;
-	int			iSuicide;
+	bool		bSuicide;
 	float		flDisplayTime;
 	bool		bHeadshot;
-	int			iDominationImageId;
+	bool		bNoScope;
+	bool		bBlind;
+	bool		bPenetrated;
+	bool		bThruSmoke;
+	bool		bDomination;
+	bool		bRevenge;
+	bool		bAssisted;
 };
 
 //-----------------------------------------------------------------------------
@@ -88,12 +92,14 @@ private:
 	CPanelAnimationVar( Color, m_clrTerroristText, "TerroristTextColor", "TerroristTextColor" );
 
 	// Texture for skull symbol
-	CHudTexture		*m_iconD_skull;  
-	CHudTexture		*m_iconD_headshot;  
-
-	int				m_iNemesisImageId;
-	int				m_iDominatedImageId;
-	int				m_iRevengeImageId;
+	CHudTexture		*m_iconD_skull; 
+	CHudTexture		*m_iconD_headshot;
+	CHudTexture		*m_iconD_dominated;
+	CHudTexture		*m_iconD_revenge;
+	CHudTexture		*m_iconD_noscope; 
+	CHudTexture		*m_iconD_blind;
+	CHudTexture		*m_iconD_penetrated;
+	CHudTexture		*m_iconD_thrusmoke;
 
 	Color			m_teamColors[TEAM_MAXCOUNT];
 
@@ -115,12 +121,14 @@ CHudDeathNotice::CHudDeathNotice( const char *pElementName ) :
 
 	m_iconD_headshot = NULL;
 	m_iconD_skull = NULL;
+	m_iconD_dominated = NULL;
+	m_iconD_revenge = NULL;
+	m_iconD_noscope = NULL;
+	m_iconD_blind = NULL;
+	m_iconD_penetrated = NULL;
+	m_iconD_thrusmoke = NULL;
 
 	SetHiddenBits( HIDEHUD_MISCSTATUS );
-
-	m_iNemesisImageId = SetupHudImageId("hud/freeze_nemesis");
-	m_iDominatedImageId = SetupHudImageId("hud/freeze_dominated");
-	m_iRevengeImageId = SetupHudImageId("hud/freeze_revenge");
 }
 
 
@@ -163,6 +171,12 @@ void CHudDeathNotice::VidInit( void )
 {
 	m_iconD_skull = gHUD.GetIcon( "d_skull_cs" );
 	m_iconD_headshot = gHUD.GetIcon( "d_headshot" );
+	m_iconD_dominated = gHUD.GetIcon( "d_dominated" );
+	m_iconD_revenge = gHUD.GetIcon( "d_revenge" );
+	m_iconD_noscope = gHUD.GetIcon( "d_noscope" );
+	m_iconD_blind = gHUD.GetIcon( "d_blind" );
+	m_iconD_penetrated = gHUD.GetIcon( "d_penetrated" );
+	m_iconD_thrusmoke = gHUD.GetIcon( "d_thrusmoke" );
 	m_DeathNotices.Purge();
 }
 
@@ -180,7 +194,7 @@ bool CHudDeathNotice::ShouldDraw( void )
 	if ( pPlayer->IsAlive() && pPlayer->m_flFlashBangTime >= gpGlobals->curtime )
 	{
 		float flAlpha = pPlayer->m_flFlashMaxAlpha * (pPlayer->m_flFlashBangTime - gpGlobals->curtime) / pPlayer->m_flFlashDuration;
-		if ( flAlpha > 75.0f ) // 0..255
+		if ( flAlpha > 128.0f ) // 0..255
 		{
 			return false;
 		}
@@ -194,7 +208,7 @@ bool CHudDeathNotice::ShouldDraw( void )
 //-----------------------------------------------------------------------------
 void CHudDeathNotice::Paint()
 {
-	if ( !m_iconD_headshot || !m_iconD_skull )
+	if ( !m_iconD_headshot || !m_iconD_skull || !m_iconD_dominated || !m_iconD_revenge || !m_iconD_noscope || !m_iconD_blind || !m_iconD_penetrated || !m_iconD_thrusmoke )
 		return;
 
 	int yStart = GetClientModeCSNormal()->GetDeathMessageStartHeight();
@@ -202,8 +216,10 @@ void CHudDeathNotice::Paint()
 	surface()->DrawSetTextFont( m_hTextFont );
 	surface()->DrawSetTextColor( m_clrCTText );
 
-	int dominationDrawWidth = scheme()->GetProportionalScaledValueEx( GetScheme(), DOMINATION_DRAW_WIDTH );
-	int dominationDrawHeight = scheme()->GetProportionalScaledValueEx( GetScheme(), DOMINATION_DRAW_HEIGHT );
+	int iconDominationWide = surface()->GetCharacterWidth( m_iconD_dominated->hFont, m_iconD_dominated->cCharacterInFont );
+	int iconDominationTall = surface()->GetFontTall( m_iconD_dominated->hFont );
+	int iconRevengeWide = surface()->GetCharacterWidth( m_iconD_revenge->hFont, m_iconD_revenge->cCharacterInFont );
+	int iconRevengeTall = surface()->GetFontTall( m_iconD_revenge->hFont );
 
 	int iconHeadshotWide;
 	int iconHeadshotTall;
@@ -220,6 +236,18 @@ void CHudDeathNotice::Paint()
 		iconHeadshotTall = (int)( scale * (float)m_iconD_headshot->Height() );
 	}
 
+	int iconNoScopeWide = surface()->GetCharacterWidth( m_iconD_noscope->hFont, m_iconD_noscope->cCharacterInFont );
+	int iconNoScopeTall = surface()->GetFontTall( m_iconD_noscope->hFont );
+
+	int iconBlindWide = surface()->GetCharacterWidth( m_iconD_blind->hFont, m_iconD_blind->cCharacterInFont );
+	int iconBlindTall = surface()->GetFontTall( m_iconD_blind->hFont );
+
+	int iconPenetrateWide = surface()->GetCharacterWidth( m_iconD_penetrated->hFont, m_iconD_penetrated->cCharacterInFont );
+	int iconPenetrateTall = surface()->GetFontTall( m_iconD_penetrated->hFont );
+
+	int iconThruSmokeWide = surface()->GetCharacterWidth( m_iconD_thrusmoke->hFont, m_iconD_thrusmoke->cCharacterInFont );
+	int iconThruSmokeTall = surface()->GetFontTall( m_iconD_thrusmoke->hFont );
+
 	int iCount = m_DeathNotices.Count();
 	for ( int i = 0; i < iCount; i++ )
 	{
@@ -229,13 +257,20 @@ void CHudDeathNotice::Paint()
 
 		wchar_t victim[ 256 ];
 		wchar_t killer[ 256 ];
+		wchar_t assister[ 256 ];
 		wchar_t victimclan[ 256 ];
 		wchar_t killerclan[ 256 ];
+		wchar_t assisterclan[ 256 ];
+
+		wchar_t assistplussign[4];
+		g_pVGuiLocalize->ConvertANSIToUnicode( " +", assistplussign, sizeof( assistplussign ) );
 
 		g_pVGuiLocalize->ConvertANSIToUnicode( m_DeathNotices[i].Victim.szName, victim, sizeof( victim ) );
 		g_pVGuiLocalize->ConvertANSIToUnicode( m_DeathNotices[i].Killer.szName, killer, sizeof( killer ) );
+		g_pVGuiLocalize->ConvertANSIToUnicode( m_DeathNotices[i].Assister.szName, assister, sizeof( assister ) );
 		g_pVGuiLocalize->ConvertANSIToUnicode( m_DeathNotices[i].Victim.szClan, victimclan, sizeof( victimclan ) );
 		g_pVGuiLocalize->ConvertANSIToUnicode( m_DeathNotices[i].Killer.szClan, killerclan, sizeof( killerclan ) );
+		g_pVGuiLocalize->ConvertANSIToUnicode( m_DeathNotices[i].Assister.szClan, assisterclan, sizeof( assisterclan ) );
 
 		// Get the local position for this notice
 		int victimNameLen = UTIL_ComputeStringWidth( m_hTextFont, victim );
@@ -265,32 +300,66 @@ void CHudDeathNotice::Paint()
 			x -= victimClanLen;
 			x -= iconWide;
 
+			if ( m_DeathNotices[i].bBlind )
+				x -= iconBlindWide;
+
+			if ( m_DeathNotices[i].bNoScope )
+				x -= iconNoScopeWide;
+
+			if ( m_DeathNotices[i].bPenetrated )
+				x -= iconPenetrateWide;
+
+			if ( m_DeathNotices[i].bThruSmoke )
+				x -= iconThruSmokeWide;
+
 			if ( m_DeathNotices[i].bHeadshot )
 				x -= iconHeadshotWide;
 
-			if ( !m_DeathNotices[i].iSuicide )
+			if ( m_DeathNotices[i].bAssisted )
+			{
+				x -= UTIL_ComputeStringWidth( m_hTextFont, assistplussign );
+				x -= UTIL_ComputeStringWidth( m_hTextFont, assister );
+				x -= UTIL_ComputeStringWidth( m_hTextFont, assisterclan );
+			}
+			
+			//if ( !m_DeathNotices[i].bSuicide )
 			{
 				x -= UTIL_ComputeStringWidth( m_hTextFont, killer );
 				x -= UTIL_ComputeStringWidth( m_hTextFont, killerclan );
 			}
-
-			if (m_DeathNotices[i].iDominationImageId >= 0)
+			
+			if (m_DeathNotices[i].bDomination)
 			{				
-				x -= dominationDrawWidth;
+				x -= iconDominationWide;
+			}
+			if (m_DeathNotices[i].bRevenge)
+			{				
+				x -= iconRevengeWide;
 			}
 		}
 
-		if (m_DeathNotices[i].iDominationImageId >= 0)
-		{			
-			surface()->DrawSetTexture(m_DeathNotices[i].iDominationImageId);
-			surface()->DrawSetColor(m_DeathNotices[i].Killer.color);
-			surface()->DrawTexturedRect( x, y, x + dominationDrawWidth, y + dominationDrawHeight );
-			x += dominationDrawWidth;
+		Color iconColor( 255, 80, 0, 255 );
+
+		if (m_DeathNotices[i].bDomination)
+		{
+			m_iconD_dominated->DrawSelf( x, y, iconDominationWide, iconDominationTall, iconColor );
+			x += iconDominationWide;
+		}
+		if (m_DeathNotices[i].bRevenge)
+		{
+			m_iconD_revenge->DrawSelf( x, y, iconRevengeWide, iconRevengeTall, iconColor );
+			x += iconRevengeWide;
 		}
 		
 		// Only draw killers name if it wasn't a suicide
-		if ( !m_DeathNotices[i].iSuicide )
+		//if ( !m_DeathNotices[i].bSuicide )
 		{
+			if ( m_DeathNotices[i].bBlind )
+			{
+				m_iconD_blind->DrawSelf( x, y, iconBlindWide, iconBlindTall, iconColor );
+				x += iconBlindWide;
+			}
+
 			// Draw killer's clan
 			surface()->DrawSetTextColor( m_DeathNotices[i].Killer.color );
 			surface()->DrawSetTextPos( x, y );
@@ -305,13 +374,54 @@ void CHudDeathNotice::Paint()
 			surface()->DrawUnicodeString( killer );
 			surface()->DrawGetTextPos( x, y );
 		}
+		
+		if ( m_DeathNotices[i].bAssisted )
+		{
+			// Draw the plus sign in between killer and assister name
+			surface()->DrawSetTextColor( Color( 255, 128, 0, 255 ) );
+			//surface()->DrawSetTextColor( iconColor );
+			surface()->DrawSetTextPos( x, y );
+			surface()->DrawSetTextFont( m_hTextFont );
+			surface()->DrawUnicodeString( assistplussign );
+			surface()->DrawGetTextPos( x, y );
 
+			// Draw assister's clan
+			surface()->DrawSetTextColor( m_DeathNotices[i].Assister.color );
+			surface()->DrawSetTextPos( x, y );
+			surface()->DrawSetTextFont( m_hTextFont );
+			surface()->DrawUnicodeString( assisterclan );
+			surface()->DrawGetTextPos( x, y );
+
+			// Draw assister's name
+			surface()->DrawSetTextColor( m_DeathNotices[i].Assister.color );
+			surface()->DrawSetTextPos( x, y );
+			surface()->DrawSetTextFont( m_hTextFont );
+			surface()->DrawUnicodeString( assister );
+			surface()->DrawGetTextPos( x, y );
+		}
 
 		// Draw death weapon
 		//If we're using a font char, this will ignore iconTall and iconWide
-		Color iconColor( 255, 80, 0, 255 );
 		icon->DrawSelf( x, y, iconWide, iconTall, iconColor );
-		x += iconWide;		
+		x += iconWide;
+
+		if( m_DeathNotices[i].bNoScope )
+		{
+			m_iconD_noscope->DrawSelf( x, y, iconNoScopeWide, iconNoScopeTall, iconColor );
+			x += iconNoScopeWide;
+		}
+
+		if( m_DeathNotices[i].bThruSmoke )
+		{
+			m_iconD_thrusmoke->DrawSelf( x, y, iconThruSmokeWide, iconThruSmokeTall, iconColor );
+			x += iconThruSmokeWide;
+		}
+
+		if( m_DeathNotices[i].bPenetrated )
+		{
+			m_iconD_penetrated->DrawSelf( x, y, iconPenetrateWide, iconPenetrateTall, iconColor );
+			x += iconPenetrateWide;
+		}
 
 		if( m_DeathNotices[i].bHeadshot )
 		{
@@ -371,9 +481,57 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	// the event should be "player_death"
 	
 	int iKiller = engine->GetPlayerForUserID( event->GetInt("attacker") );
+	int iAssister = engine->GetPlayerForUserID( event->GetInt("assister") );
 	int iVictim = engine->GetPlayerForUserID( event->GetInt("userid") );
 	const char *killedwith = event->GetString( "weapon" );
 	bool headshot = event->GetInt( "headshot" ) > 0;
+	bool noscope = event->GetInt( "noscope" ) > 0;
+	bool blind = event->GetInt( "blind" ) > 0;
+	bool penetrated = event->GetInt( "penetrated" ) > 0;
+
+	C_CSPlayer* pKiller = ToCSPlayer( ClientEntityList().GetBaseEntity( iKiller ) );
+	C_CSPlayer* pVictim = ToCSPlayer( ClientEntityList().GetBaseEntity( iVictim ) );
+	C_CSPlayer* pAssister = ToCSPlayer( ClientEntityList().GetBaseEntity( iAssister ) );
+
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	if ( pKiller && pKiller->IsControllingBot() )
+		iKiller = pKiller->GetControlledBotIndex();
+
+	if ( pVictim && pVictim->IsControllingBot() )
+		iVictim = pVictim->GetControlledBotIndex();
+
+	if ( pAssister && pAssister->IsControllingBot() )
+		iAssister = pAssister->GetControlledBotIndex();
+#endif
+
+	if ( !iKiller )
+	{
+		// PiMoN: assuming that we're suicided, so the killer equals a victim
+		// probably won't cause any problems like that but if it will, then
+		// its and easy-fix by just adding a check for suicide ( !iKiller || iKiller == iVictim );
+		iKiller = iVictim;
+	}
+
+	bool thrusmoke = false;
+	if ( pKiller && pVictim )
+		thrusmoke = LineGoesThroughSmoke( pKiller->GetAbsOrigin(), pVictim->GetAbsOrigin(), 1.0f );
+
+	// no thrusmoke icon for grenades
+	if ( thrusmoke )
+	{
+		char pWeaponName[64];
+		V_sprintf_safe( pWeaponName, "weapon_%s", killedwith );
+		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( pWeaponName );
+		if ( hWpnInfo != GetInvalidWeaponInfoHandle() )
+		{
+			CCSWeaponInfo *pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
+			if ( pWeaponInfo )
+				thrusmoke = (pWeaponInfo->m_WeaponType != WEAPONTYPE_GRENADE);
+		}
+		// no thrusmoke icon for inferno as well
+		else if ( !V_strcmp( killedwith, "inferno" ) )
+			thrusmoke = false;
+	}
 
 	char fullkilledwith[128];
 	if ( killedwith && *killedwith )
@@ -392,51 +550,58 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 		// Remove the oldest one in the queue, which will always be the first
 		m_DeathNotices.Remove(0);
 	}
+	// if our attacker is the same as our assiter, it means a bot attacked the victim and a player took over that bot
+	if ( iAssister == iKiller )
+		iAssister = 0;
 
 	// Get the names of the players
 	const char *killer_name = iKiller > 0 ? g_PR->GetPlayerName( iKiller ) : NULL;
 	const char *victim_name = iVictim > 0 ? g_PR->GetPlayerName( iVictim ) : NULL;
+	const char *assister_name = iAssister > 0 ? g_PR->GetPlayerName( iAssister ) : NULL;
 
 	if ( !killer_name )
 		killer_name = "";
 	if ( !victim_name )
 		victim_name = "";
+	if ( !assister_name )
+		assister_name = "";
 
 	// Get the clan tags of the players
 	const char *killer_clan = iKiller > 0 ? cs_PR->GetClanTag( iKiller ) : NULL;
 	const char *victim_clan = iVictim > 0 ? cs_PR->GetClanTag( iVictim ) : NULL;
+	const char *assister_clan = iAssister > 0 ? cs_PR->GetClanTag( iAssister ) : NULL;
 
 	if ( !killer_clan )
 		killer_clan = "";
 	if ( !victim_clan )
 		victim_clan = "";
+	if ( !assister_clan )
+		assister_clan = "";
 
 	// Make a new death notice
 	DeathNoticeItem deathMsg;
 	deathMsg.Killer.iEntIndex = iKiller;
 	deathMsg.Victim.iEntIndex = iVictim;
+	deathMsg.Assister.iEntIndex = iAssister;
 	deathMsg.Killer.color = iKiller > 0 ? m_teamColors[g_PR->GetTeam(iKiller)] : COLOR_WHITE;
 	deathMsg.Victim.color = iVictim > 0 ? m_teamColors[g_PR->GetTeam(iVictim)] : COLOR_WHITE;
+	deathMsg.Assister.color = iAssister > 0 ? m_teamColors[g_PR->GetTeam(iAssister)] : COLOR_WHITE;
 	Q_snprintf( deathMsg.Killer.szClan, sizeof( deathMsg.Killer.szClan ), "%s ", killer_clan );
 	Q_snprintf( deathMsg.Victim.szClan, sizeof( deathMsg.Victim.szClan ), "%s ", victim_clan );
+	Q_snprintf( deathMsg.Assister.szClan, sizeof( deathMsg.Assister.szClan ), "%s ", assister_clan );
 	Q_strncpy( deathMsg.Killer.szName, killer_name, MAX_PLAYER_NAME_LENGTH );
 	Q_strncpy( deathMsg.Victim.szName, victim_name, MAX_PLAYER_NAME_LENGTH );
+	Q_strncpy( deathMsg.Assister.szName, assister_name, MAX_PLAYER_NAME_LENGTH );
 	deathMsg.flDisplayTime = gpGlobals->curtime + hud_deathnotice_time.GetFloat();
-	deathMsg.iSuicide = ( !iKiller || iKiller == iVictim );
+	deathMsg.bSuicide = ( !iKiller || iKiller == iVictim );
 	deathMsg.bHeadshot = headshot;
-	deathMsg.iDominationImageId = -1;
-
-	CCSPlayer* pKiller = ToCSPlayer(ClientEntityList().GetBaseEntity(iKiller));
-
-	// the local player is dead, see if this is a new nemesis or a revenge
-	if ( event->GetInt( "dominated" ) > 0 || (pKiller != NULL && pKiller->IsPlayerDominated(iVictim)) )
-	{
-		deathMsg.iDominationImageId = m_iDominatedImageId;
-	}
-	else if ( event->GetInt( "revenge" ) > 0 )
-	{
-		deathMsg.iDominationImageId = m_iRevengeImageId;
-	}
+	deathMsg.bNoScope = noscope;
+	deathMsg.bBlind = blind;
+	deathMsg.bPenetrated = penetrated;
+	deathMsg.bThruSmoke = thrusmoke;
+	deathMsg.bDomination = event->GetInt( "dominated" ) > 0 || (pKiller != NULL && pKiller->IsPlayerDominated( iVictim ));
+	deathMsg.bRevenge = event->GetInt( "revenge" ) > 0;
+	deathMsg.bAssisted = iAssister > 0;
 
 	// Try and find the death identifier in the icon list
 	deathMsg.iconDeath = gHUD.GetIcon( fullkilledwith );
@@ -453,7 +618,7 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	char sDeathMsg[512];
 
 	// Record the death notice in the console
-	if ( deathMsg.iSuicide )
+	if ( deathMsg.bSuicide )
 	{
 		if ( !strcmp( fullkilledwith, "d_planted_c4" ) )
 		{
@@ -480,6 +645,3 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 
 	Msg( "%s", sDeathMsg );
 }
-
-
-

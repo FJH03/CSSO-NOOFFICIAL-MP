@@ -5971,6 +5971,54 @@ void CCSGameRules::SetBlackMarketPrices( bool bSetDefaults )
 	}
 }
 
+float CCSGameRules::CheckTotalSmokedLength( float flSmokeRadiusSq, Vector vecGrenadePos, Vector from, Vector to )
+{
+	Vector sightDir = to - from;
+	float sightLength = sightDir.NormalizeInPlace();
+
+	// the detonation position is the actual position of the smoke grenade, but the smoke volume center is actually some number of units above that
+	Vector vecSmokeCenterOffset = Vector( 0, 0, 60 );
+	const Vector &smokeOrigin = vecGrenadePos + vecSmokeCenterOffset;
+
+	float flSmokeRadius = sqrt(flSmokeRadiusSq);
+	// if the start point or the end point is inside the radius of the smoke, then the line goes through the smoke
+	if ( (smokeOrigin - from).IsLengthLessThan( flSmokeRadius*0.95f ) || (smokeOrigin - to).IsLengthLessThan( flSmokeRadius ) )
+		return -1;
+
+	Vector toGrenade = smokeOrigin - from;
+
+	float alongDist = DotProduct( toGrenade, sightDir );
+
+	// compute closest point to grenade along line of sight ray
+	Vector close;
+
+	// constrain closest point to line segment
+	if (alongDist < 0.0f)
+		close = from;
+	else if (alongDist >= sightLength)
+		close = to;
+	else
+		close = from + sightDir * alongDist;
+
+	// if closest point is within smoke radius, the line overlaps the smoke cloud
+	Vector toClose = close - smokeOrigin;
+	float lengthSq = toClose.LengthSqr();
+
+	//float smokeRadius = (float)sqrt( flSmokeRadiusSq );
+	//NDebugOverlay::Sphere( smokeOrigin, smokeRadius, 0, 255, 0, true, 2.0f);
+	if (lengthSq < flSmokeRadiusSq)
+	{
+		// some portion of the ray intersects the cloud
+			
+		// 'from' and 'to' lie outside of the cloud - the line of sight completely crosses it
+		// determine the length of the chord that crosses the cloud
+		float smokedLength = 2.0f * (float)sqrt( flSmokeRadiusSq - lengthSq );
+		return smokedLength;
+	}
+	
+	return 0;
+}
+
 #ifdef CLIENT_DLL
 
 CCSGameRules::CCSGameRules()

@@ -19,12 +19,13 @@ const int g_BotUpdateSkipCount = 2;					///< number of upkeep periods to skip up
 class CNavArea;
 
 /// TODO: move CS-specific defines into CSBot files
-enum
+/*enum
 {
-	SmokeGrenadeRadius = 155,
-	FlashbangGrenadeRadius = 115,
-	HEGrenadeRadius = 115,
+	//SmokeGrenadeRadius = 155,
+	//FlashbangGrenadeRadius = 115,
+	//HEGrenadeRadius = 115,
 };
+*/
 
 //--------------------------------------------------------------------------------------------------------------
 class CBaseGrenade;

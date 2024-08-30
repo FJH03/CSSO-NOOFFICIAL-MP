@@ -365,6 +365,7 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_bInBombZone ), 1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_bInBuyZone ), 1, SPROP_UNSIGNED ),
 	SendPropBool( SENDINFO( m_bIsScoped ) ),
+	SendPropBool( SENDINFO( m_bDuckOverride ) ),
 	SendPropInt( SENDINFO( m_iClass ), Q_log2( CS_NUM_CLASSES )+1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_ArmorValue ), 8 ),
 	SendPropAngle( SENDINFO_VECTORELEM(m_angEyeAngles, 0), 11, SPROP_CHANGES_OFTEN ),
@@ -1273,7 +1274,7 @@ void CCSPlayer::Spawn()
 
 	StopLookingAtWeapon();
 	m_bIsHoldingLookAtWeapon = false;
-
+	m_bDuckOverride = false;
 	// If we're constantly respawning then reset damage stats on spawn. Otherwise this'll happen on roundrespawn after damage is reported.
 	if ( IsAbleToInstantRespawn() )
 	{
@@ -5118,6 +5119,8 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 	else if ( FStrEq( pcmd, "+lookatweapon" ) )
  	{
   	m_bIsHoldingLookAtWeapon = true;
+	
+
 
  	 if ( ShouldRunRateLimitedCommand( args ) )
   		{
