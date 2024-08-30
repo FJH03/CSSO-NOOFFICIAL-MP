@@ -41,7 +41,7 @@
 #include "ragdoll_shared.h"
 #include "collisionutils.h"
 #include "cs_loadout.h"
-#include "../../shared/shareddefs.h"
+#include "cs_shareddefs.h"
 
 // NVNT - haptics system for spectating
 #include "haptics/haptic_utils.h"
@@ -49,7 +49,7 @@
 #include "steam/steam_api.h"
 
 #include "cs_blackmarket.h"				// for vest/helmet prices
-//#include "../../shared/cstrike/bot/bot_manager.h"
+
 #if defined( CCSPlayer )
 	#undef CCSPlayer
 #endif
