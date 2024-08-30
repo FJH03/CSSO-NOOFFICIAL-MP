@@ -7,7 +7,7 @@
 #include "cbase.h"
 #include "decoy_projectile.h"
 #include "engine/IEngineSound.h"
-#include "keyvalues.h"
+#include "KeyValues.h"
 #include "weapon_csbase.h"
 #include "particle_parse.h"
 

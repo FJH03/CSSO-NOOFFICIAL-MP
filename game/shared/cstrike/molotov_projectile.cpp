@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -7,7 +7,7 @@
 #include "cbase.h"
 #include "molotov_projectile.h"
 
-#include "keyvalues.h"
+#include "KeyValues.h"
 #include "weapon_csbase.h"
 #include "particle_parse.h"
 
