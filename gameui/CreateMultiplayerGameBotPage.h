@@ -57,6 +57,9 @@ private:
 	vgui::ComboBox *m_chatterCombo;
 	void SetChatterCombo( const char *team );
 
+	vgui::ComboBox *m_quotaModeCombo;
+	void SetQuotaModeCombo( const char *team );
+
 	vgui::TextEntry *m_prefixEntry;
 
 	KeyValues *m_pSavedData;
