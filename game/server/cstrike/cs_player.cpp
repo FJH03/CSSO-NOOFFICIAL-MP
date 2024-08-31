@@ -852,7 +852,7 @@ void CCSPlayer::PlayerRunCommand( CUserCmd *ucmd, IMoveHelper *moveHelper )
 
 						if ( nSequence != ACTIVITY_NOT_AVAILABLE )
 						{
-							pViewModel->SetCycle( 0 );
+							pViewModel->ForceCycle( 0 );
 							pViewModel->ResetSequence( nSequence );
 						}
 					}
@@ -5225,7 +5225,7 @@ void CCSPlayer::LookAtHeldWeapon( void )
 		return;
 
 	// Can't taunt while  reloading, or switching silencer
-	if (   pActiveWeapon->m_bInReload  )
+	if ( pActiveWeapon->IsWeaponZoomed() || pActiveWeapon->m_bInReload || pActiveWeapon->IsSwitchingSilencer() )
 		return;
 
 	// don't let me inspect a shotgun that's reloading
@@ -5252,7 +5252,7 @@ void CCSPlayer::LookAtHeldWeapon( void )
 			m_flLookWeaponEndTime = gpGlobals->curtime + pViewModel->SequenceDuration( nSequence );
 			m_bIsLookingAtWeapon = true;
 
-			pViewModel->SetCycle( 0 );
+			pViewModel->ForceCycle( 0 );
 			pViewModel->ResetSequence( nSequence ) ;
 		}
 	}

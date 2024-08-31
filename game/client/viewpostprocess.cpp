@@ -1679,6 +1679,24 @@ static void CenterScaleQuadUVs( Vector4D & quadUVs, const Vector2D & uvScale )
 	quadUVs.w		= uvMid.y + uvScale.y*uvRange.y;
 }
 
+#if IRONSIGHT
+void ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSetup )
+{
+	//the preparation stage returns true if following steps like rendering the scope stencil shape are necessary.
+	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	if (pPlayer)
+	{
+		C_WeaponCSBase *pWeapon = (C_WeaponCSBase *)pPlayer->GetActiveWeapon();
+		if (pWeapon)
+		{
+			if ( pWeapon->GetIronSightController() )
+			{
+				pWeapon->GetIronSightController()->RenderScopeEffect( x, y, w, h, pViewSetup );
+			}
+		}
+	}
+}
+#endif
 
 typedef struct SPyroSide
 {

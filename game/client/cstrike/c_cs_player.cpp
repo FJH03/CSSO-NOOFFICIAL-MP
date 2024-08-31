@@ -1175,6 +1175,24 @@ void C_CSPlayer::CreateAddonModel( int i )
 	}
 }
 
+void C_CSPlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, float &zFar, float &fov )
+{
+	BaseClass::CalcView( eyeOrigin, eyeAngles, zNear, zFar, fov );
+
+#if IRONSIGHT
+	CWeaponCSBase *pWeapon = GetActiveCSWeapon();
+	if (pWeapon)
+	{
+		CIronSightController* pIronSightController = pWeapon->GetIronSightController();
+		if (pIronSightController)
+		{
+			//bias the local client FOV change so ironsight transitions are nicer
+			fov = pIronSightController->GetIronSightFOV(GetDefaultFOV(), true);
+		}
+	}
+#endif //IRONSIGHT
+}
+
 
 void C_CSPlayer::UpdateAddonModels()
 {

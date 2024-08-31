@@ -166,6 +166,8 @@ public:
 	virtual CWeaponCSBase* CSAnim_GetActiveWeapon();
 	virtual bool CSAnim_CanMove();
 
+	// View model prediction setup
+	virtual void		CalcView( Vector& eyeOrigin, QAngle& eyeAngles, float& zNear, float& zFar, float& fov );
 
 	void DoAnimationEvent( PlayerAnimEvent_t event, int nData = 0 );
 

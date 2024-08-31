@@ -325,6 +325,69 @@ EXPOSE_INTERFACE( CEntityRandomProxy, IMaterialProxy, "EntityRandom" IMATERIAL_P
 
 #include "utlrbtree.h"
 
+#if IRONSIGHT
+//-----------------------------------------------------------------------------
+// IronSightAmount proxy
+//-----------------------------------------------------------------------------
+class CIronSightAmountProxy : public CResultProxy
+{
+public:
+	virtual bool Init(IMaterial *pMaterial, KeyValues *pKeyValues);
+	virtual void OnBind(void *pC_BaseEntity);
+private:
+	bool bInvert;
+};
+
+
+bool CIronSightAmountProxy::Init(IMaterial *pMaterial, KeyValues *pKeyValues)
+{
+	if (!CResultProxy::Init(pMaterial, pKeyValues))
+		return false;
+
+	bInvert = false;
+	CFloatInput	m_flInvert;
+	if ( m_flInvert.Init( pMaterial, pKeyValues, "invert" ) )
+		bInvert = ( m_flInvert.GetFloat() > 0 );
+
+	return true;
+}
+
+void CIronSightAmountProxy::OnBind(void *pC_BaseEntity)
+{
+
+	if (!pC_BaseEntity)
+		return;
+	
+	C_BaseEntity *pEntity = BindArgToEntity(pC_BaseEntity);
+	if (pEntity)
+	{
+		C_BaseViewModel *pViewModel = dynamic_cast<C_BaseViewModel*>(pEntity);
+		if (pViewModel)
+		{
+			C_CSPlayer *pPlayer = ToCSPlayer(pViewModel->GetOwner());
+			if (pPlayer)
+			{
+				CWeaponCSBase *pWeapon = pPlayer->GetActiveCSWeapon();
+				if ( pWeapon && pWeapon->GetIronSightController() )
+				{
+					if ( bInvert )
+					{
+						SetFloatResult(Bias( 1.0f - pWeapon->GetIronSightController()->GetIronSightAmount(), 0.2f));
+					}
+					else
+					{
+						SetFloatResult(Bias(pWeapon->GetIronSightController()->GetIronSightAmount(), 0.2f));
+					}
+				}
+			}
+		}
+	}
+
+}
+
+EXPOSE_INTERFACE( CIronSightAmountProxy, IMaterialProxy, "IronSightAmount" IMATERIAL_PROXY_INTERFACE_VERSION );
+#endif //IRONSIGHT
+
 //-----------------------------------------------------------------------------
 // Returns the player speed
 //-----------------------------------------------------------------------------

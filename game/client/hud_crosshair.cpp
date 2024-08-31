@@ -93,6 +93,16 @@ bool CHudCrosshair::ShouldDraw( void )
 	if ( pWeapon && !pWeapon->ShouldDrawCrosshair() )
 		return false;
 
+#if IRONSIGHT
+	C_CSPlayer* pCSPlayer = C_CSPlayer::GetLocalCSPlayer();
+	CWeaponCSBase* pCSWeapon = pCSPlayer->GetActiveCSWeapon();
+	if ( pCSWeapon && pCSWeapon->GetIronSightController() )
+	{
+		if ( pCSWeapon->GetIronSightController()->ShouldHideCrossHair() )
+			return false;
+	}
+#endif
+
 #ifdef PORTAL
 	C_Portal_Player *portalPlayer = ToPortalPlayer(pPlayer);
 	if ( portalPlayer && portalPlayer->IsSuppressingCrosshair() )

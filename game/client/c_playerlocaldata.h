@@ -36,6 +36,11 @@ public:
 		m_iv_aimPunchAngleVel.Setup( &m_aimPunchAngleVel, LATCH_SIMULATION_VAR );
 		m_flFOVRate = 0;
 
+		m_flOldFallVelocity = 0.0;
+
+		m_bInLanding = false;
+		m_flLandingTime = -1.0f;
+
 		m_flLastDuckTime = -1.0f;
 	}
 
@@ -56,6 +61,7 @@ public:
 	float					m_flJumpTime;
 	int						m_nStepside;
 	float					m_flFallVelocity;
+	float					m_flOldFallVelocity;
 	int						m_nOldButtons;
 	// Base velocity that was passed in to server physics so 
 	//  client can predict conveyors correctly.  Server zeroes it, so we need to store here, too.
@@ -71,6 +77,9 @@ public:
 	bool					m_bPoisoned;
 	float					m_flStepSize;
 	bool					m_bAllowAutoMovement;
+
+	bool					m_bInLanding;
+	float					m_flLandingTime;
 
 	// 3d skybox
 	sky3dparams_t			m_skybox3d;

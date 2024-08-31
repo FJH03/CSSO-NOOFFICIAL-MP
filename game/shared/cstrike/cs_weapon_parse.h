@@ -261,6 +261,17 @@ public:
 	char	m_szMuzzleFlash1stPersonAlt[MAX_WEAPON_STRING];
 	char	m_szMuzzleFlash3rdPerson[MAX_WEAPON_STRING];
 	char	m_szMuzzleFlash3rdPersonAlt[MAX_WEAPON_STRING];
+
+	// ironsight
+	bool	m_bIronsightCapable;
+	float	m_flIronsightSpeedUp;
+	float	m_flIronsightSpeedDown;
+	float	m_flIronsightLooseness;
+	Vector	m_vecIronsightEyePos;
+	QAngle	m_angIronsightPivotAngle;
+	float	m_flIronsightFOV;
+	float	m_flIronsightPivotForward;
+	char	m_szIronsightDotMaterial[MAX_WEAPON_STRING];
    
 	int		GetWeaponPrice( void ) const;
 	int		GetDefaultPrice( void );

@@ -317,6 +317,8 @@ CCSWeaponInfo::CCSWeaponInfo()
 {
 	m_flMaxSpeed = 1; // This should always be set in the script.
 	m_szAddonModel[0] = 0;
+	m_vecIronsightEyePos.Init();
+	m_angIronsightPivotAngle.Init();
 	ZeroObject(m_fSpread);
 	ZeroObject(m_fInaccuracyCrouch);
 	ZeroObject(m_fInaccuracyStand);
@@ -442,6 +444,24 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 
 	m_flTimeToIdleAfterFire	= pKeyValuesData->GetFloat( "TimeToIdle", 2 );
 	m_flIdleInterval	= pKeyValuesData->GetFloat( "IdleInterval", 20 );
+
+	// ironsight variables
+	m_bIronsightCapable = pKeyValuesData->GetBool( "IronsightCapable", false );
+	m_flIronsightSpeedUp = pKeyValuesData->GetFloat( "IronsightSpeedUp", 0.0f );
+	m_flIronsightSpeedDown = pKeyValuesData->GetFloat( "IronsightSpeedDown", 0.0f );
+	m_flIronsightLooseness = pKeyValuesData->GetFloat( "IronsightLooseness", 0.0f );
+	m_flIronsightFOV = pKeyValuesData->GetFloat( "IronsightFOV", 0.0f );
+	m_flIronsightPivotForward = pKeyValuesData->GetFloat( "IronsightPivotForward", 0.0f );
+
+	const char* srcString = pKeyValuesData->GetString( "IronsightEyePos", "0.0 0.0 0.0" );
+	if ( (sscanf( srcString, "%f %f %f", &(m_vecIronsightEyePos.x), &(m_vecIronsightEyePos.y), &(m_vecIronsightEyePos.z) ) != 3) )
+		m_vecIronsightEyePos.Init( 0, 0, 0 );
+	srcString = pKeyValuesData->GetString( "IronsightPivotAngle", "0.0 0.0 0.0" );
+	if ( (sscanf( srcString, "%f %f %f", &(m_angIronsightPivotAngle.x), &(m_angIronsightPivotAngle.y), &(m_angIronsightPivotAngle.z) ) != 3) )
+		m_angIronsightPivotAngle.Init( 0, 0, 0 );
+
+	const char*	pIronsightDotMaterial = pKeyValuesData->GetString( "IronsightDotMaterial", "" );
+	Q_strncpy( m_szIronsightDotMaterial, pIronsightDotMaterial, sizeof( m_szIronsightDotMaterial ) );
 
 	// Figure out what team can have this weapon.
 	m_iTeam = TEAM_UNASSIGNED;

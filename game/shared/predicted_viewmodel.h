@@ -39,6 +39,12 @@ public:
 							
 	virtual void CalcViewModelLag( Vector& origin, QAngle& angles, QAngle& original_angles );
 	virtual void AddViewModelBob( CBasePlayer *owner, Vector& eyePosition, QAngle& eyeAngles );
+	virtual void ApplyViewModelPitchAndDip( CBasePlayer *owner, Vector& origin, QAngle& angles );
+
+	virtual void CalcViewModelView( CBasePlayer *owner, const Vector& eyePosition, const QAngle& eyeAngles );
+#if IRONSIGHT
+	void CalcIronsightView( const Vector& eyePosition, const QAngle& eyeAngles );
+#endif
 
 #if defined( CLIENT_DLL )
 	BobState_t	&GetBobState() { return m_BobState;}
@@ -61,12 +67,13 @@ private:
 	// This is used to lag the angles.
 	CInterpolatedVar<QAngle> m_LagAnglesHistory;
 	QAngle m_vLagAngles;
+	Vector	m_vPredictedOffset;
 
 	CPredictedViewModel( const CPredictedViewModel & ); // not defined, not accessible
-#ifdef CSTRIKE_DLL 
-     protected: 
+
+protected: 
          BobState_t                m_BobState;                // view model head bob state
-#endif //cstrike_dll
+		 QAngle m_vLoweredWeaponOffset;
 
 #endif
 };

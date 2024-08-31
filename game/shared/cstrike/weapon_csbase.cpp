@@ -335,16 +335,24 @@ SendPropExclude( "DT_AnimTimeMustBeFirst", "m_flAnimTime" ),
 SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
 SendPropTime( SENDINFO( m_flPostponeFireReadyTime ) ),
 SendPropBool( SENDINFO( m_bReloadVisuallyComplete ) ),
+SendPropTime( SENDINFO( m_flDoneSwitchingSilencer ) ),
 SendPropFloat( SENDINFO( m_fLastShotTime ) ),
 SendPropFloat( SENDINFO( m_flRecoilIndex ) ),
 //	SendPropExclude( "DT_LocalActiveWeaponData", "m_flTimeWeaponIdle" ),
+#if IRONSIGHT
+SendPropInt( SENDINFO( m_iIronSightMode ), 2, SPROP_UNSIGNED ),
+#endif //IRONSIGHT
 #else
 RecvPropInt( RECVINFO( m_weaponMode ) ),
 RecvPropFloat( RECVINFO(m_fAccuracyPenalty)),
 RecvPropTime( RECVINFO( m_flPostponeFireReadyTime ) ),
 RecvPropBool( RECVINFO( m_bReloadVisuallyComplete ) ),
+RecvPropTime( RECVINFO( m_flDoneSwitchingSilencer ) ),
 RecvPropFloat( RECVINFO( m_fLastShotTime ) ),
 RecvPropFloat( RECVINFO( m_flRecoilIndex ) ),
+#if IRONSIGHT
+RecvPropInt( RECVINFO( m_iIronSightMode ) ),
+#endif //IRONSIGHT
 #endif
 END_NETWORK_TABLE()
 
@@ -360,6 +368,9 @@ BEGIN_PREDICTION_DATA( CWeaponCSBase )
 	DEFINE_PRED_FIELD( m_flPostponeFireReadyTime, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
 	DEFINE_PRED_FIELD( m_fLastShotTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flRecoilIndex, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+#if IRONSIGHT
+	DEFINE_PRED_FIELD( m_iIronSightMode, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
+#endif
 END_PREDICTION_DATA()
 #endif
 
@@ -474,8 +485,18 @@ CWeaponCSBase::CWeaponCSBase()
 	m_weaponMode = Primary_Mode;
 
 	m_bReloadVisuallyComplete = false;
+
+	m_flDoneSwitchingSilencer = 0.0f;
 }
 
+CWeaponCSBase::~CWeaponCSBase()
+{
+
+#if IRONSIGHT
+	delete m_IronSightController;
+	m_IronSightController = NULL;
+#endif //IRONSIGHT
+}
 
 #ifndef CLIENT_DLL
 bool CWeaponCSBase::KeyValue( const char *szKeyName, const char *szValue )
@@ -703,6 +724,11 @@ void CWeaponCSBase::ItemPostFrame()
 	{
 		if ( ItemPostFrame_ProcessZoomAction( pPlayer ) )
 			pPlayer->m_nButtons &= ~IN_ZOOM;
+	}
+	else if ( (pPlayer->m_nButtons & IN_ATTACK2 ) && ( m_flNextSecondaryAttack <= gpGlobals->curtime ))
+	{
+		if ( ItemPostFrame_ProcessSecondaryAttack( pPlayer ) )
+			pPlayer->m_nButtons &= ~IN_ATTACK2;
 	}
 	else if ((pPlayer->m_nButtons & IN_ATTACK2) && (m_flNextSecondaryAttack <= gpGlobals->curtime))
 	{
@@ -940,77 +966,77 @@ bool CWeaponCSBase::ItemPostFrame_ProcessZoomAction( CCSPlayer *pPlayer )
 
 void CWeaponCSBase::CallWeaponIronsight()
 {
- CCSPlayer *pPlayer = GetPlayerOwner();
- if ( !pPlayer )
-  return;
+	CCSPlayer *pPlayer = GetPlayerOwner();
+	if ( !pPlayer )
+		return;
 
 #if IRONSIGHT
- if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
- {
-  CIronSightController* pIronSightController = pPlayer->GetActiveCSWeapon()->GetIronSightController();
-  if ( pIronSightController )
-  {
-   pPlayer->GetActiveCSWeapon()->UpdateIronSightController();
-   pPlayer->SetFOV( pPlayer, pIronSightController->GetIronSightIdealFOV(), pIronSightController->GetIronSightPullUpDuration() );
-   pIronSightController->SetState( IronSight_should_approach_sighted );
+	if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
+	{
+		CIronSightController* pIronSightController = pPlayer->GetActiveCSWeapon()->GetIronSightController();
+		if ( pIronSightController )
+		{
+			pPlayer->GetActiveCSWeapon()->UpdateIronSightController();
+			pPlayer->SetFOV( pPlayer, pIronSightController->GetIronSightIdealFOV(), pIronSightController->GetIronSightPullUpDuration() );
+			pIronSightController->SetState( IronSight_should_approach_sighted );
 
-   //stop looking at weapon when going into ironsights
+			//stop looking at weapon when going into ironsights
 #ifndef CLIENT_DLL
-   pPlayer->StopLookingAtWeapon();
+			pPlayer->StopLookingAtWeapon();
 
-   //force idle animation
-   CBaseViewModel* pViewModel = pPlayer->GetViewModel();
-   if ( pViewModel )
-   {
-    int nSequence = pViewModel->LookupSequence( "idle" );
-    if ( nSequence != ACTIVITY_NOT_AVAILABLE )
-    {
-     pViewModel->ForceCycle( 0 );
-     pViewModel->ResetSequence( nSequence );
-    }
-   }
+			//force idle animation
+			CBaseViewModel* pViewModel = pPlayer->GetViewModel();
+			if ( pViewModel )
+			{
+				int nSequence = pViewModel->LookupSequence( "idle" );
+				if ( nSequence != ACTIVITY_NOT_AVAILABLE )
+				{
+					pViewModel->ForceCycle( 0 );
+					pViewModel->ResetSequence( nSequence );
+				}
+			}
 #endif
-   m_weaponMode = Secondary_Mode;
-   WeaponSound( SPECIAL3 ); // Zoom in sound
-  }
- }
- else
- {
-  CIronSightController* pIronSightController = pPlayer->GetActiveCSWeapon()->GetIronSightController();
-  if ( pIronSightController )
-  {
-   pPlayer->GetActiveCSWeapon()->UpdateIronSightController();
-   int iFOV = pPlayer->GetDefaultFOV();
-   pPlayer->SetFOV( pPlayer, iFOV, pIronSightController->GetIronSightPutDownDuration() );
-   pIronSightController->SetState( IronSight_should_approach_unsighted );
-   SendWeaponAnim( ACT_VM_FIDGET );
-   m_weaponMode = Primary_Mode;
-   if ( GetPlayerOwner() )
-   {
-    WeaponSound( SPECIAL2 ); // Zoom out sound
-   }
-  }
- }
+			m_weaponMode = Secondary_Mode;
+			WeaponSound( SPECIAL3 ); // Zoom in sound
+		}
+	}
+	else
+	{
+		CIronSightController* pIronSightController = pPlayer->GetActiveCSWeapon()->GetIronSightController();
+		if ( pIronSightController )
+		{
+			pPlayer->GetActiveCSWeapon()->UpdateIronSightController();
+			int iFOV = pPlayer->GetDefaultFOV();
+			pPlayer->SetFOV( pPlayer, iFOV, pIronSightController->GetIronSightPutDownDuration() );
+			pIronSightController->SetState( IronSight_should_approach_unsighted );
+			SendWeaponAnim( ACT_VM_FIDGET );
+			m_weaponMode = Primary_Mode;
+			if ( GetPlayerOwner() )
+			{
+				WeaponSound( SPECIAL2 ); // Zoom out sound
+			}
+		}
+	}
 #else
 
- if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
- {
-  pPlayer->SetFOV( pPlayer, 45, 0.10f );
-  m_weaponMode = Secondary_Mode;
- }
- else if ( pPlayer->GetFOV() == 45 )
- {
-  pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.06f );
-  m_weaponMode = Primary_Mode;
- }
- else 
- {
-  pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV() );
-  m_weaponMode = Primary_Mode;
- }
+	if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
+	{
+		pPlayer->SetFOV( pPlayer, 55, 0.2f );
+		m_weaponMode = Secondary_Mode;
+	}
+	else if ( pPlayer->GetFOV() == 55 )
+	{
+		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.15f );
+		m_weaponMode = Primary_Mode;
+	}
+	else 
+	{
+		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV() );
+		m_weaponMode = Primary_Mode;
+	}
 #endif
 
- m_flNextSecondaryAttack = gpGlobals->curtime + 0.3;
+	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3;
 }
 
 bool CWeaponCSBase::ItemPostFrame_ProcessSecondaryAttack( CCSPlayer *pPlayer )
@@ -1082,6 +1108,15 @@ bool CWeaponCSBase::ItemPostFrame_ProcessSecondaryAttack( CCSPlayer *pPlayer )
 	}
 #endif
 
+	if ( GetCSWpnData().m_bIronsightCapable )
+	{
+		CallWeaponIronsight();
+	}
+	else
+	{
+		CallSecondaryAttack();
+	}
+
 #ifndef CLIENT_DLL
 	pPlayer->ClearImmunity();
 #endif
@@ -1105,6 +1140,14 @@ void CWeaponCSBase::ItemPostFrame_ProcessIdleNoAction( CCSPlayer *pPlayer )
 		Reload();
 		return;
 	}
+
+#if IRONSIGHT
+	UpdateIronSightController();
+	if ( m_iIronSightMode == IronSight_viewmodel_is_deploying && GetActivity() != GetDeployActivity() )
+	{
+		m_iIronSightMode = IronSight_should_approach_unsighted;
+	}
+#endif
 
 	WeaponIdle();
 }
@@ -1229,6 +1272,16 @@ void CWeaponCSBase::Precache( void )
 	PrecacheScriptSound( "Default.ClipEmpty_Rifle" );
 
 	PrecacheScriptSound( "Default.Zoom" );
+
+	// PiMoN: weaponscript parsing happens on Precache() of BaseCombatWeapon
+	// so moving it here from construct is actually a good solution, all
+	// those players with not working ironsights just had different problems...
+	// lost a week to understand that I was fixing what was working as intended >-<
+#if IRONSIGHT
+	m_iIronSightMode = IronSight_should_approach_unsighted;
+	m_IronSightController = NULL;
+	UpdateIronSightController();
+#endif //IRONSIGHT
 }
 
 Activity CWeaponCSBase::GetDeployActivity( void )
@@ -1261,6 +1314,10 @@ bool CWeaponCSBase::DefaultDeploy( char *szViewModel, char *szWeaponModel, int i
 		 SetWeaponModelIndex( SHIELD_WORLD_MODEL);
 	else
 		 SetWeaponModelIndex( szWeaponModel );
+
+#if IRONSIGHT
+	m_iIronSightMode = IronSight_viewmodel_is_deploying;
+#endif //IRONSIGHT
 
 	return true;
 }
@@ -1343,6 +1400,11 @@ bool CWeaponCSBase::Holster( CBaseCombatWeapon *pSwitchingTo )
 
 bool CWeaponCSBase::Deploy()
 {
+#if IRONSIGHT
+	if ( GetIronSightController() )
+		GetIronSightController()->SetState( IronSight_viewmodel_is_deploying );
+#endif //IRONSIGHT
+
 	CCSPlayer *pPlayer = GetPlayerOwner();
 
 #ifdef CLIENT_DLL
@@ -1435,6 +1497,12 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 	SetOwner( NULL );
 
 	m_bReloadVisuallyComplete = false;
+
+#if IRONSIGHT
+	if ( GetIronSightController() )
+		GetIronSightController()->SetState( IronSight_weapon_is_dropped );
+#endif
+
 #endif
 }
 
@@ -1519,6 +1587,12 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 			alpha = 200;
 		}
 
+#ifdef IRONSIGHT
+		if ( GetIronSightController() && GetIronSightController()->ShouldHideCrossHair() )
+		{
+			alpha = 0;
+		}
+#endif
 
 		bool bCrosshairVisible = crosshair.GetBool() && GetCSWpnData().m_WeaponType != WEAPONTYPE_SNIPER_RIFLE;
 
@@ -1791,6 +1865,10 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 	void CWeaponCSBase::OnDataChanged( DataUpdateType_t type )
 	{
 		BaseClass::OnDataChanged( type );
+
+#if IRONSIGHT
+		UpdateIronSightController();
+#endif //IRONSIGHT
 
 		if ( GetPredictable() && !ShouldPredict() )
 			ShutdownPredictable();
@@ -2284,6 +2362,10 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
         //=============================================================================
         // HPE_END
         //=============================================================================
+
+#if IRONSIGHT
+		UpdateIronSightController();
+#endif //IRONSIGHT	
 	}
 
 	bool CWeaponCSBase::DefaultReload( int iClipSize1, int iClipSize2, int iActivity )
@@ -2835,6 +2917,10 @@ void CWeaponCSBase::OnPickedUp( CBaseCombatCharacter *pNewOwner )
 	// Someone picked me up, so make it so that I can't be removed.
 	SetRemoveable( false );
 #endif
+
+#if IRONSIGHT
+	UpdateIronSightController();
+#endif //IRONSIGHT
 }
 
 
@@ -2991,3 +3077,23 @@ void CWeaponCSBase::Recoil( CSWeaponMode weaponMode )
 	pPlayer->KickBack( angle, magnitude );
 	//lwss end
 }
+
+#if IRONSIGHT
+CIronSightController *CWeaponCSBase::GetIronSightController( void )
+{
+	if ( m_IronSightController && m_IronSightController->IsInitializedAndAvailable() )
+	{
+		return m_IronSightController;
+	}
+	return NULL;
+}
+
+void CWeaponCSBase::UpdateIronSightController()
+{
+	if (!m_IronSightController)
+		m_IronSightController = new CIronSightController();
+	
+	if (m_IronSightController)
+		m_IronSightController->Init(this);
+}
+#endif

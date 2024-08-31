@@ -29,7 +29,7 @@ public:
 	
 	CWeaponSG556();
 
-	virtual void SecondaryAttack();
+	//virtual void SecondaryAttack();
 	virtual void PrimaryAttack();
 
 	virtual float GetMaxSpeed() const;
@@ -67,12 +67,64 @@ CWeaponSG556::CWeaponSG556()
 {
 }
 
-
+/*
 void CWeaponSG556::SecondaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
+
+#if IRONSIGHT
+	if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
+	{
+		CIronSightController* pIronSightController = pPlayer->GetActiveCSWeapon()->GetIronSightController();
+		if ( pIronSightController )
+		{
+			pPlayer->GetActiveCSWeapon()->UpdateIronSightController();
+			pPlayer->SetFOV( pPlayer, pIronSightController->GetIronSightIdealFOV(), pIronSightController->GetIronSightPullUpDuration() );
+			pIronSightController->SetState( IronSight_should_approach_sighted );
+
+			//stop looking at weapon when going into ironsights
+#ifndef CLIENT_DLL
+			pPlayer->StopLookingAtWeapon();
+
+			//force idle animation
+			CBaseViewModel* pViewModel = pPlayer->GetViewModel();
+			if ( pViewModel )
+			{
+				int nSequence = pViewModel->LookupSequence( "idle" );
+				if ( nSequence != ACTIVITY_NOT_AVAILABLE )
+				{
+					pViewModel->ForceCycle( 0 );
+					pViewModel->ResetSequence( nSequence );
+				}
+			}
+#endif
+			m_weaponMode = Secondary_Mode;
+			if ( GetPlayerOwner() )
+			{
+				GetPlayerOwner()->EmitSound( "Weapon_sg556.ZoomIn" );
+			}
+		}
+	}
+	else
+	{
+		CIronSightController* pIronSightController = pPlayer->GetActiveCSWeapon()->GetIronSightController();
+		if ( pIronSightController )
+		{
+			pPlayer->GetActiveCSWeapon()->UpdateIronSightController();
+			int iFOV = pPlayer->GetDefaultFOV();
+			pPlayer->SetFOV( pPlayer, iFOV, pIronSightController->GetIronSightPutDownDuration() );
+			pIronSightController->SetState( IronSight_should_approach_unsighted );
+			SendWeaponAnim( ACT_VM_FIDGET );
+			m_weaponMode = Primary_Mode;
+			if ( GetPlayerOwner() )
+			{
+				GetPlayerOwner()->EmitSound( "Weapon_sg556.ZoomOut" );
+			}
+		}
+	}
+#else
 
 	if (pPlayer->GetFOV() == pPlayer->GetDefaultFOV())
 	{
@@ -90,10 +142,11 @@ void CWeaponSG556::SecondaryAttack()
 		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV() );
 		m_weaponMode = Primary_Mode;
 	}
+#endif
 
 	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3;
 }
-
+*/
 void CWeaponSG556::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();

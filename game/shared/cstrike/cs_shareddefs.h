@@ -43,7 +43,8 @@
 #define MAX_HOSTAGES				12
 #define MAX_HOSTAGE_RESCUES			4
 
-
+// ironsight functionality
+#define IRONSIGHT 1
 
  
 #define CSTRIKE_DEFAULT_AVATAR "avatar_default_64"

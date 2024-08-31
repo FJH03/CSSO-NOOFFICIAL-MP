@@ -551,8 +551,37 @@ ClientModeCSNormal* GetClientModeCSNormal()
 	return static_cast< ClientModeCSNormal* >( GetClientModeNormal() );
 }
 
+#if IRONSIGHT
+#ifdef DEBUG
+	ConVar ironsight_scoped_viewmodel_fov( "ironsight_scoped_viewmodel_fov", "54", FCVAR_CHEAT, "The fov of the viewmodel when ironsighted" );
+#else
+	#define IRONSIGHT_SCOPED_FOV 54.0f
+#endif
+#endif
+
 float ClientModeCSNormal::GetViewModelFOV( void )
 {
+#if IRONSIGHT
+	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( pPlayer )
+	{
+		CWeaponCSBase *pIronSightWeapon = (CWeaponCSBase*)pPlayer->GetActiveWeapon();
+		if ( pIronSightWeapon )
+		{
+			CIronSightController* pIronSightController = pIronSightWeapon->GetIronSightController();
+			if ( pIronSightController && pIronSightController->IsInIronSight() )
+			{
+				return FLerp( v_viewmodel_fov.GetFloat(),	
+					#ifdef DEBUG
+						ironsight_scoped_viewmodel_fov.GetFloat(),
+					#else
+						IRONSIGHT_SCOPED_FOV,
+					#endif
+				pIronSightController->GetIronSightAmount() );
+			}
+		}
+	}
+#endif
 	return v_viewmodel_fov.GetFloat();
 }
 

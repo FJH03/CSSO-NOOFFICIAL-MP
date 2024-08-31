@@ -98,6 +98,7 @@ extern ConVar r_depthoverlay;
 extern ConVar mat_viewportscale;
 extern ConVar mat_viewportupscale;
 extern bool g_bDumpRenderTargets;
+extern ConVar r_drawothermodels;
 
 //-----------------------------------------------------------------------------
 // Convars related to controlling rendering
@@ -801,6 +802,10 @@ CLIENTEFFECT_REGISTER_BEGIN( PrecachePostProcessingEffects )
 	CLIENTEFFECT_MATERIAL( "dev/pyro_vignette_border" )
 	CLIENTEFFECT_MATERIAL( "dev/pyro_vignette" )
 	CLIENTEFFECT_MATERIAL( "dev/pyro_post" )
+#endif
+#if IRONSIGHT
+	CLIENTEFFECT_MATERIAL( "models/weapons/shared/scope/scope_dot_green" )
+	CLIENTEFFECT_MATERIAL( "models/weapons/shared/scope/scope_dot_red" )
 #endif
 
 CLIENTEFFECT_REGISTER_END_CONDITIONAL( engine->GetDXSupportLevel() >= 90 )
@@ -2079,6 +2084,14 @@ void CViewRender::RenderView( const CViewSetup &view, int nClearFlags, int whatT
 			}
 			pRenderContext.SafeRelease();
 		}
+
+#if IRONSIGHT
+		if ( r_drawothermodels.GetInt() == 1 )
+		{
+			//apply the finished blur effect over the screen, while masking out the scope lens
+			ApplyIronSightScopeEffect( view.x, view.y, view.width, view.height, &m_CurrentView );
+		}
+#endif
 
 		// And here are the screen-space effects
 

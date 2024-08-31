@@ -12,7 +12,11 @@
 
 #include "cs_playeranimstate.h"
 #include "cs_weapon_parse.h"
+#include "cs_shareddefs.h"
 
+#if IRONSIGHT
+#include "weapon_ironsightcontroller.h"
+#endif //IRONSIGHT
 
 #if defined( CLIENT_DLL )
 	#define CWeaponCSBase C_WeaponCSBase
@@ -114,6 +118,7 @@ public:
 	DECLARE_PREDICTABLE();
 
 	CWeaponCSBase();
+	virtual ~CWeaponCSBase();
 
 	#ifdef GAME_DLL
 		DECLARE_DATADESC();
@@ -294,6 +299,9 @@ public:
 	virtual bool IsReloadVisuallyComplete() { return m_bReloadVisuallyComplete; }
 	CNetworkVar( bool, m_bReloadVisuallyComplete );
 
+	CNetworkVar( float, m_flDoneSwitchingSilencer );	// soonest time switching the silencer will be complete
+	bool IsSwitchingSilencer( void ) { return (m_flDoneSwitchingSilencer >= gpGlobals->curtime); }
+
 	//=============================================================================
 	// HPE_BEGIN:	
 	//=============================================================================
@@ -334,10 +342,6 @@ private:
 
 	int m_iDefaultExtraAmmo;
 
-    //=============================================================================
-    // HPE_BEGIN:
-    //=============================================================================
-
     // [dwenger] track all prior owners of this weapon
     CUtlVector< CCSPlayer* >    m_PriorOwners;
 
@@ -347,9 +351,14 @@ private:
 
 	CNetworkVar( float, m_fLastShotTime );
 
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
+public:
+
+#if IRONSIGHT
+	CIronSightController *GetIronSightController( void );
+	void				 UpdateIronSightController( void );
+	CIronSightController *m_IronSightController;
+	CNetworkVar( int, m_iIronSightMode );
+#endif //IRONSIGHT
 };
 
 extern ConVar weapon_accuracy_model;
