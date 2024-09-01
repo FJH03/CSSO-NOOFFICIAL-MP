@@ -101,6 +101,8 @@ bool CCSLoadout::HasGlovesSet( CCSPlayer* pPlayer, int team )
 	if ( !pPlayer )
 		return false;
 
+	if ( pPlayer->IsBotOrControllingBot() )
+		return false;
 
 	int value = 0;
 	switch ( team )
@@ -121,6 +123,9 @@ bool CCSLoadout::HasGlovesSet( CCSPlayer* pPlayer, int team )
 int CCSLoadout::GetGlovesForPlayer( CCSPlayer* pPlayer, int team )
 {
 	if ( !pPlayer )
+		return 0;
+
+	if ( pPlayer->IsBotOrControllingBot() )
 		return 0;
 
 	int value = 0;

@@ -51,6 +51,7 @@ class CCSBot;
 //=============================================================================
 
 extern ConVar mp_startmoney;
+extern ConVar mp_maxmoney;
 extern ConVar mp_tkpunish;
 extern ConVar mp_c4timer;
 extern ConVar mp_buytime;
@@ -61,6 +62,45 @@ extern ConVar mp_playerid;
 	extern ConVar mp_autoteambalance;
 #endif // !CLIENT_DLL
 
+namespace TeamCashAward
+{
+	enum Type
+	{
+		NONE = 0,
+		TERRORIST_WIN_BOMB,
+		ELIMINATION_HOSTAGE_MAP_T,
+		ELIMINATION_HOSTAGE_MAP_CT,
+		ELIMINATION_BOMB_MAP,
+		WIN_BY_TIME_RUNNING_OUT_HOSTAGE,
+		WIN_BY_TIME_RUNNING_OUT_BOMB,
+		WIN_BY_DEFUSING_BOMB,
+		WIN_BY_HOSTAGE_RESCUE,
+		LOSER_BONUS,
+		LOSER_BONUS_CONSECUTIVE_ROUNDS,
+		RESCUED_HOSTAGE,
+		HOSTAGE_ALIVE,
+		PLANTED_BOMB_BUT_DEFUSED,
+		HOSTAGE_INTERACTION,
+		LOSER_ZERO,
+		CUSTOM_AWARD,
+	};
+};
+
+namespace PlayerCashAward
+{
+	enum Type
+	{
+		NONE = 0,
+		KILL_TEAMMATE,
+		KILLED_ENEMY,
+		BOMB_PLANTED,
+		BOMB_DEFUSED,
+		RESCUED_HOSTAGE,
+		INTERACT_WITH_HOSTAGE,
+		DAMAGE_HOSTAGE,
+		KILL_HOSTAGE,
+	};
+};
 
 #ifdef CLIENT_DLL
 	#define CCSGameRules C_CSGameRules
@@ -292,6 +332,7 @@ public:
 	//=============================================================================
 
 	void RestartRound( void );
+	void RoundWin( void );
 	void BalanceTeams( void );
 	void MoveHumansToHumanTeam( void );
 	bool TeamFull( int team_id );
@@ -397,9 +438,6 @@ public:
 	bool m_bFirstConnected;
 	bool m_bCompleteReset;		// Set to TRUE to have the scores reset next time round restarts
 
-	int m_iAccountTerrorist;
-	int m_iAccountCT;
-
 	short m_iNumCTWins;
 	short m_iNumTerroristWins;
 
@@ -497,6 +535,11 @@ public:
 	bool	m_bBombDropped;
 	bool	m_bBombPlanted;
 	EHANDLE m_pLastBombGuy;
+
+	int		TeamCashAwardValue( int reason );
+	int		PlayerCashAwardValue( int reason );
+	void	AddTeamAccount( int team, int reason );
+	void	AddTeamAccount( int team, int reason, int amount, const char* szAwardText = NULL );
 
 private:
 

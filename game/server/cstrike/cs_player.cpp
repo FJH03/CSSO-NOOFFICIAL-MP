@@ -413,6 +413,14 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropFloat( SENDINFO( m_flProgressBarStartTime ), 0, SPROP_NOSCALE ),
 	SendPropEHandle( SENDINFO( m_hRagdoll ) ),
 	SendPropInt( SENDINFO( m_cycleLatch ), 4, SPROP_UNSIGNED ),
+
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	SendPropBool( SENDINFO( m_bIsControllingBot ) ),
+	SendPropBool( SENDINFO( m_bHasControlledBotThisRound ) ),
+	SendPropBool( SENDINFO( m_bCanControlObservedBot ) ),
+	SendPropInt( SENDINFO( m_iControlledBotEntIndex ) ),
+#endif
+
 	SendPropBool( SENDINFO( m_bNeedToChangeGloves ) ),
 	SendPropInt( SENDINFO( m_iLoadoutSlotGlovesCT ) ),
 	SendPropInt( SENDINFO( m_iLoadoutSlotGlovesT ) ),
@@ -562,6 +570,15 @@ CCSPlayer::CCSPlayer()
 	m_bHasMovedSinceSpawn = false;
 
 	m_fNextMolotovDamageSoundTime = 0.0f;
+
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	m_bIsControllingBot = false;
+	m_bCanControlObservedBot = false;
+	m_iControlledBotEntIndex = -1;
+#endif
+
+	m_storedSpawnPosition = vec3_origin;
+	m_storedSpawnAngle.Init();
 
 	m_wasNotKilledNaturally = false;
 
@@ -980,7 +997,7 @@ void CCSPlayer::InitialSpawn( void )
 
 void CCSPlayer::SetModelFromClass( void )
 {
-	if ( HasAgentSet( GetTeamNumber() ))
+	if ( HasAgentSet( GetTeamNumber() ) && !IsBotOrControllingBot() )
 	{
 		if ( GetTeamNumber() == TEAM_CT )
 		{
@@ -1108,6 +1125,12 @@ void CCSPlayer::SetModelFromClass( void )
 	}
 }
 
+void CCSPlayer::SetCSSpawnLocation( Vector position, QAngle angle )
+{
+	m_storedSpawnPosition = position;
+	m_storedSpawnAngle = angle;
+}
+
 void CCSPlayer::Spawn()
 {
 	m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_knife_weapon_ct" ) );
@@ -1134,7 +1157,7 @@ void CCSPlayer::Spawn()
 
 	// we need to do that because player can change their agent but the class won't
 	// change and it won't change arms as well
-	if ( HasAgentSet( GetTeamNumber() ) )
+	if ( HasAgentSet( GetTeamNumber() ) && !IsBotOrControllingBot() )
 	{
 		if ( GetTeamNumber() == TEAM_CT )
 			m_iClass = GetCSAgentInfoCT( GetAgentID( GetTeamNumber() ) )->m_iClass;
@@ -1292,6 +1315,7 @@ void CCSPlayer::Spawn()
 	if ( IsAbleToInstantRespawn() )
 	{
 		ResetDamageCounters();
+		RemoveSelfFromOthersDamageCounters();
 	}
 
 	if ( GetTeamNumber() == TEAM_CT )
@@ -1331,12 +1355,17 @@ void CCSPlayer::ClearFlashbangScreenFade( void )
 
 void CCSPlayer::GiveDefaultItems()
 {
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	if ( m_bIsControllingBot )
+		return;
+#endif
+
 	// Always give the player the knife.
 	CBaseCombatWeapon *pistol = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
 
 	if ( GetTeamNumber() == TEAM_CT )
 	{
-		if ( m_iLoadoutSlotKnifeWeaponCT == 0 )
+		if ( m_iLoadoutSlotKnifeWeaponCT == 0 || IsBotOrControllingBot() )
 			GiveNamedItem( "weapon_knife" );
 		else
 			GiveNamedItem( KnivesEntities[m_iLoadoutSlotKnifeWeaponCT + 1] );
@@ -1356,7 +1385,7 @@ void CCSPlayer::GiveDefaultItems()
 	}
 	else if ( GetTeamNumber() == TEAM_TERRORIST )
 	{
-		if ( m_iLoadoutSlotKnifeWeaponT == 0 )
+		if ( m_iLoadoutSlotKnifeWeaponT == 0 || IsBotOrControllingBot() )
 			GiveNamedItem( "weapon_knife_t" );
 		else
 			GiveNamedItem( KnivesEntities[m_iLoadoutSlotKnifeWeaponT + 1] );
@@ -1709,6 +1738,13 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 		m_iDisplayHistoryBits |= DHF_SPEC_DUCK;
 		HintMessage( "#Spec_Duck", true, true );
 	}
+
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	if ( IsControllingBot() )	// Should this be here, or at the top?
+	{
+		ReleaseControlOfBot();
+	}
+#endif
 }
 
 //=============================================================================
@@ -1797,7 +1833,7 @@ void CCSPlayer::CheatImpulseCommands( int iImpulse )
 				extern int gEvilImpulse101;
 				gEvilImpulse101 = true;
 
-				AddAccount( 16000 );
+				AddAccount( mp_maxmoney.GetInt() );
 
 				for ( int i = 0; i < MAX_WEAPONS; ++i )
 				{
@@ -2544,9 +2580,9 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 			if(pAttacker && pAttacker->GetTeamNumber() != GetTeamNumber())
 			{
 				//Verify that the killer has not done damage to this player beforehand
-				FOR_EACH_LL( m_DamageTakenList, i )
+				FOR_EACH_LL( m_DamageList, i )
 				{
-					if( Q_strncmp( pAttacker->GetPlayerName(), m_DamageTakenList[i]->GetPlayerName(), MAX_PLAYER_NAME_LENGTH ) == 0 )
+					if ( m_DamageList[i]->GetPlayerRecipientPtr() == this && m_DamageList[i]->GetPlayerDamagerPtr() == pAttacker )
 					{
 						onlyDamage = false;
 						break;
@@ -2580,18 +2616,23 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		Msg(outputString);
 #endif
 
+		// this is the actual damage applied to the player and not the raw damage that was output from the weapon
+		int nHealthRemoved = (GetHealth() < info.GetDamage()) ? GetHealth() : info.GetDamage();
 
 		if ( pPlayer )
 		{		
 			// Record for the shooter
-			pPlayer->RecordDamageGiven( GetPlayerName(), info.GetDamage() );
+			pAttacker->RecordDamage( pAttacker, this, info.GetDamage(), nHealthRemoved );
 
-			// And for the victim
-			RecordDamageTaken( pPlayer->GetPlayerName(), info.GetDamage() );
+			// And for the victim (don't double-record if it is the same person)
+			if ( pAttacker != this )
+			{
+				RecordDamage( pAttacker, this, info.GetDamage(), nHealthRemoved );
+			}
 		}
 		else
 		{
-			RecordDamageTaken( "world", info.GetDamage() );
+			RecordDamage( NULL, this, info.GetDamage(), nHealthRemoved ); //damaged by a null player - likely the world
 		}
 
 		m_vecTotalBulletForce += info.GetDamageForce();
@@ -2878,6 +2919,86 @@ void CCSPlayer::HintMessage( const char *pMessage, bool bDisplayIfDead, bool bOv
 		m_pHintMessageQueue->AddMessage( pMessage );
 }
 
+void CCSPlayer::AddAccountAward( int reason )
+{
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	// we don't want to award a bot money that is being controlled by a player because the player is currently storing the bots money
+	if ( IsBot() && HasControlledByPlayer() )
+		return;
+#endif
+
+	AddAccountAward( reason, CSGameRules()->PlayerCashAwardValue( reason ) );
+}
+
+void CCSPlayer::AddAccountAward( int reason, int amount, const CWeaponCSBase *pWeapon )
+{
+	// no awards in the warmup period
+	if ( CSGameRules() && CSGameRules()->IsWarmupPeriod() )
+		return;
+
+	if ( amount == 0 )
+		return;
+
+	const char* awardReasonToken = NULL;
+	const char* sign_string = "+$";
+	const char* szWeaponName = NULL;
+
+	extern ConVar cash_player_killed_enemy_default;
+	extern ConVar cash_player_killed_enemy_factor;
+
+	switch ( reason )
+	{
+		case PlayerCashAward::KILL_TEAMMATE:
+		awardReasonToken = "#Player_Cash_Award_Kill_Teammate";
+		sign_string = "-$";
+		break;
+		case PlayerCashAward::KILLED_ENEMY:
+
+		awardReasonToken = "#Player_Cash_Award_Killed_Enemy_Generic";
+
+		// if award amount is non-default, use the verbose message.
+		if ( pWeapon && (amount != cash_player_killed_enemy_default.GetInt()) )
+		{
+			szWeaponName = pWeapon->GetCSWpnData().szPrintName;
+			awardReasonToken = "#Player_Cash_Award_Killed_Enemy";
+		}
+
+		// scale amount by kill award factor convar.
+		amount = RoundFloatToInt( amount * cash_player_killed_enemy_factor.GetFloat() );
+
+		break;
+		case PlayerCashAward::BOMB_PLANTED:
+		awardReasonToken = "#Player_Cash_Award_Bomb_Planted";
+		break;
+		case PlayerCashAward::BOMB_DEFUSED:
+		awardReasonToken = "#Player_Cash_Award_Bomb_Defused";
+		break;
+		case PlayerCashAward::RESCUED_HOSTAGE:
+		awardReasonToken = "#Player_Cash_Award_Rescued_Hostage";
+		break;
+		case PlayerCashAward::INTERACT_WITH_HOSTAGE:
+		awardReasonToken = "#Player_Cash_Award_Interact_Hostage";
+		break;
+		case PlayerCashAward::DAMAGE_HOSTAGE:
+		awardReasonToken = "#Player_Cash_Award_Damage_Hostage";
+		sign_string = "-$";
+		break;
+		case PlayerCashAward::KILL_HOSTAGE:
+		awardReasonToken = "#Player_Cash_Award_Kill_Hostage";
+		sign_string = "-$";
+		break;
+		default:
+		break;
+	}
+
+	char strAmount[64];
+	Q_snprintf( strAmount, sizeof( strAmount ), "%s%d", sign_string, abs( amount ) );
+
+	ClientPrint( this, HUD_PRINTTALK, awardReasonToken, strAmount, szWeaponName );
+
+	AddAccount( amount, true, false );
+}
+
 void CCSPlayer::AddAccount( int amount, bool bTrackChange, bool bItemBought, const char *pItemName )
 {
 	m_iAccount += amount;
@@ -2906,8 +3027,8 @@ void CCSPlayer::AddAccount( int amount, bool bTrackChange, bool bItemBought, con
 
 	if ( m_iAccount < 0 )
 		m_iAccount = 0;
-	else if ( m_iAccount > 16000 )
-		m_iAccount = 16000;
+	else if ( m_iAccount > mp_maxmoney.GetInt() )
+		m_iAccount = mp_maxmoney.GetInt();
 }
 
 void CCSPlayer::MarkAsNotReceivingMoneyNextRound()
@@ -3518,6 +3639,117 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 	return bSuccess;
 }
 
+void CCSPlayer::TransferInventory( CCSPlayer* pTargetPlayer )
+{
+	// first, transfer money
+	pTargetPlayer->m_iAccount = m_iAccount;
+
+	// check is any slot has weapon in it and if so - give it
+	CBaseCombatWeapon* pKnife = Weapon_GetSlot( WEAPON_SLOT_KNIFE ); // TODO: check for taser conflicts
+	CWeaponCSBase* pPistol = dynamic_cast< CWeaponCSBase* >( Weapon_GetSlot( WEAPON_SLOT_PISTOL ) );
+	CWeaponCSBase* pPrimary = dynamic_cast< CWeaponCSBase* >( Weapon_GetSlot( WEAPON_SLOT_RIFLE ) );
+	CBaseCombatWeapon* pC4 = Weapon_GetSlot( WEAPON_SLOT_C4 );
+
+	if ( pKnife )
+	{
+		pTargetPlayer->GiveNamedItem( pKnife->GetClassname() );
+		UTIL_Remove( pKnife ); // TODO: check for any problems because of this
+	}
+
+	if ( pPistol )
+	{
+		pTargetPlayer->GiveNamedItem( pPistol->GetClassname() );
+
+		// transfer ammo as well
+		CWeaponCSBase* pTransferedPistol = dynamic_cast< CWeaponCSBase* >( pTargetPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL ) );
+		if ( pTransferedPistol )
+		{
+			pTransferedPistol->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, pPistol->GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
+			pTransferedPistol->SetReserveAmmoCount( AMMO_POSITION_SECONDARY, pPistol->GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) );
+			pTransferedPistol->m_iClip1 = pPistol->m_iClip1;
+			pTransferedPistol->m_iClip2 = pPistol->m_iClip2;
+		}
+		// also transfer silencer state
+		//pTransferedPistol->SetSilencer( pPistol->IsSilenced() );
+
+		UTIL_Remove( pPistol ); // TODO: check for any problems because of this
+	}
+
+	if ( pPrimary )
+	{
+		pTargetPlayer->GiveNamedItem( pPrimary->GetClassname() );
+
+		// transfer ammo as well
+		CWeaponCSBase* pTransferedPrimary = dynamic_cast< CWeaponCSBase* >( pTargetPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE ) );
+		if ( pTransferedPrimary )
+		{
+			pTransferedPrimary->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, pPrimary->GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
+			pTransferedPrimary->SetReserveAmmoCount( AMMO_POSITION_SECONDARY, pPrimary->GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) );
+			pTransferedPrimary->m_iClip1 = pPrimary->m_iClip1;
+			pTransferedPrimary->m_iClip2 = pPrimary->m_iClip2;
+		}
+		// also transfer silencer state
+		//pTransferedPrimary->SetSilencer( pPrimary->IsSilenced() );
+
+		UTIL_Remove( pPrimary ); // TODO: check for any problems because of this
+	}
+
+	if ( pC4 )
+	{
+		pTargetPlayer->GiveNamedItem( pC4->GetClassname() );
+		UTIL_Remove( pC4 ); // TODO: check for any problems because of this
+	}
+
+	// now do the same process with grenades
+	const char* GrenadeClassnames[] =
+	{
+		"weapon_molotov",
+		"weapon_incgrenade",
+		"weapon_smokegrenade",
+		"weapon_hegrenade",
+		"weapon_flashbang",
+		"weapon_decoy",
+	};
+	CSWeaponID GrenadeInfo[] =
+	{
+		WEAPON_MOLOTOV,
+		WEAPON_INCGRENADE,
+		WEAPON_SMOKEGRENADE,
+		WEAPON_HEGRENADE,
+		WEAPON_FLASHBANG,
+		WEAPON_DECOY,
+	};
+
+	CWeaponCSBase* pGrenade;
+	for ( int i = 0; i < ARRAYSIZE( GrenadeClassnames ); i++ )
+	{
+		pGrenade = dynamic_cast< CWeaponCSBase* >( Weapon_OwnsThisType( GrenadeClassnames[i] ) );
+		if ( pGrenade )
+		{
+			pTargetPlayer->GiveNamedItem( GrenadeClassnames[i] );
+			if ( pTargetPlayer->Weapon_OwnsThisType( GrenadeClassnames[i] ) )
+			{
+				int ammoType = GetWeaponInfo( GrenadeInfo[i] )->iAmmoType;
+				pTargetPlayer->SetAmmoCount( GetAmmoCount( ammoType ), ammoType );
+			}
+		}
+	}
+
+	pTargetPlayer->SetArmorValue( ArmorValue() );
+	pTargetPlayer->m_bHasHelmet = m_bHasHelmet;
+	pTargetPlayer->m_bHasNightVision = m_bHasNightVision;
+
+	if ( HasDefuser() )
+		pTargetPlayer->GiveDefuser();
+
+	// as part of transferring inventory, remove what WE have
+	SetArmorValue( 0 );
+	m_bHasHelmet = false;
+	m_bHasNightVision = false;
+	m_bNightVisionOn = false;
+
+	RemoveAllItems( true );
+}
 
 bool CCSPlayer::DropRifle( bool fromDeath )
 {
@@ -4533,7 +4765,7 @@ void CCSPlayer::Radio( const char *pszRadioSound, const char *pszRadioText )
 	char strRadioSound[256];
 
 	// special case for agents
-	if ( HasAgentSet( GetTeamNumber() ) )
+	if ( HasAgentSet( GetTeamNumber() ) && !IsBotOrControllingBot() )
 	{
 		if ( GetTeamNumber() == TEAM_CT )
 			Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s%s", GetCSAgentInfoCT( GetAgentID( GetTeamNumber() ) )->m_szRadioPrefix, pszRadioSound );
@@ -5264,6 +5496,10 @@ void CCSPlayer::LookAtHeldWeapon( void )
 // can be closed...false if the menu should be displayed again
 bool CCSPlayer::HandleCommand_JoinTeam( int team )
 {
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	if ( IsControllingBot() )
+		return false;
+#endif
 	CCSGameRules *mp = CSGameRules();
 
 	if ( !GetGlobalTeam( team ) )
@@ -5482,6 +5718,10 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 
 bool CCSPlayer::HandleCommand_JoinClass( int iClass )
 {
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	if ( IsControllingBot() )
+		return false;
+#endif
 	if( iClass == CS_CLASS_NONE )
 	{
 		// User choosed random class
@@ -5763,6 +6003,15 @@ bool CCSPlayer::SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pSpot 
 	return true;
 }
 
+void CCSPlayer::PostSpawnPointSelection()
+{
+	if ( m_storedSpawnAngle.LengthSqr() > 0.0f || m_storedSpawnPosition != vec3_origin )
+	{
+		Teleport( &m_storedSpawnPosition, &m_storedSpawnAngle, &vec3_origin );
+		m_storedSpawnPosition = vec3_origin;
+		m_storedSpawnAngle.Init();
+	}
+}
 
 CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 {
@@ -5919,7 +6168,8 @@ CCSPlayerStateInfo* CCSPlayer::State_LookupInfo( CSPlayerState state )
 		{ STATE_PICKINGCLASS,	"STATE_PICKINGCLASS",	&CCSPlayer::State_Enter_PICKINGCLASS, NULL,	&CCSPlayer::State_PreThink_OBSERVER_MODE },
 		{ STATE_DEATH_ANIM,		"STATE_DEATH_ANIM",		&CCSPlayer::State_Enter_DEATH_ANIM,	NULL, &CCSPlayer::State_PreThink_DEATH_ANIM },
 		{ STATE_DEATH_WAIT_FOR_KEY,	"STATE_DEATH_WAIT_FOR_KEY",	&CCSPlayer::State_Enter_DEATH_WAIT_FOR_KEY,	NULL, &CCSPlayer::State_PreThink_DEATH_WAIT_FOR_KEY },
-		{ STATE_OBSERVER_MODE,	"STATE_OBSERVER_MODE",	&CCSPlayer::State_Enter_OBSERVER_MODE,	NULL, &CCSPlayer::State_PreThink_OBSERVER_MODE }
+		{ STATE_OBSERVER_MODE,	"STATE_OBSERVER_MODE",	&CCSPlayer::State_Enter_OBSERVER_MODE,	NULL, &CCSPlayer::State_PreThink_OBSERVER_MODE },
+		{ STATE_DORMANT,		"STATE_DORMANT",		NULL, NULL, NULL }
 	};
 
 	for ( int i=0; i < ARRAYSIZE( playerStateInfos ); i++ )
@@ -6192,6 +6442,13 @@ void CCSPlayer::State_Enter_OBSERVER_MODE()
 	PhysObjectSleep();
 }
 
+void CCSPlayer::State_Leave_OBSERVER_MODE()
+{
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	m_bCanControlObservedBot = false;
+#endif
+}
+
 void CCSPlayer::State_PreThink_OBSERVER_MODE()
 {
 	// Make sure nobody has changed any of our state.
@@ -6203,6 +6460,18 @@ void CCSPlayer::State_PreThink_OBSERVER_MODE()
 	// Must be dead.
 	Assert( m_lifeState == LIFE_DEAD );
 	Assert( pl.deadflag );
+
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	m_bCanControlObservedBot = false;
+	if ( GetObserverMode() >= OBS_MODE_IN_EYE )
+	{
+		CCSBot * pBot = ToCSBot( GetObserverTarget() );
+		if ( CanControlBot( pBot ) )
+		{
+			m_bCanControlObservedBot = true;
+		}
+	}
+#endif
 }
 
 
@@ -7968,42 +8237,67 @@ void CCSPlayer::StartNewBulletGroup()
 	s_BulletGroupCounter++;
 }
 
-//=======================================================
-// Remember this amount of damage that we dealt for stats
-//=======================================================
-void CCSPlayer::RecordDamageGiven( const char *szDamageTaker, int iDamageGiven )
+CDamageRecord::CDamageRecord( CCSPlayer * pPlayerDamager, CCSPlayer * pPlayerRecipient, int iDamage, int iCounter, int iActualHealthRemoved )
 {
-	FOR_EACH_LL( m_DamageGivenList, i )
+	if ( pPlayerDamager )
 	{
-		if( Q_strncmp( szDamageTaker, m_DamageGivenList[i]->GetPlayerName(), MAX_PLAYER_NAME_LENGTH ) == 0 )
-		{
-			m_DamageGivenList[i]->AddDamage( iDamageGiven, s_BulletGroupCounter );
-			return;
-		}
+		m_PlayerDamager = pPlayerDamager;
+		m_PlayerDamagerControlledBot = pPlayerDamager->IsControllingBot() ? pPlayerDamager->GetControlledBot() : NULL;
+		Q_strncpy( m_szPlayerDamagerName, pPlayerDamager->GetPlayerName(), sizeof(m_szPlayerDamagerName) );
+	}
+	else
+	{
+		Q_strncpy( m_szPlayerDamagerName, "World", sizeof(m_szPlayerDamagerName) );
+	}
+	
+	if ( pPlayerRecipient )
+	{
+		m_PlayerRecipient = pPlayerRecipient;
+		m_PlayerRecipientControlledBot = pPlayerRecipient->IsControllingBot() ? pPlayerRecipient->GetControlledBot() : NULL;
+		Q_strncpy( m_szPlayerRecipientName, pPlayerRecipient->GetPlayerName(), sizeof(m_szPlayerRecipientName) );
+	}
+	else
+	{
+		Q_strncpy( m_szPlayerRecipientName, "World", sizeof(m_szPlayerRecipientName) );
 	}
 
-	CDamageRecord *record = new CDamageRecord( szDamageTaker, iDamageGiven, s_BulletGroupCounter );
-	int k = m_DamageGivenList.AddToTail();
-	m_DamageGivenList[k] = record;
+	m_iDamage = iDamage;
+	m_iActualHealthRemoved = iActualHealthRemoved;
+	m_iNumHits = 1;
+	m_iLastBulletUpdate = iCounter;
+}
+
+bool CDamageRecord::IsDamageRecordStillValidForDamagerAndRecipient( CCSPlayer * pPlayerDamager, CCSPlayer * pPlayerRecipient )
+{
+	if ( ( pPlayerDamager   != m_PlayerDamager )   || 
+		 ( pPlayerRecipient != m_PlayerRecipient ) ||
+		 ( pPlayerDamager != NULL   && pPlayerDamager->IsControllingBot()   && m_PlayerDamagerControlledBot   != pPlayerDamager->GetControlledBot() ) ||
+		 ( pPlayerRecipient != NULL && pPlayerRecipient->IsControllingBot() && m_PlayerRecipientControlledBot != pPlayerRecipient->GetControlledBot() )  )
+	{
+		return false;
+	}
+
+	return true;
 }
 
 //=======================================================
-// Remember this amount of damage that we took for stats
+// Remember this amount of damage that we dealt for stats
 //=======================================================
-void CCSPlayer::RecordDamageTaken( const char *szDamageDealer, int iDamageTaken )
+void CCSPlayer::RecordDamage( CCSPlayer* damageDealer, CCSPlayer* damageTaker, int iDamageDealt, int iActualHealthRemoved )
 {
-	FOR_EACH_LL( m_DamageTakenList, i )
+	FOR_EACH_LL( m_DamageList, i )
 	{
-		if( Q_strncmp( szDamageDealer, m_DamageTakenList[i]->GetPlayerName(), MAX_PLAYER_NAME_LENGTH ) == 0 )
+
+		if ( m_DamageList[i]->IsDamageRecordStillValidForDamagerAndRecipient( damageDealer, damageTaker ) )
 		{
-			m_DamageTakenList[i]->AddDamage( iDamageTaken, s_BulletGroupCounter );
+			m_DamageList[i]->AddDamage( iDamageDealt, s_BulletGroupCounter, iActualHealthRemoved );
 			return;
 		}
 	}
 
-	CDamageRecord *record = new CDamageRecord( szDamageDealer, iDamageTaken, s_BulletGroupCounter );
-	int k = m_DamageTakenList.AddToTail();
-	m_DamageTakenList[k] = record;
+	CDamageRecord *record = new CDamageRecord( damageDealer, damageTaker, iDamageDealt, s_BulletGroupCounter, iActualHealthRemoved );
+	int k = m_DamageList.AddToTail();
+	m_DamageList[k] = record;
 }
 
 //=======================================================
@@ -8011,8 +8305,32 @@ void CCSPlayer::RecordDamageTaken( const char *szDamageDealer, int iDamageTaken 
 //=======================================================
 void CCSPlayer::ResetDamageCounters()
 {
-	m_DamageGivenList.PurgeAndDeleteElements();
-	m_DamageTakenList.PurgeAndDeleteElements();
+	m_DamageList.PurgeAndDeleteElements();
+}
+
+void CCSPlayer::RemoveSelfFromOthersDamageCounters()
+{
+	// Now clear out any reference of this player in other players' damage lists.
+	CUtlVector< CCSPlayer * > playerVector;
+	CollectPlayers( &playerVector );
+
+	FOR_EACH_VEC( playerVector, i )
+	{
+		CCSPlayer *player = playerVector[ i ];
+
+		if ( playerVector[ i ] == this )
+			continue;
+
+		FOR_EACH_LL( player->m_DamageList, j )
+		{
+			if ( player->m_DamageList[j]->GetPlayerDamagerPtr() == this || player->m_DamageList[j]->GetPlayerRecipientPtr() == this )
+			{
+				delete player->m_DamageList[ j ];
+				player->m_DamageList.Remove( j );
+				break;
+			}
+		}
+	}
 }
 
 //=======================================================
@@ -8025,7 +8343,7 @@ void CCSPlayer::OutputDamageTaken( void )
 	char buf[64];
 	int msg_dest = HUD_PRINTCONSOLE;
 
-	FOR_EACH_LL( m_DamageTakenList, i )
+	FOR_EACH_LL( m_DamageList, i )
 	{
 		if( bPrintHeader )
 		{
@@ -8033,20 +8351,20 @@ void CCSPlayer::OutputDamageTaken( void )
 			ClientPrint( this, msg_dest, "-------------------------\n" );
 			bPrintHeader = false;
 		}
-		pRecord = m_DamageTakenList[i];
+		pRecord = m_DamageList[i];
 
-		if( pRecord )
+		if( pRecord && pRecord->GetPlayerRecipientPtr() == this )
 		{
-			if (pRecord->GetNumHits() == 1)
+			if (pRecord->GetNumHits() == 1 )
 			{
-				Q_snprintf( buf, sizeof(buf), "%d in %d hit", pRecord->GetDamage(), pRecord->GetNumHits() );
+				Q_snprintf( buf, sizeof(buf ), "%d in %d hit", pRecord->GetDamage(), pRecord->GetNumHits() );
 			}
 			else
 			{
-				Q_snprintf( buf, sizeof(buf), "%d in %d hits", pRecord->GetDamage(), pRecord->GetNumHits() );
+				Q_snprintf( buf, sizeof(buf ), "%d in %d hits", pRecord->GetDamage(), pRecord->GetNumHits() );
 			}
-			ClientPrint( this, msg_dest, "Damage Taken from \"%s1\" - %s2\n", pRecord->GetPlayerName(), buf );
-		}
+			ClientPrint( this, msg_dest, "Damage Taken from \"%s1\" - %s2\n", pRecord->GetPlayerDamagerName(), buf );
+		}		
 	}
 }
 
@@ -8060,7 +8378,7 @@ void CCSPlayer::OutputDamageGiven( void )
 	char buf[64];
 	int msg_dest = HUD_PRINTCONSOLE;
 
-	FOR_EACH_LL( m_DamageGivenList, i )
+	FOR_EACH_LL( m_DamageList, i )
 	{
 		if( bPrintHeader )
 		{
@@ -8069,20 +8387,20 @@ void CCSPlayer::OutputDamageGiven( void )
 			bPrintHeader = false;
 		}
 
-		pRecord = m_DamageGivenList[i];
+		pRecord = m_DamageList[i];
 
-		if( pRecord )
-		{
-			if (pRecord->GetNumHits() == 1)
+		if( pRecord && pRecord->GetPlayerDamagerPtr() == this )
+		{	
+			if (pRecord->GetNumHits() == 1 )
 			{
-				Q_snprintf( buf, sizeof(buf), "%d in %d hit", pRecord->GetDamage(), pRecord->GetNumHits() );
+				Q_snprintf( buf, sizeof(buf ), "%d in %d hit", pRecord->GetDamage(), pRecord->GetNumHits() );
 			}
 			else
 			{
-				Q_snprintf( buf, sizeof(buf), "%d in %d hits", pRecord->GetDamage(), pRecord->GetNumHits() );
+				Q_snprintf( buf, sizeof(buf ), "%d in %d hits", pRecord->GetDamage(), pRecord->GetNumHits() );
 			}
-			ClientPrint( this, msg_dest, "Damage Given to \"%s1\" - %s2\n", pRecord->GetPlayerName(), buf );
-		}
+			ClientPrint( this, msg_dest, "Damage Given to \"%s1\" - %s2\n", pRecord->GetPlayerRecipientName(), buf );
+		}		
 	}
 }
 
@@ -8112,6 +8430,22 @@ bool CCSPlayer::HasC4() const
 
 int CCSPlayer::GetNextObserverSearchStartPoint( bool bReverse )
 {
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	// Brock H. - TR - 05/05/09
+	// If the server is set up to allow controllable bots, 
+	// and if we don't already have a target, 
+	// then start with the nearest controllable bot.
+	if ( cv_bot_controllable.GetBool() )
+	{
+		if ( !IsValidObserverTarget( m_hObserverTarget.Get() ) )
+		{
+			if ( CCSBot *pBot = FindNearestControllableBot( true ) )
+			{
+				return pBot->entindex();
+			}
+		}
+	}
+#endif
 	// If we are currently watching someone who is dead, they must have died while we were watching (since
 	// a dead guy is not a valid pick to start watching).  He was given his killer as an observer target
 	// when he died, so let's start by trying to observe his killer.  If we fail, we'll use the normal way.
@@ -8498,23 +8832,17 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		}
 
 		// [menglish] Achievement check for doing 95% or more damage to a player and having another player kill them
-		FOR_EACH_LL( pVictim->m_DamageTakenList, i )
+		FOR_EACH_LL( pVictim->m_DamageList, i )
 		{
-			if( pVictim->m_DamageTakenList[i]->GetDamage() >= pVictim->GetMaxHealth() - AchievementConsts::DamageNoKill_MaxHealthLeftOnKill &&
-				Q_strncmp( pAttacker->GetPlayerName(), pVictim->m_DamageTakenList[i]->GetPlayerName(), MAX_PLAYER_NAME_LENGTH ) != 0 )
+			if ( pVictim->m_DamageList[i]->IsDamageRecordValidPlayerToPlayer() && 
+				 pVictim->m_DamageList[i]->GetPlayerRecipientPtr() == pVictim && 
+				 pVictim->m_DamageList[i]->GetPlayerDamagerPtr() != pAttacker &&
+				 (pVictim->m_DamageList[i]->GetDamage() >= pVictim->GetMaxHealth() - AchievementConsts::DamageNoKill_MaxHealthLeftOnKill ) &&
+				 pVictim->IsOtherEnemy( pVictim->m_DamageList[i]->GetPlayerDamagerPtr() ) &&
+				 !pVictim->m_DamageList[i]->GetPlayerDamagerPtr()->HasControlledBotThisRound() &&
+				 !pVictim->m_DamageList[i]->GetPlayerDamagerPtr()->HasBeenControlledThisRound() )
 			{
-				//Now find the player who did that amount of damage
-				for ( int j = 1; j <= MAX_PLAYERS; j++ )
-				{
-					CBasePlayer *pPlayerIter = UTIL_PlayerByIndex( j );
-
-					if ( pPlayerIter && Q_strncmp( pPlayerIter->GetPlayerName(), pVictim->m_DamageTakenList[i]->GetPlayerName(), MAX_PLAYER_NAME_LENGTH ) == 0  &&
-						pPlayerIter->GetTeamNumber() != pVictim->GetTeamNumber() )
-					{
-						ToCSPlayer(pPlayerIter)->AwardAchievement(CSDamageNoKill);
-						break;
-					}
-				}
+				pVictim->m_DamageList[i]->GetPlayerDamagerPtr()->AwardAchievement( CSDamageNoKill );
 			}
 		}
 
@@ -9059,17 +9387,13 @@ void CCSPlayer::CommitSuicide( const Vector &vecForce, bool bExplode /*= false*/
 int CCSPlayer::GetNumEnemyDamagers()
 {
 	int numberOfEnemyDamagers = 0;
-	FOR_EACH_LL( m_DamageTakenList, i )
+	FOR_EACH_LL( m_DamageList, i )
 	{
-		for ( int j = 1; j <= MAX_PLAYERS; j++ )
+		if ( m_DamageList[i]->IsDamageRecordValidPlayerToPlayer() &&
+			 m_DamageList[i]->GetPlayerRecipientPtr() == this &&
+			 IsOtherEnemy( m_DamageList[i]->GetPlayerDamagerPtr() ) )
 		{
-			CBasePlayer *pPlayer = UTIL_PlayerByIndex( j );
-
-			if ( pPlayer && V_strncmp( pPlayer->GetPlayerName(), m_DamageTakenList[i]->GetPlayerName(), MAX_PLAYER_NAME_LENGTH ) == 0  &&
-				pPlayer->GetTeamNumber() != GetTeamNumber() )
-			{
-				numberOfEnemyDamagers++;
-			}
+			numberOfEnemyDamagers++;
 		}
 	}
 	return numberOfEnemyDamagers;
@@ -9079,17 +9403,13 @@ int CCSPlayer::GetNumEnemyDamagers()
 int CCSPlayer::GetNumEnemiesDamaged()
 {
 	int numberOfEnemiesDamaged = 0;
-	FOR_EACH_LL( m_DamageGivenList, i )
+	FOR_EACH_LL( m_DamageList, i )
 	{
-		for ( int j = 1; j <= MAX_PLAYERS; j++ )
+		if ( m_DamageList[i]->IsDamageRecordValidPlayerToPlayer() &&
+			 m_DamageList[i]->GetPlayerDamagerPtr() == this &&
+			 IsOtherEnemy( m_DamageList[i]->GetPlayerRecipientPtr() ) )
 		{
-			CBasePlayer *pPlayer = UTIL_PlayerByIndex( j );
-
-			if ( pPlayer && V_strncmp( pPlayer->GetPlayerName(), m_DamageGivenList[i]->GetPlayerName(), MAX_PLAYER_NAME_LENGTH ) == 0  &&
-				pPlayer->GetTeamNumber() != GetTeamNumber() )
-			{
-				numberOfEnemiesDamaged++;
-			}
+			numberOfEnemiesDamaged++;
 		}
 	}
 	return numberOfEnemiesDamaged;
@@ -9099,8 +9419,403 @@ int CCSPlayer::GetNumEnemiesDamaged()
 // HPE_END
 //=============================================================================
 
+#if CS_CONTROLLABLE_BOTS_ENABLED
+void CCSPlayer::SavePreControlData()
+{
+	m_PreControlData.m_iClass	= GetClass();
+	m_PreControlData.m_iSkin	= m_iSkin;
+	m_PreControlData.m_iAccount	= m_iAccount;
+	m_PreControlData.m_iFrags	= FragCount();
+	//m_PreControlData.m_iAssists = AssistsCount();
+	m_PreControlData.m_iDeaths	= DeathCount();
+}
+
+bool CCSPlayer::CanControlBot( CCSBot *pBot, bool bSkipTeamCheck )
+{
+	if ( !cv_bot_controllable.GetBool() )
+		return false;
+
+	if ( !pBot )
+		return false;
+
+	if ( !pBot->IsAlive() )
+		return false;
+
+	if ( !bSkipTeamCheck && IsOtherEnemy( pBot->entindex() ) )
+		return false;
+
+	if ( !bSkipTeamCheck && !IsValidObserverTarget(pBot ) )
+		return false;
+
+	if ( pBot->HasControlledByPlayer() )
+		return false;
+
+	if ( pBot->IsDefusingBomb() )
+		return false;
+
+	// Can't control a bot that is setting a bomb
+	const CC4 *pC4 = dynamic_cast<CC4*>( pBot->GetActiveWeapon() );
+	if ( pC4 && pC4->m_bStartedArming )
+		return false;
+
+	if ( CSGameRules()->m_iRoundWinStatus != WINNER_NONE )
+		return false;
+
+	if ( CSGameRules()->IsFreezePeriod() )
+		return false;
+
+	if ( CSGameRules()->IsWarmupPeriod() )
+		return false;
+
+	if ( !bSkipTeamCheck && IsAlive() )
+		return false;
+
+	return true;
+}
+
+bool CCSPlayer::TakeControlOfBot( CCSBot *pBot, bool bSkipTeamCheck )
+{
+	if ( !CanControlBot(pBot, bSkipTeamCheck ) )
+		return false;
+
+	// First Save off our pre-control settings
+	SavePreControlData();
+
+	// Save off stuff we want from the bot
+	// Position / Orientation
+	// Appearance
+	// Health, Armor, Stamina
+	const Vector vecBotPosition = pBot->GetAbsOrigin();
+	QAngle vecBotAngles = pBot->GetAbsAngles();
+	const int nBotClass = pBot->GetClass();
+	const int nBotSkin = pBot->m_iSkin;
+	const int nBotHealth = pBot->GetHealth();
+	const float flBotStamina = pBot->m_flStamina;
+	const float flBotVelocityModifier = pBot->m_flVelocityModifier;
+	const bool bBotDucked = pBot->m_Local.m_bDucked;
+	const bool bBotDucking = pBot->m_Local.m_bDucking;
+	const bool bBotFL_DUCKING = (pBot->GetFlags() & FL_DUCKING ) != 0;
+	const bool bBotFL_ANIMDUCKING = ( pBot->GetFlags() & FL_ANIMDUCKING ) != 0;
+	const float flBotDuckAmount = pBot->m_flDuckAmount;
+	const MoveType_t eBotMoveType = pBot->GetMoveType();
+
+
+
+	CWeaponCSBase * pBotWeapon = pBot->GetActiveCSWeapon();
+	CBaseViewModel * pBotVM = pBot->GetViewModel();
+	
+	const float flBotNextAttack = pBot->GetNextAttack();
+	const float flBotWeaponNextPrimaryAttack = pBotWeapon ? pBotWeapon->m_flNextPrimaryAttack : gpGlobals->curtime;
+	const float flBotWeaponNextSecondaryAttack = pBotWeapon ? pBotWeapon->m_flNextSecondaryAttack : gpGlobals->curtime;
+	const float flBotWeaponTimeWeaponIdle = pBotWeapon ?  pBotWeapon->m_flTimeWeaponIdle : gpGlobals->curtime;
+	const bool bBotWeaponInReload = pBotWeapon ? pBotWeapon->m_bInReload : false;
+	//char szBotAnimExtension[32]; pBot->m_szAnimExtension;
+	//pBotWeapon->m_IdealActivity;
+	//pBotWeapon->m_nIdealSequence;
+	const Activity eBotWeaponActivity = pBotWeapon ? pBotWeapon->GetActivity() : ACT_IDLE;
+	//pBotWeapon->m_nSequence;
+	const float flBotWeaponCycle = pBotWeapon ? pBotWeapon->GetCycle() : 0.0f;
+	
+
+	const float flBotVMCycle = pBotVM ? pBotVM->GetCycle() : 0.0f;
+	char szBotWeaponClassname[64];
+	szBotWeaponClassname[0] = 0;
+	if ( pBotWeapon )
+	{
+		V_strncpy( szBotWeaponClassname, pBotWeapon->GetClassname(), sizeof(szBotWeaponClassname ) );
+	}
+	//const Activity eBotActivity = GetActivity();
+	//pBot->m_iShotsFired;
+	//pBotWeapon->m_bDelayFire;
+	
+	if ( bSkipTeamCheck && pBot->GetTeamNumber() != GetTeamNumber() )
+	{
+		// player needs to switch teams before controlling this bot
+		SwitchTeam( pBot->GetTeamNumber() );
+	}
+	
+	if ( bSkipTeamCheck && HasControlledBot() )
+	{
+		CCSBot *pOldBot = ToCSBot( GetControlledBot() );
+		pBot->SwitchTeam( GetTeamNumber() );
+		ReleaseControlOfBot();
+		pOldBot->Spawn();
+		pOldBot->Teleport( &GetAbsOrigin(), &GetAbsAngles(), &vec3_origin );
+		pOldBot->State_Transition( STATE_ACTIVE );
+
+	}
+
+	// Next set the control EHANDLEs
+	SetControlledBot( pBot );
+	pBot->SetControlledByPlayer( this );
+	m_bIsControllingBot = true;
+	m_iControlledBotEntIndex = pBot->entindex();
+
+	// [wills] Trying to squash T-pose orphaned wearables. Note: it isn't great to remove wearables all over the place, 
+	// since it may trigger an unnecessary texture re-composite, which is potentially costly.
+	// RemoveAllWearables();
+
+	// If we have a ragdoll, cut it loose now
+	if ( CCSRagdoll *pRagdoll = dynamic_cast< CCSRagdoll* >( m_hRagdoll.Get() ) )
+	{
+		pRagdoll->m_hPlayer = NULL;
+		m_hRagdoll = NULL;
+	}
+
+
+
+	// Now copy over various things from the bot
+	m_iClass = nBotClass;
+	m_iSkin = nBotSkin;
+
+	
+	// Make the bot dormant, so he no longer thinks, transmits, or simulates
+	pBot->MakeDormant();
+	pBot->State_Transition( STATE_DORMANT );
+	pBot->m_iHealth = 0;
+	pBot->m_lifeState = LIFE_DEAD;
+	pBot->m_flVelocityModifier = 0.0f;
+
+	m_flVelocityModifier = flBotVelocityModifier;		// GET FROM BOT?!?!?
+
+	// Finally, run some normal spawn logic 
+	// Here, I'm trying to copy what happens when we call CCSPlayer::Spawn, in some places 
+	// using values from the bot rather than init values
+
+	StopObserverMode();
+	State_Transition( STATE_ACTIVE );
+
+	bool hasChangedTeamTemp = m_bTeamChanged;
+
+	// HACK: Bots sometimes have some roll applied when the player takes them over due to acceleration lean
+	// which gets stuck on when the player takes them over. Easiest just to clear the roll on the bot when taking over
+	vecBotAngles.z = 0;
+
+	SetCSSpawnLocation( vecBotPosition, vecBotAngles );
+	Spawn();
+	m_bHasControlledBotThisRound = true;
+	pBot->m_bHasBeenControlledByPlayerThisRound = true;
+
+	m_fImmuneToDamageTime = 0;
+	m_bImmunity = false;
+
+	m_bTeamChanged = hasChangedTeamTemp; // dkorus: we want m_bTeamChanged to persist past the Spawn() call.  This is how we acomplish this
+
+	m_flStamina = flBotStamina;		// FROM BOT
+	State_Transition( m_iPlayerState );
+	pBot->TransferInventory( this );
+
+	m_iHealth = nBotHealth;
+	m_lifeState = LIFE_ALIVE;
+
+	m_bDuckOverride = false;
+
+	// afk check disabled for players whose first action is taking over a bot
+	m_bHasMovedSinceSpawn = true;
+
+	SetMoveType( eBotMoveType );
+	m_Local.m_bDucked = bBotDucked;
+	m_Local.m_bDucking = bBotDucking;
+	if ( bBotFL_DUCKING )
+		AddFlag( FL_DUCKING );
+	else
+		RemoveFlag( FL_DUCKING );
+	if ( bBotFL_ANIMDUCKING )
+		AddFlag( FL_ANIMDUCKING );
+	else
+		RemoveFlag( FL_ANIMDUCKING );
+	m_flDuckAmount = flBotDuckAmount;
+
+	pBot->DispatchUpdateTransmitState();
+	DispatchUpdateTransmitState();
+
+	CBaseCombatWeapon* pWeapon = pBotWeapon ? Weapon_OwnsThisType( pBotWeapon->GetClassname() ) : NULL;
+
+	if ( pWeapon )
+	{
+		Weapon_Switch( pWeapon, 0 );
+
+		pWeapon->SendWeaponAnim( eBotWeaponActivity );
+		pWeapon->SetCycle( flBotWeaponCycle );
+		pWeapon->m_flTimeWeaponIdle = flBotWeaponTimeWeaponIdle;
+		pWeapon->m_flNextPrimaryAttack = flBotWeaponNextPrimaryAttack;
+		pWeapon->m_flNextSecondaryAttack = flBotWeaponNextSecondaryAttack;
+		pWeapon->m_bInReload = bBotWeaponInReload;
+
+		if ( CBaseViewModel * pVM = GetViewModel() )
+		{
+			pVM->SetCycle( flBotVMCycle );
+		}
+
+
+		SetNextAttack( flBotNextAttack );
+	}
+
+	/*if ( pBot->IsRescuing() )
+	{
+		// Tell the hostages controlled by the bot that they should now follow this player
+		for ( int iHostage=0; iHostage < g_Hostages.Count(); iHostage++ )
+		{
+			CHostage *pHostage = g_Hostages[iHostage];
+
+			if ( pHostage && pHostage->GetLeader() == pBot )
+			{
+				pHostage->Follow( this );
+				pBot->m_hCarriedHostage = NULL;
+				m_hCarriedHostage = pHostage;
+			}
+		}
+
+		if ( HOSTAGE_RULE_CAN_PICKUP && pBot->m_hCarriedHostageProp != NULL )
+		{
+			// transfer any carried hostages and refresh the viewmodel
+			CHostageCarriableProp *pHostageProp = static_cast< CHostageCarriableProp* >( pBot->m_hCarriedHostageProp.Get() );
+			if ( pHostageProp )
+			{
+				pBot->m_hCarriedHostageProp = NULL;
+				pHostageProp->SetAbsOrigin( GetAbsOrigin() );
+				pHostageProp->SetParent( this );
+				pHostageProp->SetOwnerEntity( this );
+				pHostageProp->FollowEntity( this );
+				m_hCarriedHostageProp = pHostageProp;
+			}
+		
+			CBaseViewModel *vm = pBot->GetViewModel( HOSTAGE_VIEWMODEL );
+			UTIL_Remove( vm );
+			pBot->m_hViewModel.Set( HOSTAGE_VIEWMODEL, 0 );
+		}
+	}
+
+	RefreshCarriedHostage( true );*/
+
+	IGameEvent * event = gameeventmanager->CreateEvent( "bot_takeover" );
+	if ( event )
+	{
+		event->SetInt( "userid", GetUserID() );
+		event->SetInt( "botid", pBot->GetUserID() );
+		event->SetInt( "index", GetClientIndex() );
+
+		gameeventmanager->FireEvent( event );
+	}
+
+	return true;
+}
+
+void CCSPlayer::ReleaseControlOfBot()
+{
+	if( m_bIsControllingBot == false )
+		return;
+
+	CCSBot *pBot = ToCSBot( m_hControlledBot.Get() );
+
+
+	if ( pBot )
+	{
+		pBot->SetControlledByPlayer( NULL );
+
+		TransferInventory( pBot );
+		Msg( "    %s RELEASED CONTROL of %s\n", GetPlayerName(), pBot->GetPlayerName() );
+
+		pBot->RemoveEFlags( EFL_DORMANT );
+	}
+	else
+	{
+		// dkorus: make sure we clear out any items the player has and reset states.  This makes sure he doesn't keep the bot's items into the next round
+		SetArmorValue( 0 );
+		m_bHasHelmet = false;
+		m_bHasNightVision = false;
+		m_bNightVisionOn = false;
+
+		RemoveAllItems( true );
+	}
+	m_iClass = m_PreControlData.m_iClass;
+	m_iSkin = m_PreControlData.m_iSkin;
+	m_iAccount = m_PreControlData.m_iAccount;
+
+	SetControlledBot( NULL );
+	//UpdateAppearanceIndex();
+	m_bIsControllingBot = false;
+	m_iControlledBotEntIndex = -1;
+
+	DispatchUpdateTransmitState();
+}
+
+/*
+CBaseEntity * CCSPlayer::FindNearestThrownGrenade(bool bReverse)
+{
+	// early out if the option is disabled by the server
+	if ( !cv_bot_controllable.GetBool() )
+		return NULL;
+
+	float32 flNearestDistSqr = 0.0f;
+	CCSBot *pNearestBot = NULL;
+
+	for ( int idx = 1; idx <= gpGlobals->maxClients; ++idx )
+	{
+		CCSBot *pBot = ToCSBot( UTIL_PlayerByIndex( idx ) );
+
+		if ( !pBot )
+			continue;
+
+		if ( !CanControlBot( pBot ) )
+			continue;
+
+		if ( bMustBeValidObserverTarget && !IsValidObserverTarget( pBot ) )
+			continue;
+
+		const float flDistSqr = GetAbsOrigin().DistToSqr( pBot->GetAbsOrigin() );
+
+		if ( pNearestBot == NULL || flDistSqr < flNearestDistSqr )
+		{
+			flNearestDistSqr = flDistSqr;
+			pNearestBot = pBot;
+		}
+	}
+
+	return pNearestBot;
+}
+*/
+
+CCSBot* CCSPlayer::FindNearestControllableBot( bool bMustBeValidObserverTarget )
+{
+	// early out if the option is disabled by the server
+	if ( !cv_bot_controllable.GetBool() )
+		return NULL;
+
+	float32 flNearestDistSqr = 0.0f;
+	CCSBot *pNearestBot = NULL;
+
+	for ( int idx = 1; idx <= gpGlobals->maxClients; ++idx )
+	{
+		CCSBot *pBot = ToCSBot( UTIL_PlayerByIndex( idx ) );
+
+		if ( !pBot )
+			continue;
+
+		if ( !CanControlBot(pBot ) )
+			continue;
+
+		if ( bMustBeValidObserverTarget && !IsValidObserverTarget(pBot ) )
+			continue;
+
+		const float flDistSqr = GetAbsOrigin().DistToSqr( pBot->GetAbsOrigin() );
+
+		if ( pNearestBot == NULL || flDistSqr < flNearestDistSqr )
+		{
+			flNearestDistSqr = flDistSqr;
+			pNearestBot = pBot;
+		}
+	}
+
+	return pNearestBot;
+}
+#endif // CS_CONTROLLABLE_BOTS_ENABLED
+
 bool CCSPlayer::HasAgentSet( int team )
 {
+	if ( IsBotOrControllingBot() )
+		return false;
+
 	if ( team == TEAM_CT )
 		return ( m_iLoadoutSlotAgentCT > 0 );
 	if ( team == TEAM_TERRORIST )
@@ -9111,6 +9826,9 @@ bool CCSPlayer::HasAgentSet( int team )
 
 int CCSPlayer::GetAgentID( int team )
 {
+	if ( IsBotOrControllingBot() )
+		return 0;
+
 	if ( team == TEAM_CT )
 		return m_iLoadoutSlotAgentCT;
 	if ( team == TEAM_TERRORIST )
@@ -9118,6 +9836,112 @@ int CCSPlayer::GetAgentID( int team )
 
 	return 0;
 }
+
+void CCSPlayer::ObserverUse( bool bIsPressed )
+{
+	if ( !bIsPressed )
+		return;
+	
+#if CS_CONTROLLABLE_BOTS_ENABLED
+ 	CBasePlayer * target = ToBasePlayer( GetObserverTarget() );
+ 
+ 	if ( target && target->IsBot() )
+ 	{
+ 		if ( m_bCanControlObservedBot )
+ 		{
+			CCSPlayer *pPlayer = this;
+
+			CCSBot *pBot = ToCSBot( pPlayer->GetObserverTarget() );
+
+			if ( pBot != NULL && pBot->IsBot() )
+			{
+				if ( !pPlayer->IsDead() )
+				{
+					Msg( "Player %s tried to take control of bot %s but was disallowed by the server\n", pPlayer->GetPlayerName(), pBot->GetPlayerName() );
+				}
+				else if ( !cv_bot_controllable.GetBool() )
+				{
+					Msg( "Player %s tried to take control of bot %s but was disallowed by the server\n", pPlayer->GetPlayerName(), pBot->GetPlayerName() );
+				}
+				else if ( pPlayer->TakeControlOfBot( pBot ) )
+				{
+					Msg( "Player %s took control bot %s (%d)\n", pPlayer->GetPlayerName(), pBot->GetPlayerName(), pBot->entindex() );
+				}
+				else
+				{
+					Msg( "Player %s tried to take control of bot %s but failed\n", pPlayer->GetPlayerName(), pBot->GetPlayerName() );
+				}
+			}
+			else 
+			{
+				Msg( "Player %s tried to take control of bot but none could be found\n", pPlayer->GetPlayerName() );
+			}
+
+ 			return;
+ 		}
+ 	}
+#endif
+	
+	BaseClass::ObserverUse( bIsPressed );
+
+}
+
+void CCSPlayer::IncrementFragCount( int nCount )
+{
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	// calculate frag count properly for a bot-controlled player
+	if ( IsControllingBot() )
+	{
+		CCSPlayer* controlledPlayerScorer = GetControlledBot();
+		if ( controlledPlayerScorer )
+		{
+			controlledPlayerScorer->IncrementFragCount( nCount );
+		}
+		return;
+	}
+#endif
+
+	m_iFrags += nCount;
+	pl.frags = m_iFrags;
+}
+
+void CCSPlayer::IncrementDeathCount( int nCount )
+{
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	// calculate death count properly for a bot-controlled player
+	if ( IsControllingBot() )
+	{
+		CCSPlayer* controlledPlayerScorer = GetControlledBot();
+		if ( controlledPlayerScorer )
+		{
+			controlledPlayerScorer->IncrementDeathCount( nCount );
+		}
+		return;
+	}
+#endif
+
+	m_iDeaths += nCount;
+	pl.deaths = m_iDeaths;
+}
+
+/*void CCSPlayer::IncrementAssistsCount( int nCount )
+{
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	// calculate death count properly for a bot-controlled player
+	if ( IsControllingBot() )
+	{
+		CCSPlayer* controlledPlayerScorer = GetControlledBot();
+		if ( controlledPlayerScorer )
+		{
+			controlledPlayerScorer->IncrementAssistsCount( nCount );
+		}
+		return;
+	}
+#endif
+
+	m_iAssists += nCount;
+	pl.assists = m_iAssists;
+}*/
 
 void UTIL_AwardMoneyToTeam( int iAmount, int iTeam, CBaseEntity *pIgnore )
 {

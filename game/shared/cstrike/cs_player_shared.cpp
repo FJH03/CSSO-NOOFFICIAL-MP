@@ -14,6 +14,7 @@
 
 #ifdef CLIENT_DLL
 	#include "c_cs_player.h"
+	#include "c_cs_playerresource.h"
 #else
 	#include "cs_player.h"
 	#include "soundent.h"
@@ -194,6 +195,72 @@ float CCSPlayer::GetPlayerMaxSpeed()
 	return speed;
 }
 
+bool CCSPlayer::IsOtherEnemy( int nEntIndex )
+{
+	CCSPlayer *pPlayer = (CCSPlayer*)UTIL_PlayerByIndex( nEntIndex );
+	if ( !pPlayer )
+	{
+		// client doesn't have a pointer to enemy players outside our PVS
+#if defined ( CLIENT_DLL )	
+
+		// we are never an enemy of ourselves
+		if ( entindex() == nEntIndex )
+			return false;
+
+		C_CS_PlayerResource *pCSPR = GetCSResources();
+		if ( pCSPR )
+		{
+			int nOtherTeam = pCSPR->GetTeam( nEntIndex );
+			int nTeam = GetTeamNumber();
+
+			/*if ( mp_teammates_are_enemies.GetBool() && nTeam == nOtherTeam )
+			{
+				return true;
+			}*/
+
+			return nTeam != nOtherTeam;
+		}
+#endif
+
+		return false;
+	}
+
+	return IsOtherEnemy( pPlayer );
+}
+
+bool CCSPlayer::IsOtherEnemy( CCSPlayer *pPlayer )
+{
+	if ( !pPlayer )
+		return false;
+
+	// we are never an enemy of ourselves
+	if ( entindex() == pPlayer->entindex() )
+		return false;
+	
+	int nOtherTeam = pPlayer->GetTeamNumber();
+
+	int nTeam = GetTeamNumber();
+
+
+	/*if ( mp_teammates_are_enemies.GetBool() && nTeam == nOtherTeam )
+	{
+		return true;
+	}*/
+
+	return nTeam != nOtherTeam;
+}
+
+bool CCSPlayer::IsBotOrControllingBot()
+{
+	if ( IsBot() )
+		return true;
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	if ( IsControllingBot() )
+		return true;
+#endif
+
+	return false;
+}
 
 void CCSPlayer::GetBulletTypeParameters(
 	int iBulletType,
@@ -404,6 +471,7 @@ void CCSPlayer::FireBullet(
 #ifndef CLIENT_DLL
 	// [pfreese] Track number player entities killed with this bullet
 	int iPenetrationKills = 0;
+	int numPlayersHit = 0;
 
 	// [menglish] Increment the shots fired for this player
 	CCS_GameStats.Event_ShotFired( this, GetActiveWeapon() );
@@ -588,21 +656,21 @@ void CCSPlayer::FireBullet(
 		CalculateBulletDamageForce( &info, iBulletType, vecDir, tr.endpos );
 		pEntity->DispatchTraceAttack( info, vecDir, &tr );
 
+		// [dkorus] note:  This is the number of players hit up to this point, not the total number this bullet WILL hit.
+		info.SetDamagedOtherPlayers( numPlayersHit );
+
 		bool bWasAlive = pEntity->IsAlive();
 
 		TraceAttackToTriggers( info, tr.startpos, tr.endpos, vecDir );
 
 		ApplyMultiDamage();
 
-		if (bWasAlive && !pEntity->IsAlive() && pEntity->IsPlayer() && pEntity->GetTeamNumber() != GetTeamNumber())
-		{
-			++iPenetrationKills;
-		}
-		
-		//=============================================================================
-		// HPE_END
-		//=============================================================================
+		// === Damage applied later ===
 
+		if ( bWasAlive && pEntity->IsPlayer() && IsOtherEnemy( pEntity->entindex() ) )
+		{
+			numPlayersHit++;
+		}
 #endif
 
 		// check if bullet can penetrate another entity

@@ -43,6 +43,13 @@ public:
 	int				GetNumMVPs( int iIndex );
 	bool			HasDefuser( int iIndex );
 
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	bool			IsControllingBot( int index );
+	int				GetControlledPlayer( int index );
+	int				GetControlledByPlayer( int index );
+	virtual void	UpdatePlayerName( int slot );
+#endif
+
 protected:
 
 	int		m_iPlayerC4;	// entity index of C4 carrier or 0
@@ -70,7 +77,14 @@ protected:
 
 	int		m_iMVPs[ MAX_PLAYERS + 1 ];	 
 	bool	m_bHasDefuser[ MAX_PLAYERS + 1 ];
+
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	bool	m_bControllingBot[MAX_PLAYERS + 1];
+	int		m_iControlledPlayer[MAX_PLAYERS + 1];
+	int		m_iControlledByPlayer[MAX_PLAYERS + 1];
+#endif
 };
 
+C_CS_PlayerResource *GetCSResources( void );
 
 #endif // C_CS_PLAYERRESOURCE_H

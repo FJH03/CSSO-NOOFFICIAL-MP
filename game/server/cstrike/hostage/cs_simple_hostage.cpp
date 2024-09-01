@@ -19,6 +19,12 @@
 #include <KeyValues.h>
 #include "obstacle_pushaway.h"
 #include "props_shared.h"
+#include "te_effect_dispatch.h"
+
+#include "cs_gamestats.h"
+#include "cs_gamerules.h"
+#include "cs_achievement_constants.h"
+#include "cs_shareddefs.h"
 
 //=============================================================================
 // HPE_BEGIN
@@ -50,6 +56,7 @@ ConVar hostage_debug( "hostage_debug", "0", FCVAR_CHEAT, "Show hostage AI debug 
 extern ConVar sv_pushaway_force;
 extern ConVar sv_pushaway_min_player_speed;
 extern ConVar sv_pushaway_max_force;
+extern ConVar mp_hostages_rescuetowin;
 
 // We need hostage-specific pushaway cvars because the hostage doesn't have the same friction etc as players
 ConVar sv_pushaway_hostage_force( "sv_pushaway_hostage_force", "20000", FCVAR_REPLICATED | FCVAR_CHEAT, "How hard the hostage is pushed away from physics objects (falls off with inverse square of distance)." );
@@ -274,7 +281,7 @@ int CHostage::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 			gameeventmanager->FireEvent( event );
 		}
 
-		player->AddAccount( -((int)actualDamage * 20)  );
+		player->AddAccountAward( PlayerCashAward::DAMAGE_HOSTAGE, CSGameRules()->PlayerCashAwardValue( PlayerCashAward::DAMAGE_HOSTAGE ) * (int)actualDamage );
 	}
 
 	return BaseClass::OnTakeDamage_Alive( info );
@@ -364,7 +371,7 @@ void CHostage::Event_Killed( const CTakeDamageInfo &info )
 		}
 
 		// monetary penalty for killing the hostage
-		attacker->AddAccount( -( 500 + ((int)info.GetDamage() * 20) ) );
+		attacker->AddAccountAward( PlayerCashAward::KILL_HOSTAGE );
 
 		// check for hostage-killer abuse
 		if (attacker->GetTeamNumber() == TEAM_TERRORIST)
@@ -413,8 +420,7 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 		CCSPlayer *player = GetLeader();
 		if (player)
 		{
-			const int rescuerCashBonus = 1000;
-			player->AddAccount( rescuerCashBonus );
+			player->AddAccountAward( PlayerCashAward::RESCUED_HOSTAGE );
 		}
 		
 		Idle();
@@ -946,12 +952,10 @@ bool CHostage::IsVisible( const Vector &pos, bool testFOV ) const
 void CHostage::GiveCTUseBonus( CCSPlayer *rescuer )
 {
 	// money to team
-	const int teamBonus = 100;
-	CSGameRules()->m_iAccountCT += teamBonus;
+	CSGameRules()->AddTeamAccount( TEAM_CT, TeamCashAward::HOSTAGE_INTERACTION, CSGameRules()->TeamCashAwardValue( TeamCashAward::HOSTAGE_INTERACTION ));
 
 	// money to rescuer
-	const int rescuerBonus = 150;
-	rescuer->AddAccount( rescuerBonus );
+	rescuer->AddAccountAward( PlayerCashAward::INTERACT_WITH_HOSTAGE );
 }
 
 //-----------------------------------------------------------------------------------------------------

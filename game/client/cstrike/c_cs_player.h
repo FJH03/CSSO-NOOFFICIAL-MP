@@ -144,20 +144,17 @@ public:
 		m_SoundEvents.RemoveAll();
 	}
 
-	//=============================================================================
-	// HPE_BEGIN:
+	
 	// [menglish] Returns whether this player is dominating or is being dominated by the specified player
-	//=============================================================================
 	bool IsPlayerDominated( int iPlayerIndex );
 	bool IsPlayerDominatingMe( int iPlayerIndex );
 
 	virtual void CalcFreezeCamView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov );
 
 	virtual float GetDeathCamInterpolationTime();
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
-
+	
+	bool IsOtherEnemy( CCSPlayer *pPlayer );
+	bool IsOtherEnemy( int nEntIndex );
 
 // Called by shared code.
 public:
@@ -414,6 +411,23 @@ public:
 	CNetworkVar( int, m_iLoadoutSlotGlovesT );
 
 	C_CSPlayer( const C_CSPlayer & );
+
+	bool	IsBotOrControllingBot();
+	
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	bool IsControllingBot()							const { return m_bIsControllingBot; }
+	bool CanControlObservedBot()					const { return m_bCanControlObservedBot; }
+
+	int GetControlledBotIndex()						const { return m_iControlledBotEntIndex; }
+
+private:
+	bool		m_bIsControllingBot;	// Are we controlling a bot? 
+	// Note that this can be TRUE even if GetControlledPlayer() returns NULL, IFF we started controlling a bot and then the bot was deleted for some reason. 
+	bool		m_bCanControlObservedBot;	// True if the player can control the bot s/he is observing
+	int			m_iControlledBotEntIndex;
+
+	CNetworkVar( bool, m_bHasControlledBotThisRound );
+#endif
 };
 
 C_CSPlayer* GetLocalOrInEyeCSPlayer( void );

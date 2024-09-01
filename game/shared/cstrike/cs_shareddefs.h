@@ -43,6 +43,9 @@
 #define MAX_HOSTAGES				12
 #define MAX_HOSTAGE_RESCUES			4
 
+// controllable bots functionality
+#define CS_CONTROLLABLE_BOTS_ENABLED 1
+
 // ironsight functionality
 #define IRONSIGHT 1
 
@@ -277,6 +280,7 @@ enum CSPlayerState
 	STATE_DEATH_ANIM,			// Playing death anim, waiting for that to finish.
 	STATE_DEATH_WAIT_FOR_KEY,	// Done playing death anim. Waiting for keypress to go into observer mode.
 	STATE_OBSERVER_MODE,		// Noclipping around, watching players, etc.
+	STATE_DORMANT,				// No thinking, client updates, etc
 	NUM_PLAYER_STATES
 };
 

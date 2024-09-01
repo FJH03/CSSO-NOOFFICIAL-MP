@@ -317,6 +317,7 @@ CCSWeaponInfo::CCSWeaponInfo()
 {
 	m_flMaxSpeed = 1; // This should always be set in the script.
 	m_szAddonModel[0] = 0;
+	m_iKillAward = 0;
 	m_vecIronsightEyePos.Init();
 	m_angIronsightPivotAngle.Init();
 	ZeroObject(m_fSpread);
@@ -332,6 +333,11 @@ CCSWeaponInfo::CCSWeaponInfo()
 	ZeroObject(m_fRecoilMagnitude);
 	ZeroObject(m_fRecoilMagnitudeVariance);
 	m_iRecoilSeed = 0;
+}
+
+int	CCSWeaponInfo::GetKillAward( void ) const
+{
+	return m_iKillAward;
 }
 
 int	CCSWeaponInfo::GetWeaponPrice( void ) const
@@ -355,6 +361,8 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	BaseClass::Parse( pKeyValuesData, szWeaponName );
 
 	m_flMaxSpeed = (float)pKeyValuesData->GetInt( "MaxPlayerSpeed", 1 );
+
+	m_iKillAward = pKeyValuesData->GetInt( "KillAward", 300 );
 
 	m_iDefaultPrice = m_iWeaponPrice = pKeyValuesData->GetInt( "WeaponPrice", -1 );
 	if ( m_iWeaponPrice == -1 )

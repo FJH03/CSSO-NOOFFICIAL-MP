@@ -175,6 +175,8 @@ public:
 	// Get CS-specific weapon data.
 	CCSWeaponInfo const	&GetCSWpnData() const;
 
+	virtual int GetKillAward() const { return GetCSWpnData().GetKillAward(); }
+
 	// Get specific CS weapon ID (ie: WEAPON_AK47, etc)
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_NONE; }
 	virtual int GetWeaponID( void ) const { return GetCSWeaponID(); }

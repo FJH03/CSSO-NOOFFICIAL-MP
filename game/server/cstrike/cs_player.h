@@ -23,6 +23,7 @@ class CWeaponCSBase;
 class CMenu;
 class CHintMessageQueue;
 class CNavArea;
+class CCSBot;
 
 #include "cs_weapon_parse.h"
 
@@ -64,33 +65,51 @@ public:
 class CDamageRecord
 {
 public:
-	CDamageRecord( const char *name, int iDamage, int iCounter )
-	{
-		Q_strncpy( m_szPlayerName, name, sizeof(m_szPlayerName) );
-		m_iDamage = iDamage;
-		m_iNumHits = 1;
-		m_iLastBulletUpdate = iCounter;
-	}
+	CDamageRecord( CCSPlayer * pPlayerDamager, CCSPlayer * pPlayerRecipient, int iDamage, int iCounter, int iActualHealthRemoved );
 
-	void AddDamage( int iDamage, int iCounter )
+	void AddDamage( int iDamage, int iCounter, int iActualHealthRemoved = 0 )
 	{
 		m_iDamage += iDamage;
+		m_iActualHealthRemoved += iActualHealthRemoved;
 
-		if ( m_iLastBulletUpdate != iCounter )
+		if ( m_iLastBulletUpdate != iCounter || GetPlayerDamagerPtr() == NULL )
 			m_iNumHits++;
 
 		m_iLastBulletUpdate = iCounter;
 	}
 
+	bool IsDamageRecordStillValidForDamagerAndRecipient( CCSPlayer * pPlayerDamager, CCSPlayer * pPlayerRecipient );
+	bool IsDamageRecordValidPlayerToPlayer(void) { return ( this && m_PlayerDamager && m_PlayerRecipient) ? true : false; }
+
+	CCSPlayer* GetPlayerDamagerPtr( void ) { return m_PlayerDamager; }
+	CCSPlayer* GetPlayerRecipientPtr( void ) { return m_PlayerRecipient; }
+
+	char *GetPlayerDamagerName( void ) { return m_szPlayerDamagerName; }
+	char *GetPlayerRecipientName( void ) { return m_szPlayerRecipientName; }
+
 	char *GetPlayerName( void ) { return m_szPlayerName; }
 	int GetDamage( void ) { return m_iDamage; }
+	int GetActualHealthRemoved( void ) { return m_iActualHealthRemoved; }
 	int GetNumHits( void ) { return m_iNumHits; }
 
+	CCSPlayer* GetPlayerDamagerControlledBotPtr( void ) { return m_PlayerDamagerControlledBot; }
+	CCSPlayer* GetPlayerRecipientControlledBotPtr( void ) { return m_PlayerRecipientControlledBot; }
+
 private:
+	CHandle<CCSPlayer> m_PlayerDamager;
+	CHandle<CCSPlayer> m_PlayerRecipient;
+
+	char m_szPlayerDamagerName[MAX_PLAYER_NAME_LENGTH];
+	char m_szPlayerRecipientName[MAX_PLAYER_NAME_LENGTH];
+
 	char m_szPlayerName[MAX_PLAYER_NAME_LENGTH];
-	int m_iDamage;		//how much damage was done
+	int m_iDamage;		//how much damage was delivered
+	int m_iActualHealthRemoved;		//how much damage was actually applied
 	int m_iNumHits;		//how many hits
 	int	m_iLastBulletUpdate; // update counter
+
+	CHandle<CCSPlayer> m_PlayerDamagerControlledBot;
+	CHandle<CCSPlayer> m_PlayerRecipientControlledBot;
 };
 
 // Message display history (CCSPlayer::m_iDisplayHistoryBits)
@@ -253,6 +272,9 @@ public:
 	virtual void		Precache();
 	virtual void		Spawn();
 	virtual void		InitialSpawn( void );
+	virtual void		PostSpawnPointSelection( void );
+
+	void SetCSSpawnLocation( Vector position, QAngle angle );
 	
 	virtual void		CheatImpulseCommands( int iImpulse );
 	virtual void		PlayerRunCommand( CUserCmd *ucmd, IMoveHelper *moveHelper );
@@ -345,6 +367,9 @@ public:
 	virtual void StopReplayMode();
 	virtual void PlayUseDenySound();
 
+	bool IsOtherEnemy( CCSPlayer *pPlayer );
+	bool IsOtherEnemy( int nEntIndex );
+
 
 public:
 
@@ -385,14 +410,19 @@ public:
 	void ObserverRoundRespawn( void );
 	void CheckTKPunishment( void );
 
+	bool	IsBotOrControllingBot();
 	bool	HasAgentSet( int team );
 	int		GetAgentID( int team );
 	bool	m_bNeedToChangeAgent;
 
 	CNetworkVar( bool, m_bNeedToChangeGloves );
 
+	virtual void ObserverUse( bool bIsPressed ); // observer pressed use
+
 	// Add money to this player's account.
 	void AddAccount( int amount, bool bTrackChange=true, bool bItemBought=false, const char *pItemName = NULL );
+	void AddAccountAward( int reason );
+	void AddAccountAward( int reason, int amount, const CWeaponCSBase *pWeapon = NULL );
 
 	void HintMessage( const char *pMessage, bool bDisplayIfDead, bool bOverrideClientSettings = false ); // Displays a hint message to the player
 	CHintMessageQueue *m_pHintMessageQueue;
@@ -565,6 +595,7 @@ private:
 	void State_PreThink_ACTIVE();
 
 	void State_Enter_OBSERVER_MODE();
+	void State_Leave_OBSERVER_MODE();
 	void State_PreThink_OBSERVER_MODE();
 
 	void State_Enter_DEATH_WAIT_FOR_KEY();
@@ -584,6 +615,10 @@ public:
 
 	void				SetDeathPose( const int &iDeathPose ) { m_iDeathPose = iDeathPose; }
 	void				SetDeathPoseFrame( const int &iDeathPoseFrame ) { m_iDeathFrame = iDeathPoseFrame; }
+
+	virtual void		IncrementFragCount( int nCount );
+	virtual void		IncrementDeathCount( int nCount );
+	//virtual void		IncrementAssistsCount( int nCount );
 	
 	void				SelectDeathPose( const CTakeDamageInfo &info );
 
@@ -764,7 +799,6 @@ public:
 	int m_iLoadoutSlotKnifeWeaponT;
 	int m_iLoadoutSlotAgentCT;
 	int m_iLoadoutSlotAgentT;
-	bool IsAbleToInstantRespawn( void );
 	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield = true, bool bThrow = false );
 private:
 	CountdownTimer m_ladderSurpressionTimer;
@@ -788,6 +822,7 @@ protected:
 	CNetworkVar( int, m_iClass ); // One of the CS_CLASS_ enums.
 	int m_iSkin;
 
+	void TransferInventory( CCSPlayer* pTargetPlayer );
 	bool DropRifle( bool fromDeath = false );
 	bool DropPistol( bool fromDeath = false );
 	
@@ -852,6 +887,9 @@ private:
 	// Copyed from EyeAngles() so we can send it to the client.
 	CNetworkQAngle( m_angEyeAngles );
 
+	Vector m_storedSpawnPosition;
+	QAngle m_storedSpawnAngle;
+
 	bool m_bVCollisionInitted;
 
 // AutoBuy functions.
@@ -915,25 +953,22 @@ public:
 
 	static void	StartNewBulletGroup();	// global function
 
-	void RecordDamageTaken( const char *szDamageDealer, int iDamageTaken );
-	void RecordDamageGiven( const char *szDamageTaker, int iDamageGiven );
+	void RecordDamage( CCSPlayer* damageDealer, CCSPlayer* damageTaker, int iDamageDealt, int iActualHealthRemoved );
 
 	void ResetDamageCounters();	//Reset all lists
+
+	void RemoveSelfFromOthersDamageCounters(); // Additional cleanup to damage counters when not in a round respawn mode.
 
 	void OutputDamageTaken( void );
 	void OutputDamageGiven( void );
 
 	void StockPlayerAmmo( CBaseCombatWeapon *pNewWeapon = NULL );
 
-	CUtlLinkedList< CDamageRecord *, int >& GetDamageGivenList() {return m_DamageGivenList;}
-	CUtlLinkedList< CDamageRecord *, int >& GetDamageTakenList() {return m_DamageTakenList;}
+	CUtlLinkedList< CDamageRecord *, int >& GetDamageList() { return m_DamageList; }
 
 private:
-	//A list of damage given
-	CUtlLinkedList< CDamageRecord *, int >	m_DamageGivenList;
-
-	//A list of damage taken
-	CUtlLinkedList< CDamageRecord *, int >	m_DamageTakenList;
+	//A unified list of recorded damage that includes giver and taker in each entry
+	CUtlLinkedList< CDamageRecord *, int >	m_DamageList;
 
 protected:
 	float m_applyDeafnessTime;
@@ -1066,9 +1101,6 @@ private:
 	CNetworkVar( bool, m_bIsHoldingLookAtWeapon );
 
 	float m_flLookWeaponEndTime;
-	//=============================================================================
-	// HPE_BEGIN:
-	//=============================================================================
 
     // [menglish] number of rounds this player has caused to be won for their team
 	int m_iMVPs;
@@ -1079,14 +1111,65 @@ private:
     // [dwenger] adding tracking for which weapons this player has used in a round
     CUtlVector<CSWeaponID> m_WeaponTypesUsed; 
 
-    //=============================================================================
-	// HPE_END
-	//=============================================================================
 	int m_iDeathFlags; // Flags holding revenge and domination info about a death
 
-//=============================================================================
-// HPE_END
-//=============================================================================
+
+#if CS_CONTROLLABLE_BOTS_ENABLED
+public:
+	bool IsAbleToInstantRespawn( void );
+
+	bool CanControlBot( CCSBot *pBot ,bool bSkipTeamCheck = false );
+	bool TakeControlOfBot( CCSBot *pBot, bool bSkipTeamCheck = false );
+	void ReleaseControlOfBot( void );
+	CCSBot* FindNearestControllableBot( bool bMustBeValidObserverTarget );
+	bool IsControllingBot( void )							const { return m_bIsControllingBot; }
+
+	bool HasControlledBot( void )						const { return m_hControlledBot.Get() != NULL; }
+	CCSPlayer* GetControlledBot( void )				const { return static_cast<CCSPlayer*>(m_hControlledBot.Get()); }
+	void SetControlledBot( CCSPlayer* pOther )	      { m_hControlledBot = pOther; }
+
+	bool HasControlledByPlayer( void )					const { return m_hControlledByPlayer.Get() != NULL; }
+	CCSPlayer* GetControlledByPlayer( void )				const { return static_cast<CCSPlayer*>(m_hControlledByPlayer.Get()); }
+	void SetControlledByPlayer( CCSPlayer* pOther )	      { m_hControlledByPlayer = pOther; }
+
+	bool HasBeenControlledThisRound( void ) { return m_bHasBeenControlledByPlayerThisRound; }
+	bool HasControlledBotThisRound( void ) {return m_bHasControlledBotThisRound;}
+
+
+
+private:
+	CNetworkVar( bool, m_bIsControllingBot );	// Are we controlling a bot? 
+	// Note that this can be TRUE even if GetControlledPlayer() returns NULL, 
+	// IFF we started controlling a bot and then the bot was deleted for some reason. 
+
+	CNetworkVar( bool, m_bCanControlObservedBot );	// set to true if we can take control of the bot we are observing, for client UI feedback. 
+
+	CNetworkVar( int, m_iControlledBotEntIndex);	// Are we controlling a bot? 
+
+	CHandle<CCSPlayer> m_hControlledBot;		// The is the OTHER player that THIS player is controlling
+	CHandle<CCSPlayer> m_hControlledByPlayer;	// This is the OTHER player that is controlling THIS player
+	bool m_bHasBeenControlledByPlayerThisRound;
+	CNetworkVar( bool, m_bHasControlledBotThisRound );
+
+
+	// Various values from this character before they took control or were controlled
+	struct PreControlData
+	{
+		int m_iClass;		// CS class (such as CS_CLASS_PHOENIX_CONNNECTION or CS_CLASS_SEAL_TEAM_6)
+		int m_iSkin;		// CS class skin
+		int m_iAccount;		// money
+		int m_iFrags;		// kills / score
+		int m_iAssists;
+		int m_iDeaths;
+	};
+
+	void SavePreControlData();
+
+public:
+
+	PreControlData	m_PreControlData;
+
+#endif // #if CS_CONTROLLABLE_BOTS_ENABLED
 };
 
 

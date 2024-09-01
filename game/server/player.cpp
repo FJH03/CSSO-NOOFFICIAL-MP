@@ -4906,6 +4906,14 @@ void CBasePlayer::InitialSpawn( void )
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: Called directly after we select a spawn point and teleport to it
+//-----------------------------------------------------------------------------
+void CBasePlayer::PostSpawnPointSelection()
+{
+	// [dkorus] do nothing in base version
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: Called everytime the player respawns
 //-----------------------------------------------------------------------------
 void CBasePlayer::Spawn( void )
@@ -4978,6 +4986,10 @@ void CBasePlayer::Spawn( void )
 		g_pGameRules->SetDefaultPlayerTeam( this );
 
 	g_pGameRules->GetPlayerSpawnSpot( this );
+
+	// dkorus: Allow functions to run post-spawn
+	//		   for cstrike characters, this sets the position/rotation on controlled bots
+	PostSpawnPointSelection();
 
 	m_Local.m_bDucked = false;// This will persist over round restart if you hold duck otherwise. 
 	m_Local.m_bDucking = false;

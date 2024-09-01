@@ -305,6 +305,12 @@ ConVar mp_round_restart_delay(
 	true, 0.0f,
 	true, 10.0f );
 
+ConVar mp_hostages_rescuetowin(
+	"mp_hostages_rescuetowin",
+	"1",
+	FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY,
+	"0 == all alive, any other number is the number the CT's need to rescue to win the round." );
+
 ConVar sv_allowminmodels(
 	"sv_allowminmodels",
 	"1",
@@ -442,6 +448,14 @@ ConVar cl_autohelp(
 		true, 800,
 		true, 16000 );
 
+	ConVar mp_maxmoney(
+		"mp_maxmoney",
+		"16000",
+		FCVAR_REPLICATED,
+		"maximum amount of money allowed in a player's account",
+		true, 0,
+		false, 0 );
+
 	ConVar mp_roundtime( 
 		"mp_roundtime",
 		"2.5",
@@ -507,6 +521,120 @@ ConVar cl_autohelp(
 
 	ConCommand EndRound( "endround", &CCSGameRules::EndRound, "End the current round.", FCVAR_CHEAT );
 
+	ConVar cash_team_terrorist_win_bomb(
+		"cash_team_terrorist_win_bomb",
+		"3500",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_team_elimination_hostage_map_t(
+		"cash_team_elimination_hostage_map_t",
+		"1000",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_team_elimination_hostage_map_ct(
+		"cash_team_elimination_hostage_map_ct",
+		"2000",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_team_elimination_bomb_map(
+		"cash_team_elimination_bomb_map",
+		"3250",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_team_win_by_time_running_out_hostage(
+		"cash_team_win_by_time_running_out_hostage",
+		"3250",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_team_win_by_time_running_out_bomb(
+		"cash_team_win_by_time_running_out_bomb",
+		"3250",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_team_win_by_defusing_bomb(
+		"cash_team_win_by_defusing_bomb",
+		"3250",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_team_win_by_hostage_rescue(
+		"cash_team_win_by_hostage_rescue",
+		"3500",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_team_loser_bonus(
+		"cash_team_loser_bonus",
+		"1400",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_team_loser_bonus_consecutive_rounds(
+		"cash_team_loser_bonus_consecutive_rounds",
+		"500",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_team_rescued_hostage(
+		"cash_team_rescued_hostage",
+		"0",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_team_hostage_alive(
+		"cash_team_hostage_alive",
+		"0",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_team_planted_bomb_but_defused(
+		"cash_team_planted_bomb_but_defused",
+		"800",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_team_hostage_interaction(
+		"cash_team_hostage_interaction",
+		"500",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_player_killed_teammate(
+		"cash_player_killed_teammate",
+		"-300",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_player_killed_enemy_factor(
+		"cash_player_killed_enemy_factor",
+		"1",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_player_killed_enemy_default(
+		"cash_player_killed_enemy_default",
+		"300",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_player_bomb_planted(
+		"cash_player_bomb_planted",
+		"300",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_player_bomb_defused(
+		"cash_player_bomb_defused",
+		"300",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_player_rescued_hostage(
+		"cash_player_rescued_hostage",
+		"1000",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_player_interact_with_hostage(
+		"cash_player_interact_with_hostage",
+		"150",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_player_damage_hostage(
+		"cash_player_damage_hostage",
+		"-30",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	ConVar cash_player_killed_hostage(
+		"cash_player_killed_hostage",
+		"-1000",
+		FCVAR_REPLICATED | FCVAR_NOTIFY );
 
 	// --------------------------------------------------------------------------------------------------- //
 	// Global helper functions.
@@ -655,6 +783,28 @@ ConVar cl_autohelp(
 		return iCount;
 	}
 
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	// DK TODO: Make a similar method run AFTER all loops of this to look for orphaned bots that think they are still player controlled
+    class RevertBotsFunctor
+    {
+    public:
+        bool operator()( CBasePlayer *basePlayer )
+        {
+            CCSPlayer *pPlayer = ToCSPlayer( basePlayer );
+            if ( !pPlayer )
+                return true;
+
+            if ( !pPlayer->IsControllingBot() )
+                return true;
+
+            // this will properly handle restoring money, frag counts, etc
+            pPlayer->ReleaseControlOfBot();	
+
+            return true;
+        }
+    };
+#endif
+
 	// --------------------------------------------------------------------------------------------------- //
 	// CCSGameRules implementation.
 	// --------------------------------------------------------------------------------------------------- //
@@ -674,7 +824,6 @@ ConVar cl_autohelp(
 		m_iNumSpawnableTerrorist = m_iNumSpawnableCT = 0;
 		m_bFirstConnected = false;
 		m_bCompleteReset = false;
-		m_iAccountTerrorist = m_iAccountCT = 0;
 		m_iNumCTWins = 0;
 		m_iNumTerroristWins = 0;
 		m_iNumConsecutiveCTLoses = 0;
@@ -1532,7 +1681,7 @@ ConVar cl_autohelp(
 		if ( IPointsForKill( pScorer, pVictim ) < 0 )
 		{
 			// team-killer!
-			pCSScorer->AddAccount( -3300 );
+			pCSScorer->AddAccountAward( PlayerCashAward::KILL_TEAMMATE );
 			++pCSScorer->m_iTeamKills;
 			pCSScorer->m_bJustKilledTeammate = true;
 
@@ -1563,23 +1712,29 @@ ConVar cl_autohelp(
 		}
 		else
 		{
-			//=============================================================================
-			// HPE_BEGIN:
 			// [tj] Added a check to make sure we don't get money for suicides.
-			//=============================================================================
 			if (pCSScorer != pCSVictim)
 			{
-			//=============================================================================
-			// HPE_END
-			//=============================================================================
 				if ( pCSVictim->IsVIP() )
 				{
 					pCSScorer->HintMessage( "#Hint_reward_for_killing_vip", true );
 					pCSScorer->AddAccount( 2500 );
+
+					char strAmount[8];
+					Q_snprintf( strAmount, sizeof( strAmount ), "%d", abs( 2500 ) );
+					ClientPrint( pCSScorer, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Cash_Award_Kill_Teammate", strAmount );
 				}
-				else			
+				else
 				{
-					pCSScorer->AddAccount( 300 );
+					bool bIsGrenade = ((Q_strcmp( pInflictor->GetClassname(), "hegrenade_projectile" ) == 0) ||
+										(Q_strcmp( pInflictor->GetClassname(), "flashbang_projectile" ) == 0) ||
+										(Q_strcmp( pInflictor->GetClassname(), "smokegrenade_projectile" ) == 0));
+					CWeaponCSBase* pCSWeapon = dynamic_cast<CWeaponCSBase*>(pScorer->GetActiveWeapon());
+
+					if ( pCSWeapon && !bIsGrenade )
+						pCSScorer->AddAccountAward( PlayerCashAward::KILLED_ENEMY, pCSWeapon->GetKillAward(), pCSWeapon );
+					else
+						pCSScorer->AddAccountAward( PlayerCashAward::KILLED_ENEMY );
 				}
 			}
 
@@ -1965,20 +2120,24 @@ ConVar cl_autohelp(
 				iNumLeftToRescue++;
 		}
 
+		// the number of hostages that can be left un rescued, but still win
+		int iNumRescuedToWin = mp_hostages_rescuetowin.GetInt() == 0 ? iNumHostages : MIN( iNumHostages, mp_hostages_rescuetowin.GetInt() );
+
 		m_iHostagesRemaining = iNumLeftToRescue;
 
 		if ( (iNumLeftToRescue == 0) && (iNumHostages > 0) )
 		{
 			if ( m_iHostagesRescued >= (iNumHostages * 0.5)	)
 			{
-				m_iAccountCT += 2500;
-
 				if ( !bNeededPlayers )
 				{
 					m_iNumCTWins ++;
 					// Update the clients team score
 					UpdateTeamScores();
 				}
+
+				AddTeamAccount( TEAM_CT, TeamCashAward::WIN_BY_HOSTAGE_RESCUE );
+
 				CCS_GameStats.Event_AllHostagesRescued();
 				// tell the bots all the hostages have been rescued
 				IGameEvent * event = gameeventmanager->CreateEvent( "hostage_rescued_all" );
@@ -2070,8 +2229,6 @@ ConVar cl_autohelp(
 
 		if (m_pVIP->m_bEscaped == true)
 		{
-			m_iAccountCT += 3500;
-
 			if ( !bNeededPlayers )
 			{
 				m_iNumCTWins ++;
@@ -2115,8 +2272,6 @@ ConVar cl_autohelp(
 		}
 		else if ( m_pVIP->m_lifeState == LIFE_DEAD )   // The VIP is dead
 		{
-			m_iAccountTerrorist += 3250;
-
 			if ( !bNeededPlayers )
 			{
 				m_iNumTerroristWins ++;
@@ -2146,8 +2301,6 @@ ConVar cl_autohelp(
 		// Check to see if the bomb target was hit or the bomb defused.. if so, then let's end the round!
 		if ( ( m_bTargetBombed == true ) && ( m_bMapHasBombTarget == true ) )
 		{
-			m_iAccountTerrorist += 3500;
-
 			if ( !bNeededPlayers )
 			{
 				m_iNumTerroristWins ++;
@@ -2155,22 +2308,24 @@ ConVar cl_autohelp(
 				UpdateTeamScores();
 			}
 
+			AddTeamAccount( TEAM_TERRORIST, TeamCashAward::TERRORIST_WIN_BOMB );
+
 			TerminateRound( mp_round_restart_delay.GetFloat(), Target_Bombed );
 			return true;
 		}
 		else
 		if ( ( m_bBombDefused == true ) && ( m_bMapHasBombTarget == true ) )
 		{
-			m_iAccountCT += 3250;
-
-			m_iAccountTerrorist += 800; // give the T's a little bonus for planting the bomb even though it was defused.
-
 			if ( !bNeededPlayers )
 			{
 				m_iNumCTWins++;
 				// Update the clients team score
 				UpdateTeamScores();
 			}
+
+			AddTeamAccount( TEAM_CT, TeamCashAward::WIN_BY_DEFUSING_BOMB );
+
+			AddTeamAccount( TEAM_TERRORIST, TeamCashAward::PLANTED_BOMB_BUT_DEFUSED ); // give the T's a little bonus for planting the bomb even though it was defused.
 
 			TerminateRound( mp_round_restart_delay.GetFloat(), Bomb_Defused );
 			return true;
@@ -2241,9 +2396,9 @@ ConVar cl_autohelp(
 					if ( !nowin )
 					{
 						if ( m_bMapHasBombTarget )
-							m_iAccountCT += 3250;
+							AddTeamAccount( TEAM_CT, TeamCashAward::ELIMINATION_BOMB_MAP );
 						else
-							m_iAccountCT += 3000;
+							AddTeamAccount( TEAM_CT, TeamCashAward::ELIMINATION_HOSTAGE_MAP_CT );
 
 						if ( !bNeededPlayers )
 						{
@@ -2262,9 +2417,9 @@ ConVar cl_autohelp(
 				if ( NumAliveCT == 0 && NumDeadCT != 0 && !bCTsRespawn && m_iNumSpawnableTerrorist > 0 )
 				{
 					if ( m_bMapHasBombTarget )
-						m_iAccountTerrorist += 3250;
+						AddTeamAccount( TEAM_TERRORIST, TeamCashAward::ELIMINATION_BOMB_MAP );
 					else
-						m_iAccountTerrorist += 3000;
+						AddTeamAccount( TEAM_TERRORIST, TeamCashAward::ELIMINATION_HOSTAGE_MAP_T );
 
 					if ( !bNeededPlayers )
 					{
@@ -2388,6 +2543,70 @@ ConVar cl_autohelp(
 		m_iFreezeTime = IsWarmupPeriod() ? 2 : mp_freezetime.GetInt();
 	}
 
+	void CCSGameRules::RoundWin( void )
+	{
+        // Update accounts based on number of hostages remaining.. 
+        int iRescuedHostageBonus = 0;
+
+        for ( int iHostage=0; iHostage < g_Hostages.Count(); iHostage++ )
+        {
+            CHostage *pHostage = g_Hostages[iHostage];
+
+            if( pHostage->IsRescuable() )	//Alive and not rescued
+            {
+                iRescuedHostageBonus += TeamCashAwardValue( TeamCashAward::HOSTAGE_ALIVE );
+            }
+            
+            if ( iRescuedHostageBonus >= 2000 )
+                break;
+        }
+
+        //*******Catch up code by SupraFiend. Scale up the loser bonus when teams fall into losing streaks
+        if (m_iRoundWinStatus == WINNER_TER) // terrorists won
+        {
+            //check to see if they just broke a losing streak
+            if ( m_iNumConsecutiveTerroristLoses > 0 )
+            {
+                // reset the loser bonus
+                m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
+                m_iNumConsecutiveTerroristLoses = 0;
+            }
+            m_iNumConsecutiveCTLoses++;//increment the number of wins the CTs have had
+        }
+        else if (m_iRoundWinStatus == WINNER_CT) // CT Won
+        {
+            //check to see if they just broke a losing streak
+            if ( m_iNumConsecutiveCTLoses > 0 )
+            {
+                // reset the loser bonus
+                m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
+                m_iNumConsecutiveCTLoses = 0;
+            }
+            m_iNumConsecutiveTerroristLoses++;//increment the number of wins the Terrorists have had
+        }
+
+        //check if the losing team is in a losing streak & that the loser bonus hasn't maxed out.
+        if((m_iNumConsecutiveTerroristLoses > 1) && (m_iLoserBonus < 3000))
+            m_iLoserBonus += TeamCashAwardValue( TeamCashAward::LOSER_BONUS_CONSECUTIVE_ROUNDS );//help out the team in the losing streak
+        else
+        if((m_iNumConsecutiveCTLoses > 1) && (m_iLoserBonus < 3000))
+            m_iLoserBonus += TeamCashAwardValue( TeamCashAward::LOSER_BONUS_CONSECUTIVE_ROUNDS );//help out the team in the losing streak
+
+        // assign the wining and losing bonuses
+        if (m_iRoundWinStatus == WINNER_TER) // terrorists won
+        {
+            AddTeamAccount( TEAM_TERRORIST, TeamCashAward::HOSTAGE_ALIVE, iRescuedHostageBonus );
+            AddTeamAccount( TEAM_CT, TeamCashAward::LOSER_BONUS, m_iLoserBonus );
+        }
+        else if (m_iRoundWinStatus == WINNER_CT) // CT Won
+        {
+            AddTeamAccount( TEAM_CT, TeamCashAward::HOSTAGE_ALIVE, iRescuedHostageBonus);
+			AddTeamAccount( TEAM_TERRORIST, TeamCashAward::LOSER_BONUS, m_iLoserBonus );
+        }
+
+        //Update CT account based on number of hostages rescued
+        AddTeamAccount( TEAM_CT, TeamCashAward::RESCUED_HOSTAGE, m_iHostagesRescued * TeamCashAwardValue( TeamCashAward::RESCUED_HOSTAGE ));
+    }
 
 	void CCSGameRules::RestartRound()
 	{
@@ -2432,6 +2651,11 @@ ConVar cl_autohelp(
 		}
 
 		int i;
+
+#if CS_CONTROLLABLE_BOTS_ENABLED
+		RevertBotsFunctor revertBots;
+		ForEachPlayer( revertBots );
+#endif
 
 		m_iTotalRoundsPlayed++;
 		
@@ -2625,7 +2849,7 @@ ConVar cl_autohelp(
 		else
 			m_bMapHasEscapeZone = false;
 
-		// Check to see if this map has VIP safety zones
+		/*// Check to see if this map has VIP safety zones
 		if ( gEntList.FindEntityByClassname( NULL, "func_vip_safetyzone" ) )
 		{
 			PickNextVIP();
@@ -2652,48 +2876,50 @@ ConVar cl_autohelp(
 		}
 
 		//*******Catch up code by SupraFiend. Scale up the loser bonus when teams fall into losing streaks
-		if (m_iRoundWinStatus == WINNER_TER) // terrorists won
-		{
-			//check to see if they just broke a losing streak
-			if(m_iNumConsecutiveTerroristLoses > 1)
-				m_iLoserBonus = 1500;//this is the default losing bonus
+        if (m_iRoundWinStatus == WINNER_TER) // terrorists won
+        {
+            //check to see if they just broke a losing streak
+            if ( m_iNumConsecutiveTerroristLoses > 0 )
+            {
+                // reset the loser bonus
+                m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
+                m_iNumConsecutiveTerroristLoses = 0;
+            }
+            m_iNumConsecutiveCTLoses++;//increment the number of wins the CTs have had
+        }
+        else if (m_iRoundWinStatus == WINNER_CT) // CT Won
+        {
+            //check to see if they just broke a losing streak
+            if ( m_iNumConsecutiveCTLoses > 0 )
+            {
+                // reset the loser bonus
+                m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
+                m_iNumConsecutiveCTLoses = 0;
+            }
+            m_iNumConsecutiveTerroristLoses++;//increment the number of wins the Terrorists have had
+        }
 
-			m_iNumConsecutiveTerroristLoses = 0;//starting fresh
-			m_iNumConsecutiveCTLoses++;//increment the number of wins the CTs have had
-		}
-		else if (m_iRoundWinStatus == WINNER_CT) // CT Won
-		{
-			//check to see if they just broke a losing streak
-			if(m_iNumConsecutiveCTLoses > 1)
-				m_iLoserBonus = 1500;//this is the default losing bonus
+        //check if the losing team is in a losing streak & that the loser bonus hasn't maxed out.
+        if((m_iNumConsecutiveTerroristLoses > 1) && (m_iLoserBonus < 3000))
+            m_iLoserBonus += TeamCashAwardValue( TeamCashAward::LOSER_BONUS_CONSECUTIVE_ROUNDS );//help out the team in the losing streak
+        else
+        if((m_iNumConsecutiveCTLoses > 1) && (m_iLoserBonus < 3000))
+            m_iLoserBonus += TeamCashAwardValue( TeamCashAward::LOSER_BONUS_CONSECUTIVE_ROUNDS );//help out the team in the losing streak
 
-			m_iNumConsecutiveCTLoses = 0;//starting fresh
-			m_iNumConsecutiveTerroristLoses++;//increment the number of wins the Terrorists have had
-		}
+        // assign the wining and losing bonuses
+        if (m_iRoundWinStatus == WINNER_TER) // terrorists won
+        {
+            AddTeamAccount( TEAM_TERRORIST, TeamCashAward::HOSTAGE_ALIVE, iRescuedHostageBonus );
+            AddTeamAccount( TEAM_CT, TeamCashAward::LOSER_BONUS, m_iLoserBonus );
+        }
+        else if (m_iRoundWinStatus == WINNER_CT) // CT Won
+        {
+            AddTeamAccount( TEAM_CT, TeamCashAward::HOSTAGE_ALIVE, iRescuedHostageBonus);
+			AddTeamAccount( TEAM_TERRORIST, TeamCashAward::LOSER_BONUS, m_iLoserBonus );
+        }
 
-		//check if the losing team is in a losing streak & that the loser bonus hasen't maxed out.
-		if((m_iNumConsecutiveTerroristLoses > 1) && (m_iLoserBonus < 3000))
-			m_iLoserBonus += 500;//help out the team in the losing streak
-		else
-		if((m_iNumConsecutiveCTLoses > 1) && (m_iLoserBonus < 3000))
-			m_iLoserBonus += 500;//help out the team in the losing streak
-
-		// assign the wining and losing bonuses
-		if (m_iRoundWinStatus == WINNER_TER) // terrorists won
-		{
-			m_iAccountTerrorist += iRescuedHostageBonus;
-			m_iAccountCT += m_iLoserBonus;
-		}
-		else if (m_iRoundWinStatus == WINNER_CT) // CT Won
-		{
-			m_iAccountCT += iRescuedHostageBonus;
-			if (m_bMapHasEscapeZone == false)	// only give them the bonus if this isn't an escape map
-				m_iAccountTerrorist += m_iLoserBonus;
-		}
-		
-
-		//Update CT account based on number of hostages rescued
-		m_iAccountCT += m_iHostagesRescued * 750;
+        //Update CT account based on number of hostages rescued
+        AddTeamAccount( TEAM_CT, TeamCashAward::RESCUED_HOSTAGE, m_iHostagesRescued * TeamCashAwardValue( TeamCashAward::RESCUED_HOSTAGE ));*/
 
 
 		// Update individual players accounts and respawn players
@@ -2712,14 +2938,12 @@ ConVar cl_autohelp(
 		//Adrian - No cash for anyone at first rounds! ( well, only the default. )
 		if ( m_bCompleteReset )
 		{
-			m_iAccountTerrorist = m_iAccountCT = 0; //No extra cash!.
-
 			//We are starting fresh. So it's like no one has ever won or lost.
 			m_iNumTerroristWins				= 0; 
 			m_iNumCTWins					= 0;
 			m_iNumConsecutiveTerroristLoses	= 0;
 			m_iNumConsecutiveCTLoses		= 0;
-			m_iLoserBonus					= 1400;
+			m_iLoserBonus					= TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
 		}
 
 		for ( i = 1; i <= gpGlobals->maxClients; i++ )
@@ -2732,22 +2956,6 @@ ConVar cl_autohelp(
 			pPlayer->m_iNumSpawns	= 0;
 			pPlayer->m_bTeamChanged	= false;
 				
-			if ( pPlayer->GetTeamNumber() == TEAM_CT )
-			{
-				if (pPlayer->DoesPlayerGetRoundStartMoney())
-				{
-					pPlayer->AddAccount( m_iAccountCT );
-				}
-			}
-			else if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST )
-			{
-				m_iNumEscapers++;	// Add another potential escaper to the mix!
-				if (pPlayer->DoesPlayerGetRoundStartMoney())
-				{
-					pPlayer->AddAccount( m_iAccountTerrorist );
-				}
-			}
-
 			// tricky, make players non solid while moving to their spawn points
 			if ( (pPlayer->GetTeamNumber() == TEAM_CT) || (pPlayer->GetTeamNumber() == TEAM_TERRORIST) )
 			{
@@ -2913,7 +3121,6 @@ ConVar cl_autohelp(
 		// Reset game variables
 		m_flIntermissionEndTime = 0;
 		m_flRestartRoundTime = 0.0;
-		m_iAccountTerrorist = m_iAccountCT = 0;
 		m_iHostagesRescued = 0;
 		m_iHostagesTouched = 0;
 
@@ -3461,7 +3668,7 @@ ConVar cl_autohelp(
 			//keep going until the bomb explodes or is defused
 			if( !m_bBombPlanted )
 			{
-				m_iAccountCT += 3250;
+				AddTeamAccount( TEAM_CT, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_BOMB );
 				
 				m_iNumCTWins++;
 				TerminateRound( mp_round_restart_delay.GetFloat(), Target_Saved );
@@ -3471,7 +3678,7 @@ ConVar cl_autohelp(
 		}
 		else if ( m_bMapHasRescueZone )
 		{
-			m_iAccountTerrorist += 3250; 
+			AddTeamAccount( TEAM_TERRORIST, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_HOSTAGE );
 			
 			m_iNumTerroristWins++;
 			TerminateRound( mp_round_restart_delay.GetFloat(), Hostages_Not_Rescued );
@@ -3486,7 +3693,6 @@ ConVar cl_autohelp(
 		}
 		else if ( m_iMapHasVIPSafetyZone == 1 )
 		{
-			m_iAccountTerrorist += 3250;
 			m_iNumTerroristWins++;
 
 			TerminateRound( mp_round_restart_delay.GetFloat(), VIP_Not_Escaped );
@@ -5751,15 +5957,172 @@ void CreateBlackMarketString( void )
 	g_StringTableBlackMarket = networkstringtable->CreateStringTable( "BlackMarketTable" , 1 );
 }
 
+int CCSGameRules::TeamCashAwardValue( int reason )
+{
+	switch ( reason )
+	{
+		case TeamCashAward::TERRORIST_WIN_BOMB:				return cash_team_terrorist_win_bomb.GetInt();
+		case TeamCashAward::ELIMINATION_HOSTAGE_MAP_T:		return cash_team_elimination_hostage_map_t.GetInt();
+		case TeamCashAward::ELIMINATION_HOSTAGE_MAP_CT:		return cash_team_elimination_hostage_map_ct.GetInt();
+		case TeamCashAward::ELIMINATION_BOMB_MAP:			return cash_team_elimination_bomb_map.GetInt();
+		case TeamCashAward::WIN_BY_TIME_RUNNING_OUT_HOSTAGE:return cash_team_win_by_time_running_out_hostage.GetInt();
+		case TeamCashAward::WIN_BY_TIME_RUNNING_OUT_BOMB:	return cash_team_win_by_time_running_out_bomb.GetInt();
+		case TeamCashAward::WIN_BY_DEFUSING_BOMB:			return cash_team_win_by_defusing_bomb.GetInt();
+		case TeamCashAward::WIN_BY_HOSTAGE_RESCUE:			return cash_team_win_by_hostage_rescue.GetInt();
+		case TeamCashAward::LOSER_BONUS:					return cash_team_loser_bonus.GetInt();
+		case TeamCashAward::LOSER_BONUS_CONSECUTIVE_ROUNDS:	return cash_team_loser_bonus_consecutive_rounds.GetInt();
+		case TeamCashAward::RESCUED_HOSTAGE:				return cash_team_rescued_hostage.GetInt();
+		case TeamCashAward::HOSTAGE_ALIVE:					return cash_team_hostage_alive.GetInt();
+		case TeamCashAward::PLANTED_BOMB_BUT_DEFUSED:		return cash_team_planted_bomb_but_defused.GetInt();
+		case TeamCashAward::HOSTAGE_INTERACTION:			return cash_team_hostage_interaction.GetInt();
+
+		default:
+			AssertMsg( false, "Unhandled TeamCashAwardReason" );
+			return 0;
+	};
+}
+
+int CCSGameRules::PlayerCashAwardValue( int reason )
+{
+	switch ( reason )
+	{
+		case PlayerCashAward::NONE:						return 0;
+		case PlayerCashAward::KILL_TEAMMATE:			return cash_player_killed_teammate.GetInt();
+		case PlayerCashAward::KILLED_ENEMY:				return cash_player_killed_enemy_default.GetInt();
+		case PlayerCashAward::BOMB_PLANTED:				return cash_player_bomb_planted.GetInt();
+		case PlayerCashAward::BOMB_DEFUSED:				return cash_player_bomb_defused.GetInt();
+		case PlayerCashAward::RESCUED_HOSTAGE:			return cash_player_rescued_hostage.GetInt();
+		case PlayerCashAward::INTERACT_WITH_HOSTAGE:	return cash_player_interact_with_hostage.GetInt();
+		case PlayerCashAward::DAMAGE_HOSTAGE:			return cash_player_damage_hostage.GetInt();
+		case PlayerCashAward::KILL_HOSTAGE:				return cash_player_killed_hostage.GetInt();
+		default:
+			AssertMsg( false, "Unhandled PlayerCashAwardReason" );
+			return 0;
+	};
+}
+
+void CCSGameRules::AddTeamAccount( int team, int reason )
+{
+	int amount = TeamCashAwardValue( reason );
+
+	AddTeamAccount( team, reason, amount );
+}
+
+void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char* szAwardText )
+{
+	if ( amount == 0 )
+		return;
+
+	const char* awardReasonToken = NULL;
+
+	switch ( reason )
+	{
+		case TeamCashAward::TERRORIST_WIN_BOMB:
+		awardReasonToken = "#Team_Cash_Award_T_Win_Bomb";
+		break;
+		case TeamCashAward::ELIMINATION_HOSTAGE_MAP_T:
+		case TeamCashAward::ELIMINATION_HOSTAGE_MAP_CT:
+		awardReasonToken = "#Team_Cash_Award_Elim_Hostage";
+		break;
+		case TeamCashAward::ELIMINATION_BOMB_MAP:
+		awardReasonToken = "#Team_Cash_Award_Elim_Bomb";
+		break;
+		case TeamCashAward::WIN_BY_TIME_RUNNING_OUT_HOSTAGE:
+		case TeamCashAward::WIN_BY_TIME_RUNNING_OUT_BOMB:
+		awardReasonToken = "#Team_Cash_Award_Win_Time";
+		break;
+		case TeamCashAward::WIN_BY_DEFUSING_BOMB:
+		awardReasonToken = "#Team_Cash_Award_Win_Defuse_Bomb";
+		break;
+		case TeamCashAward::WIN_BY_HOSTAGE_RESCUE:
+		if ( mp_hostages_rescuetowin.GetInt() == 1 ) 
+			awardReasonToken = "#Team_Cash_Award_Win_Hostage_Rescue";
+		else
+			awardReasonToken = "#Team_Cash_Award_Win_Hostages_Rescue";
+		break;
+		case TeamCashAward::LOSER_BONUS:
+		if ( amount > 0 )
+			awardReasonToken = "#Team_Cash_Award_Loser_Bonus";
+		else
+			awardReasonToken = "#Team_Cash_Award_Loser_Bonus_Neg";
+
+
+		break;
+		case TeamCashAward::RESCUED_HOSTAGE:
+		awardReasonToken = "#Team_Cash_Award_Rescued_Hostage";
+		break;
+		case TeamCashAward::HOSTAGE_INTERACTION:
+		awardReasonToken = "#Team_Cash_Award_Hostage_Interaction";
+		break;
+		case TeamCashAward::HOSTAGE_ALIVE:
+		awardReasonToken = "#Team_Cash_Award_Hostage_Alive";
+		break;
+		case TeamCashAward::PLANTED_BOMB_BUT_DEFUSED:
+		awardReasonToken = "#Team_Cash_Award_Planted_Bomb_But_Defused";
+		break;
+		default:
+		break;
+	}
+
+	bool bTeamHasClinchedVictory = false;
+
+	char strAmount[8];
+	Q_snprintf( strAmount, sizeof( strAmount ), "%s$%d", amount >= 0 ? "+" : "-", abs( amount ) );
+
+	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	{
+		CCSPlayer *pPlayer = (CCSPlayer*)UTIL_PlayerByIndex( i );
+
+		if ( !pPlayer || pPlayer->GetTeamNumber() != team )
+			continue;
+
+		// hand out team cash awards from previous round
+		if ( pPlayer->DoesPlayerGetRoundStartMoney() )
+		{
+#if CS_CONTROLLABLE_BOTS_ENABLED
+			// special case for players who are controlling bots at the moment
+			// if we don't do it then that player simply won't get any money
+			if ( pPlayer->IsControllingBot() )
+			{
+				pPlayer->m_PreControlData.m_iAccount += amount;
+
+				// clamp the values so we dont go over max money
+				if ( pPlayer->m_PreControlData.m_iAccount > mp_maxmoney.GetInt() )
+					pPlayer->m_PreControlData.m_iAccount = mp_maxmoney.GetInt();
+			}
+			else
+#endif
+				pPlayer->AddAccount( amount, true, false );
+
+			ClientPrint( pPlayer, HUD_PRINTTALK, awardReasonToken, strAmount );
+		}
+		else
+		{
+			if ( !bTeamHasClinchedVictory )
+			{
+				// TODO: This code assumes on there only being 2 possible reasons for DoesPlayerGetRoundStartMoney returning false: Suicide or Running down the clock as T.
+				// This code should not make that assumption and the awardReasonToken should probably be plumbed to express those properly.
+				if ( pPlayer->GetHealth() > 0 )
+				{
+					ClientPrint( pPlayer, HUD_PRINTTALK, "#Team_Cash_Award_No_Income", strAmount );
+				}
+				else
+				{
+					ClientPrint( pPlayer, HUD_PRINTTALK, "#Team_Cash_Award_No_Income_Suicide", strAmount );
+				}
+			}
+		}
+	}
+}
+
 int CCSGameRules::GetStartMoney( void )
 {
-	if (IsWarmupPeriod())
-		return mp_startmoney.GetInt() +16000 ;
-
 	if ( IsBlackMarket() )
+	{
 		return atoi( mp_startmoney.GetDefault() );
-
-	return mp_startmoney.GetInt();
+	}
+	
+	return IsWarmupPeriod() ? mp_maxmoney.GetInt() : mp_startmoney.GetInt();
 }
 
 

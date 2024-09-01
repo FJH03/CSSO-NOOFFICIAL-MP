@@ -273,6 +273,7 @@ public:
 	float	m_flIronsightPivotForward;
 	char	m_szIronsightDotMaterial[MAX_WEAPON_STRING];
    
+	int		GetKillAward( void ) const;
 	int		GetWeaponPrice( void ) const;
 	int		GetDefaultPrice( void );
 	int		GetPrevousPrice( void );
@@ -286,6 +287,7 @@ private:
 	int m_iDefaultPrice;
 	int m_iPreviousPrice;
 
+	int m_iKillAward;
 };
 
 

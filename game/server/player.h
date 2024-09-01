@@ -288,6 +288,7 @@ public:
 	virtual void			Activate( void );
 	virtual void			SharedSpawn(); // Shared between client and server.
 	virtual void			ForceRespawn( void );
+	virtual void			PostSpawnPointSelection( void );
 
 	virtual void			InitialSpawn( void );
 	virtual void			InitHUD( void ) {}
@@ -1040,9 +1041,11 @@ private:
 	QAngle					m_vecAutoAim;
 	int						m_lastx, m_lasty;	// These are the previous update's crosshair angles, DON"T SAVE/RESTORE
 
+protected:
 	int						m_iFrags;
 	int						m_iDeaths;
 
+private:
 	float					m_flNextDecalTime;// next time this player can spray a decal
 
 	// Team Handling

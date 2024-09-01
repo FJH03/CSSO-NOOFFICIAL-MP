@@ -49,6 +49,9 @@ extern ConVar cv_bot_dont_shoot;
 extern ConVar cv_bot_eco_limit;
 extern ConVar cv_bot_auto_follow;
 extern ConVar cv_bot_flipout;
+#if CS_CONTROLLABLE_BOTS_ENABLED
+extern ConVar cv_bot_controllable;
+#endif
 
 #define RAD_TO_DEG( deg ) ((deg) * 180.0 / M_PI)
 #define DEG_TO_RAD( rad ) ((rad) * M_PI / 180.0)

@@ -9,6 +9,8 @@
 #include <shareddefs.h>
 #include <cs_shareddefs.h>
 #include "hud.h"
+#include "gamestringpool.h"
+#include "c_cs_player.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -32,6 +34,11 @@ IMPLEMENT_CLIENTCLASS_DT(C_CS_PlayerResource, DT_CSPlayerResource, CCSPlayerReso
 	RecvPropArray3( RECVINFO_ARRAY(m_bPlayerSpotted), RecvPropInt( RECVINFO(m_bPlayerSpotted[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_iMVPs), RecvPropInt( RECVINFO(m_iMVPs[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_bHasDefuser), RecvPropInt( RECVINFO(m_bHasDefuser[0]))),
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	RecvPropArray3( RECVINFO_ARRAY(m_bControllingBot), RecvPropInt( RECVINFO(m_bControllingBot[0]))),
+	RecvPropArray3( RECVINFO_ARRAY(m_iControlledPlayer), RecvPropInt( RECVINFO(m_iControlledPlayer[0]))),
+	RecvPropArray3( RECVINFO_ARRAY(m_iControlledByPlayer), RecvPropInt( RECVINFO(m_iControlledByPlayer[0]))),
+#endif
 	RecvPropArray3( RECVINFO_ARRAY(m_szClan), RecvPropString( RECVINFO(m_szClan[0]))),
 END_RECV_TABLE()
  
@@ -64,6 +71,17 @@ bool C_CS_PlayerResource::IsVIP(int iIndex )
 
 bool C_CS_PlayerResource::HasC4(int iIndex )
 {
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	if ( GetControlledByPlayer( iIndex ) > 0 )
+	{
+		return m_iPlayerC4 == GetControlledByPlayer( iIndex );
+	}
+	
+	if ( GetControlledPlayer( iIndex ) > 0 )
+	{
+		return false;
+	}
+#endif
 	return m_iPlayerC4 == iIndex;
 }
 
@@ -187,6 +205,73 @@ const char *C_CS_PlayerResource::GetClanTag( int iIndex )
 	return m_szClan[iIndex];
 }
 
+#if CS_CONTROLLABLE_BOTS_ENABLED
+bool C_CS_PlayerResource::IsControllingBot( int index )
+{
+	return m_bControllingBot[index];
+}
+
+int C_CS_PlayerResource::GetControlledPlayer( int index )
+{
+	return m_iControlledPlayer[index];
+}
+
+int C_CS_PlayerResource::GetControlledByPlayer( int index )
+{
+	return m_iControlledByPlayer[index];
+}
+
+ConVar cl_add_bot_prefix( "cl_add_bot_prefix", "1", FCVAR_ARCHIVE, "Whether to add a BOT prefix to bot names or not.", true, 0, true, 1 );
+void C_CS_PlayerResource::UpdatePlayerName( int slot )
+{
+	if ( slot < 1 || slot > MAX_PLAYERS )
+	{
+		Error( "UpdatePlayerName with bogus slot %d\n", slot );
+		return;
+	}
+
+	if ( !m_szUnconnectedName )
+	{
+		m_szUnconnectedName = AllocPooledString( PLAYER_UNCONNECTED_NAME );
+	}
+	
+	player_info_t sPlayerInfo;
+	if ( IsConnected( slot ) && engine->GetPlayerInfo( slot, &sPlayerInfo ) )
+	{
+		m_szName[slot] = AllocPooledString( sPlayerInfo.name );
+
+		if ( sPlayerInfo.fakeplayer && cl_add_bot_prefix.GetBool() )
+		{
+#if CS_CONTROLLABLE_BOTS_ENABLED
+			int controlledByPlayer = GetControlledByPlayer( slot );
+			if ( controlledByPlayer > 0 )
+			{
+				engine->GetPlayerInfo( controlledByPlayer, &sPlayerInfo );
+				char buffer[64];
+				Q_snprintf( buffer, sizeof( buffer ), "BOT (%s)", sPlayerInfo.name );
+				m_szName[slot] = AllocPooledString( buffer );
+			}
+			else
+#endif
+			{
+				char buffer[64];
+				Q_snprintf( buffer, sizeof( buffer ), "BOT %s", sPlayerInfo.name );
+				m_szName[slot] = AllocPooledString( buffer );
+			}
+		}
+	}
+	else 
+	{
+		m_szName[slot] = m_szUnconnectedName;
+	}
+}
+#endif
+
+C_CS_PlayerResource * GetCSResources( void )
+{
+	return (C_CS_PlayerResource*)g_PR;
+}
+
 //-----------------------------------------------------------------------------
 int C_CS_PlayerResource::GetNumMVPs( int iIndex )
 {
@@ -201,6 +286,18 @@ bool C_CS_PlayerResource::HasDefuser( int iIndex )
 {
 	if ( !IsConnected( iIndex ) )
 		return false;
+
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	if ( GetControlledByPlayer( iIndex ) > 0 )
+	{
+		return m_bHasDefuser[GetControlledByPlayer( iIndex )];
+	}
+
+	if ( GetControlledPlayer( iIndex ) > 0 )
+	{
+		return false;
+	}
+#endif
 
 	return m_bHasDefuser[iIndex];
 } 

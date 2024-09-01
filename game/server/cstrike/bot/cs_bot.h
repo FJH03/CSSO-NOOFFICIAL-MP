@@ -2013,6 +2013,14 @@ private:
 	RouteType m_route;
 };
 
+inline CCSBot *ToCSBot( CBaseEntity *pEntity )
+{
+	CCSPlayer* pPlayer = ToCSPlayer( pEntity );
+	if ( !pPlayer || !pPlayer->IsBot() )
+		return NULL;
+
+	return dynamic_cast<CCSBot*>( pPlayer );
+}
 
 //--------------------------------------------------------------------------------------------------------------
 //

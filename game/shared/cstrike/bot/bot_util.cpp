@@ -93,9 +93,9 @@ int UTIL_HumansOnTeam( int teamID, bool isAlive )
 		if ( entity == NULL )
 			continue;
 
-		CBasePlayer *player = static_cast<CBasePlayer *>( entity );
+		CCSPlayer *player = static_cast<CCSPlayer *>( entity );
 
-		if (player->IsBot())
+		if (player->IsBotOrControllingBot())
 			continue;
 
 		if (player->GetTeamNumber() != teamID)

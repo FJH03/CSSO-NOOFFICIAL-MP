@@ -34,6 +34,12 @@ IMPLEMENT_SERVERCLASS_ST(CCSPlayerResource, DT_CSPlayerResource)
 	SendPropArray3( SENDINFO_ARRAY3(m_bPlayerSpotted), SendPropInt( SENDINFO_ARRAY(m_bPlayerSpotted), 1, SPROP_UNSIGNED ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_iMVPs), SendPropInt( SENDINFO_ARRAY(m_iMVPs), COORD_INTEGER_BITS+1, SPROP_UNSIGNED ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_bHasDefuser), SendPropInt( SENDINFO_ARRAY(m_bHasDefuser), 1, SPROP_UNSIGNED ) ),
+
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	SendPropArray3( SENDINFO_ARRAY3(m_bControllingBot), SendPropInt( SENDINFO_ARRAY(m_bControllingBot), 1, SPROP_UNSIGNED ) ),
+	SendPropArray3( SENDINFO_ARRAY3(m_iControlledPlayer), SendPropInt( SENDINFO_ARRAY(m_iControlledPlayer), 8, SPROP_UNSIGNED ) ),
+	SendPropArray3( SENDINFO_ARRAY3(m_iControlledByPlayer), SendPropInt( SENDINFO_ARRAY(m_iControlledByPlayer), 8, SPROP_UNSIGNED ) ),
+#endif
 	SendPropArray3( SENDINFO_ARRAY3(m_szClan), SendPropStringT( SENDINFO_ARRAY(m_szClan) ) ),
 END_SEND_TABLE()
 //=============================================================================
@@ -303,6 +309,28 @@ void CCSPlayerResource::UpdatePlayerData( void )
 	{
 		m_bBombSpotted = false;
 	}
+
+#if CS_CONTROLLABLE_BOTS_ENABLED
+	for ( int i = 0; i < MAX_PLAYERS + 1; i++ )
+	{
+		CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+
+		bool bControllingBot = false;
+		CCSPlayer *pControlledPlayer = NULL;
+		CCSPlayer *pControlledByPlayer = NULL;
+
+		if ( pPlayer && pPlayer->IsConnected() )
+		{
+			bControllingBot = pPlayer->IsControllingBot();
+			pControlledPlayer = pPlayer->GetControlledBot();
+			pControlledByPlayer = pPlayer->GetControlledByPlayer();
+		}
+
+		m_bControllingBot.Set( i, bControllingBot ? 1 : 0 );
+		m_iControlledPlayer.Set( i, pControlledPlayer ? pControlledPlayer->entindex() : 0 );
+		m_iControlledByPlayer.Set( i, pControlledByPlayer ? pControlledByPlayer->entindex() : 0 );
+	}
+#endif
 
 	BaseClass::UpdatePlayerData();
 }
