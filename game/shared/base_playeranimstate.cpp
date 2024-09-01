@@ -204,9 +204,10 @@ void CBasePlayerAnimState::SetOuterPoseParameter( int iParam, float flValue )
 	GetOuter()->SetPoseParameter( iParam, flValue );
 }
 
-
 void CBasePlayerAnimState::ClearAnimationLayers()
 {
+	Assert( 0 ); // unused?
+
 	VPROF( "CBasePlayerAnimState::ClearAnimationLayers" );
 	if ( !m_pOuter )
 		return;
@@ -220,6 +221,7 @@ void CBasePlayerAnimState::ClearAnimationLayers()
 #endif
 	}
 }
+
 
 
 void CBasePlayerAnimState::RestartMainSequence()

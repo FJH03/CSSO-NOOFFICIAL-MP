@@ -62,7 +62,7 @@ public:
 	friend ICSPlayerAnimState* CreatePlayerAnimState( CBaseAnimatingOverlay *pEntity, ICSPlayerAnimStateHelpers *pHelpers, LegAnimType_t legAnimType, bool bUseAimSequences );
 
 	CCSPlayerAnimState();
-
+	
 	virtual void DoAnimationEvent( PlayerAnimEvent_t event, int nData );
 	virtual bool IsThrowingGrenade();
 	virtual int CalcAimLayerSequence( float *flCycle, float *flAimSequenceWeight, bool bForceIdle );
@@ -99,24 +99,56 @@ protected:
 	virtual int CalcSequenceIndex( const char *pBaseName, ... );
 
 private:
-
+	CSWeaponID m_iDeployedWeaponID;
 	// Current state variables.
 	bool m_bJumping;			// Set on a jump event.
 	float m_flJumpStartTime;
 	bool m_bFirstJumpFrame;
-
+	float m_flWeaponSwitchTime;
 	// Aim sequence plays reload while this is on.
 	bool m_bReloading;
 	float m_flReloadCycle;
 	int m_iReloadSequence;
 	float m_flReloadHoldEndTime;	// Intermediate shotgun reloads get held a fraction of a second
+	bool CCSPlayerAnimState::ActiveWeaponIsDeployed()
+{
+	CWeaponCSBase *pActiveWeapon = m_pHelpers->CSAnim_GetActiveWeapon();
+	bool currentWeaponIsDeployedWeapon = true;
+	if ( pActiveWeapon != NULL )
+	{
+		currentWeaponIsDeployedWeapon = ( pActiveWeapon->GetCSWeaponID() == m_iDeployedWeaponID );
+		if ( !currentWeaponIsDeployedWeapon )
+		{
+			// If the player is out of view we don't get animation events about deploy etc.
+			// Because of this we use a time out to update the active weapon.
+			const float MAX_DEPLOY_DELAY = 1.0f;
 
+			if ( m_flWeaponSwitchTime == 0.0f )
+			{
+				m_flWeaponSwitchTime = gpGlobals->curtime;
+			}
+			else if ( m_flWeaponSwitchTime + MAX_DEPLOY_DELAY < gpGlobals->curtime )
+			{
+				// It has been MAX_DEPLOY_DELAY since the player switched weapons.
+				// Go ahead and set the active weapon as the deployed weapon.
+				m_iDeployedWeaponID = pActiveWeapon->GetCSWeaponID();
+				currentWeaponIsDeployedWeapon = true;
+			}
+		}
+		else
+		{
+			m_flWeaponSwitchTime = 0.0f;
+		}
+	}
+	return currentWeaponIsDeployedWeapon;	
+}
 	// This is set to true if ANY animation is being played in the fire layer.
 	bool m_bFiring;						// If this is on, then it'll continue the fire animation in the fire layer
 										// until it completes.
 	int m_iFireSequence;				// (For any sequences in the fire layer, including grenade throw).
 	float m_flFireCycle;
 	PlayerAnimEvent_t m_delayedFire;	// if we fire while reloading, delay the fire by one frame so we can cancel the reload first
+	PlayerAnimEvent_t m_activeFireEvent;// The current or last set fire event.
 
 	// These control grenade animations.
 	bool m_bThrowingGrenade;
@@ -130,6 +162,7 @@ private:
 	ICSPlayerAnimStateHelpers *m_pHelpers;
 
 	void CheckCachedSequenceValidity( void );
+	void ClearAnimationLayer( int layer );
 
 	int m_sequenceCache[ ACT_CROUCHIDLE+1 ];	// Cache the first N sequences, since we don't have weights.
 	int m_cachedModelIndex;						// Model index for which the sequence cache is valid.
@@ -302,6 +335,19 @@ void CCSPlayerAnimState::CheckCachedSequenceValidity( void )
 	}
 }
 
+void CCSPlayerAnimState::ClearAnimationLayer( int layer )
+{
+	// Client obeys Order of CBaseAnimatingOverlay::MAX_OVERLAYS (15), but server trusts only the ANIM_LAYER_ACTIVE flag.
+	CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( layer );
+	if ( pLayer )
+	{
+		//pLayer->m_flWeight( 0.0f );
+		pLayer->SetOrder( CBaseAnimatingOverlay::MAX_OVERLAYS );
+#ifndef CLIENT_DLL
+		pLayer->m_fFlags = 0;
+#endif
+	}
+}
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -401,11 +447,14 @@ void CCSPlayerAnimState::ClearAnimationState()
 void CCSPlayerAnimState::DoAnimationEvent( PlayerAnimEvent_t event, int nData )
 {
 	Assert( event != PLAYERANIMEVENT_THROW_GRENADE );
-
+	bool currentWeaponIsDeployedWeapon = ActiveWeaponIsDeployed();
 	MDLCACHE_CRITICAL_SECTION();
 	switch ( event )
 	{
 	case PLAYERANIMEVENT_FIRE_GUN_PRIMARY:
+	case PLAYERANIMEVENT_FIRE_GUN_PRIMARY_SPECIAL1:
+	case PLAYERANIMEVENT_FIRE_GUN_PRIMARY_OPT_SPECIAL1:
+	case PLAYERANIMEVENT_FIRE_GUN_PRIMARY_OPT:
 	case PLAYERANIMEVENT_FIRE_GUN_SECONDARY:
 		// Regardless of what we're doing in the fire layer, restart it.
 		m_flFireCycle = 0;
@@ -505,6 +554,40 @@ void CCSPlayerAnimState::DoAnimationEvent( PlayerAnimEvent_t event, int nData )
 
 	default:
 		Assert( !"CCSPlayerAnimState::DoAnimationEvent" );
+	//case PLAYERANIMEVENT_FIRE_GUN_SECONDARY:
+	case PLAYERANIMEVENT_FIRE_GUN_SECONDARY_SPECIAL1:
+		if ( currentWeaponIsDeployedWeapon )
+		{
+			// Regardless of what we're doing in the fire layer, restart it.
+			m_activeFireEvent = event;
+			m_iFireSequence = CalcFireLayerSequence( event );
+			m_bFiring = m_iFireSequence != -1;
+			m_flFireCycle = 0;
+	
+			// If we are interrupting a (shotgun) reload, cancel the reload, and fire next frame.
+			if ( m_bFiring && m_bReloading )
+			{
+				m_bReloading = false;
+				m_iReloadSequence = -1;
+	
+				m_delayedFire = event;
+				m_bFiring = false;
+				m_iFireSequence = -1;
+	
+				ClearAnimationLayer( RELOADSEQUENCE_LAYER );
+			}
+
+#ifdef CLIENT_DLL
+			if ( m_bFiring && !m_bReloading )
+			{
+				if ( m_pPlayer )
+				{
+					m_pPlayer->ProcessMuzzleFlashEvent();
+				}
+			}
+#endif
+		}
+		break;
 	}
 }
 
