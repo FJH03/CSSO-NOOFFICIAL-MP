@@ -98,6 +98,8 @@ protected:
 
 	virtual int CalcSequenceIndex( const char *pBaseName, ... );
 
+	bool ActiveWeaponIsDeployed();
+
 private:
 	CSWeaponID m_iDeployedWeaponID;
 	// Current state variables.
@@ -110,38 +112,7 @@ private:
 	float m_flReloadCycle;
 	int m_iReloadSequence;
 	float m_flReloadHoldEndTime;	// Intermediate shotgun reloads get held a fraction of a second
-	bool CCSPlayerAnimState::ActiveWeaponIsDeployed()
-{
-	CWeaponCSBase *pActiveWeapon = m_pHelpers->CSAnim_GetActiveWeapon();
-	bool currentWeaponIsDeployedWeapon = true;
-	if ( pActiveWeapon != NULL )
-	{
-		currentWeaponIsDeployedWeapon = ( pActiveWeapon->GetCSWeaponID() == m_iDeployedWeaponID );
-		if ( !currentWeaponIsDeployedWeapon )
-		{
-			// If the player is out of view we don't get animation events about deploy etc.
-			// Because of this we use a time out to update the active weapon.
-			const float MAX_DEPLOY_DELAY = 1.0f;
 
-			if ( m_flWeaponSwitchTime == 0.0f )
-			{
-				m_flWeaponSwitchTime = gpGlobals->curtime;
-			}
-			else if ( m_flWeaponSwitchTime + MAX_DEPLOY_DELAY < gpGlobals->curtime )
-			{
-				// It has been MAX_DEPLOY_DELAY since the player switched weapons.
-				// Go ahead and set the active weapon as the deployed weapon.
-				m_iDeployedWeaponID = pActiveWeapon->GetCSWeaponID();
-				currentWeaponIsDeployedWeapon = true;
-			}
-		}
-		else
-		{
-			m_flWeaponSwitchTime = 0.0f;
-		}
-	}
-	return currentWeaponIsDeployedWeapon;	
-}
 	// This is set to true if ANY animation is being played in the fire layer.
 	bool m_bFiring;						// If this is on, then it'll continue the fire animation in the fire layer
 										// until it completes.
@@ -1137,4 +1108,37 @@ void CCSPlayerAnimState::ComputeFireSequence( CStudioHdr *pStudioHdr )
 	}
 
 	UpdateLayerSequenceGeneric( pStudioHdr, FIRESEQUENCE_LAYER, m_bFiring, m_flFireCycle, m_iFireSequence, false );
+}
+
+bool CCSPlayerAnimState::ActiveWeaponIsDeployed()
+{
+	CWeaponCSBase *pActiveWeapon = m_pHelpers->CSAnim_GetActiveWeapon();
+	bool currentWeaponIsDeployedWeapon = true;
+	if ( pActiveWeapon != NULL )
+	{
+		currentWeaponIsDeployedWeapon = ( pActiveWeapon->GetCSWeaponID() == m_iDeployedWeaponID );
+		if ( !currentWeaponIsDeployedWeapon )
+		{
+			// If the player is out of view we don't get animation events about deploy etc.
+			// Because of this we use a time out to update the active weapon.
+			const float MAX_DEPLOY_DELAY = 1.0f;
+
+			if ( m_flWeaponSwitchTime == 0.0f )
+			{
+				m_flWeaponSwitchTime = gpGlobals->curtime;
+			}
+			else if ( m_flWeaponSwitchTime + MAX_DEPLOY_DELAY < gpGlobals->curtime )
+			{
+				// It has been MAX_DEPLOY_DELAY since the player switched weapons.
+				// Go ahead and set the active weapon as the deployed weapon.
+				m_iDeployedWeaponID = pActiveWeapon->GetCSWeaponID();
+				currentWeaponIsDeployedWeapon = true;
+			}
+		}
+		else
+		{
+			m_flWeaponSwitchTime = 0.0f;
+		}
+	}
+	return currentWeaponIsDeployedWeapon;	
 }
