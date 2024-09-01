@@ -18,6 +18,12 @@
 #include "bitmap/tgawriter.h"
 #include "filesystem.h"
 #include "tier0/vprof.h"
+#include "viewpostprocess.h"
+
+#ifdef CSTRIKE_DLL
+#include "c_cs_player.h"
+#endif
+
 
 #include "proxyentity.h"
 

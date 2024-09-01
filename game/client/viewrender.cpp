@@ -113,7 +113,7 @@ static ConVar r_drawtranslucentworld( "r_drawtranslucentworld", "1", FCVAR_CHEAT
 static ConVar r_3dsky( "r_3dsky","1", 0, "Enable the rendering of 3d sky boxes" );
 static ConVar r_skybox( "r_skybox","1", FCVAR_CHEAT, "Enable the rendering of sky boxes" );
 #ifdef TF_CLIENT_DLL
-ConVar r_drawviewmodel( "r_drawviewmodel","1", FCVAR_ARCHIVE );
+ConVar r_drawviewmodel( "r_drawviewmodel","1", FCVAR_DONTRECORD );
 #else
 ConVar r_drawviewmodel( "r_drawviewmodel","1", FCVAR_CHEAT );
 #endif
@@ -261,8 +261,10 @@ private:
 class CWorldListCache
 {
 public:
-	CWorldListCache() = default;
+	CWorldListCache()
+	{
 
+	}
 	void Flush()
 	{
 		for ( int i = m_Entries.FirstInorder(); i != m_Entries.InvalidIndex(); i = m_Entries.NextInorder( i ) )
@@ -1033,13 +1035,13 @@ void CViewRender::DrawRenderablesInList( CUtlVector< IClientRenderable * > &list
 // Purpose: Actually draw the view model
 // Input  : drawViewModel - 
 //-----------------------------------------------------------------------------
-void CViewRender::DrawViewModels( const CViewSetup &view, bool drawViewmodel )
+void CViewRender::DrawViewModels( const CViewSetup &viewRender, bool drawViewmodel )
 {
 	VPROF( "CViewRender::DrawViewModel" );
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
 
 #ifdef PORTAL //in portal, we'd like a copy of the front buffer without the gun in it for use with the depth doubler
-	g_pPortalRender->UpdateDepthDoublerTexture( view );
+	g_pPortalRender->UpdateDepthDoublerTexture( viewRender );
 #endif
 
 	bool bShouldDrawPlayerViewModel = ShouldDrawViewModel( drawViewmodel );
@@ -1053,18 +1055,18 @@ void CViewRender::DrawViewModels( const CViewSetup &view, bool drawViewmodel )
 	pRenderContext->MatrixMode( MATERIAL_PROJECTION );
 	pRenderContext->PushMatrix();
 
-	CViewSetup viewModelSetup( view );
-	viewModelSetup.zNear = view.zNearViewmodel;
-	viewModelSetup.zFar = view.zFarViewmodel;
-	viewModelSetup.fov = view.fovViewmodel;
+	CViewSetup viewModelSetup( viewRender );
+	viewModelSetup.zNear = viewRender.zNearViewmodel;
+	viewModelSetup.zFar = viewRender.zFarViewmodel;
+	viewModelSetup.fov = viewRender.fovViewmodel;
 	viewModelSetup.m_flAspectRatio = engine->GetScreenAspectRatio();
 
 	ITexture *pRTColor = NULL;
 	ITexture *pRTDepth = NULL;
-	if( view.m_eStereoEye != STEREO_EYE_MONO )
+	if( viewRender.m_eStereoEye != STEREO_EYE_MONO )
 	{
-		pRTColor = g_pSourceVR->GetRenderTarget( (ISourceVirtualReality::VREye)(view.m_eStereoEye-1), ISourceVirtualReality::RT_Color );
-		pRTDepth = g_pSourceVR->GetRenderTarget( (ISourceVirtualReality::VREye)(view.m_eStereoEye-1), ISourceVirtualReality::RT_Depth );
+		pRTColor = g_pSourceVR->GetRenderTarget( (ISourceVirtualReality::VREye)(viewRender.m_eStereoEye-1), ISourceVirtualReality::RT_Color );
+		pRTDepth = g_pSourceVR->GetRenderTarget( (ISourceVirtualReality::VREye)(viewRender.m_eStereoEye-1), ISourceVirtualReality::RT_Depth );
 	}
 
 	render->Push3DView( viewModelSetup, 0, pRTColor, GetFrustum(), pRTDepth );
@@ -1251,12 +1253,12 @@ void CViewRender::DrawUnderwaterOverlay( void )
 			UpdateRefractTexture( x, y, w, h, true );
 
 			// Now draw the entire screen using the material...
-			CMatRenderContextPtr pRenderContext( materials );
+			CMatRenderContextPtr pRenderContextMat( materials );
 			ITexture *pTexture = GetPowerOfTwoFrameBufferTexture( );
 			int sw = pTexture->GetActualWidth();
 			int sh = pTexture->GetActualHeight();
             // Note - don't offset by x,y - already done by the viewport.
-			pRenderContext->DrawScreenSpaceRectangle( pOverlayMat, 0, 0, w, h,
+			pRenderContextMat->DrawScreenSpaceRectangle( pOverlayMat, 0, 0, w, h,
 													  0, 0, sw-1, sh-1, sw, sh );
 		}
 		else
@@ -1315,7 +1317,7 @@ bool CViewRender::UpdateShadowDepthTexture( ITexture *pRenderTarget, ITexture *p
 //-----------------------------------------------------------------------------
 // Purpose: Renders world and all entities, etc.
 //-----------------------------------------------------------------------------
-void CViewRender::ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxVisible, const CViewSetup &view, 
+void CViewRender::ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxVisible, const CViewSetup &viewRender, 
 								int nClearFlags, view_id_t viewID, bool bDrawViewModel, int baseDrawFlags, ViewCustomVisibility_t *pCustomVisibility )
 {
 	VPROF( "CViewRender::ViewDrawScene" );
@@ -1330,19 +1332,19 @@ void CViewRender::ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxV
 	// Shadowed flashlights supported on ps_2_b and up...
 	if ( r_flashlightdepthtexture.GetBool() && (viewID == VIEW_MAIN) )
 	{
-		g_pClientShadowMgr->ComputeShadowDepthTextures( view );
+		g_pClientShadowMgr->ComputeShadowDepthTextures( viewRender );
 	}
 
 	m_BaseDrawFlags = baseDrawFlags;
 
-	SetupCurrentView( view.origin, view.angles, viewID );
+	SetupCurrentView( viewRender.origin, viewRender.angles, viewID );
 
 	// Invoke pre-render methods
 	IGameSystem::PreRenderAllSystems();
 
 	// Start view
 	unsigned int visFlags;
-	SetupVis( view, visFlags, pCustomVisibility );
+	SetupVis( viewRender, visFlags, pCustomVisibility );
 
 	if ( !bDrew3dSkybox && 
 		( nSkyboxVisible == SKYBOX_NOT_VISIBLE ) && ( visFlags & IVRenderView::VIEW_SETUP_VIS_EX_RETURN_FLAGS_USES_RADIAL_VIS ) )
@@ -1361,7 +1363,7 @@ void CViewRender::ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxV
 
 	ParticleMgr()->IncrementFrameCode();
 
-	DrawWorldAndEntities( drawSkybox, view, nClearFlags, pCustomVisibility );
+	DrawWorldAndEntities( drawSkybox, viewRender, nClearFlags, pCustomVisibility );
 
 	// Disable fog for the rest of the stuff
 	DisableFog();
@@ -1371,7 +1373,7 @@ void CViewRender::ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxV
 
 	// Here are the overlays...
 
-	CGlowOverlay::DrawOverlays( view.m_bCacheFullSceneState );
+	CGlowOverlay::DrawOverlays( viewRender.m_bCacheFullSceneState );
 
 	// issue the pixel visibility tests
 	if ( IsMainView( CurrentViewID() ) )
@@ -1386,7 +1388,7 @@ void CViewRender::ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxV
 	engine->Sound_ExtraUpdate();
 
 	// Debugging info goes over the top
-	CDebugViewRender::Draw3DDebuggingInfo( view );
+	CDebugViewRender::Draw3DDebuggingInfo( viewRender );
 
 	// Draw client side effects
 	// NOTE: These are not sorted against the rest of the frame
@@ -1780,7 +1782,7 @@ void CViewRender::DisableFog( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CViewRender::SetupVis( const CViewSetup& view, unsigned int &visFlags, ViewCustomVisibility_t *pCustomVisibility )
+void CViewRender::SetupVis( const CViewSetup& viewRender, unsigned int &visFlags, ViewCustomVisibility_t *pCustomVisibility )
 {
 	VPROF( "CViewRender::SetupVis" );
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
@@ -1793,7 +1795,7 @@ void CViewRender::SetupVis( const CViewSetup& view, unsigned int &visFlags, View
 	else
 	{
 		// Use render origin as vis origin by default
-		render->ViewSetupVisEx( ShouldForceNoVis(), 1, &view.origin, visFlags );
+		render->ViewSetupVisEx( ShouldForceNoVis(), 1, &viewRender.origin, visFlags );
 	}
 }
 
@@ -1811,7 +1813,7 @@ void CViewRender::RenderPlayerSprites()
 //-----------------------------------------------------------------------------
 // Sets up, cleans up the main 3D view
 //-----------------------------------------------------------------------------
-void CViewRender::SetupMain3DView( const CViewSetup &view, int &nClearFlags )
+void CViewRender::SetupMain3DView( const CViewSetup &viewRender, int &nClearFlags )
 {
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
 
@@ -1830,19 +1832,19 @@ void CViewRender::SetupMain3DView( const CViewSetup &view, int &nClearFlags )
 	// instead of whatever was previously the render target
 	if( g_pMaterialSystemHardwareConfig->GetHDRType() == HDR_TYPE_FLOAT )
 	{
-		render->Push3DView( view, nClearFlags, GetFullFrameFrameBufferTexture( 0 ), GetFrustum() );
+		render->Push3DView( viewRender, nClearFlags, GetFullFrameFrameBufferTexture( 0 ), GetFrustum() );
 	}
 	else
 	{
 		ITexture *pRTColor = NULL;
 		ITexture *pRTDepth = NULL;
-		if( view.m_eStereoEye != STEREO_EYE_MONO )
+		if( viewRender.m_eStereoEye != STEREO_EYE_MONO )
 		{
-			pRTColor = g_pSourceVR->GetRenderTarget( (ISourceVirtualReality::VREye)(view.m_eStereoEye-1), ISourceVirtualReality::RT_Color );
-			pRTDepth = g_pSourceVR->GetRenderTarget( (ISourceVirtualReality::VREye)(view.m_eStereoEye-1), ISourceVirtualReality::RT_Depth );
+			pRTColor = g_pSourceVR->GetRenderTarget( (ISourceVirtualReality::VREye)(viewRender.m_eStereoEye-1), ISourceVirtualReality::RT_Color );
+			pRTDepth = g_pSourceVR->GetRenderTarget( (ISourceVirtualReality::VREye)(viewRender.m_eStereoEye-1), ISourceVirtualReality::RT_Depth );
 		}
 
-		render->Push3DView( view, nClearFlags, pRTColor, GetFrustum(), pRTDepth );
+		render->Push3DView( viewRender, nClearFlags, pRTColor, GetFrustum(), pRTDepth );
 	}
 
 	// If we didn't clear the depth here, we'll need to clear it later
@@ -1854,7 +1856,7 @@ void CViewRender::SetupMain3DView( const CViewSetup &view, int &nClearFlags )
 	}
 }
 
-void CViewRender::CleanupMain3DView( const CViewSetup &view )
+void CViewRender::CleanupMain3DView( const CViewSetup &viewRender )
 {
 	render->PopView( GetFrustum() );
 }
@@ -1863,13 +1865,13 @@ void CViewRender::CleanupMain3DView( const CViewSetup &view )
 //-----------------------------------------------------------------------------
 // Queues up an overlay rendering
 //-----------------------------------------------------------------------------
-void CViewRender::QueueOverlayRenderView( const CViewSetup &view, int nClearFlags, int whatToDraw )
+void CViewRender::QueueOverlayRenderView( const CViewSetup &viewRender, int nClearFlags, int whatToDraw )
 {
 	// Can't have 2 in a single scene
 	Assert( !m_bDrawOverlay );
 
     m_bDrawOverlay = true;
-	m_OverlayViewSetup = view;
+	m_OverlayViewSetup = viewRender;
 	m_OverlayClearFlags = nClearFlags;
 	m_OverlayDrawFlags = whatToDraw;
 }
@@ -2085,13 +2087,13 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 			pRenderContext.SafeRelease();
 		}
 
-/*#if IRONSIGHT
+#if IRONSIGHT
 		if ( r_drawothermodels.GetInt() == 1 )
 		{
 			//apply the finished blur effect over the screen, while masking out the scope lens
 			ApplyIronSightScopeEffect( viewRender.x, viewRender.y, viewRender.width, viewRender.height, &m_CurrentView );
 		}
-#endif*/
+#endif
 
 		// And here are the screen-space effects
 
@@ -2359,14 +2361,14 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 //-----------------------------------------------------------------------------
 // Purpose: Renders extra 2D effects in derived classes while the 2D view is on the stack
 //-----------------------------------------------------------------------------
-void CViewRender::Render2DEffectsPreHUD( const CViewSetup &view )
+void CViewRender::Render2DEffectsPreHUD( const CViewSetup &viewRender )
 {
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Renders extra 2D effects in derived classes while the 2D view is on the stack
 //-----------------------------------------------------------------------------
-void CViewRender::Render2DEffectsPostHUD( const CViewSetup &view )
+void CViewRender::Render2DEffectsPostHUD( const CViewSetup &viewRender )
 {
 }
 
@@ -2703,7 +2705,6 @@ bool DoesViewPlaneIntersectWater( float waterZ, int leafWaterDataID )
 //			&view - the camera view to render from
 //			nClearFlags -  how to clear the buffer
 //-----------------------------------------------------------------------------
-
 void CViewRender::ViewDrawScene_PortalStencil( const CViewSetup &viewIn, ViewCustomVisibility_t *pCustomVisibility )
 {
 	VPROF( "CViewRender::ViewDrawScene_PortalStencil" );
@@ -2715,6 +2716,28 @@ void CViewRender::ViewDrawScene_PortalStencil( const CViewSetup &viewIn, ViewCus
 	QAngle vecOldAngles = CurrentViewAngles();
 
 	int iCurrentViewID = g_CurrentViewID;
+	int iRecursionLevel = g_pPortalRender->GetViewRecursionLevel();
+	Assert( iRecursionLevel > 0 );
+
+	//get references to reflection textures
+	CTextureReference pPrimaryWaterReflectionTexture;
+	pPrimaryWaterReflectionTexture.Init( GetWaterReflectionTexture() );
+	CTextureReference pReplacementWaterReflectionTexture;
+	pReplacementWaterReflectionTexture.Init( portalrendertargets->GetWaterReflectionTextureForStencilDepth( iRecursionLevel ) );
+
+	//get references to refraction textures
+	CTextureReference pPrimaryWaterRefractionTexture;
+	pPrimaryWaterRefractionTexture.Init( GetWaterRefractionTexture() );
+	CTextureReference pReplacementWaterRefractionTexture;
+	pReplacementWaterRefractionTexture.Init( portalrendertargets->GetWaterRefractionTextureForStencilDepth( iRecursionLevel ) );
+
+
+	//swap texture contents for the primary render targets with those we set aside for this recursion level
+	if( pReplacementWaterReflectionTexture != NULL )
+		pPrimaryWaterReflectionTexture->SwapContents( pReplacementWaterReflectionTexture );
+
+	if( pReplacementWaterRefractionTexture != NULL )
+		pPrimaryWaterRefractionTexture->SwapContents( pReplacementWaterRefractionTexture );
 
 	bool bDrew3dSkybox = false;
 	SkyboxVisibility_t nSkyboxVisible = SKYBOX_NOT_VISIBLE;
@@ -2731,7 +2754,7 @@ void CViewRender::ViewDrawScene_PortalStencil( const CViewSetup &viewIn, ViewCus
 	//generate unique view ID's for each stencil view
 	view_id_t iNewViewID = (view_id_t)g_pPortalRender->GetCurrentViewId();
 	SetupCurrentView( view.origin, view.angles, (view_id_t)iNewViewID );
-
+	
 	// update vis data
 	unsigned int visFlags;
 	SetupVis( view, visFlags, pCustomVisibility );
@@ -2750,10 +2773,10 @@ void CViewRender::ViewDrawScene_PortalStencil( const CViewSetup &viewIn, ViewCus
 	DetermineWaterRenderInfo( fogInfo, waterInfo );
 
 	if ( waterInfo.m_bCheapWater )
-	{
+	{		     
 		cplane_t glassReflectionPlane;
 		if ( IsReflectiveGlassInView( viewIn, glassReflectionPlane ) )
-		{
+		{								    
 			CRefPtr<CReflectiveGlassView> pGlassReflectionView = new CReflectiveGlassView( this );
 			pGlassReflectionView->Setup( viewIn, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR | VIEW_CLEAR_OBEY_STENCIL, drawSkybox, fogInfo, waterInfo, glassReflectionPlane );
 			AddViewToScene( pGlassReflectionView );
@@ -2806,6 +2829,14 @@ void CViewRender::ViewDrawScene_PortalStencil( const CViewSetup &viewIn, ViewCus
 	// Return to the previous view
 	SetupCurrentView( vecOldOrigin, vecOldAngles, (view_id_t)iCurrentViewID );
 	g_CurrentViewID = iCurrentViewID; //just in case the cast to view_id_t screwed up the id #
+
+
+	//swap back the water render targets
+	if( pReplacementWaterReflectionTexture != NULL )
+		pPrimaryWaterReflectionTexture->SwapContents( pReplacementWaterReflectionTexture );
+
+	if( pReplacementWaterRefractionTexture != NULL )
+		pPrimaryWaterRefractionTexture->SwapContents( pReplacementWaterRefractionTexture );
 }
 
 void CViewRender::Draw3dSkyboxworld_Portal( const CViewSetup &view, int &nClearFlags, bool &bDrew3dSkybox, SkyboxVisibility_t &nSkyboxVisible, ITexture *pRenderTarget ) 
@@ -2843,7 +2874,7 @@ void CViewRender::GetWaterLODParams( float &flCheapWaterStartDistance, float &fl
 // Input  : &view - 
 //			&introData - 
 //-----------------------------------------------------------------------------
-void CViewRender::ViewDrawScene_Intro( const CViewSetup &view, int nClearFlags, const IntroData_t &introData )
+void CViewRender::ViewDrawScene_Intro( const CViewSetup &viewRender, int nClearFlags, const IntroData_t &introData )
 {
 	VPROF( "CViewRender::ViewDrawScene" );
 
@@ -2870,7 +2901,7 @@ void CViewRender::ViewDrawScene_Intro( const CViewSetup &view, int nClearFlags, 
 
 	if( introData.m_bDrawPrimary  )
 	{
-		CViewSetup playerView( view );
+		CViewSetup playerView( viewRender );
 		playerView.origin = introData.m_vecCameraView;
 		playerView.angles = introData.m_vecCameraViewAngles;
 		if ( introData.m_playerViewFOV )
@@ -2909,33 +2940,33 @@ void CViewRender::ViewDrawScene_Intro( const CViewSetup &view, int nClearFlags, 
 		pRenderContext->ClearBuffers( true, true );
 	}
 	Rect_t actualRect;
-	UpdateScreenEffectTexture( 0, view.x, view.y, view.width, view.height, false, &actualRect );
+	UpdateScreenEffectTexture( 0, viewRender.x, viewRender.y, viewRender.width, viewRender.height, false, &actualRect );
 
 	g_pClientShadowMgr->PreRender();
 
 	// Shadowed flashlights supported on ps_2_b and up...
 	if ( r_flashlightdepthtexture.GetBool() )
 	{
-		g_pClientShadowMgr->ComputeShadowDepthTextures( view );
+		g_pClientShadowMgr->ComputeShadowDepthTextures( viewRender );
 	}
 
 	// -----------------------------------------------------------------------
 	// Draw the secondary scene and copy it to the second framebuffer texture
 	// -----------------------------------------------------------------------
-	SetupCurrentView( view.origin, view.angles, VIEW_INTRO_CAMERA );
+	SetupCurrentView( viewRender.origin, viewRender.angles, VIEW_INTRO_CAMERA );
 
 	// Invoke pre-render methods
 	IGameSystem::PreRenderAllSystems();
 
 	// Start view, clear frame/z buffer if necessary
-	SetupVis( view, visFlags );
+	SetupVis( viewRender, visFlags );
 
 	// Clear alpha to 255 so that masking with the vortigaunts (0) works properly.
 	pRenderContext->ClearColor4ub( 0, 0, 0, 255 );
 
-	DrawWorldAndEntities( true /* drawSkybox */, view, VIEW_CLEAR_COLOR | VIEW_CLEAR_DEPTH  );
+	DrawWorldAndEntities( true /* drawSkybox */, viewRender, VIEW_CLEAR_COLOR | VIEW_CLEAR_DEPTH  );
 
-	UpdateScreenEffectTexture( 1, view.x, view.y, view.width, view.height );
+	UpdateScreenEffectTexture( 1, viewRender.x, viewRender.y, viewRender.width, viewRender.height );
 
 	// -----------------------------------------------------------------------
 	// Draw quads on the screen for each screenspace pass.
@@ -2976,7 +3007,7 @@ void CViewRender::ViewDrawScene_Intro( const CViewSetup &view, int nClearFlags, 
 		
 		// Draw a quad for this pass.
 		ITexture *pTexture = GetFullFrameFrameBufferTexture( 0 );
-		pRenderContext->DrawScreenSpaceRectangle( pOverlayMaterial, 0, 0, view.width, view.height,
+		pRenderContext->DrawScreenSpaceRectangle( pOverlayMaterial, 0, 0, viewRender.width, viewRender.height,
 											actualRect.x, actualRect.y, actualRect.x+actualRect.width-1, actualRect.y+actualRect.height-1, 
 											pTexture->GetActualWidth(), pTexture->GetActualHeight() );
 	}
@@ -2995,19 +3026,19 @@ void CViewRender::ViewDrawScene_Intro( const CViewSetup &view, int nClearFlags, 
 	DisableFog();
 	
 	// Here are the overlays...
-	CGlowOverlay::DrawOverlays( view.m_bCacheFullSceneState );
+	CGlowOverlay::DrawOverlays( viewRender.m_bCacheFullSceneState );
 
 	// issue the pixel visibility tests
 	PixelVisibility_EndCurrentView();
 
 	// And here are the screen-space effects
-	PerformScreenSpaceEffects( 0, 0, view.width, view.height );
+	PerformScreenSpaceEffects( 0, 0, viewRender.width, viewRender.height );
 
 	// Make sure sound doesn't stutter
 	engine->Sound_ExtraUpdate();
 
 	// Debugging info goes over the top
-	CDebugViewRender::Draw3DDebuggingInfo( view );
+	CDebugViewRender::Draw3DDebuggingInfo( viewRender );
 
 	// Let the particle manager simulate things that haven't been simulated.
 	ParticleMgr()->PostRender();
@@ -4024,7 +4055,7 @@ void CRendering3dView::DrawOpaqueRenderables( ERenderDepthMode DepthMode )
 		}
 	}
 
-	if ( r_threaded_renderables.GetBool() )
+	if ( 0 && r_threaded_renderables.GetBool() )
 	{
 		ParallelProcess( "BoneSetupNpcsLast", arrBoneSetupNpcsLast.Base() + numOpaqueEnts - numNpcs, numNpcs, &SetupBonesOnBaseAnimating );
 		ParallelProcess( "BoneSetupNpcsLast NonNPCs", arrBoneSetupNpcsLast.Base(), numNonNpcsAnimating, &SetupBonesOnBaseAnimating );
@@ -4809,9 +4840,9 @@ void CSkyboxView::DrawInternal( view_id_t iSkyBoxViewID, bool bInvokePreAndPostR
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-bool CSkyboxView::Setup( const CViewSetup &view, int *pClearFlags, SkyboxVisibility_t *pSkyboxVisible )
+bool CSkyboxView::Setup( const CViewSetup &viewRender, int *pClearFlags, SkyboxVisibility_t *pSkyboxVisible )
 {
-	BaseClass::Setup( view );
+	BaseClass::Setup( viewRender );
 
 	// The skybox might not be visible from here
 	*pSkyboxVisible = ComputeSkyboxVisibility();
@@ -5552,9 +5583,9 @@ void CBaseWorldView::DrawDepthOfField( )
 //-----------------------------------------------------------------------------
 // Draws the scene when there's no water or only cheap water
 //-----------------------------------------------------------------------------
-void CSimpleWorldView::Setup( const CViewSetup &view, int nClearFlags, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, ViewCustomVisibility_t *pCustomVisibility )
+void CSimpleWorldView::Setup( const CViewSetup &simpleView, int nClearFlags, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, ViewCustomVisibility_t *pCustomVisibility )
 {
-	BaseClass::Setup( view );
+	BaseClass::Setup( simpleView );
 
 	m_ClearFlags = nClearFlags;
 	m_DrawFlags = DF_DRAW_ENTITITES;
@@ -5702,9 +5733,9 @@ void CBaseWaterView::CSoftwareIntersectionView::Draw()
 //-----------------------------------------------------------------------------
 // Draws the scene when the view point is above the level of the water
 //-----------------------------------------------------------------------------
-void CAboveWaterView::Setup( const CViewSetup &view, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t& waterInfo )
+void CAboveWaterView::Setup( const CViewSetup &viewRender, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t& waterInfo )
 {
-	BaseClass::Setup( view );
+	BaseClass::Setup( viewRender );
 
 	m_bSoftwareUserClipPlane = g_pMaterialSystemHardwareConfig->UseFastClipping();
 
@@ -5954,9 +5985,9 @@ void CAboveWaterView::CIntersectionView::Draw()
 //-----------------------------------------------------------------------------
 // Draws the scene when the view point is under the level of the water
 //-----------------------------------------------------------------------------
-void CUnderWaterView::Setup( const CViewSetup &view, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t& waterInfo )
+void CUnderWaterView::Setup( const CViewSetup &underView, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t& waterInfo )
 {
-	BaseClass::Setup( view );
+	BaseClass::Setup( underView );
 
 	m_bSoftwareUserClipPlane = g_pMaterialSystemHardwareConfig->UseFastClipping();
 
@@ -6108,10 +6139,10 @@ void CUnderWaterView::CRefractionView::Draw()
 //-----------------------------------------------------------------------------
 // Draws the scene when the view contains reflective glass
 //-----------------------------------------------------------------------------
-void CReflectiveGlassView::Setup( const CViewSetup &view, int nClearFlags, bool bDrawSkybox, 
+void CReflectiveGlassView::Setup( const CViewSetup &viewRender, int nClearFlags, bool bDrawSkybox,
 	const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, const cplane_t &reflectionPlane )
 {
-	BaseClass::Setup( view, nClearFlags, bDrawSkybox, fogInfo, waterInfo, NULL );
+	BaseClass::Setup( viewRender, nClearFlags, bDrawSkybox, fogInfo, waterInfo, NULL );
 	m_ReflectionPlane = reflectionPlane;
 }
 
@@ -6189,10 +6220,10 @@ void CReflectiveGlassView::Draw()
 //-----------------------------------------------------------------------------
 // Draws the scene when the view contains reflective glass
 //-----------------------------------------------------------------------------
-void CRefractiveGlassView::Setup( const CViewSetup &view, int nClearFlags, bool bDrawSkybox, 
+void CRefractiveGlassView::Setup( const CViewSetup &viewRender, int nClearFlags, bool bDrawSkybox,
 	const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, const cplane_t &reflectionPlane )
 {
-	BaseClass::Setup( view, nClearFlags, bDrawSkybox, fogInfo, waterInfo, NULL );
+	BaseClass::Setup( viewRender, nClearFlags, bDrawSkybox, fogInfo, waterInfo, NULL );
 	m_ReflectionPlane = reflectionPlane;
 }
 
