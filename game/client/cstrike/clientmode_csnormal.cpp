@@ -22,6 +22,7 @@
 #include "view.h"
 #include "ivrenderview.h"
 #include "cstrikeclassmenu.h"
+#include "cstrikebuymenu.h"
 #include "model_types.h"
 #include "iefx.h"
 #include "dlight.h"
@@ -41,6 +42,8 @@
 #include "usermessages.h"
 #include "prediction.h"
 #include "datacache/imdlcache.h"
+#include "cs_shareddefs.h"
+#include "cs_loadout.h"
 //=============================================================================
 // HPE_BEGIN:
 // [tj] Needed to retrieve achievement text
@@ -1402,8 +1405,14 @@ bool WillPanelBeVisible( vgui::VPANEL hPanel )
 	return true;
 }
 
-
-
+extern ConVar loadout_slot_fiveseven_weapon;
+extern ConVar loadout_slot_hkp2000_weapon;
+extern ConVar loadout_slot_m4_weapon;
+extern ConVar loadout_slot_mp7_weapon_ct;
+extern ConVar loadout_slot_mp7_weapon_t;
+extern ConVar loadout_slot_tec9_weapon;
+extern ConVar loadout_slot_deagle_weapon_ct;
+extern ConVar loadout_slot_deagle_weapon_t;
 void ClientModeCSNormal::PostRenderVGui()
 {
 	// If the team menu is up, then we will render the model of the character that is currently selected.
@@ -1423,8 +1432,112 @@ void ClientModeCSNormal::PostRenderVGui()
 			w -= 2;
 			h -= 10;
 
-			UpdateClassImageEntity( g_ClassImagePanels[i]->m_ModelName, x, y, w, h );
+			UpdateClassImageEntity( pPanel->m_ModelName, x, y, w, h );
 			return;
+		}
+	}
+
+	// If the team menu is up, then we will render the model of the character that is currently selected.
+	for ( int i=0; i < g_BuyMenuPlayerImagePanels.Count(); i++ )
+	{
+		CCSBuyMenuPlayerImagePanel *pPanel = g_BuyMenuPlayerImagePanels[i];
+		if ( WillPanelBeVisible( pPanel->GetVPanel() ) )
+		{
+			// Ok, we have a visible class image panel.
+			int x, y, w, h;
+			pPanel->GetBounds( x, y, w, h );
+
+			// Allow for the border.
+			x += 3;
+			y += 5;
+			w -= 2;
+			h -= 10;
+
+			UpdateBuyMenuImageEntity( NULL, NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+			return;
+		}
+	}
+
+	// If the buy menu is up, then we will render the model of the weapon that is currently selected.
+	for ( int i=0; i < g_BuyMenuImagePanels.Count(); i++ )
+	{
+		CCSBuyMenuImagePanel *pPanel = g_BuyMenuImagePanels[i];
+		if ( WillPanelBeVisible( pPanel->GetVPanel() ) )
+		{
+			// Ok, we have a visible class image panel.
+			int x, y, w, h;
+			pPanel->GetBounds( x, y, w, h );
+			pPanel->LocalToScreen( x, y );
+
+			// Allow for the border.
+			x += 3;
+			y += 5;
+			w -= 2;
+			h -= 10;
+
+			const char *szAnimName = NULL;
+			const char *szModelName = NULL;
+			if ( V_strcmp( pPanel->m_ModelName, "fiveseven_cz75" ) == 0 )
+			{
+				szAnimName = "UI_BuyMenu_pistol";
+				szModelName = !loadout_slot_fiveseven_weapon.GetBool() ? "models/weapons/w_pist_fiveseven.mdl" : "models/weapons/w_pist_cz_75.mdl";
+				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				return;
+			}
+			else if ( V_strcmp( pPanel->m_ModelName, "hkp2000_usp" ) == 0 )
+			{
+				szAnimName = "UI_BuyMenu_pistol";
+				szModelName = !loadout_slot_hkp2000_weapon.GetBool() ? "models/weapons/w_pist_hkp2000.mdl" : "models/weapons/w_pist_usp.mdl";
+				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				return;
+			}
+			else if ( V_strcmp( pPanel->m_ModelName, "m4a4_m4a1" ) == 0 )
+			{
+				szAnimName = "UI_BuyMenu_m4";
+				szModelName = !loadout_slot_m4_weapon.GetBool() ? "models/weapons/w_rif_m4a4.mdl" : "models/weapons/w_rif_m4a1_silencer.mdl";
+				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				return;
+			}
+			else if ( V_strcmp( pPanel->m_ModelName, "mp7_mp5sd_ct" ) == 0 )
+			{
+				szAnimName = !loadout_slot_mp7_weapon_ct.GetBool() ? "UI_BuyMenu_mp7" : "UI_BuyMenu_mp5";
+				szModelName = !loadout_slot_mp7_weapon_ct.GetBool() ? "models/weapons/w_smg_mp7.mdl" : "models/weapons/w_smg_mp5sd.mdl";
+				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				return;
+			}
+			else if ( V_strcmp( pPanel->m_ModelName, "mp7_mp5sd_t" ) == 0 )
+			{
+				szAnimName = !loadout_slot_mp7_weapon_t.GetBool() ? "UI_BuyMenu_mp7" : "UI_BuyMenu_mp5";
+				szModelName = !loadout_slot_mp7_weapon_t.GetBool() ? "models/weapons/w_smg_mp7.mdl" : "models/weapons/w_smg_mp5sd.mdl";
+				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				return;
+			}
+			else if ( V_strcmp( pPanel->m_ModelName, "tec9_cz75" ) == 0 )
+			{
+				szAnimName = !loadout_slot_tec9_weapon.GetBool() ? "UI_BuyMenu_tec9" : "UI_BuyMenu_pistol";
+				szModelName = !loadout_slot_tec9_weapon.GetBool() ? "models/weapons/w_pist_tec9.mdl" : "models/weapons/w_pist_cz_75.mdl";
+				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				return;
+			}
+			else if ( V_strcmp( pPanel->m_ModelName, "deagle_revolver_ct" ) == 0 )
+			{
+				szAnimName = !loadout_slot_deagle_weapon_ct.GetBool() ? "UI_BuyMenu_Pistol" : "UI_BuyMenu_Revolver";
+				szModelName = !loadout_slot_deagle_weapon_ct.GetBool() ? "models/weapons/w_pist_deagle.mdl" : "models/weapons/w_pist_revolver.mdl";
+				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				return;
+			}
+			else if ( V_strcmp( pPanel->m_ModelName, "deagle_revolver_t" ) == 0 )
+			{
+				szAnimName = !loadout_slot_deagle_weapon_t.GetBool() ? "UI_BuyMenu_Pistol" : "UI_BuyMenu_Revolver";
+				szModelName = !loadout_slot_deagle_weapon_t.GetBool() ? "models/weapons/w_pist_deagle.mdl" : "models/weapons/w_pist_revolver.mdl";
+				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				return;
+			}
+			else
+			{
+				UpdateBuyMenuImageEntity( pPanel->m_ModelName, g_BuyMenuImagePanels[i]->m_AnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				return;
+			}
 		}
 	}
 }

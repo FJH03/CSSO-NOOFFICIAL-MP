@@ -613,6 +613,12 @@ CCSPlayer *CCSPlayer::CreatePlayer( const char *className, edict_t *ed )
 
 void CCSPlayer::Precache()
 {
+	// PiMoN: temporary? solution for UI models
+	PrecacheModel( "models/weapons/w_eq_armor_helmet.mdl" );
+	PrecacheModel( "models/weapons/w_eq_armor.mdl" );
+	PrecacheModel( "models/weapons/w_eq_taser.mdl" );
+	PrecacheModel( "models/weapons/w_defuser.mdl" );
+	
 	Vector mins( -13, -13, -10 );
 	Vector maxs( 13, 13, 75 );
 
