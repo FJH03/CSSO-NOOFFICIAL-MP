@@ -22,8 +22,93 @@
 #include "c_cs_player.h"
 #include "cs_ammodef.h"
 
+ConVar closeonbuy( "closeonbuy", "0", FCVAR_ARCHIVE, "Set non-zero to close the buy menu after buying something", true, 0, true, 1 );
 
 using namespace vgui;
+
+// ----------------------------------------------------------------------------- //
+// Buy menu player image panels. These maintain a list of the player image panels so 
+// it can render 3D images into them.
+// ----------------------------------------------------------------------------- //
+
+CUtlVector<CCSBuyMenuPlayerImagePanel*> g_BuyMenuPlayerImagePanels;
+
+
+CCSBuyMenuPlayerImagePanel::CCSBuyMenuPlayerImagePanel( vgui::Panel *pParent, const char *pName )
+	: vgui::ImagePanel( pParent, pName )
+{
+	g_BuyMenuPlayerImagePanels.AddToTail( this );
+}
+
+CCSBuyMenuPlayerImagePanel::~CCSBuyMenuPlayerImagePanel()
+{
+	g_BuyMenuPlayerImagePanels.FindAndRemove( this );
+}
+
+void CCSBuyMenuPlayerImagePanel::ApplySettings( KeyValues *inResourceData )
+{
+	int pPos = inResourceData->GetInt( "view_xpos", 0 );
+	m_ViewXPos = pPos;
+	pPos = inResourceData->GetInt( "view_ypos", 0 );
+	m_ViewYPos = pPos;
+	pPos = inResourceData->GetInt( "view_zpos", 0 );
+	m_ViewZPos = pPos;
+
+	BaseClass::ApplySettings( inResourceData );
+}
+
+// ----------------------------------------------------------------------------- //
+// Buy menu image panels. These maintain a list of the buy menu image panels so 
+// it can render 3D images into them.
+// ----------------------------------------------------------------------------- //
+
+CUtlVector<CCSBuyMenuImagePanel*> g_BuyMenuImagePanels;
+
+
+CCSBuyMenuImagePanel::CCSBuyMenuImagePanel( vgui::Panel *pParent, const char *pName )
+	: vgui::ImagePanel( pParent, pName )
+{
+	g_BuyMenuImagePanels.AddToTail( this );
+	m_ModelName[0] = NULL;
+	m_AnimName[0] = NULL;
+	m_ViewXPos = 0;
+	m_ViewYPos = 0;
+	m_ViewZPos = 0;
+}
+
+CCSBuyMenuImagePanel::~CCSBuyMenuImagePanel()
+{
+	g_BuyMenuImagePanels.FindAndRemove( this );
+}
+
+void CCSBuyMenuImagePanel::ApplySettings( KeyValues *inResourceData )
+{
+	const char *pString = inResourceData->GetString( "3DModel" );
+	if ( pString )
+	{
+		Q_strncpy( m_ModelName, pString, sizeof( m_ModelName ) );
+	}
+	pString = inResourceData->GetString( "AnimName" );
+	if ( pString )
+	{
+		Q_strncpy( m_AnimName, pString, sizeof( m_AnimName ) );
+	}
+
+	int pPos = inResourceData->GetInt( "view_xpos", 0 );
+	m_ViewXPos = pPos;
+	pPos = inResourceData->GetInt( "view_ypos", 0 );
+	m_ViewYPos = pPos;
+	pPos = inResourceData->GetInt( "view_zpos", 0 );
+	m_ViewZPos = pPos;
+	
+	BaseClass::ApplySettings( inResourceData );
+}
+
+
+void CCSBuyMenuImagePanel::Paint()
+{
+	BaseClass::Paint();
+}
 
 //-----------------------------------------------------------------------------
 /**
@@ -215,7 +300,7 @@ CCSBaseBuyMenu::CCSBaseBuyMenu(IViewPort *pViewPort, const char *subPanelName) :
 	//=============================================================================
 	// HPE_END
 	//=============================================================================
-	m_pLoadout = new BuyPresetEditPanel( m_pMainMenu, "loadoutPanel", "Resource/UI/Loadout.res", 0, false );
+	//m_pLoadout = new BuyPresetEditPanel( m_pMainMenu, "loadoutPanel", "Resource/UI/Loadout.res", 0, false );
 #else
 	for ( int i=0; i<NUM_BUY_PRESET_BUTTONS; ++i )
 	{
@@ -226,8 +311,8 @@ CCSBaseBuyMenu::CCSBaseBuyMenu(IViewPort *pViewPort, const char *subPanelName) :
 #endif // USE_BUY_PRESETS
  	m_lastMoney = -1;
 
-	m_pBlackMarket = new EditablePanel( m_pMainMenu, "BlackMarket_Bargains" );
-	m_pBlackMarket->LoadControlSettings( "Resource/UI/BlackMarket_Bargains.res" );
+	//m_pBlackMarket = new EditablePanel( m_pMainMenu, "BlackMarket_Bargains" );
+	//m_pBlackMarket->LoadControlSettings( "Resource/UI/BlackMarket_Bargains.res" );
 }
 
 //-----------------------------------------------------------------------------
@@ -396,7 +481,17 @@ void CCSBaseBuyMenu::UpdateBuyPresets( bool showDefaultPanel )
 		}
 	}
 
-	HandleBlackMarket();
+	//HandleBlackMarket();
+}
+
+Panel * CCSBaseBuyMenu::CreateControlByName( const char *controlName )
+{
+	if ( Q_stricmp( controlName, "CCSBuyMenuPlayerImagePanel" ) == 0 )
+	{
+		return new CCSBuyMenuPlayerImagePanel( NULL, controlName );
+	}
+
+	return BaseClass::CreateControlByName( controlName );
 }
 
 const char *g_pWeaponNames[] =
@@ -478,7 +573,7 @@ int GetWeeklyBargain( void )
 #ifdef _DEBUG
 ConVar cs_testbargain( "cs_testbargain", "1" );
 #endif
-
+/*
 void CCSBaseBuyMenu::HandleBlackMarket( void )
 {	
 	if ( CSGameRules() == NULL )
@@ -627,10 +722,10 @@ void CCSBaseBuyMenu::HandleBlackMarket( void )
 					pButton->SetVisible( false );
 				}
 			}
-		}
+		//}
 	}
 }
-
+*/
 //-----------------------------------------------------------------------------
 // Purpose: The CS background is painted by image panels, so we should do nothing
 //-----------------------------------------------------------------------------
@@ -778,6 +873,16 @@ void CCSBuySubMenu::OnCommand( const char *command )
 	BaseClass::OnCommand( command );
 }
 
+Panel * CCSBuySubMenu::CreateControlByName(const char *controlName)
+{
+	if ( Q_stricmp( controlName, "CSBuyMenuImagePanel" ) == 0 )
+	{
+		return new CCSBuyMenuImagePanel( NULL, controlName );
+	}
+
+	return BaseClass::CreateControlByName( controlName );
+}
+
 void CCSBuySubMenu::OnSizeChanged(int newWide, int newTall)
 {
 	m_backgroundLayoutFinished = false;
@@ -878,5 +983,6 @@ void CCSBuySubMenu::HandleBlackMarket( void )
 		pButtonBargain->SetBargainButton( true );
 	}
 }
+
 
 

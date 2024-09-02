@@ -2234,28 +2234,6 @@ bool CBaseCombatCharacter::Weapon_SlotOccupied( CBaseCombatWeapon *pWeapon )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Returns the weapon (if any) in the requested slot
-// Input  : slot - which slot to poll
-//-----------------------------------------------------------------------------
-CBaseCombatWeapon *CBaseCombatCharacter::Weapon_GetSlot( int slot ) const
-{
-	int	targetSlot = slot;
-
-	// Check for that slot being occupied already
-	for ( int i=0; i < MAX_WEAPONS; i++ )
-	{
-		if ( m_hMyWeapons[i].Get() != NULL )
-		{
-			// If the slots match, it's already occupied
-			if ( m_hMyWeapons[i]->GetSlot() == targetSlot )
-				return m_hMyWeapons[i];
-		}
-	}
-	
-	return NULL;
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Get a pointer to a weapon this character has that uses the specified ammo
 //-----------------------------------------------------------------------------
 CBaseCombatWeapon *CBaseCombatCharacter::Weapon_GetWpnForAmmo( int iAmmoIndex )

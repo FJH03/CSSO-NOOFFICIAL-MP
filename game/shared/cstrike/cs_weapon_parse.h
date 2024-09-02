@@ -203,6 +203,7 @@ public:
 								// Zero-length if no specific message for this weapon.
 
 	char m_szAnimExtension[16];
+	char m_szUIAnimExtension[16];
 	char m_szShieldViewModel[64];
 
 	char m_szAddonModel[MAX_WEAPON_STRING];		// If this is set, it is used as the addon model. Otherwise, szWorldModel is used.

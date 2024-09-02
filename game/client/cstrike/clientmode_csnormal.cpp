@@ -73,8 +73,12 @@ ConVar default_fov( "default_fov", "90", FCVAR_CHEAT );
 IClientMode *g_pClientMode = NULL;
 
 // This is a temporary entity used to render the player's model while drawing the class selection menu.
-CHandle<C_BaseAnimatingOverlay> g_ClassImagePlayer;	// player
+CHandle<C_BaseAnimating> g_ClassImagePlayer;	// player
 CHandle<C_BaseAnimating> g_ClassImageWeapon;	// weapon
+
+// This is a temporary entity used to render the player's model while drawing the buy menu.
+CHandle<C_BaseAnimating> g_BuyMenuImagePlayer;	// player
+CHandle<C_BaseAnimating> g_BuyMenuImageWeapon;	// weapon
 
 STUB_WEAPON_CLASS( cycler_weapon,	WeaponCycler,	C_BaseCombatWeapon );
 STUB_WEAPON_CLASS( weapon_cubemap,	WeaponCubemap,	C_BaseCombatWeapon );
@@ -908,25 +912,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 }
 
 
-void RemoveClassImageEntity()
-{
-	C_BaseAnimating *pEnt = g_ClassImagePlayer.Get();
-	if ( pEnt )
-	{
-		pEnt->Remove();
-		g_ClassImagePlayer = NULL;
-	}
-
-	pEnt = g_ClassImageWeapon.Get();
-	if ( pEnt )
-	{
-		pEnt->Remove();
-		g_ClassImagePlayer = NULL;
-	}
-}
-
-
-bool ShouldRecreateClassImageEntity( C_BaseAnimating *pEnt, const char *pNewModelName )
+bool ShouldRecreateImageEntity( C_BaseAnimating *pEnt, const char *pNewModelName )
 {
 	if ( !pNewModelName || !pNewModelName[0] )
 		return false;
@@ -944,9 +930,7 @@ bool ShouldRecreateClassImageEntity( C_BaseAnimating *pEnt, const char *pNewMode
 		return true;
 
 	// reload only if names are different
-	const char *pNameNoPath = V_UnqualifiedFileName( pName );
-	const char *pNewModelNameNoPath = V_UnqualifiedFileName( pNewModelName );
-	return( Q_stricmp( pNameNoPath, pNewModelNameNoPath ) != 0 );
+	return( Q_stricmp( pName, pNewModelName ) != 0 );
 }
 
 
@@ -954,57 +938,92 @@ void UpdateClassImageEntity(
 	const char *pModelName,
 	int x, int y, int width, int height )
 {
-	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
 	
 	if ( !pLocalPlayer )
 		return;
 
 	MDLCACHE_CRITICAL_SECTION();
 
-	const char *pWeaponName = "models/weapons/w_rif_ak47.mdl";
-	const char *pWeaponSequence = "Walk_Upper_AK";
+	const char* pWeaponName = "models/weapons/w_rif_ak47.mdl";
+	const char* pWeaponSequence = "UI_Idle_AK";
+	int			iTeamNumber = TEAM_UNASSIGNED;
 
-	int i;
+	if ( Q_strncmp( V_UnqualifiedFileName(pModelName), "ctm_", 4 ) == 0 )
+	{
+		// give CTs a m4
+		pWeaponName = "models/weapons/w_rif_m4a4.mdl";
+		pWeaponSequence = "UI_Idle_M4";
+		iTeamNumber = TEAM_CT;
+	}
+	else if ( Q_strncmp( V_UnqualifiedFileName( pModelName ), "tm_", 3 ) == 0 )
+		iTeamNumber = TEAM_TERRORIST;
 
+	bool m_bSilenced = false;
 	if ( pLocalPlayer->IsAlive() && pLocalPlayer->GetActiveWeapon() )
 	{
-		C_WeaponCSBase *weapon = dynamic_cast< C_WeaponCSBase * >(pLocalPlayer->GetActiveWeapon());
-		if ( weapon )
+		C_WeaponCSBase *pWeapon = dynamic_cast< C_WeaponCSBase * >( pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE ) );
+
+		// set player's primary weapon for ui model
+		if ( pWeapon )
 		{
-			pWeaponName = weapon->GetWorldModel();
-			pWeaponSequence = VarArgs("Walk_Upper_%s", weapon->GetCSWpnData().m_szAnimExtension);
+			m_bSilenced = pWeapon->IsSilenced() ? true : false;
+			pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
+			pWeaponSequence = VarArgs( "UI_Idle_%s", pWeapon->GetCSWpnData().m_szUIAnimExtension );
+		}
+		else
+		{
+			// no primary weapon? ok, use the secondary weapon
+			pWeapon = dynamic_cast< C_WeaponCSBase * >( pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL ) );
+			if ( pWeapon )
+			{
+				m_bSilenced = pWeapon->IsSilenced() ? true : false;
+				pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
+				pWeaponSequence = VarArgs( "UI_Idle_%s", pWeapon->GetCSWpnData().m_szUIAnimExtension );
+			}
+			else
+			{
+				// no pistol as well? ok, lets try active weapon then...
+				pWeapon = pLocalPlayer->GetActiveCSWeapon();
+				if ( pWeapon )
+				{
+					m_bSilenced = pWeapon->IsSilenced() ? true : false;
+					pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
+					pWeaponSequence = VarArgs( "UI_Idle_%s", pWeapon->GetCSWpnData().m_szUIAnimExtension );
+				}
+			}
 		}
 	}
 
-	C_BaseAnimatingOverlay *pPlayerModel = g_ClassImagePlayer.Get();
+	C_BaseAnimating *pPlayerModel = g_ClassImagePlayer.Get();
+
+	//bool bCreateGloves = false;
 
 	// Does the entity even exist yet?
-	bool recreatePlayer = ShouldRecreateClassImageEntity( pPlayerModel, pModelName );
+	bool recreatePlayer = ShouldRecreateImageEntity( pPlayerModel, pModelName );
 	if ( recreatePlayer )
 	{
 		if ( pPlayerModel )
 			pPlayerModel->Remove();
 
-		pPlayerModel = new C_BaseAnimatingOverlay;
+		pPlayerModel = new C_BaseAnimating;
 		pPlayerModel->InitializeAsClientEntity( pModelName, RENDER_GROUP_OPAQUE_ENTITY );
 		pPlayerModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
-
-		// let player walk ahead
-		pPlayerModel->SetSequence( pPlayerModel->LookupSequence( "walk_lower" ) );
-		pPlayerModel->SetPoseParameter( "move_yaw", 0.0f ); // move_yaw
-		pPlayerModel->SetPoseParameter( "body_pitch", 10.0f ); // body_pitch, look down a bit
-		pPlayerModel->SetPoseParameter( "body_yaw", 0.0f ); // body_yaw
-		pPlayerModel->SetPoseParameter( "move_y", 0.0f ); // move_y
-		pPlayerModel->SetPoseParameter( "move_x", 1.0f ); // move_x, walk forward
 		pPlayerModel->m_flAnimTime = gpGlobals->curtime;
 
 		g_ClassImagePlayer = pPlayerModel;
 	}
 
+	/*if ( pPlayerModel && pPlayerModel->DoesModelSupportGloves() )
+	{
+		if ( CSLoadout()->HasGlovesSet( pLocalPlayer, iTeamNumber ) )
+			bCreateGloves = true;
+	}*/
+
 	C_BaseAnimating *pWeaponModel = g_ClassImageWeapon.Get();
 
 	// Does the entity even exist yet?
-	if ( recreatePlayer || ShouldRecreateClassImageEntity( pWeaponModel, pWeaponName ) )
+	if ( recreatePlayer || ShouldRecreateImageEntity( pWeaponModel, pWeaponName ) )
 	{
 		if ( pWeaponModel )
 			pWeaponModel->Remove();
@@ -1014,8 +1033,39 @@ void UpdateClassImageEntity(
 		pWeaponModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
 		pWeaponModel->FollowEntity( pPlayerModel ); // attach to player model
 		pWeaponModel->m_flAnimTime = gpGlobals->curtime;
+
+		int silencerBodygroup = pWeaponModel->FindBodygroupByName( "silencer" );
+		if ( silencerBodygroup > -1 )
+			pWeaponModel->SetBodygroup( silencerBodygroup, m_bSilenced ? 0 : 1 );
 		g_ClassImageWeapon = pWeaponModel;
 	}
+
+	/*C_BaseAnimating *pGlovesModel = g_ClassImageGloves.Get();
+
+	if ( bCreateGloves )
+	{
+		const char* pGlovesName = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pLocalPlayer, iTeamNumber ) )->szWorldModel;
+
+		// Does the entity even exist yet?
+		if ( recreatePlayer || ShouldRecreateImageEntity( pGlovesModel, pGlovesName ) )
+		{
+			if ( pGlovesModel )
+				pGlovesModel->Remove();
+
+			pGlovesModel = new C_BaseAnimating;
+			pGlovesModel->InitializeAsClientEntity( pGlovesName, RENDER_GROUP_OPAQUE_ENTITY );
+			pGlovesModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
+			pGlovesModel->FollowEntity( pPlayerModel ); // attach to player model
+			pGlovesModel->m_nSkin = pLocalPlayer->m_pViewmodelArmConfig->iSkintoneIndex; // set the corrent skin tone
+			pGlovesModel->m_flAnimTime = gpGlobals->curtime;
+
+			g_ClassImageGloves = pGlovesModel;
+		}
+
+		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 1 );
+	}
+	else if ( pGlovesModel )
+		pGlovesModel->Remove();*/
 
 	Vector origin = pLocalPlayer->EyePosition();
 	Vector lightOrigin = origin;
@@ -1040,40 +1090,10 @@ void UpdateClassImageEntity(
 
 	// move player model in front of our view
 	pPlayerModel->SetAbsOrigin( origin );
-	pPlayerModel->SetAbsAngles( QAngle( 0, 210, 0 ) );
+	pPlayerModel->SetAbsAngles( QAngle( 5, 180, 0 ) );
 
-	// wacky hacky, set upper body animation
-	pPlayerModel->m_SequenceTransitioner.CheckForSequenceChange( 
-		pPlayerModel->GetModelPtr(),
-		pPlayerModel->LookupSequence( "walk_lower" ),
-		false,
-		true
-	);
-	pPlayerModel->m_SequenceTransitioner.UpdateCurrent( 
-		pPlayerModel->GetModelPtr(),
-		pPlayerModel->LookupSequence( "walk_lower" ),
-		pPlayerModel->GetCycle(),
-		pPlayerModel->GetPlaybackRate(),
-		gpGlobals->realtime
-	);
-
-	// Now, blend the lower and upper (aim) anims together
-	pPlayerModel->SetNumAnimOverlays( 2 );
-	int numOverlays = pPlayerModel->GetNumAnimOverlays();
-	for ( i=0; i < numOverlays; ++i )
-	{
-		C_AnimationLayer *layer = pPlayerModel->GetAnimOverlay( i );
-
-		layer->m_flCycle = pPlayerModel->GetCycle();
-		if ( i )
-			layer->m_nSequence = pPlayerModel->LookupSequence( pWeaponSequence );
-		else
-			layer->m_nSequence = pPlayerModel->LookupSequence( "walk_lower" );
-
-		layer->m_flPlaybackRate = 1.0;
-		layer->m_flWeight = 1.0f;
-		layer->SetOrder( i );
-	}
+	// now set the sequence for this player model
+	pPlayerModel->SetSequence( pPlayerModel->LookupSequence( pWeaponSequence ) );
 
 	pPlayerModel->FrameAdvance( gpGlobals->frametime );
 
@@ -1085,13 +1105,9 @@ void UpdateClassImageEntity(
 	view.height = height;
 
 	view.m_bOrtho = false;
-	view.fov = 54;
+	view.fov = 35;
 
-	view.origin = origin + Vector( -110, -5, -5 );
-
-	Vector vMins, vMaxs;
-	pPlayerModel->C_BaseAnimating::GetRenderBounds( vMins, vMaxs );
-	view.origin.z += ( vMins.z + vMaxs.z ) * 0.55f;
+	view.origin = origin + Vector( -150, 0, 40 );
 
 	view.angles.Init();
 	view.zNear = VIEW_NEARZ;
@@ -1100,24 +1116,21 @@ void UpdateClassImageEntity(
 	Frustum dummyFrustum;
 	render->Push3DView( view, 0, NULL, dummyFrustum );
 
-	//=============================================================================
-	// HPE_BEGIN:
-	// [mhansen] We don't want to light the model in the world.  We want it to 
+	// [mhansen] We don't want to light the model in the world. We want it to 
 	// always be lit normal like even if you are standing in a dark (or green) area
 	// in the world.
-	//=============================================================================
 	CMatRenderContextPtr pRenderContext( materials );
 	pRenderContext->SetLightingOrigin( vec3_origin );
-	pRenderContext->SetAmbientLight( 0.4, 0.4, 0.4 );
+	pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
 
 	static Vector white[6] = 
 	{
-		Vector( 0.4, 0.4, 0.4 ),
-		Vector( 0.4, 0.4, 0.4 ),
-		Vector( 0.4, 0.4, 0.4 ),
-		Vector( 0.4, 0.4, 0.4 ),
-		Vector( 0.4, 0.4, 0.4 ),
-		Vector( 0.4, 0.4, 0.4 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
 	};
 
 	g_pStudioRender->SetAmbientLightColors( white );
@@ -1133,11 +1146,245 @@ void UpdateClassImageEntity(
 	{
 		pWeaponModel->DrawModel( STUDIO_RENDER );
 	}
+	/*if ( pGlovesModel )
+	{
+		pGlovesModel->DrawModel( STUDIO_RENDER );
+	}*/
 
 	modelrender->SuppressEngineLighting( false );
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
+
+	render->PopView( dummyFrustum );
+}
+
+// universal function for both CCSBuyMenuPlayerImagePanel
+// (player image with active weapon) and CCSBuyMenuImagePanel
+// (player image with selected weapon in buy menu)
+void UpdateBuyMenuImageEntity(
+	const char *pModelName, const char *pAnimName,
+	int x, int y, int width, int height,
+	int viewX, int viewY, int viewZ )
+{
+	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+	
+	if ( !pLocalPlayer || !pLocalPlayer->IsAlive() )
+		return;
+
+	MDLCACHE_CRITICAL_SECTION();
+
+	const char* pWeaponName = NULL;
+	const char* pWeaponSequence = NULL;
+
+	bool m_bSilenced = true;
+
+	// check if its CCSBuyMenuPlayerImagePanel
+	if ( pModelName == NULL || pAnimName == NULL )
+	{
+		if ( Q_strncmp( V_UnqualifiedFileName( modelinfo->GetModelName( pLocalPlayer->GetModel() ) ), "ctm_", 4 ) == 0 )
+		{
+			// give CTs a m4
+			pWeaponName = "models/weapons/w_rif_m4a4.mdl";
+			pWeaponSequence = "UI_BuyMenu_M4";
+		}
+
+		if ( pLocalPlayer->IsAlive() && pLocalPlayer->GetActiveWeapon() )
+		{
+			C_WeaponCSBase *pWeapon = dynamic_cast< C_WeaponCSBase * >( pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE ) );
+
+			// set player's primary weapon for ui model
+			if ( pWeapon )
+			{
+				m_bSilenced = pWeapon->IsSilenced() ? true : false;
+				pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
+				pWeaponSequence = VarArgs( "UI_BuyMenu_%s", pWeapon->GetCSWpnData().m_szUIAnimExtension );
+			}
+			else
+			{
+				// no primary weapon? ok, use the secondary weapon
+				pWeapon = dynamic_cast< C_WeaponCSBase * >( pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL ) );
+				if ( pWeapon )
+				{
+					m_bSilenced = pWeapon->IsSilenced() ? true : false;
+					pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
+					pWeaponSequence = VarArgs( "UI_BuyMenu_%s", pWeapon->GetCSWpnData().m_szUIAnimExtension );
+				}
+				else
+				{
+					// no pistol as well? ok, lets try active weapon then...
+					pWeapon = pLocalPlayer->GetActiveCSWeapon();
+					if ( pWeapon )
+					{
+						m_bSilenced = pWeapon->IsSilenced() ? true : false;
+						pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
+						pWeaponSequence = VarArgs( "UI_BuyMenu_%s", pWeapon->GetCSWpnData().m_szUIAnimExtension );
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		pWeaponName = pModelName;
+		pWeaponSequence = pAnimName;
+	}
+
+	C_BaseAnimating *pPlayerModel = g_BuyMenuImagePlayer.Get();
+
+	//bool bCreateGloves = false;
+
+	// Does the entity even exist yet?
+	bool recreatePlayer = ShouldRecreateImageEntity( pPlayerModel, modelinfo->GetModelName( pLocalPlayer->GetModel() ) );
+	if ( recreatePlayer )
+	{
+		if ( pPlayerModel )
+			pPlayerModel->Remove();
+
+		pPlayerModel = new C_BaseAnimating;
+		pPlayerModel->InitializeAsClientEntity( modelinfo->GetModelName( pLocalPlayer->GetModel() ), RENDER_GROUP_OPAQUE_ENTITY );
+		pPlayerModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
+		pPlayerModel->m_flAnimTime = gpGlobals->curtime;
+
+		g_BuyMenuImagePlayer = pPlayerModel;
+	}
+
+	/*if ( pPlayerModel && pPlayerModel->DoesModelSupportGloves() )
+	{
+		if ( CSLoadout()->HasGlovesSet( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )
+			bCreateGloves = true;
+	}*/
+
+	C_BaseAnimating *pWeaponModel = g_BuyMenuImageWeapon.Get();
+
+	// Does the entity even exist yet?
+	if ( recreatePlayer || ShouldRecreateImageEntity( pWeaponModel, pWeaponName ) )
+	{
+		if ( pWeaponModel )
+			pWeaponModel->Remove();
+
+		pWeaponModel = new C_BaseAnimating;
+		pWeaponModel->InitializeAsClientEntity( pWeaponName, RENDER_GROUP_OPAQUE_ENTITY );
+		pWeaponModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
+		pWeaponModel->FollowEntity( pPlayerModel ); // attach to player model
+		pWeaponModel->m_flAnimTime = gpGlobals->curtime;
+
+		int silencerBodygroup = pWeaponModel->FindBodygroupByName( "silencer" );
+		if ( silencerBodygroup > -1 )
+			pWeaponModel->SetBodygroup( silencerBodygroup, m_bSilenced ? 0 : 1 );
+		g_BuyMenuImageWeapon = pWeaponModel;
+	}
+
+	/*C_BaseAnimating *pGlovesModel = g_BuyMenuImageGloves.Get();
+
+	if ( bCreateGloves )
+	{
+		const char* pGlovesName = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )->szWorldModel;
+
+		// Does the entity even exist yet?
+		if ( recreatePlayer || ShouldRecreateImageEntity( pGlovesModel, pGlovesName ) )
+		{
+			if ( pGlovesModel )
+				pGlovesModel->Remove();
+
+			pGlovesModel = new C_BaseAnimating;
+			pGlovesModel->InitializeAsClientEntity( pGlovesName, RENDER_GROUP_OPAQUE_ENTITY );
+			pGlovesModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
+			pGlovesModel->FollowEntity( pPlayerModel ); // attach to player model
+			pGlovesModel->m_nSkin = pLocalPlayer->m_pViewmodelArmConfig->iSkintoneIndex; // set the corrent skin tone
+			pGlovesModel->m_flAnimTime = gpGlobals->curtime;
+
+			g_BuyMenuImageGloves = pGlovesModel;
+		}
+
+		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 1 );
+	}
+	else if ( pGlovesModel )
+		pGlovesModel->Remove();*/
+
+	Vector origin = pLocalPlayer->EyePosition();
+	Vector lightOrigin = origin;
+
+	// find a spot inside the world for the dlight's origin, or it won't illuminate the model
+	Vector testPos( origin.x - 100, origin.y, origin.z + 100 );
+	trace_t tr;
+	UTIL_TraceLine( origin, testPos, MASK_OPAQUE, pLocalPlayer, COLLISION_GROUP_NONE, &tr );
+	if ( tr.fraction == 1.0f )
+	{
+		lightOrigin = tr.endpos;
+	}
+	else
+	{
+		// Now move the model away so we get the correct illumination
+		lightOrigin = tr.endpos + Vector( 1, 0, -1 );	// pull out from the solid
+		Vector start = lightOrigin;
+		Vector end = lightOrigin + Vector( 100, 0, -100 );
+		UTIL_TraceLine( start, end, MASK_OPAQUE, pLocalPlayer, COLLISION_GROUP_NONE, &tr );
+		origin = tr.endpos;
+	}
+
+	// move player model in front of our view
+	pPlayerModel->SetAbsOrigin( origin );
+	pPlayerModel->SetAbsAngles( QAngle( 0, 180, 0 ) );
+
+	// now set the sequence for this player model
+	pPlayerModel->SetSequence( pPlayerModel->LookupSequence( pWeaponSequence ) );
+
+	pPlayerModel->FrameAdvance( gpGlobals->frametime );
+
+	// Now draw it.
+	CViewSetup view;
+	view.x = x;
+	view.y = y;
+	view.width = width;
+	view.height = height;
+
+	view.m_bOrtho = false;
+	view.fov = 42; // previously was 32
+
+	view.origin = origin + Vector( viewX, viewY, viewZ );
+	//view.origin = origin + Vector( -70, -0, 56 ); -- old values for old animations
+
+	view.angles.Init();
+	view.zNear = VIEW_NEARZ;
+	view.zFar = 1000;
+
+	Frustum dummyFrustum;
+	render->Push3DView( view, 0, NULL, dummyFrustum );
+
+	// [mhansen] We don't want to light the model in the world. We want it to 
+	// always be lit normal like even if you are standing in a dark (or green) area
+	// in the world.
+	CMatRenderContextPtr pRenderContext( materials );
+	pRenderContext->SetLightingOrigin( vec3_origin );
+	pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
+
+	static Vector white[6] = 
+	{
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+	};
+
+	g_pStudioRender->SetAmbientLightColors( white );
+	g_pStudioRender->SetLocalLights( 0, NULL );
+
+	modelrender->SuppressEngineLighting( true );
+	float color[3] = { 1.0f, 1.0f, 1.0f };
+	render->SetColorModulation( color );
+	render->SetBlend( 1.0f );
+	pPlayerModel->DrawModel( STUDIO_RENDER );
+
+	if ( pWeaponModel )
+	{
+		pWeaponModel->DrawModel( STUDIO_RENDER );
+	}
+	/*if ( pGlovesModel )
+	{
+		pGlovesModel->DrawModel( STUDIO_RENDER );
+	}*/
+
+	modelrender->SuppressEngineLighting( false );
 
 	render->PopView( dummyFrustum );
 }

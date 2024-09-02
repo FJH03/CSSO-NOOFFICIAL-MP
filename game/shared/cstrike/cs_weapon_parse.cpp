@@ -508,6 +508,9 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	const char *pAnimEx = pKeyValuesData->GetString( "PlayerAnimationExtension", "m4" );
 	Q_strncpy( m_szAnimExtension, pAnimEx, sizeof( m_szAnimExtension ) );
 
+	const char *pUIAnimEx = pKeyValuesData->GetString( "UIPlayerAnimationExtension", m_szAnimExtension );
+	Q_strncpy( m_szUIAnimExtension, pUIAnimEx, sizeof( m_szUIAnimExtension ) );
+
 	// Default is 2000.
 	m_flBotAudibleRange = pKeyValuesData->GetFloat( "BotAudibleRange", 2000.0f );
 	

@@ -34,6 +34,8 @@ protected:
 
 	virtual void OnCommand( const char *command );
 
+	virtual Panel* CreateControlByName( const char* controlName );
+
 	MouseOverPanelButton* CreateNewMouseOverPanelButton(EditablePanel * panel)
 	{ 
 		return new BuyMouseOverPanelButton(this, NULL, panel);
