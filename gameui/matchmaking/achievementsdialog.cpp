@@ -166,6 +166,17 @@ CAchievementsDialog_XBox::CAchievementsDialog_XBox( vgui::Panel *pParent ) : Bas
 	m_pDownArrow		= new vgui::Label( this, "DownArrow", "" );
 
 	SetDeleteSelfOnClose(true);
+
+	int w = 512;
+	int h = 406;
+	if (IsProportional())
+	{
+		w = scheme()->GetProportionalScaledValueEx(GetScheme(), w);
+		h = scheme()->GetProportionalScaledValueEx(GetScheme(), h);
+	}
+
+	SetBounds(0, 0, w, h);
+	
 	SetSizeable( false );
 
 	m_pFooter = new CFooterPanel( pParent, "AchievementsFooter" );
@@ -365,14 +376,16 @@ void CAchievementsDialog_XBox::OnClose()
 //-----------------------------------------------------------------------------
 CAchievementsDialog::CAchievementsDialog(vgui::Panel *parent) : BaseClass(parent, "AchievementsDialog")
 {
-	SetDeleteSelfOnClose(true);
+	int w = 512;
+	int h = 406;
+	if (IsProportional())
+	{
+		w = scheme()->GetProportionalScaledValueEx(GetScheme(), w);
+		h = scheme()->GetProportionalScaledValueEx(GetScheme(), h);
+	}
 
-	if( IsProportional() )
-		SetBounds(0, 0, scheme()->GetProportionalScaledValue(512), scheme()->GetProportionalScaledValue(384));
-	else
-		SetBounds(0, 0, 512, 384);
+	SetBounds(0, 0, w, h);
 
-	SetMinimumSize( 256, 300 );
 	SetSizeable( true );
 
 	m_nOldScrollItem = -1;
