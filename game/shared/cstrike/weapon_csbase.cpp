@@ -730,137 +730,13 @@ void CWeaponCSBase::ItemPostFrame()
 		if ( ItemPostFrame_ProcessSecondaryAttack( pPlayer ) )
 			pPlayer->m_nButtons &= ~IN_ATTACK2;
 	}
-	else if ((pPlayer->m_nButtons & IN_ATTACK2) && (m_flNextSecondaryAttack <= gpGlobals->curtime))
+	else if ( pPlayer->m_nButtons & IN_RELOAD && GetMaxClip1() != WEAPON_NOCLIP && !m_bInReload && m_flNextPrimaryAttack < gpGlobals->curtime ) 
 	{
-		if ( pPlayer->HasShield() )
-			CWeaponCSBase::SecondaryAttack();
-		else
-			SecondaryAttack();
-
-		pPlayer->m_nButtons &= ~IN_ATTACK2;
+		ItemPostFrame_ProcessReloadAction( pPlayer );
 	}
-	else if ((pPlayer->m_nButtons & IN_ATTACK) && (m_flNextPrimaryAttack <= gpGlobals->curtime ))
+	else if ( !( pPlayer->m_nButtons & ( IN_ATTACK|IN_ATTACK2|IN_ZOOM ) ) )
 	{
-		if ( CSGameRules()->IsFreezePeriod() )	// Can't shoot during the freeze period
-			return;
-
-		if ( pPlayer->m_bIsDefusing )
-			return;
-
-		if ( pPlayer->State_Get() != STATE_ACTIVE )
-			return;
-
-		if ( pPlayer->IsShieldDrawn() ) 
-			return;
-
-		// we have to reset the FireOnEmpty flag before we can fire on an empty clip
-		if ( m_iClip1 == 0 && !m_bFireOnEmpty )
-			return;
-
-		// don't repeat fire if this is not a full auto weapon 
-		if ( pPlayer->m_iShotsFired > 0 && !IsFullAuto() )
-			return;
-
-#if !defined(CLIENT_DLL)
-		// allow the bots to react to the gunfire
-		if ( GetCSWpnData().m_WeaponType != WEAPONTYPE_GRENADE )
-		{
-			IGameEvent * event = gameeventmanager->CreateEvent( (HasAmmo()) ? "weapon_fire" : "weapon_fire_on_empty" );
-			if( event )
-			{
-				const char *weaponName = STRING( m_iClassname );
-				if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
-				{
-					weaponName += 7;
-				}
-
-				event->SetInt( "userid", pPlayer->GetUserID() );
-				event->SetString( "weapon", weaponName );
-				gameeventmanager->FireEvent( event );
-			}
-		}
-#endif
-		PrimaryAttack();
-		m_fLastShotTime = gpGlobals->curtime;
-	}
-	else if ( pPlayer->m_nButtons & IN_RELOAD && GetMaxClip1() != WEAPON_NOCLIP && !m_bInReload && m_flNextPrimaryAttack < gpGlobals->curtime)
-	{
-		// reload when reload is pressed, or if no buttons are down and weapon is empty.
-
-		//MIKETODO: add code for shields...
-		//if ( !FBitSet( m_iWeaponState, WPNSTATE_SHIELD_DRAWN ) )
-
-		if ( !pPlayer->IsShieldDrawn() )
-		{
-			 if ( Reload() )
-			 {
-#ifndef CLIENT_DLL
-				 // allow the bots to react to the reload
-				 IGameEvent * event = gameeventmanager->CreateEvent( "weapon_reload" );
-				 if( event )
-				 {
-					 event->SetInt( "userid", pPlayer->GetUserID() );
-					 gameeventmanager->FireEvent( event );
-				 }
-#endif
-			 }
-		}
-	}
-	else if ( !(pPlayer->m_nButtons & (IN_ATTACK|IN_ATTACK2) ) )
-	{
-		if ( weapon_accuracy_model.GetInt() == 2 )
-		{
-			// Fire button not down -- reset the shots fired count
-			if ( pPlayer->m_iShotsFired > 0 && ( !IsFullAuto() || m_iClip1 == 0 ) )
-			{
-				pPlayer->m_iShotsFired = 0;
-			}
-		}
-
-		// The following code prevents the player from tapping the firebutton repeatedly
-		// to simulate full auto and retaining the single shot accuracy of single fire
-		if ( m_bDelayFire )
-		{
-			m_bDelayFire = false;
-
-			if (pPlayer->m_iShotsFired > 15)
-				pPlayer->m_iShotsFired = 15;
-
-			m_flDecreaseShotsFired = gpGlobals->curtime + 0.4;
-		}
-
-		m_bFireOnEmpty = true;
-
-		// if it's a pistol then set the shots fired to 0 after the player releases a button
-		if ( IsPistol() )
-		{
-			pPlayer->m_iShotsFired = 0;
-		}
-		else
-		{
-			if ( (pPlayer->m_iShotsFired > 0) && (m_flDecreaseShotsFired < gpGlobals->curtime)	)
-			{
-				m_flDecreaseShotsFired = gpGlobals->curtime + 0.0225;
-				pPlayer->m_iShotsFired--;
-			}
-		}
-
-		if ( (!IsUseable() && m_flNextPrimaryAttack < gpGlobals->curtime) )
-		{
-			// Intentionally blank -- used to switch weapons here
-		}
-		else
-		{
-			// weapon is useable. Reload if empty and weapon has waited as long as it has to after firing
-			if ( m_iClip1 == 0 && !(GetWeaponFlags() & ITEM_FLAG_NOAUTORELOAD) && m_flNextPrimaryAttack < gpGlobals->curtime )
-			{
-				Reload();
-				return;
-			}
-		}
-
-		WeaponIdle( );
-		return;
+		ItemPostFrame_ProcessIdleNoAction( pPlayer );
 	}
 }
 
@@ -1122,6 +998,32 @@ bool CWeaponCSBase::ItemPostFrame_ProcessSecondaryAttack( CCSPlayer *pPlayer )
 #endif
 
 	return true;
+}
+
+void CWeaponCSBase::ItemPostFrame_ProcessReloadAction( CCSPlayer *pPlayer )
+{
+	// reload when reload is pressed, or if no buttons are down and weapon is empty.
+
+	//MIKETODO: add code for shields...
+	//if ( !FBitSet( m_iWeaponState, WPNSTATE_SHIELD_DRAWN ) )
+
+	ItemPostFrame_RevolverResetHaulback();
+
+	if ( !pPlayer->IsShieldDrawn() )
+	{
+		if ( Reload() )
+		{
+#ifndef CLIENT_DLL
+			// allow the bots to react to the reload
+			IGameEvent * event = gameeventmanager->CreateEvent( "weapon_reload" );
+			if ( event )
+			{
+				event->SetInt( "userid", pPlayer->GetUserID() );
+				gameeventmanager->FireEvent( event );
+			}
+#endif
+		}
+	}
 }
 
 void CWeaponCSBase::ItemPostFrame_ProcessIdleNoAction( CCSPlayer *pPlayer )

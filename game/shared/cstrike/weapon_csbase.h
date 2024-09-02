@@ -264,6 +264,7 @@ public:
 	void			ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer );
 	bool			ItemPostFrame_ProcessZoomAction( CCSPlayer *pPlayer );
 	bool			ItemPostFrame_ProcessSecondaryAttack( CCSPlayer *pPlayer );
+	void			ItemPostFrame_ProcessReloadAction( CCSPlayer *pPlayer );
 	void			ItemPostFrame_ProcessIdleNoAction( CCSPlayer *pPlayer );
 
 	void			ItemPostFrame_RevolverResetHaulback();
@@ -302,10 +303,6 @@ public:
 	CNetworkVar( bool, m_bReloadVisuallyComplete );
 	
 	CNetworkVar( bool, m_bSilencerOn );
-	CNetworkVar( float, m_flDoneSwitchingSilencer );	// soonest time switching the silencer will be complete
-	bool IsSwitchingSilencer( void ) { return (m_flDoneSwitchingSilencer >= gpGlobals->curtime); }
-
-
 	CNetworkVar( float, m_flDoneSwitchingSilencer );	// soonest time switching the silencer will be complete
 	bool IsSwitchingSilencer( void ) { return (m_flDoneSwitchingSilencer >= gpGlobals->curtime); }
 
