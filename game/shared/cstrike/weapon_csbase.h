@@ -300,6 +300,11 @@ public:
 
 	virtual bool IsReloadVisuallyComplete() { return m_bReloadVisuallyComplete; }
 	CNetworkVar( bool, m_bReloadVisuallyComplete );
+	
+	CNetworkVar( bool, m_bSilencerOn );
+	CNetworkVar( float, m_flDoneSwitchingSilencer );	// soonest time switching the silencer will be complete
+	bool IsSwitchingSilencer( void ) { return (m_flDoneSwitchingSilencer >= gpGlobals->curtime); }
+
 
 	CNetworkVar( float, m_flDoneSwitchingSilencer );	// soonest time switching the silencer will be complete
 	bool IsSwitchingSilencer( void ) { return (m_flDoneSwitchingSilencer >= gpGlobals->curtime); }

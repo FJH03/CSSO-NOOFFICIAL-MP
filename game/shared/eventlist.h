@@ -76,10 +76,14 @@ typedef enum
 	AE_CL_DISABLE_BODYGROUP,
 	AE_CL_BODYGROUP_SET_VALUE,
 	AE_CL_BODYGROUP_SET_VALUE_CMODEL_WPN,
-
+	
 	AE_CL_BODYGROUP_SET_TO_CLIP,	// Updates the value of bodygroup 1 to the number of bullets in m_iClip1
 	AE_CL_BODYGROUP_SET_TO_NEXTCLIP,	// Updates the value of bodygroup 1 to the number of bullets that can be reloaded next
 	AE_WPN_COMPLETE_RELOAD,
+	AE_CL_ATTACH_SILENCER_COMPLETE,
+	AE_CL_DETACH_SILENCER_COMPLETE,
+	AE_CL_SHOW_SILENCER,
+	AE_CL_HIDE_SILENCER,
 
 	AE_WPN_PRIMARYATTACK,	// Used by weapons that want their primary attack to occur during an attack anim (i.e. grenade throwing)
 	AE_WPN_INCREMENTAMMO,

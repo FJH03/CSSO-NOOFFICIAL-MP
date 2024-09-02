@@ -6,7 +6,13 @@
 
 #include "cbase.h"
 #include "weapon_csbasegun.h"
+#include "npcevent.h"
+#include "eventlist.h"
+#include "baseviewmodel_shared.h"
 
+#if defined( CLIENT_DLL )
+#include "c_baseanimating.h"
+#endif
 #if defined( CLIENT_DLL )
 
 	#define CWeaponM4A1 C_WeaponM4A1
@@ -29,41 +35,30 @@ public:
 	CWeaponM4A1();
 
 	virtual void Spawn();
-	virtual void Precache();
 
 	virtual void SecondaryAttack();
 	virtual void PrimaryAttack();
 	virtual bool Deploy();
 	virtual bool Reload();
 	virtual void WeaponIdle();
-	virtual bool Holster( CBaseCombatWeapon *pSwitchingTo );
-	virtual void Drop( const Vector &vecVelocity );
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_M4A1; }
 
 	// return true if this weapon has a silencer equipped
 	virtual bool IsSilenced( void ) const				{ return m_bSilencerOn; }
+	virtual void SetSilencer( bool silencer );
 
 	virtual Activity GetDeployActivity( void );
 
-#ifdef CLIENT_DLL
-	virtual int GetMuzzleFlashStyle( void );
+#ifndef CLIENT_DLL
+	virtual void Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
 #endif
-
-	virtual const char		*GetWorldModel( void ) const;
-	virtual int				GetWorldModelIndex( void );
 
 private:
 
 	CWeaponM4A1( const CWeaponM4A1 & );
 
-	void DoFireEffects();
-
 	CNetworkVar( bool, m_bSilencerOn );
-	CNetworkVar( float, m_flDoneSwitchingSilencer );	// soonest time switching the silencer will be complete
-
-	int m_silencedModelIndex;
-	bool m_inPrecache;
 };
 
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponM4A1, DT_WeaponM4A1 )
@@ -71,10 +66,8 @@ IMPLEMENT_NETWORKCLASS_ALIASED( WeaponM4A1, DT_WeaponM4A1 )
 BEGIN_NETWORK_TABLE( CWeaponM4A1, DT_WeaponM4A1 )
 	#ifdef CLIENT_DLL
 		RecvPropBool( RECVINFO( m_bSilencerOn ) ),
-		RecvPropTime( RECVINFO( m_flDoneSwitchingSilencer ) ),
 	#else
 		SendPropBool( SENDINFO( m_bSilencerOn ) ),
-		SendPropTime( SENDINFO( m_flDoneSwitchingSilencer ) ),
 	#endif
 END_NETWORK_TABLE()
 
@@ -91,58 +84,21 @@ PRECACHE_WEAPON_REGISTER( weapon_m4a1_silencer );
 
 CWeaponM4A1::CWeaponM4A1()
 {
-	m_bSilencerOn = false;
+	m_bSilencerOn = true;
 	m_flDoneSwitchingSilencer = 0.0f;
-	m_inPrecache = false;
 }
 
 
-void CWeaponM4A1::Spawn( )
+void CWeaponM4A1::Spawn()
 {
+	SetClassname( "weapon_m4a1_silencer" ); // for backwards compatibility
 	BaseClass::Spawn();
 
-	m_bSilencerOn = false;
-	m_weaponMode = Primary_Mode;
+	m_bSilencerOn = true;
+	m_weaponMode = Secondary_Mode;
 	m_flDoneSwitchingSilencer = 0.0f;
 	m_bDelayFire = true;
 }
-
-
-void CWeaponM4A1::Precache()
-{
-	m_inPrecache = true;
-	BaseClass::Precache();
-
-	m_silencedModelIndex = CBaseEntity::PrecacheModel( GetCSWpnData().m_szSilencerModel );
-	m_inPrecache = false;
-}
-
-
-int CWeaponM4A1::GetWorldModelIndex( void )
-{
-	if ( !m_bSilencerOn || m_inPrecache )
-	{
-		return m_iWorldModelIndex;
-	}
-	else
-	{
-		return m_silencedModelIndex;
-	}
-}
-
-
-const char * CWeaponM4A1::GetWorldModel( void ) const
-{
-	if ( !m_bSilencerOn || m_inPrecache )
-	{
-		return BaseClass::GetWorldModel();
-	}
-	else
-	{
-		return GetCSWpnData().m_szSilencerModel;
-	}
-}
-
 
 bool CWeaponM4A1::Deploy()
 {
@@ -166,53 +122,28 @@ Activity CWeaponM4A1::GetDeployActivity( void )
 	}
 }
 
-bool CWeaponM4A1::Holster( CBaseCombatWeapon *pSwitchingTo )
-{
-	if ( gpGlobals->curtime < m_flDoneSwitchingSilencer )
-	{
-		// still switching the silencer.  Cancel the switch.
-		m_bSilencerOn = !m_bSilencerOn;
-		m_weaponMode = m_bSilencerOn ? Secondary_Mode : Primary_Mode;
-		SetWeaponModelIndex( GetWorldModel() );
-	}
-
-	return BaseClass::Holster( pSwitchingTo );
-}
-
-void CWeaponM4A1::Drop( const Vector &vecVelocity )
-{
-	if ( gpGlobals->curtime < m_flDoneSwitchingSilencer )
-	{
-		// still switching the silencer.  Cancel the switch.
-		m_bSilencerOn = !m_bSilencerOn;
-		m_weaponMode = m_bSilencerOn ? Secondary_Mode : Primary_Mode;
-		SetWeaponModelIndex( GetWorldModel() );
-	}
-
-	BaseClass::Drop( vecVelocity );
-}
-
 void CWeaponM4A1::SecondaryAttack()
 {
+	CCSPlayer* pPlayer = GetPlayerOwner();
+
 	if ( m_bSilencerOn )
 	{
-		m_bSilencerOn = false;
-		m_weaponMode = Primary_Mode;
 		SendWeaponAnim( ACT_VM_DETACH_SILENCER );
+		pPlayer->DoAnimationEvent( PLAYERANIMEVENT_SILENCER_DETACH );
 	}
 	else
 	{
-		m_bSilencerOn = true;
-		m_weaponMode = Secondary_Mode;
 		SendWeaponAnim( ACT_VM_ATTACH_SILENCER );
+		pPlayer->DoAnimationEvent( PLAYERANIMEVENT_SILENCER_ATTACH );
 	}
-	m_flDoneSwitchingSilencer = gpGlobals->curtime + 2;
 
-	m_flNextSecondaryAttack = gpGlobals->curtime + 2;
-	m_flNextPrimaryAttack = gpGlobals->curtime + 2;
-	SetWeaponIdleTime( gpGlobals->curtime + 2 );
+	m_flDoneSwitchingSilencer = gpGlobals->curtime + SequenceDuration();
 
-	SetWeaponModelIndex( GetWorldModel() );
+	m_flNextSecondaryAttack = gpGlobals->curtime + SequenceDuration();
+	m_flNextPrimaryAttack = gpGlobals->curtime + SequenceDuration();
+	SetWeaponIdleTime( gpGlobals->curtime + SequenceDuration() );
+
+	// SetWeaponModelIndex( GetWorldModel() );
 }
 
 void CWeaponM4A1::PrimaryAttack()
@@ -223,24 +154,6 @@ void CWeaponM4A1::PrimaryAttack()
 
 	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, m_weaponMode ) )
 		return;
-
-	if ( m_bSilencerOn )
-		 SendWeaponAnim( ACT_VM_PRIMARYATTACK_SILENCED );
-
-	pPlayer = GetPlayerOwner();
-}
-
-
-void CWeaponM4A1::DoFireEffects()
-{
-	if ( !m_bSilencerOn )
-	{
-		CCSPlayer *pPlayer = GetPlayerOwner();
-		if ( pPlayer )
-		{
-			pPlayer->DoMuzzleFlash();
-		}
-	}
 }
 
 bool CWeaponM4A1::Reload()
@@ -249,15 +162,10 @@ bool CWeaponM4A1::Reload()
 	if ( !pPlayer )
 		return false;
 
-	if (pPlayer->GetAmmoCount( GetPrimaryAmmoType() ) <= 0)
+	if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 )
 		return false;
-
-	int iResult = 0;
 	
-	if ( m_bSilencerOn )
-		 iResult = DefaultReload( GetMaxClip1(), GetMaxClip2(), ACT_VM_RELOAD_SILENCED );
-	else
-		 iResult = DefaultReload( GetMaxClip1(), GetMaxClip2(), ACT_VM_RELOAD );
+	int iResult = DefaultReload( GetMaxClip1(), GetMaxClip2(), ACT_VM_RELOAD );
 
 	if ( !iResult )
 		return false;
@@ -284,24 +192,75 @@ void CWeaponM4A1::WeaponIdle()
 	if ( m_iClip1 != 0 )
 	{
 		SetWeaponIdleTime( gpGlobals->curtime + GetCSWpnData().m_flIdleInterval );
-		if ( m_bSilencerOn )
-			SendWeaponAnim( ACT_VM_IDLE_SILENCED );
-		else
-			SendWeaponAnim( ACT_VM_IDLE );
+		SendWeaponAnim( ACT_VM_IDLE );
 	}
 }
 
 
-#ifdef CLIENT_DLL
-int CWeaponM4A1::GetMuzzleFlashStyle( void )
+#ifndef CLIENT_DLL
+void CWeaponM4A1::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator )
 {
-	if( m_bSilencerOn )
+	int nEvent = pEvent->event;
+
+	if ( (pEvent->type & AE_TYPE_NEWEVENTSYSTEM) && (pEvent->type & AE_TYPE_SERVER) )
 	{
-		return CS_MUZZLEFLASH_NONE;
+		switch ( nEvent )
+		{
+			case AE_CL_ATTACH_SILENCER_COMPLETE:
+			{
+				m_bSilencerOn = true;
+				m_weaponMode = Secondary_Mode;
+				break;
+			}
+			case AE_CL_DETACH_SILENCER_COMPLETE:
+			{
+				m_bSilencerOn = false;
+				m_weaponMode = Primary_Mode;
+				break;
+			}
+			case AE_CL_SHOW_SILENCER:
+			{
+				if ( CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() ) )
+				{
+					if ( CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex ) )
+						vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), 0 );
+				}
+
+				//world model
+				SetBodygroup( FindBodygroupByName( "silencer" ), 0 );
+				break;
+			}
+			case AE_CL_HIDE_SILENCER:
+			{
+				if ( CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() ) )
+				{
+					if ( CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex ) )
+						vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), 1 );
+				}
+
+				//world model
+				SetBodygroup( FindBodygroupByName( "silencer" ), 1 );
+				break;
+			}
+		}
 	}
-	else
-	{
-		return CS_MUZZLEFLASH_X;
-	}
+
+	BaseClass::Operator_HandleAnimEvent( pEvent, pOperator );
 }
 #endif
+
+void CWeaponM4A1::SetSilencer( bool silencer )
+{
+	m_bSilencerOn = silencer;
+	m_weaponMode = silencer ? Secondary_Mode : Primary_Mode;
+
+	// we need to update bodygroups as well
+	if ( CBasePlayer* pOwner = ToBasePlayer( GetPlayerOwner() ) )
+	{
+		if ( CBaseViewModel* vm = pOwner->GetViewModel( m_nViewModelIndex ) )
+			vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), silencer ? 0 : 1 );
+	}
+
+	//world model
+	SetBodygroup( FindBodygroupByName( "silencer" ), silencer ? 0 : 1 );
+}

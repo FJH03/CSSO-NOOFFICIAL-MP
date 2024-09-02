@@ -126,6 +126,8 @@ void CWeaponGlock::SecondaryAttack()
 		m_bBurstMode = true;
 		m_weaponMode = Secondary_Mode;
 	}
+
+	pPlayer->EmitSound( "Weapon.AutoSemiAutoSwitch" );
 	
 	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3;
 }
@@ -136,7 +138,7 @@ void CWeaponGlock::PrimaryAttack()
 	if ( !pPlayer )
 		return;
 
-	float flCycleTime = m_bBurstMode ? 0.5f : GetCSWpnData().m_flCycleTime;
+	float flCycleTime = GetCSWpnData().m_flCycleTime;
 
 	m_flLastFire = gpGlobals->curtime;
 
@@ -171,7 +173,7 @@ void CWeaponGlock::PrimaryAttack()
 	FX_FireBullets( 
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(), 
-		pPlayer->GetFinalAimAngle(),
+		pPlayer->GetFinalAimAngle(), 
 		GetWeaponID(),
 		Primary_Mode,
 		CBaseEntity::GetPredictionRandomSeed() & 255, // wrap it for network traffic so it's the same between client and server
@@ -194,13 +196,8 @@ void CWeaponGlock::PrimaryAttack()
 		// Fire off the next two rounds
 		m_fNextBurstShot = gpGlobals->curtime + kGlockBurstCycleTime;
 		m_iBurstShotsRemaining = 2;
-
-		SendWeaponAnim( ACT_VM_SECONDARYATTACK );
 	}
-	else
-	{
-		SendWeaponAnim( ACT_VM_PRIMARYATTACK );
-	}
+	SendWeaponAnim( ACT_VM_PRIMARYATTACK );
 
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[m_weaponMode];
@@ -208,9 +205,7 @@ void CWeaponGlock::PrimaryAttack()
 	//ResetPlayerShieldAnim();
 
 	// table driven recoil
-	Recoil( Secondary_Mode );
-
-	m_flRecoilIndex += 1.0f;
+	Recoil( m_weaponMode );
 }
 
 
@@ -249,7 +244,9 @@ void CWeaponGlock::FireRemaining( float fSpread )
 		CBaseEntity::GetPredictionRandomSeed() & 255, // wrap it for network traffic so it's the same between client and server
 		fInaccuracy,
 		GetSpread(),
-		m_fNextBurstShot);
+		m_fNextBurstShot );
+
+	SendWeaponAnim( ACT_VM_PRIMARYATTACK );
 	
 	pPlayer->SetAnimation( PLAYER_ATTACK1 );
 	pPlayer->m_iShotsFired++;
@@ -266,8 +263,6 @@ void CWeaponGlock::FireRemaining( float fSpread )
 
 	// table driven recoil
 	Recoil( Secondary_Mode );
-
-	m_flRecoilIndex += 1.0f;
 }
 
 
@@ -287,6 +282,9 @@ void CWeaponGlock::ItemPostFrame()
 
 bool CWeaponGlock::Reload()
 {
+	if ( m_iBurstShotsRemaining != 0 )
+		return true;
+
 	return DefaultPistolReload();
 }
 

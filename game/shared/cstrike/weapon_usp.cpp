@@ -7,7 +7,13 @@
 #include "cbase.h"
 #include "weapon_csbase.h"
 #include "fx_cs_shared.h"
+#include "npcevent.h"
+#include "eventlist.h"
+#include "baseviewmodel_shared.h"
 
+#if defined( CLIENT_DLL )
+#include "c_baseanimating.h"
+#endif
 
 #if defined( CLIENT_DLL )
 
@@ -31,43 +37,30 @@ public:
 	CWeaponUSP();
 
 	virtual void Spawn();
-	virtual void Precache();
 
 	virtual void PrimaryAttack();
 	virtual void SecondaryAttack();
 	virtual bool Deploy();
-	virtual bool Holster( CBaseCombatWeapon *pSwitchingTo );
-	virtual void Drop( const Vector &vecVelocity );
 
 	virtual bool Reload();
-	virtual void WeaponIdle();
-
-	// We overload this so we can translate all weapon activities to silenced versions.
-	virtual bool SendWeaponAnim( int iActivity );
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_USP; }
 
 	// return true if this weapon has a silencer equipped
 	virtual bool IsSilenced( void ) const				{ return m_bSilencerOn; }
+	virtual void SetSilencer( bool silencer );
 
 	virtual Activity GetDeployActivity( void );
 
-#ifdef CLIENT_DLL
-	virtual int GetMuzzleFlashStyle( void );
+#ifndef CLIENT_DLL
+	virtual void Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
 #endif
-
-	virtual const char		*GetWorldModel( void ) const;
-	virtual int				GetWorldModelIndex( void );
 
 private:
 	CWeaponUSP( const CWeaponUSP & );
 
 	CNetworkVar( bool, m_bSilencerOn );
-	CNetworkVar( float, m_flDoneSwitchingSilencer );	// soonest time switching the silencer will be complete
 	float m_flLastFire;
-
-	int m_silencedModelIndex;
-	bool m_inPrecache;
 };
 
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponUSP, DT_WeaponUSP )
@@ -75,10 +68,8 @@ IMPLEMENT_NETWORKCLASS_ALIASED( WeaponUSP, DT_WeaponUSP )
 BEGIN_NETWORK_TABLE( CWeaponUSP, DT_WeaponUSP )
 #ifdef CLIENT_DLL
 	RecvPropBool( RECVINFO( m_bSilencerOn ) ),
-	RecvPropTime( RECVINFO( m_flDoneSwitchingSilencer ) ),
 #else
 	SendPropBool( SENDINFO( m_bSilencerOn ) ),
-	SendPropTime( SENDINFO( m_flDoneSwitchingSilencer ) ),
 #endif
 END_NETWORK_TABLE()
 
@@ -96,69 +87,26 @@ LINK_ENTITY_TO_CLASS( weapon_usp, CWeaponUSP ); // for backwards compatibility
 PRECACHE_WEAPON_REGISTER( weapon_usp_silencer );
 
 
-Activity g_SilencedTranslations[][2] =
-{
-	{ ACT_VM_RELOAD, ACT_VM_RELOAD_SILENCED },
-	{ ACT_VM_PRIMARYATTACK, ACT_VM_PRIMARYATTACK_SILENCED },
-	{ ACT_VM_DRAW, ACT_VM_DRAW_SILENCED },
-};
-
-
 
 CWeaponUSP::CWeaponUSP()
 {
 	m_flLastFire = gpGlobals->curtime;
-	m_bSilencerOn = false;
+	m_bSilencerOn = true;
 	m_flDoneSwitchingSilencer = 0.0f;
-	m_inPrecache = false;
 }
 
 
 void CWeaponUSP::Spawn()
 {
+	SetClassname( "weapon_usp_silencer" ); // for backwards compatibility
+	BaseClass::Spawn();
+
 	//m_iDefaultAmmo = 12;
-	m_bSilencerOn = false;
-	m_weaponMode = Primary_Mode;
+	m_bSilencerOn = true;
+	m_weaponMode = Secondary_Mode;
 	m_flDoneSwitchingSilencer = 0.0f;
 
 	//FallInit();// get ready to fall down.
-	BaseClass::Spawn();
-}
-
-
-void CWeaponUSP::Precache()
-{
-	m_inPrecache = true;
-	BaseClass::Precache();
-
-	m_silencedModelIndex = CBaseEntity::PrecacheModel( GetCSWpnData().m_szSilencerModel );
-	m_inPrecache = false;
-}
-
-
-int CWeaponUSP::GetWorldModelIndex( void )
-{
-	if ( !m_bSilencerOn || m_inPrecache )
-	{
-		return m_iWorldModelIndex;
-	}
-	else
-	{
-		return m_silencedModelIndex;
-	}
-}
-
-
-const char * CWeaponUSP::GetWorldModel( void ) const
-{
-	if ( !m_bSilencerOn || m_inPrecache )
-	{
-		return BaseClass::GetWorldModel();
-	}
-	else
-	{
-		return GetCSWpnData().m_szSilencerModel;
-	}
 }
 
 
@@ -167,32 +115,6 @@ bool CWeaponUSP::Deploy()
 	m_flDoneSwitchingSilencer = 0.0f;
 
 	return BaseClass::Deploy();
-}
-
-bool CWeaponUSP::Holster( CBaseCombatWeapon *pSwitchingTo )
-{
-	if ( gpGlobals->curtime < m_flDoneSwitchingSilencer )
-	{
-		// still switching the silencer.  Cancel the switch.
-		m_bSilencerOn = !m_bSilencerOn;
-		m_weaponMode = m_bSilencerOn ? Secondary_Mode : Primary_Mode;
-		SetWeaponModelIndex( GetWorldModel() );
-	}
-
-	return BaseClass::Holster( pSwitchingTo );
-}
-
-void CWeaponUSP::Drop( const Vector &vecVelocity )
-{
-	if ( gpGlobals->curtime < m_flDoneSwitchingSilencer )
-	{
-		// still switching the silencer.  Cancel the switch.
-		m_bSilencerOn = !m_bSilencerOn;
-		m_weaponMode = m_bSilencerOn ? Secondary_Mode : Primary_Mode;
-		SetWeaponModelIndex( GetWorldModel() );
-	}
-
-	BaseClass::Drop( vecVelocity );
 }
 
 Activity CWeaponUSP::GetDeployActivity( void )
@@ -209,23 +131,26 @@ Activity CWeaponUSP::GetDeployActivity( void )
 
 void CWeaponUSP::SecondaryAttack()
 {
+	CCSPlayer* pPlayer = GetPlayerOwner();
+
 	if ( m_bSilencerOn )
 	{
 		SendWeaponAnim( ACT_VM_DETACH_SILENCER );
+		pPlayer->DoAnimationEvent( PLAYERANIMEVENT_SILENCER_DETACH );
 	}
 	else
 	{
 		SendWeaponAnim( ACT_VM_ATTACH_SILENCER );
+		pPlayer->DoAnimationEvent( PLAYERANIMEVENT_SILENCER_ATTACH );
 	}
-	m_bSilencerOn = !m_bSilencerOn;
-	m_weaponMode = m_bSilencerOn ? Secondary_Mode : Primary_Mode;
-	m_flDoneSwitchingSilencer = gpGlobals->curtime + 3;
 
-	m_flNextSecondaryAttack = gpGlobals->curtime + 3;
-	m_flNextPrimaryAttack = gpGlobals->curtime + 3;
-	SetWeaponIdleTime( gpGlobals->curtime + 3 );
+	m_flDoneSwitchingSilencer = gpGlobals->curtime + SequenceDuration();
 
-	SetWeaponModelIndex( GetWorldModel() );
+	m_flNextSecondaryAttack = gpGlobals->curtime + SequenceDuration();
+	m_flNextPrimaryAttack = gpGlobals->curtime + SequenceDuration();
+	SetWeaponIdleTime( gpGlobals->curtime + SequenceDuration() );
+
+	// SetWeaponModelIndex( GetWorldModel() );
 }
 
 void CWeaponUSP::PrimaryAttack()
@@ -260,12 +185,6 @@ void CWeaponUSP::PrimaryAttack()
 
 	// player "shoot" animation
 	pPlayer->SetAnimation( PLAYER_ATTACK1 );
-
-	
-	if ( !m_bSilencerOn )
-	{
-		pPlayer->DoMuzzleFlash();
-	}
 	
 	FX_FireBullets(
 		pPlayer->entindex(),
@@ -290,8 +209,6 @@ void CWeaponUSP::PrimaryAttack()
 
 	// table driven recoil
 	Recoil( m_weaponMode );
-
-	m_flRecoilIndex += 1.0f;
 }
 
 
@@ -300,47 +217,71 @@ bool CWeaponUSP::Reload()
 	return DefaultPistolReload();
 }
 
-void CWeaponUSP::WeaponIdle()
-{
-	if (m_flTimeWeaponIdle > gpGlobals->curtime)
-		return;
 
-	// only idle if the slid isn't back
-	if (m_iClip1 != 0)
-	{
-		SetWeaponIdleTime( gpGlobals->curtime + 6.0 );
-	}
-}
-
-bool CWeaponUSP::SendWeaponAnim( int iActivity )
+#ifndef CLIENT_DLL
+void CWeaponUSP::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator )
 {
-	// Translate the activity?
-	if ( m_bSilencerOn )
+	int nEvent = pEvent->event;
+
+	if ( (pEvent->type & AE_TYPE_NEWEVENTSYSTEM) && (pEvent->type & AE_TYPE_SERVER) )
 	{
-		for ( int i=0; i < ARRAYSIZE( g_SilencedTranslations ); i++ )
+		switch ( nEvent )
 		{
-			if ( g_SilencedTranslations[i][0] == iActivity )
+			case AE_CL_ATTACH_SILENCER_COMPLETE:
 			{
-				iActivity = g_SilencedTranslations[i][1];
+				m_bSilencerOn = true;
+				m_weaponMode = Secondary_Mode;
+				break;
+			}
+			case AE_CL_DETACH_SILENCER_COMPLETE:
+			{
+				m_bSilencerOn = false;
+				m_weaponMode = Primary_Mode;
+				break;
+			}
+			case AE_CL_SHOW_SILENCER:
+			{
+				if ( CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() ) )
+				{
+					if ( CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex ) )
+						vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), 0 );
+				}
+
+				//world model
+				SetBodygroup( FindBodygroupByName( "silencer" ), 0 );
+				break;
+			}
+			case AE_CL_HIDE_SILENCER:
+			{
+				if ( CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() ) )
+				{
+					if ( CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex ) )
+						vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), 1 );
+				}
+
+				//world model
+				SetBodygroup( FindBodygroupByName( "silencer" ), 1 );
 				break;
 			}
 		}
 	}
-	
-	return BaseClass::SendWeaponAnim( iActivity );
-}
 
-
-#ifdef CLIENT_DLL
-int CWeaponUSP::GetMuzzleFlashStyle( void )
-{
-	if( m_bSilencerOn )
-	{
-		return CS_MUZZLEFLASH_NONE;
-	}
-	else
-	{
-		return CS_MUZZLEFLASH_NORM;
-	}
+	BaseClass::Operator_HandleAnimEvent( pEvent, pOperator );
 }
 #endif
+
+void CWeaponUSP::SetSilencer( bool silencer )
+{
+	m_bSilencerOn = silencer;
+	m_weaponMode = silencer ? Secondary_Mode : Primary_Mode;
+
+	// we need to update bodygroups as well
+	if ( CBasePlayer* pOwner = ToBasePlayer( GetPlayerOwner() ) )
+	{
+		if ( CBaseViewModel* vm = pOwner->GetViewModel( m_nViewModelIndex ) )
+			vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), silencer ? 0 : 1 );
+	}
+
+	//world model
+	SetBodygroup( FindBodygroupByName( "silencer" ), silencer ? 0 : 1 );
+}
