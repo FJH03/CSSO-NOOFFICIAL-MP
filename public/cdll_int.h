@@ -60,6 +60,7 @@ class CRenamedRecvTableInfo;
 class CMouthInfo;
 class IConVar;
 
+extern CGlobalVarsBase *gpGlobals;
 //-----------------------------------------------------------------------------
 // Purpose: This data structure is filled in by the engine when the client .dll requests information about
 //  other players that the engine knows about
