@@ -26,7 +26,9 @@
 #include "tier2/tier2.h"
 
 // engine interface singleton accessors
-extern class IVEngineClient *engine;
+#ifdef CLIENT_DLL
+extern IVEngineClient *engine;
+#endif
 extern class IGameUIFuncs *gameuifuncs;
 extern class IEngineSound *enginesound;
 extern class IMatchmaking *matchmaking;
