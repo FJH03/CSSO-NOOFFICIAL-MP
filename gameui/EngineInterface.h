@@ -19,16 +19,12 @@
 #define IN_BUTTONS_H
 
 // engine interface
-#ifdef CLIENT_DLL
-#include "cdll_client_int.h"
-#endif
+#include "cdll_int.h"
 #include "icvar.h"
 #include "tier2/tier2.h"
 
 // engine interface singleton accessors
-#ifdef CLIENT_DLL
 extern IVEngineClient *engine;
-#endif
 extern class IGameUIFuncs *gameuifuncs;
 extern class IEngineSound *enginesound;
 extern class IMatchmaking *matchmaking;
