@@ -19,7 +19,9 @@
 #define IN_BUTTONS_H
 
 // engine interface
+#ifdef CLIENT_DLL
 #include "cdll_client_int.h"
+#endif
 #include "icvar.h"
 #include "tier2/tier2.h"
 
