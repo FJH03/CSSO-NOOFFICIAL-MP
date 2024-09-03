@@ -343,6 +343,12 @@ ConVar cl_autohelp(
 	FCVAR_ARCHIVE | FCVAR_USERINFO,
 	"Auto-help" );
 
+ConVar snd_music_selection(
+    "snd_music_selection",
+    "valve_csgo_01",
+    FCVAR_ARCHIVE,
+    "Name of the music kit to use (from game files).");
+
 #else
 
 	// longest the intermission can last, in seconds

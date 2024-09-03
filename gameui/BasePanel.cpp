@@ -1306,6 +1306,10 @@ void CBasePanel::SetBackgroundRenderState(EBackgroundState state)
 			m_flTransitionStartTime = frametime;
 			m_flTransitionEndTime = frametime + 3.0f;
 		}
+
+		// update main menu music
+		if ( !GameUI().IsBackgroundMusicPlaying() )
+			GameUI().SetBackgroundMusicDesired( true );
 	}
 	else if ( state == BACKGROUND_LOADING )
 	{
@@ -1316,6 +1320,9 @@ void CBasePanel::SetBackgroundRenderState(EBackgroundState state)
 
 		// hide the menus
 		SetMenuAlpha( 0 );
+
+		// update main menu music
+		GameUI().SetBackgroundMusicDesired( false );
 	}
 	else if ( state == BACKGROUND_LEVEL )
 	{
