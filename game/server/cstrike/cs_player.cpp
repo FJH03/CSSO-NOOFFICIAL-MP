@@ -2311,7 +2311,7 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		// No damage if immune
 		return 0;
 	}
-
+	
 	CTakeDamageInfo info = inputInfo;
 
 	CBaseEntity *pInflictor = info.GetInflictor();
@@ -2321,7 +2321,18 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 
 	if ( GetMoveType() == MOVETYPE_NOCLIP || GetMoveType() == MOVETYPE_OBSERVER )
 		return 0;
+                //AndraMidoxXx:OMG,BUDDHAAAA!
+        if ( GetFlags() & FL_GODMODE )
+                return 0;
 
+        if ( m_debugOverlays & OVERLAY_BUDDHA_MODE ) 
+        {
+                if ( ( m_iHealth - info.GetDamage() ) <= 0 )
+                {
+                        m_iHealth = 1;
+                        return 0;
+                }
+	}
 	const float flArmorBonus = 0.5f;
 	float flArmorRatio = 0.5f;
 	float flDamage = info.GetDamage();

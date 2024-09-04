@@ -1576,8 +1576,12 @@ void COptionsSubVideo::OnApplyChanges()
 		}
 	}
 #endif // USE_SDL
-
-	if ( bConfigChanged )
+                //AndraMidoxXx:this fix kind of like "Hello World" but it helps a lot  
+	        bool IsStretchAsshole = CommandLine()->CheckParm("-width", nullptr) || 
+                                        CommandLine()->CheckParm("-height", nullptr) || 
+	                                CommandLine()->CheckParm("-w", nullptr) || 
+                                        CommandLine()->CheckParm("-h", nullptr);
+        if ( bConfigChanged && !IsStretchAsshole )
 	{
 		// set mode
 		char szCmd[ 256 ];
