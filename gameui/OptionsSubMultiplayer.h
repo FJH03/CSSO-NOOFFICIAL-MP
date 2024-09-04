@@ -25,16 +25,6 @@ class CCvarSlider;
 class CMultiplayerAdvancedDialog;
 
 class COptionsSubMultiplayer;
- 
-class CrosshairImagePanelBase : public vgui::ImagePanel
-{
-	DECLARE_CLASS_SIMPLE( CrosshairImagePanelBase, vgui::ImagePanel );
-public:
-	CrosshairImagePanelBase( Panel *parent, const char *name ) : BaseClass(parent, name) {}
-	virtual void ResetData() {}
-	virtual void ApplyChanges() {}
-	virtual void UpdateVisibility() {}
-};
 
 //-----------------------------------------------------------------------------
 // Purpose: multiplayer options property page
@@ -89,8 +79,6 @@ private:
 	vgui::Dar< CCvarToggleCheckButton * > m_cvarToggleCheckButtons;
 
 	CCvarToggleCheckButton *m_pLockRadarRotationCheckbox;
-
-	CrosshairImagePanelBase *m_pCrosshairImage;
 
 	// --- client download filter
 	vgui::ComboBox	*m_pDownloadFilterCombo;

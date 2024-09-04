@@ -407,7 +407,7 @@ void inline SinCos( float radians, float *sine, float *cosine )
 	//AndraMidoxXx:Better and faster way sincos implementation
       *sine = sin( radians );
       *cosine = cos( radians );
-#else//cut this shit!!
+#else //cut this shit!!
 #if defined( _X360 )
 	XMScalarSinCos( sine, cosine, radians );
 #elif defined( PLATFORM_WINDOWS_PC32 )
