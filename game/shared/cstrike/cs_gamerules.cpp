@@ -260,6 +260,15 @@ ConVar mp_respawn_on_death_ct(
 	"0",
 	FCVAR_REPLICATED,
 	"When set to 1, counter-terrorists will respawn after dying." );
+
+ConVar mp_gamemode_override(
+	"mp_gamemode_override",
+	"0",
+	FCVAR_REPLICATED,
+	"Which gamemode settings to use:\n 0 - Custom\n 1 - Casual\n 2 - Competitive\n 3 - Wingman",
+	true, 0,
+	true, GameModes::NUM_GAMEMODES - 1 );
+
 ConVar mp_warmuptime(
 	"mp_warmuptime",
 	"300",
@@ -526,6 +535,12 @@ ConVar snd_music_selection(
 		"0",
 		FCVAR_REPLICATED,
 		"Ignore conditions which would end the current round");
+
+	ConVar mp_free_armor(
+		"mp_free_armor",
+		"0",
+		FCVAR_REPLICATED,
+		"Determines whether armor and helmet are given automatically." );
 
 	ConVar mp_use_official_map_factions(
 		"mp_use_official_map_factions",
@@ -957,6 +972,10 @@ ConVar snd_music_selection(
 			g_flGameStatsUpdateTime = CS_GAME_STATS_UPDATE; //Next update is between 22 and 24 hours.
 		}
 #endif
+		
+		m_iCurrentGamemode = 0;
+		m_iOldGamemode = 0;
+
 		m_iMapFactionCT = -1;
 		m_iMapFactionT = -1;
 
@@ -3441,6 +3460,32 @@ ConVar snd_music_selection(
 			CheckRestartRound();
 			m_tmNextPeriodicThink = gpGlobals->curtime + 1.0;
 		}
+
+		if ( mp_gamemode_override.GetInt() != m_iOldGamemode )
+		{
+			m_iCurrentGamemode = mp_gamemode_override.GetInt();
+			m_iOldGamemode = mp_gamemode_override.GetInt();
+
+			switch ( mp_gamemode_override.GetInt() )
+			{
+				default:
+				case GameModes::CUSTOM:
+					// do nothing here
+					break;
+				case GameModes::CASUAL:
+					engine->ServerCommand( "exec gamemode_casual.cfg\n" );
+					engine->ServerExecute();
+					break;
+				case GameModes::COMPETITIVE:
+					engine->ServerCommand( "exec gamemode_competitive.cfg\n" );
+					engine->ServerExecute();
+					break;
+				case GameModes::COMPETITIVE_2V2:
+					engine->ServerCommand( "exec gamemode_competitive2v2.cfg\n" );
+					engine->ServerExecute();
+					break;
+			}
+		}
 	m_flLastThinkTime = gpGlobals->curtime;
 	}
 
@@ -4465,10 +4510,6 @@ ConVar snd_music_selection(
 			if ( pPlayer->m_iNumSpawns > 0 && m_bFirstConnected )
 				return false;
 		}
-
-		// Player cannot respawn twice in a round
-		if ( pPlayer->m_iNumSpawns > 0 && m_bFirstConnected && !IsWarmupPeriod() )
-			return false;
 
 		// If they're dead after the map has ended, and it's about to start the next round,
 		// wait for the round restart to respawn them.
@@ -5575,6 +5616,13 @@ bool CCSGameRules::IsBuyTimeElapsed()
 	return ( GetRoundElapsedTime() > GetBuyTimeLength() );
 }
 
+#ifndef CLIENT_DLL
+bool CCSGameRules::IsArmorFree()
+{
+	return mp_free_armor.GetBool();
+}
+#endif
+
 int CCSGameRules::DefaultFOV()
 {
 	return 90;
@@ -6126,6 +6174,10 @@ int CCSGameRules::GetStartMoney( void )
 	return IsWarmupPeriod() ? mp_maxmoney.GetInt() : mp_startmoney.GetInt();
 }
 
+bool CCSGameRules::IsPlayingAnyCompetitiveStrictRuleset( void ) const
+{
+	return (m_iCurrentGamemode == GameModes::COMPETITIVE) || (m_iCurrentGamemode == GameModes::COMPETITIVE_2V2); // TODO: check if 2v2 actually belongs here
+}
 
 
 //=============================================================================

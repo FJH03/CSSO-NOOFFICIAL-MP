@@ -1405,6 +1405,19 @@ void CCSPlayer::GiveDefaultItems()
 			m_bUsingDefaultPistol = true;
 		}
 	}
+
+	if ( Weapon_GetSlot( WEAPON_SLOT_PISTOL ) )
+	{
+		Weapon_GetSlot( WEAPON_SLOT_PISTOL )->GiveReserveAmmo( AMMO_POSITION_PRIMARY, 250 );
+	}
+
+	if ( Weapon_GetSlot( WEAPON_SLOT_RIFLE ) )
+	{
+		Weapon_GetSlot( WEAPON_SLOT_RIFLE )->GiveReserveAmmo( AMMO_POSITION_PRIMARY, 250 );
+	}
+
+	if ( CSGameRules()->IsArmorFree() )
+		GiveNamedItem( "item_assaultsuit" );
 }
 
 void CCSPlayer::SetClanTag( const char *pTag )
@@ -2903,7 +2916,7 @@ void CCSPlayer::Reset()
 	ResetFragCount();
 	ResetDeathCount();
 	m_iAccount = 0;
-	AddAccount( -16000, false );
+	AddAccount( -mp_startmoney.GetInt(), false );
 
 	//remove any weapons they bought before the round started
 	RemoveAllItems( true );
@@ -3016,10 +3029,6 @@ void CCSPlayer::AddAccount( int amount, bool bTrackChange, bool bItemBought, con
 	// HPE_BEGIN:
 	// [menglish] Description of reason for change
 	//=============================================================================
-
-	// no awards in the warmup period
-	if ( CSGameRules() && CSGameRules()->IsWarmupPeriod() )
-		return;
 
 	if(amount > 0)
 	{
@@ -3910,6 +3919,9 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 
 BuyResult_e CCSPlayer::AttemptToBuyVest( void )
 {
+	if ( CSGameRules()->IsArmorFree() )
+		return BUY_NOT_ALLOWED;
+
 	int iKevlarPrice = KEVLAR_PRICE;
 
 	if ( CSGameRules()->IsBlackMarket() )
@@ -3955,6 +3967,9 @@ BuyResult_e CCSPlayer::AttemptToBuyVest( void )
 
 BuyResult_e CCSPlayer::AttemptToBuyAssaultSuit( void )
 {
+	if ( CSGameRules()->IsArmorFree() )
+		return BUY_NOT_ALLOWED;
+
 	// WARNING: This price logic also exists in C_CSPlayer::GetCurrentAssaultSuitPrice
 	// and must be kept in sync if changes are made.
 

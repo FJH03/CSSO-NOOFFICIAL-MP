@@ -102,6 +102,19 @@ namespace PlayerCashAward
 	};
 };
 
+namespace GameModes
+{
+	enum Type
+	{
+		CUSTOM = 0,
+		CASUAL,
+		COMPETITIVE,
+		COMPETITIVE_2V2,
+		
+		NUM_GAMEMODES,
+	};
+};
+
 #ifdef CLIENT_DLL
 	#define CCSGameRules C_CSGameRules
 	#define CCSGameRulesProxy C_CSGameRulesProxy
@@ -171,11 +184,22 @@ public:
 
 	virtual int	DefaultFOV();
 
+	int GetGamemode( void ) { return m_iCurrentGamemode; };
+
+	int m_iCurrentGamemode;
+	int m_iOldGamemode;
+
+#ifndef CLIENT_DLL
+	bool IsArmorFree();
+#endif
+
 	// Get the view vectors for this mod.
 	virtual const CViewVectors* GetViewVectors() const;
 
 	void UploadGameStats( void );
 	int  GetStartMoney( void );
+
+	bool IsPlayingAnyCompetitiveStrictRuleset( void ) const;
 
 	virtual bool IsConnectedUserInfoChangeAllowed( CBasePlayer *pPlayer );
 
