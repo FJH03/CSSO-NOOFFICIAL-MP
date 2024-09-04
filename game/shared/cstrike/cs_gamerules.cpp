@@ -88,19 +88,19 @@ extern IReplaySystem *g_pReplay;
  * player height, but goldsrc-compatible collision bounds.
  */
 static CViewVectors g_CSViewVectors(
-	Vector( 0, 0, 64 ),		// eye position
+    Vector( 0, 0, 64 ),		// eye position
 
-	Vector(-16, -16, 0 ),	// hull min
-	Vector( 16,  16, 62 ),	// hull max
+    Vector(-16, -16, 0 ),	// hull min
+    Vector( 16,  16, 72 ),	// hull max
 
-	Vector(-16, -16, 0 ),	// duck hull min
-	Vector( 16,  16, 45 ),	// duck hull max
-	Vector( 0, 0, 47 ),		// duck view
+    Vector(-16, -16, 0 ),	// duck hull min
+    Vector( 16,  16, 54 ),	// duck hull max
+    Vector( 0, 0, 46 ),		// duck view
 
-	Vector(-10, -10, -10 ),	// observer hull min
-	Vector( 10,  10,  10 ),	// observer hull max
+    Vector(-10, -10, -10 ),	// observer hull min
+    Vector( 10,  10,  10 ),	// observer hull max
 
-	Vector( 0, 0, 14 )		// dead view height
+    Vector( 0, 0, 14 )		// dead view height
 );
 
 
@@ -2361,98 +2361,59 @@ ConVar snd_music_selection(
 		bool bNeededPlayers
 	)
 	{
-		bool bCTsRespawn = mp_respawn_on_death_ct.GetBool();
-		bool bTsRespawn = mp_respawn_on_death_t.GetBool();
-
 		if ( ( m_iNumCT > 0 && m_iNumSpawnableCT > 0 ) && ( m_iNumTerrorist > 0 && m_iNumSpawnableTerrorist > 0 ) )
 		{
-			// this checks for last man standing rules
-			if ( mp_teammates_are_enemies.GetBool() )
+			if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && m_iNumSpawnableCT > 0 )
 			{
-				// last CT alive
-				if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && !bTsRespawn && NumAliveCT == 1 )
-				{
-					m_iNumCTWins++;
-					//m_iNumCTWinsThisPhase++;
-					// Update the clients team score
-					UpdateTeamScores();
-					TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
-					return true;
-				}
-
-				if ( NumAliveCT == 0 && NumDeadCT != 0 && !bCTsRespawn && NumAliveTerrorist == 1 )
-				{
-					m_iNumTerroristWins++;
-					//m_iNumTerroristWinsThisPhase++;
-					// Update the clients team score
-					UpdateTeamScores();
-					TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
-					return true;
-				}
-
-				if ( NumAliveCT == 0 && !bCTsRespawn && NumAliveTerrorist == 0 && !bTsRespawn && (m_iNumTerrorist > 0 || m_iNumCT > 0) )
-				{
-					TerminateRound( mp_round_restart_delay.GetFloat(), Round_Draw );
-					return true;
-				}
-			}
-			else
-			{
-				// CTs WON (if they don't respawn)
-				if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && !bTsRespawn && m_iNumSpawnableCT > 0 )
-				{
-					bool nowin = false;
+				bool nowin = false;
 					
-					for ( int iGrenade=0; iGrenade < g_PlantedC4s.Count(); iGrenade++ )
-					{
-						CPlantedC4 *pC4 = g_PlantedC4s[iGrenade];
+				for ( int iGrenade=0; iGrenade < g_PlantedC4s.Count(); iGrenade++ )
+				{
+					CPlantedC4 *pC4 = g_PlantedC4s[iGrenade];
 
-						if ( pC4->IsBombActive() )
-							nowin = true;
-					}
-
-					if ( !nowin )
-					{
-						if ( m_bMapHasBombTarget )
-							AddTeamAccount( TEAM_CT, TeamCashAward::ELIMINATION_BOMB_MAP );
-						else
-							AddTeamAccount( TEAM_CT, TeamCashAward::ELIMINATION_HOSTAGE_MAP_CT );
-
-						if ( !bNeededPlayers )
-						{
-							m_iNumCTWins++;
-							//m_iNumCTWinsThisPhase++;
-							// Update the clients team score
-							UpdateTeamScores();
-						}
-
-						TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
-						return true;
-					}
+					if ( pC4->IsBombActive() )
+						nowin = true;
 				}
-		
-				// Terrorists WON (if they don't respawn)
-				if ( NumAliveCT == 0 && NumDeadCT != 0 && !bCTsRespawn && m_iNumSpawnableTerrorist > 0 )
+
+				if ( !nowin )
 				{
 					if ( m_bMapHasBombTarget )
-						AddTeamAccount( TEAM_TERRORIST, TeamCashAward::ELIMINATION_BOMB_MAP );
+						AddTeamAccount( TEAM_CT, TeamCashAward::ELIMINATION_BOMB_MAP );
 					else
-						AddTeamAccount( TEAM_TERRORIST, TeamCashAward::ELIMINATION_HOSTAGE_MAP_T );
+						AddTeamAccount( TEAM_CT, TeamCashAward::ELIMINATION_HOSTAGE_MAP_CT );
 
 					if ( !bNeededPlayers )
 					{
-						m_iNumTerroristWins++;
-						//m_iNumTerroristWinsThisPhase++;
+						m_iNumCTWins++;
 						// Update the clients team score
 						UpdateTeamScores();
 					}
 
-					TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
+					TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
 					return true;
 				}
 			}
+		
+			// Terrorists WON
+			if ( NumAliveCT == 0 && NumDeadCT != 0 && m_iNumSpawnableTerrorist > 0 )
+			{
+				if ( m_bMapHasBombTarget )
+					AddTeamAccount( TEAM_TERRORIST, TeamCashAward::ELIMINATION_BOMB_MAP );
+				else
+					AddTeamAccount( TEAM_TERRORIST, TeamCashAward::ELIMINATION_HOSTAGE_MAP_T );
+
+				if ( !bNeededPlayers )
+				{
+					m_iNumTerroristWins++;
+					// Update the clients team score
+					UpdateTeamScores();
+				}
+
+				TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
+				return true;
+			}
 		}
-        else if ( NumAliveCT == 0 && !bCTsRespawn && NumAliveTerrorist == 0 && !bTsRespawn && ( m_iNumTerrorist > 0 || m_iNumCT > 0 ) )
+		else if ( NumAliveCT == 0 && NumAliveTerrorist == 0 )
 		{
 			TerminateRound( mp_round_restart_delay.GetFloat(), Round_Draw );
 			return true;
@@ -2583,7 +2544,7 @@ ConVar snd_music_selection(
         if (m_iRoundWinStatus == WINNER_TER) // terrorists won
         {
             //check to see if they just broke a losing streak
-            if ( m_iNumConsecutiveTerroristLoses > 0 )
+            if ( m_iNumConsecutiveTerroristLoses > 1 )
             {
                 // reset the loser bonus
                 m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
@@ -2594,7 +2555,7 @@ ConVar snd_music_selection(
         else if (m_iRoundWinStatus == WINNER_CT) // CT Won
         {
             //check to see if they just broke a losing streak
-            if ( m_iNumConsecutiveCTLoses > 0 )
+            if ( m_iNumConsecutiveCTLoses > 1 )
             {
                 // reset the loser bonus
                 m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
@@ -2780,25 +2741,25 @@ ConVar snd_music_selection(
 				case 0: 
 					m_bCTCantBuy = false; 
 					m_bTCantBuy = false; 
-					Msg( "EVERYONE CAN BUY!\n" );
+					//Msg( "EVERYONE CAN BUY!\n" );
 					break;
 				
 				case 1: 
 					m_bCTCantBuy = false; 
 					m_bTCantBuy = true; 
-					Msg( "Only CT's can buy!!\n" );
+					//Msg( "Only CT's can buy!!\n" );
 					break;
 
 				case 2: 
 					m_bCTCantBuy = true; 
 					m_bTCantBuy = false; 
-					Msg( "Only T's can buy!!\n" );
+					//Msg( "Only T's can buy!!\n" );
 					break;
 				
 				case 3: 
 					m_bCTCantBuy = true; 
 					m_bTCantBuy = true; 
-					Msg( "No one can buy!!\n" );
+					//Msg( "No one can buy!!\n" );
 					break;
 
 				default: 
@@ -3057,11 +3018,6 @@ ConVar snd_music_selection(
 			else
 			{
 				pPlayer->ObserverRoundRespawn();
-			}
-
-			if ( pPlayer->m_iAccount > pPlayer->m_iShouldHaveCash )
-			{
-				m_bDontUploadStats = true;
 			}
 		}
 
@@ -4754,6 +4710,12 @@ ConVar snd_music_selection(
 		{
 			UTIL_LogPrintf("World triggered \"Intermission_Time_Limit\"\n");
 			GoToIntermission();
+		}
+
+		if ( (static_cast< e_RoundEndReason > (iReason) != Game_Commencing) )
+		{
+			// Perform round-related processing at the point when a round winner has been determined
+			RoundWin();
 		}
 
 		if ( iReason == Game_Commencing )

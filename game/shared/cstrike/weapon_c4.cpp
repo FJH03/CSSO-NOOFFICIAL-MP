@@ -1091,6 +1091,8 @@ void CC4::PrimaryAttack()
             // HPE_END
             //=============================================================================
 
+			pPlayer->AddAccountAward( PlayerCashAward::BOMB_PLANTED );
+			
 			IGameEvent * event = gameeventmanager->CreateEvent( "bomb_planted" );
 			if( event )
 			{
