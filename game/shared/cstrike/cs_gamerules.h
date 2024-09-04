@@ -203,6 +203,9 @@ private:
 	bool		m_bDontUploadStats;
 
 public:
+	CNetworkVar( bool, m_bBombDropped );
+	CNetworkVar( bool, m_bBombPlanted );
+	CNetworkVar( int, m_iRoundWinStatus );
 
 	bool IsBlackMarket( void ) { return m_bBlackMarket; }
 	int GetNumHostagesRemaining( void ) { return m_iHostagesRemaining; }
@@ -422,7 +425,7 @@ public:
 
 	// VARIABLES FOR ALL TYPES OF MAPS
 	bool m_bLevelInitialized;
-	int m_iRoundWinStatus;		// 1 == CT's won last round, 2 == Terrorists did, 3 == Draw, no winner
+	//int m_iRoundWinStatus;		// 1 == CT's won last round, 2 == Terrorists did, 3 == Draw, no winner
 	int m_iTotalRoundsPlayed;
 	int m_iUnBalancedRounds;	// keeps track of the # of consecutive rounds that have gone by where one team outnumbers the other team by more than 2
 
@@ -532,8 +535,8 @@ public:
 	bool	m_bTargetBombed;	// whether or not the bomb has been bombed
 	bool	m_bBombDefused;	// whether or not the bomb has been defused
 	bool	m_bMapHasBombZone;
-	bool	m_bBombDropped;
-	bool	m_bBombPlanted;
+	//bool	m_bBombDropped;
+	//bool	m_bBombPlanted;
 	EHANDLE m_pLastBombGuy;
 
 	int		TeamCashAwardValue( int reason );
@@ -545,6 +548,8 @@ private:
 
 	// Don't allow switching weapons while gaining new technologies
 	bool			m_bAllowWeaponSwitch;
+
+	bool			m_bRoundTimeWarningTriggered;
 
 	float			m_flLastThinkTime;
 public:
@@ -575,6 +580,8 @@ public:
 	const weeklyprice_t *m_pPrices;
 	float CheckTotalSmokedLength( float flRadius, Vector vecGrenadePos, Vector from, Vector to );
 
+protected:
+	bool m_bHasTriggeredRoundStartMusic;
 };
 
 
@@ -591,7 +598,13 @@ inline CCSGameRules* CSGameRules()
 #define IGNORE_SPECTATORS true
 int UTIL_HumansInGame( bool ignoreSpectators = false );
 
+//-----------------------------------------------------------------------------
+// Music Selection
+//-----------------------------------------------------------------------------
 
+#ifdef CLIENT_DLL
+void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType );
+#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Useful utility functions

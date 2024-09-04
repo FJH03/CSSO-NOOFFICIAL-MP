@@ -82,7 +82,9 @@ extern IMaterialSystemStub *materials_stub;
 extern IMaterialSystemHardwareConfig *g_pMaterialSystemHardwareConfig;
 extern IDataCache *datacache;
 extern IMDLCache *mdlcache;
+#ifdef CLIENT_DLL
 extern IVModelInfoClient *modelinfo;
+#endif
 extern IEngineVGui *enginevgui;
 extern ISpatialPartition* partition;
 extern IBaseClientDLL *clientdll;

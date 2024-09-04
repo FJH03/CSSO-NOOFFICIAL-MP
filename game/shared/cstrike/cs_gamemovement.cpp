@@ -36,8 +36,9 @@ ConVar sv_staminamax( "sv_staminamax", "80", FCVAR_REPLICATED, "Maximum stamina 
 ConVar sv_timebetweenducks( "sv_timebetweenducks", "0.4", FCVAR_REPLICATED, "Minimum time before recognizing consecutive duck key", true, 0.0, true, 2.0 );
 
 extern bool g_bMovementOptimizations;
-ConVar	sv_accelerate_use_weapon_speed	( "sv_accelerate_use_weapon_speed", "1", FCVAR_NOTIFY | FCVAR_REPLICATED );
-ConVar	sv_accelerate_debug_speed	( "sv_accelerate_debug_speed", "0", FCVAR_NOTIFY | FCVAR_REPLICATED );
+extern ConVar sv_accelerate_use_weapon_speed;
+extern ConVar sv_accelerate_debug_speed;
+
 #define SV_ACCELERATE_EXPONENT_TIME 0
 #define SV_ACCELERATE_EXPONENT 1
 
@@ -207,12 +208,11 @@ void CCSGameMovement::CheckParameters( void )
 		mv->m_nButtons |= IN_DUCK;
 	}
 
+	// Always duck during bomb-plant animation
 	if ( m_pCSPlayer->m_bDuckOverride )
 	{
 		mv->m_nButtons |= IN_DUCK;
 	}
-
-
 
 	// it would be nice to put this into the player->GetPlayerMaxSpeed() method, but
 	// this flag is only stored in the move!
@@ -384,7 +384,37 @@ void CCSGameMovement::CheckParameters( void )
 	}
 
 
-	
+	// Determine if the player is trying to run / move at full speed.
+	m_pCSPlayer->m_iMoveState = MOVESTATE_IDLE; // idle, not driving the character
+	if ( runButtonIsDown )
+	{
+		if ( opposingForwardBack && opposingRightLeft )
+		{
+			m_pCSPlayer->m_iMoveState = MOVESTATE_IDLE; // Idle, don't move if we are holding all 4 directions down.
+		}
+		else if ( opposingForwardBack || opposingRightLeft )
+		{
+			if ( ( opposingForwardBack && ( moveRight || moveLeft ) ) || ( opposingRightLeft && ( moveForward || moveBackward ) ) )
+			{
+				m_pCSPlayer->m_iMoveState = MOVESTATE_RUN; // Run, move if we are holding 3 buttons down, 2 are opposing directions.
+			}
+			else
+			{
+				m_pCSPlayer->m_iMoveState = MOVESTATE_IDLE; // Idle, don't move if we are holding just 2 opposing directions down.
+			}
+
+		}
+		else
+		{
+			m_pCSPlayer->m_iMoveState = MOVESTATE_RUN; // Run
+		}
+	}
+
+	if ( ( m_pCSPlayer->m_iMoveState == MOVESTATE_RUN ) && walkButtonIsDown )
+	{
+		m_pCSPlayer->m_iMoveState = MOVESTATE_WALK; // Walk
+	}
+
 }
 
 
@@ -807,7 +837,6 @@ void CCSGameMovement::HandleDuckingSpeedCrop( float duckFraction )
 
 bool CCSGameMovement::CanUnduck()
 {
-
 	// Can't unduck if we are planting the bomb.
 	if ( m_pCSPlayer->m_bDuckOverride )
 		return false;
@@ -939,7 +968,8 @@ void CCSGameMovement::Duck( void )
 	// Dead players don't duck.
 	if ( IsDead() && !player->IsObserver() )
 	{
-		
+		// They also don't plant the bomb.
+		m_pCSPlayer->m_bDuckOverride = false;
 
 		if ( player->GetFlags() & FL_DUCKING )
 		{
@@ -1391,3 +1421,4 @@ void CCSGameMovement::Accelerate( Vector& wishdir, float wishspeed, float accel 
 		}
 	}
 }
+

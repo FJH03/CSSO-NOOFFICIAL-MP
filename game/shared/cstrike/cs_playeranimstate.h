@@ -55,6 +55,10 @@ enum PlayerAnimEvent_t
 	PLAYERANIMEVENT_COUNT
 };
 
+#define MOVESTATE_IDLE	0
+#define MOVESTATE_WALK	1
+#define MOVESTATE_RUN	2
+
 
 class ICSPlayerAnimState : virtual public IPlayerAnimState
 {

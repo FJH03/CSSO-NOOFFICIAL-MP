@@ -368,6 +368,7 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_iAccount ), 16, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_bInBombZone ), 1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_bInBuyZone ), 1, SPROP_UNSIGNED ),
+	SendPropInt( SENDINFO( m_iMoveState ), 0, SPROP_CHANGES_OFTEN ),
 	SendPropBool( SENDINFO( m_bIsScoped ) ),
 	SendPropBool( SENDINFO( m_bDuckOverride ) ),
 	SendPropInt( SENDINFO( m_iClass ), Q_log2( CS_NUM_CLASSES )+1, SPROP_UNSIGNED ),
@@ -576,6 +577,8 @@ CCSPlayer::CCSPlayer()
 	m_bCanControlObservedBot = false;
 	m_iControlledBotEntIndex = -1;
 #endif
+
+	m_iMoveState = MOVESTATE_IDLE;
 
 	m_storedSpawnPosition = vec3_origin;
 	m_storedSpawnAngle.Init();

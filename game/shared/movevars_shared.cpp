@@ -47,6 +47,8 @@ ConVar	sv_specnoclip	( "sv_specnoclip", "1", FCVAR_ARCHIVE | FCVAR_NOTIFY | FCVA
 ConVar	sv_maxspeed		( "sv_maxspeed", "320", FCVAR_NOTIFY | FCVAR_REPLICATED);
 
 ConVar	sv_accelerate	( "sv_accelerate", "5.5", FCVAR_NOTIFY | FCVAR_REPLICATED);
+ConVar	sv_accelerate_use_weapon_speed	( "sv_accelerate_use_weapon_speed", "1", FCVAR_NOTIFY | FCVAR_REPLICATED );
+ConVar	sv_accelerate_debug_speed	( "sv_accelerate_debug_speed", "0", FCVAR_NOTIFY | FCVAR_REPLICATED );
 
 ConVar	sv_airaccelerate(  "sv_airaccelerate", "12", FCVAR_NOTIFY | FCVAR_REPLICATED);    
 ConVar	sv_wateraccelerate(  "sv_wateraccelerate", "10", FCVAR_NOTIFY | FCVAR_REPLICATED);     

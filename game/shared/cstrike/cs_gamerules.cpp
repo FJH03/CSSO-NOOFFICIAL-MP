@@ -72,6 +72,8 @@
 #define CS_GAME_STATS_UPDATE 79200 //22 hours
 #define CS_GAME_STATS_UPDATE_PERIOD 7200 // 2 hours
 
+#define ROUND_END_WARNING_TIME 10.0f
+
 extern IUploadGameStats *gamestatsuploader;
 
 #if defined( REPLAY_ENABLED )
@@ -124,7 +126,10 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropBool( RECVINFO( m_bMapHasBombTarget ) ),
 		RecvPropBool( RECVINFO( m_bMapHasRescueZone ) ),
 		RecvPropBool( RECVINFO( m_bLogoMap ) ),
-		RecvPropBool( RECVINFO( m_bBlackMarket ) )
+		RecvPropBool( RECVINFO( m_bBlackMarket ) ),
+		RecvPropBool( RECVINFO( m_bBombDropped ) ),
+		RecvPropBool( RECVINFO( m_bBombPlanted ) ),
+		RecvPropInt( RECVINFO( m_iRoundWinStatus ) )
 	#else
 		SendPropBool( SENDINFO( m_bWarmupPeriod ) ),
         SendPropFloat( SENDINFO( m_fWarmupPeriodEnd ) ), // DUMMY VAR FOR DEMOS	
@@ -137,7 +142,10 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropBool( SENDINFO( m_bMapHasBombTarget ) ),
 		SendPropBool( SENDINFO( m_bMapHasRescueZone ) ),
 		SendPropBool( SENDINFO( m_bLogoMap ) ),
-		SendPropBool( SENDINFO( m_bBlackMarket ) )
+		SendPropBool( SENDINFO( m_bBlackMarket ) ),
+		SendPropBool( SENDINFO( m_bBombDropped ) ),
+		SendPropBool( SENDINFO( m_bBombPlanted ) ),
+		SendPropInt( SENDINFO( m_iRoundWinStatus ) )
 	#endif
 END_NETWORK_TABLE()
 
@@ -907,9 +915,13 @@ ConVar snd_music_selection(
 		m_bBombPlanted = false;
 		m_pLastBombGuy = NULL;
 
+		m_bRoundTimeWarningTriggered = false;
+
 		m_bAllowWeaponSwitch = true;
 
 		m_flNextHostageAnnouncement = gpGlobals->curtime;	// asap.
+
+		m_bHasTriggeredRoundStartMusic = false;
 
 		ReadMultiplayCvars();
 
@@ -2940,6 +2952,8 @@ ConVar snd_music_selection(
 			Warning( "Trying to set a NaN round start time\n" );
 			m_fRoundStartTime.GetForModify() = 0.0f;
 		}
+
+		m_bRoundTimeWarningTriggered = false;
 		
 		//Adrian - No cash for anyone at first rounds! ( well, only the default. )
 		if ( m_bCompleteReset )
@@ -3383,6 +3397,23 @@ ConVar snd_music_selection(
 		}
 
 		CheckLevelInitialized();
+
+		if ( !m_bRoundTimeWarningTriggered && GetRoundRemainingTime() < ROUND_END_WARNING_TIME )
+        {
+            m_bRoundTimeWarningTriggered = true;
+            IGameEvent * event = gameeventmanager->CreateEvent( "round_time_warning" );
+            if ( event )
+            {
+                gameeventmanager->FireEvent( event );
+            }
+        }
+
+		if ( !m_bHasTriggeredRoundStartMusic )
+		{
+			IGameEvent* restartEvent = gameeventmanager->CreateEvent( "cs_pre_restart" );
+			gameeventmanager->FireEvent( restartEvent );
+			m_bHasTriggeredRoundStartMusic = true;
+		}
 		
 		if ( m_flRestartRoundTime > 0.0f && m_flRestartRoundTime <= gpGlobals->curtime )
 		{
@@ -3413,6 +3444,8 @@ ConVar snd_music_selection(
                     // restart only if no bots are speaking
 					if ( !botSpeaking )
                     {
+						m_bHasTriggeredRoundStartMusic = false;
+						
                         if ( gpGlobals->curtime > m_flRestartRoundTime + 10.0f )
                         {
                             Msg( "Ignoring speaking bot %s at round end\n", bot->GetPlayerName() );
@@ -6438,6 +6471,62 @@ void TestTable( void )
 
 #ifdef DEBUG
 ConCommand cs_testtable( "cs_testtable", TestTable );
+#endif
+
+// music selection
+#ifdef CLIENT_DLL
+
+const char *musicTypeStrings[] =
+{
+	"NONE",
+	"Music.StartRound_GG",
+	"Music.StartRound",
+	"Music.StartAction",
+	"Music.DeathCam",
+	"Music.BombPlanted",
+	"Music.BombTenSecCount",
+	"Music.TenSecCount",
+	"Music.WonRound",
+	"Music.LostRound",
+	"Music.GotHostage",
+	"Music.MVPAnthem",
+	"Music.Selection",
+	"Music.HalfTime",
+};
+
+void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType )
+{
+#if 0
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// test for between rounds and block incoming events until in round
+	//
+	static bool bBetweenRound = false;
+	if( nMusicType == CSMUSIC_LOSTROUND || nMusicType == CSMUSIC_WONROUND || nMusicType == CSMUSIC_MVP || nMusicType == CSMUSIC_HALFTIME )
+	{
+		bBetweenRound = true;
+	}
+	else if( nMusicType == CSMUSIC_START || nMusicType == CSMUSIC_ACTION || nMusicType== CSMUSIC_STARTGG )
+	{
+		bBetweenRound = false;
+	}
+	if( bBetweenRound && ( nMusicType == CSMUSIC_BOMB || nMusicType == CSMUSIC_BOMBTEN || nMusicType == CSMUSIC_ROUNDTEN ))
+	{
+		return;
+	}
+
+	const char *pEntry = musicTypeStrings[ nMusicType ];
+
+	if( pEntry )
+	{
+		const char* pMusicExtension = snd_music_selection.GetString();
+		char musicSelection[128];
+		int nExtLen = V_strlen( pMusicExtension );
+		int nStrLen = V_strlen( pEntry );
+		V_snprintf( musicSelection, nExtLen + nStrLen+2, "%s.%s", pEntry, pMusicExtension );
+		C_BaseEntity::EmitSound( filter, -1, musicSelection );
+	}
+#endif
+}
 #endif
 
 //-----------------------------------------------------------------------------

@@ -38,6 +38,13 @@ void CCSTeamMenu::ShowPanel(bool bShow)
 		engine->CheckPoint( "TeamMenu" );
 	}
 
+	C_CSPlayer* pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( pLocalPlayer && !pLocalPlayer->IsAlive() )
+	{
+		CLocalPlayerFilter filter;
+		PlayMusicSelection( filter, CSMUSIC_SELECTION );
+	}
+
 	BaseClass::ShowPanel( bShow );
 }
 

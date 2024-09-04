@@ -315,7 +315,11 @@ void ClientModeCSNormal::Init()
 	ListenForGameEvent( "bomb_exploded" );
 	ListenForGameEvent( "bomb_defused" );
 	ListenForGameEvent( "hostage_killed" );
-	ListenForGameEvent( "hostage_hurt" );	
+	ListenForGameEvent( "hostage_hurt" );
+	ListenForGameEvent( "round_freeze_end" );
+	ListenForGameEvent( "round_time_warning" );
+	ListenForGameEvent( "round_mvp" );
+	ListenForGameEvent( "bot_takeover" );
 
 	usermessages->HookMessage( "KillCam", MsgFunc_KillCam );
 
@@ -635,19 +639,36 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 
 		Soundscape_OnStopAllSounds();	// Tell the soundscape system.
 	}
-
-
 	else if ( Q_strcmp( "round_end", eventname ) == 0 )
 	{
 		int winningTeam = event->GetInt("winner");
 		int reason = event->GetInt("reason");
+
+		if ( reason != Game_Commencing )
+		{
+			// if spectating play music for team being spectated at that moment
+			C_BasePlayer* pTeamPlayer = pLocalPlayer;
+			if ( pLocalPlayer->GetTeamNumber() == TEAM_SPECTATOR || pLocalPlayer->IsHLTV() )
+			{
+				pTeamPlayer = GetHudPlayer();
+			}
+			if ( winningTeam == pTeamPlayer->GetTeamNumber() )
+			{
+				PlayMusicSelection( filter, CSMUSIC_WONROUND );
+			}
+			else
+			{
+				PlayMusicSelection( filter, CSMUSIC_LOSTROUND );
+			}
+		}
 
 		// play endround announcer sound
 		if ( winningTeam == TEAM_CT )
 		{
 			if ( reason == Bomb_Defused )
 			{
-				C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.BombDefused");
+				C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.BombDefused" );
+				m_fDelayedCTWinTime = gpGlobals->curtime + C_BaseEntity::GetSoundDuration( "Event.BombDefused", NULL ) + 0.3;
 			}
 			else
 			{
@@ -663,12 +684,9 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.RoundDraw");
 		}
 		
-		//=============================================================================
-		// HPE_BEGIN:
 		// [pfreese] Only show centerprint message for game commencing; the rest of 
 		// these messages are handled by the end-of-round panel.
 		// [Forrest] Show all centerprint messages if the end-of-round panel is disabled.
-		//=============================================================================
 		static ConVarRef sv_nowinpanel( "sv_nowinpanel" );
 		static ConVarRef cl_nowinpanel( "cl_nowinpanel" );
 		if ( reason == Game_Commencing || sv_nowinpanel.GetBool() || cl_nowinpanel.GetBool() )
@@ -678,12 +696,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			// we are starting a new round; clear the current match stats
 			g_CSClientGameStats.ResetMatchStats();
 		}
-		
-		//=============================================================================
-		// HPE_END
-		//=============================================================================
 	}
-
 	else if ( Q_strcmp( "player_team", eventname ) == 0 )
 	{
 		CBaseHudChat *pHudChat = (CBaseHudChat *)GET_HUDELEMENT( CHudChat );
@@ -704,7 +717,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			// that's me
 			pPlayer->TeamChange( iTeam );
 		}
-
+		
 		bool bSilent = event->GetBool( "silent" );
 		if ( !bSilent )
 		{
@@ -725,6 +738,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			{
 				g_pVGuiLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
 				g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_game_join_terrorist" ), 1, wszPlayerName );
+
 				g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
 				pHudChat->Printf( CHAT_FILTER_NONE, "%s", szLocalized );
 			}
@@ -738,34 +752,24 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
-
 	else if ( Q_strcmp( "bomb_planted", eventname ) == 0 )
 	{
 		//C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
 
-		wchar_t wszLocalized[100];
-		wchar_t seconds[4];
-
-		V_swprintf_safe( seconds, L"%d", mp_c4timer.GetInt() );
-
-		g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_TitlesTXT_Bomb_Planted" ), 1, seconds );
-
 		// show centerprint message
-		internalCenterPrint->Print( wszLocalized );
+		internalCenterPrint->Print( "#Cstrike_TitlesTXT_Bomb_Planted" );
+
+		PlayMusicSelection( filter, CSMUSIC_BOMB );
 
 		// play sound
 		 C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.BombPlanted")  ;
 	}
-
 	else if ( Q_strcmp( "bomb_defused", eventname ) == 0 )
 	{
 		// C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
 	}
-	//=============================================================================
-	// HPE_BEGIN:
-	// [menglish] Tell the client side bomb that the bomb has exploding here creating the explosion particle effect
-	//=============================================================================
-	 
+
+	// [menglish] Tell the client side bomb that the bomb has exploding here creating the explosion particle effect	 
 	else if ( Q_strcmp( "bomb_exploded", eventname ) == 0 )
 	{
 		if ( g_PlantedC4s.Count() > 0 )
@@ -775,11 +779,16 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			pC4->Explode();
 		}
 	}
-	 
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
+	else if ( Q_strcmp( "hostage_follows", eventname ) == 0 )
+	{
+		internalCenterPrint->Print( "#Cstrike_TitlesTXT_Hostage_Being_Taken" );
 
+		bool roundWasAlreadyWon = ( CSGameRules()->m_iRoundWinStatus != WINNER_NONE );
+		if ( !roundWasAlreadyWon )
+		{
+			PlayMusicSelection( filter, CSMUSIC_HOSTAGE );
+		}
+	}
 	else if ( Q_strcmp( "hostage_killed", eventname ) == 0 )
 	{
 		// play sound for spectators and CTs
@@ -794,7 +803,6 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			internalCenterPrint->Print( "#Cstrike_TitlesTXT_Killed_Hostage" );
 		}
 	}
-
 	else if ( Q_strcmp( "hostage_hurt", eventname ) == 0 )
 	{
 		// Let the loacl player know he harmed a hostage
@@ -803,7 +811,6 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			internalCenterPrint->Print( "#Cstrike_TitlesTXT_Injured_Hostage" );
 		}
 	}
-
 	else if ( Q_strcmp( "player_death", eventname ) == 0 )
 	{
 		C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
@@ -824,21 +831,16 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			gViewPortInterface->ShowPanel( PANEL_BUY_EQUIP_TER, false );
 		}
 	}
-
 	else if ( Q_strcmp( "player_changename", eventname ) == 0 )
 	{
 		return; // server sends a colorized text string for this
 	}
 
-    //=============================================================================
-    // HPE_BEGIN:
     // [tj] We handle this here instead of in the base class 
     //      The reason is that we don't use string tables to localize.
     //      Instead, we use the steam localization mechanism.
-    //
+
     // [dwenger] Remove dependency on stats system for name of achievement.
-    //=============================================================================
-     
     else if ( Q_strcmp( "achievement_earned", eventname ) == 0 )
     {
         CBaseHudChat *hudChat = (CBaseHudChat *)GET_HUDELEMENT( CHudChat );
@@ -902,11 +904,44 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
             }
         }
     }
-     
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
-    
+	else if ( V_strcmp( "round_freeze_end", eventname ) == 0 )
+	{
+		int nObsMode = pLocalPlayer->GetObserverMode();
+		if ( nObsMode == OBS_MODE_FIXED || nObsMode == OBS_MODE_ROAMING )
+		{
+			C_CSPlayer* pCSLocalPlayer = ToCSPlayer( pLocalPlayer );
+			if ( pCSLocalPlayer->GetCurrentMusic() == CSMUSIC_START )
+			{
+				CLocalPlayerFilter filter;
+				PlayMusicSelection( filter, CSMUSIC_ACTION );
+				pCSLocalPlayer->SetCurrentMusic( CSMUSIC_ACTION );
+			}
+		}
+	}
+	else if ( V_strcmp( "round_time_warning", eventname ) == 0 )
+	{
+		if ( !CSGameRules()->m_bBombPlanted )
+		{
+			PlayMusicSelection( filter, CSMUSIC_ROUNDTEN );
+		}
+	}
+	else if ( V_strcmp( "round_mvp", eventname ) == 0 )
+	{
+		PlayMusicSelection( filter, CSMUSIC_MVP );
+	}
+	else if ( V_strcmp( "bot_takeover", eventname ) == 0 )
+	{
+		C_BasePlayer* pBot = UTIL_PlayerByUserId( event->GetInt( "botid" ) );
+		if ( pBot && pLocalPlayer && pLocalPlayer->GetUserID() == event->GetInt( "userid" ) )
+		{
+			wchar_t wszLocalized[100];
+			wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
+			g_pVGuiLocalize->ConvertANSIToUnicode( pBot->GetPlayerName(), wszPlayerName, sizeof( wszPlayerName ) );
+			g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_TitlesTXT_Hint_Bot_Takeover" ), 1, wszPlayerName );
+
+			internalCenterPrint->Print( wszLocalized );
+		}
+	}
 
 	else
 	{
@@ -1544,7 +1579,7 @@ void ClientModeCSNormal::PostRenderVGui()
 
 bool ClientModeCSNormal::ShouldDrawViewModel( void )
 {
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	C_CSPlayer *pPlayer = GetHudPlayer();
 	
 	if( pPlayer && pPlayer->GetFOV() != CSGameRules()->DefaultFOV() )
 	{

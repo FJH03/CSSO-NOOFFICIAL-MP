@@ -144,6 +144,28 @@ public:
 		m_SoundEvents.RemoveAll();
 	}
 
+	CsMusicType_t GetCurrentMusic() { return m_nCurrentMusic; } const
+
+	void SetCurrentMusic( CsMusicType_t nMusicType )
+	{
+		m_nCurrentMusic = nMusicType;
+ 		if( nMusicType == CSMUSIC_START )
+ 		{
+			m_flMusicRoundStartTime = gpGlobals->curtime;
+		}
+		m_flCurrentMusicStartTime = gpGlobals->curtime;
+	}
+
+	float GetCurrentMusicElapsed()
+	{
+		return  gpGlobals->curtime - m_flCurrentMusicStartTime;
+	}
+
+	float GetMusicStartRoundElapsed()
+	{
+		return  gpGlobals->curtime - m_flMusicRoundStartTime;
+	}
+
 	
 	// [menglish] Returns whether this player is dominating or is being dominated by the specified player
 	bool IsPlayerDominated( int iPlayerIndex );
@@ -237,6 +259,7 @@ public:
 	CNetworkVar( bool, m_bInBombZone );
 	CNetworkVar( bool, m_bInBuyZone );
 	CNetworkVar( int, m_iThrowGrenadeCounter );	// used to trigger grenade throw animations.
+	CNetworkVar( int, m_iMoveState );		// Is the player trying to run or walk or idle?  Tells us what the player is "trying" to do.
 
 	const PlayerViewmodelArmConfig *m_pViewmodelArmConfig;
 
@@ -380,6 +403,10 @@ private:
 	};
 	CUtlLinkedList<CCSSoundEvent,int> m_SoundEvents;
 
+	// manage per play music
+	CsMusicType_t m_nCurrentMusic;
+	float m_flCurrentMusicStartTime;
+	float m_flMusicRoundStartTime;
 
 	// This is the list of addons hanging off the guy (grenades, C4, nightvision, etc).
 	CUtlLinkedList<CAddonModel, int> m_AddonModels;
@@ -431,6 +458,7 @@ private:
 };
 
 C_CSPlayer* GetLocalOrInEyeCSPlayer( void );
+C_CSPlayer* GetHudPlayer( void );	// get the player we should show the HUD for (local or observed)
 
 inline C_CSPlayer *ToCSPlayer( CBaseEntity *pEntity )
 {

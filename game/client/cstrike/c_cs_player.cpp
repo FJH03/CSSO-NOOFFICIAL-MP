@@ -762,6 +762,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropInt( RECVINFO( m_iAccount ) ),
 	RecvPropInt( RECVINFO( m_bInBombZone ) ),
 	RecvPropInt( RECVINFO( m_bInBuyZone ) ),
+	RecvPropInt( RECVINFO( m_iMoveState ) ),
 	RecvPropBool( RECVINFO( m_bIsScoped ) ),
 	RecvPropInt( RECVINFO( m_iClass ) ),
 	RecvPropInt( RECVINFO( m_ArmorValue ) ),
@@ -860,7 +861,11 @@ C_CSPlayer::C_CSPlayer() :
 
     m_bPlayingFreezeCamSound = false;
 
+	ListenForGameEvent( "cs_pre_restart" );
+	ListenForGameEvent( "player_death" );
 	ListenForGameEvent( "player_spawn" );
+
+	m_iMoveState = MOVESTATE_IDLE;
 }
 
 
@@ -1278,12 +1283,58 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 {
 	const char *name = event->GetName();
 	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
-	int EventUserID = event->GetInt( "userid", -1 );
 
-	if ( Q_strcmp( "player_spawn", name ) == 0 )
+	int EventUserID = event->GetInt( "userid", -1 );
+	//int LocalPlayerID = ( pLocalPlayer != NULL ) ? pLocalPlayer->GetUserID() : -2;
+	//int PlayerUserID = GetUserID();
+
+	if ( Q_strcmp( "item_pickup", name ) == 0 )
+	{
+		if ( /*Q_strcmp( event->GetString( "item" ), "c4" ) == 0 &&*/
+			 (pLocalPlayer && pLocalPlayer->GetUserID() == EventUserID) )
+		{
+			// if we aren't playing the sound on the server, play a "silent" version on the client
+			if ( event->GetBool( "silent" ) )
+				EmitSound( "Player.PickupWeaponSilent" );
+		}
+	}
+	else if ( Q_strcmp( name, "cs_pre_restart" ) == 0 )
+	{
+		if ( ( this->GetTeamNumber() == TEAM_SPECTATOR ) || ( this->IsLocalPlayer() ) )
+		{
+			CLocalPlayerFilter filter;
+			PlayMusicSelection( filter, CSMUSIC_START );
+		}
+
+		SetCurrentMusic( CSMUSIC_START );
+	}
+	else if ( (Q_strcmp( "bot_takeover", name ) == 0 || Q_strcmp( "spec_target_updated", name ) == 0) && GetUserID() == EventUserID )
+	{
+		C_CSPlayer *pLocalCSPlayer = C_CSPlayer::GetLocalCSPlayer();
+		if (pLocalCSPlayer)
+		{
+			if ( pLocalPlayer->GetObserverMode() != OBS_MODE_NONE && pLocalPlayer->GetUserID() == EventUserID )
+			{
+				C_CSPlayer *pFlashBangPlayer = GetHudPlayer();
+			}
+		}
+	}
+	else if ( Q_strcmp( "player_death", name ) == 0 )
+	{
+		C_BasePlayer* pPlayer = UTIL_PlayerByUserId( EventUserID );
+		C_CSPlayer* csPlayer = ToCSPlayer( pPlayer );
+		if (csPlayer && csPlayer->IsLocalPlayer())
+		{
+			C_RecipientFilter filter;
+			filter.AddRecipient( this );
+			PlayMusicSelection( filter, CSMUSIC_DEATHCAM );
+		}
+	}
+	else if ( Q_strcmp( "player_spawn", name ) == 0 )
 	{
 		if ( pLocalPlayer && pLocalPlayer->GetUserID() == EventUserID )
 		{
+			// we've just spawned, so reset our entity id stuff
 			m_iIDEntIndex = 0;
 			m_delayTargetIDTimer.Reset();
 			m_iOldIDEntIndex = 0;
@@ -1293,7 +1344,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 
 			m_pViewmodelArmConfig = NULL;
 		}
-
 	}
 }
 
@@ -1344,6 +1394,22 @@ static bool inSpectating_Haptics = false;
 void C_CSPlayer::ClientThink()
 {
 	BaseClass::ClientThink();
+
+	// velocity music handling
+	if( GetCurrentMusic() == CSMUSIC_START && GetMusicStartRoundElapsed() > 0.5 )
+	{
+		Vector vAbsVelocity = GetAbsVelocity();
+		float flAbsVelocity = vAbsVelocity.Length2D();
+		if( flAbsVelocity > 10 )
+		{
+			if( this == GetHudPlayer() )
+			{
+				CLocalPlayerFilter filter;
+				PlayMusicSelection( filter, CSMUSIC_ACTION );
+			}
+			SetCurrentMusic( CSMUSIC_ACTION );
+		}
+	}
 
 	UpdateSoundEvents();
 
@@ -1520,6 +1586,25 @@ C_CSPlayer* GetLocalOrInEyeCSPlayer( void )
 	C_CSPlayer *player = C_CSPlayer::GetLocalCSPlayer();
 
 	if( player && player->GetObserverMode() == OBS_MODE_IN_EYE )
+	{
+		C_BaseEntity *target = player->GetObserverTarget();
+
+		if( target && target->IsPlayer() )
+		{
+			return ToCSPlayer( target );
+		}
+	}
+	return player;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Return the local player, or the player being spectated
+//-----------------------------------------------------------------------------
+C_CSPlayer* GetHudPlayer( void )
+{
+	C_CSPlayer *player = C_CSPlayer::GetLocalCSPlayer();
+
+	if ( player && ( player->GetObserverMode() == OBS_MODE_IN_EYE || player->GetObserverMode() == OBS_MODE_CHASE ) )
 	{
 		C_BaseEntity *target = player->GetObserverTarget();
 

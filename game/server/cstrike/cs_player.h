@@ -746,6 +746,8 @@ public:
 
 	int m_iBombSiteIndex;
 
+	CNetworkVar( int, m_iMoveState );		// Is the player trying to run?  Used for state transitioning after a player lands from a jump etc.
+
 	bool IsInBuyZone();
 	bool CanPlayerBuy( bool display );
 
