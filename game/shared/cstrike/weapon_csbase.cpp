@@ -1800,6 +1800,7 @@ extern ConVar view_recoil_tracking;
 				iCenterY += flAngleToScreenPixel * sinf( DEG2RAD( viewPunch.x ) ) * (1.0f - view_recoil_tracking.GetFloat());
 				iCenterX -= flAngleToScreenPixel * sinf( DEG2RAD( viewPunch.y ) ) * (1.0f - view_recoil_tracking.GetFloat());
 			}
+		}
 
 		float flAlphaSplitInner = cl_crosshair_dynamic_splitalpha_innermod.GetFloat();
 		float flAlphaSplitOuter = cl_crosshair_dynamic_splitalpha_outermod.GetFloat();
@@ -1905,8 +1906,7 @@ extern ConVar view_recoil_tracking;
 			DrawCrosshairRect( r, g, b, alpha, iOuterLeft, iCenterY + iGap, iInnerLeft, iOuterBottom, bAdditive );
 			DrawCrosshairRect( r, g, b, alpha, iInnerRight, iOuterTop, iOuterRight, iCenterY - iGap, bAdditive );
 			DrawCrosshairRect( r, g, b, alpha, iInnerRight, iCenterY + iGap, iOuterRight, iOuterBottom, bAdditive );
-		}
-
+		}	
 	}
 
 	void CWeaponCSBase::OnDataChanged( DataUpdateType_t type )
