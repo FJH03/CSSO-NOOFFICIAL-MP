@@ -819,7 +819,7 @@ void CWeaponCSBase::ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer )
 	{
 		// we just fired.
 		// there's a bit of a cool-off before you can alt-fire at normal alt-fire rate
-		m_flNextSecondaryAttack = gpGlobals->curtime + (GetCSWpnData().m_flCycleTimeAlt * 1.7f);
+		m_flNextSecondaryAttack = gpGlobals->curtime + (GetCSWpnData().m_flCycleTime[Secondary_Mode] * 1.7f);
 	}
 
 #ifndef CLIENT_DLL
@@ -2874,7 +2874,7 @@ void CWeaponCSBase::UpdateAccuracyPenalty()
 #define WEAPON_RECOIL_DECAY_THRESHOLD 1.10	
 	// Decay the recoil index if a little more than cycle time has elapsed since the last shot. In other words,
 	// don't decay if we're firing full-auto.
-	if ( gpGlobals->curtime > m_fLastShotTime + ( GetCSWpnData().m_flCycleTime * WEAPON_RECOIL_DECAY_THRESHOLD ) )
+	if ( gpGlobals->curtime > m_fLastShotTime + ( GetCSWpnData().m_flCycleTime[m_weaponMode] * WEAPON_RECOIL_DECAY_THRESHOLD ) )
 	{
 		float fDecayFactor = logf( 10.0f ) * weapon_recoil_decay_coefficient.GetFloat( );
 

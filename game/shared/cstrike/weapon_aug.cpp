@@ -151,7 +151,7 @@ void CWeaponAug::PrimaryAttack()
 
 	bool bZoomed = pPlayer->GetFOV() < pPlayer->GetDefaultFOV();
 
-	float flCycleTime = GetCSWpnData().m_flCycleTime;
+	float flCycleTime = GetCSWpnData().m_flCycleTime[m_weaponMode];
 
 	if ( bZoomed )
 		flCycleTime = 0.135f;

@@ -119,7 +119,7 @@ void CWeaponCSBaseGun::SecondaryAttack()
 	{
 		if ( IsRevolver() && m_flNextSecondaryAttack < gpGlobals->curtime )
 		{
-			float flCycletimeAlt = GetCSWpnData().m_flCycleTimeAlt;
+			float flCycletimeAlt = GetCSWpnData().m_flCycleTime[Secondary_Mode];
 			m_weaponMode = Secondary_Mode;
 			UpdateAccuracyPenalty();
 #ifndef CLIENT_DLL
@@ -172,7 +172,7 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 
 			if ( IsRevolver() )
 			{
-				m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->curtime + ((weaponMode == Primary_Mode) ? (GetCSWpnData().m_flCycleTime) : (GetCSWpnData().m_flCycleTimeAlt));
+				m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime[weaponMode];
 				BaseClass::SendWeaponAnim( ACT_VM_DRYFIRE ); // empty!
 			}
 

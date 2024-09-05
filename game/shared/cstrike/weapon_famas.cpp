@@ -192,7 +192,7 @@ void CWeaponFamas::PrimaryAttack()
 	if ( !pPlayer )
 		return;
 
-	float flCycleTime = GetCSWpnData().m_flCycleTime;
+	float flCycleTime = GetCSWpnData().m_flCycleTime[m_weaponMode];
 
 	// change a few things if we're in burst mode
 	if ( m_bBurstMode )

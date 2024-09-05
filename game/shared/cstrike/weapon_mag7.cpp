@@ -65,7 +65,7 @@ void CWeaponMAG7::PrimaryAttack()
 	if ( !pPlayer )
 		return;
 
-	float flCycleTime = GetCSWpnData().m_flCycleTime;
+	float flCycleTime = GetCSWpnData().m_flCycleTime[m_weaponMode];
 
 	// don't fire underwater
 	if ( pPlayer->GetWaterLevel() == 3 )

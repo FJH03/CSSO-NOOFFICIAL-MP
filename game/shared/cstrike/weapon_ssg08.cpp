@@ -134,7 +134,7 @@ void CWeaponSSG08::PrimaryAttack( void )
 	if (pPlayer == NULL)
 		return;
 
-	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, m_weaponMode ) )
+	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], m_weaponMode ) )
 		return;
 
 	if ( m_weaponMode == Secondary_Mode )

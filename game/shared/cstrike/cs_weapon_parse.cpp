@@ -402,8 +402,8 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_flRange			= pKeyValuesData->GetFloat( "Range", 8192.0f );
 	m_flRangeModifier	= pKeyValuesData->GetFloat( "RangeModifier", 0.98f );
 	m_iBullets			= pKeyValuesData->GetInt( "Bullets", 1 );
-	m_flCycleTime		= pKeyValuesData->GetFloat( "CycleTime", 0.15 );
-	m_flCycleTimeAlt	= pKeyValuesData->GetFloat( "CycleTimeAlt", 0.15 );
+	m_flCycleTime[0]	= pKeyValuesData->GetFloat( "CycleTime", 0.15 );
+	m_flCycleTime[1]	= pKeyValuesData->GetFloat( "CycleTimeAlt", m_flCycleTime[0] );
 	m_bAccuracyQuadratic= pKeyValuesData->GetInt( "AccuracyQuadratic", 0 );
 	m_flAccuracyDivisor	= pKeyValuesData->GetFloat( "AccuracyDivisor", -1 ); // -1 = off
 	m_flAccuracyOffset	= pKeyValuesData->GetFloat( "AccuracyOffset", 0 );

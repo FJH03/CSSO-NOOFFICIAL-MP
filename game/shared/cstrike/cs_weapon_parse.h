@@ -219,8 +219,8 @@ public:
 	float	m_flRange;
 	float	m_flRangeModifier;
 	int		m_iBullets;
-	float	m_flCycleTime;
-	float	m_flCycleTimeAlt;
+	float	m_flCycleTime[2];
+
 
 	// Variables that control how fast the weapon's accuracy changes as it is fired.
 	bool	m_bAccuracyQuadratic;

@@ -527,7 +527,7 @@ void CCSBot::EquipKnife( void )
 {
 	if (!IsUsingKnife())
 	{
-		SelectItem( "weapon_knife" );
+		SelectItem( GetTeamNumber() == TEAM_TERRORIST ? "weapon_knife_t" : "weapon_knife" );
 	}
 }
 
@@ -577,7 +577,7 @@ bool CCSBot::IsUsingKnife( void ) const
 {
 	CWeaponCSBase *weapon = GetActiveCSWeapon();
 
-	if (weapon && weapon->IsA( WEAPON_KNIFE ))
+	if ( weapon && ( weapon->IsA( WEAPON_KNIFE ) || weapon->IsA( WEAPON_KNIFE_T ) ) )
 		return true;
 
 	return false;
