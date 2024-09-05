@@ -208,7 +208,7 @@ void FX_FireBullets(
 
 	int		iDamage = pWeaponInfo->m_iDamage;
 	float	flRange = pWeaponInfo->m_flRange;
-	int		iPenetration = pWeaponInfo->m_iPenetration;
+	float	flPenetration = pWeaponInfo->m_iPenetration;
 	float	flRangeModifier = pWeaponInfo->m_flRangeModifier;
 	int		iAmmoType = pWeaponInfo->iAmmoType;
 
@@ -216,34 +216,22 @@ void FX_FireBullets(
 
 	// CS HACK, tweak some weapon values based on primary/secondary mode
 
-	if ( iWeaponID == WEAPON_GLOCK )
-	{
-		if ( iMode == Secondary_Mode )
-		{
-			iDamage = 18;	// reduced power for burst shots
-			flRangeModifier = 0.9f;
-		}
-	}
-	else if ( iWeaponID == WEAPON_M4A1 )
-	{
-		if ( iMode == Secondary_Mode )
-		{
-			flRangeModifier = 0.95f; // slower bullets in silenced mode
-			sound_type = SPECIAL1;
-		}
-	}
-	else if ( iWeaponID == WEAPON_USP )
-	{
-		if ( iMode == Secondary_Mode )
-		{
-			iDamage = 30; // reduced damage in silenced mode
-			sound_type = SPECIAL1;
-		}
-	}
+	if ( (iWeaponID == WEAPON_M4A1 || iWeaponID == WEAPON_USP) && iMode == Secondary_Mode )
+		sound_type = SPECIAL1;
 
-	if ( bDoEffects)
+	CWeaponCSBase* pWeapon = pPlayer ? pPlayer->GetActiveCSWeapon() : NULL;
+	if ( bDoEffects )
 	{
 		FX_WeaponSound( iPlayerIndex, sound_type, vOrigin, pWeaponInfo, flSoundTime );
+
+		// If the gun's nearly empty, also play a subtle "nearly-empty" sound, since the weapon 
+		// is lighter and acoustically different when weighed down by fewer bullets.
+		// But really it's so you get a fun low ammo warning from an audio cue.
+		if ( pWeapon && pWeapon->GetMaxClip1() > 1 && // not a single-shot weapon
+			 (((float)pWeapon->m_iClip1) / ((float)pWeapon->GetMaxClip1()) <= 0.2) ) // 20% or fewer bullets remaining
+		{
+			FX_WeaponSound( iPlayerIndex, NEARLYEMPTY, vOrigin, pWeaponInfo, flSoundTime );
+		}
 	}
 
 
@@ -286,17 +274,21 @@ void FX_FireBullets(
 
 	for ( int iBullet=0; iBullet < pWeaponInfo->m_iBullets; iBullet++ )
 	{
+		int nPenetrationCount = 4;
+
 		pPlayer->FireBullet(
 			vOrigin,
 			vAngles,
 			flRange,
-			iPenetration,
+			flPenetration,
+			nPenetrationCount,
 			iAmmoType,
 			iDamage,
 			flRangeModifier,
 			pPlayer,
 			bDoEffects,
-			x0 + x1[iBullet], y0 + y1[iBullet] );
+			x0 + x1[iBullet], y0 + y1[iBullet]
+			);
 	}
 
 #if !defined (CLIENT_DLL)

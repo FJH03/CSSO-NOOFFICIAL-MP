@@ -18,6 +18,7 @@
 #include "weapon_ironsightcontroller.h"
 #endif //IRONSIGHT
 
+
 #if defined( CLIENT_DLL )
 	#define CWeaponCSBase C_WeaponCSBase
 #endif
@@ -92,8 +93,8 @@ struct BobState_t
 };
 
 #ifdef CLIENT_DLL
-float CalcNewViewModelBobbing( CBasePlayer *player, BobState_t *pBobState, int nVMIndex = 0 );
-void AddNewViewModelBobbing( Vector &origin, QAngle &angles, BobState_t *pBobState );
+float CalcViewModelBobHelper( CBasePlayer *player, BobState_t *pBobState, int nVMIndex = 0 );
+void AddViewModelBobHelper( Vector &origin, QAngle &angles, BobState_t *pBobState );
 #endif
 
 #if defined( CLIENT_DLL )
@@ -132,16 +133,8 @@ public:
 		virtual void	BulletWasFired( const Vector &vecStart, const Vector &vecEnd );
 		virtual bool	ShouldRemoveOnRoundRestart();
 
-        //=============================================================================
-        // HPE_BEGIN:
         // [dwenger] Handle round restart processing for the weapon.
-        //=============================================================================
-
         virtual void    OnRoundRestart();
-
-        //=============================================================================
-        // HPE_END
-        //=============================================================================
 
         virtual bool	DefaultReload( int iClipSize1, int iClipSize2, int iActivity );
 
@@ -159,7 +152,6 @@ public:
 	virtual void	AddViewmodelBob( CBaseViewModel *viewmodel, Vector &origin, QAngle &angles );
 	virtual	float	CalcViewmodelBob( void );
 	BobState_t		*GetBobState();
-
 	// All predicted weapons need to implement and return true
 	virtual bool	IsPredicted() const;
 
@@ -206,7 +198,7 @@ public:
 	float GetRecoveryTime( void );
 
 	void			CallSecondaryAttack();
-	void CallWeaponIronsight();
+	void			CallWeaponIronsight();
 
 public:
 	#if defined( CLIENT_DLL )
@@ -217,7 +209,6 @@ public:
 		virtual void	DrawCrosshair();
 		virtual void	OnDataChanged( DataUpdateType_t type );
 
-		virtual int		GetMuzzleAttachment( void );
 		virtual bool	HideViewModelWhenZoomed( void ) { return true; }
 
 		float			m_flCrosshairDistance;
@@ -225,11 +216,9 @@ public:
 		int				m_iAlpha;
 		int				m_iScopeTextureID;
 		int				m_iCrosshairTextureID; // for white additive texture
-
-		virtual int GetMuzzleFlashStyle( void );
+		float			m_flGunAccuracyPosition;
 
 	#else
-
 		virtual	void	Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
 		virtual bool	Reload();
 		virtual void	Spawn();
@@ -243,7 +232,7 @@ public:
 	virtual bool	CanDeploy( void );
 	virtual void	UpdateShieldState( void );
 	virtual bool	SendWeaponAnim( int iActivity );
-	virtual void	SendViewModelAnim (int nSequence);
+	virtual void	SendViewModelAnim( int nSequence );
 	virtual void	SecondaryAttack( void );
 	virtual void	Precache( void );
 	virtual bool	CanBeSelected( void );
@@ -259,7 +248,7 @@ public:
 	virtual void	ItemBusyFrame();
 	virtual const char		*GetViewModel( int viewmodelindex = 0 ) const;
 
-	virtual bool IsRevolver() const { return GetWeaponID() == WEAPON_REVOLVER; }
+	virtual bool IsRevolver() const { return GetCSWeaponID() == WEAPON_REVOLVER; }
 
 	void			ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer );
 	bool			ItemPostFrame_ProcessZoomAction( CCSPlayer *pPlayer );
@@ -272,11 +261,7 @@ public:
 
 	bool	m_bDelayFire;			// This variable is used to delay the time between subsequent button pressing.
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [pfreese] new accuracy model
-	//=============================================================================
-
 	CNetworkVar( CSWeaponMode, m_weaponMode);
 
 	virtual float GetInaccuracy() const;
@@ -291,24 +276,15 @@ public:
 	void ResetPostponeFireReadyTime( void ) { m_flPostponeFireReadyTime = FLT_MAX; }
 	void SetPostponeFireReadyTime( float flFutureTime ) { m_flPostponeFireReadyTime = flFutureTime; }
 	bool IsPostponFireReadyTimeElapsed( void ) { return (m_flPostponeFireReadyTime < gpGlobals->curtime); }
-
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 	
 	void SetExtraAmmoCount( int count ) { m_iExtraPrimaryAmmo = count; }
 	int GetExtraAmmoCount( void ) { return m_iExtraPrimaryAmmo; }
 
 	virtual bool IsReloadVisuallyComplete() { return m_bReloadVisuallyComplete; }
 	CNetworkVar( bool, m_bReloadVisuallyComplete );
-	
-	CNetworkVar( bool, m_bSilencerOn );
+
 	CNetworkVar( float, m_flDoneSwitchingSilencer );	// soonest time switching the silencer will be complete
 	bool IsSwitchingSilencer( void ) { return (m_flDoneSwitchingSilencer >= gpGlobals->curtime); }
-
-	//=============================================================================
-	// HPE_BEGIN:	
-	//=============================================================================
 
     // [tj] Accessors for the previous owner of the gun
 	void SetPreviousOwner(CCSPlayer* player) { m_prevOwner = player; }
@@ -323,10 +299,6 @@ public:
     //[dwenger] Accessors for the prior owner list
     void AddToPriorOwnerList(CCSPlayer* pPlayer);
     bool IsAPriorOwner(CCSPlayer* pPlayer);
-
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 protected:
 
@@ -351,9 +323,19 @@ private:
 
     // [tj] To keep track of people who drop weapons for teammates during the buy round
     CHandle<CCSPlayer> m_donor;
-    bool m_donated;
+	bool m_donated;
+
+	void ResetGunHeat( void );
+	void UpdateGunHeat( float heat, int iAttachmentIndex );
 
 	CNetworkVar( float, m_fLastShotTime );
+
+#ifdef CLIENT_DLL
+	// Smoke effect variables.
+	float m_gunHeat;
+	unsigned int m_smokeAttachments;
+	float m_lastSmokeTime;
+#endif
 
 public:
 

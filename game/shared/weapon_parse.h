@@ -39,6 +39,7 @@ typedef enum {
 	SPECIAL3,
 	TAUNT,
 	DEPLOY,
+	NEARLYEMPTY,
 
 	// Add new shoot sound types here
 

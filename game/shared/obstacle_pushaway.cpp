@@ -7,6 +7,9 @@
 #include "cbase.h"
 #include "obstacle_pushaway.h"
 #include "props_shared.h"
+#ifdef CLIENT_DLL
+#include "c_func_breakablesurf.h"
+#endif
 
 #if defined( CSTRIKE_DLL )
 #define SV_PUSH_CONVAR_FLAGS  (FCVAR_REPLICATED)
@@ -24,6 +27,7 @@ ConVar sv_pushaway_player_force( "sv_pushaway_player_force", "200000", SV_PUSH_C
 ConVar sv_pushaway_max_player_force( "sv_pushaway_max_player_force", "10000", SV_PUSH_CONVAR_FLAGS | FCVAR_CHEAT, "Maximum of how hard the player is pushed away from physics objects." );
 
 #ifdef CLIENT_DLL
+#define CBreakableSurface C_BreakableSurface
 ConVar sv_turbophysics( "sv_turbophysics", "0", FCVAR_REPLICATED, "Turns on turbo physics" );
 #else
 extern ConVar sv_turbophysics;
@@ -100,11 +104,14 @@ bool IsPushableEntity( CBaseEntity *pEnt )
 }
 
 //-----------------------------------------------------------------------------------------------------
-#ifndef CLIENT_DLL
 bool IsBreakableEntity( CBaseEntity *pEnt )
 {
 	if ( pEnt == NULL )
 		return false;
+
+	// first check to see if it's already broken
+	if ( pEnt->m_iHealth < 0 && pEnt->GetMaxHealth() > 0 )
+		return true;
 
 	// If we won't be able to break it, don't try
 	if ( pEnt->m_takedamage != DAMAGE_YES )
@@ -152,6 +159,8 @@ bool IsBreakableEntity( CBaseEntity *pEnt )
 		}
 	}
 
+// what the shit is this
+/*
 	CBreakableProp *pProp = dynamic_cast< CBreakableProp * >( pEnt );
 	if ( pProp )
 	{
@@ -161,10 +170,10 @@ bool IsBreakableEntity( CBaseEntity *pEnt )
 			return false;
 		}
 	}
+*/
 
 	return true;
 }
-#endif // !CLIENT_DLL
 
 //-----------------------------------------------------------------------------------------------------
 int GetPushawayEnts( CBaseCombatCharacter *pPushingEntity, CBaseEntity **ents, int nMaxEnts, float flPlayerExpand, int PartitionMask, CPushAwayEnumerator *enumerator )

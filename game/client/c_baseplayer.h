@@ -117,7 +117,9 @@ public:
 	void				SmoothViewOnStairs( Vector& eyeOrigin );
 	virtual float		CalcRoll (const QAngle& angles, const Vector& velocity, float rollangle, float rollspeed);
 	void				CalcViewRoll( QAngle& eyeAngles );
+	virtual void		CalcViewBob( Vector& eyeOrigin );
 	void				CreateWaterEffects( void );
+	virtual void		CalcAddViewmodelCameraAnimation( Vector& eyeOrigin, QAngle& eyeAngles );
 
 	virtual void			SetPlayerUnderwater( bool state );
 	void					UpdateUnderwaterState( void );

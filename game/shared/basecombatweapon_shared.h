@@ -560,6 +560,8 @@ public:
 	// Weapon art
 	CNetworkVar( int, m_iViewModelIndex );
 	CNetworkVar( int, m_iWorldModelIndex );
+
+	CNetworkVar( int, m_iNumEmptyAttacks );
 	// Sounds
 	float					m_flNextEmptySoundTime;				// delay on empty sound playing
 

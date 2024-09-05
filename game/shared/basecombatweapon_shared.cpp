@@ -1396,6 +1396,7 @@ bool CBaseCombatWeapon::DefaultDeploy( char *szViewModel, char *szWeaponModel, i
 	m_flNextSecondaryAttack	= gpGlobals->curtime + SequenceDuration();
 	m_flHudHintMinDisplayTime = 0;
 
+	m_iNumEmptyAttacks = 0;
 	m_bAltFireHudHintDisplayed = false;
 	m_bReloadHudHintDisplayed = false;
 	m_flHudHintPollTime = gpGlobals->curtime + 5.0f;
@@ -2226,6 +2227,7 @@ void CBaseCombatWeapon::PrimaryAttack( void )
 	// If my clip is empty (and I use clips) start reload
 	if ( UsesClipsForAmmo1() && !m_iClip1 ) 
 	{
+		m_iNumEmptyAttacks++;
 		Reload();
 		return;
 	}
@@ -2541,6 +2543,8 @@ BEGIN_PREDICTION_DATA( CBaseCombatWeapon )
 	DEFINE_FIELD( m_iPrimaryAmmoCount, FIELD_INTEGER ),
 	DEFINE_FIELD( m_iSecondaryAmmoCount, FIELD_INTEGER ),
 
+	DEFINE_PRED_FIELD( m_iNumEmptyAttacks, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
+
 	//DEFINE_PHYSPTR( m_pConstraint ),
 
 	// DEFINE_FIELD( m_iOldState, FIELD_INTEGER ),
@@ -2778,6 +2782,7 @@ BEGIN_NETWORK_TABLE(CBaseCombatWeapon, DT_BaseCombatWeapon)
 	SendPropModelIndex( SENDINFO(m_iWorldModelIndex) ),
 	SendPropInt( SENDINFO(m_iState ), 8, SPROP_UNSIGNED ),
 	SendPropEHandle( SENDINFO(m_hOwner) ),
+	SendPropInt( SENDINFO( m_iNumEmptyAttacks ), 8 ),
 #else
 	RecvPropDataTable("LocalWeaponData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalWeaponData)),
 	RecvPropDataTable("LocalActiveWeaponData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponData)),
@@ -2785,6 +2790,7 @@ BEGIN_NETWORK_TABLE(CBaseCombatWeapon, DT_BaseCombatWeapon)
 	RecvPropInt( RECVINFO(m_iWorldModelIndex)),
 	RecvPropInt( RECVINFO(m_iState )),
 	RecvPropEHandle( RECVINFO(m_hOwner ) ),
+	RecvPropInt( RECVINFO( m_iNumEmptyAttacks )),
 #endif
 END_NETWORK_TABLE()
 

@@ -204,13 +204,32 @@ public:
 		Vector vecSrc,
 		const QAngle &shootAngles,
 		float flDistance,
-		int iPenetration,
+		float flPenetration,
+		int nPenetrationCount,
 		int iBulletType,
 		int iDamage,
 		float flRangeModifier,
 		CBaseEntity *pevAttacker,
 		bool bDoEffects,
 		float xSpread, float ySpread );
+
+	bool HandleBulletPenetration(
+		float &flPenetration,
+		int &iEnterMaterial,
+		bool &hitGrate,
+		trace_t &tr,
+		Vector &vecDir,
+		surfacedata_t *pSurfaceData,
+		float flPenetrationModifier,
+		float flDamageModifier,
+		bool bDoEffects,
+		int iDamageType,
+		float flPenetrationPower,
+		int &nPenetrationCount,
+		Vector &vecSrc,
+		float flDistance,
+		float flCurrentDistance,
+		float &fCurrentDamage );
 
 	virtual QAngle	GetAimPunchAngle( void );
 	QAngle	GetRawAimPunchAngle( void ) const;

@@ -1653,6 +1653,8 @@ void CBasePlayer::CalcPlayerView( Vector& eyeOrigin, QAngle& eyeAngles, float& f
 
 	CalcViewRoll( eyeAngles );
 
+	CalcAddViewmodelCameraAnimation( eyeOrigin, eyeAngles );
+
 	// Apply punch angles
 	VectorAdd( eyeAngles, m_Local.m_viewPunchAngle, eyeAngles );
 
@@ -1711,6 +1713,8 @@ void CBasePlayer::CalcVehicleView(
 	Vector vecBaseEyePosition = eyeOrigin;
 
 	CalcViewRoll( eyeAngles );
+
+	CalcAddViewmodelCameraAnimation( eyeOrigin, eyeAngles );
 
 	// Apply punch angle
 	VectorAdd( eyeAngles, m_Local.m_viewPunchAngle, eyeAngles );
@@ -1796,6 +1800,33 @@ float CBasePlayer::CalcRoll (const QAngle& angles, const Vector& velocity, float
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: Allow the viewmodel to layer in artist-authored additive camera animation (to make some first-person anims 'punchier')
+//-----------------------------------------------------------------------------
+#define CAM_DRIVER_RETURN_TO_NORMAL 0.25f
+#define CAM_DRIVER_RETURN_TO_NORMAL_GAIN 0.8f
+void CBasePlayer::CalcAddViewmodelCameraAnimation( Vector& eyeOrigin, QAngle& eyeAngles )
+{
+#ifdef CLIENT_DLL
+	CBaseViewModel *vm = GetViewModel();
+	if ( vm && vm->GetModelPtr() )
+	{
+		float flTimeDelta = clamp( (gpGlobals->curtime - vm->m_flCamDriverAppliedTime), 0, CAM_DRIVER_RETURN_TO_NORMAL );
+		if ( flTimeDelta < CAM_DRIVER_RETURN_TO_NORMAL )
+		{
+			vm->m_flCamDriverWeight = clamp( Gain( RemapValClamped( flTimeDelta, 0.0f, CAM_DRIVER_RETURN_TO_NORMAL, 1.0f, 0.0f ), CAM_DRIVER_RETURN_TO_NORMAL_GAIN ), 0, 1 );
+
+			//eyeOrigin += (vm->m_vecCamDriverLastPos * vm->m_flCamDriverWeight);
+			eyeAngles += (vm->m_angCamDriverLastAng * vm->m_flCamDriverWeight);
+		}
+		else
+		{
+			vm->m_flCamDriverWeight = 0;
+		}
+	}
+#endif
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: Determine view roll, including data kick
 //-----------------------------------------------------------------------------
 void CBasePlayer::CalcViewRoll( QAngle& eyeAngles )
@@ -1807,6 +1838,83 @@ void CBasePlayer::CalcViewRoll( QAngle& eyeAngles )
 	eyeAngles[ROLL] += side;
 }
 
+#if defined( CLIENT_DLL )
+extern ConVar cl_use_new_headbob;
+//ConVar cl_headbob_freq( "cl_headbob_freq", "12", FCVAR_CLIENTDLL );
+//ConVar cl_headbob_amp("cl_headbob_amp", "1.5", FCVAR_CLIENTDLL );
+ConVar cl_headbob_land_dip_amt( "cl_headbob_land_dip_amt", "4", FCVAR_CLIENTDLL );
+#endif 
+
+void CBasePlayer::CalcViewBob( Vector& eyeOrigin )
+{
+#if defined( CLIENT_DLL )
+	if ( cl_use_new_headbob.GetBool() == false )
+		return;
+
+	Vector vecBaseEyePosition = eyeOrigin;
+
+	// if we just landed, dip the player's view
+	float flOldFallVel = m_Local.m_flOldFallVelocity;
+	float flFallVel = m_Local.m_flFallVelocity;
+	//Msg("Fall Velocity: %f\n", flFallVel );
+
+	if ( flFallVel <= 0.1f && flOldFallVel > 10.0f && flOldFallVel <= PLAYER_FATAL_FALL_SPEED && m_Local.m_bInLanding == false )
+	{
+		m_Local.m_bInLanding = true;
+		m_Local.m_flLandingTime = gpGlobals->curtime;
+	}
+
+	// don't bob the view right now
+	/*
+	const float flMaxSpeed = sv_maxspeed.GetFloat();
+	float flSpeedFactor;
+	*/
+
+	if ( m_Local.m_bInLanding == true )
+	{
+		float landseconds = MAX( gpGlobals->curtime - m_Local.m_flLandingTime, 0.0f );
+		float landFraction = SimpleSpline( landseconds / 0.25f );
+		clamp( landFraction, 0.0f, 1.0f );
+
+		float flDipAmount = (1 / flOldFallVel) * 0.1f;
+
+		int dipHighOffset = 64;
+		int dipLowOffset = dipHighOffset - cl_headbob_land_dip_amt.GetInt();
+		Vector temp = GetViewOffset();
+		temp.z = ((dipLowOffset - flDipAmount) * landFraction) +
+			(dipHighOffset * (1 - landFraction));
+
+		if ( temp.z > dipHighOffset )
+		{
+			temp.z = dipHighOffset;
+			m_Local.m_bInLanding = false;
+		}
+		eyeOrigin.z -= (dipHighOffset - temp.z);
+		//SetViewOffset( temp );
+	}
+	else
+	{
+		// don't bob the view right now
+		/*
+		flSpeedFactor = GetAbsVelocity().Length() / flMaxSpeed;
+		clamp( flSpeedFactor, 0.0f, 1.0f );
+		eyeOrigin.z += flSpeedFactor * (sin(gpGlobals->curtime * cl_headbob_freq.GetFloat() ) * cl_headbob_amp.GetFloat());
+		*/
+	}
+
+	// stop when our eyes get back to default
+	if ( m_Local.m_bInLanding == true && ((eyeOrigin.z - 0.001f) >= vecBaseEyePosition.z) )
+	{
+		m_Local.m_bInLanding = false;
+	}
+
+	if ( m_Local.m_bInLanding == false )
+	{
+		// Set the old velocity to the new velocity, we check next frame to see if we hit the ground
+		m_Local.m_flOldFallVelocity = m_Local.m_flFallVelocity;
+	}
+#endif
+}
 
 void CBasePlayer::DoMuzzleFlash()
 {

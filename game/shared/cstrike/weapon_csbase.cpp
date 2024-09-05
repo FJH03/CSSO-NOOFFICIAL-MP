@@ -11,7 +11,6 @@
 #include "weapon_csbase.h"
 #include "ammodef.h"
 #include "cs_gamerules.h"
-#include "basegrenade_shared.h"
 #include "npcevent.h"
 #include "eventlist.h"
 
@@ -22,10 +21,10 @@
 	#include "vgui/ISurface.h"
 	#include "vgui_controls/Controls.h"
 	#include "c_cs_player.h"
+	#include "predicted_viewmodel.h"
 	#include "hud_crosshair.h"
 	#include "c_te_effect_dispatch.h"
 	#include "c_te_legacytempents.h"
-	#include "predicted_viewmodel.h"
 
 	extern IVModelInfoClient* modelinfo;
 
@@ -45,6 +44,8 @@
 #define MOVEMENT_CURVE01_EXPONENT   0.25
 
 extern WeaponRecoilData g_WeaponRecoilData;
+
+extern ConVar cl_righthand;
 extern ConVar sv_jump_impulse;
 
 ConVar weapon_accuracy_model( "weapon_accuracy_model", "2", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY | FCVAR_ARCHIVE );
@@ -59,11 +60,15 @@ ConVar weapon_air_spread_scale( "weapon_air_spread_scale", "1.0", FCVAR_CHEAT | 
 
 ConVar weapon_recoil_decay_coefficient( "weapon_recoil_decay_coefficient", "2.0", FCVAR_CHEAT | FCVAR_REPLICATED, "" );
 
+
 // ----------------------------------------------------------------------------- //
 // Global functions.
 // ----------------------------------------------------------------------------- //
 
-
+#ifdef CLIENT_DLL
+void TE_DynamicLight( IRecipientFilter& filter, float delay,
+	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC );
+#endif
 
 struct WeaponAliasTranslationInfoStruct
 {
@@ -98,7 +103,7 @@ static const WeaponAliasTranslationInfoStruct s_WeaponAliasTranslationInfo[] =
 	{ "smokegrenade", "sgren" },
 	{ "smokegrenade", "sgren" },
 	{ "nvgs", "nightvision" },
-
+	
 	{ "", "" } // this needs to be last
 };
 
@@ -120,7 +125,7 @@ WeaponAliasInfo s_weaponAliasInfo[] =
 	{ WEAPON_ELITE,				"elite" },
 	{ WEAPON_FIVESEVEN,			"fiveseven" },
 	{ WEAPON_UMP45,				"ump45" },
-	{ WEAPON_SCAR20,				"scar20" },
+	{ WEAPON_SCAR20,			"scar20" },
 	{ WEAPON_GALILAR,			"galilar" },
 	{ WEAPON_FAMAS,				"famas" },
 	{ WEAPON_USP,				"usp_silencer" },
@@ -176,9 +181,9 @@ WeaponAliasInfo s_weaponAliasInfo[] =
 	{ WEAPON_SMOKEGRENADE,		"sgren" },
 	{ WEAPON_HEGRENADE,			"hegrenade" },
 	{ WEAPON_HEGRENADE,			"hegren" },
+	{ WEAPON_DECOY,				"decoy" },
 	{ WEAPON_MOLOTOV,			"molotov" },
 	{ WEAPON_INCGRENADE,		"incgrenade" },
-	{ WEAPON_DECOY,				"decoy" },
 
 	// not sure any of these are needed
 	{ WEAPON_SHIELDGUN,			"shield" },
@@ -245,7 +250,7 @@ CSWeaponID AliasToWeaponID( const char *szAlias )
 	{
 		for ( int i=0; i < ARRAYSIZE(s_weaponAliasInfo); ++i)
 		{
-			if ( Q_stricmp( s_weaponAliasInfo[i].alias, szAlias) == 0 )
+			if ( Q_stricmp( s_weaponAliasInfo[i].alias, szAlias ) == 0 )
 				return s_weaponAliasInfo[i].id;
 		}
 	}
@@ -329,27 +334,27 @@ IMPLEMENT_NETWORKCLASS_ALIASED( WeaponCSBase, DT_WeaponCSBase )
 BEGIN_NETWORK_TABLE( CWeaponCSBase, DT_WeaponCSBase )
 #if !defined( CLIENT_DLL )
 SendPropInt( SENDINFO( m_weaponMode ), 1, SPROP_UNSIGNED ),
-SendPropFloat(SENDINFO(m_fAccuracyPenalty) ),
+SendPropFloat( SENDINFO( m_fAccuracyPenalty ), 0, SPROP_CHANGES_OFTEN ),
+SendPropFloat( SENDINFO( m_fLastShotTime ) ),
+SendPropFloat( SENDINFO( m_flRecoilIndex ) ),
+SendPropBool( SENDINFO( m_bReloadVisuallyComplete ) ),
+SendPropTime( SENDINFO( m_flDoneSwitchingSilencer ) ),
 // world weapon models have no aminations
 SendPropExclude( "DT_AnimTimeMustBeFirst", "m_flAnimTime" ),
 SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
-SendPropTime( SENDINFO( m_flPostponeFireReadyTime ) ),
-SendPropBool( SENDINFO( m_bReloadVisuallyComplete ) ),
-SendPropTime( SENDINFO( m_flDoneSwitchingSilencer ) ),
-SendPropFloat( SENDINFO( m_fLastShotTime ) ),
-SendPropFloat( SENDINFO( m_flRecoilIndex ) ),
 //	SendPropExclude( "DT_LocalActiveWeaponData", "m_flTimeWeaponIdle" ),
+SendPropTime( SENDINFO( m_flPostponeFireReadyTime ) ),
 #if IRONSIGHT
 SendPropInt( SENDINFO( m_iIronSightMode ), 2, SPROP_UNSIGNED ),
 #endif //IRONSIGHT
 #else
 RecvPropInt( RECVINFO( m_weaponMode ) ),
-RecvPropFloat( RECVINFO(m_fAccuracyPenalty)),
-RecvPropTime( RECVINFO( m_flPostponeFireReadyTime ) ),
-RecvPropBool( RECVINFO( m_bReloadVisuallyComplete ) ),
-RecvPropTime( RECVINFO( m_flDoneSwitchingSilencer ) ),
+RecvPropFloat( RECVINFO( m_fAccuracyPenalty ) ),
 RecvPropFloat( RECVINFO( m_fLastShotTime ) ),
 RecvPropFloat( RECVINFO( m_flRecoilIndex ) ),
+RecvPropBool( RECVINFO( m_bReloadVisuallyComplete ) ),
+RecvPropTime( RECVINFO( m_flDoneSwitchingSilencer ) ),
+RecvPropTime( RECVINFO( m_flPostponeFireReadyTime ) ),
 #if IRONSIGHT
 RecvPropInt( RECVINFO( m_iIronSightMode ) ),
 #endif //IRONSIGHT
@@ -365,9 +370,8 @@ BEGIN_PREDICTION_DATA( CWeaponCSBase )
 	DEFINE_PRED_FIELD( m_weaponMode, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD_TOL( m_fAccuracyPenalty, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.00005f ),
 	DEFINE_PRED_FIELD( m_fLastShotTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flPostponeFireReadyTime, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
-	DEFINE_PRED_FIELD( m_fLastShotTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flRecoilIndex, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_flPostponeFireReadyTime, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
 #if IRONSIGHT
 	DEFINE_PRED_FIELD( m_iIronSightMode, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 #endif
@@ -391,8 +395,7 @@ LINK_ENTITY_TO_CLASS( weapon_cs_base, CWeaponCSBase );
 
 #if defined( CLIENT_DLL )
 	ConVar cl_crosshairstyle( "cl_crosshairstyle", "2", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "0 = DEFAULT, 1 = DEFAULT STATIC, 2 = ACCURATE SPLIT (accurate recoil/spread feedback with a fixed inner part), 3 = ACCURATE DYNAMIC (accurate recoil/spread feedback), 4 = CLASSIC STATIC, 5 = OLD CS STYLE (fake recoil - inaccurate feedback)" );
-	ConVar cl_crosshaircolor( "cl_crosshaircolor", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Set crosshair color as defined in game_options.consoles.txt" );
-	ConVar cl_dynamiccrosshair( "cl_dynamiccrosshair", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE ); 
+	ConVar cl_dynamiccrosshair( "cl_dynamiccrosshair", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE ); // PiMoN: so the CSS settings won't fuck up (thanks valve)
 	ConVar cl_scalecrosshair( "cl_scalecrosshair", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Enable crosshair scaling (deprecated)" );
 	ConVar cl_crosshairscale( "cl_crosshairscale", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Crosshair scaling factor (deprecated)" );
 	ConVar cl_crosshairalpha( "cl_crosshairalpha", "200", FCVAR_CLIENTDLL | FCVAR_ARCHIVE );
@@ -450,7 +453,6 @@ void DrawCrosshairRect( int r, int g, int b, int a, int x0, int y0, int x1, int 
 	}
 }
 
-
 #endif
 
 // must be included after the above macros
@@ -472,6 +474,7 @@ CWeaponCSBase::CWeaponCSBase()
 
 #ifdef CLIENT_DLL
 	m_iCrosshairTextureID = 0;
+	m_flGunAccuracyPosition = 0;
 #else
 	m_iDefaultExtraAmmo = 0;
 #endif
@@ -479,14 +482,15 @@ CWeaponCSBase::CWeaponCSBase()
 	m_fAccuracyPenalty = 0.0f;
 
 	m_fLastShotTime = 0.0f;
-
-	m_flRecoilIndex = 0.0f;
-
 	m_weaponMode = Primary_Mode;
 
 	m_bReloadVisuallyComplete = false;
 
 	m_flDoneSwitchingSilencer = 0.0f;
+
+	m_flRecoilIndex = 0.0f;
+
+	ResetGunHeat();
 }
 
 CWeaponCSBase::~CWeaponCSBase()
@@ -496,6 +500,15 @@ CWeaponCSBase::~CWeaponCSBase()
 	delete m_IronSightController;
 	m_IronSightController = NULL;
 #endif //IRONSIGHT
+}
+
+void CWeaponCSBase::ResetGunHeat()
+{
+#ifdef CLIENT_DLL
+	m_gunHeat = 0.0f;
+	m_smokeAttachments = 0x0;
+	m_lastSmokeTime = 0.0f;
+#endif
 }
 
 #ifndef CLIENT_DLL
@@ -636,17 +649,16 @@ bool CWeaponCSBase::SendWeaponAnim( int iActivity )
 			vm->SendViewModelMatchingSequence( idealSequence );
 		}
 	}
-
 #endif
 
 #ifndef CLIENT_DLL
- // firing or reloading should interrupt weapon inspection
- 	if ( iActivity == ACT_VM_PRIMARYATTACK || iActivity == ACT_VM_RELOAD || iActivity == ACT_SECONDARY_VM_RELOAD || iActivity == ACT_VM_ATTACH_SILENCER || iActivity == ACT_VM_DETACH_SILENCER )
- 	{
- 	 if ( CCSPlayer *pPlayer = GetPlayerOwner() )
- 		{
-  			pPlayer->StopLookingAtWeapon();
- 		}
+	// firing or reloading should interrupt weapon inspection
+	if ( iActivity == ACT_VM_PRIMARYATTACK || iActivity == ACT_VM_RELOAD || iActivity == ACT_SECONDARY_VM_RELOAD || iActivity == ACT_VM_ATTACH_SILENCER || iActivity == ACT_VM_DETACH_SILENCER )
+	{
+		if ( CCSPlayer *pPlayer = GetPlayerOwner() )
+		{
+			pPlayer->StopLookingAtWeapon();
+		}
 	}
 #endif
 
@@ -655,23 +667,23 @@ bool CWeaponCSBase::SendWeaponAnim( int iActivity )
 
 void CWeaponCSBase::SendViewModelAnim( int nSequence )
 {
- CCSPlayer *pPlayer = GetPlayerOwner();
- if ( !pPlayer || pPlayer->IsLookingAtWeapon() )
-  return;
+	CCSPlayer *pPlayer = GetPlayerOwner();
+	if ( !pPlayer || pPlayer->IsLookingAtWeapon() )
+		return;
 
- CBaseViewModel *vm = pPlayer->GetViewModel( m_nViewModelIndex );
- if ( vm )
- 	{
- 	 bool bIsLookingAt = (vm->GetSequence() != ACT_INVALID && V_stristr( vm->GetSequenceName( vm->GetSequence() ), "lookat" ));
+	CBaseViewModel *vm = pPlayer->GetViewModel( m_nViewModelIndex );
+	if ( vm )
+	{
+		bool bIsLookingAt = (vm->GetSequence() != ACT_INVALID && V_stristr( vm->GetSequenceName( vm->GetSequence() ), "lookat" ));
 
- 	 if ( vm->GetCycle() < 0.98f && bIsLookingAt && V_stristr( vm->GetSequenceName( nSequence ), "idle" ) )
- 		 {
-  		 // Don't switch from taunt to idle
-  		 return;
- 		 }
-  }
+		if ( vm->GetCycle() < 0.98f && bIsLookingAt && V_stristr( vm->GetSequenceName( nSequence ), "idle" ) )
+		{
+			// Don't switch from taunt to idle
+			return;
+		}
+	}
 
- BaseClass::SendViewModelAnim( nSequence );
+	BaseClass::SendViewModelAnim( nSequence );
 }
 
 // Common code put here to support separate zoom from silencer/burst
@@ -693,6 +705,71 @@ void CWeaponCSBase::CallSecondaryAttack()
 		SecondaryAttack();
 }
 
+void CWeaponCSBase::UpdateGunHeat( float heat, int iAttachmentIndex )
+{
+#ifdef CLIENT_DLL
+	static const float SECONDS_FOR_COOL_DOWN = 2.0f;
+	static const float MIN_TIME_BETWEEN_SMOKES = 4.0f;
+
+	float currentShotTime = gpGlobals->curtime;
+	float timeSinceLastShot = currentShotTime - m_fLastShotTime;
+	
+	// Drain off any heat from prior shots.
+	m_gunHeat -= timeSinceLastShot * ( 1.0f/SECONDS_FOR_COOL_DOWN );
+	if ( m_gunHeat <= 0.0f )
+	{
+		m_gunHeat = 0.0f;
+	}
+
+	// Add the new heat to the gun.
+	m_gunHeat += heat;
+	if ( m_gunHeat > 1.0f )
+	{
+		// Reset the heat so we have to build up to it again.
+		m_gunHeat = 0.0f;
+		m_smokeAttachments |= ( 0x1 << iAttachmentIndex );
+	}
+	
+	// Logic for the gun smoke.
+	if ( m_smokeAttachments != 0x0 )
+	{
+		// We don't want to hammer the smoke effect too much, so prevent smoke from spawning too soon after the last smoke.
+		if ( currentShotTime - m_lastSmokeTime > MIN_TIME_BETWEEN_SMOKES )
+		{
+			const char *pszHeatEffect = GetCSWpnData().m_szHeatEffect;
+
+			if ( pszHeatEffect && Q_strlen( pszHeatEffect ) > 0 )
+			{
+				static const int MAX_SMOKE_ATTACHMENT_INDEX = 16;
+				for ( int i=0; i<MAX_SMOKE_ATTACHMENT_INDEX && m_smokeAttachments > 0x0; ++i )
+				{
+					int attachmentFlag = ( 0x1<<i );
+					if ( ( attachmentFlag & m_smokeAttachments ) > 0x0 )
+					{
+						//Remove the attachment flag from the smoke attachments since we are firing it off.
+						m_smokeAttachments = ( m_smokeAttachments & ( ~attachmentFlag ) );
+
+						CCSPlayer *pPlayer = GetPlayerOwner();
+						if ( pPlayer )
+						{
+							C_BaseViewModel *pViewModel = pPlayer->GetViewModel();
+							if ( pViewModel )
+							{
+								DispatchParticleEffect( pszHeatEffect, PATTACH_POINT_FOLLOW, pViewModel, i, false );
+								m_lastSmokeTime = currentShotTime;
+							}
+						}
+					}
+				}
+			}
+			//Reset the smoke attachments so that we can start doing a smoke effect for later shots.
+			m_smokeAttachments = 0x0;
+		}
+
+	}
+#endif
+}
+
 void CWeaponCSBase::ItemPostFrame()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
@@ -708,7 +785,6 @@ void CWeaponCSBase::ItemPostFrame()
 	{
 		// the AE_WPN_COMPLETE_RELOAD event should handle the stocking the clip, but in case it's missing, we can do it here as well
 		int j = MIN( GetMaxClip1() - m_iClip1, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );	
-
 		// Add them to the clip
 		m_iClip1 += j;
 		GiveReserveAmmo( AMMO_POSITION_PRIMARY, -j, true );
@@ -739,6 +815,7 @@ void CWeaponCSBase::ItemPostFrame()
 		ItemPostFrame_ProcessIdleNoAction( pPlayer );
 	}
 }
+
 
 void CWeaponCSBase::ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer )
 {
@@ -832,7 +909,7 @@ bool CWeaponCSBase::ItemPostFrame_ProcessZoomAction( CCSPlayer *pPlayer )
 	if ( IsRevolver() )	// Revolver treats zoom as secondary fire
 		return ItemPostFrame_ProcessSecondaryAttack( pPlayer );
 
-	if ( IsKindOf( WEAPONTYPE_SNIPER_RIFLE ) || IsKindOf( WEAPONTYPE_KNIFE ) ) //need test sensitivity on snipers
+	if ( IsKindOf( WEAPONTYPE_SNIPER_RIFLE ) || IsKindOf( WEAPONTYPE_KNIFE ) )
 	{
 		CallSecondaryAttack();
 	}
@@ -1054,6 +1131,7 @@ void CWeaponCSBase::ItemPostFrame_ProcessIdleNoAction( CCSPlayer *pPlayer )
 	WeaponIdle();
 }
 
+
 void CWeaponCSBase::ItemPostFrame_RevolverResetHaulback()
 {
 	if ( IsRevolver() ) // not holding any weapon buttons
@@ -1066,6 +1144,7 @@ void CWeaponCSBase::ItemPostFrame_RevolverResetHaulback()
 		}
 	}
 }
+
 
 void CWeaponCSBase::ItemBusyFrame()
 {
@@ -1090,11 +1169,61 @@ float CWeaponCSBase::GetInaccuracy() const
 	if ( fMaxSpeed == 0.0f )
 		fMaxSpeed = GetCSWpnData().m_flMaxSpeed;
 
-	return m_fAccuracyPenalty + 
-		RemapValClamped(pPlayer->GetAbsVelocity().Length2D(), 
+	float fAccuracy = m_fAccuracyPenalty;
+
+	// CS-PRO TEST FEATURE
+	// Adding movement penalty here results in an instaneous penalty that doesn't persist.
+#if !MOVEMENT_ACCURACY_DECAYED
+	float flVerticalSpeed = abs( pPlayer->GetAbsVelocity().z );
+
+	float flMovementInaccuracyScale = RemapValClamped(pPlayer->GetAbsVelocity().Length2D(), 
 		fMaxSpeed * CS_PLAYER_SPEED_DUCK_MODIFIER, 
 		fMaxSpeed * 0.95f,							// max out at 95% of run speed to avoid jitter near max speed
-		0.0f, weaponInfo.m_fInaccuracyMove[m_weaponMode]);
+		0.0f, 1.0f );
+
+	if ( flMovementInaccuracyScale > 0.0f )
+	{
+		if ( !pPlayer->m_bIsWalking )
+		{
+			flMovementInaccuracyScale = powf( flMovementInaccuracyScale, float( MOVEMENT_CURVE01_EXPONENT ));
+		}
+
+
+		fAccuracy += flMovementInaccuracyScale * weaponInfo.m_fInaccuracyMove[m_weaponMode];
+	}
+
+	// If we are in the air/on ladder, add inaccuracy based on vertical speed (maximum accuracy at apex of jump)
+	if ( pPlayer->GetGroundEntity() == nullptr )
+	{
+		float flInaccuracyJumpInitial = weaponInfo.m_fInaccuracyJumpInitial * weapon_air_spread_scale.GetFloat();
+		static const float kMaxFallingPenalty = 2.0f;	// Accuracy is never worse than 2x starting penalty
+
+		// Use sqrt here to make the curve more "sudden" around the accurate point at the apex of the jump
+		float fSqrtMaxJumpSpeed = sqrtf( sv_jump_impulse.GetFloat() );
+		float fSqrtVerticalSpeed = sqrtf( flVerticalSpeed );
+
+		float flAirSpeedInaccuracy = RemapVal( fSqrtVerticalSpeed,
+			fSqrtMaxJumpSpeed * 0.25f,	// Anything less than 6.25% of maximum speed has no additional accuracy penalty for z-motion (6.25% = .25 * .25)
+			fSqrtMaxJumpSpeed,			// Penalty at max jump speed
+			0.0f,						// No movement-related penalty when close to stopped
+			flInaccuracyJumpInitial );	// Movement-penalty at start of jump
+
+		// Clamp to min/max values.  (Don't use RemapValClamped because it makes clamping to > kJumpMovePenalty hard)
+		if ( flAirSpeedInaccuracy < 0 )
+			flAirSpeedInaccuracy = 0;
+		else if ( flAirSpeedInaccuracy > ( kMaxFallingPenalty * flInaccuracyJumpInitial ) )
+			flAirSpeedInaccuracy = kMaxFallingPenalty * flInaccuracyJumpInitial;
+
+		// Apply air velocity inaccuracy penalty
+		// (There is an additional penalty for being in the air at all applied in UpdateAccuracyPenalty())
+		fAccuracy += flAirSpeedInaccuracy;
+	}
+#endif // !MOVEMENT_ACCURACY_DECAYED
+
+	if ( fAccuracy > 1.0f )
+		fAccuracy = 1.0f;
+
+	return fAccuracy;
 }
 
 
@@ -1142,9 +1271,9 @@ const char *CWeaponCSBase::GetViewModel( int /*viewmodelindex = 0 -- this is ign
 		 return BaseClass::GetViewModel();
 
 	if ( pOwner->HasShield() && GetCSWpnData().m_bCanUseWithShield )
-		 return GetCSWpnData().m_szShieldViewModel;
+		return GetCSWpnData().m_szShieldViewModel;
 	else
-		 return GetWpnData().szViewModel;
+		return GetWpnData().szViewModel;
 
 	return BaseClass::GetViewModel();
 
@@ -1161,6 +1290,12 @@ void CWeaponCSBase::Precache( void )
 	}
 #endif
 
+	if ( GetCSWpnData().m_szMagModel[0] != 0 )
+		PrecacheModel( GetCSWpnData().m_szMagModel );
+
+	if ( GetCSWpnData().m_szEjectBrassEffect[0] != 0 )
+		PrecacheParticleSystem( GetCSWpnData().m_szEjectBrassEffect );
+	
 	if ( GetCSWpnData().m_szMuzzleFlash1stPerson[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash1stPerson );
 	if ( GetCSWpnData().m_szMuzzleFlash1stPersonAlt[0] != 0 )
@@ -1170,10 +1305,14 @@ void CWeaponCSBase::Precache( void )
 	if ( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt );
 
+	if ( GetCSWpnData().m_szHeatEffect[0] != 0 )
+		PrecacheParticleSystem( GetCSWpnData().m_szHeatEffect );
+
 	PrecacheScriptSound( "Default.ClipEmpty_Pistol" );
 	PrecacheScriptSound( "Default.ClipEmpty_Rifle" );
 
 	PrecacheScriptSound( "Default.Zoom" );
+	PrecacheScriptSound( "Weapon.AutoSemiAutoSwitch" );
 
 	// PiMoN: weaponscript parsing happens on Precache() of BaseCombatWeapon
 	// so moving it here from construct is actually a good solution, all
@@ -1184,6 +1323,9 @@ void CWeaponCSBase::Precache( void )
 	m_IronSightController = NULL;
 	UpdateIronSightController();
 #endif //IRONSIGHT
+
+	extern void GenerateWeaponRecoilPattern( CSWeaponID id );
+	GenerateWeaponRecoilPattern( GetCSWeaponID() );
 }
 
 Activity CWeaponCSBase::GetDeployActivity( void )
@@ -1297,6 +1439,8 @@ bool CWeaponCSBase::Holster( CBaseCombatWeapon *pSwitchingTo )
 	if ( pPlayer )
 		pPlayer->SetShieldDrawnState( false );
 
+	ResetGunHeat();
+
 	return BaseClass::Holster( pSwitchingTo );
 }
 
@@ -1332,6 +1476,8 @@ bool CWeaponCSBase::Deploy()
 #endif
 
 	m_fAccuracyPenalty = 0.0f;
+
+	ResetGunHeat();
 
 	return BaseClass::Deploy();
 }
@@ -1421,6 +1567,7 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 }
 
 #if defined( CLIENT_DLL )
+ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.75", 0, "" );
 
 	//-----------------------------------------------------------------------------
 	// Purpose: Draw the weapon's crosshair
@@ -1445,23 +1592,9 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 		if ( pPlayer->IsInVGuiInputMode() )
 			return;
 
-
-
-		int	r, g, b;
-		switch ( cl_crosshaircolor.GetInt() )
-		{
-			case 0:	r = 250;	g = 50;		b = 50;		break;
-			case 1:	r = 50;		g = 250;	b = 50;		break;
-			case 2:	r = 250;	g = 250;	b = 50;		break;
-			case 3:	r = 50;		g = 50;		b = 250;	break;
-			case 4:	r = 50;		g = 250;	b = 250;	break;
-			case 5:
-				r = cl_crosshaircolor_r.GetInt();
-				g = cl_crosshaircolor_g.GetInt();
-				b = cl_crosshaircolor_b.GetInt();
-				break;
-			default:	r = 50;		g = 250;	b = 50;		break;
-		}
+		int r = cl_crosshaircolor_r.GetInt();
+		int g = cl_crosshaircolor_g.GetInt();
+		int b = cl_crosshaircolor_b.GetInt();
 
 		// if user is using nightvision, make the crosshair red.
 		if ( pPlayer->m_bNightVisionOn )
@@ -1489,6 +1622,7 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 			alpha = 200;
 		}
 
+
 #ifdef IRONSIGHT
 		if ( GetIronSightController() && GetIronSightController()->ShouldHideCrossHair() )
 		{
@@ -1496,13 +1630,11 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 		}
 #endif
 
-		bool bCrosshairVisible = crosshair.GetBool() && GetCSWpnData().m_WeaponType != WEAPONTYPE_SNIPER_RIFLE;
 
 		if ( pPlayer->HasShield() && pPlayer->IsShieldDrawn() == true )
 			return;
-		if ( !bCrosshairVisible )
-			 return;
-
+		if ( GetWeaponType() == WEAPONTYPE_SNIPER_RIFLE )
+			return;
 		float fHalfFov = DEG2RAD( pPlayer->GetFOV() ) * 0.5f;
 		float flInaccuracy = GetInaccuracy();
 		float flSpread = GetSpread();
@@ -1637,7 +1769,27 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 
 		float flAngleToScreenPixel = 0;
 
-
+#ifdef CLIENT_DLL
+		// subtract a ratio of cam driver motion from crosshair according to cl_cam_driver_compensation_scale
+		if ( cl_cam_driver_compensation_scale.GetFloat() != 0 )
+		{
+			CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() );
+			if ( pOwner )
+			{
+				CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
+				if ( vm && vm->m_flCamDriverWeight > 0 )
+				{
+					QAngle angCamDriver = vm->m_flCamDriverWeight * vm->m_angCamDriverLastAng * clamp( cl_cam_driver_compensation_scale.GetFloat(), -10.0f, 10.0f );
+					if ( angCamDriver.x != 0 || angCamDriver.y != 0  )
+					{
+						flAngleToScreenPixel = 0.65 * 2 * ( ScreenHeight() / ( 2.0f * tanf(DEG2RAD( pPlayer->GetFOV() ) / 2.0f) ) );
+						iCenterY -= ( flAngleToScreenPixel * sinf( DEG2RAD( angCamDriver.x ) ) ) ;
+						iCenterX += ( flAngleToScreenPixel * sinf( DEG2RAD( angCamDriver.y ) ) ) ;
+					}
+				}
+			}
+		}
+#endif
 
 		/*
 		// Optionally subtract out viewangle since it doesn't affect shooting.
@@ -1836,52 +1988,129 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 	{
 		if( event == 5001 )
 		{
-			C_CSPlayer *pPlayer = ToCSPlayer( GetOwner() );
-			if( pPlayer && pPlayer->GetFOV() < pPlayer->GetDefaultFOV() && HideViewModelWhenZoomed() )
+			C_CSPlayer* pPlayer = ToCSPlayer( GetOwner() );
+
+			if ( !pPlayer )
 				return true;
 
-			if ( pPlayer && pPlayer->GetFOV() != pPlayer->GetDefaultFOV() && pPlayer->m_bIsScoped )
+			if ( pPlayer && pPlayer->GetFOV() != pPlayer->GetDefaultFOV() )
 				return true;
 
-			CEffectData data;
-			data.m_fFlags = 0;
-			data.m_hEntity = pViewModel->GetRefEHandle();
-			data.m_nAttachmentIndex = 1;
-			data.m_flScale = GetCSWpnData().m_flMuzzleScale;
+			C_BasePlayer* pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+			bool bLocalThirdPerson = ( ( pPlayer == pLocalPlayer ) && pPlayer->ShouldDraw() );
 
-			switch( GetMuzzleFlashStyle() )
+			Vector origin;
+			int iAttachmentIndex = GetMuzzleAttachmentIndex( pViewModel );
+			const char* pszEffect = GetMuzzleFlashEffectName( false );
+
+			if ( pszEffect && Q_strlen( pszEffect ) > 0 && iAttachmentIndex >= 0 )
 			{
-			case CS_MUZZLEFLASH_NONE:
-				break;
+				// The view model fixes up the split screen visibility of any effects spawned off of it.
+				if ( !bLocalThirdPerson )
+					DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pViewModel, iAttachmentIndex, false );
 
-			case CS_MUZZLEFLASH_X:
-				{
-					DispatchEffect( "CS_MuzzleFlash_X", data );
-				}
-				break;
+				// we can't trust this position
+				//pViewModel->GetAttachment( iAttachmentIndex, origin );
 
-			case CS_MUZZLEFLASH_NORM:
-			default:
+				//silencers produce no light at all - even smaller lights would illuminate smoke or cause unwanted visual effects
+				if ( !( IsSilenced() ) )
 				{
-					DispatchEffect( "CS_MuzzleFlash", data );
+					CPVSFilter filter( origin );
+					origin = pPlayer->GetAbsOrigin() + pPlayer->GetViewOffset();
+					QAngle	vangles;
+					Vector	vforward, vright, vup;
+					engine->GetViewAngles( vangles );
+					AngleVectors( vangles, &vforward, &vright, &vup );
+					VectorMA( origin, cl_righthand.GetBool() ? 4 : -4, vright, origin );
+					VectorMA( origin, 31, vforward, origin );
+					origin[2] += 3.0f;
+
+					TE_DynamicLight( filter, 0.0, &origin, 255, 186, 64, 5, 70, 0.05, 768 );
 				}
-				break;
+
+				UpdateGunHeat( GetCSWpnData().m_flHeatPerShot, iAttachmentIndex );
 			}
 
 			return true;
 		}
+		else if ( event == AE_CLIENT_EJECT_BRASS )
+		{
+			C_CSPlayer *pPlayer = ToCSPlayer( GetOwner() );
+			if ( pPlayer && pPlayer->GetFOV() < pPlayer->GetDefaultFOV() )
+				return true;
+
+			Vector origin;
+			const char *pszEffect = GetCSWpnData().m_szEjectBrassEffect;
+			int iAttachmentIndex = -1;
+
+			// If options is non-zero in length, treat as an attachment name to use for this particle effect.
+			if ( options && Q_strlen( options ) > 0 )
+			{
+				iAttachmentIndex = pViewModel->LookupAttachment( options );
+			}
+			else
+			{
+				iAttachmentIndex = GetEjectBrassAttachmentIndex( pViewModel );
+			}
+
+			if ( pszEffect && Q_strlen( pszEffect ) > 0 && iAttachmentIndex >= 0 )
+			{
+
+				C_BasePlayer* pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+				bool bLocalThirdPerson = ((pPlayer == pLocalPlayer) && pPlayer->ShouldDraw());
+
+				// The view model fixes up the split screen visibility of any effects spawned off of it.
+				if ( !bLocalThirdPerson )
+					DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pViewModel, iAttachmentIndex, false );
+			}
+
+			return true;
+		}
+		else if ( event == AE_WPN_NEXTCLIP_TO_POSEPARAM )
+		{
+			// sets the given pose param to a 0..1 value representing the clip amount after an impending reload
+			CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() );
+			if ( pOwner )
+			{
+				CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
+				if ( vm )
+				{
+					int iNextClip = MIN( GetMaxClip1(), m_iClip1 + GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
+					vm->SetPoseParameter( options, 1.0f - (((float)iNextClip) / ((float)GetMaxClip1())) );
+				}
+			}
+			return true;
+		}
+		else if ( event == AE_WPN_CLIP_TO_POSEPARAM )
+		{
+			// sets the given pose param to a 0..1 value representing the clip amount
+			CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() );
+			if ( pOwner )
+			{
+				CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
+				if ( vm )
+				{
+					vm->SetPoseParameter( options, 1.0f - (((float)m_iClip1) / ((float)GetMaxClip1())) );
+				}
+			}
+			return true;
+		}
+		else if ( event == AE_WPN_EMPTYSHOTS_TO_POSEPARAM )
+		{
+			// sets the given pose param to a 0..1 value representing the number of empty shots
+			CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() );
+			if ( pOwner )
+			{
+				CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
+				if ( vm )
+				{
+					vm->SetPoseParameter( options, fmod( m_iNumEmptyAttacks, (float)GetMaxClip1() ) / (float)GetMaxClip1() );
+				}
+			}
+			return true;
+		}
 
 		return BaseClass::OnFireEvent( pViewModel, origin, angles, event, options );
-	}
-
-	int CWeaponCSBase::GetMuzzleFlashStyle( void )
-	{
-		return GetCSWpnData().m_iMuzzleFlashStyle;
-	}
-
-	int CWeaponCSBase::GetMuzzleAttachment( void )
-	{
-		return LookupAttachment( "muzzle_flash" );
 	}
 
 #else
@@ -2027,10 +2256,10 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 	}
 
 	void CWeaponCSBase::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator )
-{
-	int nEvent = pEvent->event;
+	{
+		int nEvent = pEvent->event;
 
-	 if ( (pEvent->type & AE_TYPE_NEWEVENTSYSTEM) && (pEvent->type & AE_TYPE_SERVER) )
+		if ( (pEvent->type & AE_TYPE_NEWEVENTSYSTEM) && (pEvent->type & AE_TYPE_SERVER) )
 		{
 			if ( nEvent == AE_WPN_COMPLETE_RELOAD )
 			{
@@ -2044,14 +2273,15 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 					// Add them to the clip
 					m_iClip1 += j;
 					GiveReserveAmmo( AMMO_POSITION_PRIMARY, -j, true );
+
+					m_flRecoilIndex = 0;
 				}
 			}
+			else if ( nEvent == AE_BEGIN_TAUNT_LOOP )
+			{
+				CCSPlayer *pPlayer = GetPlayerOwner();
 
-		else if ( nEvent == AE_BEGIN_TAUNT_LOOP )
-		{
-			CCSPlayer *pPlayer = GetPlayerOwner();
-
-			if ( pPlayer && pPlayer->IsLookingAtWeapon() && pPlayer->IsHoldingLookAtWeapon() )
+				if ( pPlayer && pPlayer->IsLookingAtWeapon() && pPlayer->IsHoldingLookAtWeapon() )
 				{
 					CBaseViewModel *pViewModel = pPlayer->GetViewModel();
 
@@ -2063,10 +2293,9 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 					pPlayer->ModifyTauntDuration( (flNewCycle - flPrevCycle) * flSequenceDuration );
 				}
 
-			return;
-
-		}
-		//update the bullet bodygroup on the client
+				return;
+			}
+			//update the bullet bodygroup on the client
 			else if ( nEvent == AE_CL_BODYGROUP_SET_TO_CLIP )
 			{
 				CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() );
@@ -2125,6 +2354,19 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 					if ( vm )
 					{
 						vm->SetPoseParameter( pEvent->options, 1.0f - (((float) m_iClip1) / ((float) GetMaxClip1())) );
+					}
+				}
+			}
+			else if ( nEvent == AE_WPN_EMPTYSHOTS_TO_POSEPARAM )
+			{
+				// sets the given pose param to a 0..1 value representing the number of empty shots
+				CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() );
+				if ( pOwner )
+				{
+					CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
+					if ( vm )
+					{
+						vm->SetPoseParameter( pEvent->options, fmod( m_iNumEmptyAttacks, (float) GetMaxClip1() ) / (float) GetMaxClip1() );
 					}
 				}
 			}
@@ -2215,8 +2457,9 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 				return;
 			}
 		}
-	BaseClass::Operator_HandleAnimEvent( pEvent, pOperator );
-}
+
+		BaseClass::Operator_HandleAnimEvent( pEvent, pOperator );
+	}
 
 	bool CWeaponCSBase::Reload()
 	{
@@ -2225,8 +2468,9 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 		CCSPlayer *pPlayer = GetPlayerOwner();
 		if ( !pPlayer )
 			return false;
-		
+
 		pPlayer->StopLookingAtWeapon();
+
 		pPlayer->m_iShotsFired = 0;
 
 		bool retval = BaseClass::Reload();
@@ -2236,6 +2480,7 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 
 	void CWeaponCSBase::Spawn()
 	{
+
 		BaseClass::Spawn();
 
 		// Override the bloat that our base class sets as it's a little bit bigger than we want.
@@ -2247,6 +2492,8 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 		SetCollisionGroup( COLLISION_GROUP_WEAPON );
 
 		SetExtraAmmoCount( m_iDefaultExtraAmmo );	//Start with no additional ammo
+
+		ResetGunHeat();
 
 		m_nextPrevOwnerTouchTime = 0.0;
 		m_prevOwner = NULL;
@@ -2267,7 +2514,7 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 
 #if IRONSIGHT
 		UpdateIronSightController();
-#endif //IRONSIGHT	
+#endif //IRONSIGHT
 	}
 
 	bool CWeaponCSBase::DefaultReload( int iClipSize1, int iClipSize2, int iActivity )
@@ -2303,7 +2550,6 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 
 #endif
 
-
 bool CWeaponCSBase::DefaultPistolReload()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
@@ -2331,7 +2577,7 @@ bool CWeaponCSBase::IsUseable()
 	{
 		if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 && GetMaxClip1() != -1 )
 		{
-			// clip is empty (or nonexistant) and the player has no more ammo of this type.
+			// clip is empty ( or nonexistant ) and the player has no more ammo of this type. 
 			return false;
 		}
 	}
@@ -2346,7 +2592,8 @@ float	g_lateralBob = 0;
 float	g_verticalBob = 0;
 
 static ConVar	cl_bob_version( "cl_bob_version", "0", FCVAR_CHEAT );
-static ConVar	cl_bobcycle( "cl_bobcycle", "0.98", FCVAR_CHEAT, "the frequency at which the viewmodel bobs.", true, 0.1, true, 2.0 );
+static ConVar	cl_bobcycle( "cl_bobcycle", "0.98", FCVAR_ARCHIVE, "the frequency at which the viewmodel bobs.", true, 0.1, true, 2.0 );
+//static ConVar	cl_bob( "cl_bob","0.002", FCVAR_ARCHIVE );
 static ConVar	cl_bobup( "cl_bobup", "0.5", FCVAR_CHEAT );
 
 ConVar	cl_use_new_headbob( "cl_use_new_headbob", "1", FCVAR_ARCHIVE, "What viewbob style to use: CS:S (0) or CS:GO (1)." );
@@ -2360,7 +2607,7 @@ static ConVar	cl_viewmodel_shift_right_amt( "cl_viewmodel_shift_right_amt", "0.7
 //-----------------------------------------------------------------------------
 // Purpose: Helper function to calculate head bob
 //-----------------------------------------------------------------------------
-float CalcNewViewModelBobbing( CBasePlayer *player, BobState_t *pBobState, int nVMIndex )
+float CalcViewModelBobHelper( CBasePlayer *player, BobState_t *pBobState, int nVMIndex )
 {
 	if ( cl_use_new_headbob.GetBool() == false )
 		return 0;
@@ -2453,8 +2700,8 @@ float CalcNewViewModelBobbing( CBasePlayer *player, BobState_t *pBobState, int n
 				flAccuracy = flCrouchAccuracy;
 			else
 				flAccuracy = pWeapon->GetInaccuracy();
-				bool bIsSniper = (pWeapon->GetCSWpnData().m_WeaponType != WEAPONTYPE_SNIPER_RIFLE) ? true : false;
 
+			bool bIsSniper = (pWeapon->GetWeaponType() == WEAPONTYPE_SNIPER_RIFLE) ? true : false;
 
 			float flMultiplier = 1;
 			if ( flAccuracy < flBaseAccuracy )
@@ -2479,11 +2726,14 @@ float CalcNewViewModelBobbing( CBasePlayer *player, BobState_t *pBobState, int n
 		/*
 		if ( pWeapon->m_flGunAccuracyPosition > 0.0f )
 		Msg( "m_flGunAccuracyPosition1 = %f, flAccuracy = %f\n", pWeapon->m_flGunAccuracyPosition, flAccuracy );
+
 		pWeapon->m_flGunAccuracyPosition = Lerp( ( gpGlobals->frametime / 0.02f ), (flAccuracyDiff*20), pWeapon->m_flGunAccuracyPosition );
+
 		if ( pWeapon->m_flGunAccuracyPosition > 0.0f )
 		Msg( "m_flGunAccuracyPosition1 = %f, flAccuracy = %f\n", pWeapon->m_flGunAccuracyPosition, flAccuracy );
 		*/
-
+		pWeapon->m_flGunAccuracyPosition = Approach( (flAccuracyDiff * 80), pWeapon->m_flGunAccuracyPosition, abs( ((flAccuracyDiff * 80) - pWeapon->m_flGunAccuracyPosition)*gpGlobals->frametime ) * 4.0f );
+		flGunAccPos = pWeapon->m_flGunAccuracyPosition;
 	}
 	else
 	{
@@ -2548,7 +2798,7 @@ float CalcNewViewModelBobbing( CBasePlayer *player, BobState_t *pBobState, int n
 //-----------------------------------------------------------------------------
 // Purpose: Helper function to add head bob
 //-----------------------------------------------------------------------------
-void AddNewViewModelBobbing( Vector &origin, QAngle &angles, BobState_t *pBobState )
+void AddViewModelBobHelper( Vector &origin, QAngle &angles, BobState_t *pBobState )
 {
 	if ( cl_use_new_headbob.GetBool() == false )
 		return;
@@ -2573,6 +2823,7 @@ void AddNewViewModelBobbing( Vector &origin, QAngle &angles, BobState_t *pBobSta
 
 	VectorMA( origin, pBobState->m_flLateralBob * 0.2f, right, origin );
 }
+
 	//-----------------------------------------------------------------------------
 	// Purpose:
 	// Output : float
@@ -2586,12 +2837,12 @@ void AddNewViewModelBobbing( Vector &origin, QAngle &angles, BobState_t *pBobSta
 			BobState_t *pBobState = GetBobState();
 			if ( pBobState )
 			{
-				return ::CalcNewViewModelBobbing( player, pBobState );
+				return ::CalcViewModelBobHelper( player, pBobState );
 			}
 			else
 				return 0;
 		}
-
+		
 		static	float bobtime;
 		static	float lastbobtime;
 		static  float lastspeed;
@@ -2687,7 +2938,7 @@ void AddNewViewModelBobbing( Vector &origin, QAngle &angles, BobState_t *pBobSta
 			if ( pBobState )
 			{
 				CalcViewmodelBob();
-				::AddNewViewModelBobbing( origin, angles, pBobState );
+				::AddViewModelBobHelper( origin, angles, pBobState );
 			}
 			return;
 		}
@@ -2734,7 +2985,7 @@ void AddNewViewModelBobbing( Vector &origin, QAngle &angles, BobState_t *pBobSta
 
 		// get the bob state out of the view model
 		return &(viewModel->GetBobState());
-	}
+}
 
 #else
 
@@ -2795,21 +3046,6 @@ void CWeaponCSBase::OnPickedUp( CBaseCombatCharacter *pNewOwner )
 	{
 		m_OnPlayerPickup.FireOutput(pNewOwner, this);
 
-		// Play the pickup sound for 1st-person observers
-		CRecipientFilter filter;
-		for ( int i=0; i<gpGlobals->maxClients; ++i )
-		{
-			CBasePlayer *player = UTIL_PlayerByIndex(i);
-			if ( player && !player->IsAlive() && player->GetObserverMode() == OBS_MODE_IN_EYE )
-			{
-				filter.AddRecipient( player );
-			}
-		}
-		if ( filter.GetRecipientCount() )
-		{
-			CBaseEntity::EmitSound( filter, pNewOwner->entindex(), "Player.PickupWeapon" );
-		}
-
 		// Robin: We don't want to delete weapons the player has picked up, so
 		// clear the name of the weapon. This prevents wildcards that are meant
 		// to find NPCs finding weapons dropped by the NPCs as well.
@@ -2826,9 +3062,9 @@ void CWeaponCSBase::OnPickedUp( CBaseCombatCharacter *pNewOwner )
 }
 
 
-void CWeaponCSBase::UpdateAccuracyPenalty()
+void CWeaponCSBase::UpdateAccuracyPenalty( )
 {
-	CCSPlayer *pPlayer = GetPlayerOwner();
+	CCSPlayer *pPlayer = GetPlayerOwner( );
 	if ( !pPlayer )
 		return;
 
@@ -2836,17 +3072,29 @@ void CWeaponCSBase::UpdateAccuracyPenalty()
 
 	float fNewPenalty = 0.0f;
 
+	// Adding movement penalty here results in a penalty that persists and requires decay to eliminate.
+#if MOVEMENT_ACCURACY_DECAYED
+	// movement penalty
+	fNewPenalty += RemapValClamped( pPlayer->GetAbsVelocity().Length2D(), 
+		weaponInfo.GetMaxSpeed(m_weaponMode, GetEconItemView()) * CS_PLAYER_SPEED_DUCK_MODIFIER, 
+		weaponInfo.GetMaxSpeed(m_weaponMode, GetEconItemView()) * 0.95f,							// max out at 95% of run speed to avoid jitter near max speed
+		0.0f, weaponInfo.GetInaccuracyMove( m_weaponMode, GetEconItemView( ) ) );
+#endif
+
+
 	// on ladder?
-	if ( pPlayer->GetMoveType() == MOVETYPE_LADDER )
+	if ( pPlayer->GetMoveType( ) == MOVETYPE_LADDER )
 	{
-		fNewPenalty += weaponInfo.m_fInaccuracyStand[m_weaponMode] + weaponInfo.m_fInaccuracyLadder[m_weaponMode];
+		fNewPenalty += weaponInfo.m_fInaccuracyLadder[m_weaponMode] + weaponInfo.m_fInaccuracyLadder[Primary_Mode];
 	}
 	// in the air?
-// 	else if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-// 	{
-// 		fNewPenalty += weaponInfo.m_fInaccuracyStand[m_weaponMode] + weaponInfo.m_fInaccuracyJump[m_weaponMode];
-// 	}
-	else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING) )
+	else if ( pPlayer->GetGroundEntity() == nullptr )
+	// 	else if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
+	{
+		fNewPenalty += weaponInfo.m_fInaccuracyStand[m_weaponMode];
+		fNewPenalty += weaponInfo.m_fInaccuracyJump[m_weaponMode];
+	}
+	else if ( FBitSet( pPlayer->GetFlags( ), FL_DUCKING ) )
 	{
 		fNewPenalty += weaponInfo.m_fInaccuracyCrouch[m_weaponMode];
 	}
@@ -2857,7 +3105,7 @@ void CWeaponCSBase::UpdateAccuracyPenalty()
 
 	if ( m_bInReload )
 	{
- 		fNewPenalty += weaponInfo.m_fInaccuracyReload;
+		fNewPenalty += weaponInfo.m_fInaccuracyReload;
 	}
 
 	if ( fNewPenalty > m_fAccuracyPenalty )
@@ -2870,6 +3118,7 @@ void CWeaponCSBase::UpdateAccuracyPenalty()
 
 		m_fAccuracyPenalty = Lerp( expf( TICK_INTERVAL * -fDecayFactor ), fNewPenalty, ( float ) m_fAccuracyPenalty );
 	}
+
 
 #define WEAPON_RECOIL_DECAY_THRESHOLD 1.10	
 	// Decay the recoil index if a little more than cycle time has elapsed since the last shot. In other words,
@@ -2888,7 +3137,7 @@ float CWeaponCSBase::GetRecoveryTime( void )
 	if ( !pPlayer )
 		return -1.0f;
 
-	const CCSWeaponInfo& weaponInfo = GetCSWpnData();
+	const CCSWeaponInfo& weaponInfo = GetCSWpnData( );
 
 	if ( pPlayer->GetMoveType( ) == MOVETYPE_LADDER )
 	{
@@ -2898,7 +3147,7 @@ float CWeaponCSBase::GetRecoveryTime( void )
 	{
 		// enforce a large recovery speed penalty (400%) for players in the air; this helps to provide
 		// comparable in-air accuracy to the old weapon model
-
+		
 		return weaponInfo.m_fRecoveryTimeCrouch * 4.0f;
 	}
 	else if ( FBitSet( pPlayer->GetFlags( ), FL_DUCKING ) )
@@ -2912,7 +3161,7 @@ float CWeaponCSBase::GetRecoveryTime( void )
 
 			flRecoveryTime = RemapValClamped( nRecoilIndex, weaponInfo.m_iRecoveryTransitionStartBullet, weaponInfo.m_iRecoveryTransitionEndBullet, flRecoveryTime, flRecoveryTimeFinal );
 		}
-		
+
 		return flRecoveryTime;
 	}
 	else
@@ -2926,6 +3175,7 @@ float CWeaponCSBase::GetRecoveryTime( void )
 
 			flRecoveryTime = RemapValClamped( nRecoilIndex, weaponInfo.m_iRecoveryTransitionStartBullet, weaponInfo.m_iRecoveryTransitionEndBullet, flRecoveryTime, flRecoveryTimeFinal );
 		}
+
 		return flRecoveryTime;
 	}
 }
@@ -2935,26 +3185,28 @@ const float kJumpVelocity = sqrtf(2.0f * 800.0f * 57.0f);	// see CCSGameMovement
 
 void CWeaponCSBase::OnJump( float fImpulse )
 {
-	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyJump[m_weaponMode] * fImpulse / kJumpVelocity;
+	// m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyJump[m_weaponMode] * fImpulse / kJumpVelocity;
 }
 
 void CWeaponCSBase::OnLand( float fVelocity )
 {
-	float fPenalty = GetCSWpnData().m_fInaccuracyLand[m_weaponMode] * fVelocity / kJumpVelocity;
+	float fPenalty = GetCSWpnData().m_fInaccuracyLand[m_weaponMode] * fVelocity;
 	m_fAccuracyPenalty += fPenalty;
-
-	// this bit of code is only if we want to punch the player view on all landings
+	fPenalty = clamp( fPenalty, -1.0f, 1.0f );
 
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
 
+	// NOTE: do NOT call GetAimPunchAngle() here because it may be adjusted by some recoil scalar.
+	// We just want to update the raw punch angle.
 	QAngle angle = pPlayer->GetRawAimPunchAngle();
 	float fVKick = RAD2DEG(asinf(fPenalty)) * 0.2f;
 	float fHKick = SharedRandomFloat("LandPunchAngleYaw", -1.0f, +1.0f) * fVKick * 0.1f;
 
 	angle.x += fVKick;	// pitch
 	angle.y += fHKick;	// yaw
+
 	pPlayer->SetAimPunchAngle( angle );
 }
 
@@ -2967,7 +3219,7 @@ void CWeaponCSBase::Recoil( CSWeaponMode weaponMode )
 		return;
 
 	int index;
-	if ( IsFullAuto() ) // PiMoN TODO: what should be here?
+	if ( IsFullAuto() )
 		index = m_flRecoilIndex;
 	else
 		index = GetPredictionRandomSeed();

@@ -207,26 +207,19 @@ public:
 	char m_szShieldViewModel[64];
 
 	char m_szAddonModel[MAX_WEAPON_STRING];		// If this is set, it is used as the addon model. Otherwise, szWorldModel is used.
+	char m_szMagModel[MAX_WEAPON_STRING];		// Magazine model for dropping magazines
 	char m_szDroppedModel[MAX_WEAPON_STRING];	// Alternate dropped model, if different from the szWorldModel the player holds
-	char m_szSilencerModel[MAX_WEAPON_STRING];	// Alternate model with silencer attached
 
-	int	  m_iMuzzleFlashStyle;
-	float m_flMuzzleScale;
+	// grenade throw parameters
+	float	m_fThrowVelocity;
 	
 	// Parameters for FX_FireBullets:
-	int		m_iPenetration;
+	float	m_iPenetration;
 	int		m_iDamage;
 	float	m_flRange;
 	float	m_flRangeModifier;
 	int		m_iBullets;
 	float	m_flCycleTime[2];
-
-
-	// Variables that control how fast the weapon's accuracy changes as it is fired.
-	bool	m_bAccuracyQuadratic;
-	float	m_flAccuracyDivisor;
-	float	m_flAccuracyOffset;
-	float	m_flMaxInaccuracy;
 
 	// variables for new accuracy model
 	float m_fSpread[2];
@@ -256,6 +249,13 @@ public:
 	// Delay until the next idle animation after shooting.
 	float	m_flTimeToIdleAfterFire;
 	float	m_flIdleInterval;
+
+	// eject brass variables
+	char	m_szEjectBrassEffect[MAX_WEAPON_STRING];
+
+	// heat variables
+	float	m_flHeatPerShot;
+	char	m_szHeatEffect[MAX_WEAPON_STRING];
 
 	// muzzle flashes
 	char	m_szMuzzleFlash1stPerson[MAX_WEAPON_STRING];
@@ -289,6 +289,7 @@ private:
 	int m_iPreviousPrice;
 
 	int m_iKillAward;
+
 };
 
 

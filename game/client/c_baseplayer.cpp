@@ -1727,6 +1727,8 @@ void C_BasePlayer::CalcInEyeCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 	eyeAngles = target->EyeAngles();
 	eyeOrigin = target->GetAbsOrigin();
 
+	CalcAddViewmodelCameraAnimation( eyeOrigin, eyeAngles );
+
 	// Apply punch angle
 	VectorAdd( eyeAngles, GetViewPunchAngle(), eyeAngles );
 

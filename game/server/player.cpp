@@ -596,6 +596,8 @@ CBasePlayer::CBasePlayer( )
 	m_bForceOrigin = false;
 	m_hVehicle = NULL;
 	m_pCurrentCommand = NULL;
+	m_iLockViewanglesTickNumber = 0;
+	m_qangLockViewangles.Init();
 	
 	// Setup our default FOV
 	m_iDefaultFOV = g_pGameRules->DefaultFOV();

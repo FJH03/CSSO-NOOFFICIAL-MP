@@ -154,8 +154,6 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 	if ( !pPlayer )
 		return false;
 
-	const CCSWeaponInfo &pCSInfo = GetCSWpnData();
-
 	m_bDelayFire = true;
 
 	if ( m_iClip1 == 0 )
@@ -163,6 +161,8 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 		if ( m_bFireOnEmpty )
 		{
 			PlayEmptySound();
+
+			m_iNumEmptyAttacks++;
 
 			// NOTE[pmf]: we don't want to actually play the dry fire animations, as most seem to depict the weapon actually firing.
 			// SendWeaponAnim( ACT_VM_DRYFIRE );
@@ -175,7 +175,6 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 				m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime[weaponMode];
 				BaseClass::SendWeaponAnim( ACT_VM_DRYFIRE ); // empty!
 			}
-
 			m_bFireOnEmpty = false;
 		}
 
@@ -202,9 +201,10 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 			SendWeaponAnim( (weaponMode == Secondary_Mode) ? ACT_VM_SECONDARYATTACK : ACT_VM_PRIMARYATTACK );
 		else
 #endif
-		SendWeaponAnim( ACT_VM_PRIMARYATTACK );
+			SendWeaponAnim( ACT_VM_PRIMARYATTACK );
 	}
 
+	++pPlayer->m_iShotsFired;
 	m_iClip1--;
 
 	// player "shoot" animation

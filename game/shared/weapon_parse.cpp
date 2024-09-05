@@ -34,7 +34,8 @@ const char *pWeaponSoundCategories[ NUM_SHOOT_SOUND_TYPES ] =
 	"special2",
 	"special3",
 	"taunt",
-	"deploy"
+	"deploy",
+	"nearlyempty"
 };
 #else
 extern const char *pWeaponSoundCategories[ NUM_SHOOT_SOUND_TYPES ];
@@ -460,6 +461,15 @@ void FileWeaponInfo_t::Parse( KeyValues *pKeyValuesData, const char *szWeaponNam
 			if ( soundname && soundname[0] )
 			{
 				Q_strncpy( aShootSounds[i], soundname, MAX_WEAPON_STRING );
+			}
+			else
+			{
+				// FIXME: find a better way to populate defaults
+
+				if ( i == NEARLYEMPTY ) // explicit check because it looks like most weapon sound categories don't fall back by default
+				{
+					V_sprintf_safe( aShootSounds[i], "Default.%s", pWeaponSoundCategories[i] );
+				}
 			}
 		}
 	}

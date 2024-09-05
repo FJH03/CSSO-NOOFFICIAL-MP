@@ -39,6 +39,9 @@ extern ConVar mp_respawn_on_death_ct;
 extern ConVar mp_respawn_on_death_t;
 
 #define	CS_MASK_SHOOT (MASK_SOLID|CONTENTS_DEBRIS)
+#define MAX_PENETRATION_DISTANCE 90 // this is 7.5 feet
+
+#define CS_MAX_WALLBANG_TRAIL_LENGTH 800
 
 void DispatchEffect( const char *pName, const CEffectData &data );
 
@@ -370,21 +373,71 @@ static void GetMaterialParameters( int iMaterial, float &flPenetrationModifier, 
 }
 
 
-static bool TraceToExit(Vector &start, Vector &dir, Vector &end, float flStepSize, float flMaxDistance )
+static bool TraceToExit( Vector start, Vector dir, Vector &end, trace_t &trEnter, trace_t &trExit, float flStepSize, float flMaxDistance )
 {
 	float flDistance = 0;
 	Vector last = start;
+	int nStartContents = 0;
 
 	while ( flDistance <= flMaxDistance )
 	{
 		flDistance += flStepSize;
 
-		end = start + flDistance *dir;
+		end = start + ( flDistance * dir );
 
-		if ( (UTIL_PointContents ( end ) & MASK_SOLID) == 0 )
+		Vector vecTrEnd = end - ( flStepSize * dir );
+
+		if ( nStartContents == 0 )
+			nStartContents = UTIL_PointContents( end );
+
+		int nCurrentContents = UTIL_PointContents( end );
+
+		if ( (nCurrentContents & CS_MASK_SHOOT) == 0 || ((nCurrentContents & CONTENTS_HITBOX) && nStartContents != nCurrentContents) )
 		{
-			// found first free point
-			return true;
+			// this gets a bit more complicated and expensive when we have to deal with displacements
+			UTIL_TraceLine( end, vecTrEnd, CS_MASK_SHOOT|CONTENTS_HITBOX, NULL, &trExit );
+
+			// we exited the wall into a player's hitbox
+			if ( trExit.startsolid == true && (trExit.surface.flags & SURF_HITBOX)/*( nStartContents & CONTENTS_HITBOX ) == 0 && (nCurrentContents & CONTENTS_HITBOX)*/ )
+			{
+				// do another trace, but skip the player to get the actual exit surface 
+				UTIL_TraceLine( end, start, CS_MASK_SHOOT, trExit.m_pEnt, COLLISION_GROUP_NONE, &trExit );
+				if ( trExit.DidHit() && trExit.startsolid == false )
+				{
+					end = trExit.endpos;
+					return true;
+				}
+			}
+			else if ( trExit.DidHit() && trExit.startsolid == false )
+			{
+				bool bStartIsNodraw = !!( trEnter.surface.flags & (SURF_NODRAW) );
+				bool bExitIsNodraw = !!( trExit.surface.flags & (SURF_NODRAW) );
+				if ( bExitIsNodraw && IsBreakableEntity( trExit.m_pEnt ) && IsBreakableEntity( trEnter.m_pEnt ) )
+				{
+					// we have a case where we have a breakable object, but the mapper put a nodraw on the backside
+					end = trExit.endpos;
+					return true;
+				}
+				else if ( bExitIsNodraw == false || (bStartIsNodraw && bExitIsNodraw) ) // exit nodraw is only valid if our entrace is also nodraw
+				{
+					Vector vecNormal = trExit.plane.normal;
+					float flDot = dir.Dot( vecNormal );
+					if ( flDot <= 1.0f )
+					{
+						// get the real end pos
+						end = end - ( (flStepSize * trExit.fraction) * dir );
+						return true;
+					}
+				}
+			}
+			else if ( trEnter.DidHitNonWorldEntity() && IsBreakableEntity( trEnter.m_pEnt ) )
+			{
+				// if we hit a breakable, make the assumption that we broke it if we can't find an exit (hopefully..)
+				// fake the end pos
+				trExit = trEnter;
+				trExit.endpos = start + ( 1.0f * dir );
+				return true;
+			}
 		}
 	}
 
@@ -404,11 +457,25 @@ inline void UTIL_TraceLineIgnoreTwoEntities( const Vector& vecAbsStart, const Ve
 	}
 }
 
-void CCSPlayer::FireBullet(
+ConVar sv_server_verify_blood_on_player( "sv_server_verify_blood_on_player", "1", FCVAR_CHEAT | FCVAR_REPLICATED );
+
+#ifndef CLIENT_DLL
+static const int kMaxNumPenetrationsSupported = 4;
+struct DelayedDamageInfoData_t
+{
+	CTakeDamageInfo m_info;
+	trace_t m_tr;
+
+	typedef CUtlVectorFixedGrowable< DelayedDamageInfoData_t, kMaxNumPenetrationsSupported > Array;
+};
+#endif
+
+void CCSPlayer::FireBullet( 
 	Vector vecSrc,	// shooting postion
 	const QAngle &shootAngles,  //shooting angle
-	float flDistance, // max distance
-	int iPenetration, // how many obstacles can be penetrated
+	float flDistance, // max distance 
+	float flPenetration, // the power of the penetration
+	int nPenetrationCount,
 	int iBulletType, // ammo type
 	int iDamage, // base damage
 	float flRangeModifier, // damage range modifier
@@ -419,38 +486,41 @@ void CCSPlayer::FireBullet(
 {
 	float fCurrentDamage = iDamage;   // damage of the bullet at it's current trajectory
 	float flCurrentDistance = 0.0;  //distance that the bullet has traveled so far
-
+		
 	Vector vecDirShooting, vecRight, vecUp;
 	AngleVectors( shootAngles, &vecDirShooting, &vecRight, &vecUp );
-
+	
 	// MIKETODO: put all the ammo parameters into a script file and allow for CS-specific params.
 	float flPenetrationPower = 0;		// thickness of a wall that this bullet can penetrate
 	float flPenetrationDistance = 0;	// distance at which the bullet is capable of penetrating a wall
-	float flDamageModifier = 0.5;		// default modification of bullets power after they go through a wall.
-	float flPenetrationModifier = 1.f;
+	float flDamageModifier = 0.5f;		// default modification of bullets power after they go through a wall.
+	float flPenetrationModifier = 1.0f;
 
 	GetBulletTypeParameters( iBulletType, flPenetrationPower, flPenetrationDistance );
 
+	// we use the max penetrations on this gun to figure out how much penetration it's capable of
+	flPenetrationPower = flPenetration; 
 
 	if ( !pevAttacker )
 		pevAttacker = this;  // the default attacker is ourselves
 
-	// add the spray
+	// add the spray 
 	Vector vecDir = vecDirShooting + xSpread * vecRight + ySpread * vecUp;
 
 	VectorNormalize( vecDir );
 
+
 	//Adrian: visualize server/client player positions
 	//This is used to show where the lag compesator thinks the player should be at.
-#if 0
+#if 0 
 	for ( int k = 1; k <= gpGlobals->maxClients; k++ )
 	{
 		CBasePlayer *clientClass = (CBasePlayer *)CBaseEntity::Instance( k );
 
-		if ( clientClass == NULL )
+		if ( clientClass == NULL ) 
 			 continue;
 
-		if ( k == entindex() )
+		if ( k == entindex() ) 
 			 continue;
 
 #ifdef CLIENT_DLL
@@ -463,11 +533,6 @@ void CCSPlayer::FireBullet(
 
 #endif
 
-
-//=============================================================================
-// HPE_BEGIN:
-//=============================================================================
-
 #ifndef CLIENT_DLL
 	// [pfreese] Track number player entities killed with this bullet
 	int iPenetrationKills = 0;
@@ -477,31 +542,35 @@ void CCSPlayer::FireBullet(
 	CCS_GameStats.Event_ShotFired( this, GetActiveWeapon() );
 #endif
 
-//=============================================================================
-// HPE_END
-//=============================================================================
-
 	bool bFirstHit = true;
 
-	CBasePlayer *lastPlayerHit = NULL;
+	const CBaseCombatCharacter *lastPlayerHit = NULL;	// this includes players, bots, and hostages
 
-	if( sv_showplayerhitboxes.GetInt() > 0 )
-	{
-		CBasePlayer *lagPlayer = UTIL_PlayerByIndex( sv_showplayerhitboxes.GetInt() );
-		if( lagPlayer )
-		{
 #ifdef CLIENT_DLL
-			lagPlayer->DrawClientHitboxes(4, true);
-#else
-			lagPlayer->DrawServerHitboxes(4, true);
+	Vector vecWallBangHitStart, vecWallBangHitEnd;
+	vecWallBangHitStart.Init();
+	vecWallBangHitEnd.Init();
+	bool bWallBangStarted = false;
+	bool bWallBangEnded = false;
+	bool bWallBangHeavyVersion = false;
 #endif
-		}
-	}
+
+	bool bBulletHitPlayer = false;
 
 	MDLCACHE_CRITICAL_SECTION();
+
+#ifndef CLIENT_DLL
+	DelayedDamageInfoData_t::Array arrPendingDamage;
+#endif
+
+	bool bShotHitTeammate = false;
+
+	float flDist_aim = 0;
+	Vector vHitLocation = Vector( 0,0,0 );
+
 	while ( fCurrentDamage > 0 )
 	{
-		Vector vecEnd = vecSrc + vecDir * flDistance;
+		Vector vecEnd = vecSrc + vecDir * (flDistance-flCurrentDistance);
 
 		trace_t tr; // main enter bullet trace
 
@@ -514,18 +583,57 @@ void CCSPlayer::FireBullet(
 			UTIL_ClipTraceToPlayers( vecSrc, vecEnd + vecDir * rayExtension, CS_MASK_SHOOT|CONTENTS_HITBOX, &filter, &tr );
 		}
 
-		lastPlayerHit = ToBasePlayer(tr.m_pEnt);
+		if ( !flDist_aim )
+		{
+			flDist_aim = ( tr.fraction != 1.0 ) ? ( tr.startpos - tr.endpos ).Length() : 0;
+		}
+
+		if ( flDist_aim )
+		{
+			vHitLocation = tr.endpos;
+		}
+
+		lastPlayerHit = dynamic_cast<const CBaseCombatCharacter *>(tr.m_pEnt);
+
+		if ( lastPlayerHit )
+		{
+			if ( lastPlayerHit->GetTeamNumber() == GetTeamNumber() )
+			{
+				bShotHitTeammate = true;
+			}
+
+			bBulletHitPlayer = true;
+		}
 
 		if ( tr.fraction == 1.0f )
 			break; // we didn't hit anything, stop tracing shoot
 
-#ifdef _DEBUG
+#ifdef CLIENT_DLL
+		if ( !bWallBangStarted && !bBulletHitPlayer )
+		{
+			vecWallBangHitStart = tr.endpos;
+			vecWallBangHitEnd = tr.endpos;
+			bWallBangStarted = true;
+
+			if ( fCurrentDamage > 20 )
+				bWallBangHeavyVersion = true;
+		}
+		else if ( !bWallBangEnded )
+		{
+			vecWallBangHitEnd = tr.endpos;
+
+			if ( bBulletHitPlayer )
+				bWallBangEnded = true;
+		}
+#endif
+
+
+#if defined( _DEBUG ) && !defined( CLIENT_DLL )	
 		if ( bFirstHit )
 			AddBulletStat( gpGlobals->realtime, VectorLength( vecSrc-tr.endpos), tr.endpos );
 #endif
 
 		bFirstHit = false;
-
 #ifndef CLIENT_DLL
 		//
 		// Propogate a bullet impact event
@@ -548,50 +656,56 @@ void CCSPlayer::FireBullet(
 
 		GetMaterialParameters( iEnterMaterial, flPenetrationModifier, flDamageModifier );
 
-		bool hitGrate = tr.contents & CONTENTS_GRATE;
+		bool hitGrate = ( tr.contents & CONTENTS_GRATE ) != 0;
 
-		// since some railings in de_inferno are CONTENTS_GRATE but CHAR_TEX_CONCRETE, we'll trust the
-		// CONTENTS_GRATE and use a high damage modifier.
-		if ( hitGrate )
-		{
-			// If we're a concrete grate (TOOLS/TOOLSINVISIBLE texture) allow more penetrating power.
-			flPenetrationModifier = 1.0f;
-			flDamageModifier = 0.99f;
-		}
 
 #ifdef CLIENT_DLL
 		if ( sv_showimpacts.GetInt() == 1 || sv_showimpacts.GetInt() == 2 )
 		{
 			// draw red client impact markers
 			debugoverlay->AddBoxOverlay( tr.endpos, Vector(-2,-2,-2), Vector(2,2,2), QAngle( 0, 0, 0), 255,0,0,127, 4 );
+		}		
 
-			if ( tr.m_pEnt && tr.m_pEnt->IsPlayer() )
-			{
-				C_BasePlayer *player = ToBasePlayer( tr.m_pEnt );
-				player->DrawClientHitboxes( 4, true );
-			}
-		}
 #else
 		if ( sv_showimpacts.GetInt() == 1 || sv_showimpacts.GetInt() == 3 )
 		{
 			// draw blue server impact markers
 			NDebugOverlay::Box( tr.endpos, Vector(-2,-2,-2), Vector(2,2,2), 0,0,255,127, 4 );
-
-			if ( tr.m_pEnt && tr.m_pEnt->IsPlayer() )
-			{
-				CBasePlayer *player = ToBasePlayer( tr.m_pEnt );
-				player->DrawServerHitboxes( 4, true );
-			}
 		}
 #endif
 
+		// draw green boxes where the shot originated from
+		//NDebugOverlay::Box( vecSrc, Vector(-1,-1,-1), Vector(1,1,1), 0,255,90,90, 10 );
+
 		//calculate the damage based on the distance the bullet travelled.
-		flCurrentDistance += tr.fraction * flDistance;
+		flCurrentDistance += tr.fraction * (flDistance-flCurrentDistance);
 		fCurrentDamage *= pow (flRangeModifier, (flCurrentDistance / 500));
 
+#ifndef CLIENT_DLL
+		// the value of iPenetration when the round reached its max penetration distance
+		int nPenetrationAtMaxDistance = 0;
+		// save off how many penetrations this bullet had in case we reached max distance and stomp the value later
+		int const numPenetrationsInitiallyAllowedForThisBullet = nPenetrationCount;
+#endif
+
 		// check if we reach penetration distance, no more penetrations after that
-		if (flCurrentDistance > flPenetrationDistance && iPenetration > 0)
-			iPenetration = 0;
+		// or if our modifyer is super low, just stop the bullet
+		if ( (flCurrentDistance > flPenetrationDistance && flPenetration > 0 ) ||
+			flPenetrationModifier < 0.1 )
+		{
+#ifndef CLIENT_DLL
+			nPenetrationAtMaxDistance = 0;
+#endif
+			// Setting nPenetrationCount to zero prevents the bullet from penetrating object at max distance
+			// and will no longer trace beyond the exit point, however "numPenetrationsInitiallyAllowedForThisBullet"
+			// is saved off to allow correct determination whether the hit on the object at max distance had
+			// *previously* penetrated anything or not. In case of a direct hit over 3000 units the saved off
+			// value would be max penetrations value and will determine a direct hit and not a penetration hit.
+			// However it is important that all tracing further stops past this point (as the code does at
+			// the time of writing) because otherwise next trace will think that 4 penetrations have already
+			// occurred.
+			nPenetrationCount = 0;
+		}
 
 #ifndef CLIENT_DLL
 		// This just keeps track of sounds for AIs (it doesn't play anything).
@@ -599,15 +713,20 @@ void CCSPlayer::FireBullet(
 #endif
 
 		int iDamageType = DMG_BULLET | DMG_NEVERGIB;
+		CWeaponCSBase* pActiveWeapon = GetActiveCSWeapon();
+		if ( pActiveWeapon && pActiveWeapon->IsA( WEAPON_TASER ) )
+		{
+			iDamageType = DMG_SHOCK | DMG_NEVERGIB;
+		}
 
 		if( bDoEffects )
 		{
 			// See if the bullet ended up underwater + started out of the water
 			if ( enginetrace->GetPointContents( tr.endpos ) & (CONTENTS_WATER|CONTENTS_SLIME) )
-			{
+			{	
 				trace_t waterTrace;
 				UTIL_TraceLine( vecSrc, tr.endpos, (MASK_SHOT|CONTENTS_WATER|CONTENTS_SLIME), this, COLLISION_GROUP_NONE, &waterTrace );
-
+				
 				if( waterTrace.allsolid != 1 )
 				{
 					CEffectData	data;
@@ -630,40 +749,50 @@ void CCSPlayer::FireBullet(
 				// Don't decal nodraw surfaces
 				if ( !( tr.surface.flags & (SURF_SKY|SURF_NODRAW|SURF_HINT|SURF_SKIP) ) )
 				{
-					CBaseEntity *pEntity = tr.m_pEnt;
-					if ( !( !friendlyfire.GetBool() && pEntity && pEntity->GetTeamNumber() == GetTeamNumber() ) )
-					{
-						UTIL_ImpactTrace( &tr, iDamageType );
-					}
+					//CBaseEntity *pEntity = tr.m_pEnt;
+					UTIL_ImpactTrace( &tr, iDamageType );
 				}
 			}
-		} // bDoEffects
-
-		// add damage to entity that we hit
+		}
 
 #ifndef CLIENT_DLL
-		ClearMultiDamage();
+		// decal players on the server to eliminate the disparity between where the client thinks the decal went and where it actually went
+		// we want to eliminate the case where a player sees a blood decal on someone, but they are at 100 health
+		if ( sv_server_verify_blood_on_player.GetBool() && tr.DidHit() && tr.m_pEnt && tr.m_pEnt->IsPlayer() )
+		{
+			UTIL_ImpactTrace( &tr, iDamageType );
+		}
+#endif
 
-		//=============================================================================
-		// HPE_BEGIN:
-		// [pfreese] Check if enemy players were killed by this bullet, and if so,
-		// add them to the iPenetrationKills count
-		//=============================================================================
+#ifdef CLIENT_DLL
+#if USE_TRACERS
+		// create the tracer
+		CreateWeaponTracer( vecSrc, tr.endpos );
+#endif
+#endif
+
+		// add damage to entity that we hit
 		
+#ifndef CLIENT_DLL
 		CBaseEntity *pEntity = tr.m_pEnt;
 
-		CTakeDamageInfo info( pevAttacker, pevAttacker, fCurrentDamage, iDamageType );
-		CalculateBulletDamageForce( &info, iBulletType, vecDir, tr.endpos );
-		pEntity->DispatchTraceAttack( info, vecDir, &tr );
+		// [pfreese] Check if enemy players were killed by this bullet, and if so,
+		// add them to the iPenetrationKills count
+
+		DelayedDamageInfoData_t &delayedDamage = arrPendingDamage.Element( arrPendingDamage.AddToTail() );
+		delayedDamage.m_tr = tr;
+
+		int nObjectsPenetrated = kMaxNumPenetrationsSupported - ( numPenetrationsInitiallyAllowedForThisBullet + nPenetrationAtMaxDistance );
+		CTakeDamageInfo &info = delayedDamage.m_info;
+		info.Set( pevAttacker, pevAttacker, GetActiveWeapon(), fCurrentDamage, iDamageType, 0, nObjectsPenetrated );
 
 		// [dkorus] note:  This is the number of players hit up to this point, not the total number this bullet WILL hit.
 		info.SetDamagedOtherPlayers( numPlayersHit );
 
+		info.SetAmmoType( iBulletType );
+		CalculateBulletDamageForce( &info, iBulletType, vecDir, tr.endpos );
+
 		bool bWasAlive = pEntity->IsAlive();
-
-		TraceAttackToTriggers( info, tr.startpos, tr.endpos, vecDir );
-
-		ApplyMultiDamage();
 
 		// === Damage applied later ===
 
@@ -673,96 +802,240 @@ void CCSPlayer::FireBullet(
 		}
 #endif
 
-		// check if bullet can penetrate another entity
-		if ( iPenetration == 0 && !hitGrate )
-			break; // no, stop
+		// [dkorus] note: values are changed inside of HandleBulletPenetration
+		bool bulletStopped = HandleBulletPenetration( flPenetration, iEnterMaterial, hitGrate, tr, vecDir, pSurfaceData, flPenetrationModifier,
+			flDamageModifier, bDoEffects, iDamageType, flPenetrationPower, nPenetrationCount, vecSrc, flDistance,
+			flCurrentDistance, fCurrentDamage );
 
-		// If we hit a grate with iPenetration == 0, stop on the next thing we hit
-		if ( iPenetration < 0 )
+		// [dkorus] bulletStopped is true if the bullet can no longer continue penetrating materials
+		if ( bulletStopped )
 			break;
 
-		Vector penetrationEnd;
 
-		// try to penetrate object, maximum penetration is 128 inch
-		if ( !TraceToExit( tr.endpos, vecDir, penetrationEnd, 24, 128 ) )
-			break;
 
-		// find exact penetration exit
-		trace_t exitTr;
-		UTIL_TraceLine( penetrationEnd, tr.endpos, CS_MASK_SHOOT|CONTENTS_HITBOX, NULL, &exitTr );
-
-		if( exitTr.m_pEnt != tr.m_pEnt && exitTr.m_pEnt != NULL )
-		{
-			// something was blocking, trace again
-			UTIL_TraceLine( penetrationEnd, tr.endpos, CS_MASK_SHOOT|CONTENTS_HITBOX, exitTr.m_pEnt, COLLISION_GROUP_NONE, &exitTr );
-		}
-
-		// get material at exit point
-		pSurfaceData = physprops->GetSurfaceData( exitTr.surface.surfaceProps );
-		int iExitMaterial = pSurfaceData->game.material;
-
-		hitGrate = hitGrate && ( exitTr.contents & CONTENTS_GRATE );
-
-		// if enter & exit point is wood or metal we assume this is
-		// a hollow crate or barrel and give a penetration bonus
-		if ( iEnterMaterial == iExitMaterial )
-		{
-			if( iExitMaterial == CHAR_TEX_WOOD ||
-				iExitMaterial == CHAR_TEX_METAL )
-			{
-				flPenetrationModifier *= 2;
-			}
-		}
-
-		float flTraceDistance = VectorLength( exitTr.endpos - tr.endpos );
-
-		// check if bullet has enough power to penetrate this distance for this material
-		if ( flTraceDistance > ( flPenetrationPower * flPenetrationModifier ) )
-			break; // bullet hasn't enough power to penetrate this distance
-
-		// penetration was successful
-
-		// bullet did penetrate object, exit Decal
-		if ( bDoEffects )
-		{
-			UTIL_ImpactTrace( &exitTr, iDamageType );
-		}
-
-		//setup new start end parameters for successive trace
-
-		flPenetrationPower -= flTraceDistance / flPenetrationModifier;
-		flCurrentDistance += flTraceDistance;
-
-		// NDebugOverlay::Box( exitTr.endpos, Vector(-2,-2,-2), Vector(2,2,2), 0,255,0,127, 8 );
-
-		vecSrc = exitTr.endpos;
-		flDistance = (flDistance - flCurrentDistance) * 0.5;
-
-		// reduce damage power each time we hit something other than a grate
-		fCurrentDamage *= flDamageModifier;
-
-		// reduce penetration counter
-		iPenetration--;
 	}
 
 #ifndef CLIENT_DLL
-	//=============================================================================
-	// HPE_BEGIN:
+	if ( bBulletHitPlayer && !bShotHitTeammate )
+	{	// Guarantee that the bullet that hit an enemy trumps the player viewangles
+		// that are locked in for the duration of the server simulation ticks
+		m_iLockViewanglesTickNumber = gpGlobals->tickcount;
+		m_qangLockViewangles = pl.v_angle;
+	}
+#endif
+
+#ifndef CLIENT_DLL
+	FOR_EACH_VEC( arrPendingDamage, idxDamage )
+	{
+		ClearMultiDamage();
+
+		CTakeDamageInfo &info = arrPendingDamage[idxDamage].m_info;
+		trace_t &tr = arrPendingDamage[idxDamage].m_tr;
+
+		CBaseEntity *pEntity = tr.m_pEnt;
+		bool bWasAlive = pEntity->IsAlive();
+
+		pEntity->DispatchTraceAttack( info, vecDir, &tr );
+		TraceAttackToTriggers( info, tr.startpos, tr.endpos, vecDir );
+
+		ApplyMultiDamage();
+
+		if ( bWasAlive && !pEntity->IsAlive() && pEntity->IsPlayer() && IsOtherEnemy( pEntity->entindex() ) )
+		{
+			++iPenetrationKills;
+		}
+	}
+#endif
+
+#ifdef CLIENT_DLL
+	if ( bWallBangStarted )
+	{
+		float flWallBangLength = (vecWallBangHitEnd - vecWallBangHitStart).Length();
+		if ( flWallBangLength > 0 && flWallBangLength < CS_MAX_WALLBANG_TRAIL_LENGTH )
+		{
+			QAngle temp;
+			VectorAngles( vecWallBangHitEnd - vecWallBangHitStart, temp );
+
+			CEffectData	data;
+ 			data.m_vOrigin = vecWallBangHitStart;
+			data.m_vStart = vecWallBangHitEnd;
+			data.m_vAngles = temp;
+			//data.m_vNormal = vecWallBangHitStart - vecWallBangHitEnd;
+			data.m_flScale = 1.0f;
+			
+			if ( bWallBangHeavyVersion )
+			{
+				DispatchEffect( "impact_wallbang_heavy", data );
+			}
+			else
+			{
+				DispatchEffect( "impact_wallbang_heavy", data );
+			}
+
+			//debugoverlay->AddLineOverlay( vecWallBangHitStart, vecWallBangHitEnd, 0, 255, 0, false, 3 );
+		}
+	}
+#endif
+
+#ifndef CLIENT_DLL
 	// [pfreese] If we killed at least two enemies with a single bullet, award the
 	// TWO_WITH_ONE_SHOT achievement
-	//=============================================================================
-	
-	if (iPenetrationKills >= 2)
+
+	if ( iPenetrationKills >= 2 )
 	{
-		AwardAchievement(CSKillTwoWithOneShot);
+		AwardAchievement( CSKillTwoWithOneShot );
 	}
-	
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 #endif
+
+
 }
 
+// [dkorus] helper for FireBullet
+//			changes iPenetration to updated value
+//			returns TRUE if we should stop processing more hits after this one
+//			returns FALSE if we can continue processing
+bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
+										 int &iEnterMaterial,
+										 bool &hitGrate,
+										 trace_t &tr,
+										 Vector &vecDir,
+										 surfacedata_t *pSurfaceData,
+										 float flPenetrationModifier,
+										 float flDamageModifier,
+										 bool bDoEffects,
+										 int iDamageType,
+										 float flPenetrationPower,
+										 int &nPenetrationCount,
+										 Vector &vecSrc,
+										 float flDistance,
+										 float flCurrentDistance,
+										 float &fCurrentDamage)
+{
+	bool bIsNodraw = !!( tr.surface.flags & (SURF_NODRAW) );
+
+	bool bFailedPenetrate = false;
+
+	// check if bullet can penetrarte another entity
+	if ( nPenetrationCount == 0 && !hitGrate && !bIsNodraw 
+		 && iEnterMaterial != CHAR_TEX_GLASS && iEnterMaterial != CHAR_TEX_GRATE )
+		bFailedPenetrate = true; // no, stop
+
+	// If we hit a grate with iPenetration == 0, stop on the next thing we hit
+	if ( flPenetration <= 0 || nPenetrationCount <= 0 )
+		bFailedPenetrate = true;
+
+	Vector penetrationEnd;
+
+	// find exact penetration exit
+	trace_t exitTr;
+	if ( !TraceToExit( tr.endpos, vecDir, penetrationEnd, tr, exitTr, 4, MAX_PENETRATION_DISTANCE ) )
+	{
+		// ended in solid
+		if ( (UTIL_PointContents ( tr.endpos ) & CS_MASK_SHOOT) == 0 )
+		{
+			bFailedPenetrate = true;
+		}
+	}
+	
+	if ( bFailedPenetrate == true )
+	{
+		return true;
+	}
+
+	//debugoverlay->AddBoxOverlay( exitTr.endpos, Vector(-1,-1,-1), Vector(1,1,1), QAngle( 0, 0, 0), 255,255,0,127, 400 );
+
+	// get material at exit point
+	surfacedata_t *pExitSurfaceData = physprops->GetSurfaceData( exitTr.surface.surfaceProps );
+	int iExitMaterial = pExitSurfaceData->game.material;
+
+	// percent of total damage lost automatically on impacting a surface
+	float flDamLostPercent = 0.16;
+
+	// since some railings in de_inferno are CONTENTS_GRATE but CHAR_TEX_CONCRETE, we'll trust the
+	// CONTENTS_GRATE and use a high damage modifier.
+	if ( hitGrate || bIsNodraw || iEnterMaterial == CHAR_TEX_GLASS || iEnterMaterial == CHAR_TEX_GRATE )
+	{
+		// If we're a concrete grate (TOOLS/TOOLSINVISIBLE texture) allow more penetrating power.
+		if ( iEnterMaterial == CHAR_TEX_GLASS || iEnterMaterial == CHAR_TEX_GRATE )
+		{
+			flPenetrationModifier = 3.0f;
+			flDamLostPercent = 0.05;
+		}
+		else
+			flPenetrationModifier = 1.0f;
+
+		flDamageModifier = 0.99f;
+	}
+	else
+	{
+		// check the exit material and average the exit and entrace values
+		float flExitPenetrationModifier;
+		float flExitDamageModifier;
+		GetMaterialParameters( pExitSurfaceData->game.material, flExitPenetrationModifier, flExitDamageModifier );
+		flPenetrationModifier = (flPenetrationModifier + flExitPenetrationModifier) / 2;
+		flDamageModifier = (flDamageModifier + flExitDamageModifier) / 2;
+	}
+
+	// if enter & exit point is wood we assume this is 
+	// a hollow crate and give a penetration bonus
+	if ( iEnterMaterial == iExitMaterial )
+	{
+		if ( iExitMaterial == CHAR_TEX_WOOD )
+		{
+			flPenetrationModifier = 3;
+		}
+		else if ( iExitMaterial == CHAR_TEX_PLASTIC )
+		{
+			flPenetrationModifier = 2;
+		}
+	}
+
+	float flTraceDistance = VectorLength( exitTr.endpos - tr.endpos );
+
+	float flPenMod = MAX( 0, (1 / flPenetrationModifier) );
+
+	float flPercentDamageChunk = fCurrentDamage * flDamLostPercent;
+	float flPenWepMod = flPercentDamageChunk + MAX( 0, (3 / flPenetrationPower) * 1.25 ) * (flPenMod * 3.0);
+
+	float flLostDamageObject = ((flPenMod * (flTraceDistance*flTraceDistance)) / 24);
+	float flTotalLostDamage = flPenWepMod + flLostDamageObject;
+
+	// reduce damage power each time we hit something other than a grate
+	fCurrentDamage -= MAX( 0, flTotalLostDamage );
+
+	if ( fCurrentDamage < 1 )
+		return true;
+
+	// penetration was successful
+
+	// bullet did penetrate object, exit Decal
+	if ( bDoEffects )
+	{
+		UTIL_ImpactTrace( &exitTr, iDamageType );
+	}
+
+#ifndef CLIENT_DLL
+	// decal players on the server to eliminate the disparity between where the client thinks the decal went and where it actually went
+	// we want to eliminate the case where a player sees a blood decal on someone, but they are at 100 health
+	if ( sv_server_verify_blood_on_player.GetBool() && tr.DidHit() && tr.m_pEnt && tr.m_pEnt->IsPlayer() )
+	{
+		UTIL_ImpactTrace( &tr, iDamageType );
+	}
+#endif
+
+	//setup new start end parameters for successive trace
+
+	//flPenetrationPower -= (flTraceDistance/2) / flPenMod;
+	flCurrentDistance += flTraceDistance;
+
+	// NDebugOverlay::Box( exitTr.endpos, Vector(-2,-2,-2), Vector(2,2,2), 0,255,0,127, 8 );
+
+	vecSrc = exitTr.endpos;
+	flDistance = (flDistance - flCurrentDistance) * 0.5;
+
+	nPenetrationCount--;
+	return false;
+}
 
 void CCSPlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOrigin, const Vector &vecVelocity  )
 {

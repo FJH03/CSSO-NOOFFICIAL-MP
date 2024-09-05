@@ -22,6 +22,9 @@ bool IsPushAwayEntity( CBaseEntity *pEnt );
 bool IsPushableEntity( CBaseEntity *pEnt );
 
 //--------------------------------------------------------------------------------------------------------------
+bool IsBreakableEntity( CBaseEntity *pEnt );
+
+//--------------------------------------------------------------------------------------------------------------
 #ifndef CLIENT_DLL
 bool IsBreakableEntity( CBaseEntity *pEnt );
 #endif // !CLIENT_DLL

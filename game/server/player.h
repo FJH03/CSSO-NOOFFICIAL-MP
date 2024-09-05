@@ -391,6 +391,8 @@ public:
 	void					SmoothViewOnStairs( Vector& eyeOrigin );
 	virtual float			CalcRoll (const QAngle& angles, const Vector& velocity, float rollangle, float rollspeed);
 	void					CalcViewRoll( QAngle& eyeAngles );
+	virtual void			CalcViewBob( Vector& eyeOrigin );
+	virtual void			CalcAddViewmodelCameraAnimation( Vector& eyeOrigin, QAngle& eyeAngles );
 
 	virtual int				Save( ISave &save );
 	virtual int				Restore( IRestore &restore );
@@ -745,6 +747,8 @@ public:
 	bool	IsPredictingWeapons( void ) const; 
 	int		CurrentCommandNumber() const;
 	const CUserCmd *GetCurrentUserCommand() const;
+	int		GetLockViewanglesTickNumber() const { return m_iLockViewanglesTickNumber; }
+	QAngle	GetLockViewanglesData() const { return m_qangLockViewangles; }
 
 	int		GetFOV( void );														// Get the current FOV value
 	int		GetDefaultFOV( void ) const;										// Default FOV if not specified otherwise
@@ -1071,6 +1075,8 @@ protected:
 	// Last received usercmd (in case we drop a lot of packets )
 	CUserCmd				m_LastCmd;
 	CUserCmd				*m_pCurrentCommand;
+	int						m_iLockViewanglesTickNumber;
+	QAngle					m_qangLockViewangles;
 
 	float					m_flStepSoundTime;	// time to check for next footstep sound
 

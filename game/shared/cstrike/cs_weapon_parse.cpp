@@ -137,9 +137,7 @@ CCSWeaponInfo g_EquipmentInfo[MAX_EQUIPMENT];
 
 void PrepareEquipmentInfo( void )
 {
-    // MoeMod : dont use memset here
-    for(int i = 0; i < MAX_EQUIPMENT; ++i)
-        g_EquipmentInfo[i] = {};
+	memset( g_EquipmentInfo, 0, ARRAYSIZE( g_EquipmentInfo ) );
 
 	g_EquipmentInfo[2].SetWeaponPrice( CSGameRules()->GetBlackMarketPriceForWeapon( WEAPON_KEVLAR ) );
 	g_EquipmentInfo[2].SetDefaultPrice( KEVLAR_PRICE );
@@ -307,6 +305,7 @@ FileWeaponInfo_t* CreateWeaponInfo()
 	return new CCSWeaponInfo;
 }
 
+
 template <typename T>
 void ZeroObject( T* p )
 {
@@ -317,6 +316,8 @@ CCSWeaponInfo::CCSWeaponInfo()
 {
 	m_flMaxSpeed = 1; // This should always be set in the script.
 	m_szAddonModel[0] = 0;
+	m_szMagModel[0] = 0;
+	m_fThrowVelocity = 0.0f;
 	m_iKillAward = 0;
 	m_vecIronsightEyePos.Init();
 	m_angIronsightPivotAngle.Init();
@@ -384,7 +385,6 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_iCrosshairMinDistance		= pKeyValuesData->GetInt( "CrosshairMinDistance", 4 );
 	m_iCrosshairDeltaDistance	= pKeyValuesData->GetInt( "CrosshairDeltaDistance", 3 );
 	m_bCanUseWithShield			= !!pKeyValuesData->GetInt( "CanEquipWithShield", false );
-	m_flMuzzleScale				= pKeyValuesData->GetFloat( "MuzzleFlashScale", 1 );
 
 	// muzzle flash
 	const char* pTemp = pKeyValuesData->GetString( "MuzzleFlash1stPerson", "" );
@@ -397,17 +397,13 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	pTemp = pKeyValuesData->GetString( "MuzzleFlash3rdPersonAlt", m_szMuzzleFlash3rdPerson );
 	Q_strncpy( m_szMuzzleFlash3rdPersonAlt, pTemp, sizeof( m_szMuzzleFlash3rdPersonAlt ) );
 
-	m_iPenetration		= pKeyValuesData->GetInt( "Penetration", 1 );
+	m_iPenetration		= pKeyValuesData->GetFloat( "Penetration", 1 );
 	m_iDamage			= pKeyValuesData->GetInt( "Damage", 42 ); // Douglas Adams 1952 - 2001
 	m_flRange			= pKeyValuesData->GetFloat( "Range", 8192.0f );
 	m_flRangeModifier	= pKeyValuesData->GetFloat( "RangeModifier", 0.98f );
 	m_iBullets			= pKeyValuesData->GetInt( "Bullets", 1 );
 	m_flCycleTime[0]	= pKeyValuesData->GetFloat( "CycleTime", 0.15 );
 	m_flCycleTime[1]	= pKeyValuesData->GetFloat( "CycleTimeAlt", m_flCycleTime[0] );
-	m_bAccuracyQuadratic= pKeyValuesData->GetInt( "AccuracyQuadratic", 0 );
-	m_flAccuracyDivisor	= pKeyValuesData->GetFloat( "AccuracyDivisor", -1 ); // -1 = off
-	m_flAccuracyOffset	= pKeyValuesData->GetFloat( "AccuracyOffset", 0 );
-	m_flMaxInaccuracy	= pKeyValuesData->GetFloat( "MaxInaccuracy", 0 );
 
 	// new accuracy model parameters
 	m_fSpread[0]				= pKeyValuesData->GetFloat("Spread", 0.0f);
@@ -452,6 +448,18 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 
 	m_flTimeToIdleAfterFire	= pKeyValuesData->GetFloat( "TimeToIdle", 2 );
 	m_flIdleInterval	= pKeyValuesData->GetFloat( "IdleInterval", 20 );
+
+	// grenade parameters
+	m_fThrowVelocity	= pKeyValuesData->GetFloat( "ThrowVelocity", 0.0f );
+
+	// eject brass variables
+	const char* pEjectBrassEffect = pKeyValuesData->GetString( "EjectBrassEffect", "" );
+	Q_strncpy( m_szEjectBrassEffect, pEjectBrassEffect, sizeof( m_szEjectBrassEffect ) );
+
+	// heat variables
+	m_flHeatPerShot = pKeyValuesData->GetFloat( "HeatPerShot", 0.0f );
+	const char* pHeatEffect = pKeyValuesData->GetString( "HeatEffect", "" );
+	Q_strncpy( m_szHeatEffect, pHeatEffect, sizeof( m_szHeatEffect ) );
 
 	// ironsight variables
 	m_bIronsightCapable = pKeyValuesData->GetBool( "IronsightCapable", false );
@@ -507,7 +515,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	
 	const char *pAnimEx = pKeyValuesData->GetString( "PlayerAnimationExtension", "m4" );
 	Q_strncpy( m_szAnimExtension, pAnimEx, sizeof( m_szAnimExtension ) );
-
+	
 	const char *pUIAnimEx = pKeyValuesData->GetString( "UIPlayerAnimationExtension", m_szAnimExtension );
 	Q_strncpy( m_szUIAnimExtension, pUIAnimEx, sizeof( m_szUIAnimExtension ) );
 
@@ -522,11 +530,14 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	// Read the addon model.
 	Q_strncpy( m_szAddonModel, pKeyValuesData->GetString( "AddonModel" ), sizeof( m_szAddonModel ) );
 
+	// Read the magazine model.
+	Q_strncpy( m_szMagModel, pKeyValuesData->GetString( "magazine_model" ), sizeof( m_szMagModel ) );
+
 	// Read the dropped model.
 	Q_strncpy( m_szDroppedModel, pKeyValuesData->GetString( "DroppedModel" ), sizeof( m_szDroppedModel ) );
 
 	// Read the silencer model.
-	Q_strncpy( m_szSilencerModel, pKeyValuesData->GetString( "SilencerModel" ), sizeof( m_szSilencerModel ) );
+	//Q_strncpy( m_szSilencerModel, pKeyValuesData->GetString( "SilencerModel" ), sizeof( m_szSilencerModel ) );
 
 #ifndef CLIENT_DLL
 	// Enforce consistency for the weapon here, since that way we don't need to save off the model bounds
@@ -535,15 +546,15 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 //	engine->ForceExactFile( UTIL_VarArgs("scripts/%s.ctx", szWeaponName ) );
 
 	// Model bounds are rounded to the nearest integer, then extended by 1
-	engine->ForceModelBounds( szWorldModel, Vector( -15, -12, -18 ), Vector( 44, 16, 19 ) );
+	engine->ForceModelBounds( szWorldModel, Vector( -20, -12, -18 ), Vector( 50, 16, 19 ) );
 	if ( m_szAddonModel[0] )
 	{
 		engine->ForceModelBounds( m_szAddonModel, Vector( -5, -5, -6 ), Vector( 13, 5, 7 ) );
-	}
+	}/*
 	if ( m_szSilencerModel[0] )
 	{
-		engine->ForceModelBounds( m_szSilencerModel, Vector( -15, -12, -18 ), Vector( 44, 16, 19 ) );
-	}
+		engine->ForceModelBounds( m_szSilencerModel, Vector( -20, -12, -18 ), Vector( 50, 16, 19 ) );
+	}*/
 #endif // !CLIENT_DLL
 }
 
@@ -602,7 +613,7 @@ void WeaponRecoilData::GenerateRecoilTable( RecoilData *data )
 			flRecoilMagnitudeVariance[iMode] = pWeaponInfo->m_fRecoilMagnitudeVariance[iMode];
 		}
 	}
-
+	
 	for ( int iMode = 0; iMode < 2; ++iMode )
 	{
 		Assert( pWeaponInfo );
@@ -686,5 +697,3 @@ void GenerateWeaponRecoilPattern( CSWeaponID idx )
 {
 	g_WeaponRecoilData.GenerateRecoilPattern( idx );
 }
-
-

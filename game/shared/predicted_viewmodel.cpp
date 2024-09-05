@@ -67,10 +67,10 @@ ConVar cl_wpn_sway_scale( "cl_wpn_sway_scale", "1.0", FCVAR_CLIENTDLL|FCVAR_CHEA
 
          // if we are an off hand view model (index 1) and we have a model, add head bob. 
          // (Head bob for main hand model added by the weapon itself.) 
-         if ( ViewModelIndex() == 1 && m_bShouldIgnoreOffsetAndAccuracy ) 
+         if ( ViewModelIndex() ) 
          { 
-                CalcNewViewModelBobbing( owner, &m_BobState, 1 ); 
-                AddNewViewModelBobbing( eyePosition, eyeAngles, &m_BobState ); 
+                CalcViewModelBobHelper( owner, &m_BobState );
+				AddViewModelBobHelper( eyePosition, eyeAngles, &m_BobState ); 
          } 
  #endif 
  #endif 

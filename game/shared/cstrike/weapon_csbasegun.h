@@ -41,6 +41,8 @@ public:
 	virtual void WeaponIdle();
 	virtual bool Holster( CBaseCombatWeapon *pSwitchingTo );
 
+	virtual bool IsRevolver() const { return GetCSWeaponID() == WEAPON_REVOLVER; }
+
 	// Derived classes call this to fire a bullet.
 	bool CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode );
 
