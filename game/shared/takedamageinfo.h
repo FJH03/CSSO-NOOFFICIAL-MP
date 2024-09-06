@@ -108,7 +108,6 @@ public:
 
 //private:
 	void			CopyDamageToBaseDamage();
-	int				GetObjectsPenetrated() const { return m_iPlayerPenetrationCount; }
 
 
 protected:
