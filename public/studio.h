@@ -2350,7 +2350,7 @@ struct studiohdr_t
 	const studiohdr_t	*FindModel( void **cache, char const *modelname ) const;
 
 	// implementation specific back pointer to virtual data
-	int                 unused_virtualModel;
+	mutable void		*virtualModel;
 	virtualmodel_t		*GetVirtualModel( void ) const;
 
 	// for demand loaded animation blocks
