@@ -65,7 +65,7 @@ private:
 	int  m_OldLifestate;
 	int  m_iMaxHealth;
 
-	ICSPlayerAnimState *m_PlayerAnimState;
+	IPlayerAnimState *m_PlayerAnimState;
 
 	CNetworkVar( EHANDLE, m_leader );				// who we are following, or NULL
 

@@ -264,7 +264,7 @@ public:
 	virtual void 			NotifyFriendsOfDamage( CBaseEntity *pAttackerEntity ) {}
 	virtual bool			HasEverBeenInjured( int team = TEAM_ANY ) const;			// return true if we have ever been injured by a member of the given team
 	virtual float			GetTimeSinceLastInjury( int team = TEAM_ANY ) const;		// return time since we were hurt by a member of the given team
-
+	RelativeDamagedDirection_t GetLastInjuryRelativeDirection( void ) { return m_nRelativeDirectionOfLastInjury; }
 
 	virtual void			OnPlayerKilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &info ) {}
 
@@ -539,6 +539,9 @@ protected:
 		IntervalTimer interval;		// how long has it been
 	};
 	DamageHistory m_damageHistory[ MAX_DAMAGE_TEAMS ];
+
+	CNetworkVar( float, m_flTimeOfLastInjury );
+	CNetworkVar( RelativeDamagedDirection_t, m_nRelativeDirectionOfLastInjury );
 
 	// last known navigation area of player - NULL if unknown
 	CNavArea *m_lastNavArea;

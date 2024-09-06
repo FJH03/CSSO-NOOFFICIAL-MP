@@ -19,7 +19,31 @@ typedef enum
 	LEGANIM_GOLDSRC	// Legs always point in the direction he's running and the torso rotates.
 } LegAnimType_t;
 
+enum PlayerAnimEvent_t
+{
+	PLAYERANIMEVENT_FIRE_GUN_PRIMARY = 0,
+	PLAYERANIMEVENT_FIRE_GUN_PRIMARY_OPT, // an optional primary attack for variation in animation. For example, the knife toggles between left AND right slash animations.
+	PLAYERANIMEVENT_FIRE_GUN_PRIMARY_SPECIAL1,
+	PLAYERANIMEVENT_FIRE_GUN_PRIMARY_OPT_SPECIAL1, // an optional primary special attack for variation in animation.
+	PLAYERANIMEVENT_FIRE_GUN_SECONDARY,
+	PLAYERANIMEVENT_FIRE_GUN_SECONDARY_SPECIAL1,
+	PLAYERANIMEVENT_GRENADE_PULL_PIN,
+	PLAYERANIMEVENT_THROW_GRENADE,
+	PLAYERANIMEVENT_JUMP,
+	PLAYERANIMEVENT_RELOAD,
+	PLAYERANIMEVENT_RELOAD_START,	///< w_model partial reload for shotguns
+	PLAYERANIMEVENT_RELOAD_LOOP,	///< w_model partial reload for shotguns
+	PLAYERANIMEVENT_RELOAD_END,		///< w_model partial reload for shotguns
+	PLAYERANIMEVENT_CLEAR_FIRING,	///< clear animations on the firing layer
+	PLAYERANIMEVENT_DEPLOY,			///< Used to play deploy animations on third person models.
+	PLAYERANIMEVENT_SILENCER_ATTACH,
+	PLAYERANIMEVENT_SILENCER_DETACH,
 
+	// new events
+	PLAYERANIMEVENT_THROW_GRENADE_UNDERHAND,
+	PLAYERANIMEVENT_CATCH_WEAPON,
+	PLAYERANIMEVENT_COUNT
+};
 
 abstract_class IPlayerAnimState
 {
@@ -41,6 +65,14 @@ public:
 	// The client uses this to figure out what angles to render the entity with (since as the guy turns,
 	// it will change his body_yaw pose parameter before changing his rendered angle).
 	virtual const QAngle& GetRenderAngles() = 0;
+
+	// This is called by both the client and the server in the same way to trigger events for
+	// players firing, jumping, throwing grenades, etc.
+	virtual void DoAnimationEvent( PlayerAnimEvent_t event, int nData = 0 ) = 0;
+
+	// Returns true if we're playing the grenade prime or throw animation.
+	virtual bool IsThrowingGrenade() = 0;
+	virtual bool ShouldHideGrenadeDuringThrow() = 0;
 };
 
 

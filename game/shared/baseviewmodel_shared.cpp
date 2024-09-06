@@ -27,6 +27,9 @@ extern ConVar in_forceuser;
 #include "iclientmode.h"
 #endif
 
+#include "weapon_basecsgrenade.h"
+#include "cs_shareddefs.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -419,6 +422,20 @@ void CBaseViewModel::PostBuildTransformations( CStudioHdr *pStudioHdr, Vector *p
 
 void CBaseViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& eyePosition, const QAngle& eyeAngles )
 {
+
+#ifdef CLIENT_DLL
+	if ( owner )
+	{
+		CBaseCSGrenade* pGrenade = dynamic_cast<CBaseCSGrenade*>( owner->GetActiveWeapon() );
+		if ( pGrenade )
+		{
+			int iPoseParam = LookupPoseParameter( "throwcharge" );
+			if ( iPoseParam != -1 )
+				SetPoseParameter( iPoseParam, clamp(pGrenade->ApproachThrownStrength(), 0.0f, 1.0f) );
+		}
+	}
+#endif
+
 	// UNDONE: Calc this on the server?  Disabled for now as it seems unnecessary to have this info on the server
 #if defined( CLIENT_DLL )
 	QAngle vmangoriginal = eyeAngles;

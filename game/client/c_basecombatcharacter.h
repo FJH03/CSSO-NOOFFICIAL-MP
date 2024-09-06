@@ -60,6 +60,7 @@ public:
 	virtual bool IsLineOfSightClear( CBaseEntity *entity, LineOfSightCheckType checkType = IGNORE_NOTHING ) const;// strictly LOS check with no other considerations
 	virtual bool IsLineOfSightClear( const Vector &pos, LineOfSightCheckType checkType = IGNORE_NOTHING, CBaseEntity *entityToIgnore = NULL ) const;
 
+	int	LastHitGroup() const { return m_LastHitGroup; }
 
 	// -----------------------
 	// Ammo
@@ -84,6 +85,10 @@ public:
 
 	// This is a sort of hack back-door only used by physgun!
 	void SetAmmoCount( int iCount, int iAmmoIndex );
+
+	bool HasEverBeenInjured( void ) const;
+	float GetTimeSinceLastInjury( void ) const;
+	RelativeDamagedDirection_t GetLastInjuryRelativeDirection( void ) { return m_nRelativeDirectionOfLastInjury; }
 
 	float				GetNextAttack() const { return m_flNextAttack; }
 	void				SetNextAttack( float flWait ) { m_flNextAttack = flWait; }
@@ -116,10 +121,16 @@ protected:
 private:
 	bool				ComputeLOS( const Vector &vecEyePosition, const Vector &vecTarget ) const;
 
+public:
+	int m_LastHitGroup;
+
+private:
 	CNetworkArray( int, m_iAmmo, MAX_AMMO_TYPES );
 
 	CHandle<C_BaseCombatWeapon>		m_hMyWeapons[MAX_WEAPONS];
 	CHandle< C_BaseCombatWeapon > m_hActiveWeapon;
+	float m_flTimeOfLastInjury;
+	RelativeDamagedDirection_t m_nRelativeDirectionOfLastInjury;
 
 #ifdef GLOWS_ENABLE
 	bool				m_bGlowEnabled;

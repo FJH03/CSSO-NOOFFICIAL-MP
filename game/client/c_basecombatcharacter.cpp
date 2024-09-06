@@ -84,6 +84,16 @@ void C_BaseCombatCharacter::OnDataChanged( DataUpdateType_t updateType )
 #endif // GLOWS_ENABLE
 }
 
+bool C_BaseCombatCharacter::HasEverBeenInjured( void ) const
+{
+	return (m_flTimeOfLastInjury != 0.0f);
+}
+
+float C_BaseCombatCharacter::GetTimeSinceLastInjury( void ) const
+{
+	return gpGlobals->curtime - m_flTimeOfLastInjury;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Overload our muzzle flash and send it to any actively held weapon
 //-----------------------------------------------------------------------------
@@ -157,7 +167,10 @@ END_RECV_TABLE();
 
 BEGIN_RECV_TABLE(C_BaseCombatCharacter, DT_BaseCombatCharacter)
 	RecvPropDataTable( "bcc_localdata", 0, 0, &REFERENCE_RECV_TABLE(DT_BCCLocalPlayerExclusive) ),
+	RecvPropInt( RECVINFO( m_LastHitGroup ) ),
 	RecvPropEHandle( RECVINFO( m_hActiveWeapon ) ),
+	RecvPropTime( RECVINFO( m_flTimeOfLastInjury ) ),
+	RecvPropInt( RECVINFO( m_nRelativeDirectionOfLastInjury ) ),
 	RecvPropArray3( RECVINFO_ARRAY(m_hMyWeapons), RecvPropEHandle( RECVINFO( m_hMyWeapons[0] ) ) ),
 #ifdef GLOWS_ENABLE
 	RecvPropBool( RECVINFO( m_bGlowEnabled ) ),

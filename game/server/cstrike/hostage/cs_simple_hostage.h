@@ -120,7 +120,7 @@ protected:
 private:
 	float GetModifiedDamage( float flDamage, int nHitGroup );
 
-	ICSPlayerAnimState *m_PlayerAnimState;
+	IPlayerAnimState *m_PlayerAnimState;
 
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_iMaxHealth );
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_iHealth );

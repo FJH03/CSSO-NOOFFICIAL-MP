@@ -18,8 +18,6 @@
 #ifdef CLIENT_DLL
 	class C_BaseAnimatingOverlay;
 	class C_WeaponCSBase;
-	// Avoid redef warnings
-	#undef CBaseAnimatingOverlay
 	#define CBaseAnimatingOverlay C_BaseAnimatingOverlay
 	#define CWeaponCSBase C_WeaponCSBase
 	#define CCSPlayer C_CSPlayer
@@ -33,43 +31,12 @@
 // When moving this fast, he plays run anim.
 #define ARBITRARY_RUN_SPEED		175.0f
 
-
-enum PlayerAnimEvent_t
-{
-	PLAYERANIMEVENT_FIRE_GUN_PRIMARY=0,
-	PLAYERANIMEVENT_FIRE_GUN_SECONDARY,
-	PLAYERANIMEVENT_SILENCER_ATTACH,
-	PLAYERANIMEVENT_SILENCER_DETACH,
-	PLAYERANIMEVENT_FIRE_GUN_PRIMARY_SPECIAL1,
-	PLAYERANIMEVENT_FIRE_GUN_PRIMARY_OPT_SPECIAL1,
-	PLAYERANIMEVENT_FIRE_GUN_PRIMARY_OPT, // an optional primary attack for variation in animation. For example, the knife toggles between left AND right slash animations.
-	PLAYERANIMEVENT_FIRE_GUN_SECONDARY_SPECIAL1,
-	PLAYERANIMEVENT_THROW_GRENADE,
-	PLAYERANIMEVENT_JUMP,
-	PLAYERANIMEVENT_RELOAD,
-	PLAYERANIMEVENT_RELOAD_START,	///< w_model partial reload for shotguns
-	PLAYERANIMEVENT_RELOAD_LOOP,	///< w_model partial reload for shotguns
-	PLAYERANIMEVENT_RELOAD_END,		///< w_model partial reload for shotguns
-	PLAYERANIMEVENT_CLEAR_FIRING,	///< clear animations on the firing layer
-	
-	PLAYERANIMEVENT_COUNT
-};
+#define HOSTAGE_JUMP_POWER		200.0f
+#define HOSTAGE_ANIM_MODEL		"models/hostage/hostage.mdl"
 
 #define MOVESTATE_IDLE	0
 #define MOVESTATE_WALK	1
 #define MOVESTATE_RUN	2
-
-
-class ICSPlayerAnimState : virtual public IPlayerAnimState
-{
-public:
-	// This is called by both the client and the server in the same way to trigger events for
-	// players firing, jumping, throwing grenades, etc.
-	virtual void DoAnimationEvent( PlayerAnimEvent_t event, int nData = 0 ) = 0;
-	
-	// Returns true if we're playing the grenade prime or throw animation.
-	virtual bool IsThrowingGrenade() = 0;
-};
 
 
 // This abstracts the differences between CS players and hostages.
@@ -81,8 +48,8 @@ public:
 };
 
 
-ICSPlayerAnimState* CreatePlayerAnimState( CBaseAnimatingOverlay *pEntity, ICSPlayerAnimStateHelpers *pHelpers, LegAnimType_t legAnimType, bool bUseAimSequences );
-ICSPlayerAnimState* CreateHostageAnimState( CBaseAnimatingOverlay *pEntity, ICSPlayerAnimStateHelpers *pHelpers, LegAnimType_t legAnimType, bool bUseAimSequences );
+IPlayerAnimState* CreatePlayerAnimState( CBaseAnimatingOverlay *pEntity, ICSPlayerAnimStateHelpers *pHelpers, LegAnimType_t legAnimType, bool bUseAimSequences );
+IPlayerAnimState* CreateHostageAnimState( CBaseAnimatingOverlay *pEntity, ICSPlayerAnimStateHelpers *pHelpers, LegAnimType_t legAnimType, bool bUseAimSequences );
 
 // If this is set, then the game code needs to make sure to send player animation events
 // to the local player if he's the one being watched.

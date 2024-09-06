@@ -264,11 +264,11 @@ public:
 	void SetActivity( Activity eActivity );
 	Activity GetActivity( void ) const;
 
-	ICSPlayerAnimState *GetPlayerAnimState() { return m_PlayerAnimState; }
+	IPlayerAnimState *GetPlayerAnimState() { return m_PlayerAnimState; }
 
 public:
 
-	ICSPlayerAnimState *m_PlayerAnimState;
+	IPlayerAnimState *m_PlayerAnimState;
 
 	// Used to control animation state.
 	Activity m_Activity;

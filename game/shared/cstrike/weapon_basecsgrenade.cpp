@@ -7,13 +7,14 @@
 #include "cbase.h"
 #include "weapon_csbase.h"
 #include "gamerules.h"
+#include "cs_gamerules.h"
 #include "npcevent.h"
 #include "engine/IEngineSound.h"
 #include "weapon_basecsgrenade.h"
 #include "in_buttons.h"	
 #include "datacache/imdlcache.h"
 
-
+#include "cs_shareddefs.h"
 
 #ifdef CLIENT_DLL
 
@@ -23,12 +24,16 @@
 
 	#include "cs_player.h"
 	#include "items.h"
-	#include "../../server/cstrike/cs_gamestats.h"
+	#include "cs_gamestats.h"
 
 #endif
 
 
 #define GRENADE_TIMER	1.5f //Seconds
+#define GRENADE_SECONDARY_DAMPENING 0.3f
+#define GRENADE_SECONDARY_LOWER 12.0f
+#define GRENADE_SECONDARY_TRANSITION 1.3f
+#define GRENADE_SECONDARY_INTERP 2.0f
 
 
 IMPLEMENT_NETWORKCLASS_ALIASED( BaseCSGrenade, DT_BaseCSGrenade )
@@ -37,14 +42,18 @@ BEGIN_NETWORK_TABLE(CBaseCSGrenade, DT_BaseCSGrenade)
 
 #ifndef CLIENT_DLL
 	SendPropBool( SENDINFO(m_bRedraw) ),
+	SendPropBool( SENDINFO(m_bIsHeldByPlayer) ),
 	SendPropBool( SENDINFO(m_bPinPulled) ),
 	SendPropFloat( SENDINFO(m_fThrowTime), 0, SPROP_NOSCALE ),
 	SendPropBool( SENDINFO( m_bLoopingSoundPlaying ) ),
+	SendPropFloat( SENDINFO(m_flThrowStrength), 0, SPROP_NOSCALE ),
 #else
 	RecvPropBool( RECVINFO(m_bRedraw) ),
+	RecvPropBool( RECVINFO(m_bIsHeldByPlayer) ),
 	RecvPropBool( RECVINFO(m_bPinPulled) ),
 	RecvPropFloat( RECVINFO(m_fThrowTime) ),
 	RecvPropBool( RECVINFO( m_bLoopingSoundPlaying ) ),
+	RecvPropFloat( RECVINFO(m_flThrowStrength) ),
 #endif
 
 END_NETWORK_TABLE()
@@ -53,6 +62,7 @@ END_NETWORK_TABLE()
 BEGIN_PREDICTION_DATA( CBaseCSGrenade )
 	DEFINE_PRED_FIELD( m_bRedraw, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_bRedraw, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_flThrowStrength, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 END_PREDICTION_DATA()
 #endif
 
@@ -65,9 +75,12 @@ ConVar sv_ignoregrenaderadio( "sv_ignoregrenaderadio", "0", 0, "Turn off Fire in
 CBaseCSGrenade::CBaseCSGrenade()
 {
 	m_bRedraw = false;
+	m_bIsHeldByPlayer = false;
 	m_bPinPulled = false;
 	m_fThrowTime = 0;
 	m_bLoopingSoundPlaying = false;
+	m_flThrowStrength = 1.0f;
+	m_flThrowStrengthClientSmooth = 1.0f;
 
 #ifndef CLIENT_DLL
 	m_bHasEmittedProjectile = false;
@@ -88,7 +101,10 @@ void CBaseCSGrenade::Precache()
 bool CBaseCSGrenade::Deploy()
 {
 	m_bRedraw = false;
+	m_bIsHeldByPlayer = true;
 	m_bPinPulled = false;
+	m_flThrowStrength = 1.0f;
+	m_flThrowStrengthClientSmooth = 1.0f;
 	m_fThrowTime = 0;
 
 #ifndef CLIENT_DLL
@@ -116,6 +132,8 @@ bool CBaseCSGrenade::Holster( CBaseCombatWeapon *pSwitchingTo )
 {
 	m_bRedraw = false;
 	m_bPinPulled = false; // when this is holstered make sure the pin isn�t pulled.
+	m_flThrowStrength = 1.0f;
+	m_flThrowStrengthClientSmooth = 1.0f;
 	m_fThrowTime = 0;
 
 #ifndef CLIENT_DLL
@@ -141,12 +159,16 @@ bool CBaseCSGrenade::Holster( CBaseCombatWeapon *pSwitchingTo )
 //-----------------------------------------------------------------------------
 void CBaseCSGrenade::PrimaryAttack()
 {
-	if ( m_bRedraw || m_bPinPulled || m_fThrowTime > 0.0f )
+	if ( !m_bIsHeldByPlayer || m_bPinPulled || m_fThrowTime > 0.0f )
 		return;
 
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer || pPlayer->GetAmmoCount( m_iPrimaryAmmoType ) <= 0 )
 		return;
+
+#ifndef CLIENT_DLL
+	pPlayer->DoAnimationEvent( PLAYERANIMEVENT_GRENADE_PULL_PIN );
+#endif
 
 	// The pull pin animation has to finish, then we wait until they aren't holding the primary
 	// attack button, then throw the grenade.
@@ -165,7 +187,19 @@ void CBaseCSGrenade::PrimaryAttack()
 //-----------------------------------------------------------------------------
 void CBaseCSGrenade::SecondaryAttack()
 {
-	if ( m_bRedraw )
+	if ( !m_bPinPulled )
+	{
+		m_flThrowStrength = 0.0f;
+		m_flThrowStrengthClientSmooth = 0.0f;
+	}
+
+	if ( CSGameRules()->IsFreezePeriod() )	// Don't let Brian molotov the team during freezetime
+		return;
+
+	PrimaryAttack();
+	return;
+
+	/*if ( m_bRedraw )
 		return;
 
 	CCSPlayer *pPlayer = GetPlayerOwner();
@@ -188,7 +222,7 @@ void CBaseCSGrenade::SecondaryAttack()
 	// Don't let weapon idle interfere in the middle of a throw!
 	SetWeaponIdleTime( gpGlobals->curtime + SequenceDuration() );
 
-	m_flNextSecondaryAttack	= gpGlobals->curtime + SequenceDuration();
+	m_flNextSecondaryAttack	= gpGlobals->curtime + SequenceDuration();*/
 }
 
 //-----------------------------------------------------------------------------
@@ -217,6 +251,32 @@ bool CBaseCSGrenade::Reload()
 
 //-----------------------------------------------------------------------------
 // Purpose: 
+// Input  : *pPicker - 
+//-----------------------------------------------------------------------------
+void CBaseCSGrenade::OnPickedUp( CBaseCombatCharacter *pNewOwner )
+{
+	BaseClass::OnPickedUp( pNewOwner );
+
+#if !defined( CLIENT_DLL )
+	if ( pNewOwner )
+	{
+		m_bIsHeldByPlayer = true;
+	}
+#endif
+}
+
+float CBaseCSGrenade::ApproachThrownStrength()
+{
+	m_flThrowStrengthClientSmooth = Approach(
+		m_flThrowStrength,
+		m_flThrowStrengthClientSmooth,
+		gpGlobals->frametime * GRENADE_SECONDARY_INTERP
+		);
+	return m_flThrowStrengthClientSmooth;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
 //-----------------------------------------------------------------------------
 void CBaseCSGrenade::ItemPostFrame()
 {
@@ -228,16 +288,42 @@ void CBaseCSGrenade::ItemPostFrame()
 	if ( !vm )
 		return;
 
-	// If they let go of the fire button, they want to throw the grenade.
-	if ( m_bPinPulled && !(pPlayer->m_nButtons & IN_ATTACK) ) 
+	bool bPrimaryHeld = (pPlayer->m_nButtons & IN_ATTACK) != 0;
+	bool bSecondaryHeld = (pPlayer->m_nButtons & IN_ATTACK2) != 0;
+
+	if ( m_bPinPulled && (bPrimaryHeld || bSecondaryHeld) )
 	{
-		pPlayer->DoAnimationEvent( PLAYERANIMEVENT_THROW_GRENADE );
+		float flIdealThrowStrength = 0.5f;
+
+		if ( bPrimaryHeld )
+			flIdealThrowStrength += 0.5f;
+
+		if ( bSecondaryHeld )
+			flIdealThrowStrength -= 0.5f;
+
+		m_flThrowStrength = Approach( flIdealThrowStrength, m_flThrowStrength, gpGlobals->frametime * GRENADE_SECONDARY_TRANSITION );
+	}
+
+	// If they let go of the fire button, they want to throw the grenade.
+	if ( m_bPinPulled && !(bPrimaryHeld) && !(bSecondaryHeld) )
+	{
+		if ( IsThrownUnderhand() )
+			pPlayer->DoAnimationEvent( PLAYERANIMEVENT_THROW_GRENADE_UNDERHAND );
+		else
+			pPlayer->DoAnimationEvent( PLAYERANIMEVENT_THROW_GRENADE );
 
 		StartGrenadeThrow();
 		
 		MDLCACHE_CRITICAL_SECTION();
 		m_bPinPulled = false;
-		SendWeaponAnim( ACT_VM_THROW );	
+		if ( IsThrownUnderhand() )
+		{
+			SendWeaponAnim( ACT_VM_RELEASE );
+		}
+		else
+		{
+			SendWeaponAnim( ACT_VM_THROW );
+		}
 		SetWeaponIdleTime( gpGlobals->curtime + SequenceDuration() );
 
 		m_flNextPrimaryAttack	= gpGlobals->curtime + SequenceDuration(); // we're still throwing, so reset our next primary attack
@@ -254,6 +340,7 @@ void CBaseCSGrenade::ItemPostFrame()
 
 			event->SetInt( "userid", pPlayer->GetUserID() );
 			event->SetString( "weapon", weaponName );
+			event->SetBool( "silenced", false );
 			gameeventmanager->FireEvent( event );
 		}
 #endif
@@ -265,7 +352,7 @@ void CBaseCSGrenade::ItemPostFrame()
 
 		ThrowGrenade();
 	}
-	else if( m_bRedraw )
+	else if ( !m_bIsHeldByPlayer )
 	{
 		// Has the throw animation finished playing
 		if( m_flTimeWeaponIdle < gpGlobals->curtime )
@@ -302,18 +389,28 @@ void CBaseCSGrenade::ItemPostFrame()
 	void CBaseCSGrenade::DropGrenade()
 	{
 		m_bRedraw = true;
+		m_bIsHeldByPlayer = false;
 		m_fThrowTime = 0.0f;
 	}
 
 	void CBaseCSGrenade::ThrowGrenade()
 	{
 		m_bRedraw = true;
+		m_bIsHeldByPlayer = false;
 		m_fThrowTime = 0.0f;
 	}
 
 	void CBaseCSGrenade::StartGrenadeThrow()
 	{
 		m_fThrowTime = gpGlobals->curtime + 0.1f;
+
+		CBroadcastRecipientFilter filter;
+		CSoundParameters params;
+		if ( GetParametersForSound( GetShootSound( SINGLE ), params, NULL ) )
+		{
+			//CPASAttenuationFilter filter( this );
+			EmitSound( filter, entindex(), GetShootSound( SINGLE )); 
+		}
 	}
 
 #else
@@ -367,14 +464,23 @@ void CBaseCSGrenade::ItemPostFrame()
 			angThrow.x = -10 + angThrow.x * -((90 - 10) / 90.0);
 		}
 
-		float flVel = (90 - angThrow.x) * 6;
+		const float kBaseVelocity = GetCSWpnData().m_fThrowVelocity;
+		float flVel = clamp( ( kBaseVelocity * 0.9f ), 15, 750 );
 
 		if (flVel > 750)
 			flVel = 750;
 
+		//clamp the throw strength ranges just to be sure
+		float flClampedThrowStrength = m_flThrowStrength;
+		flClampedThrowStrength = clamp( flClampedThrowStrength, 0.0f, 1.0f );
+
+		flVel *= Lerp( flClampedThrowStrength, GRENADE_SECONDARY_DAMPENING, 1.0f );
+
 		AngleVectors( angThrow, &vForward, &vRight, &vUp );
 
 		Vector vecSrc = pPlayer->GetAbsOrigin() + pPlayer->GetViewOffset();
+
+		vecSrc += Vector( 0, 0, Lerp( flClampedThrowStrength, -GRENADE_SECONDARY_LOWER, 0.0f ) );
 
 		// We want to throw the grenade from 16 units out.  But that can cause problems if we're facing
 		// a thin wall.  Do a hull trace to be safe.
@@ -384,13 +490,14 @@ void CBaseCSGrenade::ItemPostFrame()
 		UTIL_TraceHull( vecSrc, vecSrc + vForward * 16, mins, maxs, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &trace );
 		vecSrc = trace.endpos;
 
-		Vector vecThrow = vForward * flVel + pPlayer->GetAbsVelocity();
+		Vector vecThrow = vForward * flVel + (pPlayer->GetAbsVelocity() * 1.25);
 
 		EmitGrenade( vecSrc, vec3_angle, vecThrow, AngularImpulse(600,random->RandomInt(-1200,1200),0), pPlayer );
 
 		m_bHasEmittedProjectile = true; // Flag the grenade weapon as having emitted a projectile. The 'grenade' is now flying away from the player, so we don't want to drop *this* grenade on death (that'll make a duplicate)
-		
+
 		m_bRedraw = true;
+		m_bIsHeldByPlayer = false;
 		m_fThrowTime = 0.0f;
 
 		CCSPlayer *pCSPlayer = ToCSPlayer( pPlayer );
@@ -464,6 +571,7 @@ void CBaseCSGrenade::ItemPostFrame()
 		}
 
 		m_bRedraw = true;
+		m_bIsHeldByPlayer = false;
 		m_fThrowTime = 0.0f;
 	}
 

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,6 +12,7 @@
 #include "apparent_velocity_helper.h"
 #include "utldict.h"
 #include "filesystem.h"
+#include "cs_shareddefs.h"
 
 
 #ifdef CLIENT_DLL
@@ -20,15 +21,21 @@
 
 	ConVar cl_showanimstate( "cl_showanimstate", "-1", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Show the (client) animation state for the specified entity (-1 for none)." );
 	ConVar showanimstate_log( "cl_showanimstate_log", "0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "1 to output cl_showanimstate to Msg(). 2 to store in AnimStateClient.log. 3 for both." );
+	ConVar showanimstate_activities( "cl_showanimstate_activities", "0", FCVAR_CHEAT, "Show activities in the (client) animation state display." );
 #else
 	#include "player.h"
 	ConVar sv_showanimstate( "sv_showanimstate", "-1", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Show the (server) animation state for the specified entity (-1 for none)." );
 	ConVar showanimstate_log( "sv_showanimstate_log", "0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "1 to output sv_showanimstate to Msg(). 2 to store in AnimStateServer.log. 3 for both." );
+	ConVar showanimstate_activities( "sv_showanimstate_activities", "0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Show activities in the (server) animation state display." );
 #endif
+
+// NOTE: This has to be the last file included!
+#include "tier0/memdbgon.h"
+
 
 
 // Below this many degrees, slow down turning rate linearly
-#define FADE_TURN_DEGREES	45.0f
+#define FADE_TURN_DEGREES	15.0f
 
 // After this, need to start turning feet
 #define MAX_TORSO_ANGLE		70.0f
@@ -36,16 +43,17 @@
 // Below this amount, don't play a turning animation/perform IK
 #define MIN_TURN_ANGLE_REQUIRING_TURN_ANIMATION		15.0f
 
+#define POSE_PARAM_DELTA_DAMPEN 4.0f
 
 ConVar mp_feetyawrate( 
 	"mp_feetyawrate", 
-	"720", 
+	"400",
 	FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY, 
 	"How many degrees per second that we can turn our feet or upper body." );
 
 ConVar mp_facefronttime( 
 	"mp_facefronttime", 
-	"3", 
+	"2", 
 	FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY, 
 	"After this amount of time of standing in place but aiming to one side, go ahead and move feet to face upper body." );
 
@@ -65,13 +73,14 @@ CBasePlayerAnimState::CBasePlayerAnimState()
 	m_flEyePitch = 0.0f;
 	m_bCurrentFeetYawInitialized = false;
 	m_flCurrentTorsoYaw = 0.0f;
-	m_nTurningInPlace = TURN_NONE;
+	m_flCurrentTorsoYaw = TURN_NONE;
 	m_flMaxGroundSpeed = 0.0f;
 	m_flStoredCycle = 0.0f;
 
 	m_flGaitYaw = 0.0f;
 	m_flGoalFeetYaw = 0.0f;
 	m_flCurrentFeetYaw = 0.0f;
+	m_bForceAimYaw = false;
 	m_flLastYaw = 0.0f;
 	m_flLastTurnTime = 0.0f;
 	m_angRender.Init();
@@ -82,6 +91,12 @@ CBasePlayerAnimState::CBasePlayerAnimState()
 	m_pOuter = NULL;
 	m_eCurrentMainSequenceActivity = ACT_IDLE;
 	m_flLastAnimationStateClearTime = 0.0f;
+	/*
+	m_bInFootPlantIdleTurn = false;
+	m_flFootPlantIdleTurnCycle = 0.0f;
+	m_bFootPlantIdleNeedToLiftFeet = false;
+	*/
+	m_flPoseParamTargetDampenedScaleIdeal = 0.0f;
 }
 
 
@@ -204,6 +219,7 @@ void CBasePlayerAnimState::SetOuterPoseParameter( int iParam, float flValue )
 	GetOuter()->SetPoseParameter( iParam, flValue );
 }
 
+
 void CBasePlayerAnimState::ClearAnimationLayers()
 {
 	Assert( 0 ); // unused?
@@ -221,7 +237,6 @@ void CBasePlayerAnimState::ClearAnimationLayers()
 #endif
 	}
 }
-
 
 
 void CBasePlayerAnimState::RestartMainSequence()
@@ -260,9 +275,7 @@ void CBasePlayerAnimState::ComputeMainSequence()
 	// Have our class or the mod-specific class determine what the current activity is.
 	Activity idealActivity = CalcMainActivity();
 
-#ifdef CLIENT_DLL
 	Activity oldActivity = m_eCurrentMainSequenceActivity;
-#endif
 	
 	// Store our current activity so the aim and fire layers know what to do.
 	m_eCurrentMainSequenceActivity = idealActivity;
@@ -270,10 +283,12 @@ void CBasePlayerAnimState::ComputeMainSequence()
 	// Export to our outer class..
 	int animDesired = SelectWeightedSequence( TranslateActivity(idealActivity) );
 
-#if !defined( HL1_CLIENT_DLL ) && !defined ( HL1_DLL )
-	if ( pPlayer->GetSequenceActivity( pPlayer->GetSequence() ) == pPlayer->GetSequenceActivity( animDesired ) )
+#if !defined ( CSTRIKE_DLL )
+	if ( !ShouldResetMainSequence( pPlayer->GetSequence(), animDesired ) )
 		return;
 #endif
+
+	ResetCycleAcrossCustomActivityChange( oldActivity, idealActivity );
 
 	if ( animDesired < 0 )
 		 animDesired = 0;
@@ -281,19 +296,38 @@ void CBasePlayerAnimState::ComputeMainSequence()
 	pPlayer->ResetSequence( animDesired );
 
 #ifdef CLIENT_DLL
-	// If we went from idle to walk, reset the interpolation history.
-	// Kind of hacky putting this here.. it might belong outside the base class.
-	if ( (oldActivity == ACT_CROUCHIDLE || oldActivity == ACT_IDLE) && 
-		 (idealActivity == ACT_WALK || idealActivity == ACT_RUN_CROUCH) )
+	if ( ShouldResetGroundSpeed( oldActivity, idealActivity ) )
 	{
 		ResetGroundSpeed();
 	}
 #endif
 }
 
+void CBasePlayerAnimState::ResetCycleAcrossCustomActivityChange( Activity iCurrent, Activity iNew )
+{
+	if ( !GetOuter() )
+		return;
 
+	if ( iCurrent == ACT_CROUCHIDLE && iNew != ACT_CROUCHIDLE )
+	{
+		GetOuter()->SetCycle(0);
+	}
+}
 
+bool CBasePlayerAnimState::ShouldResetMainSequence( int iCurrentSequence, int iNewSequence )
+{
+	if ( !GetOuter() )
+		return false;
 
+	return GetOuter()->GetSequenceActivity( iCurrentSequence ) == GetOuter()->GetSequenceActivity( iNewSequence );
+}
+
+bool CBasePlayerAnimState::ShouldResetGroundSpeed( Activity oldActivity, Activity idealActivity )
+{
+	// If we went from idle to walk, reset the interpolation history.
+	return ( (oldActivity == ACT_CROUCHIDLE || oldActivity == ACT_IDLE || oldActivity == ACT_TURN || oldActivity == ACT_STEP_FORE ) && 
+			 (idealActivity == ACT_WALK || idealActivity == ACT_RUN_CROUCH || idealActivity == ACT_WALK_CROUCH || idealActivity == ACT_RUN ) );
+}
 
 void CBasePlayerAnimState::UpdateAimSequenceLayers(
 	float flCycle,
@@ -308,68 +342,19 @@ void CBasePlayerAnimState::UpdateAimSequenceLayers(
 	if ( iAimSequence == -1 )
 		iAimSequence = 0;
 
-	// Feed the current state of the animation parameters to the sequence transitioner.
-	// It will hand back either 1 or 2 animations in the queue to set, depending on whether
-	// it's transitioning or not. We just dump those into the animation layers.
-	pTransitioner->CheckForSequenceChange(
-		m_pOuter->GetModelPtr(),
-		iAimSequence,
-		false,	// don't force transitions on the same anim
-		true	// yes, interpolate when transitioning
-		);
+	CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( iFirstLayer );
 
-	pTransitioner->UpdateCurrent(
-		m_pOuter->GetModelPtr(),
-		iAimSequence,
-		flCycle,
-		GetOuter()->GetPlaybackRate(),
-		gpGlobals->curtime
-		);
+	pLayer->m_nSequence = iAimSequence;
+	pLayer->m_flCycle = flCycle;
+	pLayer->m_flWeight = clamp( flWeightScale, 0.0f, 1.0f );
 
-	CAnimationLayer *pDest0 = m_pOuter->GetAnimOverlay( iFirstLayer );
-	CAnimationLayer *pDest1 = m_pOuter->GetAnimOverlay( iFirstLayer+1 );
-
-	if ( pTransitioner->m_animationQueue.Count() == 1 )
-	{
-		// If only 1 animation, then blend it in fully.
-		CAnimationLayer *pSource0 = &pTransitioner->m_animationQueue[0];
-		*pDest0 = *pSource0;
-		
-		pDest0->m_flWeight = 1;
-		pDest1->m_flWeight = 0;
-		pDest0->m_nOrder = iFirstLayer;
+	pLayer->SetOrder( iFirstLayer );	// should already be set
 
 #ifndef CLIENT_DLL
-		pDest0->m_fFlags |= ANIM_LAYER_ACTIVE;
+	pLayer->m_fFlags |= ANIM_LAYER_ACTIVE;
 #endif
-	}
-	else if ( pTransitioner->m_animationQueue.Count() >= 2 )
-	{
-		// The first one should be fading out. Fade in the new one inversely.
-		CAnimationLayer *pSource0 = &pTransitioner->m_animationQueue[0];
-		CAnimationLayer *pSource1 = &pTransitioner->m_animationQueue[1];
 
-		*pDest0 = *pSource0;
-		*pDest1 = *pSource1;
-		Assert( pDest0->m_flWeight >= 0.0f && pDest0->m_flWeight <= 1.0f );
-		pDest1->m_flWeight = 1 - pDest0->m_flWeight;	// This layer just mirrors the other layer's weight (one fades in while the other fades out).
 
-		pDest0->m_nOrder = iFirstLayer;
-		pDest1->m_nOrder = iFirstLayer+1;
-
-#ifndef CLIENT_DLL
-		pDest0->m_fFlags |= ANIM_LAYER_ACTIVE;
-		pDest1->m_fFlags |= ANIM_LAYER_ACTIVE;
-#endif
-	}
-	
-	pDest0->m_flWeight *= flWeightScale * flAimSequenceWeight;
-	pDest0->m_flWeight = clamp( (float)pDest0->m_flWeight, 0.0f, 1.0f );
-
-	pDest1->m_flWeight *= flWeightScale * flAimSequenceWeight;
-	pDest1->m_flWeight = clamp( (float)pDest1->m_flWeight, 0.0f, 1.0f );
-
-	pDest0->m_flCycle = pDest1->m_flCycle = flCycle;
 }
 
 
@@ -392,8 +377,9 @@ void CBasePlayerAnimState::OptimizeLayerWeights( int iFirstLayer, int nLayers )
 	CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( iFirstLayer );
 	if ( pLayer->IsActive() && pLayer->m_flWeight > 0.0f )
 	{
-		pLayer->m_flWeight = 1.0f - totalWeight;
-		pLayer->m_flWeight = MAX( (float)pLayer->m_flWeight, 0.0f);
+		float flWeight = 1.0f - totalWeight;
+		flWeight = MAX( flWeight, 0.0f );
+		pLayer->m_flWeight = flWeight;
 	}
 
 	// This part is just an optimization. Since we have the walk/run animations weighted on top of 
@@ -415,7 +401,7 @@ void CBasePlayerAnimState::OptimizeLayerWeights( int iFirstLayer, int nLayers )
 		{
 			CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( iFirstLayer+i );
 #ifdef CLIENT_DLL 
-			pLayer->m_nOrder = CBaseAnimatingOverlay::MAX_OVERLAYS;
+			pLayer->SetOrder( CBaseAnimatingOverlay::MAX_OVERLAYS );
 #else
 			pLayer->m_nOrder.Set( CBaseAnimatingOverlay::MAX_OVERLAYS );
 			pLayer->m_fFlags = 0;
@@ -428,7 +414,7 @@ bool CBasePlayerAnimState::ShouldBlendAimSequenceToIdle()
 {
 	Activity act = GetCurrentMainSequenceActivity();
 
-	return (act == ACT_RUN || act == ACT_WALK || act == ACT_RUNTOIDLE || act == ACT_RUN_CROUCH);
+	return (act == ACT_RUN || act == ACT_LEAP || act == ACT_WALK || act == ACT_JUMP || act == ACT_RUNTOIDLE || act == ACT_RUN_CROUCH || act == ACT_WALK_CROUCH );
 }
 
 void CBasePlayerAnimState::ComputeAimSequence()
@@ -438,26 +424,30 @@ void CBasePlayerAnimState::ComputeAimSequence()
 	// Synchronize the lower and upper body cycles.
 	float flCycle = m_pOuter->GetCycle();
 
-	// Figure out the new cycle time.
-	UpdateAimSequenceLayers( flCycle, AIMSEQUENCE_LAYER, true, &m_IdleSequenceTransitioner, 1 );
-	
+	//[msmith]
+	bool bIsMoving = false;
+	float flPlaybackRate = 0.0f;
+
 	if ( ShouldBlendAimSequenceToIdle() )
 	{
-		// What we do here is blend between the idle upper body animation (like where he's got the dual elites
-		// held out in front of him but he's not moving) and his walk/run/crouchrun upper body animation,
-		// weighting it based on how fast he's moving. That way, when he's moving slowly, his upper 
-		// body doesn't jiggle all around.
-		bool bIsMoving;
-		float flPlaybackRate = CalcMovementPlaybackRate( &bIsMoving );
-		if ( bIsMoving )
-			UpdateAimSequenceLayers( flCycle, AIMSEQUENCE_LAYER+2, false, &m_SequenceTransitioner, flPlaybackRate );
+		// See how much the player should weigh in the motion vs. the idle layers.
+		flPlaybackRate = CalcMovementPlaybackRate( &bIsMoving );
+	}
+
+	// Set the idle layers to full (blend between different idle layers only and do NOT consider movement layers).
+	UpdateAimSequenceLayers( flCycle, AIMSEQUENCE_LAYER, true, &m_HighAimSequenceTransitioner, 1.0f );
+
+	if ( bIsMoving )
+	{
+		// Blend the run / walk layers together.
+		UpdateAimSequenceLayers( flCycle, AIMSEQUENCE_LAYER+1, false, &m_LowAimSequenceTransitioner, flPlaybackRate );
 	}
 
 	OptimizeLayerWeights( AIMSEQUENCE_LAYER, NUM_AIMSEQUENCE_LAYERS );
 }
 
 
-int CBasePlayerAnimState::CalcSequenceIndex( const char *pBaseName, ... )
+int CBasePlayerAnimState::CalcSequenceIndex( PRINTF_FORMAT_STRING const char *pBaseName, ... )
 {
 	char szFullName[512];
 	va_list marker;
@@ -470,7 +460,7 @@ int CBasePlayerAnimState::CalcSequenceIndex( const char *pBaseName, ... )
 	if ( iSequence == -1 )
 	{
 		static CUtlDict<int,int> dict;
-		if ( dict.Find( szFullName ) == -1 )
+		if ( dict.Find( szFullName ) == dict.InvalidIndex() )
 		{
 			dict.Insert( szFullName, 0 );
 			Warning( "CalcSequenceIndex: can't find '%s'.\n", szFullName );
@@ -521,9 +511,8 @@ float CBasePlayerAnimState::CalcMovementPlaybackRate( bool *bIsMoving )
 		}
 		else
 		{
-			// Note this gets set back to 1.0 if sequence changes due to ResetSequenceInfo below
 			flReturnValue = speed / flGroundSpeed;
-			flReturnValue = clamp( flReturnValue, 0.01f, 10.f );	// don't go nuts here.
+			flReturnValue = clamp( flReturnValue, 0.01, 10 );	// don't go nuts here.
 		}
 		*bIsMoving = true;
 	}
@@ -582,6 +571,9 @@ void CBasePlayerAnimState::EstimateYaw()
 	}
 }
 
+#define MOVEMENT_MINIMUM_ANIMATED_SPEED 10.0f
+#define MOVEMENT_MAXIMUM_PLAYBACK_RATE 1.3f
+
 //-----------------------------------------------------------------------------
 // Purpose: Override for backpeddling
 // Input  : dt - 
@@ -637,10 +629,11 @@ void CBasePlayerAnimState::ComputePoseParam_MoveYaw( CStudioHdr *pStudioHdr )
 	
 	if ( m_AnimConfig.m_LegAnimType == LEGANIM_9WAY )
 	{
-#ifndef CLIENT_DLL
 		//Adrian: Make the model's angle match the legs so the hitboxes match on both sides.
+		//[msmith]: Since bounding box code uses the entities local angle, we need the local angle to match
+		//			the render angle on both the server AND the client.  The server for hit tests, the client
+		//			for proper visibility culling.
 		GetOuter()->SetLocalAngles( QAngle( 0, m_flCurrentFeetYaw, 0 ) );
-#endif
 
 		int iMoveX = GetOuter()->LookupPoseParameter( pStudioHdr, "move_x" );
 		int iMoveY = GetOuter()->LookupPoseParameter( pStudioHdr, "move_y" );
@@ -650,14 +643,92 @@ void CBasePlayerAnimState::ComputePoseParam_MoveYaw( CStudioHdr *pStudioHdr )
 		bool bIsMoving;
 		float flPlaybackRate = CalcMovementPlaybackRate( &bIsMoving );
 
+#ifdef CLIENT_DLL
+		Vector vel;
+		GetOuterAbsVelocity( vel );
+		bIsMoving = ( vel.Length2D() > 0 );
+#endif
+
 		// Setup the 9-way blend parameters based on our speed and direction.
 		Vector2D vCurMovePose( 0, 0 );
 
+		m_flPoseParamTargetDampenedScaleIdeal = Approach( flPlaybackRate, m_flPoseParamTargetDampenedScaleIdeal, gpGlobals->frametime * POSE_PARAM_DELTA_DAMPEN );
+
 		if ( bIsMoving )
 		{
-			vCurMovePose.x = cos( DEG2RAD( flYaw ) ) * flPlaybackRate;
-			vCurMovePose.y = -sin( DEG2RAD( flYaw ) ) * flPlaybackRate;
+			vCurMovePose.x = cos( DEG2RAD( flYaw ) );
+			vCurMovePose.y = -sin( DEG2RAD( flYaw ) );
+			// movement pose parameters on the diagonals are encoded at 1 instead of 0.707 (cos 45)
+			// scale to the outside of a box instead of the outside of a circle.
+			float scale = fabs( vCurMovePose.x );
+			float scale2 = fabs( vCurMovePose.y );
+			if ( scale2 > scale ) scale = scale2;
+			if ( scale > 0.01f )
+			{
+				scale = 1.0f / scale;
+				vCurMovePose.x *= scale;
+				vCurMovePose.y *= scale;
+			}
+
+#ifdef CLIENT_DLL
+			// find the max speed the animation will move in the current direction
+
+			//If these aren't applied here, the legs stutter. Even though they're re-applied in a sec
+			GetOuter()->SetPoseParameter( pStudioHdr, iMoveX, vCurMovePose.x );
+			GetOuter()->SetPoseParameter( pStudioHdr, iMoveY, vCurMovePose.y );
+
+			Vector vecAnimatedVel;
+			GetOuter()->GetBlendedLinearVelocity( &vecAnimatedVel );
+			float flAnimatedSpeed = vecAnimatedVel.Length2D();
+
+			// find how to scale the current animation down to the desired speed
+			Vector vel;
+			GetOuterAbsVelocity( vel );
+			float flMovementSpeed = vel.Length2D();
+
+			if ( flAnimatedSpeed > CS_PLAYER_SPEED_RUN )
+				flAnimatedSpeed = flMovementSpeed;
+
+			if ( flAnimatedSpeed < MOVEMENT_MINIMUM_ANIMATED_SPEED )
+			{
+				// we're moving so slowly (either just starting or just stopping) that current playback rate is almost nothing.
+				flPlaybackRate = flMovementSpeed / ( MOVEMENT_MINIMUM_ANIMATED_SPEED * 2.0f );
+			}
+			else
+			{
+				
+				flPlaybackRate = flMovementSpeed / flAnimatedSpeed;
+			}
+
+			// player is moving less than what's animated, scale pose parameters back towards 0,0
+			if ( flPlaybackRate < 1.0f )
+			{
+				if ( flPlaybackRate > 0.08f )
+				{
+					vCurMovePose.x *= flPlaybackRate;
+					vCurMovePose.y *= flPlaybackRate;
+					GetOuter()->SetPlaybackRate( flPlaybackRate );
+				}
+				else
+				{
+					vCurMovePose.x *= 0.08f;
+					vCurMovePose.y *= 0.08f;
+					GetOuter()->SetPlaybackRate( 1.0f );
+				}
+			}
+			else
+			{
+				// speed up the animation to match the needed motion, but only so far
+				flPlaybackRate = clamp( flPlaybackRate, 1.0f, MOVEMENT_MAXIMUM_PLAYBACK_RATE );
+				GetOuter()->SetPlaybackRate( flPlaybackRate );
+			}
+#endif
+			vCurMovePose.x *= m_flPoseParamTargetDampenedScaleIdeal;
+			vCurMovePose.y *= m_flPoseParamTargetDampenedScaleIdeal;
+
 		}
+
+
 
 		GetOuter()->SetPoseParameter( pStudioHdr, iMoveX, vCurMovePose.x );
 		GetOuter()->SetPoseParameter( pStudioHdr, iMoveY, vCurMovePose.y );
@@ -676,6 +747,7 @@ void CBasePlayerAnimState::ComputePoseParam_MoveYaw( CStudioHdr *pStudioHdr )
 			// This makes the 8-way blend act like a 9-way blend by blending to 
 			// an idle sequence as he slows down.
 #if defined(CLIENT_DLL)
+#ifndef INFESTED_DLL
 			bool bIsMoving;
 			CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( MAIN_IDLE_SEQUENCE_LAYER );
 			
@@ -702,9 +774,10 @@ void CBasePlayerAnimState::ComputePoseParam_MoveYaw( CStudioHdr *pStudioHdr )
 			}
 			
 			pLayer->m_flPlaybackRate = 1;
-			pLayer->m_flCycle += m_pOuter->GetSequenceCycleRate( pStudioHdr, pLayer->m_nSequence ) * gpGlobals->frametime;
+			pLayer->m_flCycle = pLayer->m_flCycle + m_pOuter->GetSequenceCycleRate( pStudioHdr, pLayer->m_nSequence ) * gpGlobals->frametime;
 			pLayer->m_flCycle = fmod( pLayer->m_flCycle, 1 );
-			pLayer->m_nOrder = MAIN_IDLE_SEQUENCE_LAYER;
+			pLayer->SetOrder( MAIN_IDLE_SEQUENCE_LAYER );
+#endif
 #endif
 		}
 	}
@@ -723,7 +796,7 @@ void CBasePlayerAnimState::ComputePoseParam_BodyPitch( CStudioHdr *pStudioHdr )
 	{
 		flPitch -= 360.0f;
 	}
-	flPitch = clamp( flPitch, -90.f, 90.f );
+	flPitch = clamp( flPitch, -90, 90 );
 
 	// See if we have a blender for pitch
 	int pitch = GetOuter()->LookupPoseParameter( pStudioHdr, "body_pitch" );
@@ -764,7 +837,20 @@ int CBasePlayerAnimState::ConvergeAngles( float goal,float maxrate, float maxgap
 	if ( anglediffabs > maxgap )
 	{
 		// gap is too big, jump
-		maxmove = (anglediffabs - maxgap);
+		//maxmove = (anglediffabs - maxgap);
+		float flTooFar = MIN( anglediffabs - maxgap, maxmove * 5 );
+		if ( anglediff > 0 )
+		{
+			current += flTooFar;
+		}
+		else
+		{
+			current -= flTooFar;
+		}
+		current = AngleNormalize( current );
+		anglediff = goal - current;
+		anglediff = AngleNormalize( anglediff );
+		anglediffabs = fabs( anglediff );
 	}
 
 	if ( anglediffabs < maxmove )
@@ -809,8 +895,9 @@ void CBasePlayerAnimState::ComputePoseParam_BodyYaw()
 		m_bCurrentFeetYawInitialized = true;
 		m_flGoalFeetYaw = m_flCurrentFeetYaw = m_flEyeYaw;
 		m_flLastTurnTime = 0.0f;
+		//m_bInFootPlantIdleTurn = false;
 	}
-	else if ( bIsMoving )
+	else if ( bIsMoving || m_bForceAimYaw )
 	{
 		// player is moving, feet yaw = aiming yaw
 		if ( m_AnimConfig.m_LegAnimType == LEGANIM_9WAY || m_AnimConfig.m_LegAnimType == LEGANIM_8WAY )
@@ -830,11 +917,21 @@ void CBasePlayerAnimState::ComputePoseParam_BodyYaw()
 				m_flGoalFeetYaw += 180;
 			}
 		}
-
+		//m_bInFootPlantIdleTurn = false;
 	}
-	else if ( (gpGlobals->curtime - m_flLastTurnTime) > mp_facefronttime.GetFloat() )
+	else if ( (gpGlobals->curtime - m_flLastTurnTime) > mp_facefronttime.GetFloat() && m_flGoalFeetYaw != m_flEyeYaw )
 	{
 		// player didn't move & turn for quite some time
+		/*if ( vel.Length2D() <= FOOTPLANT_MINIMUM_SPEED )
+		{
+			m_bInFootPlantIdleTurn = true;
+			if ( m_flFootPlantIdleTurnCycle >= 1 )
+				m_flFootPlantIdleTurnCycle = 0;
+		}
+
+		float flDiff = AngleNormalize(m_flGoalFeetYaw - m_flEyeYaw);
+		m_bFootPlantIdleNeedToLiftFeet = (fabs(flDiff) > m_AnimConfig.m_flIdleFootPlantFootLiftDelta);*/
+
 		m_flGoalFeetYaw = m_flEyeYaw;
 	}
 	else
@@ -844,22 +941,51 @@ void CBasePlayerAnimState::ComputePoseParam_BodyYaw()
 
 		if ( fabs(flDiff) > m_AnimConfig.m_flMaxBodyYawDegrees )
 		{
+			/*if ( vel.Length2D() <= FOOTPLANT_MINIMUM_SPEED )
+			{
+				m_bInFootPlantIdleTurn = true;
+				if ( m_flFootPlantIdleTurnCycle >= 1 )
+					m_flFootPlantIdleTurnCycle = 0;
+			}
+
+			m_bFootPlantIdleNeedToLiftFeet = true;*/
+
 			if ( flDiff  > 0 )
 				m_flGoalFeetYaw -= m_AnimConfig.m_flMaxBodyYawDegrees;
 			else
 				m_flGoalFeetYaw += m_AnimConfig.m_flMaxBodyYawDegrees;
 		}
+		/*
+		// If current yaw is significantly different from goal, abort idle foot ik to avoid intersecting the legs
+		if ( m_bInFootPlantIdleTurn )
+		{
+			float flDiffYaw = AngleNormalize(m_flCurrentFeetYaw - m_flGoalFeetYaw);
+			if ( fabs(flDiffYaw) > m_AnimConfig.m_flIdleFootPlantMaxYaw )
+			{
+				m_bInFootPlantIdleTurn = false;
+				m_flFootPlantIdleTurnCycle = 0;
+			}
+		}*/
 	}
 
 	m_flGoalFeetYaw = AngleNormalize( m_flGoalFeetYaw );
 
 	if ( m_flCurrentFeetYaw != m_flGoalFeetYaw )
 	{
-		ConvergeAngles( m_flGoalFeetYaw, mp_feetyawrate.GetFloat(), m_AnimConfig.m_flMaxBodyYawDegrees,
-			 gpGlobals->frametime, m_flCurrentFeetYaw );
+		if ( m_bForceAimYaw )
+		{
+			m_flCurrentFeetYaw = m_flGoalFeetYaw;
+		}
+		else
+		{
+			ConvergeAngles( m_flGoalFeetYaw, GetFeetYawRate(), m_AnimConfig.m_flMaxBodyYawDegrees, gpGlobals->frametime, m_flCurrentFeetYaw );
+		}
 
 		m_flLastTurnTime = gpGlobals->curtime;
 	}
+
+	// Turn off a force aim yaw - either we have already updated or we don't need to.
+	m_bForceAimYaw = false;
 
 	float flCurrentTorsoYaw = AngleNormalize( m_flEyeYaw - m_flCurrentFeetYaw );
 
@@ -917,6 +1043,11 @@ const QAngle& CBasePlayerAnimState::GetRenderAngles()
 	return m_angRender;
 }
 
+void CBasePlayerAnimState::SetForceAimYaw( bool bForce )
+{
+	m_bForceAimYaw = bForce;
+}
+
 
 void CBasePlayerAnimState::GetOuterAbsVelocity( Vector& vel ) const
 {
@@ -936,7 +1067,7 @@ float CBasePlayerAnimState::GetOuterXYSpeed() const
 }
 
 // -----------------------------------------------------------------------------
-void CBasePlayerAnimState::AnimStateLog( const char *pMsg, ... )
+void CBasePlayerAnimState::AnimStateLog( PRINTF_FORMAT_STRING const char *pMsg, ... )
 {
 	// Format the string.
 	char str[4096];
@@ -966,7 +1097,7 @@ void CBasePlayerAnimState::AnimStateLog( const char *pMsg, ... )
 
 
 // -----------------------------------------------------------------------------
-void CBasePlayerAnimState::AnimStatePrintf( int iLine, const char *pMsg, ... )
+void CBasePlayerAnimState::AnimStatePrintf( int iLine, PRINTF_FORMAT_STRING const char *pMsg, ... )
 {
 	// Format the string.
 	char str[4096];
@@ -1012,7 +1143,7 @@ void CBasePlayerAnimState::DebugShowAnimState( int iStartLine )
 		CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( AIMSEQUENCE_LAYER + i );
 #ifdef CLIENT_DLL
 		AnimStatePrintf( iLine++, "%s(%d), weight: %.2f, cycle: %.2f, order (%d), aim (%d)", 
-			!pLayer->IsActive() ? "-- ": (pLayer->m_nSequence == 0 ? "-- " : GetSequenceName( m_pOuter->GetModelPtr(), pLayer->m_nSequence ) ), 
+			!pLayer->IsActive() ? "-- ": (pLayer->m_nSequence == 0 ? "-- " : (showanimstate_activities.GetBool()) ? GetSequenceActivityName( m_pOuter->GetModelPtr(), pLayer->m_nSequence ) : GetSequenceName( m_pOuter->GetModelPtr(), pLayer->m_nSequence ) ), 
 			!pLayer->IsActive() ? 0 : (int)pLayer->m_nSequence, 
 			!pLayer->IsActive() ? 0 : (float)pLayer->m_flWeight, 
 			!pLayer->IsActive() ? 0 : (float)pLayer->m_flCycle, 
@@ -1021,7 +1152,7 @@ void CBasePlayerAnimState::DebugShowAnimState( int iStartLine )
 			);
 #else
 		AnimStatePrintf( iLine++, "%s(%d), flags (%d), weight: %.2f, cycle: %.2f, order (%d), aim (%d)", 
-			!pLayer->IsActive() ? "-- " : ( pLayer->m_nSequence == 0 ? "-- " : GetSequenceName( m_pOuter->GetModelPtr(), pLayer->m_nSequence ) ), 
+			!pLayer->IsActive() ? "-- " : ( pLayer->m_nSequence == 0 ? "-- " : (showanimstate_activities.GetBool()) ? GetSequenceActivityName( m_pOuter->GetModelPtr(), pLayer->m_nSequence ) : GetSequenceName( m_pOuter->GetModelPtr(), pLayer->m_nSequence ) ), 
 			!pLayer->IsActive() ? 0 : (int)pLayer->m_nSequence, 
 			!pLayer->IsActive() ? 0 : (int)pLayer->m_fFlags,// Doesn't exist on client
 			!pLayer->IsActive() ? 0 : (float)pLayer->m_flWeight, 
@@ -1054,12 +1185,24 @@ void CBasePlayerAnimState::DebugShowAnimState( int iStartLine )
 	angles[YAW] = m_flEyeYaw;
 	Vector vForward, vRight, vUp;
 	AngleVectors( angles, &vForward, &vRight, &vUp );
-	debugoverlay->AddTriangleOverlay( vBasePos+vRight*flBaseSize/2, vBasePos-vRight*flBaseSize/2, vBasePos+vForward*flHeight, 255, 0, 0, 255, false, 0.01 );
+	debugoverlay->AddTriangleOverlay( vBasePos+vRight*flBaseSize/2, vBasePos-vRight*flBaseSize/2, vBasePos+vForward*flHeight, 255, 0, 0, 255, false, gpGlobals->frametime );
 
 	// Draw a blue triangle on the ground for the body yaw.
 	angles[YAW] = m_angRender[YAW];
 	AngleVectors( angles, &vForward, &vRight, &vUp );
-	debugoverlay->AddTriangleOverlay( vBasePos+vRight*flBaseSize/2, vBasePos-vRight*flBaseSize/2, vBasePos+vForward*flHeight, 0, 0, 255, 255, false, 0.01 );
+	debugoverlay->AddTriangleOverlay( vBasePos+vRight*flBaseSize/2, vBasePos-vRight*flBaseSize/2, vBasePos+vForward*flHeight, 0, 0, 255, 255, false, gpGlobals->frametime );
+
+	
+	//left limit
+	angles[YAW] = m_flEyeYaw - 60;
+	AngleVectors(angles, &vForward, &vRight, &vUp);
+	debugoverlay->AddTriangleOverlay(vBasePos + vRight*flBaseSize / 4, vBasePos - vRight*flBaseSize / 4, vBasePos + vForward*flHeight, 0, 255, 0, 100, false, gpGlobals->frametime);
+
+	//right limit
+	angles[YAW] = m_flEyeYaw + 60;
+	AngleVectors(angles, &vForward, &vRight, &vUp);
+	debugoverlay->AddTriangleOverlay(vBasePos + vRight*flBaseSize / 4, vBasePos - vRight*flBaseSize / 4, vBasePos + vForward*flHeight, 0, 255, 0, 100, false, gpGlobals->frametime);
+
 
 }
 
@@ -1079,3 +1222,7 @@ int CBasePlayerAnimState::SelectWeightedSequence( Activity activity )
 	return GetOuter()->SelectWeightedSequence( activity ); 
 }
 
+float CBasePlayerAnimState::GetFeetYawRate( void )
+{
+	return mp_feetyawrate.GetFloat();
+}

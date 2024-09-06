@@ -380,7 +380,7 @@ public:
 	void MakeVIP( bool isVIP );
 
 	virtual void SetAnimation( PLAYER_ANIM playerAnim );
-	ICSPlayerAnimState *GetPlayerAnimState() { return m_PlayerAnimState; }
+	IPlayerAnimState *GetPlayerAnimState() { return m_PlayerAnimState; }
 
 	virtual bool StartReplayMode( float fDelay, float fDuration, int iEntity );
 	virtual void StopReplayMode();
@@ -695,7 +695,7 @@ public:
     int GetNumFirearmsUsed() { return m_WeaponTypesUsed.Count(); }
 
 	void ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
-	
+
 	//=============================================================================
 	// HPE_END
 	//=============================================================================
@@ -879,7 +879,7 @@ protected:
 
 private:
 
-	ICSPlayerAnimState *m_PlayerAnimState;
+	IPlayerAnimState *m_PlayerAnimState;
 
 	// Aiming heuristics code
 	float						m_flIdleTime;		//Amount of time we've been motionless

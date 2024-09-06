@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -27,12 +27,15 @@
 // animation at low playback rate).
 #define MOVING_MINIMUM_SPEED 0.5f
 
+//#define FOOTPLANT_MINIMUM_SPEED 0.1f
 
 #define MAIN_IDLE_SEQUENCE_LAYER 0	// For 8-way blended models, this layer blends an idle on top of the run/walk animation to simulate a 9-way blend.
 									// For 9-way blended models, we don't use this layer.
 
 #define AIMSEQUENCE_LAYER		1	// Aim sequence uses layers 0 and 1 for the weapon idle animation (needs 2 layers so it can blend).
-#define NUM_AIMSEQUENCE_LAYERS	4	// Then it uses layers 2 and 3 to blend in the weapon run/walk/crouchwalk animation.
+
+
+#define NUM_AIMSEQUENCE_LAYERS	2	// Then it uses layers 2 and 3 to blend in the weapon run/walk/crouchwalk animation.
 
 
 // Everyone who derives from CBasePlayerAnimState gets to fill in this info
@@ -43,7 +46,11 @@ public:
 	// This tells how far the upper body can rotate left and right. If he begins to rotate
 	// past this, it'll turn his feet to face his upper body.
 	float	m_flMaxBodyYawDegrees;
-
+	
+	float	m_flMaxBodyYawDegreesCorrectionAmount;
+	//float	m_flIdleFootPlantMaxYaw;
+	//float	m_flIdleFootPlantFootLiftDelta;
+	
 	// How do the legs animate?
 	LegAnimType_t m_LegAnimType;
 
@@ -56,7 +63,7 @@ public:
 // CBasePlayerAnimState declaration.
 // ------------------------------------------------------------------------------------------------ //
 
-abstract_class CBasePlayerAnimState : virtual public IPlayerAnimState
+abstract_class CBasePlayerAnimState : public IPlayerAnimState
 {
 public:
 	DECLARE_CLASS_NOBASE( CBasePlayerAnimState );
@@ -95,6 +102,7 @@ public:
 	// it will change his body_yaw pose parameter before changing his rendered angle).
 	virtual const QAngle& GetRenderAngles();
 
+	virtual void SetForceAimYaw( bool bForce );
 
 // Overrideables.
 public:
@@ -162,6 +170,8 @@ public:
 
 	void				RestartMainSequence();
 
+	virtual	float		GetFeetYawRate( void );
+
 
 // Helpers for the derived classes to use.
 protected:
@@ -180,18 +190,21 @@ protected:
 
 	float				GetEyeYaw() const { return m_flEyeYaw; }
 
+	void				SetOuterPoseParameter( int iParam, float flValue );
+
 protected:
 	
 	CModAnimConfig		m_AnimConfig;
 	CBaseAnimatingOverlay	*m_pOuter;
 
 protected:
-	int					ConvergeAngles( float goal,float maxrate, float maxgap, float dt, float& current );
+	virtual int			ConvergeAngles( float goal,float maxrate, float maxgap, float dt, float& current );
 	virtual void		ComputePoseParam_MoveYaw( CStudioHdr *pStudioHdr );
 	virtual void		ComputePoseParam_BodyPitch( CStudioHdr *pStudioHdr );
 	virtual void		ComputePoseParam_BodyYaw();
 
 	virtual void		ResetGroundSpeed( void );
+	virtual bool		ShouldResetGroundSpeed( Activity oldActivity, Activity idealActivity );
 
 protected:
 	// The player's eye yaw and pitch angles.
@@ -206,6 +219,8 @@ protected:
 	float				m_flCurrentFeetYaw;
 	bool				m_bCurrentFeetYawInitialized;
 
+	bool				m_bForceAimYaw;
+
 	float				m_flCurrentTorsoYaw;
 
 	// To check if they are rotating in place
@@ -219,6 +234,14 @@ protected:
 
 	QAngle				m_angRender;
 
+	Vector2D			m_vLastMovePose;
+	/*
+	bool				m_bInFootPlantIdleTurn;
+	float				m_flFootPlantIdleTurnCycle;
+	bool				m_bFootPlantIdleNeedToLiftFeet;
+	*/
+	float				m_flPoseParamTargetDampenedScaleIdeal;
+
 private:
 
 	// Update the prone state machine.
@@ -229,15 +252,15 @@ private:
 
 	Activity			BodyYawTranslateActivity( Activity activity );
 
-	void				SetOuterPoseParameter( int iParam, float flValue );
-
-
 	void				EstimateYaw();
 
+	virtual bool		ShouldResetMainSequence( int iCurrentSequence, int iNewSequence );
 	void				ComputeMainSequence();
 	void				ComputeAimSequence();
 
 	void				ComputePlaybackRate();
+
+	void				ResetCycleAcrossCustomActivityChange( Activity iCurrent, Activity iNew );
 
 	void UpdateInterpolators();
 	float GetInterpolatedGroundSpeed();
@@ -258,8 +281,6 @@ private:
 	float				m_flGaitYaw;
 	float				m_flStoredCycle;
 
-	Vector2D			m_vLastMovePose;
-
 	void UpdateAimSequenceLayers(
 		float flCycle,
 		int iFirstLayer,
@@ -270,9 +291,11 @@ private:
 
 	void OptimizeLayerWeights( int iFirstLayer, int nLayers );
 
+protected:
+
 	// This gives us smooth transitions between aim anim sequences on the client.
-	CSequenceTransitioner	m_IdleSequenceTransitioner;
-	CSequenceTransitioner	m_SequenceTransitioner;
+	CSequenceTransitioner	m_HighAimSequenceTransitioner;
+	CSequenceTransitioner	m_LowAimSequenceTransitioner;
 };
 
 extern float g_flLastBodyPitch, g_flLastBodyYaw, m_flLastMoveYaw;

@@ -103,6 +103,8 @@ BEGIN_DATADESC( CBaseCombatCharacter )
 	DEFINE_AUTO_ARRAY( m_iAmmo, FIELD_INTEGER ),
 	DEFINE_AUTO_ARRAY( m_hMyWeapons, FIELD_EHANDLE ),
 	DEFINE_FIELD( m_hActiveWeapon, FIELD_EHANDLE ),
+	DEFINE_FIELD( m_flTimeOfLastInjury, FIELD_FLOAT ),
+	DEFINE_FIELD( m_nRelativeDirectionOfLastInjury, FIELD_INTEGER ),
 	DEFINE_FIELD( m_bForceServerRagdoll, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bPreventWeaponPickup, FIELD_BOOLEAN ),
 
@@ -197,6 +199,8 @@ IMPLEMENT_SERVERCLASS_ST(CBaseCombatCharacter, DT_BaseCombatCharacter)
 	SendPropDataTable( "bcc_localdata", 0, &REFERENCE_SEND_TABLE(DT_BCCLocalPlayerExclusive), SendProxy_SendBaseCombatCharacterLocalDataTable ),
 
 	SendPropEHandle( SENDINFO( m_hActiveWeapon ) ),
+	SendPropTime( SENDINFO( m_flTimeOfLastInjury ) ),
+	SendPropInt( SENDINFO( m_nRelativeDirectionOfLastInjury ), 3, SPROP_UNSIGNED ),
 	SendPropArray3( SENDINFO_ARRAY3(m_hMyWeapons), SendPropEHandle( SENDINFO_ARRAY(m_hMyWeapons) ) ),
 
 #ifdef INVASION_DLL
@@ -778,6 +782,8 @@ void CBaseCombatCharacter::Spawn( void )
 	{
 		m_damageHistory[t].team = TEAM_INVALID;
 	}
+
+	m_flTimeOfLastInjury = 0.0f;
 
 	// not standing on a nav area yet
 	ClearLastKnownArea();
@@ -2374,9 +2380,9 @@ int CBaseCombatCharacter::OnTakeDamage( const CTakeDamageInfo &info )
 	{
 		int attackerTeam = info.GetAttacker()->GetTeamNumber();
 
-		m_hasBeenInjured |= ( 1 << attackerTeam );
+		m_hasBeenInjured |= (1 << attackerTeam);
 
-		for( int i=0; i<MAX_DAMAGE_TEAMS; ++i )
+		for ( int i = 0; i<MAX_DAMAGE_TEAMS; ++i )
 		{
 			if ( m_damageHistory[i].team == attackerTeam )
 			{
@@ -2393,11 +2399,57 @@ int CBaseCombatCharacter::OnTakeDamage( const CTakeDamageInfo &info )
 				break;
 			}
 		}
+
+		m_flTimeOfLastInjury = gpGlobals->curtime;
+
+		// Figure out what relative direction it hit from
+		Vector vDamageDirection = info.GetDamageForce();
+		VectorNormalize( vDamageDirection );
+
+		Vector vForward, vRight;
+		if ( IsPlayer() )
+		{
+			AngleVectors( EyeAngles(), &vForward, &vRight, NULL );
+		}
+		else
+		{
+			GetVectors( &vForward, &vRight, NULL );
+		}
+
+		// Try front and back
+		float flDamageDirectionDot = vForward.Dot( vDamageDirection );
+
+		if ( flDamageDirectionDot <= -0.5f )
+		{
+			m_nRelativeDirectionOfLastInjury = DAMAGED_DIR_FRONT;
+		}
+		else if ( flDamageDirectionDot >= 0.5f )
+		{
+			m_nRelativeDirectionOfLastInjury = DAMAGED_DIR_BACK;
+		}
+		else
+		{
+			// Try left and right sides
+			float flDamageDirectionDot = vRight.Dot( vDamageDirection );
+
+			if ( flDamageDirectionDot <= -0.5f )
+			{
+				m_nRelativeDirectionOfLastInjury = DAMAGED_DIR_RIGHT;
+			}
+			else if ( flDamageDirectionDot >= 0.5f )
+			{
+				m_nRelativeDirectionOfLastInjury = DAMAGED_DIR_LEFT;
+			}
+			else
+			{
+				m_nRelativeDirectionOfLastInjury = DAMAGED_DIR_NONE;
+			}
+		}
 	}
 
-	switch( m_lifeState )
+	switch ( m_lifeState )
 	{
-	case LIFE_ALIVE:
+		case LIFE_ALIVE:
 		retVal = OnTakeDamage_Alive( info );
 		if ( m_iHealth <= 0 )
 		{
@@ -2406,7 +2458,7 @@ int CBaseCombatCharacter::OnTakeDamage( const CTakeDamageInfo &info )
 			{
 				pPhysics->EnableCollisions( false );
 			}
-			
+
 			bool bGibbed = false;
 
 			Event_Killed( info );
@@ -2416,7 +2468,7 @@ int CBaseCombatCharacter::OnTakeDamage( const CTakeDamageInfo &info )
 			{
 				bGibbed = Event_Gibbed( info );
 			}
-			
+
 			if ( bGibbed == false )
 			{
 				Event_Dying( info );
@@ -2425,11 +2477,11 @@ int CBaseCombatCharacter::OnTakeDamage( const CTakeDamageInfo &info )
 		return retVal;
 		break;
 
-	case LIFE_DYING:
+		case LIFE_DYING:
 		return OnTakeDamage_Dying( info );
-	
-	default:
-	case LIFE_DEAD:
+
+		default:
+		case LIFE_DEAD:
 		retVal = OnTakeDamage_Dead( info );
 		if ( m_iHealth <= 0 && g_pGameRules->Damage_ShouldGibCorpse( info.GetDamageType() ) && ShouldGib( info ) )
 		{
@@ -2440,9 +2492,11 @@ int CBaseCombatCharacter::OnTakeDamage( const CTakeDamageInfo &info )
 	}
 }
 
-
 int CBaseCombatCharacter::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 {
+	if ( GetFlags() & FL_GODMODE )
+		return 0;
+
 	// grab the vector of the incoming attack. ( pretend that the inflictor is a little lower than it really is, so the body will tend to fly upward a bit).
 	Vector vecDir = vec3_origin;
 	if (info.GetInflictor())
@@ -2479,7 +2533,6 @@ int CBaseCombatCharacter::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 
 	return 1;
 }
-
 
 int CBaseCombatCharacter::OnTakeDamage_Dying( const CTakeDamageInfo &info )
 {

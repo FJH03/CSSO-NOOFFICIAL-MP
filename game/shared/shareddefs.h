@@ -454,6 +454,17 @@ enum PLAYER_ANIM
 #define	DAMAGE_YES				2
 #define	DAMAGE_AIM				3
 
+enum RelativeDamagedDirection_t
+{
+	DAMAGED_DIR_NONE = 0,
+	DAMAGED_DIR_FRONT,
+	DAMAGED_DIR_BACK,
+	DAMAGED_DIR_LEFT,
+	DAMAGED_DIR_RIGHT,
+
+	DAMAGED_DIR_TOTAL
+};
+
 // Spectator Movement modes
 enum {
 	OBS_MODE_NONE = 0,	// not in spectator mode
