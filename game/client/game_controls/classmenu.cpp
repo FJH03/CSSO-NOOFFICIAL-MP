@@ -193,6 +193,7 @@ void CClassMenu::ShowPanel(bool bShow)
 {
 	if ( bShow )
 	{
+		engine->ClientCmd_Unrestricted("touch_enable 0\n");
 		Activate();
 		SetMouseInputEnabled( true );
 
@@ -216,6 +217,7 @@ void CClassMenu::ShowPanel(bool bShow)
 	}
 	else
 	{
+		engine->ClientCmd_Unrestricted("touch_enable 0\n");
 		SetVisible( false );
 		SetMouseInputEnabled( false );
 	}
