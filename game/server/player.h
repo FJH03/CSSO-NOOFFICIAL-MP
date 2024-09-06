@@ -670,6 +670,7 @@ public:
 
 	// Accessor methods
 	int		FragCount() const		{ return m_iFrags; }
+	int		AssistsCount() const	{ return m_iAssists; }
 	int		DeathCount() const		{ return m_iDeaths;}
 	bool	IsConnected() const		{ return m_iConnected != PlayerDisconnected; }
 	bool	IsDisconnecting() const	{ return m_iConnected == PlayerDisconnecting; }
@@ -1047,6 +1048,7 @@ private:
 
 protected:
 	int						m_iFrags;
+	int						m_iAssists;
 	int						m_iDeaths;
 
 private:

@@ -637,7 +637,7 @@ public:
 
 	virtual void		IncrementFragCount( int nCount );
 	virtual void		IncrementDeathCount( int nCount );
-	//virtual void		IncrementAssistsCount( int nCount );
+	virtual void		IncrementAssistsCount( int nCount );
 	
 	void				SelectDeathPose( const CTakeDamageInfo &info );
 

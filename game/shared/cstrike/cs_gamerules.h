@@ -313,6 +313,8 @@ public:
 
 	virtual void UpdateClientData( CBasePlayer *pl );
 
+	virtual CCSPlayer* CheckAndAwardAssists( CCSPlayer* pCSVictim, CCSPlayer* pKiller );
+
 	// Death notices
 	virtual void		DeathNotice( CBasePlayer *pVictim, const CTakeDamageInfo &info );
 

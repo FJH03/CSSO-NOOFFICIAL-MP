@@ -108,6 +108,8 @@ public:
 
 //private:
 	void			CopyDamageToBaseDamage();
+	int				GetObjectsPenetrated() const { return m_iPlayerPenetrationCount; }
+
 
 protected:
 	void			Init( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, const Vector &reportedPosition, float flDamage, int bitsDamageType, int iKillType, int iObjectsPenetrated );

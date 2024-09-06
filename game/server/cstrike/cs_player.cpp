@@ -9461,7 +9461,7 @@ void CCSPlayer::SavePreControlData()
 	m_PreControlData.m_iSkin	= m_iSkin;
 	m_PreControlData.m_iAccount	= m_iAccount;
 	m_PreControlData.m_iFrags	= FragCount();
-	//m_PreControlData.m_iAssists = AssistsCount();
+	m_PreControlData.m_iAssists = AssistsCount();
 	m_PreControlData.m_iDeaths	= DeathCount();
 }
 
@@ -9959,7 +9959,7 @@ void CCSPlayer::IncrementDeathCount( int nCount )
 	pl.deaths = m_iDeaths;
 }
 
-/*void CCSPlayer::IncrementAssistsCount( int nCount )
+void CCSPlayer::IncrementAssistsCount( int nCount )
 {
 #if CS_CONTROLLABLE_BOTS_ENABLED
 	// calculate death count properly for a bot-controlled player
@@ -9975,8 +9975,8 @@ void CCSPlayer::IncrementDeathCount( int nCount )
 #endif
 
 	m_iAssists += nCount;
-	pl.assists = m_iAssists;
-}*/
+	//pl.assists = m_iAssists;
+}
 
 void UTIL_AwardMoneyToTeam( int iAmount, int iTeam, CBaseEntity *pIgnore )
 {

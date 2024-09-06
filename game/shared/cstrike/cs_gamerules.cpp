@@ -198,6 +198,9 @@ ConVar ammo_molotov_max( "ammo_molotov_max", "1", FCVAR_REPLICATED );
 
 //ConVar mp_dynamicpricing( "mp_dynamicpricing", "0", FCVAR_REPLICATED, "Enables or Disables the dynamic weapon prices" );
 
+#if defined( GAME_DLL )
+ConVar cs_AssistDamageThreshold( "cs_AssistDamageThreshold", "40.0", FCVAR_DEVELOPMENTONLY, "cs_AssistDamageThreshold defines the amount of damage needed to score an assist" );
+#endif
 
 extern ConVar sv_stopspeed;
 
@@ -1541,6 +1544,40 @@ ConVar snd_music_selection(
 		//=============================================================================
 	}
 
+	CCSPlayer* CCSGameRules::CheckAndAwardAssists( CCSPlayer* pCSVictim, CCSPlayer* pKiller )
+    {  
+        CUtlLinkedList< CDamageRecord *, int >& victimDamageTakenList = pCSVictim->GetDamageList();
+        float maxDamage = 0.0f;
+        CCSPlayer* maxDamagePlayer = NULL;
+
+        FOR_EACH_LL( victimDamageTakenList, ii )
+        {
+			if ( victimDamageTakenList[ii]->GetPlayerRecipientPtr() == pCSVictim )
+			{
+				CCSPlayer* pAttackerPlayer = victimDamageTakenList[ii]->GetPlayerDamagerPtr();
+				if ( pAttackerPlayer )
+				{
+					if ( (victimDamageTakenList[ii]->GetDamage() > maxDamage) && (pAttackerPlayer != pKiller) && ( pAttackerPlayer != pCSVictim ) )
+					{
+						maxDamage = victimDamageTakenList[ii]->GetDamage();
+						maxDamagePlayer = pAttackerPlayer;
+					}
+				}
+			}            
+        }
+
+        // note, only the highest damaging player can be awarded an assist
+		if ( maxDamagePlayer && (maxDamage > cs_AssistDamageThreshold.GetFloat()) )
+		{
+			if ( IPointsForKill( maxDamagePlayer, pCSVictim ) > 0 ) // this ensures that only assists on enemies are recorded, but "assists" for teammate kills are not
+			{
+				maxDamagePlayer->IncrementAssistsCount( 1 );
+			}
+			return maxDamagePlayer;
+		}
+
+        return NULL;
+    }
 	//-----------------------------------------------------------------------------
 	// Purpose: 
 	// Input  : *pVictim - 
@@ -1557,9 +1594,13 @@ ConVar snd_music_selection(
 		CBaseEntity *pInflictor = info.GetInflictor();
 		CBaseEntity *pKiller = info.GetAttacker();
 		CBasePlayer *pScorer = GetDeathScorer( pKiller, pInflictor );
-		CCSPlayer *pCSVictim = (CCSPlayer*)(pVictim);
+		CCSPlayer *pCSScorer = ToCSPlayer(pScorer);
+		CCSPlayer *pCSVictim = (CCSPlayer*) (pVictim);
+		CCSPlayer *pAssiter = CheckAndAwardAssists( pCSVictim, (CCSPlayer *) pKiller );
 
 		bool bHeadshot = false;
+		bool bNoScope = false;
+		bool bBlindKill = false;
 
 		if ( pScorer )	// Is the killer a client?
 		{
@@ -1579,6 +1620,18 @@ ConVar snd_music_selection(
 					if ( pScorer->GetActiveWeapon() )
 					{
 						killer_weapon_name = pScorer->GetActiveWeapon()->GetClassname(); //GetDeathNoticeName();
+
+						if ( pCSScorer->GetActiveCSWeapon()->IsKindOf( WEAPONTYPE_SNIPER_RIFLE ) && pCSScorer->GetFOV() == pCSScorer->GetDefaultFOV() )
+						{
+							// assuming that we are no-scoped with a sniper rifle - draw a noscope icon
+							bNoScope = true;
+						}
+
+						if ( pCSScorer->IsBlind() )
+						{
+							// we are flashed - draw a blind kill icon
+							bBlindKill = true;
+						}
 					}
 				}
 				else
@@ -1617,6 +1670,10 @@ ConVar snd_music_selection(
 		{
 			killer_weapon_name = "decoy";
 		}
+		else if( strncmp( killer_weapon_name, "smokegrenade", 5 ) == 0 )	//"smokegrenade_projectile"
+		{
+			killer_weapon_name = "smokegrenade";
+		}
 		else if( strncmp( killer_weapon_name, "molotov", 5 ) == 0 )	//"molotov_projectile"
 		{
 			killer_weapon_name = "molotov";
@@ -1630,11 +1687,38 @@ ConVar snd_music_selection(
 
 		if ( event )
 		{
-			event->SetInt("userid", pVictim->GetUserID() );
+			event->SetInt("userid", pCSVictim->GetUserID() );
+            event->SetInt("assister", pAssiter ? pAssiter->GetUserID() : 0 );
 			event->SetInt("attacker", killer_ID );
 			event->SetString("weapon", killer_weapon_name );
-			event->SetInt("headshot", bHeadshot ? 1 : 0 );
-			event->SetInt("priority", bHeadshot ? 8 : 7 );	// HLTV event priority, not transmitted
+
+			// If the weapon has a silencer but it isn't currently attached, add "_off" suffix to the weapon name so hud can find an alternate icon
+			if ( pInflictor && pScorer && ( pInflictor == pScorer ) )
+			{
+				CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* >( pScorer->GetActiveWeapon() );
+
+				if ( pWeapon )
+				{
+					bool m_bHasSilencer = ( pWeapon->GetWeaponID() == WEAPON_M4A1 ||
+											pWeapon->GetWeaponID() == WEAPON_USP );
+
+					if ( m_bHasSilencer && !pWeapon->IsSilenced() )
+					{
+						if ( V_strEndsWith( killer_weapon_name, "silencer" ) )
+						{
+							char szTempWeaponNameWithOFFsuffix[64];
+							V_snprintf( szTempWeaponNameWithOFFsuffix, sizeof( szTempWeaponNameWithOFFsuffix ), "%s_off", killer_weapon_name );
+							event->SetString( "weapon", szTempWeaponNameWithOFFsuffix );
+						}
+					}
+				}
+			}
+
+			event->SetInt( "headshot", bHeadshot ? 1 : 0 );
+			event->SetInt( "noscope", bNoScope ? 1 : 0 );
+			event->SetInt( "blind", bBlindKill ? 1 : 0 );
+			event->SetInt( "penetrated", info.GetObjectsPenetrated() );
+			event->SetInt( "priority", bHeadshot ? 8 : 7 );	// HLTV event priority, not transmitted
 			if ( pCSVictim->GetDeathFlags() & CS_DEATH_DOMINATION )
 			{
 				event->SetInt( "dominated", 1 );
@@ -1647,6 +1731,7 @@ ConVar snd_music_selection(
 			gameeventmanager->FireEvent( event );
 		}
 	}
+
 
 	//=========================================================
 	//=========================================================
