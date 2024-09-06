@@ -63,6 +63,7 @@ void CBuyMenu::ShowPanel(bool bShow)
 
 	if ( bShow )
 	{
+		engine->ClientCmd_Unrestricted("touch_enable 0\n");
 		Update();
 
 		Run( m_pMainMenu );
@@ -73,6 +74,7 @@ void CBuyMenu::ShowPanel(bool bShow)
 	}
 	else
 	{
+	        engine->ClientCmd_Unrestricted("touch_enable 1\n");
 		engine->ClientCmd_Unrestricted( "gameui_allowescapetoshow\n" );
 
 		SetVisible( false );
