@@ -1939,9 +1939,6 @@ void C_CSPlayer::UpdateClientSideAnimation()
 	}
 }
 
-
-float g_flMuzzleFlashScale=1;
-
 void C_CSPlayer::ProcessMuzzleFlashEvent()
 {
 	CWeaponCSBase *pWeapon = GetActiveCSWeapon();
@@ -2459,16 +2456,6 @@ bool C_CSPlayer::HasC4( void )
 		return pCSPR->HasC4( entindex() );
 	}
 }
-
-void C_CSPlayer::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
-{
-	static ConVar *violence_hblood = cvar->FindVar( "violence_hblood" );
-	if ( violence_hblood && !violence_hblood->GetBool() )
-		return;
-
-	BaseClass::ImpactTrace( pTrace, iDamageType, pCustomImpactName );
-}
-
 
 //-----------------------------------------------------------------------------
 void C_CSPlayer::CalcObserverView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov )

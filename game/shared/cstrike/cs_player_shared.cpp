@@ -24,6 +24,8 @@
 	#include "cs_gamestats.h"
 #endif
 
+#include "tier0/vprof.h"
+
 #include "cs_playeranimstate.h"
 #include "basecombatweapon_shared.h"
 #include "util_shared.h"
@@ -1036,6 +1038,138 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 	nPenetrationCount--;
 	return false;
 }
+
+void CCSPlayer::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
+{
+
+#ifdef CLIENT_DLL
+	if ( sv_server_verify_blood_on_player.GetBool() )
+		return;
+#endif
+
+	static ConVar *violence_hblood = cvar->FindVar( "violence_hblood" );
+	if ( violence_hblood && !violence_hblood->GetBool() )
+		return;
+
+	VPROF( "CCSPlayer::ImpactTrace" );
+	Assert( pTrace->m_pEnt );
+
+	CBaseEntity *pEntity = pTrace->m_pEnt;
+
+	// Build the impact data
+	CEffectData data;
+	data.m_vOrigin = pTrace->endpos;
+	data.m_vStart = pTrace->startpos;
+	data.m_nSurfaceProp = pTrace->surface.surfaceProps;
+	if ( data.m_nSurfaceProp < 0 )
+	{
+		data.m_nSurfaceProp = 0;
+	}
+	data.m_nDamageType = iDamageType;
+	data.m_nHitBox = pTrace->hitbox;
+#ifdef CLIENT_DLL
+	data.m_hEntity = ClientEntityList().EntIndexToHandle( pEntity->entindex() );
+#else
+	data.m_nEntIndex = pEntity->entindex();
+
+	if ( sv_server_verify_blood_on_player.GetBool() )
+	{
+		data.m_vOrigin -= GetAbsOrigin();
+		data.m_vStart -= GetAbsOrigin();
+	}
+
+#endif
+
+	// Send it on its way
+	if ( !pCustomImpactName )
+	{
+		DispatchEffect( "Impact", data );
+	}
+	else
+	{
+		DispatchEffect( pCustomImpactName, data );
+	}
+}
+
+#ifdef CLIENT_DLL
+
+void TE_DynamicLight( IRecipientFilter& filter, float delay,
+	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC );
+
+#if USE_TRACERS
+void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
+{
+	int iTracerFreq = 1;
+	C_WeaponCSBase *pWeapon = GetActiveCSWeapon();
+
+	if ( pWeapon )
+	{
+		// if this is a local player, start at attachment on view model
+		// else start on attachment on weapon model
+		int iEntIndex = entindex();
+		int iUseAttachment = TRACER_DONT_USE_ATTACHMENT;
+		int iAttachment = 1;
+
+		C_CSPlayer *pLocalPlayer = NULL;
+		bool bUseObserverTarget = false;
+
+		pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+		if ( !pLocalPlayer )
+			return;
+
+		if ( pLocalPlayer->GetObserverTarget() == this &&
+			pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE )
+		{
+			bUseObserverTarget = true;
+		}
+		
+		C_BaseViewModel *pViewModel = GetViewModel(WEAPON_VIEWMODEL);
+
+		if ( pWeapon->GetOwner() && pWeapon->GetOwner()->IsDormant() )
+		{
+			// This is likely a player firing from around a corner, where this client can't see them.
+			// Don't modify the tracer start position, since our local world weapon model position is not reliable.
+		}
+		else
+		{
+			iAttachment = pWeapon->LookupAttachment( "muzzle_flash" );
+			if ( iAttachment > 0 )
+				pWeapon->GetAttachment( iAttachment, vecStart );
+		}
+		if ( pViewModel )
+		{
+			iAttachment = pViewModel->LookupAttachment( "1" );
+			pViewModel->GetAttachment( iAttachment, vecStart );
+		}
+
+		// bail if we're at the origin
+		if ( vecStart.LengthSqr() <= 0 )
+			return;
+
+		// muzzle flash dynamic light
+		CPVSFilter filter( vecStart );
+		TE_DynamicLight( filter, 0.0, &vecStart, 255, 192, 64, 5, 70, 0.05, 768 );
+
+		int	nBulletNumber = (pWeapon->GetMaxClip1() - pWeapon->Clip1()) + 1;
+		iTracerFreq = pWeapon->GetCSWpnData().m_iTracerFrequency[pWeapon->m_weaponMode];
+		if ( ( iTracerFreq != 0 ) && ( nBulletNumber % iTracerFreq ) == 0 )
+		{
+			const char *pszTracerEffect = GetTracerType();
+			if ( pszTracerEffect && pszTracerEffect[0] )
+			{
+				UTIL_ParticleTracer( pszTracerEffect, vecStart, vecEnd, iEntIndex, iUseAttachment, true );
+			}
+		}
+		else
+		{
+			// just do the whiz sound
+			FX_TracerSound( vecStart, vecEnd, TRACER_TYPE_DEFAULT );
+		}
+		
+	}
+}
+#endif
+#endif
 
 void CCSPlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOrigin, const Vector &vecVelocity  )
 {

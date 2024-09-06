@@ -72,6 +72,11 @@ public:
 	bool HasHelmet() const;
 	int GetCurrentAssaultSuitPrice();
 
+#if USE_TRACERS
+	// create tracers
+	void CreateWeaponTracer( Vector vecStart, Vector vecEnd );
+#endif
+
 	virtual const QAngle& EyeAngles();
 	virtual const QAngle& GetRenderAngles();
 	virtual void CalcObserverView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov );

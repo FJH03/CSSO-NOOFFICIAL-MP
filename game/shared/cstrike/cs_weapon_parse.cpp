@@ -456,6 +456,12 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	const char* pEjectBrassEffect = pKeyValuesData->GetString( "EjectBrassEffect", "" );
 	Q_strncpy( m_szEjectBrassEffect, pEjectBrassEffect, sizeof( m_szEjectBrassEffect ) );
 
+	// tracer variables
+	m_iTracerFrequency[0] = pKeyValuesData->GetInt( "TracerFrequency", 0 );
+	m_iTracerFrequency[1] = pKeyValuesData->GetInt( "TracerFrequencyAlt", m_iTracerFrequency[0] );
+	const char* pTracerEffect = pKeyValuesData->GetString( "TracerEffect", "" );
+	Q_strncpy( m_szTracerEffect, pTracerEffect, sizeof( m_szTracerEffect ) );
+	
 	// heat variables
 	m_flHeatPerShot = pKeyValuesData->GetFloat( "HeatPerShot", 0.0f );
 	const char* pHeatEffect = pKeyValuesData->GetString( "HeatEffect", "" );

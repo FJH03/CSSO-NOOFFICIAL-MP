@@ -180,6 +180,8 @@ public:
 	bool IsKindOf( CSWeaponType type ) const			{ return GetCSWpnData().m_WeaponType == type; }
 	virtual CSWeaponType GetWeaponType( void ) const	{ return GetCSWpnData().m_WeaponType; }
 
+	const char		*GetTracerType( void ) { return GetCSWpnData().m_szTracerEffect; }
+	
 #ifdef CLIENT_DLL
 	virtual int GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
 	virtual const char* GetMuzzleFlashEffectName( bool bThirdPerson );

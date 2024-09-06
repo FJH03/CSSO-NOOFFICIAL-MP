@@ -1296,6 +1296,9 @@ void CWeaponCSBase::Precache( void )
 
 	if ( GetCSWpnData().m_szEjectBrassEffect[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szEjectBrassEffect );
+
+	if ( GetTracerType()[0] != 0 )
+		PrecacheParticleSystem( GetTracerType() );
 	
 	if ( GetCSWpnData().m_szMuzzleFlash1stPerson[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash1stPerson );

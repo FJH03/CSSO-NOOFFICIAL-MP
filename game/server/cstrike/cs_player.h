@@ -694,6 +694,8 @@ public:
     void PlayerUsedFirearm( CBaseCombatWeapon* pBaseWeapon );
     int GetNumFirearmsUsed() { return m_WeaponTypesUsed.Count(); }
 
+	void ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
+	
 	//=============================================================================
 	// HPE_END
 	//=============================================================================

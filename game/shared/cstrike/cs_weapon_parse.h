@@ -253,6 +253,10 @@ public:
 	// eject brass variables
 	char	m_szEjectBrassEffect[MAX_WEAPON_STRING];
 
+	// tracer variables
+	int		m_iTracerFrequency[2];
+	char	m_szTracerEffect[MAX_WEAPON_STRING];
+
 	// heat variables
 	float	m_flHeatPerShot;
 	char	m_szHeatEffect[MAX_WEAPON_STRING];
