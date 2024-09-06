@@ -134,6 +134,7 @@ public:
 	virtual bool			Interpolate( float currentTime );
 
 	bool					ShouldFlipViewModel();
+	virtual bool			ShouldFlipModel( void ) { return ShouldFlipViewModel(); }
 	void					UpdateAnimationParity( void );
 
 	virtual void			PostBuildTransformations( CStudioHdr *pStudioHdr, Vector *pos, Quaternion q[] );
