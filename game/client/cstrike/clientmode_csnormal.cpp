@@ -314,6 +314,9 @@ void ClientModeCSNormal::Init()
 	ListenForGameEvent( "bomb_planted" );
 	ListenForGameEvent( "bomb_exploded" );
 	ListenForGameEvent( "bomb_defused" );
+	ListenForGameEvent( "hostage_follows" );
+	ListenForGameEvent( "hostage_killed" );
+	ListenForGameEvent( "hostage_hurt" );
 	ListenForGameEvent( "hostage_killed" );
 	ListenForGameEvent( "hostage_hurt" );
 	ListenForGameEvent( "round_freeze_end" );

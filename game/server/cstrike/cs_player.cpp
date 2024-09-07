@@ -380,6 +380,9 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropBool( SENDINFO( m_bHasDefuser ) ),
 	SendPropBool( SENDINFO( m_bNightVisionOn ) ),	//send as int so we can use a RecvProxy on the client
 	SendPropBool( SENDINFO( m_bHasNightVision ) ),
+	SendPropBool( SENDINFO( m_bIsGrabbingHostage ) ),
+	SendPropEHandle( SENDINFO( m_hCarriedHostage ) ),
+	SendPropEHandle( SENDINFO( m_hCarriedHostageProp ) ),
 	SendPropBool( SENDINFO( m_bIsLookingAtWeapon ) ),
 	SendPropBool( SENDINFO( m_bIsHoldingLookAtWeapon ) ),
 	SendPropBool( SENDINFO( m_bIsWalking ) ),
@@ -399,9 +402,6 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 
 	SendPropBool( SENDINFO( m_bInHostageRescueZone ) ),
 	SendPropBool( SENDINFO( m_bIsDefusing ) ),
-	SendPropBool( SENDINFO( m_bIsGrabbingHostage ) ),
-	SendPropEHandle( SENDINFO( m_hCarriedHostage ) ),
-	SendPropEHandle( SENDINFO( m_hCarriedHostageProp ) ),
 	SendPropBool( SENDINFO( m_bHasMovedSinceSpawn ) ),
 	SendPropFloat( SENDINFO( m_fImmuneToDamageTime ) ),
 	SendPropBool( SENDINFO( m_bImmunity ) ),
@@ -1217,6 +1217,8 @@ void CCSPlayer::Spawn()
 	SetFOV( this, 0 );
 
 	m_bIsDefusing = false;
+	m_bIsGrabbingHostage = false;
+
 
 	m_bIsWalking = false;
 
@@ -1337,13 +1339,14 @@ void CCSPlayer::Spawn()
 		RemoveSelfFromOthersDamageCounters();
 	}
 
+	// clear out and carried hostage stuff
+	RemoveCarriedHostage();
+
 	if ( GetTeamNumber() == TEAM_CT )
 		m_bIsFemale = (HasAgentSet( TEAM_CT )) ? (GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_bIsFemale) : false;
 	else
 		m_bIsFemale = (HasAgentSet( TEAM_TERRORIST )) ? (GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_bIsFemale) : false;
 }
-
-ConVar mp_flinch_punch_scale( "mp_flinch_punch_scale", "3", FCVAR_REPLICATED | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Scalar for first person view punch when getting hit." );
 
 void CCSPlayer::ShowViewPortPanel( const char * name, bool bShow, KeyValues *data )
 {
@@ -1633,7 +1636,8 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	SetProgressBarTime( 0 );
 
 	m_bIsDefusing = false;
-
+	m_bIsGrabbingHostage = false;
+	
 	m_bHasNightVision = false;
 	m_bNightVisionOn = false;
 
@@ -4249,7 +4253,7 @@ BuyResult_e CCSPlayer::AttemptToBuyDefuser( void )
 {
 	CCSGameRules *MPRules = CSGameRules();
 
-	if( ( GetTeamNumber() == TEAM_CT ) && MPRules->IsBombDefuseMap() )
+	if( ( GetTeamNumber() == TEAM_CT ) && ( MPRules->IsBombDefuseMap() || MPRules->IsHostageRescueMap() ) )
 	{
 		if ( HasDefuser() )		// prevent this guy from buying more than 1 Defuse Kit
 		{
@@ -6974,6 +6978,13 @@ void CCSPlayer::RescueZoneTouch( inputdata_t &inputdata )
 		HintMessage( "#Hint_hostage_rescue_zone", false );
 		m_iDisplayHistoryBits |= DHF_IN_RESCUE_ZONE;
 	}
+
+	// if the player is carrying a hostage when he touches the rescue zone, pass the touch input to it
+	if ( m_hCarriedHostage && m_hCarriedHostage.Get() )
+	{
+		variant_t emptyVariant;
+		m_hCarriedHostage.Get()->AcceptInput( "OnRescueZoneTouch", NULL, NULL, emptyVariant, 0 );
+	}
 }
 
 //------------------------------------------------------------------------------------------
@@ -8336,6 +8347,12 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 	//=============================================================================
 	// HPE_END
 	//=============================================================================
+	if ( m_hCarriedHostage != NULL && GetNumFollowers() > 0 )
+	{
+		CHostage *pHostage = dynamic_cast< CHostage * >(m_hCarriedHostage.Get());
+		if ( pHostage )
+			pHostage->DropHostage( GetAbsOrigin() );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -9972,7 +9989,7 @@ bool CCSPlayer::TakeControlOfBot( CCSBot *pBot, bool bSkipTeamCheck )
 		SetNextAttack( flBotNextAttack );
 	}
 
-	/*if ( pBot->IsRescuing() )
+	if ( pBot->IsRescuing() )
 	{
 		// Tell the hostages controlled by the bot that they should now follow this player
 		for ( int iHostage=0; iHostage < g_Hostages.Count(); iHostage++ )
@@ -10007,7 +10024,7 @@ bool CCSPlayer::TakeControlOfBot( CCSBot *pBot, bool bSkipTeamCheck )
 		}
 	}
 
-	RefreshCarriedHostage( true );*/
+	RefreshCarriedHostage( true );
 
 	IGameEvent * event = gameeventmanager->CreateEvent( "bot_takeover" );
 	if ( event )

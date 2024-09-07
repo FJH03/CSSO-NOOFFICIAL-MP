@@ -35,6 +35,7 @@
 #include "fx_cs_blood.h"
 #include "c_cs_playerresource.h"
 #include "c_team.h"
+#include "c_cs_hostage.h"
 #include "prediction.h"
 
 #include "history_resource.h"
@@ -908,6 +909,8 @@ C_CSPlayer::C_CSPlayer() :
 	ListenForGameEvent( "player_death" );
 	ListenForGameEvent( "player_spawn" );
 
+	m_bPlayingHostageCarrySound = false;
+
 	m_iMoveState = MOVESTATE_IDLE;
 }
 
@@ -1231,6 +1234,24 @@ void C_CSPlayer::CreateAddonModel( int i )
 	}
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : bThirdperson - 
+//-----------------------------------------------------------------------------
+void C_CSPlayer::ThirdPersonSwitch( bool bThirdperson )
+{
+	BaseClass::ThirdPersonSwitch( bThirdperson );
+
+	if ( m_hCarriedHostageProp != NULL )
+	{
+		C_HostageCarriableProp *pHostageProp = static_cast< C_HostageCarriableProp* >( m_hCarriedHostageProp.Get() );
+		if ( pHostageProp )
+		{
+			UpdateHostageCarryModels();
+		}
+	}
+}
+
 void C_CSPlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, float &zFar, float &fov )
 {
 	BaseClass::CalcView( eyeOrigin, eyeAngles, zNear, zFar, fov );
@@ -1249,6 +1270,27 @@ void C_CSPlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, f
 #endif //IRONSIGHT
 }
 
+void C_CSPlayer::UpdateHostageCarryModels()
+{
+	if ( m_hCarriedHostage )
+	{
+		if ( m_hCarriedHostageProp != NULL )
+		{
+			C_HostageCarriableProp *pHostageProp = static_cast< C_HostageCarriableProp* >(m_hCarriedHostageProp.Get());
+			if ( pHostageProp )
+			{
+				pHostageProp->UpdateVisibility();
+			}
+		}
+
+		C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>(GetViewModel( HOSTAGE_VIEWMODEL ));
+		if ( pViewModel )
+		{
+			pViewModel->UpdateVisibility();
+		}
+	}
+
+}
 
 void C_CSPlayer::UpdateAddonModels()
 {
@@ -1458,6 +1500,8 @@ void C_CSPlayer::ClientThink()
 
 	UpdateAddonModels();
 
+	UpdateHostageCarryModels();
+
 	UpdateIDTarget();
 
 	if ( gpGlobals->curtime >= m_fNextThinkPushAway )
@@ -1567,6 +1611,17 @@ void C_CSPlayer::OnDataChanged( DataUpdateType_t type )
 				CSGameRules()->SetBlackMarketPrices( false );
 			}
 		}
+	}
+
+	if ( m_bPlayingHostageCarrySound == false && m_hCarriedHostage )
+	{
+		m_bPlayingHostageCarrySound = true;
+		EmitSound( "Hostage.Breath" );
+	}
+	else if ( m_bPlayingHostageCarrySound == true && !m_hCarriedHostage )
+	{
+		m_bPlayingHostageCarrySound = false;
+		StopSound( "Hostage.Breath" );
 	}
 
 	UpdateVisibility();

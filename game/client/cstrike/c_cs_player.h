@@ -279,6 +279,9 @@ public:
 	void SetActivity( Activity eActivity );
 	Activity GetActivity( void ) const;
 
+	// Global/static methods
+	virtual void ThirdPersonSwitch( bool bThirdperson );
+
 	IPlayerAnimState *GetPlayerAnimState() { return m_PlayerAnimState; }
 
 public:
@@ -406,13 +409,18 @@ private:
 
 	void CreateAddonModel( int i );
 	void UpdateAddonModels();
+	void UpdateHostageCarryModels();
 
 	void PushawayThink();
 	void FireGameEvent( IGameEvent *event );
 
 	int		m_iAccount;
 	bool	m_bHasHelmet;
+	
+public:
 	int		m_iClass;
+
+private:
 	int		m_ArmorValue;
 	QAngle	m_angEyeAngles;
 	bool	m_bHasDefuser;
