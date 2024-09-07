@@ -49,7 +49,7 @@ CBaseEntity * CheckForEntitiesAlongSegment( const Vector &start, const Vector &e
 	Ray_t ray;
 	ray.Init( start, end, mins, maxs );
 
-	partition->EnumerateElementsAlongRay( PARTITION_ENGINE_SOLID_EDICTS, ray, false, enumerator );
+	::partition->EnumerateElementsAlongRay( PARTITION_ENGINE_SOLID_EDICTS, ray, false, enumerator );
 	if ( enumerator->m_nAlreadyHit > 0 )
 	{
 		entity = enumerator->m_AlreadyHit[0];
@@ -351,7 +351,8 @@ void CCSBot::BreakablesCheck( void )
 				}
 			}
 
-			shouldShoot = shouldShoot && !IsFriendInLineOfFire();
+			// Shoot out breakable if the LOS is clear, or if we're playing a mode with no friendly fire
+			shouldShoot = shouldShoot && ( !TheCSBots()->AllowFriendlyFireDamage() || !IsFriendInLineOfFire() );
 
 			if ( shouldShoot )
 			{

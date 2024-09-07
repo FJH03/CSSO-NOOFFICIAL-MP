@@ -169,8 +169,6 @@ void PlaceDirectory::Load( CUtlBuffer &fileBuffer, int version )
 	}
 }
 
-
-
 PlaceDirectory placeDirectory;
 
 #if defined( _X360 )
@@ -179,6 +177,7 @@ PlaceDirectory placeDirectory;
 #else
 	#define FORMAT_BSPFILE "maps\\%s.bsp"
 	#define FORMAT_NAVFILE "maps\\%s.nav"
+	#define PATH_NAVFILE_EMBEDDED "maps\\embed.nav"
 #endif
 
 //--------------------------------------------------------------------------------------------------------------
@@ -200,6 +199,20 @@ char *GetBspFilename( const char *navFilename )
 	bspFilename[ len-1 ] = 'p';
 
 	return bspFilename;
+}
+
+unsigned char CNavArea::GetSavedHidingSpotCount( void ) const
+{
+	unsigned char count = 0;
+	FOR_EACH_VEC( m_hidingSpots, i )
+	{
+		if ( count == 0xff )
+			break;
+
+		if ( m_hidingSpots[ i ]->IsSaved() )
+			count++;
+	}
+	return count;
 }
 
 
@@ -241,15 +254,11 @@ void CNavArea::Save( CUtlBuffer &fileBuffer, unsigned int version ) const
 	//
 	// Store hiding spots for this area
 	//
-	unsigned char count;
-	if (m_hidingSpots.Count() > 255)
+	unsigned char count = GetSavedHidingSpotCount();
+	if ( count > 255 )
 	{
 		count = 255;
 		Warning( "Warning: NavArea #%d: Truncated hiding spot list to 255\n", m_id );
-	}
-	else
-	{
-		count = (unsigned char)m_hidingSpots.Count();
 	}
 	fileBuffer.PutUnsignedChar( count );
 
@@ -413,10 +422,6 @@ NavErrorType CNavArea::Load( CUtlBuffer &fileBuffer, unsigned int version, unsig
 	fileBuffer.Get( &m_nwCorner, 3*sizeof(float) );
 	fileBuffer.Get( &m_seCorner, 3*sizeof(float) );
 
-	m_center.x = (m_nwCorner.x + m_seCorner.x)/2.0f;
-	m_center.y = (m_nwCorner.y + m_seCorner.y)/2.0f;
-	m_center.z = (m_nwCorner.z + m_seCorner.z)/2.0f;
-
 	if ( ( m_seCorner.x - m_nwCorner.x ) > 0.0f && ( m_seCorner.y - m_nwCorner.y ) > 0.0f )
 	{
 		m_invDxCorners = 1.0f / ( m_seCorner.x - m_nwCorner.x );
@@ -427,7 +432,7 @@ NavErrorType CNavArea::Load( CUtlBuffer &fileBuffer, unsigned int version, unsig
 		m_invDxCorners = m_invDyCorners = 0;
 
 		DevWarning( "Degenerate Navigation Area #%d at setpos %g %g %g\n", 
-			m_id, m_center.x, m_center.y, m_center.z );
+			m_id, m_nwCorner.x, m_nwCorner.y, m_nwCorner.z );
 	}
 
 	// load heights of implicit corners
@@ -642,18 +647,8 @@ NavErrorType CNavArea::Load( CUtlBuffer &fileBuffer, unsigned int version, unsig
 
 	// load visibility information
 	unsigned int visibleAreaCount = fileBuffer.GetUnsignedInt();
-	if ( !IsX360() )
-	{
-		m_potentiallyVisibleAreas.EnsureCapacity( visibleAreaCount );
-	}
-	else
-	{
-/* TODO: Re-enable when latest 360 code gets integrated (MSB 5/5/09)
-		size_t nBytes = visibleAreaCount * sizeof( AreaBindInfo ); 
-		m_potentiallyVisibleAreas.~CAreaBindInfoArray();
-		new ( &m_potentiallyVisibleAreas ) CAreaBindInfoArray( (AreaBindInfo *)engine->AllocLevelStaticData( nBytes ), visibleAreaCount );
-*/
-	}
+
+	m_potentiallyVisibleAreas.EnsureCapacity( visibleAreaCount );
 
 	for( unsigned int j=0; j<visibleAreaCount; ++j )
 	{
@@ -786,9 +781,6 @@ NavErrorType CNavArea::PostLoad( void )
 	bad.area = NULL;
 	while( m_potentiallyVisibleAreas.FindAndRemove( bad ) );
 
-	// func avoid/prefer attributes are controlled by func_nav_cost entities
-	ClearAllNavCostEntities();
-
 	return error;
 }
 
@@ -871,7 +863,7 @@ void CNavArea::ComputeEarliestOccupyTimes( void )
 		 spot;
 		 spot = gEntList.FindEntityByClassname( spot, "info_player_terrorist" ) )
 	{
-		float travelDistance = NavAreaTravelDistance( spot->GetAbsOrigin(), m_center, cost );
+		float travelDistance = NavAreaTravelDistance( spot->GetAbsOrigin(), GetCenter(), cost );
 		if (travelDistance < 0.0f)
 			continue;
 
@@ -889,7 +881,7 @@ void CNavArea::ComputeEarliestOccupyTimes( void )
 		 spot;
 		 spot = gEntList.FindEntityByClassname( spot, "info_player_counterterrorist" ) )
 	{
-		float travelDistance = NavAreaTravelDistance( spot->GetAbsOrigin(), m_center, cost );
+		float travelDistance = NavAreaTravelDistance( spot->GetAbsOrigin(), GetCenter(), cost );
 		if (travelDistance < 0.0f)
 			continue;
 
@@ -1314,19 +1306,6 @@ const CUtlVector< Place > *CNavMesh::GetPlacesFromNavFile( bool *hasUnnamedPlace
 			return NULL;
 		}
 	}
-	
-	if ( IsX360() )
-	{
-		// 360 has compressed NAVs
-		CLZMA lzma;
-		if ( lzma.IsCompressed( (unsigned char *)fileBuffer.Base() ) )
-		{
-			int originalSize = lzma.GetActualSize( (unsigned char *)fileBuffer.Base() );
-			unsigned char *pOriginalData = new unsigned char[originalSize];
-			lzma.Uncompress( (unsigned char *)fileBuffer.Base(), pOriginalData );
-			fileBuffer.AssumeMemory( pOriginalData, originalSize, originalSize, CUtlBuffer::READ_ONLY );
-		}
-	}
 
 	// check magic number
 	unsigned int magic = fileBuffer.GetUnsignedInt();
@@ -1399,25 +1378,13 @@ NavErrorType CNavMesh::Load( void )
 
 	bool navIsInBsp = false;
 	CUtlBuffer fileBuffer( 4096, 1024*1024, CUtlBuffer::READ_ONLY );
+
 	if ( !filesystem->ReadFile( filename, "MOD", fileBuffer ) )	// this ignores .nav files embedded in the .bsp ...
 	{
 		navIsInBsp = true;
 		if ( !filesystem->ReadFile( filename, "BSP", fileBuffer ) )	// ... and this looks for one if it's the only one around.
 		{
 			return NAV_CANT_ACCESS_FILE;
-		}
-	}
-
-	if ( IsX360() )
-	{
-		// 360 has compressed NAVs
-		CLZMA lzma;
-		if ( lzma.IsCompressed( (unsigned char *)fileBuffer.Base() ) )
-		{
-			int originalSize = lzma.GetActualSize( (unsigned char *)fileBuffer.Base() );
-			unsigned char *pOriginalData = new unsigned char[originalSize];
-			lzma.Uncompress( (unsigned char *)fileBuffer.Base(), pOriginalData );
-			fileBuffer.AssumeMemory( pOriginalData, originalSize, originalSize, CUtlBuffer::READ_ONLY );
 		}
 	}
 
@@ -1436,7 +1403,7 @@ NavErrorType CNavMesh::Load( void )
 		Msg( "Unknown navigation file version.\n" );
 		return NAV_BAD_FILE_VERSION;
 	}
-	
+
 	unsigned int subVersion = 0;
 	if ( version >= 10 )
 	{
@@ -1464,14 +1431,17 @@ NavErrorType CNavMesh::Load( void )
 
 		if ( bspSize != saveBspSize && !navIsInBsp )
 		{
-			if ( engine->IsDedicatedServer() )
+			if ( !IsGameConsole() )
 			{
-				// Warning doesn't print to the dedicated server console, so we'll use Msg instead
-				DevMsg( "The Navigation Mesh was built using a different version of this map.\n" );
-			}
-			else
-			{
-				DevWarning( "The Navigation Mesh was built using a different version of this map.\n" );
+				if ( engine->IsDedicatedServer() )
+				{
+					// Warning doesn't print to the dedicated server console, so we'll use Msg instead
+					DevMsg( "The Navigation Mesh was built using a different version of this map.\n" );
+				}
+				else
+				{
+					DevWarning( "The Navigation Mesh was built using a different version of this map.\n" );
+				}
 			}
 			m_isOutOfDate = true;
 		}

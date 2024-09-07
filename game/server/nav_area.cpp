@@ -43,7 +43,8 @@ extern void HintMessageToAllPlayers( const char *message );
 unsigned int CNavArea::m_nextID = 1;
 NavAreaVector TheNavAreas;
 
-unsigned int CNavArea::m_masterMarker = 1;
+uint32 CNavArea::m_masterMarker = 1;
+
 CNavArea *CNavArea::m_openList = NULL;
 CNavArea *CNavArea::m_openListTail = NULL;
 
@@ -59,8 +60,14 @@ ConVar nav_show_light_intensity( "nav_show_light_intensity", "0", FCVAR_CHEAT );
 ConVar nav_debug_blocked( "nav_debug_blocked", "0", FCVAR_CHEAT );
 ConVar nav_show_contiguous( "nav_show_continguous", "0", FCVAR_CHEAT, "Highlight non-contiguous connections" );
 
+#ifdef CSTRIKE_DLL
+const float DEF_NAV_VIEW_DISTANCE = 0.0;	// CS doesn't use nav vis
+#else
 const float DEF_NAV_VIEW_DISTANCE = 1500.0;
-ConVar nav_max_view_distance( "nav_max_view_distance", "6000", FCVAR_CHEAT, "Maximum range for precomputed nav mesh visibility (0 = default 1500 units)" );
+#endif
+
+ConVar nav_max_view_distance( "nav_max_view_distance", "0", FCVAR_CHEAT, "Maximum range for precomputed nav mesh visibility (0 = default 1500 units)" );
+
 ConVar nav_update_visibility_on_edit( "nav_update_visibility_on_edit", "0", FCVAR_CHEAT, "If nonzero editing the mesh will incrementally recompue visibility" );
 ConVar nav_potentially_visible_dot_tolerance( "nav_potentially_visible_dot_tolerance", "0.98", FCVAR_CHEAT );
 ConVar nav_show_potentially_visible( "nav_show_potentially_visible", "0", FCVAR_CHEAT, "Show areas that are potentially visible from the current nav area" );
@@ -201,7 +208,7 @@ CNavArea::CNavArea( void )
 		m_isBlocked[i] = false;
 
 		m_danger[i] = 0.0f;
-		m_dangerTimestamp[i] = 0.0f;
+		m_dangerTimestamp = 0.0f;
 
 		m_clearedTimestamp[i] = 0.0f;
 
@@ -212,12 +219,9 @@ CNavArea::CNavArea( void )
 
 	// set an ID for splitting and other interactive editing - loads will overwrite this
 	m_id = m_nextID++;
-	m_debugid = 0;
 
 	m_prevHash = NULL;
 	m_nextHash = NULL;
-
-	m_isBattlefront = false;
 
 	for( i = 0; i<NUM_DIRECTIONS; ++i )
 	{
@@ -234,16 +238,11 @@ CNavArea::CNavArea( void )
 		m_lightIntensity[i] = 1.0f;
 	}
 
-	m_elevator = NULL;
-	m_elevatorAreas.RemoveAll();
-
 	m_invDxCorners = 0;
 	m_invDyCorners = 0;
 
 	m_inheritVisibilityFrom.area = NULL;
 	m_isInheritedFrom = false;
-
-	m_funcNavCostVector.RemoveAll();
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -277,10 +276,6 @@ void CNavArea::Build( const Vector &corner, const Vector &otherCorner )
 	m_nwCorner.z = corner.z;
 	m_seCorner.z = corner.z;
 
-	m_center.x = (m_nwCorner.x + m_seCorner.x)/2.0f;
-	m_center.y = (m_nwCorner.y + m_seCorner.y)/2.0f;
-	m_center.z = (m_nwCorner.z + m_seCorner.z)/2.0f;
-
 	if ( ( m_seCorner.x - m_nwCorner.x ) > 0.0f && ( m_seCorner.y - m_nwCorner.y ) > 0.0f )
 	{
 		m_invDxCorners = 1.0f / ( m_seCorner.x - m_nwCorner.x );
@@ -305,10 +300,6 @@ void CNavArea::Build( const Vector &nwCorner, const Vector &neCorner, const Vect
 {
 	m_nwCorner = nwCorner;
 	m_seCorner = seCorner;
-
-	m_center.x = (m_nwCorner.x + m_seCorner.x)/2.0f;
-	m_center.y = (m_nwCorner.y + m_seCorner.y)/2.0f;
-	m_center.z = (m_nwCorner.z + m_seCorner.z)/2.0f;
 
 	m_neZ = neCorner.z;
 	m_swZ = swCorner.z;
@@ -335,10 +326,6 @@ void CNavArea::Build( CNavNode *nwNode, CNavNode *neNode, CNavNode *seNode, CNav
 {
 	m_nwCorner = *nwNode->GetPosition();
 	m_seCorner = *seNode->GetPosition();
-
-	m_center.x = (m_nwCorner.x + m_seCorner.x)/2.0f;
-	m_center.y = (m_nwCorner.y + m_seCorner.y)/2.0f;
-	m_center.z = (m_nwCorner.z + m_seCorner.z)/2.0f;
 
 	m_neZ = neNode->GetPosition()->z;
 	m_swZ = swNode->GetPosition()->z;
@@ -554,9 +541,7 @@ CNavArea::~CNavArea()
  */
 void CNavArea::ConnectElevators( void )
 {
-	m_elevator = NULL;
 	m_attributeFlags &= ~NAV_MESH_HAS_ELEVATOR;
-	m_elevatorAreas.RemoveAll();
 
 #ifdef TERROR
 	// connect elevators
@@ -662,7 +647,6 @@ void CNavArea::OnServerActivate( void )
 {
 	ConnectElevators();
 	m_damagingTickCount = 0;
-	ClearAllNavCostEntities();
 }
 
 
@@ -675,7 +659,6 @@ void CNavArea::OnRoundRestart( void )
 	// need to redo this here since func_elevators are deleted and recreated at round restart
 	ConnectElevators();
 	m_damagingTickCount = 0;
-	ClearAllNavCostEntities();
 }
 
 
@@ -761,11 +744,6 @@ void CNavArea::OnDestroyNotify( CNavArea *dead )
 		m_connect[ d ].FindAndRemove( con );
 		m_incomingConnect[ d ].FindAndRemove( con );
 	}
-
-	// remove all visibility info, since we're editing the mesh anyways
-	m_inheritVisibilityFrom.area = NULL;
-	m_potentiallyVisibleAreas.RemoveAll();
-	m_isInheritedFrom = false;
 }
 
 
@@ -914,10 +892,6 @@ void CNavArea::FinishMerge( CNavArea *adjArea )
 	// update extent
 	m_nwCorner = *m_node[ NORTH_WEST ]->GetPosition();
 	m_seCorner = *m_node[ SOUTH_EAST ]->GetPosition();
-
-	m_center.x = (m_nwCorner.x + m_seCorner.x)/2.0f;
-	m_center.y = (m_nwCorner.y + m_seCorner.y)/2.0f;
-	m_center.z = (m_nwCorner.z + m_seCorner.z)/2.0f;
 
 	m_neZ = m_node[ NORTH_EAST ]->GetPosition()->z;
 	m_swZ = m_node[ SOUTH_WEST ]->GetPosition()->z;
@@ -1377,10 +1351,6 @@ void CNavArea::FinishSplitEdit( CNavArea *newArea, NavDirType ignoreEdge )
 {
 	newArea->InheritAttributes( this );
 
-	newArea->m_center.x = (newArea->m_nwCorner.x + newArea->m_seCorner.x)/2.0f;
-	newArea->m_center.y = (newArea->m_nwCorner.y + newArea->m_seCorner.y)/2.0f;
-	newArea->m_center.z = (newArea->m_nwCorner.z + newArea->m_seCorner.z)/2.0f;
-
 	newArea->m_neZ = GetZ( newArea->m_seCorner.x, newArea->m_nwCorner.y );
 	newArea->m_swZ = GetZ( newArea->m_nwCorner.x, newArea->m_seCorner.y );
 
@@ -1702,12 +1672,12 @@ bool CNavArea::SpliceEdit( CNavArea *other )
 */
 void CNavArea::CalcDebugID()
 {
-	if ( m_debugid == 0 )
-	{
-		// calculate a debug ID which will be constant for this nav area across generation runs
-		int coord[6] = { (int) m_nwCorner.x, (int) m_nwCorner.x, (int) m_nwCorner.z, (int) m_seCorner.x, (int) m_seCorner.y, (int) m_seCorner.z };
-		m_debugid = CRC32_ProcessSingleBuffer( &coord, sizeof( coord ) );
-	}
+// 	if ( m_debugid == 0 )
+// 	{
+// 		// calculate a debug ID which will be constant for this nav area across generation runs
+// 		int coord[6] = { (int) m_nwCorner.x, (int) m_nwCorner.x, (int) m_nwCorner.z, (int) m_seCorner.x, (int) m_seCorner.y, (int) m_seCorner.z };
+// 		m_debugid = CRC32_ProcessSingleBuffer( &coord, sizeof( coord ) );
+// 	}
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -1742,10 +1712,6 @@ bool CNavArea::MergeEdit( CNavArea *adj )
 
 	if (m_seCorner.x < adj->m_seCorner.x || m_seCorner.y < adj->m_seCorner.y)
 		m_seCorner = adj->m_seCorner;
-
-	m_center.x = (m_nwCorner.x + m_seCorner.x)/2.0f;
-	m_center.y = (m_nwCorner.y + m_seCorner.y)/2.0f;
-	m_center.z = (m_nwCorner.z + m_seCorner.z)/2.0f;
 
 	if ( ( m_seCorner.x - m_nwCorner.x ) > 0.0f && ( m_seCorner.y - m_nwCorner.y ) > 0.0f )
 	{
@@ -2285,21 +2251,6 @@ CNavArea *CNavArea::GetRandomAdjacentArea( NavDirType dir ) const
 	return NULL;
 }
 
-
-//--------------------------------------------------------------------------------------------------------------
-// Build a vector of all adjacent areas
-void CNavArea::CollectAdjacentAreas( CUtlVector< CNavArea * > *adjVector ) const
-{
-	for( int d=0; d<NUM_DIRECTIONS; ++d )
-	{
-		for( int i=0; i<m_connect[d].Count(); ++i )
-		{
-			adjVector->AddToTail( m_connect[d].Element(i).area );
-		}
-	}
-}
-
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Compute "portal" between two adjacent areas. 
@@ -2663,7 +2614,7 @@ NavDirType CNavArea::ComputeDirection( Vector *point ) const
 	}
 
 	// find closest direction
-	Vector to = *point - m_center;
+	Vector to = *point - GetCenter();
 
 	if (fabs(to.x) > fabs(to.y))
 	{
@@ -2945,6 +2896,7 @@ void CNavArea::Draw( void ) const
 			color = NavAttributePreciseColor;
 
 		float size = 8.0f;
+		Vector m_center = GetCenter();
 		Vector up( m_center.x, m_center.y - size, m_center.z );
 		Vector down( m_center.x, m_center.y + size, m_center.z );
 		NavDrawLine( up, down, color );
@@ -2960,6 +2912,7 @@ void CNavArea::Draw( void ) const
 			color = NavAttributeNoJumpColor;
 
 		float size = 8.0f;
+		Vector m_center = GetCenter();
 		Vector up( m_center.x, m_center.y - size, m_center.z );
 		Vector down( m_center.x, m_center.y + size, m_center.z );
 		Vector left( m_center.x - size, m_center.y, m_center.z );
@@ -3024,6 +2977,8 @@ void CNavArea::Draw( void ) const
 		float length = dist/2.5f;
 		Vector start, end;
 
+		Vector m_center = GetCenter();
+
 		start =	m_center + Vector( dist, -length, 0 );
 		end =	m_center + Vector( dist,  length, 0 );
 		NavDrawLine( start, end, color );
@@ -3064,6 +3019,7 @@ void CNavArea::Draw( void ) const
 			color = NavAttributeWalkColor;
 
 		float size = 8.0f;
+		Vector m_center = GetCenter();
 		NavDrawHorizontalArrow( m_center + Vector( -size, 0, 0 ), m_center + Vector( size, 0, 0 ), 4, color );
 	}
 
@@ -3075,6 +3031,7 @@ void CNavArea::Draw( void ) const
 
 		float size = 8.0f;
 		float dist = 4.0f;
+		Vector m_center = GetCenter();
 		NavDrawHorizontalArrow( m_center + Vector( -size,  dist, 0 ), m_center + Vector( size,  dist, 0 ), 4, color );
 		NavDrawHorizontalArrow( m_center + Vector( -size, -dist, 0 ), m_center + Vector( size, -dist, 0 ), 4, color );
 	}
@@ -3089,6 +3046,7 @@ void CNavArea::Draw( void ) const
 		float topWidth = 3.0f;
 		float bottomHeight = 3.0f;
 		float bottomWidth = 2.0f;
+		Vector m_center = GetCenter();
 		NavDrawTriangle( m_center, m_center + Vector( -topWidth, topHeight, 0 ), m_center + Vector( +topWidth, topHeight, 0 ), color );
 		NavDrawTriangle( m_center + Vector( 0, -bottomHeight, 0 ), m_center + Vector( -bottomWidth, -bottomHeight*2, 0 ), m_center + Vector( bottomWidth, -bottomHeight*2, 0 ), color );
 	}
@@ -3124,18 +3082,8 @@ void CNavArea::DrawFilled( int r, int g, int b, int a, float deltaT, bool noDept
 	Vector sw = GetCorner( SOUTH_WEST ) + Vector( margin, -margin, 0.0f );
 	Vector se = GetCorner( SOUTH_EAST ) + Vector( -margin, -margin, 0.0f );
 
-	if ( a == 0 )
-	{
-		NDebugOverlay::Line( nw, ne, r, g, b, true, deltaT );
-		NDebugOverlay::Line( nw, sw, r, g, b, true, deltaT );
-		NDebugOverlay::Line( sw, se, r, g, b, true, deltaT );
-		NDebugOverlay::Line( se, ne, r, g, b, true, deltaT );
-	}
-	else
-	{
-		NDebugOverlay::Triangle( nw, se, ne, r, g, b, a, noDepthTest, deltaT );
-		NDebugOverlay::Triangle( se, nw, sw, r, g, b, a, noDepthTest, deltaT );
-	}
+	NDebugOverlay::Triangle( nw, se, ne, r, g, b, a, noDepthTest, deltaT );
+	NDebugOverlay::Triangle( se, nw, sw, r, g, b, a, noDepthTest, deltaT );
 
 	// backside
 // 	NDebugOverlay::Triangle( nw, ne, se, r, g, b, a, noDepthTest, deltaT );
@@ -3266,7 +3214,7 @@ void CNavArea::DrawConnectedAreas( void ) const
 
 			if ( !ladder->IsConnected( this, CNavLadder::LADDER_DOWN ) )
 			{
-				NavDrawLine( m_center, ladder->m_bottom + Vector( 0, 0, GenerationStepSize ), NavConnectedOneWayColor );
+				NavDrawLine( GetCenter(), ladder->m_bottom + Vector( 0, 0, GenerationStepSize ), NavConnectedOneWayColor );
 			}
 		}
 	}
@@ -3279,7 +3227,7 @@ void CNavArea::DrawConnectedAreas( void ) const
 
 			if ( !ladder->IsConnected( this, CNavLadder::LADDER_UP ) )
 			{
-				NavDrawLine( m_center, ladder->m_top, NavConnectedOneWayColor );
+				NavDrawLine( GetCenter(), ladder->m_top, NavConnectedOneWayColor );
 			}
 		}
 	}
@@ -3589,10 +3537,6 @@ void CNavArea::SetCorner( NavCornerType corner, const Vector& newPosition )
 			m_swZ += delta.z;
 		}
 	}
-
-	m_center.x = (m_nwCorner.x + m_seCorner.x)/2.0f;
-	m_center.y = (m_nwCorner.y + m_seCorner.y)/2.0f;
-	m_center.z = (m_nwCorner.z + m_seCorner.z)/2.0f;
 
 	if ( ( m_seCorner.x - m_nwCorner.x ) > 0.0f && ( m_seCorner.y - m_nwCorner.y ) > 0.0f )
 	{
@@ -3968,6 +3912,19 @@ void CNavArea::ComputeSniperSpots( void )
 	}
 }
 
+void CNavArea::AddHidingSpot( HidingSpot * pSpot )
+{
+	Assert( m_hidingSpots.Find( pSpot ) == m_hidingSpots.InvalidIndex() );
+	m_hidingSpots.AddToTail( pSpot );
+}
+
+void CNavArea::RemoveHidingSpot( HidingSpot * pSpot )
+{
+	bool bSuccess = m_hidingSpots.FindAndRemove( pSpot );
+	Assert( bSuccess );
+	NOTE_UNUSED( bSuccess );
+}
+
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Given the areas we are moving between, return the spots we will encounter
@@ -4140,7 +4097,7 @@ void CNavArea::DecayDanger( void )
 {
 	for( int i=0; i<MAX_NAV_TEAMS; ++i )
 	{
-		float deltaT = gpGlobals->curtime - m_dangerTimestamp[i];
+		float deltaT = gpGlobals->curtime - m_dangerTimestamp;
 		float decayAmount = GetDangerDecayRate() * deltaT;
 
 		m_danger[i] -= decayAmount;
@@ -4148,7 +4105,7 @@ void CNavArea::DecayDanger( void )
 			m_danger[i] = 0.0f;
 
 		// update timestamp
-		m_dangerTimestamp[i] = gpGlobals->curtime;
+		m_dangerTimestamp = gpGlobals->curtime;
 	}
 }
 
@@ -4164,7 +4121,7 @@ void CNavArea::IncreaseDanger( int teamID, float amount )
 	int teamIdx = teamID % MAX_NAV_TEAMS;
 
 	m_danger[ teamIdx ] += amount;
-	m_dangerTimestamp[ teamIdx ] = gpGlobals->curtime;
+	m_dangerTimestamp = gpGlobals->curtime;
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -4273,7 +4230,7 @@ bool CNavArea::ComputeLighting( void )
 
 		float ambientIntensity = ambientColor.x + ambientColor.y + ambientColor.z;
 		float lightIntensity = light.x + light.y + light.z;
-		lightIntensity = clamp( lightIntensity, 0.f, 1.f );	// sum can go well over 1.0, but it's the lower region we care about.  if it's bright, we don't need to know *how* bright.
+		lightIntensity = clamp( lightIntensity, 0, 1 );	// sum can go well over 1.0, but it's the lower region we care about.  if it's bright, we don't need to know *how* bright.
 
 		lightIntensity = MAX( lightIntensity, ambientIntensity );
 
@@ -4346,11 +4303,6 @@ void CNavArea::RaiseCorner( NavCornerType corner, int amount, bool raiseAdjacent
 		m_seCorner.z += amount;
 		break;
 	}
-
-	// Recompute the center
-	m_center.x = (m_nwCorner.x + m_seCorner.x)/2.0f;
-	m_center.y = (m_nwCorner.y + m_seCorner.y)/2.0f;
-	m_center.z = (m_nwCorner.z + m_seCorner.z)/2.0f;
 
 	if ( ( m_seCorner.x - m_nwCorner.x ) > 0.0f && ( m_seCorner.y - m_nwCorner.y ) > 0.0f )
 	{
@@ -4559,8 +4511,6 @@ void CNavArea::Shift( const Vector &shift )
 {
 	m_nwCorner += shift;
 	m_seCorner += shift;
-	
-	m_center += shift;
 }
 
 
@@ -4636,22 +4586,29 @@ bool CNavArea::IsBlocked( int teamID, bool ignoreNavBlockers ) const
 		bool isBlocked = false;
 		for ( int i=0; i<MAX_NAV_TEAMS; ++i )
 		{
-			isBlocked |= m_isBlocked[ i ];
+			isBlocked |= !!m_isBlocked[ i ];
 		}
 
 		return isBlocked;
 	}
 
 	int teamIdx = teamID % MAX_NAV_TEAMS;
-	return m_isBlocked[ teamIdx ];
+	return !!m_isBlocked[ teamIdx ];
 }
 
 //--------------------------------------------------------------------------------------------------------
 void CNavArea::MarkAsBlocked( int teamID, CBaseEntity *blocker, bool bGenerateEvent )
 {
-	if ( blocker && blocker->ClassMatches( "func_nav_blocker" ) )
+	if ( blocker )
 	{
-		m_attributeFlags |= NAV_MESH_NAV_BLOCKER;
+		if ( blocker->ClassMatches( "func_nav_blocker" )  )
+		{
+			m_attributeFlags |= NAV_MESH_NAV_BLOCKER;
+		}
+		else if ( blocker->ClassMatches( "prop_door_rotating" ) )
+		{
+			m_attributeFlags |= NAV_MESH_BLOCKED_PROPDOOR;
+		}
 	}
 
 	bool wasBlocked = false;
@@ -4659,14 +4616,14 @@ void CNavArea::MarkAsBlocked( int teamID, CBaseEntity *blocker, bool bGenerateEv
 	{
 		for ( int i=0; i<MAX_NAV_TEAMS; ++i )
 		{
-			wasBlocked |= m_isBlocked[ i ];
+			wasBlocked |= !!m_isBlocked[ i ];
 			m_isBlocked[ i ] = true;
 		}
 	}
 	else
 	{
 		int teamIdx = teamID % MAX_NAV_TEAMS;
-		wasBlocked |= m_isBlocked[ teamIdx ];
+		wasBlocked |= !!m_isBlocked[ teamIdx ];
 		m_isBlocked[ teamIdx ] = true;
 	}
 
@@ -4712,6 +4669,53 @@ void CNavArea::MarkAsBlocked( int teamID, CBaseEntity *blocker, bool bGenerateEv
 	}
 }
 
+//--------------------------------------------------------------------------------------------------------
+void CNavArea::MarkAsUnblocked( int teamID, bool bGenerateEvent )
+{
+	m_attributeFlags &= ~NAV_MESH_NAV_BLOCKER;
+	m_attributeFlags &= ~NAV_MESH_BLOCKED_PROPDOOR;
+
+	for ( int i = 0; i < MAX_NAV_TEAMS; ++i )
+	{
+		m_isBlocked[i] = false;
+	}
+
+	bool wasBlocked = false;
+	if ( teamID == TEAM_ANY )
+	{
+		for ( int i = 0; i < MAX_NAV_TEAMS; ++i )
+		{
+			m_isBlocked[i] = false;
+		}
+	}
+	else
+	{
+		int teamIdx = teamID % MAX_NAV_TEAMS;
+		wasBlocked |= !!m_isBlocked[teamIdx];
+		m_isBlocked[teamIdx] = false;
+	}
+
+	if ( wasBlocked )
+	{
+		if ( bGenerateEvent )
+		{
+			IGameEvent * event = gameeventmanager->CreateEvent( "nav_blocked" );
+			if ( event )
+			{
+				event->SetInt( "area", m_id );
+				event->SetInt( "blocked", 0 );
+				gameeventmanager->FireEvent( event );
+			}
+		}
+
+		if ( nav_debug_blocked.GetBool() )
+		{
+			ConColorMsg( Color( 0, 128, 255, 255 ), "area %d is unblocked by a nav blocker\n", GetID() );
+		}
+		TheNavMesh->OnAreaUnblocked( this );
+	}
+}
+
 
 //--------------------------------------------------------------------------------------------------------
 // checks if any func_nav_blockers are still blocking the area
@@ -4727,12 +4731,16 @@ void CNavArea::UpdateBlockedFromNavBlockers( void )
 	bool wasBlocked = false;
 	for ( int i=0; i<MAX_NAV_TEAMS; ++i )
 	{
-		oldBlocked[i] = m_isBlocked[i];
-		wasBlocked = wasBlocked || m_isBlocked[i];
+		oldBlocked[i] = !!m_isBlocked[i];
+		wasBlocked = wasBlocked || oldBlocked[i];
 		m_isBlocked[i] = false;
 	}
 
-	bool isBlocked = CFuncNavBlocker::CalculateBlocked( m_isBlocked, bounds.lo, bounds.hi );
+	bool tempIsBlocked[MAX_NAV_TEAMS];
+	bool isBlocked = CFuncNavBlocker::CalculateBlocked( tempIsBlocked, bounds.lo, bounds.hi );
+	
+	for ( int i=0; i<MAX_NAV_TEAMS; ++i )
+		m_isBlocked[i] = tempIsBlocked[i];
 
 	if ( isBlocked )
 	{
@@ -4771,21 +4779,13 @@ void CNavArea::UpdateBlockedFromNavBlockers( void )
 
 
 //--------------------------------------------------------------------------------------------------------------
-void CNavArea::UnblockArea( int teamID )
+void CNavArea::UnblockArea( void )
 {
-	bool wasBlocked = IsBlocked( teamID );
+	bool wasBlocked = IsBlocked( TEAM_ANY );
 
-	if ( teamID == TEAM_ANY )
+	for ( int i=0; i<MAX_NAV_TEAMS; ++i )
 	{
-		for ( int i=0; i<MAX_NAV_TEAMS; ++i )
-		{
-			m_isBlocked[ i ] = false;
-		}
-	}
-	else
-	{
-		int teamIdx = teamID % MAX_NAV_TEAMS;
-		m_isBlocked[ teamIdx ] = false;
+		m_isBlocked[ i ] = false;
 	}
 
 	if ( wasBlocked )
@@ -4820,13 +4820,15 @@ void CNavArea::UpdateBlocked( bool force, int teamID )
 		return;
 	}
 
-	const float MaxBlockedCheckInterval = 5;
-	float interval = m_blockedTimer.GetCountdownDuration() + 1;
-	if ( interval > MaxBlockedCheckInterval )
-	{
-		interval = MaxBlockedCheckInterval;
-	}
-	m_blockedTimer.Start( interval );
+	// update blocked is called on all nav areas for many frames with the force param set true, 
+	// causing this timer to grow until this is forced to run after a delay at the start of the round
+// 	const float MaxBlockedCheckInterval = 1;
+// 	float interval = m_blockedTimer.GetCountdownDuration() + 1;
+// 	if ( interval > MaxBlockedCheckInterval )
+// 	{
+// 		interval = MaxBlockedCheckInterval;
+// 	}
+	m_blockedTimer.Start( 1 );
 
 	if ( ( m_attributeFlags & NAV_MESH_NAV_BLOCKER ) )
 	{
@@ -4834,6 +4836,10 @@ void CNavArea::UpdateBlocked( bool force, int teamID )
 		{
 			UpdateBlockedFromNavBlockers();
 		}
+		return;
+	}
+	if ( ( m_attributeFlags & NAV_MESH_BLOCKED_PROPDOOR ) )
+	{
 		return;
 	}
 
@@ -4869,6 +4875,45 @@ void CNavArea::UpdateBlocked( bool force, int teamID )
 
 	}
 
+#ifdef CSTRIKE_DLL
+	if ( force )
+	{
+		if ( teamID == TEAM_ANY )
+		{
+			for ( int i = 0; i < MAX_NAV_TEAMS; ++i )
+			{
+				m_isBlocked[i] = true;
+			}
+		}
+		else
+		{
+			int teamIdx = teamID % MAX_NAV_TEAMS;
+			m_isBlocked[teamIdx] = true;
+		}
+	}
+	else if ( !tr.startsolid )
+	{
+		// unblock ourself
+#ifdef TERROR
+		extern ConVar DebugZombieBreakables;
+		if ( DebugZombieBreakables.GetBool() )
+#else
+		if ( false )
+#endif
+
+		{
+			NDebugOverlay::Box( origin, bounds.lo, bounds.hi, 0, 255, 0, 10, 5.0f );
+		}
+		else
+		{
+			for ( int i = 0; i < MAX_NAV_TEAMS; ++i )
+			{
+				m_isBlocked[i] = false;
+			}
+		}
+	}
+
+#else// other games
 	if ( !tr.startsolid )
 	{
 		// unblock ourself
@@ -4905,6 +4950,7 @@ void CNavArea::UpdateBlocked( bool force, int teamID )
 			m_isBlocked[ teamIdx ] = true;
 		}
 	}
+#endif
 
 	bool isBlocked = IsBlocked( TEAM_ANY );
 
@@ -5058,74 +5104,6 @@ void CNavArea::UpdateAvoidanceObstacles( void )
 	{
 		TheNavMesh->OnAvoidanceObstacleLeftArea( this );
 	}
-}
-
-
-//--------------------------------------------------------------------------------------------------------------
-// Clear set of func_nav_cost entities that affect this area
-void CNavArea::ClearAllNavCostEntities( void )
-{
-	RemoveAttributes( NAV_MESH_FUNC_COST );
-	m_funcNavCostVector.RemoveAll();
-}
-
-
-//--------------------------------------------------------------------------------------------------------------
-// Add the given func_nav_cost entity to the cost of this area
-void CNavArea::AddFuncNavCostEntity( CFuncNavCost *cost )
-{
-	SetAttributes( NAV_MESH_FUNC_COST );
-	m_funcNavCostVector.AddToTail( cost );
-}
-
-
-//--------------------------------------------------------------------------------------------------------------
-// Return the cost multiplier of this area's func_nav_cost entities for the given actor
-float CNavArea::ComputeFuncNavCost( CBaseCombatCharacter *who ) const
-{
-	float funcCost = 1.0f;
-
-	for( int i=0; i<m_funcNavCostVector.Count(); ++i )
-	{
-		if ( m_funcNavCostVector[i] != NULL )
-		{
-			funcCost *= m_funcNavCostVector[i]->GetCostMultiplier( who );
-		}
-	}
-
-	return funcCost;
-}
-
-
-//--------------------------------------------------------------------------------------------------------------
-bool CNavArea::HasFuncNavAvoid( void ) const
-{
-	for( int i=0; i<m_funcNavCostVector.Count(); ++i )
-	{
-		CFuncNavAvoid *avoid = dynamic_cast< CFuncNavAvoid * >( m_funcNavCostVector[i].Get() );
-		if ( avoid )
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-
-//--------------------------------------------------------------------------------------------------------------
-bool CNavArea::HasFuncNavPrefer( void ) const
-{
-	for( int i=0; i<m_funcNavCostVector.Count(); ++i )
-	{
-		CFuncNavPrefer *prefer = dynamic_cast< CFuncNavPrefer * >( m_funcNavCostVector[i].Get() );
-		if ( prefer )
-		{
-			return true;
-		}
-	}
-
-	return false;
 }
 
 
@@ -5861,7 +5839,6 @@ Vector CNavArea::GetRandomPoint( void ) const
 
 	return spot;
 }
-
 
 
 
