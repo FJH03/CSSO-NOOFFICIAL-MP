@@ -195,7 +195,7 @@ void CClassMenu::ShowPanel(bool bShow)
 	{
 		Activate();
 		SetMouseInputEnabled( true );
-		engine->ClientCmd_Unrestricted("touch_enable 0\n");
+		//engine->ClientCmd_Unrestricted("touch_enable 0\n");
 
 		// load a default class page
 		for ( int i=0; i<m_mouseoverButtons.Count(); ++i )
@@ -219,7 +219,7 @@ void CClassMenu::ShowPanel(bool bShow)
 	{
 		SetVisible( false );
 		SetMouseInputEnabled( false );
-		engine->ClientCmd_Unrestricted("touch_enable 1\n");
+		//engine->ClientCmd_Unrestricted("touch_enable 1\n");
 	}
 	
 	m_pViewPort->ShowBackGround( bShow );
