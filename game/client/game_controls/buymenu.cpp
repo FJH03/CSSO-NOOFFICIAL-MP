@@ -70,7 +70,7 @@ void CBuyMenu::ShowPanel(bool bShow)
 		SetMouseInputEnabled( true );
 
 		engine->ClientCmd_Unrestricted( "gameui_preventescapetoshow\n" );
-		engine->ClientCmd_Unrestricted("touch_enable 0\n");
+		//engine->ClientCmd_Unrestricted("touch_enable 0\n");
 	}
 	else
 	{
@@ -78,7 +78,7 @@ void CBuyMenu::ShowPanel(bool bShow)
 
 		SetVisible( false );
 		SetMouseInputEnabled( false );
-		engine->ClientCmd_Unrestricted("touch_enable 1\n");
+		//engine->ClientCmd_Unrestricted("touch_enable 1\n");
 	}
 
 	m_pViewPort->ShowBackGround( bShow );
