@@ -88,7 +88,7 @@
 
 		// Info for defusing.
 		CHandle<CCSPlayer> m_pBombDefuser;
-		float			m_flNextDefuse;
+		float			m_fLastDefuseTime;
 		bool			m_bStartDefuse;
 		int				m_iBombSiteIndex;
 
@@ -189,6 +189,7 @@ public:
 	CNetworkVar( bool, m_bStartedArming );
 	CNetworkVar( float, m_fArmedTime );
 	CNetworkVar( bool, m_bBombPlacedAnimation );
+	CNetworkVar( bool, m_bIsPlantingViaUse );
 
 	virtual bool IsRemoveable( void ) { return false; }
 

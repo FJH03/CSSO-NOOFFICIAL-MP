@@ -153,6 +153,7 @@ extern ConVar ammo_smokegrenade_max;
 extern ConVar ammo_decoy_max;
 extern ConVar ammo_molotov_max;
 
+ConVar mp_drop_knife_enable( "mp_drop_knife_enable", "0", 0, "Allows players to drop knives." );
 
 #define THROWGRENADE_COUNTER_BITS 3
 
@@ -368,6 +369,7 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_iAccount ), 16, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_bInBombZone ), 1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_bInBuyZone ), 1, SPROP_UNSIGNED ),
+	SendPropBool( SENDINFO( m_bKilledByTaser ) ),
 	SendPropInt( SENDINFO( m_iMoveState ), 0, SPROP_CHANGES_OFTEN ),
 	SendPropBool( SENDINFO( m_bIsScoped ) ),
 	SendPropBool( SENDINFO( m_bDuckOverride ) ),
@@ -1317,6 +1319,8 @@ void CCSPlayer::Spawn()
 		m_bImmunity = false;
 	}
 
+	m_bKilledByTaser = false;
+
 	StopLookingAtWeapon();
 	m_bIsHoldingLookAtWeapon = false;
 	m_bDuckOverride = false;
@@ -1597,35 +1601,27 @@ int CCSPlayer::GetPercentageOfEnemyTeamKilled()
 
 void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 {
-	//=============================================================================
-	// HPE_BEGIN:
-	// [pfreese] Process on-death achievements
-	//=============================================================================
-	
 	ProcessPlayerDeathAchievements(ToCSPlayer(info.GetAttacker()), this, info);
-
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 	SetArmorValue( 0 );
 
-	//=============================================================================
-	// HPE_BEGIN:
-	// [tj] Added a parameter so we know if it was death that caused the drop
-	// [menglish] Keep track of what the player has dropped for the freeze panel callouts
-	//=============================================================================
-	 
 	CBaseEntity* pAttacker = info.GetAttacker();
 	bool friendlyFire = pAttacker && pAttacker->GetTeamNumber() == GetTeamNumber();
 
+	CCSPlayer* pAttackerPlayer = ToCSPlayer( info.GetAttacker() );
+	if ( pAttackerPlayer )
+	{
+		CWeaponCSBase* pAttackerWeapon = dynamic_cast< CWeaponCSBase * >( pAttackerPlayer->GetActiveCSWeapon() );	// this can be NULL if the kill is by HE/molly/impact/etc. (inflictor is non-NULL and points to grenade then)
+
+		// killed by a taser?
+		if ( pAttackerWeapon && pAttackerWeapon->IsA( WEAPON_TASER ) )
+		{
+			m_bKilledByTaser = true;
+		}
+	}
+
 	//Only count the drop if it was not friendly fire
 	DropWeapons(true, !friendlyFire);
-	 
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
-	
 
 	// Just in case the progress bar is on screen, kill it.
 	SetProgressBarTime( 0 );
@@ -2115,7 +2111,8 @@ void CCSPlayer::PostThink()
 	if ( GetActiveWeapon() && !(m_iDisplayHistoryBits & DHF_AMMO_EXHAUSTED) )
 	{
 		CBaseCombatWeapon *pWeapon = GetActiveWeapon();
-		if ( !pWeapon->HasAnyAmmo() && !(pWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE) )
+		CWeaponCSBase* pCSWeapon = dynamic_cast<CWeaponCSBase*>(pWeapon);
+		if ( !pWeapon->HasAnyAmmo() && !(pWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE) && pCSWeapon->GetWeaponID() != WEAPON_TASER )
 		{
 			m_iDisplayHistoryBits |= DHF_AMMO_EXHAUSTED;
 			HintMessage( "#Hint_out_of_ammo", false );
@@ -3549,18 +3546,18 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 			pCSWeapon->SetWeaponModelIndex( pCSWeapon->GetCSWpnData().szWorldModel );
 
 			//Find out the index of the ammo type
-			int iAmmoIndex = pCSWeapon->GetPrimaryAmmoType();
+			/*int iAmmoIndex = pCSWeapon->GetPrimaryAmmoType();
 
 			//If it has an ammo type, find out how much the player has
-			if( iAmmoIndex != -1 )
+			if ( iAmmoIndex != -1 )
 			{
 				// Check to make sure we don't have other weapons using this ammo type
 				bool bAmmoTypeInUse = false;
 				if ( IsAlive() && GetHealth() > 0 )
 				{
-					for ( int i=0; i<MAX_WEAPONS; ++i )
+					for ( int i = 0; i<MAX_WEAPONS; ++i )
 					{
-						CBaseCombatWeapon *pOtherWeapon = GetWeapon(i);
+						CBaseCombatWeapon *pOtherWeapon = GetWeapon( i );
 						if ( pOtherWeapon && pOtherWeapon != pWeapon && pOtherWeapon->GetPrimaryAmmoType() == iAmmoIndex )
 						{
 							bAmmoTypeInUse = true;
@@ -3579,7 +3576,7 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 					//Remove all ammo of this type from the player
 					SetAmmoCount( 0, iAmmoIndex );
 				}
-			}
+			}*/
 		}
 
 		//=========================================
@@ -3657,6 +3654,154 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 				pWeaponPhys->SetPosition( vPos, angles, true );
 
 				AngularImpulse	angImp(0,0,0);
+				Vector vecAdd = GetAbsVelocity();
+				pWeaponPhys->AddVelocity( &vecAdd, &angImp );
+			}
+		}
+
+		bSuccess = true;
+	}
+
+	return bSuccess;
+}
+
+bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool bDropShield )
+{
+	bool bSuccess = false;
+
+	if ( HasShield() && bDropShield == true )
+	{
+		DropShield();
+		return true;
+	}
+
+	if ( pWeapon )
+	{
+		Vector vForward;
+
+		AngleVectors( EyeAngles(), &vForward, NULL, NULL );
+		//GetVectors( &vForward, NULL, NULL );
+
+		Weapon_Drop( pWeapon, &targetPos, NULL );
+
+		pWeapon->SetSolidFlags( FSOLID_NOT_STANDABLE | FSOLID_TRIGGER | FSOLID_USE_TRIGGER_BOUNDS );
+		pWeapon->SetMoveCollide( MOVECOLLIDE_FLY_BOUNCE );
+
+		CWeaponCSBase *pCSWeapon = dynamic_cast< CWeaponCSBase* >(pWeapon);
+
+		if ( pCSWeapon )
+		{
+			pCSWeapon->SetWeaponModelIndex( pCSWeapon->GetCSWpnData().szWorldModel );
+
+			//Find out the index of the ammo type
+			/*int iAmmoIndex = pCSWeapon->GetPrimaryAmmoType();
+
+			//If it has an ammo type, find out how much the player has
+			if ( iAmmoIndex != -1 )
+			{
+				// Check to make sure we don't have other weapons using this ammo type
+				bool bAmmoTypeInUse = false;
+				if ( IsAlive() && GetHealth() > 0 )
+				{
+					for ( int i = 0; i<MAX_WEAPONS; ++i )
+					{
+						CBaseCombatWeapon *pOtherWeapon = GetWeapon( i );
+						if ( pOtherWeapon && pOtherWeapon != pWeapon && pOtherWeapon->GetPrimaryAmmoType() == iAmmoIndex )
+						{
+							bAmmoTypeInUse = true;
+							break;
+						}
+					}
+				}
+
+				if ( !bAmmoTypeInUse )
+				{
+					int iAmmoToDrop = GetAmmoCount( iAmmoIndex );
+
+					//Add this much to the dropped weapon
+					pCSWeapon->SetExtraAmmoCount( iAmmoToDrop );
+
+					//Remove all ammo of this type from the player
+					SetAmmoCount( 0, iAmmoIndex );
+				}
+			}*/
+		}
+
+		//=========================================
+		// Teleport the weapon to the player's hand
+		//=========================================
+		int iBIndex = -1;
+		int iWeaponBoneIndex = -1;
+
+		MDLCACHE_CRITICAL_SECTION();
+		CStudioHdr *hdr = pWeapon->GetModelPtr();
+		// If I have a hand, set the weapon position to my hand bone position.
+		if ( hdr && hdr->numbones() > 0 )
+		{
+			// Assume bone zero is the root
+			for ( iWeaponBoneIndex = 0; iWeaponBoneIndex < hdr->numbones(); ++iWeaponBoneIndex )
+			{
+				iBIndex = LookupBone( hdr->pBone( iWeaponBoneIndex )->pszName() );
+				// Found one!
+				if ( iBIndex != -1 )
+				{
+					break;
+				}
+			}
+
+			if ( iWeaponBoneIndex == hdr->numbones() )
+				return true;
+
+			if ( iBIndex == -1 )
+			{
+				iBIndex = LookupBone( "ValveBiped.Bip01_R_Hand" );
+			}
+		}
+		else
+		{
+			iBIndex = LookupBone( "ValveBiped.Bip01_R_Hand" );
+		}
+
+		if ( iBIndex != -1 )
+		{
+			Vector origin;
+			QAngle angles;
+			matrix3x4_t transform;
+
+			// Get the transform for the weapon bonetoworldspace in the NPC
+			GetBoneTransform( iBIndex, transform );
+
+			// find offset of root bone from origin in local space
+			// Make sure we're detached from hierarchy before doing this!!!
+			pWeapon->StopFollowingEntity();
+			pWeapon->SetAbsOrigin( Vector( 0, 0, 0 ) );
+			pWeapon->SetAbsAngles( QAngle( 0, 0, 0 ) );
+			pWeapon->InvalidateBoneCache();
+			matrix3x4_t rootLocal;
+			pWeapon->GetBoneTransform( iWeaponBoneIndex, rootLocal );
+
+			// invert it
+			matrix3x4_t rootInvLocal;
+			MatrixInvert( rootLocal, rootInvLocal );
+
+			matrix3x4_t weaponMatrix;
+			ConcatTransforms( transform, rootInvLocal, weaponMatrix );
+			MatrixAngles( weaponMatrix, angles, origin );
+
+			pWeapon->Teleport( &origin, &angles, NULL );
+
+			//Have to teleport the physics object as well
+
+			IPhysicsObject *pWeaponPhys = pWeapon->VPhysicsGetObject();
+
+			if ( pWeaponPhys )
+			{
+				Vector vPos;
+				QAngle vAngles;
+				pWeaponPhys->GetPosition( &vPos, &vAngles );
+				pWeaponPhys->SetPosition( vPos, angles, true );
+
+				AngularImpulse	angImp( 0, 0, 0 );
 				Vector vecAdd = GetAbsVelocity();
 				pWeaponPhys->AddVelocity( &vecAdd, &angImp );
 			}
@@ -4171,6 +4316,39 @@ BuyResult_e CCSPlayer::AttemptToBuyNightVision( void )
 	}
 }
 
+BuyResult_e CCSPlayer::AttemptToBuyTaser( void )
+{
+	if ( Weapon_OwnsThisType( "weapon_taser" ) )
+	{
+		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
+			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_One" );
+		return BUY_ALREADY_HAVE;
+	}
+	else if ( m_iAccount < TASER_PRICE )
+	{
+		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
+			ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
+		return BUY_CANT_AFFORD;
+	}
+	else
+	{
+		IGameEvent * event = gameeventmanager->CreateEvent( "item_pickup" );
+		if( event )
+		{
+			event->SetInt( "userid", GetUserID() );
+			event->SetString( "item", "nvgs" );
+			event->SetBool( "silent", false );
+			gameeventmanager->FireEvent( event );
+		}
+
+		EmitSound( "Player.PickupWeapon" );
+
+		GiveNamedItem( "weapon_taser" );
+		AddAccount( -TASER_PRICE, true, true );
+
+		return BUY_BOUGHT;
+	}
+}
 
 // Handles the special "buy" alias commands we're creating to accommodate the buy
 // scripts players use (now that we've rearranged the buy menus and broken the scripts)
@@ -4208,20 +4386,35 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 	CCSWeaponInfo *pWeaponInfo = GetWeaponInfo( AliasToWeaponID( wpnName ) );
 	if ( pWeaponInfo == NULL )
 	{
-		if ( Q_stricmp( wpnName, "primammo" ) == 0 )
+		// UPD: oh wait, you can't rebuy ammo in cs:go...
+		/*if ( Q_stricmp( wpnName, "primammo" ) == 0 )
 		{
 			result = AttemptToBuyAmmo( 0 );
+
+			// it buys more ammo than it should be because
+			// GetReserveAmmoMax() returns max ammo for ammo
+			// type and not for weapon! It's happening because
+			// it checks if player (not weapon) has gun's type
+			// of ammo and if so, uses it's max capacity instead
+			// of gun's max capacity because player for some
+			// resaon has some ammo but he shouldn't
+			// solution: always return 0 in pPlayer->GetAmmoCount()?
 		}
 		else if ( Q_stricmp( wpnName, "secammo" ) == 0 )
 		{
 			result = AttemptToBuyAmmo( 1 );
 		}
-		else if ( Q_stristr( wpnName, "defuser" )  )
+		else*/ if ( Q_stristr( wpnName, "defuser" )  )
 		{
 			if( CanPlayerBuy( true ) )
 			{
 				result = AttemptToBuyDefuser();
 			}
+		}
+		else if ( Q_stristr( wpnName, "taser" )  )
+		{
+			if ( CanPlayerBuy( true ) )
+				result = AttemptToBuyTaser();
 		}
 	}
 	else
@@ -5290,39 +5483,7 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 	}
 	else if ( FStrEq( pcmd, "drop" ) )
 	{
-		CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase* >( GetActiveWeapon() );
-
-		if( pWeapon )
-		{
-			//=============================================================================
-			// HPE_BEGIN:
-			// [dwenger] Determine value of dropped item.
-			//=============================================================================
-
-			if ( !pWeapon->IsAPriorOwner( this ) )
-			{
-				pWeapon->AddToPriorOwnerList( this );
-
-				CCS_GameStats.IncrementStat(this, CSTAT_ITEMS_DROPPED_VALUE, pWeapon->GetCSWpnData().GetWeaponPrice());
-			}
-
-			//=============================================================================
-			// HPE_END
-			//=============================================================================
-
-			CSWeaponType type = pWeapon->GetCSWpnData().m_WeaponType;
-
-			if( type != WEAPONTYPE_KNIFE && type != WEAPONTYPE_GRENADE )
-			{
-				if (CSGameRules()->GetCanDonateWeapon() && !pWeapon->GetDonated())
-				{
-					pWeapon->SetDonated(true);
-					pWeapon->SetDonor(this);
-				}
-				CSWeaponDrop( pWeapon, true, true );
-
-			}
-		}
+		HandleDropWeapon();
 
 		return true;
 	}
@@ -5387,16 +5548,16 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 
 		return true;
 	}
-	else if ( FStrEq( pcmd, "buyammo1" ) )
-	{
-		AttemptToBuyAmmoSingle(0);
-		return true;
-	}
-	else if ( FStrEq( pcmd, "buyammo2" ) )
-	{
-		AttemptToBuyAmmoSingle(1);
-		return true;
-	}
+//	else if ( FStrEq( pcmd, "buyammo1" ) )
+//	{
+//		AttemptToBuyAmmoSingle(0);
+//		return true;
+//	}
+//	else if ( FStrEq( pcmd, "buyammo2" ) )
+//	{
+//		AttemptToBuyAmmoSingle(1);
+//		return true;
+//	}
 	else if ( FStrEq( pcmd, "nightvision" ) )
 	{
 		if ( ShouldRunRateLimitedCommand( args ) )
@@ -6646,6 +6807,9 @@ bool CCSPlayer::Weapon_CanUse( CBaseCombatWeapon *pBaseWeapon )
 
 	if ( pWeapon )
 	{
+		if ( pWeapon->IsA(WEAPON_TASER) && !pWeapon->HasAnyAmmo() )
+			return false;
+
 		// Don't give weapon_c4 to non-terrorists
 		if( pWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_C4 && GetTeamNumber() != TEAM_TERRORIST )
 		{
@@ -6658,7 +6822,7 @@ bool CCSPlayer::Weapon_CanUse( CBaseCombatWeapon *pBaseWeapon )
 
 bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 {
-	CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase* >( pBaseWeapon );
+	CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase* >(pBaseWeapon);
 	if ( !pWeapon )
 	{
 		Assert( !pWeapon );
@@ -6683,8 +6847,7 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 
 	// Even if we already have a grenade in this slot, we can pickup another one if we don't already
 	// own this type of grenade.
-	bool bPickupGrenade =  ( pWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_GRENADE );
-
+	bool bPickupGrenade = (pWeapon->GetWeaponType() == WEAPONTYPE_GRENADE);
 
 	/*
 	// ----------------------------------------
@@ -6692,79 +6855,106 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 	// ----------------------------------------
 	if ( !bPickupGrenade && Weapon_SlotOccupied( pWeapon ) )
 	{
-		Weapon_EquipAmmoOnly( pWeapon );
-		// Only remove me if I have no ammo left
-		// Can't just check HasAnyAmmo because if I don't use clips, I want to be removed,
-		if ( pWeapon->UsesClipsForAmmo1() && pWeapon->HasPrimaryAmmo() )
-			return false;
+	Weapon_EquipAmmoOnly( pWeapon );
+	// Only remove me if I have no ammo left
+	// Can't just check HasAnyAmmo because if I don't use clips, I want to be removed,
+	if ( pWeapon->UsesClipsForAmmo1() && pWeapon->HasPrimaryAmmo() )
+	return false;
 
-		UTIL_Remove( pWeapon );
-		return false;
+	UTIL_Remove( pWeapon );
+	return false;
 	}
 	*/
 
 	if ( HasShield() && pWeapon->GetCSWpnData().m_bCanUseWithShield == false )
-		 return false;
+		return false;
 
-	// Check ammo counts for grenades, and don't try to pick up more grenades than we can carry
-	/*if ( bPickupGrenade )
+	bool bPickupTaser = ( pWeapon->IsA( WEAPON_TASER ) );
+	if ( bPickupTaser )
 	{
-		CBaseCombatWeapon *pOwnedGrenade = Weapon_OwnsThisType( pWeapon->GetClassname() );
+		CBaseCombatWeapon *pOwnedTaser = Weapon_OwnsThisType( "weapon_taser" );
+		if ( pOwnedTaser )
+			return false;
+	}
 
-		if( pOwnedGrenade )
+	bool bPickupC4 = (pWeapon->GetWeaponType() == WEAPONTYPE_C4);
+	if ( bPickupC4 )
+	{
+		// we're only allowed to pick up one c4 at a time
+		CBaseCombatWeapon *pC4 = Weapon_OwnsThisType( "weapon_c4" );
+		if ( pC4 )
+			return false;
+
+		// see if we're trying to pick up the bomb without being able to "see" it
+		// prevent picking it up through a thin wall
+		float flDist = (pWeapon->GetAbsOrigin() - GetAbsOrigin()).AsVector2D().Length();
+		if ( flDist > 34 )
 		{
-			int numGrenades = 0;
-			int maxGrenades = 0;
-
-			int ammoIndex = pOwnedGrenade->GetPrimaryAmmoType();
-			if( ammoIndex != -1 )
-			{
-				numGrenades = GetAmmoCount( ammoIndex );
-			}
-			maxGrenades = GetAmmoDef()->MaxCarry(ammoIndex);
-
-			if( numGrenades >= maxGrenades )
-			{
+			trace_t tr;
+			UTIL_TraceLine( pWeapon->GetAbsOrigin(), EyePosition(), MASK_VISIBLE, this, COLLISION_GROUP_DEBRIS, &tr );
+			if ( tr.fraction < 1.0 )
 				return false;
-			}
 		}
-	}*/
+	}
 
-	if( bPickupGrenade || !Weapon_SlotOccupied( pWeapon ) )
+	//	bool bPickupCarriableItem = ( pWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_CARRIABLEITEM );
+	//	if ( bPickupCarriableItem && Weapon_SlotOccupied( pWeapon ) )
+	//	{
+	//		CBaseCarribleItem *pPickupItem = static_cast<CBaseCarribleItem*>(pWeapon);
+	//		if ( pPickupItem )
+	//		{
+	//			CBaseCarribleItem *pOwnedItem = static_cast<CBaseCarribleItem*>(Weapon_OwnsThisType( pPickupItem->GetClassname(), pPickupItem->GetSubType() ));
+	//			if ( pOwnedItem && pOwnedItem->GetCurrentItems() < pOwnedItem->GetMaxItems() )
+	//			{
+	//				pOwnedItem->AddAmmo( pPickupItem->GetCurrentItems() );
+	//				UTIL_Remove( pPickupItem );
+	//			}
+	//			
+	//			return false;
+	//		}
+	//	}
+
+	if ( bPickupC4 || bPickupGrenade || bPickupTaser || /*bPickupCarriableItem || */ !Weapon_SlotOccupied( pWeapon ) )
 	{
+		// we have to do this here because picking up weapons placed in the world don't have their clips set
+		// TODO: give the weapon a clip on spawn and not when picked up!
+		if ( !pWeapon->GetPreviousOwner() )
+			StockPlayerAmmo( pWeapon );
+
 		pWeapon->CheckRespawn();
 
 		pWeapon->AddSolidFlags( FSOLID_NOT_SOLID );
 		pWeapon->AddEffects( EF_NODRAW );
 
-		CCSPlayer* pDonor = pWeapon->GetDonor();
-		if ( pDonor && pDonor != this && pWeapon->GetCSWpnData().GetWeaponPrice() > m_iAccount )
+		CCSPlayer* donor = pWeapon->GetDonor();
+		if ( donor )
 		{
-			CCS_GameStats.Event_PlayerDonatedWeapon( pDonor );
+			CCS_GameStats.Event_PlayerDonatedWeapon( donor );
+			pWeapon->SetDonor( NULL );
 		}
-		pWeapon->SetDonor(NULL);
 
 		Weapon_Equip( pWeapon );
 
-		int iExtraAmmo = pWeapon->GetExtraAmmoCount();
-
-		if( iExtraAmmo && !bPickupGrenade )
-		{
-			//Find out the index of the ammo
-			int iAmmoIndex = pWeapon->GetPrimaryAmmoType();
-
-			if( iAmmoIndex != -1 )
-			{
-				//Remove the extra ammo from the weapon
-				pWeapon->SetExtraAmmoCount(0);
-
-				//Give it to the player
-				SetAmmoCount( iExtraAmmo, iAmmoIndex );
-			}
-		}
+		// Made obsolete when ammo was moved from player to weapon
+		// 		int iExtraAmmo = pWeapon->GetExtraAmmoCount();
+		// 		
+		// 		if( iExtraAmmo /*&& !bPickupGrenade*/ /*&& !bPickupCarriableItem*/ )
+		// 		{
+		// 			//Find out the index of the ammo
+		// 			int iAmmoIndex = pWeapon->GetPrimaryAmmoType();
+		// 
+		// 			if( iAmmoIndex != -1 )
+		// 			{
+		// 				//Remove the extra ammo from the weapon
+		// 				pWeapon->SetExtraAmmoCount(0 );
+		// 
+		// 				//Give it to the player
+		// 				SetAmmoCount( iExtraAmmo, iAmmoIndex );
+		// 			}
+		// 		}
 
 		IGameEvent * event = gameeventmanager->CreateEvent( "item_pickup" );
-		if( event )
+		if ( event )
 		{
 			const char *weaponName = pWeapon->GetClassname();
 			if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
@@ -7308,6 +7498,9 @@ void CCSPlayer::BuildRebuyStruct()
 	// defuser
 	m_rebuyStruct.m_defuser = HasDefuser();
 
+	// taser
+	m_rebuyStruct.m_taser = (Weapon_OwnsThisType( "weapon_taser" )) ? true : false;
+
 	// night vision
 	m_rebuyStruct.m_nightVision = m_bHasNightVision.Get();	//cast to avoid strange compiler warning
 
@@ -7343,18 +7536,22 @@ void CCSPlayer::Rebuy( void )
 		if (!Q_strncmp(token, "PrimaryWeapon", 14))
 		{
 			result = RebuyPrimaryWeapon();
-		}
+		}/*
 		else if (!Q_strncmp(token, "PrimaryAmmo", 12))
 		{
 			result = RebuyPrimaryAmmo();
-		}
+		}*/
 		else if (!Q_strncmp(token, "SecondaryWeapon", 16))
 		{
 			result = RebuySecondaryWeapon();
-		}
+		}/*
 		else if (!Q_strncmp(token, "SecondaryAmmo", 14))
 		{
 			result = RebuySecondaryAmmo();
+		}*/
+		else if ( Q_strcasecmp(token, "Taser" ) == 0 )		// TODO[pmf]: handle this better
+		{
+			result = RebuyTaser();
 		}
 		else if (!Q_strncmp(token, "HEGrenade", 10))
 		{
@@ -7447,6 +7644,14 @@ BuyResult_e CCSPlayer::RebuySecondaryWeapon()
 	return BUY_ALREADY_HAVE;
 }
 
+BuyResult_e CCSPlayer::RebuyTaser()
+{
+	if ( m_rebuyStruct.m_taser )
+		return HandleCommand_Buy( "taser" );
+
+	return BUY_INVALID_ITEM;
+}
+/*
 BuyResult_e CCSPlayer::RebuyPrimaryAmmo()
 {
 	CBaseCombatWeapon *primary = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
@@ -7496,7 +7701,7 @@ BuyResult_e CCSPlayer::RebuySecondaryAmmo()
 
 	return BUY_ALREADY_HAVE;
 }
-
+*/
 BuyResult_e CCSPlayer::RebuyHEGrenade()
 {
 	CBaseCombatWeapon *pGrenade = Weapon_OwnsThisType( "weapon_hegrenade" );
@@ -7714,32 +7919,26 @@ CBaseEntity *CCSPlayer::FindUseEntity()
 
 	// Check to see if the bomb is close enough to use before attempting to use anything else.
 
-	if ( CSGameRules()->IsBombDefuseMap() && GetTeamNumber() == TEAM_CT )
+	entity = GetUsableHighPriorityEntity();
+
+	if ( entity== NULL )
 	{
-		// This is done separately since there might be something blocking our LOS to it
-		// but we might want to use it anyway if it's close enough.  This should eliminate
-		// the vast majority of bomb placement exploits (places where the bomb can be planted
-		// but can't be "used".  This also mimics goldsrc cstrike behavior.
-		CBaseEntity *bomb = gEntList.FindEntityByClassname( NULL, PLANTED_C4_CLASSNAME );
-		if (bomb != NULL)
+		Vector aimDir;
+		AngleVectors( EyeAngles(), &aimDir );
+
+		trace_t result;
+		UTIL_TraceLine( EyePosition(), EyePosition() + MAX_WEAPON_NAME_POPUP_RANGE * aimDir, MASK_ALL, this, COLLISION_GROUP_NONE, &result );
+
+		if ( result.DidHitNonWorldEntity() && result.m_pEnt->IsBaseCombatWeapon() )
 		{
-			Vector bombPos = bomb->GetAbsOrigin();
-			Vector vecLOS = EyePosition() - bombPos;
 
-			if (vecLOS.LengthSqr() < (96*96)) // 64 is the distance in Goldsrc.  However since Goldsrc did distance from the player's origin and we're doing distance from the player's eye, make the radius a bit bigger.
-			{
-				// bomb is close enough, now make sure the player is facing the bomb.
-				Vector forward;
-				AngleVectors(EyeAngles(), &forward, NULL, NULL);
-
-				vecLOS.NormalizeInPlace();
-
-				float flDot = DotProduct(forward, vecLOS);
-				if (flDot < -0.7) // 0.7 taken from Goldsrc, +/- ~45 degrees
+				CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase * >( result.m_pEnt );
+				CSWeaponType nType = pWeapon->GetWeaponType();
+				if ( IsPrimaryOrSecondaryWeapon( nType ) )
 				{
-					entity = bomb;
+					entity = pWeapon;
 				}
-			}
+
 		}
 	}
 
@@ -7893,6 +8092,105 @@ void CCSPlayer::FlashlightTurnOff( void )
 	}
 }
 
+bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
+{
+
+	CWeaponCSBase *pCSWeapon = dynamic_cast< CWeaponCSBase* >( pWeapon ? pWeapon : GetActiveWeapon() );
+
+	if( pCSWeapon )
+	{
+/*
+		CBaseCarribleItem *pItem = dynamic_cast< CBaseCarribleItem * >( pCSWeapon );
+		if ( pItem  )
+		{
+			pItem->DropItem();
+				
+			// decrement the ammo
+			pItem->DecrementAmmo( this );
+			// if that was the last item, delete this one
+			if ( pItem->GetCurrentItems() <= 0 )
+			{
+				CSWeaponDrop( pItem, true, true );
+				UTIL_Remove( pItem );
+				UpdateAddonBits();
+			}
+
+			return false;
+		}
+*/
+		
+		// [dwenger] Determine value of dropped item.
+		if ( !pCSWeapon->IsAPriorOwner( this ) )
+		{
+			pCSWeapon->AddToPriorOwnerList( this );
+			CCS_GameStats.IncrementStat(this, CSTAT_ITEMS_DROPPED_VALUE, pCSWeapon->GetCSWpnData().GetWeaponPrice() );
+		}
+
+		// PiMoN: uncomment this when we have healthshots
+		/*if ( pCSWeapon->IsA( WEAPON_HEALTHSHOT ) )
+		{
+			CItem_Healthshot* pHealth = dynamic_cast< CItem_Healthshot* >( pCSWeapon );
+			if ( pHealth )
+			{
+				pHealth->DropHealthshot();
+				ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
+				
+			}
+			return true;
+		}*/
+
+		CSWeaponType type = pCSWeapon->GetWeaponType();
+		switch ( type )
+		{
+		// Only certail weapons can be dropped when drop is initiated by player
+		case WEAPONTYPE_PISTOL:
+		case WEAPONTYPE_SUBMACHINEGUN:
+		case WEAPONTYPE_RIFLE:
+		case WEAPONTYPE_SHOTGUN:
+		case WEAPONTYPE_SNIPER_RIFLE:
+		case WEAPONTYPE_MACHINEGUN:
+		case WEAPONTYPE_C4:
+		{
+			if (CSGameRules()->GetCanDonateWeapon() && !pCSWeapon->GetDonated() )
+			{
+				pCSWeapon->SetDonated(true );
+				pCSWeapon->SetDonor(this );
+			}
+			CSWeaponDrop( pCSWeapon, true, true );
+
+			if ( IsAlive() && !bSwapping )
+				ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
+		}
+		break;
+
+		default:
+		{
+			// let dedicated servers optionally allow droppable knives
+			if ( type == WEAPONTYPE_KNIFE && mp_drop_knife_enable.GetBool( ) )
+			{
+				if ( CSGameRules( )->GetCanDonateWeapon( ) && !pCSWeapon->GetDonated( ) )
+				{
+					pCSWeapon->SetDonated( true );
+					pCSWeapon->SetDonor( this );
+				}
+				CSWeaponDrop( pCSWeapon, true, true );
+
+				if ( IsAlive( ) && !bSwapping )
+					ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName( ) );
+			}
+			else if ( IsAlive( ) && !bSwapping )
+			{
+				ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_CannotDropWeapon", pCSWeapon->GetPrintName( ) );
+			}
+		}
+		break;
+		}
+
+		return true;
+	}
+
+	return false;
+}
 
 //Drop the appropriate weapons:
 // Defuser if we have one
@@ -8944,7 +9242,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			ToCSPlayer(pAttacker)->AwardAchievement(CSPosthumousGrenadeKill);
 		}
 
-		if (pAttacker->GetActiveWeapon() && pAttacker->GetActiveWeapon()->Clip1() == 0 && pAttackerWeapon && pAttackerWeapon->GetCSWpnData().m_WeaponType != WEAPONTYPE_SNIPER_RIFLE)
+		if (pAttacker->GetActiveWeapon() && pAttacker->GetActiveWeapon()->Clip1() == 0 && pAttackerWeapon && pAttackerWeapon->GetCSWpnData().m_WeaponType != WEAPONTYPE_SNIPER_RIFLE && attackerWeaponId != WEAPON_TASER )
 		{
 			if (pInflictor == pAttacker)
 			{

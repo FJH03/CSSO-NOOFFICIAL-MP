@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Weapon selection handling
 //
@@ -40,6 +40,9 @@ DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, Close, "CHudWeaponSelection");
 DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, NextWeapon, "CHudWeaponSelection");
 DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, PrevWeapon, "CHudWeaponSelection");
 DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, LastWeapon, "CHudWeaponSelection");
+DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, NextGrenadeWeapon, "CHudWeaponSelection");
+DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, NextItemWeapon, "CHudWeaponSelection");
+DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, NextNonGrenadeWeapon, "CHudWeaponSelection");
 
 HOOK_COMMAND( slot1, Slot1 );
 HOOK_COMMAND( slot2, Slot2 );
@@ -56,6 +59,9 @@ HOOK_COMMAND( cancelselect, Close );
 HOOK_COMMAND( invnext, NextWeapon );
 HOOK_COMMAND( invprev, PrevWeapon );
 HOOK_COMMAND( lastinv, LastWeapon );
+HOOK_COMMAND( invnextgrenade, NextGrenadeWeapon);
+HOOK_COMMAND( invnextitem, NextItemWeapon);
+HOOK_COMMAND( invnextnongrenade, NextNonGrenadeWeapon);
 
 // instance info
 CBaseHudWeaponSelection *CBaseHudWeaponSelection::s_pInstance = NULL;
@@ -119,12 +125,14 @@ void CBaseHudWeaponSelection::VidInit(void)
 	// If we've already loaded weapons, let's get new sprites
 	gWR.LoadAllWeaponSprites();
 
+#if !defined( CSTRIKE_DLL )
 	// set spacing of pickup history
 	CHudHistoryResource *pHudHR = GET_HUDELEMENT( CHudHistoryResource );
 	if( pHudHR )
 	{
 		pHudHR->SetHistoryGap( 21 );
 	}
+#endif // !CSTRIKE_DLL
 
 	Reset();
 }
@@ -265,6 +273,7 @@ int	CBaseHudWeaponSelection::KeyInput( int down, ButtonCode_t keynum, const char
 //-----------------------------------------------------------------------------
 void CBaseHudWeaponSelection::OnWeaponPickup( C_BaseCombatWeapon *pWeapon )
 {
+#if !defined( CSTRIKE_DLL )
 	// add to pickup history
 	CHudHistoryResource *pHudHR = GET_HUDELEMENT( CHudHistoryResource );
 	
@@ -272,6 +281,7 @@ void CBaseHudWeaponSelection::OnWeaponPickup( C_BaseCombatWeapon *pWeapon )
 	{
 		pHudHR->AddToHistory( pWeapon );
 	}
+#endif // !CSTRIKE_DLL
 }
 
 //------------------------------------------------------------------------
@@ -436,7 +446,66 @@ void CBaseHudWeaponSelection::UserCmd_NextWeapon(void)
 		return;
 
 	CycleToNextWeapon();
+#if !defined ( CSTRIKE_DLL )
 	if( hud_fastswitch.GetInt() > 0 )
+#endif
+	{
+		SelectWeapon();
+	}
+	UpdateSelectionTime();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Selects the next grenade or bom in the weapon menu
+//-----------------------------------------------------------------------------
+void CBaseHudWeaponSelection::UserCmd_NextGrenadeWeapon(void)
+{
+	// If we're not allowed to draw, ignore weapon selections
+	if ( !BaseClass::ShouldDraw() )
+		return;
+
+	CycleToNextGrenadeOrBomb();
+#if !defined ( CSTRIKE_DLL )
+	if( hud_fastswitch.GetInt() > 0 )
+#endif
+	{
+		SelectWeapon();
+	}
+	UpdateSelectionTime();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Selects the next grenade, bomb or melee weapon in the weapon menu
+//-----------------------------------------------------------------------------
+void CBaseHudWeaponSelection::UserCmd_NextItemWeapon(void)
+{
+	// If we're not allowed to draw, ignore weapon selections
+	if ( !BaseClass::ShouldDraw() )
+		return;
+
+	CycleToNextGrenadeBombOrMelee();
+#if !defined ( CSTRIKE_DLL )
+	if( hud_fastswitch.GetInt() > 0 )
+#endif
+	{
+		SelectWeapon();
+	}
+	UpdateSelectionTime();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Selects the next non grenade item in the weapon menu
+//-----------------------------------------------------------------------------
+void CBaseHudWeaponSelection::UserCmd_NextNonGrenadeWeapon(void)
+{
+	// If we're not allowed to draw, ignore weapon selections
+	if ( !BaseClass::ShouldDraw() )
+		return;
+
+	CycleToNextNonGrenadeOrBomb();
+#if !defined ( CSTRIKE_DLL )
+	if( hud_fastswitch.GetInt() > 0 )
+#endif
 	{
 		SelectWeapon();
 	}
@@ -454,7 +523,9 @@ void CBaseHudWeaponSelection::UserCmd_PrevWeapon(void)
 
 	CycleToPrevWeapon();
 
+#if !defined ( CSTRIKE_DLL )
 	if( hud_fastswitch.GetInt() > 0 )
+#endif
 	{
 		SelectWeapon();
 	}
@@ -535,6 +606,7 @@ void CBaseHudWeaponSelection::SelectWeapon( void )
 
 		// Play the "weapon selected" sound
 		player->EmitSound( "Player.WeaponSelected" );
+		
 	}
 }
 
@@ -556,8 +628,12 @@ void CBaseHudWeaponSelection::CancelWeaponSelection( void )
 
 		m_hSelectedWeapon = NULL;
 
-		// Play the "close weapon selection" sound
-		player->EmitSound( "Player.WeaponSelectionClose" );
+		// Play the "close weapon selection" sound based on faction
+		//player->EmitSound( "Player.WeaponSelectionClose" );
+
+		// Play the "weapon selected" sound
+		player->EmitSound( "Player.WeaponSelected" );
+
 	}
 	else
 	{

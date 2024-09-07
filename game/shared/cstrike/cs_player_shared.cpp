@@ -15,6 +15,10 @@
 #ifdef CLIENT_DLL
 	#include "c_cs_player.h"
 	#include "c_cs_playerresource.h"
+	#include "c_cs_hostage.h"
+	#include "c_plantedc4.h"
+
+	#define CCSPlayerResource C_CS_PlayerResource
 #else
 	#include "cs_player.h"
 	#include "soundent.h"
@@ -22,6 +26,10 @@
 	#include "KeyValues.h"
 	#include "triggers.h"
 	#include "cs_gamestats.h"
+	#include "cs_simple_hostage.h"
+	#include "predicted_viewmodel.h"
+	//#include "cs_player_resource.h"
+	#include "cs_simple_hostage.h"
 #endif
 
 #include "tier0/vprof.h"
@@ -34,6 +42,8 @@
 #include "engine/ivdebugoverlay.h"
 #include "obstacle_pushaway.h"
 #include "props_shared.h"
+#include "ammodef.h"
+#include "cs_loadout.h"
 
 ConVar sv_showimpacts("sv_showimpacts", "0", FCVAR_REPLICATED, "Shows client (red) and server (blue) bullet impact point (1=both, 2=client-only, 3=server-only)" );
 ConVar sv_showplayerhitboxes( "sv_showplayerhitboxes", "0", FCVAR_REPLICATED, "Show lag compensated hitboxes for the specified player index whenever a player fires." );
@@ -46,6 +56,10 @@ extern ConVar mp_respawn_on_death_t;
 #define CS_MAX_WALLBANG_TRAIL_LENGTH 800
 
 void DispatchEffect( const char *pName, const CEffectData &data );
+
+#if defined( CLIENT_DLL )
+#define CPlantedC4 C_PlantedC4
+#endif
 
 bool CCSPlayer::IsAbleToInstantRespawn( void )
 {
@@ -200,6 +214,17 @@ float CCSPlayer::GetPlayerMaxSpeed()
 	return speed;
 }
 
+bool CCSPlayer::IsPrimaryOrSecondaryWeapon( CSWeaponType nType )
+{
+	if ( nType == WEAPONTYPE_PISTOL || nType == WEAPONTYPE_SUBMACHINEGUN || nType == WEAPONTYPE_RIFLE ||  
+		nType == WEAPONTYPE_SHOTGUN || nType == WEAPONTYPE_SNIPER_RIFLE || nType == WEAPONTYPE_MACHINEGUN )
+	{
+		return true;
+	}
+
+	return false;
+}
+
 bool CCSPlayer::IsOtherEnemy( int nEntIndex )
 {
 	CCSPlayer *pPlayer = (CCSPlayer*)UTIL_PlayerByIndex( nEntIndex );
@@ -253,6 +278,170 @@ bool CCSPlayer::IsOtherEnemy( CCSPlayer *pPlayer )
 	}*/
 
 	return nTeam != nOtherTeam;
+}
+
+bool CCSPlayer::GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity, CConfigurationForHighPriorityUseEntity_t &cfg )
+{
+	if ( dynamic_cast<CPlantedC4*>( pEntity ) )
+	{
+		if ( CSGameRules() && CSGameRules()->IsBombDefuseMap() &&
+			( this->GetTeamNumber() == TEAM_CT ) )
+		{
+			cfg.m_pEntity = pEntity;
+		}
+		else
+		{
+			// it's a high-priority entity, but not used by the player team
+			cfg.m_pEntity = NULL;
+		}
+		cfg.m_ePriority = cfg.k_EPriority_Bomb;
+		cfg.m_eDistanceCheckType = cfg.k_EDistanceCheckType_2D;
+		cfg.m_pos = pEntity->GetAbsOrigin() + Vector( 0, 0, 3 );
+		cfg.m_flMaxUseDistance = 62;		// Cannot use if > 62 units away
+		cfg.m_flLosCheckDistance = 36;		// Check LOS if > 36 units away (2D)
+		cfg.m_flDotCheckAngle = -0.7;		// 0.7 taken from Goldsrc, +/- ~45 degrees
+		cfg.m_flDotCheckAngleMax = -0.5;	// 0.3 for it going outside the range during continuous use (120-degree cone)
+		return true;
+	}
+	else if ( dynamic_cast<CHostage*>( pEntity ) )
+	{
+		cfg.m_pEntity = pEntity;
+		cfg.m_ePriority = cfg.k_EPriority_Hostage;
+		cfg.m_eDistanceCheckType = cfg.k_EDistanceCheckType_3D;
+		cfg.m_pos = pEntity->EyePosition();
+		cfg.m_flMaxUseDistance = 62;		// Cannot use if > 62 units away
+		cfg.m_flLosCheckDistance = 32;		// Check LOS if > 32 units away (2D)
+		cfg.m_flDotCheckAngle = -0.7;		// 0.7 taken from Goldsrc, +/- ~45 degrees
+		cfg.m_flDotCheckAngleMax = -0.5;	// 0.5 for it going outside the range during continuous use (120-degree cone)
+		return true;
+	}
+	return false;
+}
+
+bool CCSPlayer::GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity )
+{
+	if ( dynamic_cast<CPlantedC4*>( pEntity ) )
+	{
+		return true;
+	}
+	else if ( dynamic_cast<CHostage*>( pEntity ) )
+	{
+		return true;
+	}
+	return false;
+}
+
+
+
+CBaseEntity *CCSPlayer::GetUsableHighPriorityEntity( void )
+{
+	// This is done separately since there might be something blocking our LOS to it
+	// but we might want to use it anyway if it's close enough.  This should eliminate
+	// the vast majority of bomb placement exploits (places where the bomb can be planted
+	// but can't be "used".  This also mimics goldsrc cstrike behavior.
+
+	CBaseEntity *pEntsNearPlayer[64];
+	// 64 is the distance in Goldsrc.  However since Goldsrc did distance from the player's origin and we're doing distance from the player's eye, make the radius a bit bigger.
+	int iEntsNearPlayer = UTIL_EntitiesInSphere( pEntsNearPlayer, 64, EyePosition(), 72, FL_OBJECT );
+	if( iEntsNearPlayer != 0 )
+	{
+		CConfigurationForHighPriorityUseEntity_t cfgBestHighPriorityEntity;
+		cfgBestHighPriorityEntity.m_pEntity = NULL;
+		cfgBestHighPriorityEntity.m_ePriority = cfgBestHighPriorityEntity.k_EPriority_Default;
+
+		for( int i = 0; i != iEntsNearPlayer; ++i )
+		{
+			CBaseEntity *pEntity = pEntsNearPlayer[i];
+			Assert( pEntity != NULL );
+			CConfigurationForHighPriorityUseEntity_t cfgUseSettings;
+			if ( !GetUseConfigurationForHighPriorityUseEntity( pEntity, cfgUseSettings ) )
+				continue; // not a high-priority entity
+			if ( !cfgUseSettings.m_pEntity )
+				continue; // not used by the player
+			if ( cfgUseSettings.m_ePriority < cfgBestHighPriorityEntity.m_ePriority )
+				continue; // we already have a higher priority entity
+			
+			if ( !cfgUseSettings.UseByPlayerNow( this, cfgUseSettings.k_EPlayerUseType_Start ) )
+				continue; // cannot start use by the player right now
+				
+			// This high-priority entity passes the checks, remember it as best
+			if ( cfgUseSettings.IsBetterForUseThan( cfgBestHighPriorityEntity ) )
+				cfgBestHighPriorityEntity = cfgUseSettings;
+		}
+
+		return cfgBestHighPriorityEntity.m_pEntity;
+	}
+
+	return NULL;
+}
+
+
+
+bool CConfigurationForHighPriorityUseEntity_t::IsBetterForUseThan( CConfigurationForHighPriorityUseEntity_t const &other ) const
+{
+	if ( !m_pEntity )
+		return false;
+	if ( !other.m_pEntity )
+		return true;
+	if ( m_ePriority < other.m_ePriority )
+		return false;
+	if ( m_ePriority > other.m_ePriority )
+		return true;
+	if ( m_flDotCheckAngleMax < other.m_flDotCheckAngleMax ) // We are looking at it with a better angle
+		return true;
+	if ( m_flMaxUseDistance < other.m_flMaxUseDistance ) // This entity is closer to user
+		return true;
+	return false;
+}
+
+bool CConfigurationForHighPriorityUseEntity_t::UseByPlayerNow( CCSPlayer *pPlayer, EPlayerUseType_t ePlayerUseType )
+{
+	if ( !pPlayer )
+		return false;
+
+	// entity is close enough, now make sure the player is facing the bomb.
+	float flDistTo = FLT_MAX;
+	switch ( m_eDistanceCheckType )
+	{
+	case k_EDistanceCheckType_2D:
+		flDistTo = pPlayer->EyePosition().AsVector2D().DistTo( m_pos.AsVector2D() );
+		break;
+	case k_EDistanceCheckType_3D:
+		flDistTo = pPlayer->EyePosition().DistTo( m_pos );
+		break;
+	default:
+		Assert( false );
+	}
+	// UTIL_EntitiesInSphere gives strange results where I can find it when my eyes are at an angle, but not when I'm right on top of it
+	// because of that, make sure it's in our radius, but check the 2d los and make sure we are as close or closer than we need to be in 1.6
+	if ( flDistTo > m_flMaxUseDistance )
+		return false;
+
+	// if it's more than 36 units away (2d), we should check LOS
+	if ( flDistTo > m_flLosCheckDistance )
+	{
+		trace_t tr;
+		UTIL_TraceLine( pPlayer->EyePosition(), m_pos, (MASK_VISIBLE|CONTENTS_WATER|CONTENTS_SLIME), pPlayer, COLLISION_GROUP_DEBRIS, &tr );
+		// if we can't trace to the bomb at this distance, then we fail
+		if ( tr.fraction < 0.98 )
+			return false;
+	}
+
+	Vector vecLOS = pPlayer->EyePosition() - m_pos;
+	Vector forward;
+	AngleVectors( pPlayer->EyeAngles(), &forward, NULL, NULL );
+
+	vecLOS.NormalizeInPlace();
+
+	float flDot = DotProduct(forward, vecLOS);
+	float flCheckAngle = ( ePlayerUseType == k_EPlayerUseType_Start ) ? m_flDotCheckAngle : m_flDotCheckAngleMax;
+	if ( flDot >= flCheckAngle )
+		return false;
+
+	// Remember the actual settings of this entity
+	m_flDotCheckAngle = m_flDotCheckAngleMax = flDot;
+	m_flLosCheckDistance = m_flMaxUseDistance = flDistTo;
+	return true;
 }
 
 bool CCSPlayer::IsBotOrControllingBot()
@@ -318,6 +507,11 @@ void CCSPlayer::GetBulletTypeParameters(
 	{
 		fPenetrationPower = 30;
 		flPenetrationDistance = 2000.0;
+	}
+	else if ( IsAmmoType( iBulletType, AMMO_TYPE_TASERCHARGE ) )
+	{
+		fPenetrationPower = 0;
+		flPenetrationDistance = 0.0;
 	}
 	else
 	{

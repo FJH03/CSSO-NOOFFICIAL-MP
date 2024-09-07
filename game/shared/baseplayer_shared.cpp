@@ -1117,12 +1117,9 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 	int useableContents = MASK_SOLID | CONTENTS_DEBRIS | CONTENTS_PLAYERCLIP;
 
 #ifdef CSTRIKE_DLL
-	useableContents = MASK_NPCSOLID_BRUSHONLY | MASK_OPAQUE_AND_NPCS;
+	useableContents = (MASK_NPCSOLID_BRUSHONLY | MASK_OPAQUE_AND_NPCS) & ~CONTENTS_OPAQUE;
 #endif
 
-#ifdef HL1_DLL
-	useableContents = MASK_SOLID;
-#endif
 #ifndef CLIENT_DLL
 	CBaseEntity *pFoundByTrace = NULL;
 #endif
@@ -1135,10 +1132,16 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 	CBaseEntity *pNearest = NULL;
 
 	const int NUM_TANGENTS = 8;
+
+#if defined( CSTRIKE_DLL ) && defined( GAME_DLL )
+	const int NUM_TRACES = 1;
+#else
+	const int NUM_TRACES = NUM_TANGENTS;
+#endif
 	// trace a box at successive angles down
 	//							forward, 45 deg, 30 deg, 20 deg, 15 deg, 10 deg, -10, -15
 	const float tangents[NUM_TANGENTS] = { 0, 1, 0.57735026919f, 0.3639702342f, 0.267949192431f, 0.1763269807f, -0.1763269807f, -0.267949192431f };
-	for ( int i = 0; i < NUM_TANGENTS; i++ )
+	for ( int i = 0; i < NUM_TRACES; i++ )
 	{
 		if ( i == 0 )
 		{
@@ -1168,8 +1171,14 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 			float centerZ = CollisionProp()->WorldSpaceCenter().z;
 			delta.z = IntervalDistance( tr.endpos.z, centerZ + CollisionProp()->OBBMins().z, centerZ + CollisionProp()->OBBMaxs().z );
 			float dist = delta.Length();
+#if defined( CSTRIKE_DLL )
+			CCSPlayer *pPlayer = dynamic_cast<CCSPlayer*>( pObject );
+			if ( (pPlayer && pPlayer->IsBot() && dist < PLAYER_USE_BOT_RADIUS) || dist < PLAYER_USE_RADIUS )
+			{
+#else
 			if ( dist < PLAYER_USE_RADIUS )
 			{
+#endif
 #ifndef CLIENT_DLL
 
 				if ( sv_debug_player_use.GetBool() )
@@ -1218,6 +1227,11 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 		}
 	}
 
+#if defined( CSTRIKE_DLL ) && defined( GAME_DLL )
+	CCSPlayer* pPlayer = ToCSPlayer( this );
+	const float MIN_DOT_FOR_WEAPONS = 0.99f;
+#endif
+
 	for ( CEntitySphereQuery sphere( searchCenter, PLAYER_USE_RADIUS ); ( pObject = sphere.GetCurrentEntity() ) != NULL; sphere.NextEntity() )
 	{
 		if ( !pObject )
@@ -1230,12 +1244,26 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 		Vector point;
 		pObject->CollisionProp()->CalcNearestPoint( searchCenter, &point );
 
+		float fMinimumDot = 0.8f; // pObject->GetUseLookAtAngle()
+
+#if defined( CSTRIKE_DLL ) && defined( GAME_DLL )
+		CWeaponCSBase *pWeapon = dynamic_cast<CWeaponCSBase*>( pObject );
+		CSWeaponType nWepType = WEAPONTYPE_UNKNOWN;
+		if ( pWeapon )
+		{
+			nWepType = pWeapon->GetWeaponType();
+
+			if ( pPlayer->IsPrimaryOrSecondaryWeapon( nWepType ) )
+				fMinimumDot = MIN_DOT_FOR_WEAPONS;
+		}
+#endif
+
 		Vector dir = point - searchCenter;
 		VectorNormalize(dir);
 		float dot = DotProduct( dir, forward );
 
 		// Need to be looking at the object more or less
-		if ( dot < 0.8 )
+		if ( dot < fMinimumDot )
 			continue;
 
 		float dist = CalcDistanceToLine( point, searchCenter, forward );
@@ -1398,6 +1426,144 @@ void CBasePlayer::PlayerUse ( void )
 	}
 
 	CBaseEntity *pUseEntity = FindUseEntity();
+
+#if defined( CSTRIKE_DLL )
+	// in counterstrike, we need to allow the buy menu to open more easily
+	// The old code defaulted to using whatever you were pointing at.
+	// This code first checks to see if you're in a buy zone.  If that's true, 
+	// then it ignores any weapon you may be pointing at. (the planted c4 is
+	// not a weapon).
+
+	if ( m_afButtonPressed & IN_USE )
+	{
+		CCSPlayer* pPlayer = ToCSPlayer( this );
+		CWeaponCSBase *pWeapon = dynamic_cast<CWeaponCSBase*>(pUseEntity);
+		CSWeaponType nWepType = WEAPONTYPE_UNKNOWN;
+		if ( pWeapon )
+			nWepType = pWeapon->GetWeaponType();
+
+		bool bOpenBuyWithUse = true;
+		if ( pPlayer )
+		{
+			const char *cl_useopensbuymenu = engine->GetClientConVarValue( ENTINDEX( pPlayer->edict() ), "cl_use_opens_buy_menu" );
+			if ( cl_useopensbuymenu && atoi( cl_useopensbuymenu ) <= 0 )
+				bOpenBuyWithUse = false;
+		}
+
+		if ( pWeapon && pPlayer->IsPrimaryOrSecondaryWeapon( nWepType ) )
+		{
+			bool bPickupIsSecondary = pWeapon->IsKindOf( WEAPONTYPE_PISTOL );
+			CBaseCombatWeapon *pPlayerWeapon = NULL;
+
+			if ( !bPickupIsSecondary )
+			{
+				pPlayerWeapon = pPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE );
+			}
+			else
+			{
+				pPlayerWeapon = pPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL );
+			}
+
+			// if the player has a weapon in the slot that occupies the weapon that they'd like to pick up
+			// AND they are able to drop it, pick up the new weapon
+			// OR if they don't have a weapon in that slot, go ahead and pick up the new weapon
+			if ( (pPlayerWeapon && pPlayer->HandleDropWeapon( pPlayerWeapon, true )) || !pPlayerWeapon )
+			{
+				pWeapon->Touch( this );
+
+				if ( pWeapon->IsPrimaryWeapon() )
+				{
+					// change the weapon to a picked up one if it's primary
+					pPlayer->Weapon_Switch( pWeapon, 0 );
+				}
+			}
+		}
+		else if ( pPlayer && bOpenBuyWithUse && pPlayer->IsInBuyZone() && pPlayer->CanPlayerBuy( false ) )
+		{
+			bool bItemIsNullOrWeapon = true;
+
+			if ( pUseEntity )
+			{
+				bItemIsNullOrWeapon = (pWeapon != 0);
+			}
+
+			if ( bItemIsNullOrWeapon )
+			{
+				engine->ClientCommand( edict(), "buymenu\n" );
+				return;
+			}
+		}
+		else if ( !pUseEntity && pPlayer && pPlayer->HasC4() && pPlayer->GetActiveCSWeapon() )
+		{
+			if ( pPlayer->m_bInBombZone && !(pPlayer->GetActiveCSWeapon()->IsA( WEAPON_C4 )) )
+			{
+				// we're in a bomb zone with C4, but it's not equipped.  Equip it.
+				CWeaponCSBase	*pC4Weapon = NULL;
+
+				//Search for the c4 weapon to use
+				for ( int i = 0; i < pPlayer->WeaponCount(); i++ )
+				{
+					CBaseCombatWeapon* pWeaponBase = pPlayer->GetWeapon( i );
+					CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* > (pWeaponBase);
+
+					if ( pWeapon == NULL )
+					{
+						continue;
+					}
+
+
+					if ( !pWeapon->IsA( WEAPON_C4 ) )
+					{
+						continue;
+					}
+
+					// Must be eligible for switching to.
+					if ( !pPlayer->Weapon_CanSwitchTo( pWeapon ) )
+					{
+						continue;
+					}
+
+					pC4Weapon = pWeapon;
+				}
+
+				if ( pC4Weapon != NULL )
+				{
+					//pPlayer->SetLastWeaponBeforeAutoSwitchToC4( pPlayer->GetActiveCSWeapon() );
+					pPlayer->Weapon_Switch( pC4Weapon, 0 );
+
+					static_cast<CC4*>(pC4Weapon)->m_bIsPlantingViaUse = true;
+				}
+			}
+			else if ( pPlayer->GetActiveCSWeapon()->IsA( WEAPON_C4 ) )
+			{
+				static_cast<CC4*>(pPlayer->GetActiveWeapon())->m_bIsPlantingViaUse = true;
+			}
+		}
+		else if ( pUseEntity && pUseEntity->IsPlayer() )
+		{
+			// Bots can give their C4 to the requesting human.
+
+			CCSPlayer* pPlayer = ToCSPlayer( this );
+			CCSPlayer* pBot = ToCSPlayer( pUseEntity );
+
+			if ( pPlayer && pPlayer->IsAlive() && pBot && pBot->IsBot() && (pBot->GetTeamNumber() == pPlayer->GetTeamNumber()) && pBot->HasC4() )
+			{
+				//distance check is implicit in +use, but check it anyway
+				if ( (pBot->WorldSpaceCenter() - pPlayer->WorldSpaceCenter()).Length() < 200 )
+				{
+					CBaseCombatWeapon *pC4 = pBot->Weapon_OwnsThisType( "weapon_c4" );
+					if ( pC4 )
+					{
+						pBot->CSWeaponDrop( pC4, WorldSpaceCenter(), false );
+						pBot->Radio( "Radio.YouTakeThePoint", "#Cstrike_TitlesTXT_Game_afk_bomb_drop" );
+					}
+				}
+
+			}
+		}
+	}
+
+#endif
 
 	// Found an object
 	if ( pUseEntity )

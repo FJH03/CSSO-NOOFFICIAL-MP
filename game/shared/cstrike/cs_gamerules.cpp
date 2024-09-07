@@ -220,6 +220,12 @@ ConVar mp_do_warmup_period(
 	true, 0,
 	true, 1 );
 
+ConVar mp_c4_cannot_be_defused(
+	"mp_c4_cannot_be_defused",
+	"0",
+	FCVAR_REPLICATED,
+	"If set, the planted c4 cannot be defused." );
+
 ConVar mp_respawn_immunitytime("mp_respawn_immunitytime", "4.0", FCVAR_REPLICATED, "How many seconds after respawn immunity lasts." );
 #ifndef CLIENT_DLL
 CON_COMMAND( mp_warmup_start, "Start warmup." )
@@ -5764,7 +5770,8 @@ CAmmoDef* GetAmmoDef()
 		ammoDef.AddAmmoType( AMMO_TYPE_FLASHBANG,		0,			TRACER_LINE, 0,	0, "ammo_flashbang_max", 1, 0 );
 		ammoDef.AddAmmoType( AMMO_TYPE_SMOKEGRENADE,	0,			TRACER_LINE, 0, 0, "ammo_smokegrenade_max", 1, 0 );
 		ammoDef.AddAmmoType( AMMO_TYPE_MOLOTOV,			DMG_BURN,	TRACER_NONE, 0, 0, "ammo_molotov_max", 0, 0, 0 );
-		 ammoDef.AddAmmoType( AMMO_TYPE_DECOY,			0,			TRACER_NONE, 0, 0, "ammo_decoy_max", 0, 0, 0 );
+		ammoDef.AddAmmoType( AMMO_TYPE_DECOY,			0,			TRACER_NONE, 0, 0, "ammo_decoy_max", 0, 0, 0 );
+		 ammoDef.AddAmmoType( AMMO_TYPE_TASERCHARGE,		DMG_SHOCK,	TRACER_BEAM, 0, 0, 0, 0, 0, 0 );
 
 		//Adrian: I set all the prices to 0 just so the rest of the buy code works
 		//This should be revisited.

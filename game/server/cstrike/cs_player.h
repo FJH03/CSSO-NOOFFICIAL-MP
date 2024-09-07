@@ -16,7 +16,7 @@
 #include "cs_shareddefs.h"
 #include "cs_autobuy.h"
 #include "utldict.h"
-
+#include "cs_player_shared.h"
 
 
 class CWeaponCSBase;
@@ -403,11 +403,17 @@ public:
 	void InitVCollision( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity );
 	void VPhysicsShadowUpdate( IPhysicsObject *pPhysics );
 
+	bool IsPrimaryOrSecondaryWeapon( CSWeaponType nType );
+
 	virtual bool IsLookingAtWeapon( void ) const { return m_bIsLookingAtWeapon; }
 	virtual bool IsHoldingLookAtWeapon( void ) const { return m_bIsHoldingLookAtWeapon; }
 	virtual void StopLookingAtWeapon( void ) { m_bIsLookingAtWeapon = false; m_bIsHoldingLookAtWeapon = false; }
 	void ModifyTauntDuration( float flTimingChange ) { m_flLookWeaponEndTime -= flTimingChange; }
 	
+	CBaseEntity *GetUsableHighPriorityEntity( void );
+	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity, CConfigurationForHighPriorityUseEntity_t &cfg );
+	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity );
+
 	bool HasShield() const;
 	bool IsShieldDrawn() const;
 	void GiveShield( void );
@@ -759,6 +765,7 @@ public:
 	// Reset after prediction (in PostThink).
 	CNetworkVar( bool, m_bInBombZone );
 	CNetworkVar( bool, m_bInBuyZone );
+	CNetworkVar( bool, m_bKilledByTaser );
 
 	//imunity
 	CNetworkVar( bool, m_bHasMovedSinceSpawn ); // Whether player has moved from spawn position
@@ -823,6 +830,9 @@ public:
 	int m_iLoadoutSlotAgentCT;
 	int m_iLoadoutSlotAgentT;
 	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield = true, bool bThrow = false );
+	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool bDropShield = true );
+	
+	bool HandleDropWeapon( CBaseCombatWeapon *pWeapon = NULL, bool bSwapping = false );
 private:
 	CountdownTimer m_ladderSurpressionTimer;
 	Vector m_lastLadderNormal;
@@ -870,6 +880,7 @@ protected:
 	BuyResult_e AttemptToBuyAssaultSuit( void );
 	BuyResult_e AttemptToBuyDefuser( void );
 	BuyResult_e AttemptToBuyNightVision( void );
+	BuyResult_e AttemptToBuyTaser( void );
 	BuyResult_e AttemptToBuyShield( void );
 	
 	BuyResult_e BuyAmmo( int nSlot, bool bBlinkMoney );
@@ -941,9 +952,10 @@ private:
 	void			BuildRebuyStruct();
 
 	BuyResult_e	RebuyPrimaryWeapon();
-	BuyResult_e	RebuyPrimaryAmmo();
+	//BuyResult_e	RebuyPrimaryAmmo();
 	BuyResult_e	RebuySecondaryWeapon();
-	BuyResult_e	RebuySecondaryAmmo();
+	//BuyResult_e	RebuySecondaryAmmo();
+	BuyResult_e	RebuyTaser();
 	BuyResult_e	RebuyHEGrenade();
 	BuyResult_e	RebuyFlashbang();
 	BuyResult_e	RebuySmokeGrenade();

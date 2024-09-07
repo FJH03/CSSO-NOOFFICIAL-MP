@@ -19,6 +19,8 @@
 #include "beamdraw.h"
 #include "cs_loadout.h"
 
+#include "cs_player_shared.h"
+
 class C_PhysicsProp;
 
 extern ConVar cl_disablefreezecam;
@@ -108,6 +110,7 @@ public:
 
 	virtual void UpdateClientSideAnimation();
 	virtual void ProcessMuzzleFlashEvent();
+	void HandleTaserAnimation();
 
 	virtual const Vector& GetRenderOrigin( void );
 
@@ -199,6 +202,11 @@ public:
 // Implemented in shared code.
 public:
 	virtual float GetPlayerMaxSpeed();
+	bool IsPrimaryOrSecondaryWeapon( CSWeaponType nType );
+	
+	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity, CConfigurationForHighPriorityUseEntity_t &cfg );
+	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity );
+	CBaseEntity *GetUsableHighPriorityEntity( void );
 
 	void GetBulletTypeParameters(
 		int iBulletType,
@@ -283,6 +291,8 @@ public:
 	CNetworkVar( bool, m_bInBombZone );
 	CNetworkVar( bool, m_bInBuyZone );
 	CNetworkVar( int, m_iThrowGrenadeCounter );	// used to trigger grenade throw animations.
+	
+	CNetworkVar( bool, m_bKilledByTaser );
 	CNetworkVar( int, m_iMoveState );		// Is the player trying to run or walk or idle?  Tells us what the player is "trying" to do.
 
 	const PlayerViewmodelArmConfig *m_pViewmodelArmConfig;
@@ -460,6 +470,10 @@ private:
 public:
 	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesT );
+
+	// taser items	
+	float m_nextTaserShakeTime;
+	float m_firstTaserShakeTime;
 
 	C_CSPlayer( const C_CSPlayer & );
 

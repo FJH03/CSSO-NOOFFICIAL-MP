@@ -13,6 +13,7 @@
 
 // PlayerUse defines
 #define	PLAYER_USE_RADIUS	80.f
+#define	PLAYER_USE_BOT_RADIUS	140.f
 #define CONE_45_DEGREES		0.707f
 #define CONE_15_DEGREES		0.9659258f
 #define CONE_90_DEGREES		0

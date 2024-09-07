@@ -1,13 +1,12 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
 //=============================================================================//
 
 #include "cbase.h"
-#include "weapon_selection.h"
+#include "cs_hud_weaponselection.h"
 #include "iclientmode.h"
-#include "history_resource.h"
 #include "iinput.h"
 #include "cs_gamerules.h"
 
@@ -16,106 +15,13 @@
 #include <vgui/ISurface.h>
 #include <vgui/ISystem.h>
 #include <vgui_controls/AnimationController.h>
-#include <vgui_controls/Panel.h>
 
 #include "vgui/ILocalize.h"
 
 #include <string.h>
 
-//-----------------------------------------------------------------------------
-// Purpose: cstrike weapon selection hud element
-//-----------------------------------------------------------------------------
-class CHudWeaponSelection : public CBaseHudWeaponSelection, public vgui::Panel
-{
-	DECLARE_CLASS_SIMPLE( CHudWeaponSelection, vgui::Panel );
-
-public:
-	CHudWeaponSelection(const char *pElementName );
-
-	virtual bool ShouldDraw();
-	virtual void OnWeaponPickup( C_BaseCombatWeapon *pWeapon );
-
-	virtual void CycleToNextWeapon( void );
-	virtual void CycleToPrevWeapon( void );
-	virtual void SwitchToLastWeapon( void );
-
-	virtual C_BaseCombatWeapon *GetWeaponInSlot( int iSlot, int iSlotPos );
-	virtual void SelectWeaponSlot( int iSlot );
-	virtual void SelectWeapon( void );
-
-	virtual C_BaseCombatWeapon	*GetSelectedWeapon( void )
-	{ 
-		return m_hSelectedWeapon;
-	}
-
-	virtual void OpenSelection( void );
-	virtual void HideSelection( void );
-
-	virtual void CancelWeaponSelection( void );
-
-	virtual void LevelInit();
-
-protected:
-	virtual void OnThink();
-	virtual void Paint();
-	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
-
-	virtual bool IsWeaponSelectable()
-	{ 
-		if (IsInSelectionMode())
-			return true;
-
-		return false;
-	}
-
-	virtual bool IsHudMenuTakingInput();
-	virtual bool IsHudMenuPreventingWeaponSelection();
-
-private:
-	C_BaseCombatWeapon *FindNextWeaponInWeaponSelection(int iCurrentSlot, int iCurrentPosition);
-	C_BaseCombatWeapon *FindPrevWeaponInWeaponSelection(int iCurrentSlot, int iCurrentPosition);
-
-	virtual	void SetSelectedWeapon( C_BaseCombatWeapon *pWeapon ) 
-	{ 
-		m_hSelectedWeapon = pWeapon;
-	}
-
-	void DrawBox(int x, int y, int wide, int tall, Color color, float normalizedAlpha, int number);
-
-	CPanelAnimationVar( vgui::HFont, m_hNumberFont, "NumberFont", "HudSelectionNumbers" );
-	CPanelAnimationVar( vgui::HFont, m_hTextFont, "TextFont", "HudSelectionText" );
-
-	CPanelAnimationVarAliasType( float, m_flSmallBoxSize, "SmallBoxSize", "32", "proportional_float" );
-	CPanelAnimationVarAliasType( float, m_flLargeBoxWide, "LargeBoxWide", "108", "proportional_float" );
-	CPanelAnimationVarAliasType( float, m_flLargeBoxTall, "LargeBoxTall", "72", "proportional_float" );
-
-	CPanelAnimationVarAliasType( float, m_flBoxGap, "BoxGap", "12", "proportional_float" );
-
-	CPanelAnimationVarAliasType( float, m_flSelectionNumberXPos, "SelectionNumberXPos", "4", "proportional_float" );
-	CPanelAnimationVarAliasType( float, m_flSelectionNumberYPos, "SelectionNumberYPos", "4", "proportional_float" );
-
-	CPanelAnimationVarAliasType( float, m_flIconXPos, "IconXPos", "16", "proportional_float" );
-	CPanelAnimationVarAliasType( float, m_flIconYPos, "IconYPos", "8", "proportional_float" );
-
-	CPanelAnimationVarAliasType( float, m_flTextYPos, "TextYPos", "54", "proportional_float" );
-
-	CPanelAnimationVar( float, m_flAlphaOverride, "Alpha", "255" );
-	CPanelAnimationVar( float, m_flSelectionAlphaOverride, "SelectionAlpha", "255" );
-
-
-	CPanelAnimationVar( Color, m_TextColor, "TextColor", "SelectionTextFg" );
-	CPanelAnimationVar( Color, m_NumberColor, "NumberColor", "SelectionNumberFg" );
-	CPanelAnimationVar( Color, m_EmptyBoxColor, "EmptyBoxColor", "SelectionEmptyBoxBg" );
-	CPanelAnimationVar( Color, m_BoxColor, "BoxColor", "SelectionBoxBg" );
-	CPanelAnimationVar( Color, m_SelectedBoxColor, "SelectedBoxClor", "SelectionSelectedBoxBg" );
-
-	CPanelAnimationVar( float, m_flWeaponPickupGrowTime, "SelectionGrowTime", "0.1" );
-
-	CPanelAnimationVar( float, m_flTextScan, "TextScan", "1.0" );
-
-	CPanelAnimationVar( int, m_iMaxSlots, "MaxSlots", "6" );
-	CPanelAnimationVar( bool, m_bPlaySelectionSounds, "PlaySelectSounds", "1" );
-};
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
 
 DECLARE_HUDELEMENT( CHudWeaponSelection );
 
@@ -137,12 +43,20 @@ CHudWeaponSelection::CHudWeaponSelection( const char *pElementName ) : CBaseHudW
 //-----------------------------------------------------------------------------
 void CHudWeaponSelection::OnWeaponPickup( C_BaseCombatWeapon *pWeapon )
 {
-	// add to pickup history
-	CHudHistoryResource *pHudHR = GET_HUDELEMENT( CHudHistoryResource );
-	if ( pHudHR )
-	{
-		pHudHR->AddToHistory( pWeapon );
-	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: sets up display for showing weapon drop
+//-----------------------------------------------------------------------------
+void CHudWeaponSelection::OnWeaponDrop( C_BaseCombatWeapon *pWeapon )
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: sets up display for showing weapon pickup
+//-----------------------------------------------------------------------------
+void CHudWeaponSelection::OnWeaponSwitch( C_BaseCombatWeapon *pWeapon )
+{
 }
 
 //-----------------------------------------------------------------------------
@@ -174,6 +88,14 @@ bool CHudWeaponSelection::IsHudMenuPreventingWeaponSelection()
 //-----------------------------------------------------------------------------
 bool CHudWeaponSelection::ShouldDraw()
 {
+	// [jason] Moving into Scaleform: sfhudhealthammopanel
+#if defined( CSTRIKE_DLL )
+	if ( !IsPC() )
+	{
+		return false;
+	}
+#endif
+
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	if ( !pPlayer )
 	{
@@ -206,6 +128,7 @@ void CHudWeaponSelection::LevelInit()
 //-------------------------------------------------------------------------
 void CHudWeaponSelection::Paint()
 {
+#if !defined( CSTRIKE_DLL )
 	if (!ShouldDraw())
 		return;
 
@@ -222,7 +145,7 @@ void CHudWeaponSelection::Paint()
 
 	// interpolate the selected box size between the small box size and the large box size
 	// interpolation has been removed since there is no weapon pickup animation anymore, so it's all at the largest size
-	float percentageDone = 1.0f; //min(1.0f, (gpGlobals->curtime - m_flPickupStartTime) / m_flWeaponPickupGrowTime);
+	float percentageDone = 1.0f; //MIN(1.0f, (gpGlobals->curtime - m_flPickupStartTime) / m_flWeaponPickupGrowTime);
 	int largeBoxWide = m_flSmallBoxSize + ((m_flLargeBoxWide - m_flSmallBoxSize) * percentageDone);
 	int largeBoxTall = m_flSmallBoxSize + ((m_flLargeBoxTall - m_flSmallBoxSize) * percentageDone);
 	Color selectedColor;
@@ -378,6 +301,7 @@ void CHudWeaponSelection::Paint()
 		ypos = 0;
 		xpos += m_flBoxGap;
 	}
+#endif // #if !defined( CSTRIKE_DLL )
 }
 
 //-----------------------------------------------------------------------------
@@ -424,7 +348,7 @@ void CHudWeaponSelection::OpenSelection( void )
 	Assert(!IsInSelectionMode());
 
 	CBaseHudWeaponSelection::OpenSelection();
-	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence("OpenWeaponSelectionMenu");
+	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "OpenWeaponSelectionMenu" );
 }
 
 //-----------------------------------------------------------------------------
@@ -433,13 +357,13 @@ void CHudWeaponSelection::OpenSelection( void )
 void CHudWeaponSelection::HideSelection( void )
 {
 	CBaseHudWeaponSelection::HideSelection();
-	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence("CloseWeaponSelectionMenu");
+	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "CloseWeaponSelectionMenu" );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns the next available weapon item in the weapon selection
 //-----------------------------------------------------------------------------
-C_BaseCombatWeapon *CHudWeaponSelection::FindNextWeaponInWeaponSelection(int iCurrentSlot, int iCurrentPosition)
+C_BaseCombatWeapon *CHudWeaponSelection::FindNextWeaponInWeaponSelection(int iCurrentSlot, int iCurrentPosition, WEAPON_SELECTION_MODE selectionMode /*WEAPON_SELECTION_NORMAL*/)
 {
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	if ( !pPlayer )
@@ -455,6 +379,24 @@ C_BaseCombatWeapon *CHudWeaponSelection::FindNextWeaponInWeaponSelection(int iCu
 		C_BaseCombatWeapon *pWeapon = pPlayer->GetWeapon(i);
 		if ( !pWeapon )
 			continue;
+
+		if (selectionMode != WEAPON_SELECTION_NORMAL)
+		{
+			// skip over weapon types we arent including in this list
+			CWeaponCSBase* pCSWeapon = dynamic_cast< CWeaponCSBase * >( pWeapon );
+			if (!pCSWeapon)
+				continue;
+			bool isGrenade = pCSWeapon->IsKindOf( WEAPONTYPE_GRENADE );
+			bool isBomb = pCSWeapon->IsKindOf( WEAPONTYPE_C4 );
+			bool isMelee = ( pCSWeapon->IsKindOf( WEAPONTYPE_KNIFE ) || pCSWeapon->IsA( WEAPON_TASER ) );
+			if ( ( selectionMode == WEAPON_SELECTION_GRENADE_AND_BOMB && !isGrenade && !isBomb ) ||
+				 ( selectionMode == WEAPON_SELECTION_GRENADE_AND_BOMB_AND_MELEE && !isGrenade && !isBomb && !isMelee ) ||
+				 ( selectionMode == WEAPON_SELECTION_NO_GRENADE_AND_BOMB && ( isGrenade || isBomb || isMelee ) ) ||	 
+				 ( selectionMode == WEAPON_SELECTION_GRENADE && !isGrenade ) ||
+				 ( selectionMode == WEAPON_SELECTION_MELEE && !isMelee ) ||
+				 ( selectionMode == WEAPON_SELECTION_ITEMSLOT && !isBomb ) )
+				continue;
+		}
 
 		if ( pWeapon->CanBeSelected() )
 		{
@@ -523,6 +465,134 @@ C_BaseCombatWeapon *CHudWeaponSelection::FindPrevWeaponInWeaponSelection(int iCu
 //-----------------------------------------------------------------------------
 void CHudWeaponSelection::CycleToNextWeapon( void )
 {
+	CycleToNextWeapon(WEAPON_SELECTION_NORMAL);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Select the next grenade or bomb
+//-----------------------------------------------------------------------------
+void CHudWeaponSelection::CycleToNextGrenadeOrBomb( void )
+{
+	CycleToNextWeapon(WEAPON_SELECTION_GRENADE_AND_BOMB);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Select the next grenade or bomb
+//-----------------------------------------------------------------------------
+void CHudWeaponSelection::CycleToNextGrenadeBombOrMelee( void )
+{
+	CycleToNextWeapon(WEAPON_SELECTION_GRENADE_AND_BOMB_AND_MELEE);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Select the next pistol/gun/knife
+//-----------------------------------------------------------------------------
+void CHudWeaponSelection::CycleToNextNonGrenadeOrBomb( void )
+{
+	CycleToNextWeapon(WEAPON_SELECTION_NO_GRENADE_AND_BOMB);
+}
+
+	
+//-----------------------------------------------------------------------------
+// Purpose: Select a weapon from nBucketID at the nSlotPos
+//-----------------------------------------------------------------------------
+void CHudWeaponSelection::SelectSpecificWeapon( CSWeaponID weaponID )
+{
+	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+
+	if ( !pPlayer )
+	{
+		return;
+	}
+
+	// Note[pfreese] This could probably just be replaced by a call to CBasePlayer::SelectItem().
+	// It's interesting, and perhaps a bit worrying, that SelectItem() does additional
+	// tests that the code in this file does not, such as verifying that the current
+	// weapon can be holstered.
+	//
+	// Players who bind keys to the use command, e.g. "bind 6 use weapon_hegrenade" will
+	// get weapons selected via the CBasePlayer::SelectItem() code path, which means they will
+	// see slightly different behavior than players who switch weapons using the redirected
+	// slotN commands above (the default configured through the Options UI.
+
+	// get the weapon by ID if the player owns it
+	CWeaponCSBase* pWeapon = pPlayer->GetCSWeapon(weaponID);
+	if ( pWeapon != NULL )
+	{
+		// Make sure the player's allowed to switch weapons
+		if ( pPlayer->IsAllowedToSwitchWeapons() == false )
+			return;
+
+		// Mark the change
+		SetSelectedWeapon( pWeapon );
+		SelectWeapon();
+
+		if( m_bPlaySelectionSounds )
+			pPlayer->EmitSound( "Player.WeaponSelectionMoveSlot" );
+	}
+}
+
+void CHudWeaponSelection::SetSelectedWeapon( C_BaseCombatWeapon *pWeapon ) 
+{ 
+	m_hSelectedWeapon = pWeapon;
+}
+
+// Switch to knife
+void CHudWeaponSelection::UserCmd_Slot3( void )
+{
+	//SelectSpecificWeapon( WEAPON_KNIFE );
+	CycleToNextWeapon( WEAPON_SELECTION_MELEE );
+}
+
+// Switch to breach charges
+void CHudWeaponSelection::UserCmd_Slot5( void )
+{
+	CycleToNextWeapon( WEAPON_SELECTION_ITEMSLOT );
+}
+
+// Switch to hegrenade
+void CHudWeaponSelection::UserCmd_Slot6( void )
+{
+	SelectSpecificWeapon( WEAPON_HEGRENADE );
+}
+
+// Switch to flashbang
+void CHudWeaponSelection::UserCmd_Slot7( void )
+{
+	SelectSpecificWeapon( WEAPON_FLASHBANG );
+}
+
+// Switch to smoke grenade
+void CHudWeaponSelection::UserCmd_Slot8( void )
+{
+	SelectSpecificWeapon( WEAPON_SMOKEGRENADE );
+}
+
+// Switch to decoy
+void CHudWeaponSelection::UserCmd_Slot9( void )
+{
+	SelectSpecificWeapon( WEAPON_DECOY );
+}
+
+// Switch to taser
+void CHudWeaponSelection::UserCmd_Slot10( void )
+{
+	SelectSpecificWeapon( WEAPON_TASER );
+}
+
+
+// Cycle grenades
+void CHudWeaponSelection::UserCmd_Slot4( void )
+{
+	CycleToNextWeapon( WEAPON_SELECTION_GRENADE );
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Moves the selection to the next item in the menu
+//-----------------------------------------------------------------------------
+void CHudWeaponSelection::CycleToNextWeapon(WEAPON_SELECTION_MODE selectionMode)
+{
 	// Get the local player.
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	if ( !pPlayer )
@@ -536,7 +606,7 @@ void CHudWeaponSelection::CycleToNextWeapon( void )
 		if ( !pWeapon )
 			return;
 
-		pNextWeapon = FindNextWeaponInWeaponSelection( pWeapon->GetSlot(), pWeapon->GetPosition() );
+		pNextWeapon = FindNextWeaponInWeaponSelection( pWeapon->GetSlot(), pWeapon->GetPosition(), selectionMode );
 	}
 	else
 	{
@@ -544,20 +614,23 @@ void CHudWeaponSelection::CycleToNextWeapon( void )
 		pNextWeapon = pPlayer->GetActiveWeapon();
 		if ( pNextWeapon )
 		{
-			pNextWeapon = FindNextWeaponInWeaponSelection( pNextWeapon->GetSlot(), pNextWeapon->GetPosition() );
+			pNextWeapon = FindNextWeaponInWeaponSelection( pNextWeapon->GetSlot(), pNextWeapon->GetPosition(), selectionMode );
 		}
 	}
 
 	if ( !pNextWeapon )
 	{
 		// wrap around back to start
-		pNextWeapon = FindNextWeaponInWeaponSelection(-1, -1);
+		pNextWeapon = FindNextWeaponInWeaponSelection(-1, -1, selectionMode);
 	}
 
 	if ( pNextWeapon )
 	{
 		SetSelectedWeapon( pNextWeapon );
 
+#if defined ( CSTRIKE_DLL )
+		SelectWeapon();
+#else
 		if( hud_fastswitch.GetInt() > 0 )
 		{
 			SelectWeapon();
@@ -566,6 +639,7 @@ void CHudWeaponSelection::CycleToNextWeapon( void )
 		{
 			OpenSelection();
 		}
+#endif
 
 		// Play the "cycle to next weapon" sound
 		if( m_bPlaySelectionSounds )
@@ -616,6 +690,9 @@ void CHudWeaponSelection::CycleToPrevWeapon( void )
 	{
 		SetSelectedWeapon( pNextWeapon );
 
+#if defined ( CSTRIKE_DLL )
+		SelectWeapon();
+#else
 		if( hud_fastswitch.GetInt() > 0 )
 		{
 			SelectWeapon();
@@ -624,6 +701,7 @@ void CHudWeaponSelection::CycleToPrevWeapon( void )
 		{
 			OpenSelection();
 		}
+#endif
 
 		// Play the "cycle to next weapon" sound
 		if( m_bPlaySelectionSounds )
@@ -684,13 +762,14 @@ void CHudWeaponSelection::SwitchToLastWeapon( void )
 C_BaseCombatWeapon *CHudWeaponSelection::GetWeaponInSlot( int iSlot, int iSlotPos )
 {
 	C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
+
 	if ( !player )
 		return NULL;
 
 	if ( player->IsPlayerDead() )
 		return NULL;
 
-	for ( int i = 0; i < MAX_WEAPONS; i++ )
+	for ( int i = 0; i < player->WeaponCount(); i++ )
 	{
 		C_BaseCombatWeapon *pWeapon = player->GetWeapon(i);
 		
@@ -704,6 +783,34 @@ C_BaseCombatWeapon *CHudWeaponSelection::GetWeaponInSlot( int iSlot, int iSlotPo
 	return NULL;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: returns the weapon in the specified slot
+//-----------------------------------------------------------------------------
+C_BaseCombatWeapon *CHudWeaponSelection::GetWeaponInSlotForTarget( C_BasePlayer *player, int iSlot, int iSlotPos )
+{
+	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( pLocalPlayer && pLocalPlayer == player )
+		return GetWeaponInSlot( iSlot, iSlotPos );
+
+	if ( !player )
+		return NULL;
+
+	if ( player->IsPlayerDead() )
+		return NULL;
+
+	for ( int i = 0; i < player->WeaponCount(); i++ )
+	{
+		C_BaseCombatWeapon *pWeapon = player->GetWeapon(i);
+
+		if ( pWeapon == NULL )
+			continue;
+
+		if ( pWeapon->GetSlot() == iSlot && pWeapon->GetPosition() == iSlotPos )
+			return pWeapon;
+	}
+
+	return NULL;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: Player has chosen to draw the currently selected weapon
@@ -733,8 +840,17 @@ void CHudWeaponSelection::SelectWeapon( void )
 		// a weapon different than the one that is already active.
 		if (GetSelectedWeapon() != activeWeapon)
 		{
-			// Play the "weapon selected" sound
-			player->EmitSound( "Player.WeaponSelected" );
+			if (player->GetTeamNumber() == TEAM_CT)
+			{
+				// Play the "weapon selected" sound
+				player->EmitSound("Player.WeaponSelected_CT");
+
+			}
+			else
+			{
+				// Play the "weapon selected" sound
+				player->EmitSound("Player.WeaponSelected_T");
+			}
 		}
 
 		SetWeaponSelected();
@@ -766,10 +882,12 @@ void CHudWeaponSelection::CancelWeaponSelection()
 	}
 	else
 	{
-		engine->ClientCmd("escape");
+		// [pmf] The escape command causes the UI to be closed, which in turn causes an "unpause" command, which is blocked on multi-player games, 
+		// causing a warning. It seems like this escape command is only necessary when fast-switching is disabled. According to one of our designers,
+		// we don't need non-fast-switching, so I'm removing this command injection to prevent the subsequent warning.
+		// 	engine->ClientCmd("escape");
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Moves selection to the specified slot
@@ -826,6 +944,15 @@ void CHudWeaponSelection::SelectWeaponSlot( int iSlot )
 			}
 		}
 
+#if defined ( CSTRIKE_DLL )
+		// only select if only one item in the bucket
+		if( bMultipleWeaponsInSlot == false )
+		{
+			// only one active item in bucket, so change directly to weapon
+			SelectWeapon();
+		}
+#else
+
 		// if fast weapon switch is on, then weapons can be selected in a single keypress
 		// but only if there is only one item in the bucket
 		if( hud_fastswitch.GetInt() > 0 && bMultipleWeaponsInSlot == false )
@@ -838,6 +965,7 @@ void CHudWeaponSelection::SelectWeaponSlot( int iSlot )
 			// open the weapon selection
 			OpenSelection();
 		}
+#endif
 	}
 
 	if( m_bPlaySelectionSounds )

@@ -248,6 +248,7 @@ public:
 	IRagdoll* GetIRagdoll() const;
 	void GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt ) OVERRIDE;
 
+	void ApplyRandomTaserForce( void );
 	void ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
 
 	virtual void ComputeFxBlend();
@@ -341,6 +342,42 @@ void C_CSRagdoll::Interp_Copy( C_BaseAnimatingOverlay *pSourceEntity )
 			}
 		}
 	}
+}
+
+ConVar cl_random_taser_bone_y( "cl_random_taser_bone_y", "-1.0", 0, "The Y position used for the random taser force." );
+ConVar cl_random_taser_force_y( "cl_random_taser_force_y", "-1.0", 0, "The Y position used for the random taser force." );
+ConVar cl_random_taser_power( "cl_random_taser_power", "4000.0", 0, "Power used when applying the taser effect." );
+
+void C_CSRagdoll::ApplyRandomTaserForce( void )
+{
+	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
+
+	if( !pPhysicsObject )
+		return;
+
+	int boneID = LookupBone( RandomInt( 0, 1 ) ? "ValveBiped.Bip01_L_Hand" : "ValveBiped.Bip01_R_Hand" );
+	if( boneID < 0 )
+	{
+		// error, couldn't find a bone matching this name, early out
+		AssertMsg( false, "couldn't find a bone matching this name, early out" );
+		return;
+	}
+	
+	Vector bonePos;
+	QAngle boneAngle;
+	GetBonePosition( boneID, bonePos, boneAngle );
+
+	bonePos.y += cl_random_taser_bone_y.GetFloat();
+	Vector dir( random->RandomFloat( -1.0f, 1.0f ), random->RandomFloat( -1.0f, 1.0f ), cl_random_taser_force_y.GetFloat() );
+	VectorNormalize( dir );
+
+	dir *= cl_random_taser_power.GetFloat();  // adjust  strength
+
+	// apply force where we hit it
+	pPhysicsObject->ApplyForceOffset( dir, bonePos );	
+
+	// make sure the ragdoll is "awake" to process our updates, at least for a bit
+	m_pRagdoll->ResetRagdollSleepAfterTime();
 }
 
 void C_CSRagdoll::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
@@ -762,6 +799,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropInt( RECVINFO( m_iAccount ) ),
 	RecvPropInt( RECVINFO( m_bInBombZone ) ),
 	RecvPropInt( RECVINFO( m_bInBuyZone ) ),
+	RecvPropBool( RECVINFO( m_bKilledByTaser ) ),
 	RecvPropInt( RECVINFO( m_iMoveState ) ),
 	RecvPropBool( RECVINFO( m_bIsScoped ) ),
 	RecvPropInt( RECVINFO( m_iClass ) ),
@@ -860,6 +898,10 @@ C_CSPlayer::C_CSPlayer() :
 	view->SetScreenOverlayMaterial( NULL );
 
     m_bPlayingFreezeCamSound = false;
+
+	m_nextTaserShakeTime = 0.0f;
+	m_firstTaserShakeTime = 0.0f;
+	m_bKilledByTaser = false;
 
 	ListenForGameEvent( "cs_pre_restart" );
 	ListenForGameEvent( "player_death" );
@@ -1890,6 +1932,45 @@ bool C_CSPlayer::Weapon_CanSwitchTo( CBaseCombatWeapon *pWeapon )
 	return true;
 }
 
+ConVar clTaserShakeFreqMin( "clTaserShakeFreqMin", "0.2", 0, "how often the shake is applied (min time)" );
+ConVar clTaserShakeFreqMax( "clTaserShakeFreqMax", "0.7", 0, "how often the shake is applied (max time)" );
+
+ConVar clTaserShakeTimeTotal( "clTaserShakeTimeTotal", "7.0", 0, "time the taser shake is applied." );
+
+
+void C_CSPlayer::HandleTaserAnimation()
+{
+	if ( m_bKilledByTaser )
+	{
+		if ( m_nextTaserShakeTime < gpGlobals->curtime )
+		{
+			// we're ready to apply a taser force
+			C_CSRagdoll *pRagdoll = (C_CSRagdoll* )m_hRagdoll.Get();
+			if ( pRagdoll )
+			{
+				pRagdoll->ApplyRandomTaserForce();
+			}
+
+			if ( m_firstTaserShakeTime == 0.0f )
+			{
+				m_firstTaserShakeTime = gpGlobals->curtime;
+				EmitSound("Player.DeathTaser" ); // play death audio here
+			}
+
+			if ( m_firstTaserShakeTime + clTaserShakeTimeTotal.GetFloat() < gpGlobals->curtime )
+			{
+				// we've waited more than clTaserShakeTimeTotal since our first shake so we're done with the taze effect...  AKA: "DON'T TAZE ME BRO"
+				m_bKilledByTaser = false;
+				m_firstTaserShakeTime = 0.0f;
+			}
+			else
+			{
+				// set the timer for our next shake
+				m_nextTaserShakeTime = gpGlobals->curtime + RandomFloat( clTaserShakeFreqMin.GetFloat(), clTaserShakeFreqMax.GetFloat() );
+			}
+		}
+	}
+}
 
 void C_CSPlayer::UpdateClientSideAnimation()
 {
@@ -1914,6 +1995,12 @@ void C_CSPlayer::UpdateClientSideAnimation()
 		// latch old values
 		OnLatchInterpolatedVariables( LATCH_ANIMATION_VAR );
 	}
+
+	if ( m_bKilledByTaser )
+	{
+		HandleTaserAnimation();
+	}
+	
 	if ( IsLocalPlayer() )
 	{
 		CWeaponCSBase *pWeapon = GetActiveCSWeapon();

@@ -51,6 +51,10 @@ int g_sModelIndexC4Glow = -1;
 
 #define WEAPON_C4_ARM_TIME	3.0
 
+// amount of time a player is forced to continue defusing after not USEing. this effects other player's ability to interrupt
+const float C4_DEFUSE_LOCKIN_PERIOD = 0.05f;
+
+extern ConVar mp_c4_cannot_be_defused;
 
 #ifdef CLIENT_DLL
 
@@ -295,7 +299,7 @@ END_PREDICTION_DATA()
 		m_flTimerLength = mp_c4timer.GetInt();
 
 		m_flC4Blow = gpGlobals->curtime + m_flTimerLength;
-		m_flNextDefuse = 0;
+		m_fLastDefuseTime = 0;
 
 		m_bStartDefuse = false;
 		m_bBombTicking = true;
@@ -374,15 +378,22 @@ END_PREDICTION_DATA()
 		}
 
 		//if the defusing process has started
-		if ((m_bStartDefuse == true) && (m_pBombDefuser != NULL))
+		if ( m_bStartDefuse && (m_pBombDefuser != NULL) && mp_c4_cannot_be_defused.GetBool() == false )
 		{
 			//if the defusing process has not ended yet
 			if ( m_flDefuseCountDown > gpGlobals->curtime)
 			{
 				int iOnGround = FBitSet( m_pBombDefuser->GetFlags(), FL_ONGROUND );
 
+				const CUserCmd *pCmd = m_pBombDefuser->GetLastUserCommand();
+				bool bPlayerStoppedHoldingUse = !(pCmd->buttons & IN_USE) && (gpGlobals->curtime > m_fLastDefuseTime + C4_DEFUSE_LOCKIN_PERIOD);
+
+				CConfigurationForHighPriorityUseEntity_t cfgUseEntity;
+				bool bPlayerUseIsValidNow = m_pBombDefuser->GetUseConfigurationForHighPriorityUseEntity( this, cfgUseEntity ) &&
+					( cfgUseEntity.m_pEntity == this ) && cfgUseEntity.UseByPlayerNow( m_pBombDefuser, cfgUseEntity.k_EPlayerUseType_Progress );
+
 				//if the bomb defuser has stopped defusing the bomb
-				if( m_flNextDefuse < gpGlobals->curtime || !iOnGround )
+				if ( bPlayerStoppedHoldingUse || !bPlayerUseIsValidNow || !iOnGround )
 				{
 					if ( !iOnGround && m_pBombDefuser->IsAlive() )
 						ClientPrint( m_pBombDefuser, HUD_PRINTCENTER, "#C4_Defuse_Must_Be_On_Ground");
@@ -656,7 +667,7 @@ END_PREDICTION_DATA()
 	void CPlantedC4::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 	{
 		//Can't defuse if its already defused or if it has blown up
-		if( !m_bBombTicking )
+		if( !IsBombActive() || m_flC4Blow < gpGlobals->curtime || mp_c4_cannot_be_defused.GetBool() == true )
 		{
 			SetUse( NULL );
 			return;
@@ -679,7 +690,7 @@ END_PREDICTION_DATA()
 				return;
 			}
 
-			m_flNextDefuse = gpGlobals->curtime + 0.5;
+			m_fLastDefuseTime = gpGlobals->curtime + 0.5;
 		}
 		else
 		{
@@ -713,10 +724,11 @@ END_PREDICTION_DATA()
 			m_flDefuseLength = player->HasDefuser() ? 5 : 10;
 
 
-			m_flNextDefuse = gpGlobals->curtime + 0.5;
 			m_pBombDefuser = player;
 			m_bStartDefuse = TRUE;
 			player->m_bIsDefusing = true;
+
+			m_fLastDefuseTime = gpGlobals->curtime;
 			
 			m_flDefuseCountDown = gpGlobals->curtime + m_flDefuseLength;
 
@@ -743,11 +755,13 @@ BEGIN_NETWORK_TABLE( CC4, DT_WeaponC4 )
 	#ifdef CLIENT_DLL
 		RecvPropBool( RECVINFO( m_bStartedArming ) ),
 		RecvPropBool( RECVINFO( m_bBombPlacedAnimation ) ),
-		RecvPropFloat( RECVINFO( m_fArmedTime ) )
+		RecvPropFloat( RECVINFO( m_fArmedTime ) ),
+		RecvPropBool( RECVINFO( m_bIsPlantingViaUse ) )
 	#else
 		SendPropBool( SENDINFO( m_bStartedArming ) ),
 		SendPropBool( SENDINFO( m_bBombPlacedAnimation ) ),
-		SendPropFloat( SENDINFO( m_fArmedTime ), 0, SPROP_NOSCALE )
+		SendPropFloat( SENDINFO( m_fArmedTime ), 0, SPROP_NOSCALE ),
+		SendPropBool( SENDINFO( m_bIsPlantingViaUse ) )	
 	#endif
 END_NETWORK_TABLE()
 
@@ -755,7 +769,8 @@ END_NETWORK_TABLE()
 BEGIN_PREDICTION_DATA( CC4 )
 	DEFINE_PRED_FIELD( m_bStartedArming, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_bBombPlacedAnimation, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_fArmedTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE )
+	DEFINE_PRED_FIELD( m_fArmedTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_bIsPlantingViaUse, FIELD_INTEGER, FTYPEDESC_INSENDTABLE )
 END_PREDICTION_DATA()
 #endif
 
@@ -785,6 +800,8 @@ CC4::CC4()
 	m_szScreenText[0] = '\0';
 #endif
 
+	m_bIsPlantingViaUse = false;
+
 }
 
 
@@ -813,14 +830,18 @@ void CC4::ItemPostFrame()
 		return;
 
 	// Disable all the firing code.. the C4 grenade is all custom.
-	if ( pPlayer->m_nButtons & IN_ATTACK )
+	if ( pPlayer->m_nButtons & IN_ATTACK || (pPlayer->m_nButtons & IN_USE && m_bIsPlantingViaUse) )
 	{
-		PrimaryAttack();
+		if ( gpGlobals->curtime >= m_flNextPrimaryAttack )
+			PrimaryAttack();
 	}
 	else
 	{
 		WeaponIdle();
 	}
+
+	if ( !(pPlayer->m_nButtons & IN_USE) )
+		m_bIsPlantingViaUse = false;
 }
 
 #if defined( CLIENT_DLL )
