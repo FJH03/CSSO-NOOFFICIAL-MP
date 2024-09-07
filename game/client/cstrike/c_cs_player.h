@@ -48,6 +48,10 @@ public:
 
 	virtual void Simulate();
 
+	void GiveCarriedHostage( EHANDLE hHostage );
+	void RefreshCarriedHostage( bool bForceCreate );
+	void RemoveCarriedHostage();
+
 	bool HasDefuser() const;
 
 	void GiveDefuser();
@@ -291,6 +295,7 @@ public:
 	CNetworkVar( int , m_iLastZoom ); // after firing a shot, set the FOV to 90, and after showing the animation, bring the FOV back to last zoom level.
 	CNetworkVar( CSPlayerState, m_iPlayerState );	// SupraFiend: this gives the current state in the joining process, the states are listed above
 	CNetworkVar( bool, m_bIsDefusing );			// tracks whether this player is currently defusing a bomb
+	CNetworkVar( bool, m_bIsGrabbingHostage );	// tracks whether this player is currently grabbing a hostage
 	CNetworkVar( bool, m_bInBombZone );
 	CNetworkVar( bool, m_bInBuyZone );
 	CNetworkVar( int, m_iThrowGrenadeCounter );	// used to trigger grenade throw animations.
@@ -345,6 +350,10 @@ public:
 	bool		m_bDetected;
 
 	EHANDLE	m_hRagdoll;
+
+	EHANDLE	m_hCarriedHostage;
+	EHANDLE	m_hCarriedHostageProp;
+	bool	m_bPlayingHostageCarrySound;
 
 	CWeaponCSBase* GetActiveCSWeapon() const;
 	CWeaponCSBase* GetCSWeapon( CSWeaponID id ) const;

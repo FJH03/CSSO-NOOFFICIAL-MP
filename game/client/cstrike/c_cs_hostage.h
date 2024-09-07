@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Client side CHostage class
 //
@@ -21,6 +21,24 @@
 // for shared code
 #define CHostage C_CHostage
 
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+class C_HostageCarriableProp : public C_BaseAnimating
+{
+public:
+	DECLARE_CLASS( C_HostageCarriableProp, C_BaseAnimating );
+	DECLARE_CLIENTCLASS();
+
+	C_HostageCarriableProp();
+
+	virtual void ClientThink( void );
+	void OnDataChanged( DataUpdateType_t updateType );
+	virtual bool					ShouldDraw();
+	virtual ShadowType_t			ShadowCastType();
+
+	bool	m_bCreatedViewmodel;
+	float	m_flFadeInStartTime;
+};
 
 //----------------------------------------------------------------------------------------------
 /**
@@ -39,6 +57,7 @@ public:
 public:
 	virtual CWeaponCSBase* CSAnim_GetActiveWeapon();
 	virtual bool CSAnim_CanMove();
+	virtual void EstimateAbsVelocity( Vector &vel );
 
 public:	
 	virtual void Spawn( void );
@@ -46,6 +65,8 @@ public:
 
 	void OnPreDataChanged( DataUpdateType_t updateType );
 	void OnDataChanged( DataUpdateType_t updateType );
+
+	int GetHostageState( void ) { return m_nHostageState; }
 
 	bool IsRescued( void ) { return m_isRescued; }
 	bool WasRecentlyKilledOrRescued( void );
@@ -60,7 +81,8 @@ public:
 	virtual C_BaseAnimating * BecomeRagdollOnClient();
 	virtual bool ShouldDraw( void );
 
-	void ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
+	void ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName );
+
 private:
 	int  m_OldLifestate;
 	int  m_iMaxHealth;
@@ -68,10 +90,22 @@ private:
 	IPlayerAnimState *m_PlayerAnimState;
 
 	CNetworkVar( EHANDLE, m_leader );				// who we are following, or NULL
+	
+	CNetworkVar( Vector, m_vel );
 
 	CNetworkVar( bool, m_isRescued );
+	CNetworkVar( bool, m_jumpedThisFrame );
+
+	CNetworkVar( int, m_nHostageState );
+
+	
+	CNetworkVar( float, m_flRescueStartTime );
+	CNetworkVar( float, m_flGrabSuccessTime );		//What time did the grabbing succeed?
+	CNetworkVar( float, m_flDropStartTime );		//What time did the grabbing succeed?
+
 	float m_flDeadOrRescuedTime;
 	static void RecvProxy_Rescued( const CRecvProxyData *pData, void *pStruct, void *pOut );
+	static void RecvProxy_Jumped( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
 	CountdownTimer m_blinkTimer;
 
@@ -101,9 +135,9 @@ private:
 	float m_headPitchMax;
 	float m_flCurrentHeadPitch;
 
-	int m_seq;
-
 	bool m_createdLowViolenceRagdoll;
+
+	CHandle<C_BaseAnimating> m_hRagdollOnClient;
 	
 private:
 	C_CHostage( const C_CHostage & );				// not defined, not accessible
@@ -117,7 +151,7 @@ inline C_CSPlayer *C_CHostage::GetLeader( void ) const
 
 
 extern CUtlVector< C_CHostage* > g_Hostages;
-extern CUtlVector< EHANDLE > g_HostageRagdolls;
+extern CUtlVector< CHandle<C_BaseAnimating> > g_HostageRagdolls;
 
 
 #endif // C_CHOSTAGE_H

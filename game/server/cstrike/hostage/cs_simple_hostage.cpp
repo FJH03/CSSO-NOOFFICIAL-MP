@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -9,6 +9,7 @@
 // cs_simple_hostage.cpp
 // Simple CS1.6 level hostage
 // Author: Michael S. Booth and Matt Boone, July 2004
+// Bugs Fixed by: Everyone else
 
 #include "cbase.h"
 #include "cs_simple_hostage.h"
@@ -26,56 +27,77 @@
 #include "cs_achievement_constants.h"
 #include "cs_shareddefs.h"
 
-//=============================================================================
-// HPE_BEGIN
-//=============================================================================
-// [dwenger] Necessary for stats tracking
-#include "cs_gamestats.h"
-
-//[tj] Necessary for fast rescue achievement
-#include "cs_achievement_constants.h"
-//=============================================================================
-// HPE_END
-//=============================================================================
-
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-#define HOSTAGE_THINK_INTERVAL	0.1f
+#define HOSTAGE_THINK_INTERVAL	(1.0f/60.0f)//We increased this from 0.1 in CS:GO so that the hostages don't stutter as much.
+#define HOSTAGE_THINK_CARRIED_INTERVAL	(1.0f/45.0f)
 
 #define DrawLine( from, to, duration, red, green, blue )		NDebugOverlay::Line( from, to, red, green, blue, true, 0.1f )
 #define HOSTAGE_PUSHAWAY_THINK_CONTEXT	"HostagePushawayThink"
 
-#define HOSTAGE_BBOX_VEC_MIN	Vector( -13, -13, 0 )
-#define HOSTAGE_BBOX_VEC_MAX	Vector( 13, 13, 72 )
+#define HOSTAGE_BBOX_VEC_MIN	Vector( -8, -8, 0 )
+#define HOSTAGE_BBOX_VEC_MAX	Vector( 8, 8, 64 )
 
+#define MAX_HOSTAGE_MOVE_FORCE 1024
 
-ConVar mp_hostagepenalty( "mp_hostagepenalty", "13", FCVAR_NOTIFY, "Terrorist are kicked for killing too much hostages" );
+#define HOSTAGE_CARRY_PROP_MODEL		"models/hostage/hostage_carry.mdl"
+#define HOSTAGE_CARRY_VIEW_MODEL		"models/hostage/v_hostage_arm.mdl"
+
+// amount of time a player is forced to continue defusing after not USEing. this effects other player's ability to interrupt
+const float GRAB_HOSTAGE_LOCKIN_PERIOD = 0.05f;	
+
+ConVar mp_hostagepenalty( "mp_hostagepenalty", "10", FCVAR_NOTIFY, "Terrorist are kicked for killing too much hostages" );
 ConVar hostage_debug( "hostage_debug", "0", FCVAR_CHEAT, "Show hostage AI debug information" );
+ConVar hostage_drop_time( "hostage_drop_time", "1", FCVAR_DEVELOPMENTONLY, "Time for the hostage before it fully drops to ground" );
+ConVar hostage_is_silent( "hostage_is_silent", "0", FCVAR_CHEAT, "When set, the hostage won't play any code driven response rules lines" );
+
 
 extern ConVar sv_pushaway_force;
 extern ConVar sv_pushaway_min_player_speed;
 extern ConVar sv_pushaway_max_force;
+extern ConVar mp_hostages_takedamage;
 extern ConVar mp_hostages_rescuetowin;
 
 // We need hostage-specific pushaway cvars because the hostage doesn't have the same friction etc as players
 ConVar sv_pushaway_hostage_force( "sv_pushaway_hostage_force", "20000", FCVAR_REPLICATED | FCVAR_CHEAT, "How hard the hostage is pushed away from physics objects (falls off with inverse square of distance)." );
 ConVar sv_pushaway_max_hostage_force( "sv_pushaway_max_hostage_force", "1000", FCVAR_REPLICATED | FCVAR_CHEAT, "Maximum of how hard the hostage is pushed away from physics objects." );
 
-const int NumHostageModels = 4;
-static const char *HostageModel[NumHostageModels] = 
+ConVar mp_hostages_max( "mp_hostages_max", "2", FCVAR_REPLICATED, "Maximum number of hostages to spawn." );
+ConVar mp_hostages_spawn_farthest( "mp_hostages_spawn_farthest", "0", FCVAR_REPLICATED, "When enabled will consistently force the farthest hostages to spawn." );
+ConVar mp_hostages_spawn_same_every_round( "mp_hostages_spawn_same_every_round", "1", FCVAR_REPLICATED, "0 = spawn hostages randomly every round, 1 = same spawns for entire match." );
+ConVar mp_hostages_spawn_force_positions( "mp_hostages_spawn_force_positions", "", FCVAR_REPLICATED, "Comma separated list of zero based indices to force spawn positions, e.g. '0,2' or '1,6'" );
+ConVar mp_hostages_run_speed_modifier( "mp_hostages_run_speed_modifier", "1.0", FCVAR_REPLICATED, "Default is 1.0, slow down hostages by setting this to < 1.0.", true, 0.1, true, 1.5 );
+
+
+LINK_ENTITY_TO_CLASS( hostage_carriable_prop, CHostageCarriableProp );
+PRECACHE_REGISTER( hostage_carriable_prop );
+
+BEGIN_DATADESC( CHostageCarriableProp )
+END_DATADESC()
+
+IMPLEMENT_SERVERCLASS_ST( CHostageCarriableProp, DT_HostageCarriableProp )
+END_SEND_TABLE()
+
+BEGIN_PREDICTION_DATA( CHostageCarriableProp )
+END_PREDICTION_DATA()
+
+const int DEFAULT_NUM_HOSTAGE_MODELS = 4;
+static char *HostageModel[DEFAULT_NUM_HOSTAGE_MODELS] = 
 {
-	"models/Characters/Hostage_01.mdl",
-	"models/Characters/Hostage_02.mdl",
-	"models/Characters/hostage_03.mdl",
-	"models/Characters/hostage_04.mdl",
+	"models/hostage/hostage.mdl",
+	"models/hostage/hostage_variantA.mdl",
+	"models/hostage/hostage_variantB.mdl",
+	"models/hostage/hostage_variantC.mdl",
 };
+
+void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID);
 
 Vector DropToGround( CBaseEntity *pMainEnt, const Vector &vPos, const Vector &vMins, const Vector &vMaxs );
 
 //-----------------------------------------------------------------------------------------------------
+LINK_ENTITY_TO_CLASS( info_hostage_spawn, CHostage );
 LINK_ENTITY_TO_CLASS( hostage_entity, CHostage );
-
 
 //-----------------------------------------------------------------------------------------------------
 BEGIN_DATADESC( CHostage )
@@ -85,6 +107,11 @@ BEGIN_DATADESC( CHostage )
 	DEFINE_USEFUNC( HostageUse ), 
 	DEFINE_THINKFUNC( HostageThink ),
 
+	//Outputs	
+	DEFINE_OUTPUT( m_OnHostageBeginGrab, "OnHostageBeginGrab" ),
+	DEFINE_OUTPUT( m_OnFirstPickedUp, "OnFirstPickedUp" ),
+	DEFINE_OUTPUT( m_OnDroppedNotRescued, "OnDroppedNotRescued" ),
+	DEFINE_OUTPUT( m_OnRescued, "OnRescued" ),
 END_DATADESC()
 
 
@@ -102,11 +129,18 @@ IMPLEMENT_SERVERCLASS_ST( CHostage, DT_CHostage )
 	SendPropExclude( "DT_AnimTimeMustBeFirst" , "m_flAnimTime" ),
 
 	SendPropBool( SENDINFO(m_isRescued) ),
+	SendPropBool( SENDINFO(m_jumpedThisFrame) ),
 	SendPropInt( SENDINFO(m_iHealth), 10 ),
 	SendPropInt( SENDINFO(m_iMaxHealth), 10 ),
 	SendPropInt( SENDINFO(m_lifeState), 3, SPROP_UNSIGNED ),
-
+	SendPropInt( SENDINFO(m_fFlags), PLAYER_FLAG_BITS, SPROP_UNSIGNED, SendProxy_CropFlagsToPlayerFlagBitsLength ),
+	SendPropVector( SENDINFO( m_vel ), 12, 0x0, -MAX_HOSTAGE_MOVE_FORCE, MAX_HOSTAGE_MOVE_FORCE ),
 	SendPropEHandle( SENDINFO(m_leader) ),
+	SendPropInt( SENDINFO(m_nHostageState) ),
+
+	SendPropFloat( SENDINFO(m_flRescueStartTime) ),
+	SendPropFloat( SENDINFO(m_flGrabSuccessTime) ),
+	SendPropFloat( SENDINFO(m_flDropStartTime) ),
 
 END_SEND_TABLE()
 
@@ -115,14 +149,27 @@ END_SEND_TABLE()
 CUtlVector< CHostage * > g_Hostages;
 static CountdownTimer announceTimer;		// used to stop "hostage rescued" announcements from stepping on each other
 
-
 //-----------------------------------------------------------------------------------------------------
 CHostage::CHostage()
 {
-	g_Hostages.AddToTail( this );
-	m_PlayerAnimState = CreateHostageAnimState( this, this, LEGANIM_8WAY, false );
+	if ( g_Hostages.Count() < MAX_HOSTAGES )
+	{
+		g_Hostages.AddToTail( this );
+		m_bRemove = false;
+	}
+	else
+	{
+		DevMsg( "The maximum number of hostages (%i) has been exceeded.", MAX_HOSTAGES );
+		m_bRemove = true;
+	}
+
+	m_uiHostageSpawnExclusionGroupMask = 0u;
+	m_nHostageSpawnRandomFactor = 1u;
+
+	m_PlayerAnimState = CreateHostageAnimState( this, this, LEGANIM_9WAY, false );
 	UseClientSideAnimation();
 	SetBloodColor( BLOOD_COLOR_RED );
+	m_pExpresser = NULL;
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -130,6 +177,20 @@ CHostage::~CHostage()
 {
 	g_Hostages.FindAndRemove( this );
 	m_PlayerAnimState->Release();
+	delete m_pExpresser;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+CAI_Expresser *CHostage::CreateExpresser( void )
+{
+	m_pExpresser = new CMultiplayer_Expresser( this );
+	if ( !m_pExpresser)
+		return NULL;
+
+	m_pExpresser->Connect( this );
+	return m_pExpresser;
 }
 
 CWeaponCSBase* CHostage::CSAnim_GetActiveWeapon()
@@ -142,25 +203,76 @@ bool CHostage::CSAnim_CanMove()
 	return true;
 }
 
+bool CHostage::KeyValue( const char *szKeyName, const char *szValue )
+{
+	if ( char const *szHostageSpawnExclusionGroup = StringAfterPrefix( szKeyName, "HostageSpawnExclusionGroup" ) )
+	{
+		int iGroupId = Q_atoi( szHostageSpawnExclusionGroup );
+		if ( ( iGroupId >= 1 ) && ( iGroupId <= 32 ) )
+		{
+			bool bValue = !!Q_atoi( szValue );
+			uint32 uiBitMaskValue = 1u << ( iGroupId - 1 );
+			if ( bValue )
+				m_uiHostageSpawnExclusionGroupMask |= uiBitMaskValue;
+			else
+				m_uiHostageSpawnExclusionGroupMask &=~uiBitMaskValue;
+		}
+		return true;
+	}
+	else if ( FStrEq( szKeyName, "HostageSpawnRandomFactor" ) )
+	{
+		int iFactor = Q_atoi( szValue );
+		if ( iFactor < 1 )
+			iFactor = 1;
+		else if ( iFactor > 100 )
+			iFactor = 100;
+		m_nHostageSpawnRandomFactor = iFactor;
+		return true;
+	}
+
+	return BaseClass::KeyValue( szKeyName, szValue );
+}
+
 //-----------------------------------------------------------------------------------------------------
 void CHostage::Spawn( void )
 {
+	if ( CSGameRules()->IsWarmupPeriod() && !mp_hostages_spawn_same_every_round.GetBool() )
+		return;
+
+	// remove hostage spawns that exceeded MAX_HOSTAGES and weren't added to g_Hostages
+	if ( m_bRemove )
+	{
+		UTIL_Remove( this );
+	}
+
+	SetClassname( "hostage_entity");
+
 	Precache();
 
 	// round-robin through the hostage models
-	static int index = 0;
-	int whichModel = index % NumHostageModels;
-	++index;
+	static int hostageModelIndex = 0;
 
-	SetModel( HostageModel[ whichModel ] );
+	bool hostageSet = false;
+	//const CUtlStringList *pTModelNames = g_pGameTypes->GetTModelsForMap( m_mapName );
 
+	if ( !hostageSet )
+	{
+		int whichModel = hostageModelIndex % DEFAULT_NUM_HOSTAGE_MODELS;
+		SetModel( HostageModel[ whichModel ] );
+	}
 
+	// Advance to the next hostage model type.
+	++hostageModelIndex;
+
+	RemoveEffects( EF_NODRAW );
 	SetHullType( HULL_HUMAN );
 
 	SetSolid( SOLID_BBOX );
 	AddSolidFlags( FSOLID_NOT_STANDABLE );
 	SetMoveType( MOVETYPE_STEP );
 	SetCollisionGroup( COLLISION_GROUP_PLAYER );
+
+	AddFlag( FL_OBJECT ); // have the spawned hostage participate in high-priority entity pickup rules
 
 	SetGravity( 1.0 );
 
@@ -171,7 +283,7 @@ void CHostage::Spawn( void )
 	InitBoneControllers( ); 
 
 	// we must set this, because its zero by default thus putting their eyes in their feet
-	SetViewOffset( Vector( 0, 0, 60 ) );
+	SetViewOffset( Vector( 0, 0, 35 ) );
 
 
 	// set up think callback
@@ -182,11 +294,14 @@ void CHostage::Spawn( void )
 
 	SetUse( &CHostage::HostageUse );
 
-	m_leader = NULL;
+	m_leader = 0;
 	m_reuseTimer.Invalidate();
 	m_hasBeenUsed = false;
 
 	m_isRescued = false;
+	m_jumpedThisFrame = false;
+
+	m_nHostageState = k_EHostageStates_Idle;
 
 	m_vel = Vector( 0, 0, 0 );
 	m_accel = Vector( 0, 0, 0 );
@@ -204,12 +319,6 @@ void CHostage::Spawn( void )
 	Vector GroundPos = DropToGround( this, GetAbsOrigin(), HOSTAGE_BBOX_VEC_MIN, HOSTAGE_BBOX_VEC_MAX );
 	SetAbsOrigin( GroundPos );
 
-	if (TheNavMesh)
-	{
-		Vector pos = GetAbsOrigin();
-		m_lastKnownArea = TheNavMesh->GetNearestNavArea( pos );
-	}
-
 	m_isCrouching = false;
 	m_isRunning = true;
 	m_jumpTimer.Invalidate();
@@ -222,48 +331,75 @@ void CHostage::Spawn( void )
 	m_lastLeaderID = 0;
 
 	announceTimer.Invalidate();
-	m_disappearTime = 0.0f;
+	m_flRescueStartTime = 0.0f;
+
+	m_flGrabSuccessTime = 0.0f;
+	m_flDropStartTime = 0.0f;
+
+	m_fLastGrabTime = 0.0f;
+	//m_bBeingGrabbed = false;
+	m_flGrabbingLength = 0.0f;
+	m_bHandsHaveBeenCut = false;
+
+	m_vecGrabbedPos = GetAbsOrigin();
+
+	CreateExpresser();
 }
 
 //-----------------------------------------------------------------------------------------------------
 void CHostage::Precache()
-{
-	for ( int i=0; i<NumHostageModels; ++i )
+{	
+	// Could not find a list of hostages for this map, so use the defaults.
+	for ( int i=0; i<DEFAULT_NUM_HOSTAGE_MODELS; ++i )
 	{
 		PrecacheModel( HostageModel[i] );
 	}
+
+	// Used for the PlayerAnimState activities etc.
+	PrecacheModel( HOSTAGE_ANIM_MODEL );
+	PrecacheModel( HOSTAGE_CARRY_PROP_MODEL );
+	PrecacheModel( HOSTAGE_CARRY_VIEW_MODEL );
 
 	PrecacheScriptSound( "Hostage.StartFollowCT" );
 	PrecacheScriptSound( "Hostage.StopFollowCT" );
 	PrecacheScriptSound( "Hostage.Pain" );
 
+	PrecacheScriptSound( "Hostage.CutFreeWithDefuser" );
+	PrecacheScriptSound( "Hostage.CutFreeWithoutDefuser" );
+	PrecacheScriptSound( "Hostage.PickUp" );
+	PrecacheScriptSound( "Hostage.Drop" );
+
 	BaseClass::Precache();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CHostage::ModifyOrAppendCriteria( AI_CriteriaSet& set )
+{
+	BaseClass::ModifyOrAppendCriteria( set );
+
+	set.AppendCriteria( "rescued", (IsRescued() ? "yes" : "no") );
 }
 
 //-----------------------------------------------------------------------------------------------------
 int CHostage::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 {
-	float actualDamage = info.GetDamage();
+	float actualDamage = MIN( info.GetDamage(), GetHealth() );
 
 	// say something
-	EmitSound( "Hostage.Pain" );
+	if ( hostage_is_silent.GetBool() == false )
+	{
+		EmitSound( "Hostage.Pain" );
+	}
 
 	CCSPlayer *player = ToCSPlayer( info.GetAttacker() );
 
 	if (player)
 	{
-        //=============================================================================
-        // HPE_BEGIN
-        // [dwenger] Track which player injured the hostage
-        //=============================================================================
-
-        player->SetInjuredAHostage(true);
+		// [dwenger] Track which player injured the hostage
+		player->SetInjuredAHostage(true);
 		CSGameRules()->HostageInjured();
-
-        //=============================================================================
-        // HPE_END
-        //=============================================================================
-
 
 		if ( !( player->m_iDisplayHistoryBits & DHF_HOSTAGE_INJURED ) )
 		{
@@ -284,7 +420,7 @@ int CHostage::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 		player->AddAccountAward( PlayerCashAward::DAMAGE_HOSTAGE, CSGameRules()->PlayerCashAwardValue( PlayerCashAward::DAMAGE_HOSTAGE ) * (int)actualDamage );
 	}
 
-	return BaseClass::OnTakeDamage_Alive( info );
+	return ( mp_hostages_takedamage.GetBool() ? BaseClass::OnTakeDamage_Alive( info ) : 1 );
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -310,11 +446,31 @@ float CHostage::GetModifiedDamage( float flDamage, int nHitGroup )
 }
 
 //-----------------------------------------------------------------------------------------------------
-void CHostage::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator )
+void CHostage::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	CTakeDamageInfo scaledInfo = info;
 	scaledInfo.SetDamage( GetModifiedDamage( info.GetDamage(), ptr->hitgroup ) );
-	BaseClass::TraceAttack( scaledInfo, vecDir, ptr, pAccumulator );
+
+	Vector vecOrigin = ptr->endpos - vecDir * 4;
+
+	if ( m_takedamage )
+	{
+		CDisablePredictionFiltering disabler;
+
+		AddMultiDamage( info, this );
+
+		// This does smaller splotches on the guy and splats blood on the world.
+		TraceBleed( info.GetDamage(), vecDir, ptr, info.GetDamageType() );
+
+		CEffectData	data;
+		data.m_vOrigin = ptr->endpos;
+		data.m_vNormal = vecDir * -1;
+		data.m_nEntIndex = ptr->m_pEnt ?  ptr->m_pEnt->entindex() : 0;
+		data.m_flMagnitude =  info.GetDamage();
+
+		DispatchEffect( "csblood", data );
+	}
+
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -331,12 +487,13 @@ void CHostage::CheckForHostageAbuse( CCSPlayer *player )
 
 		if ( player->m_iHostagesKilled == hostageKillLimit - 1 )
 		{
-			player->HintMessage( "#Hint_removed_for_next_hostage_killed", TRUE );
+			//player->HintMessage( "#Hint_removed_for_next_hostage_killed", TRUE );
+			ClientPrint( player, HUD_PRINTTALK, "#Hint_removed_for_next_hostage_killed" );
 		}
 		else if ( player->m_iHostagesKilled >= hostageKillLimit )
 		{
 			Msg( "Kicking client \"%s\" for killing too many hostages\n", player->GetPlayerName() );
-			engine->ServerCommand( UTIL_VarArgs( "kickid %d \"For killing too many hostages\"\n", player->GetUserID() ) );
+			engine->ServerCommand( UTIL_VarArgs( "kickid_ex %d %d For killing too many hostages\n", player->GetUserID(), 1 ) );
 		}
 	}
 }
@@ -348,17 +505,19 @@ void CHostage::CheckForHostageAbuse( CCSPlayer *player )
  */
 void CHostage::Event_Killed( const CTakeDamageInfo &info )
 {
+	// clear followers for music cue
+	CCSPlayer *player = GetLeader();
+	if (player)
+	{
+		player->DecrementNumFollowers();
+	}
+
+
 	// tell the game logic that we've died
 	CSGameRules()->CheckWinConditions();
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [tj] Let the game know that a hostage has been killed
-	//=============================================================================
 	CSGameRules()->HostageKilled();
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 	CCSPlayer *attacker = ToCSPlayer( info.GetAttacker() );
 
@@ -390,9 +549,11 @@ void CHostage::Event_Killed( const CTakeDamageInfo &info )
 	{
 		event->SetInt( "userid", (attacker)?attacker->GetUserID():0 );
 		event->SetInt( "hostage", entindex() );
-		event->SetInt( "priority", 6 );
+		event->SetInt( "priority", 5 );
 		gameeventmanager->FireEvent( event );
 	}
+
+	m_nHostageState = k_EHostageStates_Dead;
 }
 
 
@@ -407,12 +568,6 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 		m_isRescued = true;
 		m_lastLeaderID = 0;
 
-		SetSolid( SOLID_NONE );
-		SetSolidFlags( 0 );
-
-		// start fading out
-		m_disappearTime = gpGlobals->curtime + 3.0f;
-
 		SetUse( NULL );
 		m_takedamage = DAMAGE_NO;
 
@@ -421,9 +576,43 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 		if (player)
 		{
 			player->AddAccountAward( PlayerCashAward::RESCUED_HOSTAGE );
+			player->DecrementNumFollowers();
+
+			m_OnRescued.FireOutput(this, player);
+
+			if ( HOSTAGE_RULE_CAN_PICKUP == 1 )
+			{
+				// Put him a short distance in front of the player.
+				Vector vecTarget;
+				Vector vForward;
+				AngleVectors( player->GetAbsAngles(), &vForward );
+				vForward.z = 0;
+				vecTarget = player->GetAbsOrigin() + vForward * 100;
+
+				Vector hullSizeNormal = VEC_HULL_MAX - VEC_HULL_MIN;
+				Vector hullSizeCrouch = VEC_DUCK_HULL_MAX - VEC_DUCK_HULL_MIN;
+
+				Vector newOrigin;
+				VectorCopy( vecTarget, newOrigin );
+				newOrigin += -0.5f * ( hullSizeNormal - hullSizeCrouch );
+
+				trace_t trace;
+				UTIL_TraceHull( newOrigin, vecTarget + Vector( 0, 0, 1 ), VEC_HULL_MIN, VEC_HULL_MAX, MASK_PLAYERSOLID, player, COLLISION_GROUP_PLAYER_MOVEMENT, &trace );
+
+				if ( trace.fraction == 1.0 )
+					DropHostage( vecTarget, true );  // drop the hostage in front of the player
+				else
+					DropHostage( player->GetAbsOrigin(), true );  // just drop the hostage where the player stands
+			}
 		}
-		
-		Idle();
+
+		SetSolid( SOLID_NONE );
+		SetSolidFlags( 0 );
+
+		// start fading out
+		m_flRescueStartTime = gpGlobals->curtime;
+		// mark them as rescued
+		m_nHostageState = k_EHostageStates_Rescued;
 
 		// tell the bots someone has rescued a hostage
 		IGameEvent *event = gameeventmanager->CreateEvent( "hostage_rescued" );
@@ -432,61 +621,51 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 			event->SetInt( "userid", player ? player->GetUserID() : (-1) );
 			event->SetInt( "hostage", entindex() );
 			event->SetInt( "site", 0 ); // TODO add site index
-			event->SetInt( "priority", 9 );
+			event->SetInt( "priority", 5 );
 			gameeventmanager->FireEvent( event );
 		}
 
 		// update game rules
 		CSGameRules()->m_iHostagesRescued++;
 
-        //=============================================================================
-        // HPE_BEGIN
-        // [dwenger] Hostage rescue achievement processing
-        //=============================================================================
-
-        // Track last rescuer
-        if ( CSGameRules()->m_pLastRescuer == NULL )
-        {
-            // No rescuer yet, so assign one & set rescuer count to 1
-            CSGameRules()->m_pLastRescuer = player;
-            CSGameRules()->m_iNumRescuers = 1;
-        }
-        else
-        {
-            if ( CSGameRules()->m_pLastRescuer != player )
-            {
-                // Rescuer changed
-                CSGameRules()->m_pLastRescuer = player;
-                CSGameRules()->m_iNumRescuers++;
-            }
-        }
-
-		bool roundIsAlreadyOver = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
-
-        //=============================================================================
-        // HPE_END
-        //=============================================================================
-
-		if (CSGameRules()->CheckWinConditions() == false)
+		// [dwenger] Hostage rescue achievement processing
+		// Track last rescuer
+		if ( CSGameRules()->m_pLastRescuer == NULL )
 		{
-			// this hostage didn't win the round, so announce its rescue to everyone
-			if (announceTimer.IsElapsed())
+			// No rescuer yet, so assign one & set rescuer count to 1
+			CSGameRules()->m_pLastRescuer = player;
+			CSGameRules()->m_iNumRescuers = 1;
+		}
+		else
+		{
+			if ( CSGameRules()->m_pLastRescuer != player )
 			{
-				CSGameRules()->BroadcastSound( "Event.HostageRescued" );
+				// Rescuer changed
+				CSGameRules()->m_pLastRescuer = player;
+				CSGameRules()->m_iNumRescuers++;
 			}
+		}
 
+		bool roundWasAlreadyOver = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
+
+		//
+		// Play the sound when every hostage is getting rescued
+		//
+		if (announceTimer.IsElapsed())
+		{
+			CSGameRules()->BroadcastSound( "Event.HostageRescued" );
+			
 			// avoid having the announcer talk over himself
 			announceTimer.Start( 2.0f );
 		}
-        //=============================================================================
-        // HPE_BEGIN
-        // [dwenger] Awarding of hostage rescue achievement
-        //=============================================================================
 
-        else
-        {
-            //Check hostage rescue achievements
-            if ( CSGameRules()->m_iNumRescuers == 1 && !CSGameRules()->WasHostageKilled())
+		//
+		// Check match win conditions and if round is now won award achievements
+		//
+		if ( CSGameRules()->CheckWinConditions() && player )
+		{
+			//Check hostage rescue achievements
+			if ( CSGameRules()->m_iNumRescuers == 1 && !CSGameRules()->WasHostageKilled())
             {
 				//check for unrescued hostages
 				bool allHostagesRescued = true;				
@@ -518,29 +697,17 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 					}
 				}
             }
-			//=============================================================================
-			// HPE_BEGIN:
-			// [menglish] If this rescue ended the round give an mvp to the rescuer
-			//=============================================================================
+		}
 
-            if ( player && !roundIsAlreadyOver)
-            {
-			    player->IncrementNumMVPs( CSMVP_HOSTAGERESCUE );
-            }
+		if ( player && !roundWasAlreadyOver )
+		{
+			player->IncrementNumMVPs( CSMVP_HOSTAGERESCUE );
+		}
 
-			//=============================================================================
-			// HPE_END
-			//=============================================================================
-        }
-
-        if ( player )
-        {
-            CCS_GameStats.Event_HostageRescued( player );
-        }
-
-        //=============================================================================
-        // HPE_END
-        //=============================================================================
+		if ( player )
+		{
+			CCS_GameStats.Event_HostageRescued( player );
+		}
 	}
 }
 
@@ -552,6 +719,9 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 void CHostage::Touch( CBaseEntity *other )
 {
 	BaseClass::Touch( other );
+
+	if ( HOSTAGE_RULE_CAN_PICKUP == 1 )
+		return;
 
 	// allow players and other hostages to push me around
 	if ( ( other->IsPlayer() && other->GetTeamNumber() == TEAM_CT ) || FClassnameIs( other, "hostage_entity" ) )
@@ -569,6 +739,12 @@ void CHostage::Touch( CBaseEntity *other )
 	{
 		m_inhibitDoorTimer.Start( 3.0f );
 		other->Use( this, this, USE_TOGGLE, 0.0f );
+	}
+	else if ( FClassnameIs( other, "func_breakable_surf" ) )
+	{
+		// break glass we've run into, so we're not stuck behind it
+		CTakeDamageInfo damageInfo( this, this, 100.0f, DMG_CRUSH );
+		other->OnTakeDamage( damageInfo );
 	}
 }
 
@@ -623,6 +799,17 @@ void CHostage::Wiggle( void )
  */
 void CHostage::UpdateFollowing( float deltaT )
 {
+	if ( HOSTAGE_RULE_CAN_PICKUP && IsFollowingSomeone() && GetLeader()  )
+	{
+		if ( m_nHostageState != k_EHostageStates_GettingPickedUp )
+		{
+			// only set the origin when we are carrying and not just when we are in the process of "getting picked up"
+			SetAbsOrigin( GetLeader()->GetAbsOrigin() );	
+		}
+	
+		return;
+	}
+
 	if ( !IsFollowingSomeone() && m_lastLeaderID != 0 )
 	{
 		// emit hostage_stops_following event
@@ -631,7 +818,7 @@ void CHostage::UpdateFollowing( float deltaT )
 		{
 			event->SetInt( "userid", m_lastLeaderID );
 			event->SetInt( "hostage", entindex() );
-			event->SetInt( "priority", 6 );
+			event->SetInt( "priority", 5 );
 			gameeventmanager->FireEvent( event );
 		}
 
@@ -649,6 +836,9 @@ void CHostage::UpdateFollowing( float deltaT )
 			return;
 		}
 
+		if ( HOSTAGE_RULE_CAN_PICKUP == 0 )
+			m_nHostageState = k_EHostageStates_FollowingPlayer;
+
 		// if leader has moved, repath
 		if (m_path.IsValid())
 		{
@@ -660,7 +850,6 @@ void CHostage::UpdateFollowing( float deltaT )
 				m_path.Invalidate();
 			}
 		}
-
 
 		// build a path to our leader
 		if (!m_path.IsValid() && m_repathTimer.IsElapsed())
@@ -745,7 +934,7 @@ void CHostage::UpdateFollowing( float deltaT )
 //-----------------------------------------------------------------------------------------------------
 void CHostage::AvoidPhysicsProps( void )
 {
-	if ( m_lifeState == LIFE_DEAD )
+	if ( m_lifeState == LIFE_DEAD || HOSTAGE_RULE_CAN_PICKUP )
 		return;
 
 	CBaseEntity *props[512];
@@ -795,11 +984,13 @@ void CHostage::AvoidPhysicsProps( void )
 		UTIL_TraceEntity( this, start, start + forward, MASK_PLAYERSOLID, this, COLLISION_GROUP_PLAYER, &trace );
 		if ( !trace.startsolid && trace.fraction < 1.0f && trace.plane.normal.z < 0.7f )
 		{
-			float groundFraction = trace.fraction;
-			start.z += StepHeight;
-			UTIL_TraceEntity( this, start, start + forward, MASK_PLAYERSOLID, this, COLLISION_GROUP_PLAYER, &trace );
-			if ( !trace.startsolid && trace.fraction > groundFraction )
+			Vector vecStepStart = trace.endpos + forward;
+			vecStepStart.z += StepHeight;
+
+			UTIL_TraceEntity( this, vecStepStart, vecStepStart + Vector( 0, 0, -StepHeight), MASK_PLAYERSOLID, this, COLLISION_GROUP_PLAYER, &trace );
+			if ( !trace.startsolid && trace.fraction > 0 )
 			{
+				start.z += (StepHeight*(1-trace.fraction) + 1);
 				SetAbsOrigin( start );
 			}
 		}
@@ -813,6 +1004,9 @@ void CHostage::AvoidPhysicsProps( void )
  */
 void CHostage::PushawayThink( void )
 {
+	if ( HOSTAGE_RULE_CAN_PICKUP )
+		return;
+
 	PerformObstaclePushaway( this );
 	SetNextThink( gpGlobals->curtime + PUSHAWAY_THINK_INTERVAL, HOSTAGE_PUSHAWAY_THINK_CONTEXT );
 }
@@ -836,6 +1030,8 @@ void CHostage::PhysicsSimulate( void )
  */
 void CHostage::HostageThink( void )
 {
+	m_jumpedThisFrame = false;
+
 	if (!m_isAdjusted)
 	{
 		m_isAdjusted = true;
@@ -844,8 +1040,80 @@ void CHostage::HostageThink( void )
 		SetCollisionBounds( HOSTAGE_BBOX_VEC_MIN, HOSTAGE_BBOX_VEC_MAX );
 	}
 
-	const float deltaT = HOSTAGE_THINK_INTERVAL;
+	const float deltaT = ( HOSTAGE_RULE_CAN_PICKUP && IsFollowingSomeone() ) ? HOSTAGE_THINK_CARRIED_INTERVAL : HOSTAGE_THINK_INTERVAL;
+
 	SetNextThink( gpGlobals->curtime + deltaT );
+
+	//if the defusing process has started
+	if ( HOSTAGE_RULE_CAN_PICKUP && m_nHostageState == k_EHostageStates_BeingUntied  && (m_pHostageGrabber != NULL))
+	{
+		//if the defusing process has not ended yet
+		if ( gpGlobals->curtime < m_flGrabSuccessTime )
+		{
+			int iOnGround = FBitSet( m_pHostageGrabber->GetFlags(), FL_ONGROUND );
+
+			const CUserCmd *pCmd = m_pHostageGrabber->GetLastUserCommand();
+			bool bPlayerStoppedHoldingUse = !(pCmd->buttons & IN_USE) && (gpGlobals->curtime > m_fLastGrabTime + GRAB_HOSTAGE_LOCKIN_PERIOD);
+
+			CConfigurationForHighPriorityUseEntity_t cfgUseEntity;
+			bool bPlayerUseIsValidNow = m_pHostageGrabber->GetUseConfigurationForHighPriorityUseEntity( this, cfgUseEntity ) &&
+				( cfgUseEntity.m_pEntity == this ) && cfgUseEntity.UseByPlayerNow( m_pHostageGrabber, cfgUseEntity.k_EPlayerUseType_Progress );
+
+			//if the bomb defuser has stopped defusing the bomb
+			if ( bPlayerStoppedHoldingUse || !bPlayerUseIsValidNow || !iOnGround )
+			{
+				if ( !iOnGround && m_pHostageGrabber->IsAlive() )
+					ClientPrint( m_pHostageGrabber, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Hostage_Pickup_Must_Be_On_Ground");
+
+				// tell the bots someone has aborted defusing
+// 				IGameEvent * event = gameeventmanager->CreateEvent( "bomb_abortdefuse" );
+// 				if( event )
+// 				{
+// 					event->SetInt("userid", m_pHostageGrabber->GetUserID() );
+// 					event->SetInt( "priority", 5 ); // bomb_abortdefuse
+// 					gameeventmanager->FireEvent( event );
+// 				}
+
+				//cancel the progress bar
+				m_pHostageGrabber->SetProgressBarTime( 0 );
+				//m_pHostageGrabber->OnCanceledGrab();
+
+				// release the player from being frozen
+				m_pHostageGrabber->m_bIsGrabbingHostage = false;
+				//m_bBeingGrabbed = false;
+				m_nHostageState = k_EHostageStates_Idle;
+
+				if ( m_bHandsHaveBeenCut || m_pHostageGrabber->HasDefuser() )
+					StopSound( "Hostage.CutFreeWithDefuser" );
+				else
+					StopSound( "Hostage.CutFreeWithoutDefuser" );
+			}
+			return;
+		}
+		else if ( m_pHostageGrabber->IsAlive() )
+		{
+			Vector soundPosition = m_pHostageGrabber->GetAbsOrigin() + Vector( 0, 0, 5 );
+			CBroadcastRecipientFilter filter;
+
+			EmitSound( filter, entindex(), "Hostage.PickUp" );
+
+			// release the player from being frozen
+			m_pHostageGrabber->m_bIsGrabbingHostage = false;
+
+			SetHostageStartFollowingPlayer( m_pHostageGrabber.Get() );
+
+			// Clear their progress bar.
+			m_pHostageGrabber->SetProgressBarTime( 0 );
+			m_pHostageGrabber = NULL;
+			m_flGrabbingLength = 10;
+
+			m_vecGrabbedPos = GetAbsOrigin();
+
+			m_nHostageState = k_EHostageStates_GettingPickedUp;
+
+			return;
+		}
+	}
 
 	// keep track of which Navigation Area we are in (or were in, if we're "off the mesh" right now)
 	CNavArea *area = TheNavMesh->GetNavArea( GetAbsOrigin() );
@@ -860,18 +1128,32 @@ void CHostage::HostageThink( void )
 
 	AvoidPhysicsProps();
 
+	SmoothlyDropHostageToGround( GetAbsOrigin() );
+
 	// update hostage velocity in the XY plane
-	const float damping = 2.0f;
-	m_vel += deltaT * (m_accel - damping * m_vel);
+	Vector vel = m_vel;
 
-	// leave Z component untouched
-	m_vel.z = GetAbsVelocity().z;
-
-	if ( m_accel.IsZero() && m_vel.AsVector2D().IsZero( 1.0f ) )
+	if ( m_accel.IsZero() )
 	{
-		m_vel.x = 0.0f;
-		m_vel.y = 0.0f;
+		// Increase the damping if we've stopped adding acceleration.
+		const float DAMPING = 4.0f;
+		vel -=  ( vel * ( deltaT * DAMPING ) );
+
+		if ( vel.AsVector2D().IsZero( 1.0f ) )
+		{
+			vel.x = 0.0f;
+			vel.y = 0.0f;
+		}
 	}
+	else
+	{
+		const float DAMPING = 2.0f;
+		vel += deltaT * (m_accel - DAMPING * vel);
+	}
+	
+	// leave Z component untouched
+	vel.z = GetAbsVelocity().z;
+	m_vel = vel;
 
 	m_accel = Vector( 0, 0, 0 );
 
@@ -879,6 +1161,7 @@ void CHostage::HostageThink( void )
 	StudioFrameAdvance();
 
 	int sequence = SelectWeightedSequence( ACT_IDLE );
+	
 	if (GetSequence() != sequence)
 	{
 		SetSequence( sequence );
@@ -886,16 +1169,60 @@ void CHostage::HostageThink( void )
 
 	m_PlayerAnimState->Update( GetAbsAngles()[YAW], GetAbsAngles()[PITCH] );
 
+	if ( m_nHostageState == k_EHostageStates_GettingPickedUp )
+	{
+		SetSolid( SOLID_NONE );
+		SetSolidFlags( 0 );
+		SetUse( NULL );
+		RemoveFlag( FL_OBJECT );
 
-	if ( m_disappearTime && m_disappearTime < gpGlobals->curtime )
+		if ( m_flGrabSuccessTime + CS_HOSTAGE_TRANSTIME_PICKUP < gpGlobals->curtime )
+		{
+			m_nHostageState = k_EHostageStates_BeingCarried;
+
+			m_takedamage = DAMAGE_NO;
+		}
+		else if ( GetLeader() )
+		{
+			float flFrac = ((gpGlobals->curtime - m_flGrabSuccessTime) /  CS_HOSTAGE_TRANSTIME_PICKUP);
+			Vector vecStart = m_vecGrabbedPos;
+			Vector vecDest = GetLeader()->GetAbsOrigin() + Vector( 0, 0, 40 );
+			Vector vecCur = vecStart + ((vecDest - vecStart) * flFrac);
+
+			SetAbsOrigin( vecCur );
+		}
+	}
+	else if ( m_nHostageState == k_EHostageStates_GettingDropped && m_flDropStartTime + CS_HOSTAGE_TRANSTIME_DROP < gpGlobals->curtime )
+	{
+		m_nHostageState = k_EHostageStates_Idle;
+
+		SetSolid( SOLID_BBOX );
+		SetCollisionGroup( COLLISION_GROUP_PLAYER );
+		SetUse( &CHostage::HostageUse );
+		AddFlag( FL_OBJECT );
+
+		AddSolidFlags( FSOLID_NOT_STANDABLE );
+	}
+	else if ( m_nHostageState == k_EHostageStates_Rescued && m_flRescueStartTime + CS_HOSTAGE_TRANSTIME_RESCUE < gpGlobals->curtime )
 	{
 		// finished fading - remove us completely
-		AddEffects( EF_NODRAW );
+// 		RemoveEffects( EF_NODRAW );
+// 
+// 		SetSolid( SOLID_BBOX );
+// 		SetCollisionGroup( COLLISION_GROUP_PLAYER );
+// 		SetUse( &CHostage::HostageUse );
+// 
+// 		AddSolidFlags( FSOLID_NOT_STANDABLE );
 
 		SetSolid( SOLID_NONE );
 		SetSolidFlags( 0 );
-		m_disappearTime = 0.0f;
+		RemoveFlag( FL_OBJECT );
 	}
+}
+
+bool CHostage::IsBeingCarried( void )
+{
+	return IsFollowingSomeone();
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -964,7 +1291,7 @@ void CHostage::GiveCTUseBonus( CCSPlayer *rescuer )
  */
 void CHostage::Idle( void )
 {
-	m_leader = NULL;
+	m_leader = 0;
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -973,24 +1300,38 @@ void CHostage::Idle( void )
  */
 void CHostage::Follow( CCSPlayer *leader )
 {
-    //=============================================================================
-    // HPE_BEGIN
-    // [dwenger] Set variable to track whether player is currently rescuing hostages
-    //=============================================================================
+	// [dwenger] Set variable to track whether player is currently rescuing hostages
+	if ( leader )
+	{
+		leader->IncrementNumFollowers( );
+		leader->SetIsRescuing(true);
 
-    if ( leader )
-    {
-        leader->IncrementNumFollowers();
-        leader->SetIsRescuing(true);
-    }
+		// say something
+		/*if ( hostage_is_silent.GetBool() == false )
+		{
+			AIConcept_t concept( "StartFollowing" );
+			GetExpresser()->Speak( concept, "leaderteam:CT" );		
+		}*/
 
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
+		// emit hostage_follows event
+		IGameEvent *event = gameeventmanager->CreateEvent( "hostage_follows" );
+		if ( event )
+		{
+			event->SetInt( "userid", leader->GetUserID() );
+			event->SetInt( "hostage", entindex() );
+			event->SetInt( "priority", 5 );
+			gameeventmanager->FireEvent( event );
+		}
+	}
 
 	m_leader = leader;
 	m_isWaitingForLeader = false;
 	m_lastLeaderID = (leader) ? leader->GetUserID() : 0;
+
+	if ( leader && HOSTAGE_RULE_CAN_PICKUP )
+	{
+		leader->GiveCarriedHostage( this );
+	}
 }
 
 
@@ -1010,33 +1351,106 @@ CCSPlayer *CHostage::GetLeader( void ) const
  */
 void CHostage::HostageUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	Vector to = pActivator->GetAbsOrigin() - GetAbsOrigin();
+	CCSPlayer *pPlayer = ToCSPlayer( pActivator );
+	if ( !pPlayer )
+		return;
+
+	if ( CSGameRules() && CSGameRules()->IsWarmupPeriod() )
+	{
+		if ( pPlayer->m_iNextTimeCheck < gpGlobals->curtime )
+		{
+			ClientPrint( pPlayer, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Cannot_Move_Hostages_Warmup" );
+			pPlayer->m_iNextTimeCheck = gpGlobals->curtime + 1.f;
+		}
+		return;
+	}
 
 	// limit use range
 	float useRange = 1000.0f;
+	Vector to = pActivator->GetAbsOrigin() - GetAbsOrigin();
 	if (to.IsLengthGreaterThan( useRange ))
 	{
 		return;
 	}
 
-	// TODO: check line of sight to hostage
-
-
-	CCSPlayer *user = ToCSPlayer( pActivator );
-	if (user == NULL)
+	if ( HOSTAGE_RULE_CAN_PICKUP == 1 )
 	{
-		return;
-	}
-
-	// only members of the CT team can use hostages (no T's or spectators)
-	if (!hostage_debug.GetBool() && user->GetTeamNumber() != TEAM_CT)
-	{
-		if ( user->GetTeamNumber() == TEAM_TERRORIST )
+		if ( pPlayer->m_hCarriedHostage != NULL )
 		{
-			if ( !(user->m_iDisplayHistoryBits & DHF_HOSTAGE_CTMOVE) )
+			ClientPrint( pPlayer, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_CanOnlyCarryOneHostage" );
+			return;
+		}
+
+		if ( pPlayer && pPlayer->GetTeamNumber() == TEAM_TERRORIST )
+		{
+			SetHostageStartFollowingPlayer( pPlayer );
+		}
+		else
+		{
+			if ( m_nHostageState == k_EHostageStates_BeingUntied )
 			{
-				user->m_iDisplayHistoryBits |= DHF_HOSTAGE_CTMOVE;
-				user->HintMessage( "#Only_CT_Can_Move_Hostages", false, true );
+				if ( pPlayer != m_pHostageGrabber )
+				{
+					if ( pPlayer->m_iNextTimeCheck < gpGlobals->curtime )
+					{
+						ClientPrint( pPlayer, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_SomeonePickingUpHostage" );
+						pPlayer->m_iNextTimeCheck = gpGlobals->curtime + 1.f;
+					}
+					return;
+				}
+
+				m_fLastGrabTime = gpGlobals->curtime;
+			}
+			else
+			{
+				Vector soundPosition = pPlayer->GetAbsOrigin() + Vector( 0, 0, 5 );
+				CBroadcastRecipientFilter filter;
+
+				if ( m_bHandsHaveBeenCut || pPlayer->HasDefuser() )
+				{
+					EmitSound( filter, entindex(), "Hostage.CutFreeWithDefuser" );
+					m_flGrabbingLength = 1;
+				}
+				else
+				{
+					EmitSound( filter, entindex(), "Hostage.CutFreeWithoutDefuser" );
+					m_flGrabbingLength = 4;
+				}
+				
+				m_flGrabSuccessTime = gpGlobals->curtime + m_flGrabbingLength;
+				pPlayer->SetProgressBarTime( m_flGrabbingLength );
+
+				m_pHostageGrabber = pPlayer;
+				m_nHostageState = k_EHostageStates_BeingUntied;
+				pPlayer->m_bIsGrabbingHostage = true;
+			
+				m_fLastGrabTime = gpGlobals->curtime;
+
+				//start the progress bar
+
+				//player->OnStartedGrab();
+
+				m_OnHostageBeginGrab.FireOutput(this, pPlayer);
+			}
+		}
+	}
+	else
+	{
+		SetHostageStartFollowingPlayer( pPlayer );
+	}
+}
+
+void CHostage::SetHostageStartFollowingPlayer( CCSPlayer *pPlayer )
+{
+	// only members of the CT team can use hostages (no T's or spectators)
+	if (!hostage_debug.GetBool() && pPlayer->GetTeamNumber() != TEAM_CT)
+	{
+		if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST )
+		{
+			if ( !(pPlayer->m_iDisplayHistoryBits & DHF_HOSTAGE_CTMOVE) )
+			{
+				pPlayer->m_iDisplayHistoryBits |= DHF_HOSTAGE_CTMOVE;
+				pPlayer->HintMessage( "#Only_CT_Can_Move_Hostages", false, true );
 			}
 		}
 
@@ -1061,18 +1475,35 @@ void CHostage::HostageUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 	{
 		m_hasBeenUsed = true;
 
-		GiveCTUseBonus( user );
+		GiveCTUseBonus( pPlayer );
 
 		CSGameRules()->HostageTouched();
+
+		if ( pPlayer && !pPlayer->IsBot() && pPlayer->m_flGotHostageTalkTimer < gpGlobals->curtime )
+		{
+			//pPlayer->Radio( "Radio.EscortingHostages", "#Cstrike_TitlesTXT_Got_Hostages", true );
+			pPlayer->m_flGotHostageTalkTimer = gpGlobals->curtime + 10.0f;
+		}
+
+		m_bHandsHaveBeenCut = true;
+
+		m_OnFirstPickedUp.FireOutput(this, pPlayer);
 	}
 
+	// Add hostage rescue time to round timer
+	CSGameRules()->AddHostageRescueTime();
+
 	// if we are already following the player who used us, stop following
-	if (IsFollowing( user ))
+	if (IsFollowing( pPlayer ))
 	{
 		Idle();
 
-		// say something
-		EmitSound( "Hostage.StopFollowCT" );
+		/*if ( hostage_is_silent.GetBool() == false )
+		{
+			// say something
+			AIConcept_t concept( "StopFollowing" );
+			GetExpresser()->Speak( concept, "leaderteam:CT" );
+		}*/
 	}
 	else
 	{
@@ -1083,31 +1514,92 @@ void CHostage::HostageUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 		}
 
 		// start following
-		Follow( user );
-
-		// say something
-		EmitSound( "Hostage.StartFollowCT" );
-
-		// emit hostage_follows event
-		IGameEvent *event = gameeventmanager->CreateEvent( "hostage_follows" );
-		if ( event )
-		{
-			event->SetInt( "userid", user->GetUserID() );
-			event->SetInt( "hostage", entindex() );
-			event->SetInt( "priority", 6 );
-			gameeventmanager->FireEvent( event );
-		}
-
-		if ( !(user->m_iDisplayHistoryBits & DHF_HOSTAGE_USED) )
-		{
-			user->m_iDisplayHistoryBits |= DHF_HOSTAGE_USED;
-			user->HintMessage( "#Hint_lead_hostage_to_rescue_point", false );
-		}
+		Follow( pPlayer );
 	}
 
 	m_reuseTimer.Start( 1.0f );
 }
 
+void CHostage::SmoothlyDropHostageToGround( Vector vecPosition )
+{
+	if ( ( m_flDropStartTime > 0 ) && ( gpGlobals->curtime < m_flDropStartTime + hostage_drop_time.GetFloat() ) &&
+		( hostage_drop_time.GetFloat() > 0 ) )
+	{	// Perform smooth drop
+		Vector GroundPos = DropToGround( this, vecPosition, HOSTAGE_BBOX_VEC_MIN, HOSTAGE_BBOX_VEC_MAX );
+
+		// How far from ground should the hostage be now taking into account its starting location
+		float flLengthOriginal = ( GroundPos - m_vecPositionWhenStartedDroppingToGround ).Length();
+		float flLengthRemaining = ( GroundPos - vecPosition ).Length();
+		float flDropTimeRemaining = ( m_flDropStartTime + hostage_drop_time.GetFloat() - gpGlobals->curtime );
+		float flFractionOfDropDistanceRemaining = flDropTimeRemaining / hostage_drop_time.GetFloat();
+		if ( flLengthRemaining > flLengthOriginal * flFractionOfDropDistanceRemaining )
+		{
+			flLengthRemaining = flLengthOriginal * flFractionOfDropDistanceRemaining;
+			GroundPos = GroundPos + flLengthRemaining*( vecPosition - GroundPos ).Normalized();
+		}
+		else
+			GroundPos = vecPosition;
+		
+		SetAbsOrigin( GroundPos );
+	}
+	else if ( ( m_flDropStartTime > 0 ) && ( m_nHostageSpawnRandomFactor != k_EHostageStates_GettingDropped ) )
+	{	// Perform the final drop
+		Vector GroundPos = DropToGround( this, vecPosition, HOSTAGE_BBOX_VEC_MIN, HOSTAGE_BBOX_VEC_MAX );
+		SetAbsOrigin( GroundPos );
+		m_flDropStartTime = 0;
+	}
+}
+
+void CHostage::DropHostage( Vector vecPosition, bool bIsRescued )
+{
+	m_lastLeaderID = 0;
+
+	CCSPlayer *player = GetLeader();
+	if (player)
+	{
+		player->DecrementNumFollowers();
+		player->RemoveCarriedHostage();
+
+		if ( !bIsRescued )
+			m_OnDroppedNotRescued.FireOutput(this, player);
+	}
+
+	if ( !bIsRescued )
+	{
+		SetSolid( SOLID_BBOX );
+		SetCollisionGroup( COLLISION_GROUP_PLAYER );
+		SetUse( &CHostage::HostageUse );
+
+		AddSolidFlags( FSOLID_NOT_STANDABLE );
+		// say something
+		/*if ( hostage_is_silent.GetBool() == false )
+		{
+			AIConcept_t concept( "StopFollowing" );
+			GetExpresser()->Speak( concept, "leaderteam:CT" );
+		}*/
+
+		m_nHostageState = k_EHostageStates_GettingDropped;
+		m_flDropStartTime = gpGlobals->curtime;
+
+		
+	}
+
+	//Vector soundPosition = GetAbsOrigin() + Vector( 0, 0, 5 );
+	//CBroadcastRecipientFilter filter;
+	//EmitSound( filter, entindex(), "Hostage.Drop" );
+
+	m_leader = 0;
+
+	// Drop the hostage as much down as we can immediately
+	Vector GroundPos = DropToGround( this, vecPosition, HOSTAGE_BBOX_VEC_MIN, HOSTAGE_BBOX_VEC_MAX );
+	SetAbsOrigin( GroundPos );
+	m_vecPositionWhenStartedDroppingToGround = GroundPos;
+
+	SetGravity( 1.0 );
+
+	// set up think callback
+	SetNextThink( gpGlobals->curtime );
+}
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -1123,8 +1615,8 @@ void CHostage::FaceTowards( const Vector &target, float deltaT )
 
 	QAngle angles = GetAbsAngles();
 
-	const float turnSpeed = 250.0f;	
-	angles.y = ApproachAngle( desiredAngles.y, angles.y, turnSpeed * deltaT );
+	// The animstate system for hostages will smooth out the transition to this direction, so no need to double smooth it here.
+	angles.y = desiredAngles.y;
 
 	SetAbsAngles( angles );
 }
@@ -1227,14 +1719,22 @@ bool CHostage::IsCrouching( void ) const
  */
 void CHostage::Jump( void )
 {
+	// don't jump if the nav disallows it
+	CNavArea *myArea = GetLastKnownArea();
+	if ( myArea && myArea->HasAttributes( NAV_MESH_NO_JUMP ) )
+		return;
+
 	if (m_jumpTimer.IsElapsed() && IsOnGround())
 	{
 		const float minJumpInterval = 0.5f;
 		m_jumpTimer.Start( minJumpInterval );
 
 		Vector vel = GetAbsVelocity();
-		vel.z += 200.0f;
+		vel.z += HOSTAGE_JUMP_POWER;
 		SetAbsVelocity( vel );
+
+		m_jumpedThisFrame = true;
+		m_PlayerAnimState->DoAnimationEvent( PLAYERANIMEVENT_JUMP );
 	}
 }
 
@@ -1310,8 +1810,9 @@ void CHostage::TrackPath( const Vector &pathGoal, float deltaT )
 		to.z = 0.0f;
 		to.NormalizeInPlace();
 
-		const float speed = 1000.0f;
-		ApplyForce( speed * to );
+		float flHostageSlowMultiplier = mp_hostages_run_speed_modifier.GetFloat();
+
+		ApplyForce( (float)(MAX_HOSTAGE_MOVE_FORCE * flHostageSlowMultiplier) * to );
 	}
 	else
 	{
@@ -1320,8 +1821,8 @@ void CHostage::TrackPath( const Vector &pathGoal, float deltaT )
 		QAngle angles = GetAbsAngles();
 		AngleVectors( angles, &to );
 
-		const float airSpeed = 350.0f;
-		ApplyForce( airSpeed * to );
+		const float AIR_FORCE = 350.0f;
+		ApplyForce( AIR_FORCE * to );
 	}
 }
 

@@ -123,6 +123,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropFloat( RECVINFO( m_fRoundStartTime ) ),
 		RecvPropFloat( RECVINFO( m_flGameStartTime ) ),
 		RecvPropInt( RECVINFO( m_iHostagesRemaining ) ),
+		RecvPropBool( RECVINFO( m_bAnyHostageReached ) ),
 		RecvPropBool( RECVINFO( m_bMapHasBombTarget ) ),
 		RecvPropBool( RECVINFO( m_bMapHasRescueZone ) ),
 		RecvPropBool( RECVINFO( m_bLogoMap ) ),
@@ -139,6 +140,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropFloat( SENDINFO( m_fRoundStartTime ), 32, SPROP_NOSCALE ),
 		SendPropFloat( SENDINFO( m_flGameStartTime ), 32, SPROP_NOSCALE ),
 		SendPropInt( SENDINFO( m_iHostagesRemaining ), 4 ),
+		SendPropBool( SENDINFO( m_bAnyHostageReached ) ),
 		SendPropBool( SENDINFO( m_bMapHasBombTarget ) ),
 		SendPropBool( SENDINFO( m_bMapHasRescueZone ) ),
 		SendPropBool( SENDINFO( m_bLogoMap ) ),
@@ -332,11 +334,23 @@ ConVar mp_round_restart_delay(
 	true, 0.0f,
 	true, 10.0f );
 
+ConVar mp_hostages_takedamage(
+	"mp_hostages_takedamage",
+	"0",
+	FCVAR_REPLICATED,
+	"Whether or not hostages can be hurt." );
+
 ConVar mp_hostages_rescuetowin(
 	"mp_hostages_rescuetowin",
 	"1",
 	FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY,
 	"0 == all alive, any other number is the number the CT's need to rescue to win the round." );
+
+ConVar mp_hostages_rescuetime(
+	"mp_hostages_rescuetime",
+	"1",
+	FCVAR_REPLICATED,
+	"Additional time added to round time if a hostage is reached by a CT." );
 
 ConVar sv_allowminmodels(
 	"sv_allowminmodels",
@@ -2230,6 +2244,23 @@ ConVar snd_music_selection(
 				}
 			}
 		}
+	}
+
+	void CCSGameRules::AddHostageRescueTime( void )
+	{
+		if ( m_bAnyHostageReached )
+			return;
+
+		m_bAnyHostageReached = true;
+
+		// If the round is already over don't add additional time
+		bool roundIsAlreadyOver = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
+		if ( roundIsAlreadyOver )
+			return;
+
+		m_iRoundTime += (int)(mp_hostages_rescuetime.GetFloat() * 60);
+
+		UTIL_ClientPrintAll( HUD_PRINTTALK, "#hostagerescuetime" );
 	}
 
 	bool CCSGameRules::HostageRescueRoundEndCheck( bool bNeededPlayers )

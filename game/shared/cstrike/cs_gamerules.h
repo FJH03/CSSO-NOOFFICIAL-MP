@@ -200,6 +200,7 @@ public:
 
 	void UploadGameStats( void );
 	int  GetStartMoney( void );
+	void AddHostageRescueTime( void );
 
 	bool IsPlayingAnyCompetitiveStrictRuleset( void ) const;
 
@@ -218,6 +219,7 @@ private:
 	CNetworkVar( float, m_fRoundStartTime ); // time round has started
 	CNetworkVar( float, m_flGameStartTime );
 	CNetworkVar( int, m_iHostagesRemaining );
+	CNetworkVar( bool, m_bAnyHostageReached );
 	CNetworkVar( bool, m_bMapHasBombTarget );
 	CNetworkVar( bool, m_bMapHasRescueZone );
 	CNetworkVar( bool, m_bLogoMap );		 // If there's an info_player_logo entity, then it's a logo map.

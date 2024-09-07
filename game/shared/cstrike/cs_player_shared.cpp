@@ -444,6 +444,127 @@ bool CConfigurationForHighPriorityUseEntity_t::UseByPlayerNow( CCSPlayer *pPlaye
 	return true;
 }
 
+void CCSPlayer::GiveCarriedHostage( EHANDLE hHostage )
+{
+	if ( !IsAlive() )
+		return;
+
+	m_hCarriedHostage = hHostage;
+
+	RefreshCarriedHostage( true );
+}
+
+void CCSPlayer::RefreshCarriedHostage( bool bForceCreate )
+{
+#ifndef CLIENT_DLL 
+	if ( m_hCarriedHostage == NULL )
+		return;
+
+	if ( m_hCarriedHostageProp == NULL )
+	{
+		CHostageCarriableProp *pHostageProp = dynamic_cast< CHostageCarriableProp* >(CreateEntityByName( "hostage_carriable_prop" ));
+
+		if ( pHostageProp )
+		{
+			pHostageProp->SetAbsOrigin( GetAbsOrigin() );
+			pHostageProp->SetSolid( SOLID_NONE );
+			pHostageProp->SetModel( "models/hostage/hostage_carry.mdl" );
+			pHostageProp->SetModelName( MAKE_STRING( "models/hostage/hostage_carry.mdl" ) );
+			pHostageProp->SetParent( this );
+			pHostageProp->SetOwnerEntity( this );
+			pHostageProp->FollowEntity( this );
+			m_hCarriedHostageProp = pHostageProp;
+
+			CRecipientFilter filter;
+			filter.MakeReliable();
+			filter.AddRecipient( this );
+			UTIL_ClientPrintFilter( filter, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_CarryingHostage" );
+		}
+	}
+
+	if ( bForceCreate && GetViewModel( HOSTAGE_VIEWMODEL ) )
+	{
+		CBaseViewModel *vm = GetViewModel( HOSTAGE_VIEWMODEL );
+		UTIL_Remove( vm );
+		m_hViewModel.Set( HOSTAGE_VIEWMODEL, 0 );
+	}
+
+	CPredictedViewModel *vm = NULL;
+
+	CBaseViewModel *pVM = GetViewModel( HOSTAGE_VIEWMODEL );
+	if ( pVM )
+		vm = (CPredictedViewModel *)pVM;
+	else
+	{
+		vm = (CPredictedViewModel *)CreateEntityByName( "predicted_viewmodel" );
+		bForceCreate = true;
+	}
+
+	if ( vm )
+	{
+		vm->SetAbsOrigin( GetAbsOrigin() );
+		vm->SetOwner( this );
+		vm->SetIndex( HOSTAGE_VIEWMODEL );
+		int nAct = ACT_VM_IDLE;
+		if ( bForceCreate )
+		{
+			nAct = ACT_VM_DRAW;
+			DispatchSpawn( vm );
+		}
+		vm->FollowEntity( this, false );
+		vm->SetModel( "models/hostage/v_hostage_arm.mdl" );
+
+		int	idealSequence = vm->SelectWeightedSequence( (Activity)nAct );
+		if ( idealSequence >= 0 )
+		{
+			vm->SendViewModelMatchingSequence( idealSequence );
+		}
+		vm->SetShouldIgnoreOffsetAndAccuracy( true );
+
+		m_hViewModel.Set( HOSTAGE_VIEWMODEL, vm );
+
+		m_hHostageViewModel = vm;
+	}
+
+#endif
+}
+
+void CCSPlayer::RemoveCarriedHostage( void )
+{
+	m_hCarriedHostage = NULL;
+
+#ifndef CLIENT_DLL 
+	if ( m_hCarriedHostageProp )
+	{
+		CBaseAnimating *pHostageProp = dynamic_cast< CBaseAnimating* >(m_hCarriedHostageProp.Get());
+		if ( pHostageProp )
+		{
+			pHostageProp->FollowEntity( NULL );
+			UTIL_Remove( pHostageProp );
+		}
+
+		m_hCarriedHostageProp = NULL;
+	}
+
+	if ( m_hHostageViewModel || dynamic_cast<CPredictedViewModel*>(GetViewModel( HOSTAGE_VIEWMODEL )) )
+	{
+		CPredictedViewModel *pHostageVM = dynamic_cast< CPredictedViewModel* >(m_hHostageViewModel.Get());
+		if ( !pHostageVM )
+			pHostageVM = dynamic_cast<CPredictedViewModel*>(GetViewModel( HOSTAGE_VIEWMODEL ));
+
+		if ( pHostageVM )
+		{
+			pHostageVM->FollowEntity( NULL );
+			UTIL_Remove( pHostageVM );
+		}
+
+		m_hHostageViewModel = 0;
+
+		m_hViewModel.Set( HOSTAGE_VIEWMODEL, 0 );
+	}
+#endif
+}
+
 bool CCSPlayer::IsBotOrControllingBot()
 {
 	if ( IsBot() )

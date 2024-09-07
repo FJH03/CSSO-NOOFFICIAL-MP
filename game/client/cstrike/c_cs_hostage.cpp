@@ -1,17 +1,18 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: Client side C_CHostage class
+// Purpose: Client side C_CHostage class 
 //
-// $NoKeywords: $
+// $NoKeywords: $ 
 //=============================================================================//
 #include "cbase.h"
 #include "c_cs_hostage.h"
 #include <bitbuf.h>
 #include "ragdoll_shared.h"
+#include "c_breakableprop.h"
+#include "cs_shareddefs.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
-
 
 #undef CHostage
 
@@ -19,12 +20,11 @@
 
 static float HOSTAGE_HEAD_TURN_RATE = 130;
 
-
 CUtlVector< C_CHostage* > g_Hostages;
-CUtlVector< EHANDLE > g_HostageRagdolls;
+CUtlVector< CHandle<C_BaseAnimating> > g_HostageRagdolls;
 
 extern ConVar g_ragdoll_fadespeed;
-
+ConVar cl_use_hostage_ik("cl_use_hostage_ik", "1");
 //-----------------------------------------------------------------------------
 const int NumInterestingPoseParameters = 6;
 static const char* InterestingPoseParameters[NumInterestingPoseParameters] =
@@ -36,6 +36,107 @@ static const char* InterestingPoseParameters[NumInterestingPoseParameters] =
 	"head_yaw",
 	"head_roll"
 };
+
+// Op Bloodhound hostage characters
+// cbble: Lord William
+// lake: journalist
+// bank: Hostage
+// office: 
+struct CustomHostageNames
+{
+	const char* mapname;
+	const char* hostageName;
+};
+
+//-----------------------------------------------------------------------------
+C_HostageCarriableProp::C_HostageCarriableProp()
+{
+	m_bCreatedViewmodel = false;
+	m_flFadeInStartTime = 0.0f;
+}
+
+//-----------------------------------------------------------------------------
+void C_HostageCarriableProp::OnDataChanged( DataUpdateType_t updateType )
+{
+	BaseClass::OnDataChanged( updateType );
+
+	if ( updateType == DATA_UPDATE_CREATED )
+	{
+		SetNextClientThink( CLIENT_THINK_ALWAYS );
+
+		m_flFadeInStartTime = gpGlobals->curtime;
+	}
+	
+	// if we don't have an owner for some reason, remove ourselves
+	/*C_BaseEntity *pOwner = GetFollowedEntity();
+	if ( !pOwner )
+		UTIL_Remove( this );*/
+}
+
+//-----------------------------------------------------------------------------
+// Should this object cast shadows?
+//-----------------------------------------------------------------------------
+ShadowType_t C_HostageCarriableProp::ShadowCastType()
+{
+	if ( IsEffectActive( /*EF_NODRAW |*/ EF_NOSHADOW ) )
+		return SHADOWS_NONE;
+
+	if ( ShouldDraw() )
+		return SHADOWS_RENDER_TO_TEXTURE;
+
+	return SHADOWS_NONE;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns whether object should render.
+//-----------------------------------------------------------------------------
+bool C_HostageCarriableProp::ShouldDraw( void )
+{
+	C_BaseEntity *pOwner = GetFollowedEntity();
+
+	// weapon has no owner, don't draw it - will get removed soon
+	if ( !pOwner )
+		return false;
+
+	C_BasePlayer *pViewedPlayer = GetLocalOrInEyeCSPlayer();
+	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+
+	// carried by local player?
+	if ( pOwner == pViewedPlayer )
+	{
+		if ( pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE )
+			return false;
+
+		// 3rd person mode
+		return pViewedPlayer->ShouldDrawLocalPlayer();
+	}
+
+	return BaseClass::ShouldDraw();
+}
+
+void C_HostageCarriableProp::ClientThink()
+{
+	BaseClass::ClientThink();
+
+	int a = GetRenderColor().a;
+
+	if ( m_flFadeInStartTime + 1.0 > gpGlobals->curtime )
+	{
+		SetRenderMode( kRenderGlow );
+		a = ((gpGlobals->curtime - m_flFadeInStartTime) /  1.0f) * 255;
+	}
+	else
+	{
+		SetRenderMode( kRenderNormal );
+		a = 255;
+	}
+
+	a = MAX( 0, a );
+	SetRenderColorA( a );
+}
+
+IMPLEMENT_CLIENTCLASS_DT(C_HostageCarriableProp, DT_HostageCarriableProp, CHostageCarriableProp)
+END_RECV_TABLE()
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -173,21 +274,49 @@ void C_CHostage::RecvProxy_Rescued( const CRecvProxyData *pData, void *pStruct, 
 	{
 		// hostage was rescued
 		pHostage->m_flDeadOrRescuedTime = gpGlobals->curtime + 2;
-		pHostage->SetRenderMode( kRenderGlow );
-		pHostage->SetNextClientThink( gpGlobals->curtime );
+		//pHostage->SetRenderMode( kRenderGlow );
+		//pHostage->SetNextClientThink( gpGlobals->curtime );
 	}
 
 	pHostage->m_isRescued = isRescued;
 }
 
 //-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void C_CHostage::RecvProxy_Jumped( const CRecvProxyData *pData, void *pStruct, void *pOut )
+{
+	C_CHostage *pHostage= (C_CHostage *) pStruct;
+	
+	bool jumped = pData->m_Value.m_Int != 0;
+
+	if ( jumped )
+	{
+		// hostage jumped
+		pHostage->m_PlayerAnimState->DoAnimationEvent( PLAYERANIMEVENT_JUMP );
+		pHostage->SetNextClientThink( gpGlobals->curtime );
+	}
+
+	pHostage->m_jumpedThisFrame = jumped;
+}
+
+//-----------------------------------------------------------------------------
 IMPLEMENT_CLIENTCLASS_DT(C_CHostage, DT_CHostage, CHostage)
 	
 	RecvPropInt( RECVINFO( m_isRescued ), 0, C_CHostage::RecvProxy_Rescued ),
+	RecvPropInt( RECVINFO( m_jumpedThisFrame ), 0, C_CHostage::RecvProxy_Jumped ),
+	
 	RecvPropInt( RECVINFO( m_iHealth ) ),
 	RecvPropInt( RECVINFO( m_iMaxHealth ) ),
 	RecvPropInt( RECVINFO( m_lifeState ) ),
-	
+	RecvPropInt( RECVINFO( m_fFlags ) ),// Needed for on ground detection for hostage jumping.
+
+	RecvPropInt( RECVINFO( m_nHostageState ) ),
+
+	RecvPropFloat( RECVINFO( m_flRescueStartTime ) ),
+	RecvPropFloat( RECVINFO( m_flGrabSuccessTime ) ),
+	RecvPropFloat( RECVINFO( m_flDropStartTime ) ),
+
+	RecvPropVector( RECVINFO( m_vel ) ),
 	RecvPropEHandle( RECVINFO( m_leader ) ),
 
 END_RECV_TABLE()
@@ -204,16 +333,19 @@ C_CHostage::C_CHostage()
 	m_createdLowViolenceRagdoll = false;
 	
 	// TODO: Get IK working on the steep slopes CS has, then enable it on characters.
-	m_EntClientFlags |= ENTCLIENTFLAG_DONTUSEIK;
+	// [msmith] We're starting to use IK on hostages so that we can optionally have their hands bound.
+	if ( !cl_use_hostage_ik.GetBool() )
+	{
+		m_EntClientFlags |= ENTCLIENTFLAG_DONTUSEIK;
+	}
 
 	// set the model so the PlayerAnimState uses the Hostage activities/sequences
-	SetModelName( "models/Characters/Hostage_01.mdl" );
+	SetModelName( HOSTAGE_ANIM_MODEL );
 
-	m_PlayerAnimState = CreateHostageAnimState( this, this, LEGANIM_8WAY, false );
+	m_PlayerAnimState = CreateHostageAnimState( this, this, LEGANIM_9WAY, false );
 	
-	m_leader = NULL;
+	m_leader = 0;
 	m_blinkTimer.Invalidate();
-	m_seq = -1;
 
 	m_flCurrentHeadPitch = 0;
 	m_flCurrentHeadYaw = 0;
@@ -239,8 +371,10 @@ C_CHostage::~C_CHostage()
 //-----------------------------------------------------------------------------
 void C_CHostage::Spawn( void )
 {
-	m_leader = NULL;
+	m_leader = 0;
 	m_blinkTimer.Invalidate();
+
+	SetNextClientThink( CLIENT_THINK_ALWAYS );
 }
 
 //-----------------------------------------------------------------------------
@@ -248,6 +382,24 @@ bool C_CHostage::ShouldDraw( void )
 {
 	if ( m_createdLowViolenceRagdoll )
 		return false;
+
+	switch ( m_nHostageState )
+	{
+	case k_EHostageStates_BeingCarried:
+		{
+			return false;
+		}
+	case k_EHostageStates_GettingPickedUp:
+	case k_EHostageStates_GettingDropped:
+	case k_EHostageStates_Rescued:
+	case k_EHostageStates_Idle:
+	case k_EHostageStates_BeingUntied:
+	case k_EHostageStates_FollowingPlayer:
+	case k_EHostageStates_Dead:
+		{
+			return true;
+		}
+	}
 
 	return BaseClass::ShouldDraw();
 }
@@ -265,6 +417,8 @@ C_BaseAnimating * C_CHostage::BecomeRagdollOnClient()
 		{
 			UpdateVisibility();
 			g_HostageRagdolls.AddToTail( pLowViolenceModel );
+			m_hRagdollOnClient.Set( pLowViolenceModel );
+			
 			return pLowViolenceModel;
 		}
 		else
@@ -279,6 +433,7 @@ C_BaseAnimating * C_CHostage::BecomeRagdollOnClient()
 	{
 		g_HostageRagdolls.AddToTail( pRagdoll );
 	}
+	m_hRagdollOnClient.Set( pRagdoll );
 	return pRagdoll;
 }
 
@@ -339,6 +494,10 @@ bool C_CHostage::CSAnim_CanMove()
 	return true;
 }
 
+void C_CHostage::EstimateAbsVelocity( Vector& vel )
+{
+	vel = m_vel;
+}
 
 //-----------------------------------------------------------------------------
 /**
@@ -467,17 +626,46 @@ void C_CHostage::ClientThink()
 {
 	C_BaseCombatCharacter::ClientThink();
 
-	int speed = 2;
-	int a = m_clrRender->a;
+	int a = 255;
 
-	a = MAX( 0, a - speed );
+// 	if (  GetRenderAlpha() > 0 )
+// 	{
+// 		SetNextClientThink( gpGlobals->curtime + 0.001 );
+// 	}
 
-	SetRenderColorA( a );
-
-	if ( m_clrRender->a > 0 )
+	switch ( m_nHostageState )
 	{
-		SetNextClientThink( gpGlobals->curtime + 0.001 );
+	case k_EHostageStates_GettingPickedUp:
+		{
+			a = (1.0f - ((gpGlobals->curtime - m_flGrabSuccessTime) /  CS_HOSTAGE_TRANSTIME_PICKUP)) * 255;
+			break;
+		}
+	case k_EHostageStates_GettingDropped:
+		{
+			a = ((gpGlobals->curtime - m_flDropStartTime) /  CS_HOSTAGE_TRANSTIME_DROP) * 255;
+			break;
+		}
+	case k_EHostageStates_Rescued:
+		{
+ 			a = (1.0f - ((gpGlobals->curtime - m_flRescueStartTime) /  CS_HOSTAGE_TRANSTIME_RESCUE)) * 255;
+			break;
+		}
+	case k_EHostageStates_BeingCarried:
+		{
+			a = 0;
+			break;
+		}
 	}
+
+	if ( a < 255 )
+		SetRenderMode( kRenderTransAlpha );
+	else
+		SetRenderMode( kRenderNormal, true );
+
+	a = MAX( 0, a );
+
+	RemoveEffects( EF_NODRAW );
+	SetRenderColorA( a );
 }
 
 //-----------------------------------------------------------------------------
@@ -507,7 +695,7 @@ void C_CHostage::OnDataChanged( DataUpdateType_t updateType )
 }
 
 //-----------------------------------------------------------------------------
-void C_CHostage::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
+void C_CHostage::ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName )
 {
 	static ConVar *violence_hblood = cvar->FindVar( "violence_hblood" );
 	if ( violence_hblood && !violence_hblood->GetBool() )
@@ -515,4 +703,3 @@ void C_CHostage::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCus
 
 	BaseClass::ImpactTrace( pTrace, iDamageType, pCustomImpactName );
 }
-

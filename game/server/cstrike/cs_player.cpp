@@ -399,6 +399,9 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 
 	SendPropBool( SENDINFO( m_bInHostageRescueZone ) ),
 	SendPropBool( SENDINFO( m_bIsDefusing ) ),
+	SendPropBool( SENDINFO( m_bIsGrabbingHostage ) ),
+	SendPropEHandle( SENDINFO( m_hCarriedHostage ) ),
+	SendPropEHandle( SENDINFO( m_hCarriedHostageProp ) ),
 	SendPropBool( SENDINFO( m_bHasMovedSinceSpawn ) ),
 	SendPropFloat( SENDINFO( m_fImmuneToDamageTime ) ),
 	SendPropBool( SENDINFO( m_bImmunity ) ),
@@ -564,6 +567,9 @@ CCSPlayer::CCSPlayer()
 	m_bKilledRescuer = false;
 	m_maxGrenadeKills = 0;
 	m_grenadeDamageTakenThisRound = 0;
+	m_flGotHostageTalkTimer = 0;
+	m_flDefusingTalkTimer = 0;
+	m_flC4PlantTalkTimer = 0;
 
 	m_vLastHitLocationObjectSpace = Vector(0,0,0);\
 

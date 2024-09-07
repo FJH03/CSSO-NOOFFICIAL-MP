@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -17,18 +17,37 @@
 #include "cs_nav_pathfind.h"
 #include "improv_locomotor.h"
 #include "cs_playeranimstate.h"
+#include "ai_speech.h"
 
 class CCSPlayer;
 
+class CHostageExpresserShim : public CBaseCombatCharacter
+{
+public:
+	inline CAI_Expresser *GetExpresser( void ) { return m_pExpresser; }
+	inline const CAI_Expresser *GetMultiplayerExpresser( void ) const { return m_pExpresser; }
+
+protected:
+	CAI_Expresser *m_pExpresser;
+};
+
+class CHostageCarriableProp : public CBaseAnimating
+{
+public:
+	DECLARE_CLASS( CHostageCarriableProp, CBaseAnimating );
+	DECLARE_DATADESC();
+	DECLARE_SERVERCLASS();
+	DECLARE_PREDICTABLE();
+};
 
 //----------------------------------------------------------------------------------------------------------------
 /**
  * A Counter-Strike Hostage
  */
-class CHostage : public CBaseCombatCharacter, public CImprovLocomotor, public ICSPlayerAnimStateHelpers
+class CHostage : public CAI_ExpresserHost< CHostageExpresserShim >, public CImprovLocomotor, public ICSPlayerAnimStateHelpers
 {
 public:
-	DECLARE_CLASS( CHostage, CBaseCombatCharacter );
+	DECLARE_CLASS( CHostage, CHostageExpresserShim );
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
 
@@ -40,11 +59,12 @@ public:
 	virtual void Spawn( void );
 	virtual void Precache();
 	int ObjectCaps( void ) { return (BaseClass::ObjectCaps() | FCAP_IMPULSE_USE); }	// make hostage "useable"
+	virtual bool KeyValue( const char *szKeyName, const char *szValue );
 
 	virtual void PhysicsSimulate( void );
 
 	virtual int OnTakeDamage_Alive( const CTakeDamageInfo &info );
-	virtual void TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator );
+	virtual void TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
 
 	virtual void Event_Killed( const CTakeDamageInfo &info );
 	virtual void Touch( CBaseEntity *other );				// in contact with "other"
@@ -57,6 +77,7 @@ public:
 	void CheckForHostageAbuse( CCSPlayer *player );			// check for hostage-killer abuse
 
 	// queries
+	bool IsBeingCarried( void );
 	bool IsFollowingSomeone( void );
 	bool IsFollowing( const CBaseEntity *entity );
 	bool IsValid( void ) const;
@@ -70,6 +91,8 @@ public:
 	void Idle( void );										// stand idle
 	void Follow( CCSPlayer *leader );						// begin following "leader"
 	CCSPlayer *GetLeader( void ) const;						// return our leader, or NULL
+
+	void DropHostage( Vector vecPosition, bool bIsRescued = false );
 
 	void FaceTowards( const Vector &target, float deltaT );	// rotate body to face towards "target"
 	void ApplyForce( const Vector &force )		{ m_accel += force; }	// apply a force to the hostage
@@ -107,17 +130,33 @@ public:
 	virtual void OnMoveToFailure( const Vector &goal, MoveToFailureType reason );	// invoked when an improv fails to reach a MoveTo goal
 	// end CImprovLocomotor -------------------------------------------------------------------------------------------------------------------
 
-// ICSPlayerAnimState overrides.
 public:
 	virtual CWeaponCSBase* CSAnim_GetActiveWeapon();
 	virtual bool CSAnim_CanMove();
 
+	virtual void ModifyOrAppendCriteria( AI_CriteriaSet& set );
 
+	int GetHostageState( void ) { return m_nHostageState; }
+
+	uint32 GetHostageSpawnExclusionGroup() const { return m_uiHostageSpawnExclusionGroupMask; }
+	uint32 GetHostageSpawnRandomFactor() const { return m_nHostageSpawnRandomFactor; }
+
+	COutputEvent m_OnHostageBeginGrab;
+	COutputEvent m_OnFirstPickedUp; 
+	COutputEvent m_OnDroppedNotRescued; 
+	COutputEvent m_OnRescued; 
 
 protected:
+	virtual CAI_Expresser *CreateExpresser( void );
 	virtual void HostageUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void SetHostageStartFollowingPlayer( CCSPlayer *pPlayer );
+	void SmoothlyDropHostageToGround( Vector vecPosition );
 
 private:
+	uint32 m_uiHostageSpawnExclusionGroupMask;	// Mask of hostage spawn exclusion groups
+	uint32 m_nHostageSpawnRandomFactor; // Additional weight when building random spawn locations
+	bool m_bRemove; // We've exceeded MAX_HOSTAGES; delete excess entities upon spawn.
+
 	float GetModifiedDamage( float flDamage, int nHitGroup );
 
 	IPlayerAnimState *m_PlayerAnimState;
@@ -125,7 +164,14 @@ private:
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_iMaxHealth );
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_iHealth );
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_lifeState );
+	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_fFlags );
+	
+	CNetworkVar( Vector, m_vel );
+
 	CNetworkVar( bool, m_isRescued );						// true if the hostage has been rescued
+	CNetworkVar( bool, m_jumpedThisFrame );
+
+	CNetworkVar( int, m_nHostageState );
 
 	CNetworkVar( EHANDLE, m_leader );						// the player we are following
 	void UpdateFollowing( float deltaT );					// do following behavior
@@ -135,7 +181,6 @@ private:
 	CountdownTimer m_reuseTimer;							// to throttle how often hostage can be used
 	bool m_hasBeenUsed;										// flag to give first rescuer bonus money
 
-	Vector m_vel;
 	Vector m_accel;
 
 	bool m_isRunning;										// true if hostage move speed is to run (walk if false)
@@ -159,7 +204,19 @@ private:
 	NavRelativeDirType m_wiggleDirection;
 
 	bool m_isAdjusted;										// hack for adjusting bounding box
-	float m_disappearTime;									// has finished fading, remove me
+
+	// Info for defusing.
+	bool			m_bHandsHaveBeenCut;
+	//bool			m_bBeingGrabbed;
+	CHandle<CCSPlayer> m_pHostageGrabber;
+	float			m_fLastGrabTime;
+	float			m_flGrabbingLength;		//How long does the defuse take? Depends on if a defuser was used
+	Vector			m_vecPositionWhenStartedDroppingToGround; // Where was the hostage when he started dropping to ground
+	
+	Vector			m_vecGrabbedPos;
+	CNetworkVar( float, m_flRescueStartTime );
+	CNetworkVar( float, m_flGrabSuccessTime );		//What time did the grabbing succeed?
+	CNetworkVar( float, m_flDropStartTime );		//What time did the grabbing succeed?
 
 	void PushawayThink( void );								// pushes physics objects away from the hostage
 	void AvoidPhysicsProps( void );							// guides the hostage away from physics props
@@ -174,8 +231,6 @@ private:
 class HostagePathCost
 {
 public:
-
-	// HPE_TODO[pmf]: check that these new parameters are okay to be ignored
 	float operator() ( CNavArea *area, CNavArea *fromArea, const CNavLadder *ladder, const CFuncElevator *elevator, float length )
 	{
 		if (fromArea == NULL)

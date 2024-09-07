@@ -810,8 +810,9 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropInt( RECVINFO( m_bHasDefuser ), 0, RecvProxy_HasDefuser ),
 	RecvPropInt( RECVINFO( m_bNightVisionOn), 0, RecvProxy_NightVision ),
 	RecvPropBool( RECVINFO( m_bHasNightVision ) ),
-
-
+	RecvPropBool( RECVINFO( m_bIsGrabbingHostage ) ),
+	RecvPropEHandle( RECVINFO( m_hCarriedHostage ) ),
+	RecvPropEHandle( RECVINFO( m_hCarriedHostageProp ) ),
     //=============================================================================
     // HPE_BEGIN:
     // [dwenger] Added for fun-fact support

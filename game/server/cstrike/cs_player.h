@@ -462,6 +462,15 @@ public:
 	bool DoesPlayerGetRoundStartMoney(); // self-explanitory :)
 
 	void DropC4();	// Get rid of the C4 bomb.
+
+	CNetworkHandle( CBaseEntity, m_hCarriedHostage );	// networked entity handle
+	void GiveCarriedHostage( EHANDLE hHostage );
+	void RefreshCarriedHostage( bool bForceCreate );
+	void RemoveCarriedHostage();
+	CNetworkHandle( CBaseEntity, m_hCarriedHostageProp );	// networked entity handle
+	EHANDLE	m_hHostageViewModel;
+
+
 	
 	bool HasDefuser();		// Is this player carrying a bomb defuser?
 	void GiveDefuser(bool bPickedUp = false);		// give the player a defuser
@@ -509,6 +518,9 @@ public:
 	// Have this guy speak a message into his radio.
 	void Radio( const char *szRadioSound, const char *szRadioText = NULL );
 	void ConstructRadioFilter( CRecipientFilter& filter );
+	float m_flGotHostageTalkTimer;
+	float m_flDefusingTalkTimer;
+	float m_flC4PlantTalkTimer;
 
 	void EmitPrivateSound( const char *soundName );		///< emit given sound that only we can hear
 
@@ -676,6 +688,7 @@ public:
 	CNetworkVar( bool, m_bResumeZoom );
 	CNetworkVar( int , m_iLastZoom ); // after firing a shot, set the FOV to 90, and after showing the animation, bring the FOV back to last zoom level.
 	CNetworkVar( bool, m_bIsDefusing );			// tracks whether this player is currently defusing a bomb
+	CNetworkVar( bool, m_bIsGrabbingHostage );			// tracks whether this player is currently grabbing a hostage
 	CNetworkVar( bool, m_bDuckOverride );
 	int m_LastHitGroup;			// the last body region that took damage
 

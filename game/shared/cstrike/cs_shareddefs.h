@@ -42,6 +42,7 @@
 
 #define MAX_HOSTAGES				12
 #define MAX_HOSTAGE_RESCUES			4
+#define HOSTAGE_RULE_CAN_PICKUP		1
 
 // controllable bots functionality
 #define CS_CONTROLLABLE_BOTS_ENABLED 1
@@ -78,6 +79,22 @@ public:
 	}
 };
 
+#define CS_HOSTAGE_TRANSTIME_PICKUP		0.1
+#define CS_HOSTAGE_TRANSTIME_DROP		0.25
+#define CS_HOSTAGE_TRANSTIME_RESCUE		4.0
+
+enum EHostageStates_t
+{
+	k_EHostageStates_Idle = 0,
+	k_EHostageStates_BeingUntied,
+	k_EHostageStates_GettingPickedUp,
+	k_EHostageStates_BeingCarried,
+	k_EHostageStates_FollowingPlayer,
+	k_EHostageStates_GettingDropped,
+	k_EHostageStates_Rescued,
+	k_EHostageStates_Dead,
+};
+
 enum CsMusicType_t
 {
 	CSMUSIC_NONE = 0,
@@ -94,6 +111,12 @@ enum CsMusicType_t
 	CSMUSIC_MVP,
 	CSMUSIC_SELECTION,
 	CSMUSIC_HALFTIME
+};
+
+enum CSViewModels_t
+{
+	WEAPON_VIEWMODEL = 0,
+	HOSTAGE_VIEWMODEL
 };
 
 #define CONSTANT_UNITS_SMOKEGRENADERADIUS 166
