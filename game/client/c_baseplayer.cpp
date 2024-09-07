@@ -92,7 +92,7 @@ extern ConVar sensitivity;
 
 static C_BasePlayer *s_pLocalPlayer = NULL;
 
-static ConVar	cl_customsounds ( "cl_customsounds", "0", 0, "Enable customized player sound playback" );
+static ConVar	cl_customsounds ( "cl_customsounds", "1", 0, "Enable customized player sound playback" );
 static ConVar	spec_track		( "spec_track", "0", 0, "Tracks an entity in spec mode" );
 static ConVar	cl_smooth		( "cl_smooth", "1", 0, "Smooth view/eye origin after prediction errors" );
 static ConVar	cl_smoothtime	( 
@@ -105,10 +105,10 @@ static ConVar	cl_smoothtime	(
 	 );
 
 #ifdef CSTRIKE_DLL
-ConVar	spec_freeze_time( "spec_freeze_time", "3.0", FCVAR_REPLICATED, "Time spend frozen in observer freeze cam." );
-ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.3", FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01, false, 0 );
-ConVar	spec_freeze_distance_min( "spec_freeze_distance_min", "60", FCVAR_CHEAT, "Minimum random distance from the target to stop when framing them in observer freeze cam." );
-ConVar	spec_freeze_distance_max( "spec_freeze_distance_max", "80", FCVAR_CHEAT, "Maximum random distance from the target to stop when framing them in observer freeze cam." );
+ConVar	spec_freeze_time( "spec_freeze_time", "5.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Time spend frozen in observer freeze cam." );
+ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.7", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01, false, 0 );
+ConVar	spec_freeze_distance_min( "spec_freeze_distance_min", "80", FCVAR_CHEAT, "Minimum random distance from the target to stop when framing them in observer freeze cam." );
+ConVar	spec_freeze_distance_max( "spec_freeze_distance_max", "90", FCVAR_CHEAT, "Maximum random distance from the target to stop when framing them in observer freeze cam." );
 #else
 ConVar	spec_freeze_time( "spec_freeze_time", "4.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Time spend frozen in observer freeze cam." );
 ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.4", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01, false, 0 );
@@ -116,7 +116,7 @@ ConVar	spec_freeze_distance_min( "spec_freeze_distance_min", "96", FCVAR_CHEAT, 
 ConVar	spec_freeze_distance_max( "spec_freeze_distance_max", "200", FCVAR_CHEAT, "Maximum random distance from the target to stop when framing them in observer freeze cam." );
 #endif
 
-static ConVar	cl_first_person_uses_world_model ( "cl_first_person_uses_world_model", "0", FCVAR_NONE, "Causes the third person model to be drawn instead of the view model" );
+static ConVar	cl_first_person_uses_world_model ( "cl_first_person_uses_world_model", "0", FCVAR_ARCHIVE, "Causes the third person model to be drawn instead of the view model" );
 
 ConVar demo_fov_override( "demo_fov_override", "0", FCVAR_CLIENTDLL | FCVAR_DONTRECORD, "If nonzero, this value will be used to override FOV during demo playback." );
 
@@ -126,9 +126,6 @@ ConVar demo_fov_override( "demo_fov_override", "0", FCVAR_CLIENTDLL | FCVAR_DONT
 // This value is found by hand, and a good value depends more on the in-game models than on actual human shapes.
 ConVar cl_meathook_neck_pivot_ingame_up( "cl_meathook_neck_pivot_ingame_up", "7.0" );
 ConVar cl_meathook_neck_pivot_ingame_fwd( "cl_meathook_neck_pivot_ingame_fwd", "3.0" );
-
-static ConVar	cl_clean_textures_on_death( "cl_clean_textures_on_death", "0", FCVAR_DEVELOPMENTONLY,  "If enabled, attempts to purge unused textures every time a freeze cam is shown" );
-
 
 void RecvProxy_LocalVelocityX( const CRecvProxyData *pData, void *pStruct, void *pOut );
 void RecvProxy_LocalVelocityY( const CRecvProxyData *pData, void *pStruct, void *pOut );
@@ -309,9 +306,9 @@ END_RECV_TABLE()
 #if defined USES_ECON_ITEMS
 		RecvPropUtlVector( RECVINFO_UTLVECTOR( m_hMyWearables ), MAX_WEARABLES_SENT_FROM_SERVER,	RecvPropEHandle(NULL, 0, 0) ),
 #endif
-		
-		RecvPropFloat	(RECVINFO(m_flDuckAmount)),
-		RecvPropFloat	(RECVINFO(m_flDuckSpeed)),
+
+	RecvPropFloat	(RECVINFO(m_flDuckAmount)),
+	RecvPropFloat	(RECVINFO(m_flDuckSpeed)),
 
 	END_RECV_TABLE()
 
@@ -459,7 +456,6 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 	m_bFiredWeapon = false;
 
 	m_nForceVisionFilterFlags = 0;
-	m_nLocalPlayerVisionFlags = 0;
 
 	ListenForGameEvent( "base_player_teleported" );
 
@@ -494,8 +490,8 @@ void C_BasePlayer::Spawn( void )
 	ClearFlags();
 	AddFlag( FL_CLIENT );
 
-	int fEffects = GetEffects() & EF_NOSHADOW;
-	SetEffects( fEffects );
+	int effects = GetEffects() & EF_NOSHADOW;
+	SetEffects( effects );
 
 	m_iFOV	= 0;	// init field of view.
 
@@ -571,7 +567,6 @@ CBaseEntity	*C_BasePlayer::GetObserverTarget() const	// returns players target o
 			case OBS_MODE_FIXED:		// view from a fixed camera position
 			case OBS_MODE_IN_EYE:		// follow a player in first person view
 			case OBS_MODE_CHASE:		// follow a player in third person view
-			case OBS_MODE_POI:			// PASSTIME point of interest - game objective, big fight, anything interesting
 			case OBS_MODE_ROAMING:		// free roaming
 				return m_hObserverTarget;
 				break;
@@ -666,7 +661,6 @@ int C_BasePlayer::GetObserverMode() const
 		case OBS_MODE_FIXED:		// view from a fixed camera position
 		case OBS_MODE_IN_EYE:		// follow a player in first person view
 		case OBS_MODE_CHASE:		// follow a player in third person view
-		case OBS_MODE_POI:			// PASSTIME point of interest - game objective, big fight, anything interesting
 		case OBS_MODE_ROAMING:		// free roaming
 			return m_iObserverMode;
 			break;
@@ -743,8 +737,8 @@ void C_BasePlayer::FireGameEvent( IGameEvent *event )
 {
 	if ( FStrEq( event->GetName(), "base_player_teleported" ) )
 	{
-		const int index_ = event->GetInt( "entindex" );
-		if ( index_ == entindex() && IsLocalPlayer() )
+		const int index = event->GetInt( "entindex" );
+		if ( index == entindex() && IsLocalPlayer() )
 		{
 			// In VR, we want to make sure our head and body
 			// are aligned after we teleport.
@@ -912,10 +906,6 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 			// Force the sound mixer to the freezecam mixer
 			ConVar *pVar = (ConVar *)cvar->FindVar( "snd_soundmixer" );
 			pVar->SetValue( "FreezeCam_Only" );
-
-			// When we start, give unused textures an opportunity to unload
-			if ( cl_clean_textures_on_death.GetBool() )
-				g_pMaterialSystem->UncacheUnusedMaterials( false );
 		}
 		else if ( m_bWasFreezeFraming && GetObserverMode() != OBS_MODE_FREEZECAM )
 		{
@@ -932,14 +922,6 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 
 			m_nForceVisionFilterFlags = 0;
 			CalculateVisionUsingCurrentFlags();
-		}
-		
-		// force calculate vision when the local vision flags changed
-		int nCurrentLocalPlayerVisionFlags = GetLocalPlayerVisionFilterFlags();
-		if ( m_nLocalPlayerVisionFlags != nCurrentLocalPlayerVisionFlags )
-		{
-			CalculateVisionUsingCurrentFlags();
-			m_nLocalPlayerVisionFlags = nCurrentLocalPlayerVisionFlags;
 		}
 	}
 
@@ -1615,11 +1597,11 @@ void C_BasePlayer::CalcRoamingView(Vector& eyeOrigin, QAngle& eyeAngles, float& 
 	
 	if ( spec_track.GetInt() > 0 )
 	{
-		C_BaseEntity *pTarget =  ClientEntityList().GetBaseEntity( spec_track.GetInt() );
+		C_BaseEntity *target =  ClientEntityList().GetBaseEntity( spec_track.GetInt() );
 
-		if ( pTarget )
+		if ( target )
 		{
-			Vector v = pTarget->GetAbsOrigin(); v.z += 54;
+			Vector v = target->GetAbsOrigin(); v.z += 54;
 			QAngle a; VectorAngles( v - eyeOrigin, a );
 
 			NormalizeAngles( a );
@@ -2127,7 +2109,7 @@ void C_BasePlayer::GetToolRecordingState( KeyValues *msg )
 	// then this code can (should!) be removed
 	if ( state.m_bThirdPerson )
 	{
-		const Vector& cam_ofs = g_ThirdPersonManager.GetCameraOffsetAngles();
+		Vector cam_ofs = g_ThirdPersonManager.GetCameraOffsetAngles();
 		
 		QAngle camAngles;
 		camAngles[ PITCH ] = cam_ofs[ PITCH ];
@@ -2182,11 +2164,11 @@ void C_BasePlayer::Simulate()
 //		Consider using GetRenderedWeaponModel() instead - it will get the
 //		viewmodel or the active weapon as appropriate.
 //-----------------------------------------------------------------------------
-C_BaseViewModel *C_BasePlayer::GetViewModel( int index_ /*= 0*/, bool bObserverOK )
+C_BaseViewModel *C_BasePlayer::GetViewModel( int index /*= 0*/, bool bObserverOK )
 {
-	Assert( index_ >= 0 && index_ < MAX_VIEWMODELS );
+	Assert( index >= 0 && index < MAX_VIEWMODELS );
 
-	C_BaseViewModel *vm = m_hViewModel[index_];
+	C_BaseViewModel *vm = m_hViewModel[ index ];
 	
 	if ( bObserverOK && GetObserverMode() == OBS_MODE_IN_EYE )
 	{
@@ -2195,7 +2177,7 @@ C_BaseViewModel *C_BasePlayer::GetViewModel( int index_ /*= 0*/, bool bObserverO
 		// get the targets viewmodel unless the target is an observer itself
 		if ( target && target != this && !target->IsObserver() )
 		{
-			vm = target->GetViewModel( index_ );
+			vm = target->GetViewModel( index );
 		}
 	}
 
@@ -2662,7 +2644,7 @@ void C_BasePlayer::NotePredictionError( const Vector &vDelta )
 // offset curtime and setup bones at that time using fake interpolation
 // fake interpolation means we don't have reliable interpolation history (the local player doesn't animate locally)
 // so we just modify cycle and origin directly and use that as a fake guess
-bool C_BasePlayer::ForceSetupBonesAtTimeFakeInterpolation( matrix3x4_t *pBonesOut, float curtimeOffset )
+void C_BasePlayer::ForceSetupBonesAtTimeFakeInterpolation( matrix3x4_t *pBonesOut, float curtimeOffset )
 {
 	// we don't have any interpolation data, so fake it
 	float cycle = m_flCycle;
@@ -2677,37 +2659,30 @@ bool C_BasePlayer::ForceSetupBonesAtTimeFakeInterpolation( matrix3x4_t *pBonesOu
 	m_flCycle = fmod( 10 + cycle + m_flPlaybackRate * curtimeOffset, 1.0f );
 	SetLocalOrigin( origin + curtimeOffset * GetLocalVelocity() );
 	// Setup bone state to extrapolate physics velocity
-	bool bSuccess = SetupBones( pBonesOut, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime + curtimeOffset );
+	SetupBones( pBonesOut, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime + curtimeOffset );
 
 	m_flCycle = cycle;
 	SetLocalOrigin( origin );
-	return bSuccess;
 }
 
-bool C_BasePlayer::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt )
+void C_BasePlayer::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt )
 {
 	if ( !IsLocalPlayer() )
-		return BaseClass::GetRagdollInitBoneArrays(pDeltaBones0, pDeltaBones1, pCurrentBones, boneDt);
-
-	bool bSuccess = true;
-
-	if ( !ForceSetupBonesAtTimeFakeInterpolation( pDeltaBones0, -boneDt ) )
-		bSuccess = false;
-	if ( !ForceSetupBonesAtTimeFakeInterpolation( pDeltaBones1, 0 ) )
-		bSuccess = false;
-
+	{
+		BaseClass::GetRagdollInitBoneArrays(pDeltaBones0, pDeltaBones1, pCurrentBones, boneDt);
+		return;
+	}
+	ForceSetupBonesAtTimeFakeInterpolation( pDeltaBones0, -boneDt );
+	ForceSetupBonesAtTimeFakeInterpolation( pDeltaBones1, 0 );
 	float ragdollCreateTime = PhysGetSyncCreateTime();
 	if ( ragdollCreateTime != gpGlobals->curtime )
 	{
-		if ( !ForceSetupBonesAtTimeFakeInterpolation( pCurrentBones, ragdollCreateTime - gpGlobals->curtime ) )
-			bSuccess = false;
+		ForceSetupBonesAtTimeFakeInterpolation( pCurrentBones, ragdollCreateTime - gpGlobals->curtime );
 	}
 	else
 	{
-		if ( !SetupBones( pCurrentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime ) )
-			bSuccess = false;
+		SetupBones( pCurrentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
 	}
-	return bSuccess;
 }
 
 
@@ -2883,7 +2858,16 @@ bool C_BasePlayer::GetSteamID( CSteamID *pID )
 	{
 		if ( pi.friendsID && steamapicontext && steamapicontext->SteamUtils() )
 		{
+#if 1	// new
+			static EUniverse universe = k_EUniverseInvalid;
+
+			if ( universe == k_EUniverseInvalid )
+				universe = steamapicontext->SteamUtils()->GetConnectedUniverse();
+
+			pID->InstancedSet( pi.friendsID, 1, universe, k_EAccountTypeIndividual );
+#else	// old
 			pID->InstancedSet( pi.friendsID, 1, steamapicontext->SteamUtils()->GetConnectedUniverse(), k_EAccountTypeIndividual );
+#endif
 
 			return true;
 		}
@@ -2904,7 +2888,6 @@ void C_BasePlayer::UpdateWearables( void )
 		{
 			pItem->ValidateModelIndex();
 			pItem->UpdateVisibility();
-			pItem->CreateShadow();
 		}
 	}
 }
