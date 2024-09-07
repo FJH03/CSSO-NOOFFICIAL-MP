@@ -31,11 +31,12 @@ public:
 	
 	CWeaponNova();
 
+	virtual void Spawn();
+
 	virtual void PrimaryAttack();
 	virtual bool Reload();
 	virtual void WeaponIdle();
 
-	virtual float GetSpread() const;
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_NOVA; }
 
@@ -78,12 +79,10 @@ CWeaponNova::CWeaponNova()
 	m_reloadState = 0;
 }
 
-float CWeaponNova::GetSpread() const
+void CWeaponNova::Spawn()
 {
-	if ( weapon_accuracy_model.GetInt() == 1 )
-		return 0.0675f;
-
-	return GetCSWpnData().m_fSpread[Primary_Mode];
+	SetClassname( "weapon_nova" ); // for backwards compatibility
+	BaseClass::Spawn();
 }
 
 void CWeaponNova::PrimaryAttack()
@@ -127,8 +126,8 @@ void CWeaponNova::PrimaryAttack()
 	float flCurAttack = CalculateNextAttackTime( flCycleTime );
 	FX_FireBullets( 
 		pPlayer->entindex(),
-		pPlayer->Weapon_ShootPosition(), 
-		pPlayer->GetFinalAimAngle(), 
+		pPlayer->Weapon_ShootPosition(),
+		pPlayer->GetFinalAimAngle(),
 		GetWeaponID(),
 		Primary_Mode,
 		CBaseEntity::GetPredictionRandomSeed() & 255, // wrap it for network traffic so it's the same between client and server
@@ -167,7 +166,7 @@ bool CWeaponNova::Reload()
 	if ( !pPlayer )
 		return false;
 
-	if (pPlayer->GetAmmoCount( m_iPrimaryAmmoType ) <= 0 || m_iClip1 == GetMaxClip1())
+	if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 || m_iClip1 == GetMaxClip1() )
 		return true;
 
 	// don't reload until recoil is done
@@ -220,12 +219,8 @@ bool CWeaponNova::Reload()
 #ifdef GAME_DLL
 		SendReloadEvents();
 #endif
-		
-		CCSPlayer *pPlayer = GetPlayerOwner();
 
-		if ( pPlayer )
-			 pPlayer->RemoveAmmo( 1, m_iPrimaryAmmoType );
-
+		GiveReserveAmmo( AMMO_POSITION_PRIMARY, -1, true );
 		m_reloadState = 1;
 	}
 
@@ -247,15 +242,15 @@ void CWeaponNova::WeaponIdle()
 
 	if (m_flTimeWeaponIdle < gpGlobals->curtime)
 	{
-		if (m_iClip1 == 0 && m_reloadState == 0 && pPlayer->GetAmmoCount( m_iPrimaryAmmoType ))
+		if ( m_iClip1 == 0 && m_reloadState == 0 && GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) )
 		{
-			Reload( );
+			Reload();
 		}
 		else if (m_reloadState != 0)
 		{
-			if (m_iClip1 != 8 && pPlayer->GetAmmoCount( m_iPrimaryAmmoType ))
+			if ( m_iClip1 != 8 && GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) )
 			{
-				Reload( );
+				Reload();
 			}
 			else
 			{

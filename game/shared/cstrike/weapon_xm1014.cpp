@@ -36,8 +36,6 @@ public:
 	virtual bool Reload();
 	virtual void WeaponIdle();
 
-	virtual float GetSpread() const;
-
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_XM1014; }
 
 private:
@@ -80,14 +78,6 @@ void CWeaponXM1014::Spawn()
 	//m_iDefaultAmmo = M3_DEFAULT_GIVE;
 	//FallInit();// get ready to fall
 	BaseClass::Spawn();
-}
-
-float CWeaponXM1014::GetSpread() const
-{
-	if ( weapon_accuracy_model.GetInt() == 1 )
-		return 0.0725f;
-
-	return GetCSWpnData().m_fSpread[Primary_Mode];
 }
 
 void CWeaponXM1014::PrimaryAttack()
@@ -134,7 +124,7 @@ void CWeaponXM1014::PrimaryAttack()
 	float flCurAttack = CalculateNextAttackTime( flCycleTime );
 	FX_FireBullets( 
 		pPlayer->entindex(),
-		pPlayer->Weapon_ShootPosition(), 
+		pPlayer->Weapon_ShootPosition(),
 		pPlayer->GetFinalAimAngle(),
 		GetWeaponID(),
 		Primary_Mode,
@@ -174,7 +164,7 @@ bool CWeaponXM1014::Reload()
 	if ( !pPlayer )
 		return false;
 
-	if (pPlayer->GetAmmoCount( m_iPrimaryAmmoType ) <= 0 || m_iClip1 == GetMaxClip1())
+	if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 || m_iClip1 == GetMaxClip1() )
 		return true;
 
 	// don't reload until recoil is done
@@ -230,11 +220,7 @@ bool CWeaponXM1014::Reload()
 		SendReloadEvents();
 #endif
 		
-		CCSPlayer *pPlayer = GetPlayerOwner();
-
-		if ( pPlayer )
-			 pPlayer->RemoveAmmo( 1, m_iPrimaryAmmoType );
-
+		GiveReserveAmmo( AMMO_POSITION_PRIMARY, -1, true );
 		m_reloadState = 1;
 	}
 	
@@ -257,15 +243,15 @@ void CWeaponXM1014::WeaponIdle()
 
 	if (m_flTimeWeaponIdle < gpGlobals->curtime)
 	{
-		if (m_iClip1 == 0 && m_reloadState == 0 && pPlayer->GetAmmoCount( m_iPrimaryAmmoType ))
+		if ( m_iClip1 == 0 && m_reloadState == 0 && GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) )
 		{
-			Reload( );
+			Reload();
 		}
 		else if (m_reloadState != 0)
 		{
-			if (m_iClip1 != 7 && pPlayer->GetAmmoCount( m_iPrimaryAmmoType ))
+			if ( m_iClip1 != GetMaxClip1() && GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) )
 			{
-				Reload( );
+				Reload();
 			}
 			else
 			{
