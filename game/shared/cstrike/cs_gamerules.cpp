@@ -195,6 +195,7 @@ ConVar ammo_flashbang_max( "ammo_flashbang_max", "2", FCVAR_REPLICATED );
 ConVar ammo_smokegrenade_max( "ammo_smokegrenade_max", "1", FCVAR_REPLICATED );
 ConVar ammo_decoy_max( "ammo_decoy_max", "1", FCVAR_REPLICATED );
 ConVar ammo_molotov_max( "ammo_molotov_max", "1", FCVAR_REPLICATED );
+ConVar ammo_grenade_limit_total( "ammo_grenade_limit_total", "3", FCVAR_REPLICATED );
 
 //ConVar mp_dynamicpricing( "mp_dynamicpricing", "0", FCVAR_REPLICATED, "Enables or Disables the dynamic weapon prices" );
 

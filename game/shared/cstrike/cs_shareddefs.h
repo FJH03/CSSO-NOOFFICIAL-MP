@@ -418,4 +418,33 @@ const CCSAgentInfo* GetCSAgentInfoT( int i );
 
 extern const char *pszWinPanelCategoryHeaders[];
 
+// Possible results for CSPlayer::CanAcquire
+namespace AcquireResult
+{
+	enum Type
+	{
+		Allowed,
+		InvalidItem,
+		AlreadyOwned,
+		AlreadyPurchased,
+		ReachedGrenadeTypeLimit,
+		ReachedGrenadeTotalLimit,
+		NotAllowedByTeam,
+		NotAllowedByMap,
+		NotAllowedByMode,
+		NotAllowedForPurchase,
+		NotAllowedByProhibition,
+	};
+}
+
+// Possible results for CSPlayer::CanAcquire
+namespace AcquireMethod
+{
+	enum Type
+	{
+		PickUp,
+		Buy,
+	};
+}
+
 #endif // CS_SHAREDDEFS_H

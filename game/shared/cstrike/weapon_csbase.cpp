@@ -1294,20 +1294,20 @@ void CWeaponCSBase::Precache( void )
 	if ( GetCSWpnData().m_szMagModel[0] != 0 )
 		PrecacheModel( GetCSWpnData().m_szMagModel );
 
-	if ( GetCSWpnData().m_szEjectBrassEffect[0] != 0 )
-		PrecacheParticleSystem( GetCSWpnData().m_szEjectBrassEffect );
+	//if ( GetCSWpnData().m_szEjectBrassEffect[0] != 0 )
+	//	PrecacheParticleSystem( GetCSWpnData().m_szEjectBrassEffect );
 
 	if ( GetTracerType()[0] != 0 )
 		PrecacheParticleSystem( GetTracerType() );
 	
-	if ( GetCSWpnData().m_szMuzzleFlash1stPerson[0] != 0 )
+	/*if ( GetCSWpnData().m_szMuzzleFlash1stPerson[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash1stPerson );
 	if ( GetCSWpnData().m_szMuzzleFlash1stPersonAlt[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash1stPersonAlt );
 	if ( GetCSWpnData().m_szMuzzleFlash3rdPerson[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash3rdPerson );
 	if ( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt[0] != 0 )
-		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt );
+		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt );*/
 
 	if ( GetCSWpnData().m_szHeatEffect[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szHeatEffect );
@@ -1572,7 +1572,7 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 
 #if defined( CLIENT_DLL )
 ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.75", 0, "" );
-ConVar cl_crosshair_recoil( "cl_crosshair_recoil", "0", FCVAR_ARCHIVE, "Recoil/aimpunch will move the user's crosshair to show the effect", true, 0, true, 1 );
+ConVar cl_crosshair_recoil( "cl_crosshair_recoil", "0", FCVAR_CHEAT, "Recoil/aimpunch will move the user's crosshair to show the effect", true, 0, true, 1 );
 extern ConVar view_recoil_tracking;
 	//-----------------------------------------------------------------------------
 	// Purpose: Draw the weapon's crosshair
@@ -1939,7 +1939,7 @@ extern ConVar view_recoil_tracking;
 	}
 
 #ifdef CLIENT_DLL
-	int CWeaponCSBase::GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson )
+	/*int CWeaponCSBase::GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson )
 	{
 		if ( pAnimating )
 		{
@@ -1952,9 +1952,9 @@ extern ConVar view_recoil_tracking;
 				return pAnimating->LookupAttachment( "1" );
 		}
 		return -1;
-	}
+	}*/
 
-	const char* CWeaponCSBase::GetMuzzleFlashEffectName( bool bThirdPerson )
+	/*const char* CWeaponCSBase::GetMuzzleFlashEffectName( bool bThirdPerson )
 	{
 		if ( IsSilenced() )
 		{
@@ -1977,7 +1977,7 @@ extern ConVar view_recoil_tracking;
 		}
 
 		return -1;
-	}
+	}*/
 #endif
 
 	bool CWeaponCSBase::OnFireEvent( C_BaseViewModel *pViewModel, const Vector& origin, const QAngle& angles, int event, const char *options )
@@ -1995,41 +1995,34 @@ extern ConVar view_recoil_tracking;
 			C_BasePlayer* pLocalPlayer = C_BasePlayer::GetLocalPlayer();
 			bool bLocalThirdPerson = ( ( pPlayer == pLocalPlayer ) && pPlayer->ShouldDraw() );
 
-			Vector origin;
-			int iAttachmentIndex = GetMuzzleAttachmentIndex( pViewModel );
-			const char* pszEffect = GetMuzzleFlashEffectName( false );
+			CEffectData data;
+			data.m_fFlags = 0;
+			data.m_hEntity = pViewModel->GetRefEHandle();
+			data.m_nAttachmentIndex = 1;
+			data.m_flScale = GetCSWpnData().m_flMuzzleScale;
 
-			if ( pszEffect && Q_strlen( pszEffect ) > 0 && iAttachmentIndex >= 0 )
+			switch( GetMuzzleFlashStyle() )
 			{
-				// The view model fixes up the split screen visibility of any effects spawned off of it.
-				if ( !bLocalThirdPerson )
-					DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pViewModel, iAttachmentIndex, false );
+			case CS_MUZZLEFLASH_NONE:
+				break;
 
-				// we can't trust this position
-				//pViewModel->GetAttachment( iAttachmentIndex, origin );
-
-				//silencers produce no light at all - even smaller lights would illuminate smoke or cause unwanted visual effects
-				if ( !( IsSilenced() ) )
+			case CS_MUZZLEFLASH_X:
 				{
-					CPVSFilter filter( origin );
-					origin = pPlayer->GetAbsOrigin() + pPlayer->GetViewOffset();
-					QAngle	vangles;
-					Vector	vforward, vright, vup;
-					engine->GetViewAngles( vangles );
-					AngleVectors( vangles, &vforward, &vright, &vup );
-					VectorMA( origin, cl_righthand.GetBool() ? 4 : -4, vright, origin );
-					VectorMA( origin, 31, vforward, origin );
-					origin[2] += 3.0f;
-
-					TE_DynamicLight( filter, 0.0, &origin, 255, 186, 64, 5, 70, 0.05, 768 );
+					DispatchEffect( "CS_MuzzleFlash_X", data );
 				}
+				break;
 
-				UpdateGunHeat( GetCSWpnData().m_flHeatPerShot, iAttachmentIndex );
+			case CS_MUZZLEFLASH_NORM:
+			default:
+				{
+					DispatchEffect( "CS_MuzzleFlash", data );
+				}
+				break;
 			}
 
 			return true;
 		}
-		else if ( event == AE_CLIENT_EJECT_BRASS )
+		/*else if ( event == AE_CLIENT_EJECT_BRASS )
 		{
 			C_CSPlayer *pPlayer = ToCSPlayer( GetOwner() );
 			if ( pPlayer && pPlayer->GetFOV() < pPlayer->GetDefaultFOV() )
@@ -2061,7 +2054,7 @@ extern ConVar view_recoil_tracking;
 			}
 
 			return true;
-		}
+		}*/
 		else if ( event == AE_WPN_NEXTCLIP_TO_POSEPARAM )
 		{
 			// sets the given pose param to a 0..1 value representing the clip amount after an impending reload
@@ -2107,6 +2100,16 @@ extern ConVar view_recoil_tracking;
 		}
 
 		return BaseClass::OnFireEvent( pViewModel, origin, angles, event, options );
+	}
+
+	int CWeaponCSBase::GetMuzzleFlashStyle( void )
+	{
+		return GetCSWpnData().m_iMuzzleFlashStyle;
+	}
+
+	int CWeaponCSBase::GetMuzzleAttachment( void )
+	{
+		return LookupAttachment( "muzzle_flash" );
 	}
 
 #else

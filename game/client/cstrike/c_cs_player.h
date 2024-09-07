@@ -183,6 +183,9 @@ public:
 
 	virtual float GetDeathCamInterpolationTime();
 	
+	AcquireResult::Type CanAcquire( CSWeaponID weaponId, AcquireMethod::Type acquireMethod );
+	int					GetCarryLimit( CSWeaponID weaponId );
+
 	bool IsOtherEnemy( CCSPlayer *pPlayer );
 	bool IsOtherEnemy( int nEntIndex );
 

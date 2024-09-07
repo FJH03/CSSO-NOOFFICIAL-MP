@@ -530,6 +530,9 @@ public:
 
     BuyResult_e HandleCommand_Buy_Internal( const char * item );
 
+	AcquireResult::Type CanAcquire( CSWeaponID weaponId, AcquireMethod::Type acquireMethod );
+	int					GetCarryLimit( CSWeaponID weaponId );
+	
 	void HandleMenu_Radio1( int slot );
 	void HandleMenu_Radio2( int slot );
 	void HandleMenu_Radio3( int slot );

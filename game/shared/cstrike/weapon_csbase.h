@@ -186,9 +186,9 @@ public:
 	const char		*GetTracerType( void ) { return GetCSWpnData().m_szTracerEffect; }
 	
 #ifdef CLIENT_DLL
-	virtual int GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
-	virtual const char* GetMuzzleFlashEffectName( bool bThirdPerson );
-	virtual int GetEjectBrassAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
+	//virtual int GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
+	//virtual const char* GetMuzzleFlashEffectName( bool bThirdPerson );
+	//virtual int GetEjectBrassAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
 #endif
 
 	// return true if this weapon has a silencer equipped
@@ -214,6 +214,7 @@ public:
 		virtual void	DrawCrosshair();
 		virtual void	OnDataChanged( DataUpdateType_t type );
 
+		virtual int		GetMuzzleAttachment( void );
 		virtual bool	HideViewModelWhenZoomed( void ) { return true; }
 
 		float			m_flCrosshairDistance;
@@ -223,6 +224,7 @@ public:
 		int				m_iCrosshairTextureID; // for white additive texture
 		float			m_flGunAccuracyPosition;
 
+		virtual int GetMuzzleFlashStyle( void );
 	#else
 		virtual	void	Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
 		virtual bool	Reload();

@@ -44,7 +44,8 @@ public:
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_ELITE; }
 
 #ifdef CLIENT_DLL
-	virtual int GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson );
+	virtual int		GetMuzzleAttachment( void );
+	virtual bool OnFireEvent( C_BaseViewModel *pViewModel, const Vector& origin, const QAngle& angles, int event, const char *options );
 #endif
 
 	virtual const char		*GetWorldModel( void ) const;
@@ -245,24 +246,30 @@ void CWeaponElite::WeaponIdle()
 
 #ifdef CLIENT_DLL
 
-int CWeaponElite::GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson )
-{
-	if ( !pAnimating )
-		return -1;
+ bool CWeaponElite::OnFireEvent( C_BaseViewModel *pViewModel, const Vector& origin, const QAngle& angles, int event, const char *options )
+	{
+		if( event == 5001 )
+		{
+			C_CSPlayer *pPlayer = ToCSPlayer( GetOwner() );
+			if( pPlayer && pPlayer->GetFOV() < pPlayer->GetDefaultFOV() && HideViewModelWhenZoomed() )
+				return true;
+			
+			CEffectData data;
+			data.m_fFlags = 0;
+			data.m_hEntity = pViewModel->GetRefEHandle();
+			data.m_nAttachmentIndex = FiringLeft() ? 1 : 2; // toggle muzzle flash
+			data.m_flScale = GetCSWpnData().m_flMuzzleScale;
+		
+			DispatchEffect( "CS_MuzzleFlash", data );
 
-	if ( isThirdPerson )
-	{
-		if ( FiringLeft() )
-			return pAnimating->LookupAttachment( "muzzle_flash2" );
-		else
-			return pAnimating->LookupAttachment( "muzzle_flash" );
+			return true;
+		}
+
+		return BaseClass::OnFireEvent( pViewModel, origin, angles, event, options );
 	}
-	else
+
+	int CWeaponElite::GetMuzzleAttachment( void )
 	{
-		if ( FiringLeft() )
-			return pAnimating->LookupAttachment( "1" );
-		else
-			return pAnimating->LookupAttachment( "2" );
+		return LookupAttachment( FiringLeft() ? "muzzle_flash_l" : "muzzle_flash_r" );	
 	}
-}
 #endif

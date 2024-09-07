@@ -58,6 +58,7 @@ extern ConVar mp_c4timer;
 extern ConVar mp_buytime;
 extern ConVar mp_freezetime;
 extern ConVar mp_playerid;
+extern ConVar ammo_grenade_limit_total;
 
 #ifndef CLIENT_DLL
 	extern ConVar mp_autoteambalance;

@@ -56,6 +56,10 @@ public:
 	virtual void Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
 #endif
 
+#ifdef CLIENT_DLL
+	virtual int GetMuzzleFlashStyle( void );
+#endif
+
 private:
 	CWeaponUSP( const CWeaponUSP & );
 
@@ -285,3 +289,17 @@ void CWeaponUSP::SetSilencer( bool silencer )
 	//world model
 	SetBodygroup( FindBodygroupByName( "silencer" ), silencer ? 0 : 1 );
 }
+
+#ifdef CLIENT_DLL
+int CWeaponUSP::GetMuzzleFlashStyle( void )
+{
+	if( m_bSilencerOn )
+	{
+		return CS_MUZZLEFLASH_NONE;
+	}
+	else
+	{
+		return CS_MUZZLEFLASH_NORM;
+	}
+}
+#endif

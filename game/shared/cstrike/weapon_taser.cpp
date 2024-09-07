@@ -38,9 +38,9 @@ public:
 	virtual void ItemPostFrame();
 #endif
 
-#ifdef CLIENT_DLL
-	const char* GetMuzzleFlashEffectName( bool bThirdPerson );
-#endif
+//#ifdef CLIENT_DLL
+//	const char* GetMuzzleFlashEffectName( bool bThirdPerson );
+//#endif
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_TASER; }
 
@@ -107,9 +107,9 @@ void CWeaponTaser::ItemPostFrame()
 
 #endif
 
-#ifdef CLIENT_DLL
+/*#ifdef CLIENT_DLL
 const char* CWeaponTaser::GetMuzzleFlashEffectName( bool bThirdPerson )
 {
 	return BaseClass::GetMuzzleFlashEffectName( bThirdPerson );
 }
-#endif
+#endif*/

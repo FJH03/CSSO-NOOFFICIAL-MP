@@ -385,9 +385,32 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_iCrosshairMinDistance		= pKeyValuesData->GetInt( "CrosshairMinDistance", 4 );
 	m_iCrosshairDeltaDistance	= pKeyValuesData->GetInt( "CrosshairDeltaDistance", 3 );
 	m_bCanUseWithShield			= !!pKeyValuesData->GetInt( "CanEquipWithShield", false );
+	m_flMuzzleScale				= pKeyValuesData->GetFloat( "MuzzleFlashScale", 1 );
+
+	const char *pMuzzleFlashStyle = pKeyValuesData->GetString( "MuzzleFlashStyle", "CS_MUZZLEFLASH_NORM" );
+	
+	if( pMuzzleFlashStyle )
+	{
+		if ( Q_stricmp( pMuzzleFlashStyle, "CS_MUZZLEFLASH_X" ) == 0 )
+		{
+			m_iMuzzleFlashStyle = CS_MUZZLEFLASH_X;
+		}
+		else if ( Q_stricmp( pMuzzleFlashStyle, "CS_MUZZLEFLASH_NONE" ) == 0 )
+		{
+			m_iMuzzleFlashStyle = CS_MUZZLEFLASH_NONE;
+		}
+		else
+		{
+			m_iMuzzleFlashStyle = CS_MUZZLEFLASH_NORM;
+		}
+	}
+	else
+	{
+		Assert( false );
+	}
 
 	// muzzle flash
-	const char* pTemp = pKeyValuesData->GetString( "MuzzleFlash1stPerson", "" );
+	/*const char* pTemp = pKeyValuesData->GetString( "MuzzleFlash1stPerson", "" );
 	Q_strncpy( m_szMuzzleFlash1stPerson, pTemp, sizeof( m_szMuzzleFlash1stPerson ) );
 	pTemp = pKeyValuesData->GetString( "MuzzleFlash1stPersonAlt", m_szMuzzleFlash1stPerson );
 	Q_strncpy( m_szMuzzleFlash1stPersonAlt, pTemp, sizeof( m_szMuzzleFlash1stPersonAlt ) );
@@ -395,7 +418,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	pTemp = pKeyValuesData->GetString( "MuzzleFlash3rdPerson", "" );
 	Q_strncpy( m_szMuzzleFlash3rdPerson, pTemp, sizeof( m_szMuzzleFlash3rdPerson ) );
 	pTemp = pKeyValuesData->GetString( "MuzzleFlash3rdPersonAlt", m_szMuzzleFlash3rdPerson );
-	Q_strncpy( m_szMuzzleFlash3rdPersonAlt, pTemp, sizeof( m_szMuzzleFlash3rdPersonAlt ) );
+	Q_strncpy( m_szMuzzleFlash3rdPersonAlt, pTemp, sizeof( m_szMuzzleFlash3rdPersonAlt ) );*/
 
 	m_iPenetration		= pKeyValuesData->GetFloat( "Penetration", 1 );
 	m_iDamage			= pKeyValuesData->GetInt( "Damage", 42 ); // Douglas Adams 1952 - 2001
@@ -453,8 +476,8 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_fThrowVelocity	= pKeyValuesData->GetFloat( "ThrowVelocity", 0.0f );
 
 	// eject brass variables
-	const char* pEjectBrassEffect = pKeyValuesData->GetString( "EjectBrassEffect", "" );
-	Q_strncpy( m_szEjectBrassEffect, pEjectBrassEffect, sizeof( m_szEjectBrassEffect ) );
+	//const char* pEjectBrassEffect = pKeyValuesData->GetString( "EjectBrassEffect", "" );
+	//Q_strncpy( m_szEjectBrassEffect, pEjectBrassEffect, sizeof( m_szEjectBrassEffect ) );
 
 	// tracer variables
 	m_iTracerFrequency[0] = pKeyValuesData->GetInt( "TracerFrequency", 0 );

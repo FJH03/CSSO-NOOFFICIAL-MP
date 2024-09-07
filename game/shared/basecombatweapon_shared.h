@@ -226,7 +226,7 @@ public:
 	bool					UsesSecondaryAmmo( void );					// returns true if the weapon actually uses secondary ammo
 	void					GiveDefaultAmmo( void );
 	
-	virtual bool			CanHolster( void ) { return TRUE; };		// returns true if the weapon can be holstered
+	virtual bool			CanHolster( void ) const { return TRUE; };		// returns true if the weapon can be holstered
 	virtual bool			DefaultDeploy( char *szViewModel, char *szWeaponModel, int iActivity, char *szAnimExt );
 	virtual bool			CanDeploy( void ) { return true; }			// return true if the weapon's allowed to deploy
 	virtual bool			Deploy( void );								// returns true is deploy was successful
@@ -249,6 +249,7 @@ public:
 	virtual void			HandleFireOnEmpty();					// Called when they have the attack button down
 																	// but they are out of ammo. The default implementation
 																	// either reloads, switches weapons, or plays an empty sound.
+	virtual bool			CanPerformSecondaryAttack() const;
 
 	virtual bool			ShouldBlockPrimaryFire() { return false; }
 
@@ -267,8 +268,7 @@ public:
 	bool					DefaultReload( int iClipSize1, int iClipSize2, int iActivity );
 	bool					ReloadsSingly( void ) const;
 
-	virtual bool			AutoFiresFullClip( void ) { return false; }
-	virtual bool			CanOverload( void ) { return false; }
+	virtual bool			AutoFiresFullClip( void ) const { return false; }
 	virtual void			UpdateAutoFire( void );
 
 	// Weapon firing
@@ -309,7 +309,7 @@ public:
 
 	virtual void			SetActivity( Activity act, float duration );
 	inline void				SetActivity( Activity eActivity ) { m_Activity = eActivity; }
-	inline Activity			GetActivity( void ) { return m_Activity; }
+	inline Activity			GetActivity( void ) const { return m_Activity; }
 
 	virtual void			AddViewKick( void );	// Add in the view kick for the weapon
 
@@ -563,6 +563,7 @@ public:
 	CNetworkVar( int, m_iWorldModelIndex );
 
 	CNetworkVar( int, m_iNumEmptyAttacks );
+
 	// Sounds
 	float					m_flNextEmptySoundTime;				// delay on empty sound playing
 
@@ -586,6 +587,9 @@ public:
 
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_nNextThinkTick );
 
+#ifdef CLIENT_DLL
+	static void				RecvProxy_WeaponState( const CRecvProxyData *pData, void *pStruct, void *pOut );
+#endif
 	int						WeaponState() const { return m_iState; }
 
 	// Weapon data
@@ -598,7 +602,7 @@ public:
 
 	CNetworkVar( int, m_iPrimaryReserveAmmoCount );	// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
 	CNetworkVar( int, m_iSecondaryReserveAmmoCount );	// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
-	
+
 	bool					m_bFiresUnderwater;		// true if this weapon can fire underwater
 	bool					m_bAltFiresUnderwater;		// true if this weapon can fire underwater
 	float					m_fMinRange1;			// What's the closest this weapon can be used?

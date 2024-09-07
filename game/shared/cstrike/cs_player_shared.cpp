@@ -1524,6 +1524,178 @@ bool CCSPlayer::CSAnim_CanMove()
 	return CanMove();
 }
 
+int CCSPlayer::GetCarryLimit( CSWeaponID weaponId )
+{
+	const CCSWeaponInfo *pWeaponInfo = GetWeaponInfo( weaponId );
+	if ( pWeaponInfo == NULL )
+		return 0;
+
+	if ( pWeaponInfo->m_WeaponType == WEAPONTYPE_GRENADE )
+	{
+		return GetAmmoDef()->MaxCarry( pWeaponInfo->iAmmoType, this );	// We still use player-stored ammo for grenades.
+	}
+
+	return 1;
+}
+
+AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::Type acquireMethod )
+{
+	const CCSWeaponInfo *pWeaponInfo = NULL;
+	if ( weaponId == WEAPON_NONE )
+		return AcquireResult::InvalidItem;
+
+	pWeaponInfo = GetWeaponInfo( weaponId );
+
+	if ( pWeaponInfo == NULL )
+		return AcquireResult::InvalidItem;
+
+	int nType = pWeaponInfo->m_WeaponType;
+
+// 	if ( acquireMethod == AcquireMethod::Buy )
+// 	{
+// 		bool bFoundInLoadout = false;
+// 		int nStartSearchPos = LOADOUT_POSITION_INVALID;
+// 
+// 		if ( nType == WEAPONTYPE_PISTOL )
+// 			nStartSearchPos = LOADOUT_POSITION_SECONDARY0;
+// 		else if ( nType == WEAPONTYPE_SHOTGUN || nType == WEAPONTYPE_MACHINEGUN )
+// 			nStartSearchPos = LOADOUT_POSITION_HEAVY0;
+// 		else if ( nType == WEAPONTYPE_SUBMACHINEGUN )
+// 			nStartSearchPos = LOADOUT_POSITION_SMG0;
+// 		else if ( nType == WEAPONTYPE_RIFLE || nType == WEAPONTYPE_SNIPER_RIFLE )
+// 			nStartSearchPos = LOADOUT_POSITION_RIFLE0;
+// 
+// 		// make sure that we have this item equipped in our inventory loadout
+// 		for ( int i = nStartSearchPos; i < (nStartSearchPos+6); ++i )
+// 		{
+// 			CEconItemView *pItemView = Inventory()->GetItemInLoadout( GetTeamNumber(), i );
+// 			if ( pItemView && pItemView->GetStaticData() )
+// 			{
+// 				if ( pItemView == pItem || ( V_stricmp( pItemView->GetStaticData()->GetDefinitionName(), WeaponIdAsString( weaponId ) ) == 0 ) )
+// 				{
+// 					bFoundInLoadout = true;
+// 					break;
+// 				}
+// 			}
+// 		}
+// 		if ( nStartSearchPos != LOADOUT_POSITION_INVALID && !bFoundInLoadout )
+// 			return AcquireResult::NotAllowedForPurchase;
+// 	}
+
+	if ( nType == WEAPONTYPE_GRENADE )
+	{
+		// make sure we aren't exceeding the ammo max for this grenade type
+		int carryLimitThisGrenade = GetCarryLimit( weaponId );
+
+		int carryLimitAllGrenades = ammo_grenade_limit_total.GetInt();
+
+		CBaseCombatWeapon* pGrenadeWeapon = Weapon_OwnsThisType( WeaponIdAsString( weaponId ) );
+		if ( pGrenadeWeapon != NULL )
+		{
+			int nAmmoType = pGrenadeWeapon->GetPrimaryAmmoType();
+
+			if( nAmmoType != -1 )
+			{
+				int thisGrenadeCarried = GetAmmoCount(nAmmoType );
+				if ( thisGrenadeCarried >= carryLimitThisGrenade )
+				{
+					return AcquireResult::ReachedGrenadeTypeLimit;
+				}
+			}
+		}
+
+		// count how many grenades of any type the player is currently carrying
+		int allGrenadesCarried = 0;
+		for ( int i = 0; i < MAX_WEAPONS; ++i )
+		{
+			CWeaponCSBase* pWeapon = dynamic_cast<CWeaponCSBase*>( GetWeapon(i) );
+			if ( pWeapon != NULL && pWeapon->IsKindOf( WEAPONTYPE_GRENADE ) )
+			{
+				int nAmmoType = pWeapon->GetPrimaryAmmoType();
+				if( nAmmoType != -1 )
+				{
+					allGrenadesCarried += GetAmmoCount( nAmmoType );
+				}
+			}
+		}
+
+		if ( allGrenadesCarried >= carryLimitAllGrenades )
+		{
+			return AcquireResult::ReachedGrenadeTotalLimit;
+		}
+
+		// don't allow players with an inferno spawning weapon to pick up another inferno spawning weapon
+		if ( weaponId == WEAPON_INCGRENADE )
+		{
+			 if ( Weapon_OwnsThisType( "weapon_molotov" ) )
+				 return AcquireResult::AlreadyOwned;
+		}
+		else if ( weaponId == WEAPON_MOLOTOV )
+		{
+			if ( Weapon_OwnsThisType( "weapon_incgrenade" ) )
+				return AcquireResult::AlreadyOwned;
+		}
+	}
+	/*else if ( nType == WEAPONTYPE_STACKABLEITEM )
+	{
+		int carryLimit = GetAmmoDef()->MaxCarry( pWeaponInfo->iAmmoType, this );
+
+		CBaseCombatWeapon* pItemWeapon = Weapon_OwnsThisType( WeaponIdAsString( weaponId ) );
+		if ( pItemWeapon != NULL )
+		{
+			int nAmmoType = pItemWeapon->GetPrimaryAmmoType();
+
+			if ( nAmmoType != -1 )
+			{
+				int thisCarried = GetAmmoCount( nAmmoType );
+				if ( thisCarried >= carryLimit )
+				{
+					return AcquireResult::ReachedGrenadeTypeLimit;
+				}
+			}
+		}
+	}*/
+	else if ( weaponId == WEAPON_C4 )
+	{
+		// TODO[pmf]: Data drive this from the scripts
+		if ( acquireMethod == AcquireMethod::Buy )
+			return AcquireResult::NotAllowedForPurchase;
+	}
+
+	// additional constraints for purchasing weapons
+	if ( acquireMethod == AcquireMethod::Buy )
+	{
+		if ( pWeaponInfo->m_iTeam != TEAM_UNASSIGNED && GetTeamNumber() != pWeaponInfo->m_iTeam )
+		{
+			return AcquireResult::NotAllowedByTeam;
+		}
+
+		// special case for flashbangs - no limit
+		if ( weaponId == WEAPON_FLASHBANG )
+		{
+			return AcquireResult::Allowed;
+		}
+
+		// don't allow purchasing multiple grenades of a given type per round (even if the player throws the purchased one)
+		if ( pWeaponInfo->m_WeaponType == WEAPONTYPE_GRENADE )
+		{
+			// limit the number of purchases to one more than the number we are allowed to carry
+			int carryLimitThisGrenade = GetAmmoDef()->MaxCarry( pWeaponInfo->iAmmoType, this ); // We still use player-stored ammo for grenades.
+
+			// for smoke grenade, we are only allow to buy exactly the amount we are allowed to carry, with other weapons, we can purchase one more than what we can carry per round
+			if ( weaponId == WEAPON_SMOKEGRENADE && carryLimitThisGrenade > 0 )
+				carryLimitThisGrenade--;
+		}
+
+		if ( CSLoadout()->IsKnife(weaponId) )
+		{ 
+			return AcquireResult::NotAllowedForPurchase; 
+		}
+	}
+
+	return AcquireResult::Allowed;
+}
+
 //--------------------------------------------------------------------------------------------------------------
 
 #define MATERIAL_NAME_LENGTH 16

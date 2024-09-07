@@ -4475,43 +4475,23 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 			{
 				bPurchase = true;
 
-				const char *szWeaponName = NULL;
-				int ammoMax = 0;
-				if ( Q_strstr( pWeaponInfo->szClassName, "flashbang" ) )
+				const char* weaponName = pWeaponInfo->szClassName;
+				if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
 				{
-					szWeaponName = "weapon_flashbang";
-					ammoMax = ammo_flashbang_max.GetInt();
-				}
-				else if ( Q_strstr( pWeaponInfo->szClassName, "hegrenade" ) )
-				{
-					szWeaponName = "weapon_hegrenade";
-					ammoMax = ammo_hegrenade_max.GetInt();
-				}
-				else if ( Q_strstr( pWeaponInfo->szClassName, "smokegrenade" ) )
-				{
-					szWeaponName = "weapon_smokegrenade";
-					ammoMax = ammo_smokegrenade_max.GetInt();
+					weaponName += 7;
 				}
 
-				if ( szWeaponName != NULL )
+				switch ( CanAcquire( AliasToWeaponID( weaponName ), AcquireMethod::Buy ) )
 				{
-					CBaseCombatWeapon* pGrenadeWeapon = Weapon_OwnsThisType( szWeaponName );
+					case AcquireResult::ReachedGrenadeTypeLimit:
+					case AcquireResult::ReachedGrenadeTotalLimit:
+					case AcquireResult::AlreadyOwned:
+					case AcquireResult::AlreadyPurchased:
 					{
-						if ( pGrenadeWeapon != NULL )
-						{
-							int nAmmoType = pGrenadeWeapon->GetPrimaryAmmoType();
-
-							if( nAmmoType != -1 )
-							{
-								if( GetAmmoCount(nAmmoType) >= ammoMax )
-								{
-									result = BUY_ALREADY_HAVE;
-									if( !m_bIsInAutoBuy && !m_bIsInRebuy )
-										ClientPrint( this, HUD_PRINTCENTER, "#Cannot_Carry_Anymore" );
-									bPurchase = false;
-								}
-							}
-						}
+						result = BUY_ALREADY_HAVE;
+						if ( !m_bIsInAutoBuy && !m_bIsInRebuy )
+							ClientPrint( this, HUD_PRINTCENTER, "#Cannot_Carry_Anymore" );
+						bPurchase = false;
 					}
 				}
 			}
@@ -6774,8 +6754,7 @@ void CCSPlayer::Weapon_Equip( CBaseCombatWeapon *pWeapon )
 	{
 		// For rifles, pistols, or the knife, drop our old weapon in this slot.
 		if ( pCSWeapon->GetSlot() == WEAPON_SLOT_RIFLE ||
-			pCSWeapon->GetSlot() == WEAPON_SLOT_PISTOL ||
-			pCSWeapon->GetSlot() == WEAPON_SLOT_KNIFE )
+			pCSWeapon->GetSlot() == WEAPON_SLOT_PISTOL )
 		{
 			CBaseCombatWeapon *pDropWeapon = Weapon_GetSlot( pCSWeapon->GetSlot() );
 			if ( pDropWeapon )
@@ -6783,7 +6762,7 @@ void CCSPlayer::Weapon_Equip( CBaseCombatWeapon *pWeapon )
 				CSWeaponDrop( pDropWeapon, false, true );
 			}
 		}
-		else if( pCSWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_GRENADE )
+		else if ( pCSWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_GRENADE )
 		{
 			//if we already have this weapon, just add the ammo and destroy it
 			if( Weapon_OwnsThisType( pCSWeapon->GetClassname() ) )
@@ -6808,6 +6787,9 @@ bool CCSPlayer::Weapon_CanUse( CBaseCombatWeapon *pBaseWeapon )
 	if ( pWeapon )
 	{
 		if ( pWeapon->IsA(WEAPON_TASER) && !pWeapon->HasAnyAmmo() )
+			return false;
+
+		if ( CanAcquire( pWeapon->GetCSWeaponID(), AcquireMethod::PickUp ) != AcquireResult::Allowed )
 			return false;
 
 		// Don't give weapon_c4 to non-terrorists
@@ -7963,7 +7945,7 @@ void CCSPlayer::StockPlayerAmmo( CBaseCombatWeapon *pNewWeapon )
 
 		if ( nAmmo != -1 )
 		{
-			GiveAmmo( 9999, GetAmmoDef()->GetAmmoOfIndex(nAmmo)->pName );
+			pWeapon->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, 9999 );
 			pWeapon->m_iClip1 = pWeapon->GetMaxClip1();
 		}
 
@@ -7978,7 +7960,7 @@ void CCSPlayer::StockPlayerAmmo( CBaseCombatWeapon *pNewWeapon )
 
 		if ( nAmmo != -1 )
 		{
-			GiveAmmo( 9999, GetAmmoDef()->GetAmmoOfIndex(nAmmo)->pName );
+			pWeapon->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, 9999 );
 			pWeapon->m_iClip1 = pWeapon->GetMaxClip1();
 		}
 	}
@@ -7991,7 +7973,7 @@ void CCSPlayer::StockPlayerAmmo( CBaseCombatWeapon *pNewWeapon )
 
 		if ( nAmmo != -1 )
 		{
-			GiveAmmo( 9999, GetAmmoDef()->GetAmmoOfIndex(nAmmo)->pName );
+			pWeapon->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, 9999 );
 			pWeapon->m_iClip1 = pWeapon->GetMaxClip1();
 		}
 	}
