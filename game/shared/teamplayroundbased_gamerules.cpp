@@ -90,7 +90,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CTeamplayRoundBasedRules, DT_TeamplayRoundBasedRules
 	RecvPropBool( RECVINFO( m_bStopWatch ) ),
 	RecvPropBool( RECVINFO( m_bMultipleTrains ) ),
 	RecvPropArray3( RECVINFO_ARRAY(m_bPlayerReady), RecvPropBool( RECVINFO(m_bPlayerReady[0]) ) ),
-
+	RecvPropBool( RECVINFO( m_bCheatsEnabledDuringLevel ) ),
 #else
 	SendPropInt( SENDINFO( m_iRoundState ), 5 ),
 	SendPropBool( SENDINFO( m_bInWaitingForPlayers ) ),
@@ -107,6 +107,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CTeamplayRoundBasedRules, DT_TeamplayRoundBasedRules
 	SendPropBool( SENDINFO( m_bStopWatch ) ),
 	SendPropBool( SENDINFO( m_bMultipleTrains ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_bPlayerReady), SendPropBool( SENDINFO_ARRAY(m_bPlayerReady) ) ),
+	SendPropBool( SENDINFO( m_bCheatsEnabledDuringLevel ) ),
 #endif
 END_NETWORK_TABLE()
 
@@ -421,6 +422,7 @@ CTeamplayRoundBasedRules::CTeamplayRoundBasedRules( void )
 	m_nAutoBalanceQueuePlayerScore = -1;
 
 	SetDefLessFunc( m_GameTeams );
+	m_bCheatsEnabledDuringLevel = false;
 
 #endif
 }
@@ -554,6 +556,18 @@ float CTeamplayRoundBasedRules::GetMinTimeWhenPlayerMaySpawn( CBasePlayer *pPlay
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+void CTeamplayRoundBasedRules::LevelInitPostEntity( void )
+{
+	BaseClass::LevelInitPostEntity();
+
+#ifdef GAME_DLL
+	m_bCheatsEnabledDuringLevel = sv_cheats && sv_cheats->GetBool();
+#endif // GAME_DLL
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
 float CTeamplayRoundBasedRules::GetRespawnTimeScalar( int iTeam )
 {
 	// For long respawn times, scale the time as the number of players drops
@@ -582,7 +596,7 @@ void CTeamplayRoundBasedRules::Think( void )
 	if ( g_fGameOver )   // someone else quit the game already
 	{
 		// check to see if we should change levels now
-		if ( m_flIntermissionEndTime && ( m_flIntermissionEndTime < gpGlobals->curtime ) )
+		if ( m_flIntermissionStartTime && ( m_flIntermissionStartTime + GetIntermissionDuration() < gpGlobals->curtime ) )
 		{
 			if ( !IsX360() )
 			{
@@ -600,8 +614,8 @@ void CTeamplayRoundBasedRules::Think( void )
 			}
 
 			// Don't run this code again
-			m_flIntermissionEndTime = 0.f;
-		}	
+			m_flIntermissionStartTime = 0.f;
+		}
 
 		return;
 	}
@@ -629,6 +643,12 @@ void CTeamplayRoundBasedRules::Think( void )
 		CheckWaitingForPlayers();
 
 		m_flNextPeriodicThink = gpGlobals->curtime + 1.0;
+	}
+
+	// Watch dog for cheats ever being enabled during a level
+	if ( !m_bCheatsEnabledDuringLevel && sv_cheats && sv_cheats->GetBool() )
+	{
+		m_bCheatsEnabledDuringLevel = true;
 	}
 
 	// Bypass teamplay think.

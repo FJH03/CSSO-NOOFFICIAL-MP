@@ -524,6 +524,8 @@ public:
 
 	void EmitPrivateSound( const char *soundName );		///< emit given sound that only we can hear
 
+	bool Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex /*= 0*/ );
+	
 	CWeaponCSBase* GetActiveCSWeapon() const;
 
 	void PreThink();

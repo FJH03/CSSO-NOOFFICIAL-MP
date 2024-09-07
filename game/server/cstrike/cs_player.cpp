@@ -331,6 +331,9 @@ BEGIN_SEND_TABLE_NOBASE( CCSPlayer, DT_CSLocalPlayerExclusive )
 	// HPE_END
 	//=============================================================================
 
+	SendPropBool( SENDINFO( m_bIsLookingAtWeapon ) ),
+	SendPropBool( SENDINFO( m_bIsHoldingLookAtWeapon ) ),
+
 END_SEND_TABLE()
 
 
@@ -383,8 +386,6 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropBool( SENDINFO( m_bIsGrabbingHostage ) ),
 	SendPropEHandle( SENDINFO( m_hCarriedHostage ) ),
 	SendPropEHandle( SENDINFO( m_hCarriedHostageProp ) ),
-	SendPropBool( SENDINFO( m_bIsLookingAtWeapon ) ),
-	SendPropBool( SENDINFO( m_bIsHoldingLookAtWeapon ) ),
 	SendPropBool( SENDINFO( m_bIsWalking ) ),
 	SendPropFloat( SENDINFO( m_flGroundAccelLinearFracLastTime ), 0, SPROP_CHANGES_OFTEN ),
 
@@ -876,7 +877,7 @@ void CCSPlayer::PlayerRunCommand( CUserCmd *ucmd, IMoveHelper *moveHelper )
 			if ( (ucmd->buttons & IN_ATTACK2) != 0 && (ucmd->buttons & (IN_ATTACK | IN_RELOAD)) == 0 )
 			{
 				CWeaponCSBase *pWeapon = GetActiveCSWeapon();
-				if ( pWeapon && pWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_SNIPER_RIFLE )
+				if ( pWeapon && pWeapon->GetWeaponType() == WEAPONTYPE_SNIPER_RIFLE )
 				{
 					// Force the animation back to idle since changing zoom has no specific animation
 					CBaseViewModel *pViewModel = GetViewModel();
@@ -1331,6 +1332,7 @@ void CCSPlayer::Spawn()
 
 	StopLookingAtWeapon();
 	m_bIsHoldingLookAtWeapon = false;
+
 	m_bDuckOverride = false;
 	// If we're constantly respawning then reset damage stats on spawn. Otherwise this'll happen on roundrespawn after damage is reported.
 	if ( IsAbleToInstantRespawn() )
@@ -2095,10 +2097,11 @@ void CCSPlayer::UpdateMouseoverHints()
 void CCSPlayer::PostThink()
 {
 	BaseClass::PostThink();
+
 	if ( IsLookingAtWeapon() )
- 	{
-	  if ( gpGlobals->curtime >= m_flLookWeaponEndTime )
- 	  StopLookingAtWeapon();
+	{
+		if ( gpGlobals->curtime >= m_flLookWeaponEndTime )
+			StopLookingAtWeapon();
 	}
 
 	UpdateAddonBits();
@@ -2174,11 +2177,6 @@ void CCSPlayer::PushawayThink()
 //-----------------------------------------------------------------------------
 bool CCSPlayer::Weapon_CanSwitchTo( CBaseCombatWeapon *pWeapon )
 {
-	if ( IsLookingAtWeapon() )
- 	{
- 		StopLookingAtWeapon();
-	}
-
 	if ( !pWeapon->CanDeploy() )
 		return false;
 
@@ -3336,6 +3334,33 @@ void CCSPlayer::CheckTKPunishment( void )
 		m_bPunishedForTK = true;
 		CommitSuicide();
 	}
+}
+
+bool CCSPlayer::Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex /*= 0*/ )
+{
+	if ( IsLookingAtWeapon() )
+	{
+		StopLookingAtWeapon();
+	}
+
+	bool bBaseClassSwitch = BaseClass::Weapon_Switch( pWeapon, viewmodelindex );
+
+	if ( bBaseClassSwitch )
+		m_bDuckOverride = false;
+
+	if ( pWeapon )
+	{
+		CWeaponCSBase* pCSWeapon = dynamic_cast< CWeaponCSBase* >( pWeapon );
+		if ( pCSWeapon )
+		{
+			if ( pCSWeapon->GetWeaponType() == WEAPONTYPE_GRENADE )
+			{	// When switching to grenade remember the preferred grenade
+				m_nPreferredGrenadeDrop = pCSWeapon->GetCSWeaponID();
+			}
+		}
+	}
+
+	return bBaseClassSwitch;
 }
 
 CWeaponCSBase* CCSPlayer::GetActiveCSWeapon() const
@@ -5609,27 +5634,26 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 		return true;
 	}
 	else if ( FStrEq( pcmd, "+lookatweapon" ) )
- 	{
-  	m_bIsHoldingLookAtWeapon = true;
-	
+	{
+		m_bIsHoldingLookAtWeapon = true;
 
+		if ( ShouldRunRateLimitedCommand( args ) )
+		{
+			LookAtHeldWeapon();
+		}
 
- 	 if ( ShouldRunRateLimitedCommand( args ) )
-  		{
- 		  LookAtHeldWeapon();
- 		 }
+		return true;
+	}
+ 	else if ( FStrEq( pcmd, "-lookatweapon" ) )
+	{
+		m_bIsHoldingLookAtWeapon = false;
 
-  return true;
- }
- else if ( FStrEq( pcmd, "-lookatweapon" ) )
- {
-   m_bIsHoldingLookAtWeapon = false;
+		return true;
+	}
 
-  return true;
- }
-
-return BaseClass::ClientCommand( args );
+	return BaseClass::ClientCommand( args );
 }
+
 void CCSPlayer::LookAtHeldWeapon( void )
 {
 	if ( IsLookingAtWeapon() )
@@ -5642,7 +5666,7 @@ void CCSPlayer::LookAtHeldWeapon( void )
 	if ( !pActiveWeapon )
 		return;
 
-	// Can't taunt while  reloading, or switching silencer
+	// Can't taunt while zoomed, reloading, or switching silencer
 	if ( pActiveWeapon->IsWeaponZoomed() || pActiveWeapon->m_bInReload || pActiveWeapon->IsSwitchingSilencer() )
 		return;
 
@@ -5671,7 +5695,7 @@ void CCSPlayer::LookAtHeldWeapon( void )
 			m_bIsLookingAtWeapon = true;
 
 			pViewModel->ForceCycle( 0 );
-			pViewModel->ResetSequence( nSequence ) ;
+			pViewModel->ResetSequence( nSequence );
 		}
 	}
 

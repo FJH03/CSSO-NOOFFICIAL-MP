@@ -40,6 +40,7 @@
 #define WINNER_CT		TEAM_CT
 
 #define MAX_WEAPON_NAME_POPUP_RANGE 128.0
+
 //=============================================================================
 // HPE_BEGIN:
 // [tj] Forward declaration so we can track bot suicides in the game rules.
@@ -138,7 +139,6 @@ public:
 	DECLARE_NETWORKCLASS();
 };
 
-
 class CCSGameRules : public CTeamplayRules
 {
 public:
@@ -170,6 +170,7 @@ public:
 	int   SelectDefaultTeam( bool ignoreBots = false );
 	int   GetHumanTeam();			// TEAM_UNASSIGNED if no restrictions
 
+	void	LoadMapProperties();
 #ifndef CLIENT_DLL
 	bool	UseMapFactionsForThisPlayer( CBasePlayer* pPlayer );
 	int		GetMapFactionsForThisPlayer( CBasePlayer* pPlayer );
@@ -183,8 +184,8 @@ public:
 	bool IsSpawnPointValid( CBaseEntity *pSpot, CBasePlayer *pPlayer );
 
 	bool IsBuyTimeElapsed();
-
-	virtual int	DefaultFOV();
+	bool IsMatchWaitingForResume( void );
+	void SetMatchWaitingForResume( bool pause ) { m_bMatchWaitingForResume = pause; };
 
 	int GetGamemode( void ) { return m_iCurrentGamemode; };
 
@@ -195,11 +196,14 @@ public:
 	bool IsArmorFree();
 #endif
 
+	virtual int	DefaultFOV();
+
 	// Get the view vectors for this mod.
 	virtual const CViewVectors* GetViewVectors() const;
 
 	void UploadGameStats( void );
 	int  GetStartMoney( void );
+
 	void AddHostageRescueTime( void );
 
 	bool IsPlayingAnyCompetitiveStrictRuleset( void ) const;
@@ -215,6 +219,7 @@ private:
 	CNetworkVar( bool, m_bWarmupPeriod );	 // 
 	CNetworkVar( float, m_fWarmupPeriodEnd ); // OBSOLETE. LEFT IN FOR DEMO COMPATIBILITY.
 	CNetworkVar( float, m_fWarmupPeriodStart );
+	CNetworkVar( bool, m_bMatchWaitingForResume ); // When mp_pause_match is called, this state becomes true and will prevent the next freezetime from ending.
 	CNetworkVar( int, m_iRoundTime );		 // (From mp_roundtime) - How many seconds long this round is.
 	CNetworkVar( float, m_fRoundStartTime ); // time round has started
 	CNetworkVar( float, m_flGameStartTime );
@@ -224,13 +229,14 @@ private:
 	CNetworkVar( bool, m_bMapHasRescueZone );
 	CNetworkVar( bool, m_bLogoMap );		 // If there's an info_player_logo entity, then it's a logo map.
 	CNetworkVar( bool, m_bBlackMarket );
-
+	
 	int		m_iMapFactionCT;
 	int		m_iMapFactionT;
 
 	bool		m_bDontUploadStats;
 
 public:
+
 	CNetworkVar( bool, m_bBombDropped );
 	CNetworkVar( bool, m_bBombPlanted );
 	CNetworkVar( int, m_iRoundWinStatus );
@@ -264,6 +270,7 @@ public:
 	virtual void Think();
 
 	void FreezePlayers( void );
+
 	// Called at the end of GameFrame (i.e. after all game logic has run this frame)
 	virtual void EndGameFrame( void );
 
@@ -324,7 +331,7 @@ public:
 
 	virtual void			InitDefaultAIRelationships( void );
 
-	virtual const char *GetGameDescription( void ) { return "Counter-Strike: Source"; }  // this is the game name that gets seen in the server browser
+	virtual const char *GetGameDescription( void ) { return "Counter-Strike: Source Offensive"; }  // this is the game name that gets seen in the server browser
 	virtual const char *AIClassText(int classType);
 
 	virtual bool FShouldSwitchWeapon( CBasePlayer *pPlayer, CBaseCombatWeapon *pWeapon );
@@ -369,6 +376,8 @@ public:
 	void BalanceTeams( void );
 	void MoveHumansToHumanTeam( void );
 	bool TeamFull( int team_id );
+	int	 MaxNumPlayersOnTerrTeam();
+	int  MaxNumPlayersOnCTTeam();
 	bool TeamStacked( int newTeam_id, int curTeam_id  );
 	bool FPlayerCanRespawn( CBasePlayer *pPlayer );
 	void UpdateTeamScores();
@@ -467,6 +476,7 @@ public:
 	int m_iNumCT;				// The number of CTs on the team (this is generated at the end of a round)
 	int m_iNumSpawnableTerrorist;
 	int m_iNumSpawnableCT;
+	CUtlVector< int > m_arrSelectedHostageSpawnIndices; // The indices of hostage spawn locations selected for the match
 
 	bool m_bFirstConnected;
 	bool m_bCompleteReset;		// Set to TRUE to have the scores reset next time round restarts
@@ -488,6 +498,7 @@ public:
 	float m_tmNextPeriodicThink;
 
 	float m_fWarmupNextChatNoticeTime;
+
 
 	// HOSTAGE RESCUE VARIABLES
 	int		m_iHostagesRescued;
@@ -565,8 +576,8 @@ public:
 	bool	m_bTargetBombed;	// whether or not the bomb has been bombed
 	bool	m_bBombDefused;	// whether or not the bomb has been defused
 	bool	m_bMapHasBombZone;
-	//bool	m_bBombDropped;
-	//bool	m_bBombPlanted;
+//	bool	m_bBombDropped; -- moved to network cvars
+//	bool	m_bBombPlanted; -- moved to network cvars
 	EHANDLE m_pLastBombGuy;
 
 	int		TeamCashAwardValue( int reason );
@@ -582,6 +593,7 @@ private:
 	bool			m_bRoundTimeWarningTriggered;
 
 	float			m_flLastThinkTime;
+
 public:
 
 
@@ -605,16 +617,15 @@ public:
 
 	void SetBlackMarketPrices( bool bSetDefaults );
 
+	float CheckTotalSmokedLength( float flRadius, Vector vecGrenadePos, Vector from, Vector to );
+
 	// Black market
 	INetworkStringTable *m_StringTableBlackMarket;
 	const weeklyprice_t *m_pPrices;
-	float CheckTotalSmokedLength( float flRadius, Vector vecGrenadePos, Vector from, Vector to );
 
 protected:
 	bool m_bHasTriggeredRoundStartMusic;
 };
-
-
 
 //-----------------------------------------------------------------------------
 // Gets us at the team fortress game rules
@@ -628,6 +639,7 @@ inline CCSGameRules* CSGameRules()
 #define IGNORE_SPECTATORS true
 int UTIL_HumansInGame( bool ignoreSpectators = false );
 
+
 //-----------------------------------------------------------------------------
 // Music Selection
 //-----------------------------------------------------------------------------
@@ -635,6 +647,7 @@ int UTIL_HumansInGame( bool ignoreSpectators = false );
 #ifdef CLIENT_DLL
 void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType );
 #endif
+
 
 //-----------------------------------------------------------------------------
 // Purpose: Useful utility functions

@@ -221,6 +221,8 @@ public:
 
 	void SkipNextMapInCycle();
 
+	virtual float GetIntermissionStartTime() const { return m_flIntermissionStartTime; };
+
 	virtual void	ClientCommandKeyValues( edict_t *pEntity, KeyValues *pKeyValues );
 
 public:
@@ -252,6 +254,8 @@ public:
 
 protected:
 	virtual void GoToIntermission( void );
+	float GetIntermissionDuration() const;
+	float m_flIntermissionStartTime;
 	void LoadMapCycleFile( void );
 	void ChangeLevelToMap( const char *pszMap );
 

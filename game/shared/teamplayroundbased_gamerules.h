@@ -183,6 +183,7 @@ public:
 
 	virtual float GetNextRespawnWave( int iTeam, CBasePlayer *pPlayer );
 	virtual bool HasPassedMinRespawnTime( CBasePlayer *pPlayer );
+	virtual void	LevelInitPostEntity( void );
 	virtual float	GetRespawnTimeScalar( int iTeam );
 	virtual float	GetRespawnWaveMaxLength( int iTeam, bool bScaleWithNumPlayers = true );
 	virtual bool	ShouldRespawnQuickly( CBasePlayer *pPlayer ) { return false; }
@@ -541,6 +542,7 @@ private:
 public:
 	bool WouldChangeUnbalanceTeams( int iNewTeam, int iCurrentTeam  );
 	bool AreTeamsUnbalanced( int &iHeaviestTeam, int &iLightestTeam );
+	virtual bool HaveCheatsBeenEnabledDuringLevel( void ) { return m_bCheatsEnabledDuringLevel; }
 
 protected:
 	CNetworkVar( gamerules_roundstate_t, m_iRoundState );
@@ -560,6 +562,7 @@ protected:
 	CNetworkVar( bool, m_bStopWatch );
 	CNetworkVar( bool, m_bMultipleTrains ); // two trains in this map?
 	CNetworkArray( bool,		m_bPlayerReady, MAX_PLAYERS );
+	CNetworkVar( bool,			m_bCheatsEnabledDuringLevel );
 	
 public:
 	CNetworkArray( float,		m_TeamRespawnWaveTimes, MAX_TEAMS );	// Time between each team's respawn wave

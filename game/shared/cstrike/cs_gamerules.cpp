@@ -19,6 +19,7 @@
 
 	#include "networkstringtable_clientdll.h"
 	#include "utlvector.h"
+	#include "soundenvelope.h"
 
 #else
 	
@@ -116,9 +117,10 @@ REGISTER_GAMERULES_CLASS( CCSGameRules );
 BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 	#ifdef CLIENT_DLL
 		RecvPropBool( RECVINFO( m_bFreezePeriod ) ),
-		RecvPropBool( RECVINFO( m_bWarmupPeriod ) ),
+		RecvPropBool( RECVINFO( m_bMatchWaitingForResume ) ),
+        RecvPropBool( RECVINFO( m_bWarmupPeriod ) ),
         RecvPropFloat( RECVINFO( m_fWarmupPeriodEnd ) ), // DUMMY VAR FOR DEMOS		
-        RecvPropFloat( RECVINFO( m_fWarmupPeriodStart ) ),
+        RecvPropFloat( RECVINFO( m_fWarmupPeriodStart ) ),	
 		RecvPropInt( RECVINFO( m_iRoundTime ) ),
 		RecvPropFloat( RECVINFO( m_fRoundStartTime ) ),
 		RecvPropFloat( RECVINFO( m_flGameStartTime ) ),
@@ -132,10 +134,11 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropBool( RECVINFO( m_bBombPlanted ) ),
 		RecvPropInt( RECVINFO( m_iRoundWinStatus ) )
 	#else
-		SendPropBool( SENDINFO( m_bWarmupPeriod ) ),
-        SendPropFloat( SENDINFO( m_fWarmupPeriodEnd ) ), // DUMMY VAR FOR DEMOS	
-        SendPropFloat( SENDINFO( m_fWarmupPeriodStart ) ),
 		SendPropBool( SENDINFO( m_bFreezePeriod ) ),
+		SendPropBool( SENDINFO( m_bMatchWaitingForResume ) ),
+        SendPropBool( SENDINFO( m_bWarmupPeriod ) ),
+        SendPropFloat( SENDINFO( m_fWarmupPeriodEnd ) ), // DUMMY VAR FOR DEMOS	
+        SendPropFloat( SENDINFO( m_fWarmupPeriodStart ) ),	
 		SendPropInt( SENDINFO( m_iRoundTime ), 16 ),
 		SendPropFloat( SENDINFO( m_fRoundStartTime ), 32, SPROP_NOSCALE ),
 		SendPropFloat( SENDINFO( m_flGameStartTime ), 32, SPROP_NOSCALE ),
@@ -205,102 +208,32 @@ ConVar ammo_grenade_limit_total( "ammo_grenade_limit_total", "3", FCVAR_REPLICAT
 ConVar cs_AssistDamageThreshold( "cs_AssistDamageThreshold", "40.0", FCVAR_DEVELOPMENTONLY, "cs_AssistDamageThreshold defines the amount of damage needed to score an assist" );
 #endif
 
+
 extern ConVar sv_stopspeed;
+extern ConVar mp_randomspawn;
+extern ConVar mp_randomspawn_los;
+extern ConVar mp_hostages_max;
+extern ConVar mp_hostages_spawn_farthest;
+extern ConVar mp_hostages_spawn_force_positions;
+extern ConVar mp_hostages_spawn_same_every_round;
 
 ConVar mp_buytime( 
 	"mp_buytime", 
 	"1.5",
 	FCVAR_REPLICATED,
-	"How many minutes after round start players can buy items for.",
+	"How many seconds after round start players can buy items for.",
 	true, 0.25,
 	false, 0 );
 
 ConVar mp_do_warmup_period(
 	"mp_do_warmup_period",
-	"0",
+	"1",
 	FCVAR_REPLICATED,
-	"Whether or not to do a warmup period at the start of a match(def:off).",
+	"Whether or not to do a warmup period at the start of a match.",
 	true, 0,
 	true, 1 );
 
-ConVar mp_c4_cannot_be_defused(
-	"mp_c4_cannot_be_defused",
-	"0",
-	FCVAR_REPLICATED,
-	"If set, the planted c4 cannot be defused." );
-
 ConVar mp_respawn_immunitytime("mp_respawn_immunitytime", "4.0", FCVAR_REPLICATED, "How many seconds after respawn immunity lasts." );
-#ifndef CLIENT_DLL
-CON_COMMAND( mp_warmup_start, "Start warmup." )
-{
-	if ( !UTIL_IsCommandIssuedByServerAdmin() )
-		return;
-
-	if ( CSGameRules() )
-	{
-		CSGameRules()->StartWarmup();
-	}
-}
-CON_COMMAND( mp_warmup_end, "End warmup immediately." )
-{
-	if ( !UTIL_IsCommandIssuedByServerAdmin() )
-	{
-		return;
-	}
-
-	if ( CSGameRules() )
-	{
-		CSGameRules()->EndWarmup();
-	}
-}
-#endif
-static void mpwarmuptime_f( IConVar *pConVar, const char *pOldString, float flOldValue )
-{
-	if ( CSGameRules() )
-	{
-		CSGameRules()->SetWarmupPeriodStartTime( gpGlobals->curtime );
-	}
-}
-ConVar mp_respawn_on_death_t(
-	"mp_respawn_on_death_t",
-	"0",
-	FCVAR_REPLICATED,
-	"When set to 1, terrorists will respawn after dying." );
-
-ConVar mp_respawn_on_death_ct(
-	"mp_respawn_on_death_ct",
-	"0",
-	FCVAR_REPLICATED,
-	"When set to 1, counter-terrorists will respawn after dying." );
-
-ConVar mp_gamemode_override(
-	"mp_gamemode_override",
-	"0",
-	FCVAR_REPLICATED,
-	"Which gamemode settings to use:\n 0 - Custom\n 1 - Casual\n 2 - Competitive\n 3 - Wingman",
-	true, 0,
-	true, GameModes::NUM_GAMEMODES - 1 );
-
-ConVar mp_warmuptime(
-	"mp_warmuptime",
-	"300",
-	FCVAR_REPLICATED,
-	"How long the warmup period lasts. Changing this value resets warmup.",
-	true, 5,
-	false, 0,
-	mpwarmuptime_f );
-
-ConVar mp_warmuptime_all_players_connected(
-	"mp_warmuptime_all_players_connected",
-	"60",
-	FCVAR_REPLICATED,
-	"Warmup time to use when all players have connected in official competitive. 0 to disable." );
-
-ConVar mp_warmup_pausetimer(
-	"mp_warmup_pausetimer",
-	"0",
-	FCVAR_REPLICATED,
-	"Set to 1 to stay in warmup indefinitely. Set to 0 to resume the timer." );
 
 ConVar mp_playerid(
 	"mp_playerid",
@@ -328,7 +261,7 @@ ConVar mp_playerid_hold(
 
 ConVar mp_round_restart_delay(
 	"mp_round_restart_delay",
-	"5.0",
+	"7.0",
 	FCVAR_REPLICATED,
 	"Number of seconds to delay before restarting a round after a win",
 	true, 0.0f,
@@ -352,6 +285,74 @@ ConVar mp_hostages_rescuetime(
 	FCVAR_REPLICATED,
 	"Additional time added to round time if a hostage is reached by a CT." );
 
+ConVar mp_anyone_can_pickup_c4(
+	"mp_anyone_can_pickup_c4",
+	"0",
+	FCVAR_REPLICATED,
+	"If set, everyone can pick up the c4, not just Ts." );
+
+ConVar mp_c4_cannot_be_defused(
+	"mp_c4_cannot_be_defused",
+	"0",
+	FCVAR_REPLICATED,
+	"If set, the planted c4 cannot be defused." );
+
+#ifndef CLIENT_DLL
+CON_COMMAND( mp_warmup_start, "Start warmup." )
+{
+	if ( !UTIL_IsCommandIssuedByServerAdmin() )
+		return;
+
+	if ( CSGameRules() )
+	{
+		CSGameRules()->StartWarmup();
+	}
+}
+
+CON_COMMAND( mp_warmup_end, "End warmup immediately." )
+{
+	if ( !UTIL_IsCommandIssuedByServerAdmin() )
+	{
+		return;
+	}
+
+	if ( CSGameRules() )
+	{
+		CSGameRules()->EndWarmup();
+	}
+}
+#endif
+
+static void mpwarmuptime_f( IConVar *pConVar, const char *pOldString, float flOldValue )
+{
+	if ( CSGameRules() )
+	{
+		CSGameRules()->SetWarmupPeriodStartTime( gpGlobals->curtime );
+	}
+}
+
+
+ConVar mp_warmuptime(
+	"mp_warmuptime",
+	"30",
+	FCVAR_REPLICATED,
+	"How long the warmup period lasts. Changing this value resets warmup.",
+	true, 5,
+	false, 0,
+	mpwarmuptime_f );
+
+ConVar mp_warmuptime_all_players_connected(
+	"mp_warmuptime_all_players_connected",
+	"60",
+	FCVAR_REPLICATED,
+	"Warmup time to use when all players have connected in official competitive. 0 to disable." );
+
+ConVar mp_warmup_pausetimer(
+	"mp_warmup_pausetimer",
+	"0",
+	FCVAR_REPLICATED,
+	"Set to 1 to stay in warmup indefinitely. Set to 0 to resume the timer." );
+
 ConVar sv_allowminmodels(
 	"sv_allowminmodels",
 	"1",
@@ -366,9 +367,33 @@ ConVar mp_molotovusedelay(
 	true, 0.0,
 	true, 30.0 );
 
-ConVar mp_c4timer( "mp_c4timer", "40", FCVAR_REPLICATED | FCVAR_NOTIFY, "how long from when the C4 is armed until it blows", true, 10, true, 90	);
+ConVar mp_respawn_on_death_t(
+	"mp_respawn_on_death_t",
+	"0",
+	FCVAR_REPLICATED,
+	"When set to 1, terrorists will respawn after dying." );
 
-extern ConVar mp_teammates_are_enemies;
+ConVar mp_respawn_on_death_ct(
+	"mp_respawn_on_death_ct",
+	"0",
+	FCVAR_REPLICATED,
+	"When set to 1, counter-terrorists will respawn after dying." );
+
+ConVar mp_gamemode_override(
+	"mp_gamemode_override",
+	"0",
+	FCVAR_REPLICATED,
+	"Which gamemode settings to use:\n 0 - Custom\n 1 - Casual\n 2 - Competitive\n 3 - Wingman",
+	true, 0,
+	true, GameModes::NUM_GAMEMODES - 1 );
+
+ConVar sv_kick_ban_duration(
+	"sv_kick_ban_duration",
+	"15",
+	FCVAR_REPLICATED | FCVAR_NOTIFY,
+	"How long should a kick ban from the server should last (in minutes)" );
+
+ConVar mp_c4timer( "mp_c4timer", "40", FCVAR_REPLICATED | FCVAR_NOTIFY, "how long from when the C4 is armed until it blows", true, 10, true, 90	);
 
 #ifdef CLIENT_DLL
 
@@ -378,17 +403,25 @@ ConVar cl_autowepswitch(
 	FCVAR_ARCHIVE | FCVAR_USERINFO,
 	"Automatically switch to picked up weapons (if more powerful)" );
 
+ConVar cl_use_opens_buy_menu(
+	"cl_use_opens_buy_menu",
+	"1",
+	FCVAR_ARCHIVE | FCVAR_USERINFO,
+	"Pressing the +use key will open the buy menu if in a buy zone (just as if you pressed the 'buy' key)." );
+
 ConVar cl_autohelp(
 	"cl_autohelp",
 	"1",
 	FCVAR_ARCHIVE | FCVAR_USERINFO,
 	"Auto-help" );
 
+#ifdef CLIENT_DLL
 ConVar snd_music_selection(
     "snd_music_selection",
     "valve_csgo_01",
     FCVAR_ARCHIVE,
     "Name of the music kit to use (from game files).");
+#endif
 
 #else
 
@@ -461,11 +494,11 @@ ConVar snd_music_selection(
 				if ( pListener->IsAlive() == false )
 					return ( pListener->InSameTeam( pTalker ) );
 
-				return false;
+                return false;
 			}
 
 			return ( pListener->InSameTeam( pTalker ) );
-		}
+        }
 	};
 	CVoiceGameMgrHelper g_VoiceGameMgrHelper;
 	IVoiceGameMgrHelper *g_pVoiceGameMgrHelper = &g_VoiceGameMgrHelper;
@@ -490,10 +523,10 @@ ConVar snd_music_selection(
 	ConVar mp_startmoney( 
 		"mp_startmoney", 
 		"800", 
-		FCVAR_REPLICATED | FCVAR_NOTIFY,
+		FCVAR_REPLICATED,
 		"amount of money each player gets when they reset",
-		true, 800,
-		true, 16000 );
+		true, 0,
+		false, 0 );
 
 	ConVar mp_maxmoney(
 		"mp_maxmoney",
@@ -558,7 +591,7 @@ ConVar snd_music_selection(
 		"mp_ignore_round_win_conditions",
 		"0",
 		FCVAR_REPLICATED,
-		"Ignore conditions which would end the current round");
+		"Ignore conditions which would end the current round" );
 
 	ConVar mp_free_armor(
 		"mp_free_armor",
@@ -865,6 +898,7 @@ ConVar snd_music_selection(
 	CCSGameRules::CCSGameRules()
 	{
 		m_flLastThinkTime = gpGlobals->curtime;
+
 		m_iRoundTime = 0;
 		m_iRoundWinStatus = WINNER_NONE;
 		m_iFreezeTime = 0;
@@ -872,6 +906,7 @@ ConVar snd_music_selection(
 		m_fRoundStartTime = 0;
 		m_bAllowWeaponSwitch = true;
 		m_bFreezePeriod = true;
+		m_bMatchWaitingForResume = false;
 		m_iNumTerrorist = m_iNumCT = 0;	// number of players per team
 		m_flRestartRoundTime = 0.1f; // restart first round as soon as possible
 		m_iNumSpawnableTerrorist = m_iNumSpawnableCT = 0;
@@ -887,6 +922,7 @@ ConVar snd_music_selection(
 		m_iUnBalancedRounds = 0;
 		m_flGameStartTime = 0;
 		m_iHostagesRemaining = 0;
+		m_bAnyHostageReached = false;
 		m_bLevelInitialized = false;
 		m_bLogoMap = false;
 		m_tmNextPeriodicThink = 0;
@@ -996,16 +1032,46 @@ ConVar snd_music_selection(
 			g_flGameStatsUpdateTime = CS_GAME_STATS_UPDATE; //Next update is between 22 and 24 hours.
 		}
 #endif
-		
+
 		m_iCurrentGamemode = 0;
 		m_iOldGamemode = 0;
 
 		m_iMapFactionCT = -1;
 		m_iMapFactionT = -1;
+		LoadMapProperties();
 
 		m_bWarmupPeriod = mp_do_warmup_period.GetBool();
 		m_fWarmupNextChatNoticeTime = 0;
 		m_fWarmupPeriodStart = gpGlobals->curtime;
+	}
+
+	void CCSGameRules::LoadMapProperties()
+	{
+		char filename[MAX_PATH];
+		char kvFilename[MAX_PATH];
+		V_StripExtension( V_UnqualifiedFileName( STRING( gpGlobals->mapname ) ), filename, MAX_PATH );
+		V_snprintf( kvFilename, sizeof( kvFilename ), "maps/%s.kv", filename );
+
+		if ( !g_pFullFileSystem->FileExists( kvFilename ) )
+		{
+			Warning( ".kv file for map %s doesn't exist!\n", STRING( gpGlobals->mapname ) );
+			return;
+		}
+
+		KeyValues *pkvMap = new KeyValues( "Map" );
+
+		if ( pkvMap->LoadFromFile( g_pFullFileSystem, kvFilename ) && pkvMap )
+		{
+			int iFactionCT = pkvMap->GetInt( "ct_faction", 0 );
+			int iFactionT = pkvMap->GetInt( "t_faction", 0 );
+
+			m_iMapFactionCT = iFactionCT;
+			m_iMapFactionT = iFactionT;
+		}
+		else
+		{
+			Warning( "Failed to load .kv file for map %s\n", STRING( gpGlobals->mapname ) );
+		}
 	}
 
 	void CCSGameRules::AddPricesToTable( weeklyprice_t prices )
@@ -1565,7 +1631,7 @@ ConVar snd_music_selection(
 		//=============================================================================
 	}
 
-	CCSPlayer* CCSGameRules::CheckAndAwardAssists( CCSPlayer* pCSVictim, CCSPlayer* pKiller )
+    CCSPlayer* CCSGameRules::CheckAndAwardAssists( CCSPlayer* pCSVictim, CCSPlayer* pKiller )
     {  
         CUtlLinkedList< CDamageRecord *, int >& victimDamageTakenList = pCSVictim->GetDamageList();
         float maxDamage = 0.0f;
@@ -1599,6 +1665,7 @@ ConVar snd_music_selection(
 
         return NULL;
     }
+
 	//-----------------------------------------------------------------------------
 	// Purpose: 
 	// Input  : *pVictim - 
@@ -1753,7 +1820,6 @@ ConVar snd_music_selection(
 		}
 	}
 
-
 	//=========================================================
 	//=========================================================
 	void CCSGameRules::PlayerKilled( CBasePlayer *pVictim, const CTakeDamageInfo &info )
@@ -1765,12 +1831,9 @@ ConVar snd_music_selection(
 		CCSPlayer *pCSScorer = (CCSPlayer *)pScorer;
 
 		CCS_GameStats.PlayerKilled( pVictim, info );
-		//=============================================================================
-		// HPE_BEGIN:        
+
 		// [tj] Flag the round as non-lossless for the appropriate team.
 		// [menglish] Set the death flags depending on a nemesis system
-		//=============================================================================
-
 		if (pVictim->GetTeamNumber() == TEAM_TERRORIST)
 		{
 			m_bNoTerroristsKilled = false;
@@ -1797,18 +1860,16 @@ ConVar snd_music_selection(
             CCS_GameStats.CalculateOverkill( pCSScorer, pCSVictim);
 			CCS_GameStats.CalcDominationAndRevenge( pCSScorer, pCSVictim, &iDeathFlags );            
 		}
-		pCSVictim->SetDeathFlags( iDeathFlags );	
-		//=============================================================================
-		// HPE_END
-		//=============================================================================
+		pCSVictim->SetDeathFlags( iDeathFlags );
 
 		// If we're killed by the C4, we do a subset of BaseClass::PlayerKilled()
-		// Specifically, we shouldn't lose any points or show death notices, to match goldsrc
+		// Specifically, we shouldn't lose any points, to match goldsrc
 		if ( Q_strcmp(pKiller->GetClassname(), "planted_c4" ) == 0 )
 		{
 			// dvsents2: uncomment when removing all FireTargets
 			// variant_t value;
 			// g_EventQueue.AddEvent( "game_playerdie", "Use", value, 0, pVictim, pVictim );
+			DeathNotice( pVictim, info );
 			FireTargets( "game_playerdie", pVictim, pVictim, USE_TOGGLE, 0 );
 		}
 		else
@@ -1828,22 +1889,31 @@ ConVar snd_music_selection(
 			++pCSScorer->m_iTeamKills;
 			pCSScorer->m_bJustKilledTeammate = true;
 
-			ClientPrint( pCSScorer, HUD_PRINTCENTER, "#Killed_Teammate" );
 			if ( mp_autokick.GetBool() )
 			{
-				char strTeamKills[64];
-				Q_snprintf( strTeamKills, sizeof( strTeamKills ), "%d", pCSScorer->m_iTeamKills );
-				ClientPrint( pCSScorer, HUD_PRINTCONSOLE, "#Game_teammate_kills", strTeamKills ); // this includes a " of 3" in it
+				char strTeamKills[8];
+				Q_snprintf( strTeamKills, sizeof( strTeamKills ), "%d", (3 - pCSScorer->m_iTeamKills) );
+				ClientPrint( pCSScorer, HUD_PRINTTALK, "#Game_teammate_kills", strTeamKills );
 
 				if ( pCSScorer->m_iTeamKills >= 3 )
 				{
-					ClientPrint( pCSScorer, HUD_PRINTCONSOLE, "#Banned_For_Killing_Teammates" );
-					engine->ServerCommand( UTIL_VarArgs( "kickid %d\n", pCSScorer->GetUserID() ) );
+					if ( sv_kick_ban_duration.GetInt() > 0 )
+					{
+						ClientPrint( pCSScorer, HUD_PRINTTALK, "#Banned_For_Killing_Teammates" );
+						engine->ServerCommand( UTIL_VarArgs( "banid %d %d\n", sv_kick_ban_duration.GetInt(), pCSScorer->GetUserID() ) );
+					}
+
+                    engine->ServerCommand( UTIL_VarArgs( "kickid_ex %d %d For killing too many teammates\n", pCSScorer->GetUserID(), 1 ) );
 				}
 				else if ( mp_spawnprotectiontime.GetInt() > 0 && GetRoundElapsedTime() < mp_spawnprotectiontime.GetInt() )
 				{
-					ClientPrint( pCSScorer, HUD_PRINTCONSOLE, "#Banned_For_Killing_Teammates" );
-					engine->ServerCommand( UTIL_VarArgs( "kickid %d\n", pCSScorer->GetUserID() ) );
+					if ( sv_kick_ban_duration.GetInt() > 0 )
+					{
+						ClientPrint( pCSScorer, HUD_PRINTTALK, "#Banned_For_Killing_Teammates" );
+						engine->ServerCommand( UTIL_VarArgs( "banid %d %d\n", sv_kick_ban_duration.GetInt(), pCSScorer->GetUserID() ) );
+					}
+
+					engine->ServerCommand( UTIL_VarArgs( "kickid_ex %d %d For killing a teammate at round start\n", pCSScorer->GetUserID(), 1 ) );
 				}
 			}
 
@@ -2103,18 +2173,18 @@ ConVar snd_music_selection(
 			return false;
 		}
 
-		// If a winner has already been determined.. then get the heck out of here
-		if (IsWarmupPeriod() || ( m_iRoundWinStatus != WINNER_NONE ))
-		{
-			// still check if we lost players to where we need to do a full reset next round...
-			int NumDeadCT, NumDeadTerrorist, NumAliveTerrorist, NumAliveCT;
-			InitializePlayerCounts( NumAliveTerrorist, NumAliveCT, NumDeadTerrorist, NumDeadCT );
+        // If a winner has already been determined.. then get the heck out of here
+        if ( IsWarmupPeriod() || ( m_iRoundWinStatus != WINNER_NONE ) )
+        {
+            // still check if we lost players to where we need to do a full reset next round...
+            int NumDeadCT, NumDeadTerrorist, NumAliveTerrorist, NumAliveCT;
+            InitializePlayerCounts( NumAliveTerrorist, NumAliveCT, NumDeadTerrorist, NumDeadCT );
 
-			bool bNeededPlayers = false;
-			NeededPlayersCheck( bNeededPlayers );
+            bool bNeededPlayers = false;
+            NeededPlayersCheck( bNeededPlayers );
 
-			return true;
-		}
+            return true;
+        }
 
 		// Initialize the player counts..
 		int NumDeadCT, NumDeadTerrorist, NumAliveTerrorist, NumAliveCT;
@@ -2282,16 +2352,17 @@ ConVar snd_music_selection(
 
 		// the number of hostages that can be left un rescued, but still win
 		int iNumRescuedToWin = mp_hostages_rescuetowin.GetInt() == 0 ? iNumHostages : MIN( iNumHostages, mp_hostages_rescuetowin.GetInt() );
+		int iNumLeftCanWin = MAX( 0, iNumHostages - iNumRescuedToWin );
 
 		m_iHostagesRemaining = iNumLeftToRescue;
 
-		if ( (iNumLeftToRescue == 0) && (iNumHostages > 0) )
+		if ( (iNumLeftToRescue >= iNumLeftCanWin) && (iNumHostages > 0) )
 		{
-			if ( m_iHostagesRescued >= (iNumHostages * 0.5)	)
+			if ( m_iHostagesRescued >= iNumRescuedToWin )
 			{
 				if ( !bNeededPlayers )
 				{
-					m_iNumCTWins ++;
+					m_iNumCTWins++;
 					// Update the clients team score
 					UpdateTeamScores();
 				}
@@ -2389,6 +2460,8 @@ ConVar snd_music_selection(
 
 		if (m_pVIP->m_bEscaped == true)
 		{
+			//m_iAccountCT += 3500;
+
 			if ( !bNeededPlayers )
 			{
 				m_iNumCTWins ++;
@@ -2432,6 +2505,8 @@ ConVar snd_music_selection(
 		}
 		else if ( m_pVIP->m_lifeState == LIFE_DEAD )   // The VIP is dead
 		{
+			//m_iAccountTerrorist += 3250;
+
 			if ( !bNeededPlayers )
 			{
 				m_iNumTerroristWins ++;
@@ -2476,6 +2551,7 @@ ConVar snd_music_selection(
 		else
 		if ( ( m_bBombDefused == true ) && ( m_bMapHasBombTarget == true ) )
 		{
+
 			if ( !bNeededPlayers )
 			{
 				m_iNumCTWins++;
@@ -2969,8 +3045,8 @@ ConVar snd_music_selection(
 		}
 		else
 			m_bMapHasEscapeZone = false;
-
-		/*// Check to see if this map has VIP safety zones
+		/*
+		// Check to see if this map has VIP safety zones
 		if ( gEntList.FindEntityByClassname( NULL, "func_vip_safetyzone" ) )
 		{
 			PickNextVIP();
@@ -2997,50 +3073,48 @@ ConVar snd_music_selection(
 		}
 
 		//*******Catch up code by SupraFiend. Scale up the loser bonus when teams fall into losing streaks
-        if (m_iRoundWinStatus == WINNER_TER) // terrorists won
-        {
-            //check to see if they just broke a losing streak
-            if ( m_iNumConsecutiveTerroristLoses > 0 )
-            {
-                // reset the loser bonus
-                m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
-                m_iNumConsecutiveTerroristLoses = 0;
-            }
-            m_iNumConsecutiveCTLoses++;//increment the number of wins the CTs have had
-        }
-        else if (m_iRoundWinStatus == WINNER_CT) // CT Won
-        {
-            //check to see if they just broke a losing streak
-            if ( m_iNumConsecutiveCTLoses > 0 )
-            {
-                // reset the loser bonus
-                m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
-                m_iNumConsecutiveCTLoses = 0;
-            }
-            m_iNumConsecutiveTerroristLoses++;//increment the number of wins the Terrorists have had
-        }
+		if (m_iRoundWinStatus == WINNER_TER) // terrorists won
+		{
+			//check to see if they just broke a losing streak
+			if(m_iNumConsecutiveTerroristLoses > 1)
+                m_iLoserBonus = TeamCashAwardValue( LOSER_BONUS );
 
-        //check if the losing team is in a losing streak & that the loser bonus hasn't maxed out.
-        if((m_iNumConsecutiveTerroristLoses > 1) && (m_iLoserBonus < 3000))
-            m_iLoserBonus += TeamCashAwardValue( TeamCashAward::LOSER_BONUS_CONSECUTIVE_ROUNDS );//help out the team in the losing streak
-        else
-        if((m_iNumConsecutiveCTLoses > 1) && (m_iLoserBonus < 3000))
-            m_iLoserBonus += TeamCashAwardValue( TeamCashAward::LOSER_BONUS_CONSECUTIVE_ROUNDS );//help out the team in the losing streak
+			m_iNumConsecutiveTerroristLoses = 0;//starting fresh
+			m_iNumConsecutiveCTLoses++;//increment the number of wins the CTs have had
+		}
+		else if (m_iRoundWinStatus == WINNER_CT) // CT Won
+		{
+			//check to see if they just broke a losing streak
+			if(m_iNumConsecutiveCTLoses > 1)
+                m_iLoserBonus = TeamCashAwardValue( LOSER_BONUS );
 
-        // assign the wining and losing bonuses
-        if (m_iRoundWinStatus == WINNER_TER) // terrorists won
-        {
-            AddTeamAccount( TEAM_TERRORIST, TeamCashAward::HOSTAGE_ALIVE, iRescuedHostageBonus );
-            AddTeamAccount( TEAM_CT, TeamCashAward::LOSER_BONUS, m_iLoserBonus );
-        }
-        else if (m_iRoundWinStatus == WINNER_CT) // CT Won
-        {
-            AddTeamAccount( TEAM_CT, TeamCashAward::HOSTAGE_ALIVE, iRescuedHostageBonus);
-			AddTeamAccount( TEAM_TERRORIST, TeamCashAward::LOSER_BONUS, m_iLoserBonus );
-        }
+			m_iNumConsecutiveCTLoses = 0;//starting fresh
+			m_iNumConsecutiveTerroristLoses++;//increment the number of wins the Terrorists have had
+		}
 
-        //Update CT account based on number of hostages rescued
-        AddTeamAccount( TEAM_CT, TeamCashAward::RESCUED_HOSTAGE, m_iHostagesRescued * TeamCashAwardValue( TeamCashAward::RESCUED_HOSTAGE ));*/
+		//check if the losing team is in a losing streak & that the loser bonus hasen't maxed out.
+		if((m_iNumConsecutiveTerroristLoses > 1) && (m_iLoserBonus < 3000))
+            m_iLoserBonus += TeamCashAwardValue( LOSER_BONUS_CONSECUTIVE_ROUNDS );//help out the team in the losing streak
+		else
+		if((m_iNumConsecutiveCTLoses > 1) && (m_iLoserBonus < 3000))
+            m_iLoserBonus += TeamCashAwardValue( LOSER_BONUS_CONSECUTIVE_ROUNDS );//help out the team in the losing streak
+
+		// assign the wining and losing bonuses
+		if (m_iRoundWinStatus == WINNER_TER) // terrorists won
+		{
+			AddTeamAccount( TEAM_TERRORIST, HOSTAGE_ALIVE, iRescuedHostageBonus );
+			AddTeamAccount( TEAM_CT, LOSER_BONUS, m_iLoserBonus );
+		}
+		else if (m_iRoundWinStatus == WINNER_CT) // CT Won
+		{
+			AddTeamAccount( TEAM_CT, HOSTAGE_ALIVE, iRescuedHostageBonus );
+			if (m_bMapHasEscapeZone == false)	// only give them the bonus if this isn't an escape map
+				AddTeamAccount( TEAM_TERRORIST, LOSER_BONUS, m_iLoserBonus );
+		}
+		
+
+		//Update CT account based on number of hostages rescued
+		AddTeamAccount( TEAM_CT, RESCUED_HOSTAGE, m_iHostagesRescued * TeamCashAwardValue( RESCUED_HOSTAGE ) );*/
 
 
 		// Update individual players accounts and respawn players
@@ -3078,7 +3152,7 @@ ConVar snd_music_selection(
 
 			pPlayer->m_iNumSpawns	= 0;
 			pPlayer->m_bTeamChanged	= false;
-				
+
 			// tricky, make players non solid while moving to their spawn points
 			if ( (pPlayer->GetTeamNumber() == TEAM_CT) || (pPlayer->GetTeamNumber() == TEAM_TERRORIST) )
 			{
@@ -3214,6 +3288,202 @@ ConVar snd_music_selection(
 		// Respawn entities (glass, doors, etc..)
 		CleanUpMap();
 
+		// Reduce hostage count to desired number
+
+		int iHostageCount = mp_hostages_max.GetInt();
+
+		if ( g_Hostages.Count() > iHostageCount )
+		{
+			CUtlVector< CHostage * > arrCopyOfOriginalHostageIndices;
+			arrCopyOfOriginalHostageIndices.AddMultipleToTail( g_Hostages.Count(), g_Hostages.Base() );
+
+			if ( !mp_hostages_spawn_same_every_round.GetBool() )
+				m_arrSelectedHostageSpawnIndices.RemoveAll();
+
+			if ( m_arrSelectedHostageSpawnIndices.Count() )
+			{
+				// We have pre-selected hostage indices, keep only them
+				FOR_EACH_VEC_BACK( g_Hostages, idxGlobalHostage )
+				{
+					if ( m_arrSelectedHostageSpawnIndices.Find( idxGlobalHostage ) != m_arrSelectedHostageSpawnIndices.InvalidIndex() )
+						continue;
+					CHostage *pHostage = g_Hostages[idxGlobalHostage];
+					UTIL_Remove( pHostage );
+					g_Hostages.Remove( idxGlobalHostage );
+
+				}
+			}
+			else if ( mp_hostages_spawn_force_positions.GetString()[0] )
+			{
+				CUtlVector< int > arrBestHostageIdx;
+				CUtlVector< char* > tagStrings;
+				V_SplitString( mp_hostages_spawn_force_positions.GetString(), ",", tagStrings );
+				arrBestHostageIdx.EnsureCapacity( tagStrings.Count() );
+				FOR_EACH_VEC( tagStrings, iTagString )
+				{
+					arrBestHostageIdx.AddToTail( Q_atoi( tagStrings[iTagString] ) );
+				}
+				tagStrings.PurgeAndDeleteElements();
+
+				// Now we have selected best hostage indices, keep only them
+				FOR_EACH_VEC_BACK( g_Hostages, idxGlobalHostage )
+				{
+					if ( arrBestHostageIdx.Find( idxGlobalHostage ) != arrBestHostageIdx.InvalidIndex() )
+						continue;
+					CHostage *pHostage = g_Hostages[idxGlobalHostage];
+					UTIL_Remove( pHostage );
+					g_Hostages.Remove( idxGlobalHostage );
+				}
+			}
+			else if ( mp_hostages_spawn_farthest.GetBool() )
+			{
+				CUtlVector< int > arrBestHostageIdx;
+				vec_t bestMetric = 0;
+				CUtlVector< int > arrTryHostageIdx;
+				for ( int iStartIdx = 0; iStartIdx < mp_hostages_max.GetInt(); ++iStartIdx )
+					arrTryHostageIdx.AddToTail( iStartIdx );
+				arrBestHostageIdx.AddMultipleToTail( arrTryHostageIdx.Count(), arrTryHostageIdx.Base() );
+				while ( 1 )
+				{
+					vec_t metricThisCombo = 0;
+					for ( int iFirstHostage = 0; iFirstHostage < arrTryHostageIdx.Count(); ++iFirstHostage )
+					{
+						for ( int iSecondHostage = iFirstHostage + 1; iSecondHostage < arrTryHostageIdx.Count(); ++iSecondHostage )
+						{
+							vec_t len2Dsq = (g_Hostages[arrTryHostageIdx[iFirstHostage]]->GetAbsOrigin() - g_Hostages[arrTryHostageIdx[iSecondHostage]]->GetAbsOrigin()).Length2DSqr();
+							metricThisCombo += len2Dsq;
+						}
+					}
+
+					if ( metricThisCombo > bestMetric )
+					{
+						arrBestHostageIdx.RemoveAll();
+						arrBestHostageIdx.AddMultipleToTail( arrTryHostageIdx.Count(), arrTryHostageIdx.Base() );
+						bestMetric = metricThisCombo;
+					}
+
+					// Advance to next permutation
+					int iAdvanceIdx = 0;
+					while ( (iAdvanceIdx < arrTryHostageIdx.Count()) && (arrTryHostageIdx[arrTryHostageIdx.Count() - 1 - iAdvanceIdx] >= g_Hostages.Count() - 1 - iAdvanceIdx) )
+						iAdvanceIdx++;
+					if ( iAdvanceIdx >= arrTryHostageIdx.Count() )
+						break;	// Cannot set a valid permutation
+					// Increment the index 
+					arrTryHostageIdx[arrTryHostageIdx.Count() - 1 - iAdvanceIdx] ++;
+					// Set all the following indices
+					for ( int iFollowingIdx = arrTryHostageIdx.Count() - iAdvanceIdx; iFollowingIdx < arrTryHostageIdx.Count(); ++iFollowingIdx )
+						arrTryHostageIdx[iFollowingIdx] = arrTryHostageIdx[arrTryHostageIdx.Count() - 1 - iAdvanceIdx] + (iFollowingIdx - (arrTryHostageIdx.Count() - iAdvanceIdx) + 1);
+				}
+
+				// Now we have selected best hostage indices, keep only them
+				FOR_EACH_VEC_BACK( g_Hostages, idxGlobalHostage )
+				{
+					if ( arrBestHostageIdx.Find( idxGlobalHostage ) != arrBestHostageIdx.InvalidIndex() )
+						continue;
+					CHostage *pHostage = g_Hostages[idxGlobalHostage];
+					UTIL_Remove( pHostage );
+					g_Hostages.Remove( idxGlobalHostage );
+				}
+			}
+			else
+			{
+				// Enforce spawn exclusion groups
+				CUtlVector< CHostage * > arrSelectedSpawns;
+				while ( (arrSelectedSpawns.Count() < mp_hostages_max.GetInt()) && g_Hostages.Count() )
+				{
+					uint32 uiTotalSpawnWeightFactor = 0;
+					FOR_EACH_VEC( g_Hostages, idxGlobalHostage )
+					{
+						if ( CHostage *pCheckHostage = g_Hostages[idxGlobalHostage] )
+							uiTotalSpawnWeightFactor += pCheckHostage->GetHostageSpawnRandomFactor();
+					}
+					if ( !uiTotalSpawnWeightFactor )
+						break;
+
+					uint32 iKeepHostage = (uint32)RandomInt( 0, uiTotalSpawnWeightFactor - 1 );
+					CHostage *pKeepHostage = NULL;
+					FOR_EACH_VEC( g_Hostages, idxGlobalHostage )
+					{
+						if ( CHostage *pCheckHostage = g_Hostages[idxGlobalHostage] )
+						{
+							uint32 uiThisFactor = pCheckHostage->GetHostageSpawnRandomFactor();
+							if ( iKeepHostage < uiThisFactor )
+							{
+								pKeepHostage = pCheckHostage;
+								g_Hostages.Remove( idxGlobalHostage );
+								break;
+							}
+							else
+							{
+								iKeepHostage -= uiThisFactor;
+							}
+						}
+					}
+					if ( !pKeepHostage )
+						break;
+
+					uint32 uiHostageSpawnExclusionGroup = pKeepHostage->GetHostageSpawnExclusionGroup();
+					arrSelectedSpawns.AddToTail( pKeepHostage );
+
+					if ( uiHostageSpawnExclusionGroup )
+					{
+						FOR_EACH_VEC_BACK( g_Hostages, idxGlobalHostage )
+						{
+							CHostage *pCheckHostage = g_Hostages[idxGlobalHostage];
+							if ( (pCheckHostage != pKeepHostage) && !!(pCheckHostage->GetHostageSpawnExclusionGroup() & uiHostageSpawnExclusionGroup) )
+							{	// They share the same exclusion group
+								UTIL_Remove( pCheckHostage );
+								g_Hostages.Remove( idxGlobalHostage );
+							}
+						}
+					}
+				}
+				// Remove all the remaining hostages that we didn't pick
+				while ( g_Hostages.Count() )
+				{
+					CHostage *pHostage = g_Hostages.Tail();
+					UTIL_Remove( pHostage );
+					g_Hostages.RemoveMultipleFromTail( 1 );
+				}
+				// Add back the hostages that we decided to keep
+				g_Hostages.AddMultipleToTail( arrSelectedSpawns.Count(), arrSelectedSpawns.Base() );
+			}
+
+			// Keep removing randomly now until we reach needed number of hostages remaining
+			while ( g_Hostages.Count() > mp_hostages_max.GetInt() )
+			{
+				int randHostage = RandomInt( 0, g_Hostages.Count() - 1 );
+
+				CHostage *pHostage = g_Hostages[randHostage];
+				UTIL_Remove( pHostage );
+				g_Hostages.Remove( randHostage );
+			}
+
+			// Remember which spots ended up picked, so that players could disable randomization and keep the spots
+			if ( !m_arrSelectedHostageSpawnIndices.Count() )
+			{
+				FOR_EACH_VEC( g_Hostages, iPickedHostage )
+				{
+					int idxOriginalSpawnPoint = arrCopyOfOriginalHostageIndices.Find( g_Hostages[iPickedHostage] );
+					Assert( idxOriginalSpawnPoint != arrCopyOfOriginalHostageIndices.InvalidIndex() );
+					m_arrSelectedHostageSpawnIndices.AddToTail( idxOriginalSpawnPoint );
+				}
+			}
+
+			// Show information about which hostage positions were selected for the round
+			CFmtStr fmtHostagePositions;
+			fmtHostagePositions.AppendFormat( "Selected %d hostage positions '", g_Hostages.Count() );
+			FOR_EACH_VEC( g_Hostages, iPickedHostage )
+			{
+				int idxOriginalSpawnPoint = arrCopyOfOriginalHostageIndices.Find( g_Hostages[iPickedHostage] );
+				Assert( idxOriginalSpawnPoint != arrCopyOfOriginalHostageIndices.InvalidIndex() );
+				fmtHostagePositions.AppendFormat( "%d,", idxOriginalSpawnPoint );
+			}
+			fmtHostagePositions.Access()[fmtHostagePositions.Length() - 1] = '\'';
+			fmtHostagePositions.AppendFormat( "\n" );
+			ConMsg( "%s", fmtHostagePositions.Access() );
+		}
+
 		// now run a tkpunish check, after the map has been cleaned up
 		for ( i = 1; i <= gpGlobals->maxClients; i++ )
 		{
@@ -3233,11 +3503,11 @@ ConVar snd_music_selection(
 		}
 
 		// Give C4 to the terrorists
-		if (m_bMapHasBombTarget == true	&& !IsWarmupPeriod())
+		if ( m_bMapHasBombTarget == true && !IsWarmupPeriod() )
 			GiveC4();
 
 		// Reset game variables
-		m_flIntermissionEndTime = 0;
+        m_flIntermissionStartTime = 0;
 		m_flRestartRoundTime = 0.0;
 		m_iHostagesRescued = 0;
 		m_iHostagesTouched = 0;
@@ -3258,7 +3528,8 @@ ConVar snd_music_selection(
         m_bCanDonateWeapons = true;
 
 		// [dwenger] Reset rescue-related achievement values
-        m_iHostagesRemaining = 0;
+		m_iHostagesRemaining = 0;
+		m_bAnyHostageReached = false;
         m_pLastRescuer = NULL;
 
 		m_hostageWasInjured = false;
@@ -3359,7 +3630,7 @@ ConVar snd_music_selection(
 			}
 		}
 
-		int which = cv_bot_defer_to_human.GetBool();
+		int which = cv_bot_defer_to_human_items.GetBool();
 		if ( numAliveTs[HUMAN_TERRORISTS] == 0 )
 		{
 			which = ALL_TERRORISTS;
@@ -3379,6 +3650,7 @@ ConVar snd_music_selection(
 			Assert( pPlayer && pPlayer->GetTeamNumber() == TEAM_TERRORIST && pPlayer->IsAlive() );
 
 			pPlayer->GiveNamedItem( WEAPON_C4_CLASSNAME );
+			pPlayer->SelectItem( WEAPON_C4_CLASSNAME );
 			m_pLastBombGuy = pPlayer;
 
 			//pPlayer->SetBombIcon();
@@ -3428,6 +3700,7 @@ ConVar snd_music_selection(
 		{
 			return;
 		}
+
 		if ( IsWarmupPeriod() )
         {
 #ifdef GAME_DLL
@@ -3438,7 +3711,7 @@ ConVar snd_music_selection(
 
 				m_fWarmupNextChatNoticeTime += gpGlobals->curtime - m_flLastThinkTime;
 			}
-
+			
 			if ( m_fWarmupNextChatNoticeTime < gpGlobals->curtime )
             {
                 m_fWarmupNextChatNoticeTime = gpGlobals->curtime + 10;
@@ -3449,7 +3722,7 @@ ConVar snd_music_selection(
             }
 #endif
             //bool bIsPlayingProgressive = CSGameRules() && CSGameRules()->IsPlayingGunGameProgressive();
-
+			
 			extern ConVar mp_do_warmup_period;
 
             if ( UTIL_HumansInGame( true ) > 0 && ( GetWarmupPeriodEndTime() - 5 < gpGlobals->curtime) )
@@ -3483,7 +3756,7 @@ ConVar snd_music_selection(
                 }
             }
         }
-
+		
 		// Check for the end of the round.
 		if ( IsFreezePeriod() )
 		{
@@ -3496,7 +3769,7 @@ ConVar snd_music_selection(
 
 		CheckLevelInitialized();
 
-		if ( !m_bRoundTimeWarningTriggered && GetRoundRemainingTime() < ROUND_END_WARNING_TIME )
+        if ( !m_bRoundTimeWarningTriggered && GetRoundRemainingTime() < ROUND_END_WARNING_TIME )
         {
             m_bRoundTimeWarningTriggered = true;
             IGameEvent * event = gameeventmanager->CreateEvent( "round_time_warning" );
@@ -3515,7 +3788,7 @@ ConVar snd_music_selection(
 		
 		if ( m_flRestartRoundTime > 0.0f && m_flRestartRoundTime <= gpGlobals->curtime )
 		{
-			if ( IsWarmupPeriod() && GetWarmupPeriodEndTime() <= gpGlobals->curtime && UTIL_HumansInGame( false ) && m_flGameStartTime != 0 )
+            if ( IsWarmupPeriod() && GetWarmupPeriodEndTime() <= gpGlobals->curtime && UTIL_HumansInGame( false ) && m_flGameStartTime != 0 )
             {
                 m_bCompleteReset = true;
                 m_flRestartRoundTime = gpGlobals->curtime + 1;
@@ -3539,11 +3812,8 @@ ConVar snd_music_selection(
                     if ( !bot )
                         continue;
 
-                    // restart only if no bots are speaking
-					if ( !botSpeaking )
+                    if ( bot->IsUsingVoice() )
                     {
-						m_bHasTriggeredRoundStartMusic = false;
-						
                         if ( gpGlobals->curtime > m_flRestartRoundTime + 10.0f )
                         {
                             Msg( "Ignoring speaking bot %s at round end\n", bot->GetPlayerName() );
@@ -3556,11 +3826,15 @@ ConVar snd_music_selection(
                     }
                 }
 
+				// restart only if no bots are speaking
 				if ( !botSpeaking )
 				{
+					m_bHasTriggeredRoundStartMusic = false;
 
 					// Don't call RoundEnd() before the first round of a match
-					if (IsWarmupPeriod() &&
+					if (m_iTotalRoundsPlayed > 0)
+					{
+						if (IsWarmupPeriod() &&
 							(GetWarmupPeriodEndTime() <= gpGlobals->curtime) &&
 							UTIL_HumansInGame(false))
 						{
@@ -3571,12 +3845,13 @@ ConVar snd_music_selection(
 							m_bWarmupPeriod = false;
 							return;
 						}
-				}
-			}
+					}
 
-			RestartRound();
-			
-		}
+                    // Perform round-related processing at the point when the next round is beginning
+                    RestartRound();
+                }
+            }
+        }
 		
 		if ( gpGlobals->curtime > m_tmNextPeriodicThink )
 		{
@@ -3609,7 +3884,8 @@ ConVar snd_music_selection(
 					break;
 			}
 		}
-	m_flLastThinkTime = gpGlobals->curtime;
+
+		m_flLastThinkTime = gpGlobals->curtime;
 	}
 
 
@@ -3626,22 +3902,16 @@ ConVar snd_music_selection(
 	{
 		if ( g_fGameOver )   // someone else quit the game already
 		{
-			//=============================================================================
-			// HPE_BEGIN:
 			// [Forrest] Calling ChangeLevel multiple times was causing IncrementMapCycleIndex
 			// to skip over maps in the list.  Avoid this using a technique from CTeamplayRoundBasedRules::Think.
-			//=============================================================================
 			// check to see if we should change levels now
-			if ( m_flIntermissionEndTime && ( m_flIntermissionEndTime < gpGlobals->curtime ) )
+			if ( m_flIntermissionStartTime && ( m_flIntermissionStartTime + GetIntermissionDuration() < gpGlobals->curtime ) )
 			{
 				ChangeLevel(); // intermission is over
 
-				// Don't run this code again
-				m_flIntermissionEndTime = 0.f;
+                // Don't run this code again
+                m_flIntermissionStartTime = 0.f;
 			}
-			//=============================================================================
-			// HPE_END
-			//=============================================================================
 
 			return true;
 		}
@@ -3729,6 +3999,11 @@ ConVar snd_music_selection(
 
 		if ( IsFinite( startTime ) && gpGlobals->curtime < startTime )
 		{
+			if ( IsMatchWaitingForResume() )
+			{
+				m_fRoundStartTime = gpGlobals->curtime + m_iFreezeTime;
+			}
+
 			return; // not time yet to start round
 		}
 
@@ -3741,36 +4016,36 @@ ConVar snd_music_selection(
 		switch ( random->RandomInt( 0, 3 ) )
 		{
 		case 0:
-			Q_strncpy(CT_sentence,"radio.moveout", sizeof( CT_sentence ) ); 
-			Q_strncpy(T_sentence ,"radio.moveout", sizeof( T_sentence ) ); 
+			Q_strncpy(CT_sentence,"Radio.moveout", sizeof( CT_sentence ) ); 
+			Q_strncpy(T_sentence ,"Radio.moveout", sizeof( T_sentence ) ); 
 			break;
 
 		case 1:
-			Q_strncpy(CT_sentence, "radio.letsgo", sizeof( CT_sentence ) ); 
-			Q_strncpy(T_sentence , "radio.letsgo", sizeof( T_sentence ) ); 
+			Q_strncpy(CT_sentence, "Radio.letsgo", sizeof( CT_sentence ) ); 
+			Q_strncpy(T_sentence , "Radio.letsgo", sizeof( T_sentence ) ); 
 			break;
 
 		case 2:
-			Q_strncpy(CT_sentence , "radio.locknload", sizeof( CT_sentence ) );
-			Q_strncpy(T_sentence , "radio.locknload", sizeof( T_sentence ) );
+			Q_strncpy(CT_sentence , "Radio.locknload", sizeof( CT_sentence ) );
+			Q_strncpy(T_sentence , "Radio.locknload", sizeof( T_sentence ) );
 			break;
 
 		default:
-			Q_strncpy(CT_sentence , "radio.go", sizeof( CT_sentence ) );
-			Q_strncpy(T_sentence , "radio.go", sizeof( T_sentence ) );
+			Q_strncpy(CT_sentence , "Radio.go", sizeof( CT_sentence ) );
+			Q_strncpy(T_sentence , "Radio.go", sizeof( T_sentence ) );
 			break;
 		}
 
 		// More specific radio commands for the new scenarios : Prison & Assasination
 		if (m_bMapHasEscapeZone == TRUE)
 		{
-			Q_strncpy(CT_sentence , "radio.elim", sizeof( CT_sentence ) );
-			Q_strncpy(T_sentence , "radio.getout", sizeof( T_sentence ) );
+			Q_strncpy(CT_sentence , "Radio.elim", sizeof( CT_sentence ) );
+			Q_strncpy(T_sentence , "Radio.getout", sizeof( T_sentence ) );
 		}
 		else if (m_iMapHasVIPSafetyZone == 1)
 		{
-			Q_strncpy(CT_sentence , "radio.vip", sizeof( CT_sentence ) );
-			Q_strncpy(T_sentence , "radio.locknload", sizeof( T_sentence ) );
+			Q_strncpy(CT_sentence , "Radio.vip", sizeof( CT_sentence ) );
+			Q_strncpy(T_sentence , "Radio.locknload", sizeof( T_sentence ) );
 		}
 
 		// Freeze period expired: kill the flag
@@ -3856,6 +4131,7 @@ ConVar snd_music_selection(
 		}
 		else if ( m_iMapHasVIPSafetyZone == 1 )
 		{
+			//m_iAccountTerrorist += 3250;
 			m_iNumTerroristWins++;
 
 			TerminateRound( mp_round_restart_delay.GetFloat(), VIP_Not_Escaped );
@@ -3977,6 +4253,7 @@ ConVar snd_music_selection(
 			// pCappingPlayers is a null terminated list of player indeces
 			event2->SetInt("userid", pPlayer->GetUserID() );
 			event2->SetInt("attacker", pPlayer->GetUserID() );
+			event2->SetInt("assister", pPlayer->GetUserID() );
 			event2->SetString("weapon", "Bare Hands" );
 			event2->SetInt("headshot", 1 );
 			event2->SetInt( "revenge", 1 );
@@ -4104,7 +4381,8 @@ ConVar snd_music_selection(
 		PrintToConsole( player, str.sprintf( "m_iRoundWinStatus: %d\n", m_iRoundWinStatus ) );
 
 		PrintToConsole( player, str.sprintf( "first connected: %d\n", m_bFirstConnected ) );
-		PrintToConsole( player, str.sprintf( "intermission end time: %f\n", m_flIntermissionEndTime ) );
+        PrintToConsole( player, str.sprintf( "intermission start time: %f\n", m_flIntermissionStartTime ) );
+		PrintToConsole( player, str.sprintf( "intermission duration: %f\n", GetIntermissionDuration() ) );
 		PrintToConsole( player, str.sprintf( "freeze period: %d\n", m_bFreezePeriod.Get() ) );
 		PrintToConsole( player, str.sprintf( "round restart time: %f\n", m_flRestartRoundTime ) );
 		PrintToConsole( player, str.sprintf( "game start time: %f\n", m_flGameStartTime.Get() ) );
@@ -4270,6 +4548,40 @@ ConVar snd_music_selection(
 			mp_restartgame.SetValue( 0 );
 		}
 	}
+
+	//////// PAUSE
+	void cc_PauseMatch( const CCommand& args )
+	{
+		if ( UTIL_IsCommandIssuedByServerAdmin() )
+		{
+			CCSGameRules *pRules = dynamic_cast<CCSGameRules*>( GameRules() );
+
+			if ( pRules && !pRules->IsMatchWaitingForResume() )
+			{
+				UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Match_Will_Pause" );
+				pRules->SetMatchWaitingForResume( true );
+			}
+		}
+	}
+
+	static ConCommand mp_pause_match( "mp_pause_match", cc_PauseMatch, "Pause the match in the next freeze time" );	
+
+	//////// RESUME
+	void cc_ResumeMatch( const CCommand& args )
+	{
+		if ( UTIL_IsCommandIssuedByServerAdmin() )
+		{
+			CCSGameRules *pRules = dynamic_cast<CCSGameRules*>( GameRules() );
+
+			if ( pRules && pRules->IsMatchWaitingForResume() )
+			{
+				UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Match_Will_Resume" );
+				pRules->SetMatchWaitingForResume( false );
+			}
+		}
+	}
+
+	static ConCommand mp_unpause_match( "mp_unpause_match", cc_ResumeMatch, "Resume the match" );
 
 
 	class SetHumanTeamFunctor
@@ -4465,22 +4777,35 @@ ConVar snd_music_selection(
 		}
 	}
 
+    
+    // the following two functions cap the number of players on a team to five instead of basing it on the number of spawn points
+    int CCSGameRules::MaxNumPlayersOnTerrTeam()
+    {
+		bool bRandomTSpawn = mp_randomspawn.GetInt() == 1 || mp_randomspawn.GetInt() == TEAM_TERRORIST;
+        return bRandomTSpawn ? MAX_PLAYERS : m_iSpawnPointCount_Terrorist;
+    }
+
+    int CCSGameRules::MaxNumPlayersOnCTTeam()
+    {
+		bool bRandomCTSpawn = mp_randomspawn.GetInt() == 1 || mp_randomspawn.GetInt() == TEAM_CT;
+        return bRandomCTSpawn ? MAX_PLAYERS : m_iSpawnPointCount_CT;
+    }
 
 	bool CCSGameRules::TeamFull( int team_id )
 	{
-		CheckLevelInitialized();
+        CheckLevelInitialized();
 
-		switch ( team_id )
-		{
-		case TEAM_TERRORIST:
-			return m_iNumTerrorist >= m_iSpawnPointCount_Terrorist;
+        switch ( team_id )
+        {
+        case TEAM_TERRORIST:
+            return m_iNumTerrorist >= MaxNumPlayersOnTerrTeam();
 
-		case TEAM_CT:
-			return m_iNumCT >= m_iSpawnPointCount_CT;
-		}
+        case TEAM_CT:
+            return m_iNumCT >= MaxNumPlayersOnCTTeam();
+        }
 
-		return false;
-	}
+        return false;
+    }
 	
 	int CCSGameRules::GetHumanTeam()
 	{
@@ -4648,25 +4973,27 @@ ConVar snd_music_selection(
 			return false;
 
 		if ( !pPlayer->IsAbleToInstantRespawn() && !IsWarmupPeriod() )
-		// Player cannot respawn until next round if more than 20 seconds in
-
-		// Tabulate the number of players on each team.
-		m_iNumCT = GetGlobalTeam( TEAM_CT )->GetNumPlayers();
-		m_iNumTerrorist = GetGlobalTeam( TEAM_TERRORIST )->GetNumPlayers();
-
-		if ( m_iNumTerrorist > 0 && m_iNumCT > 0 )
 		{
-			if ( gpGlobals->curtime > (m_fRoundStartTime + 20) )
-			{
-				//If this player just connected and fadetoblack is on, then maybe
-				//the server admin doesn't want him peeking around.
-				color32_s clr = {0,0,0,255};
-				if ( mp_fadetoblack.GetBool() )
-				{
-					UTIL_ScreenFade( pPlayer, clr, 3, 3, FFADE_OUT | FFADE_STAYOUT );
-				}
+			// Player cannot respawn until next round if more than 20 seconds in
 
-				return false;
+			// Tabulate the number of players on each team.
+			m_iNumCT = GetGlobalTeam( TEAM_CT )->GetNumPlayers();
+			m_iNumTerrorist = GetGlobalTeam( TEAM_TERRORIST )->GetNumPlayers();
+
+			if ( m_iNumTerrorist > 0 && m_iNumCT > 0 )
+			{
+				if ( gpGlobals->curtime > (m_fRoundStartTime + 20) )
+				{
+					//If this player just connected and fadetoblack is on, then maybe
+					//the server admin doesn't want him peeking around.
+					color32_s clr = { 0, 0, 0, 255 };
+					if ( mp_fadetoblack.GetBool() )
+					{
+						UTIL_ScreenFade( pPlayer, clr, 3, 3, FFADE_OUT | FFADE_STAYOUT );
+					}
+
+					return false;
+				}
 			}
 		}
 
@@ -5513,7 +5840,28 @@ CBaseCombatWeapon *CCSGameRules::GetNextBestWeapon( CBaseCombatCharacter *pPlaye
 		{
 			if ( weapon->GetSlot() < bestWeapon->GetSlot() )
 			{
-				bestWeapon = weapon;
+				int nAmmo = 0;
+				if ( weapon->UsesClipsForAmmo1() )
+				{
+					nAmmo = weapon->Clip1();
+				}
+				else
+				{
+					if ( pPlayer )
+					{
+						nAmmo = weapon->GetReserveAmmoCount( AMMO_POSITION_PRIMARY );
+					}
+					else
+					{
+						// No owner, so return how much primary ammo I have along with me.
+						nAmmo = weapon->GetPrimaryAmmoCount();
+					}
+				}
+
+				if ( nAmmo > 0 )
+				{
+					bestWeapon = weapon;
+				}
 			}
 			else if ( weapon->GetSlot() == bestWeapon->GetSlot() && weapon->GetPosition() < bestWeapon->GetPosition() )
 			{
@@ -5691,10 +6039,14 @@ void CCSGameRules::EndWarmup( void )
 	m_bWarmupPeriod = false;
 	m_bCompleteReset = true;
 	m_fWarmupPeriodStart = -1;
-
+		
 	RestartRound();
 }
 #endif
+
+ConVar mp_randomspawn("mp_randomspawn", "0", FCVAR_REPLICATED, "Determines whether players are to spawn. 0 = default; 1 = both teams; 2 = Terrorists; 3 = CTs." );
+ConVar mp_randomspawn_los("mp_randomspawn_los", "1", FCVAR_REPLICATED, "If using mp_randomspawn, determines whether to test Line of Sight when spawning." );
+ConVar mp_randomspawn_dist( "mp_randomspawn_dist", "0", FCVAR_REPLICATED, "If using mp_randomspawn, determines whether to test distance when selecting this spot." );
 
 bool CCSGameRules::IsVIPMap() const
 {
@@ -5728,7 +6080,8 @@ float CCSGameRules::GetBuyTimeLength()
 		if ( mp_buytime.GetFloat() < GetWarmupPeriodEndTime() )
 			return GetWarmupPeriodEndTime();
 	}
-	return ( mp_buytime.GetFloat() * 60 );
+
+	return mp_buytime.GetFloat();
 }
 
 bool CCSGameRules::IsBuyTimeElapsed()
@@ -5737,6 +6090,11 @@ bool CCSGameRules::IsBuyTimeElapsed()
 		return false;
 
 	return ( GetRoundElapsedTime() > GetBuyTimeLength() );
+}
+
+bool CCSGameRules::IsMatchWaitingForResume()
+{
+	return m_bMatchWaitingForResume;
 }
 
 #ifndef CLIENT_DLL
@@ -5802,8 +6160,8 @@ CAmmoDef* GetAmmoDef()
 		ammoDef.AddAmmoType( AMMO_TYPE_FLASHBANG,		0,			TRACER_LINE, 0,	0, "ammo_flashbang_max", 1, 0 );
 		ammoDef.AddAmmoType( AMMO_TYPE_SMOKEGRENADE,	0,			TRACER_LINE, 0, 0, "ammo_smokegrenade_max", 1, 0 );
 		ammoDef.AddAmmoType( AMMO_TYPE_MOLOTOV,			DMG_BURN,	TRACER_NONE, 0, 0, "ammo_molotov_max", 0, 0, 0 );
-		ammoDef.AddAmmoType( AMMO_TYPE_DECOY,			0,			TRACER_NONE, 0, 0, "ammo_decoy_max", 0, 0, 0 );
-		 ammoDef.AddAmmoType( AMMO_TYPE_TASERCHARGE,		DMG_SHOCK,	TRACER_BEAM, 0, 0, 0, 0, 0, 0 );
+        ammoDef.AddAmmoType( AMMO_TYPE_DECOY,			0,			TRACER_NONE, 0, 0, "ammo_decoy_max", 0, 0, 0 );
+        ammoDef.AddAmmoType( AMMO_TYPE_TASERCHARGE,		DMG_SHOCK,	TRACER_BEAM, 0, 0, 0, 0, 0, 0 );
 
 		//Adrian: I set all the prices to 0 just so the rest of the buy code works
 		//This should be revisited.
@@ -6005,6 +6363,7 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 			pCSPlayer->m_bShowHints = false;
 		}
 	}
+
 	pCSPlayer->m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_knife_weapon_ct" ) );
 	pCSPlayer->m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_knife_weapon_t" ) );
 
@@ -6304,6 +6663,7 @@ bool CCSGameRules::IsPlayingAnyCompetitiveStrictRuleset( void ) const
 }
 
 
+
 //=============================================================================
 // HPE_BEGIN:
 // [menglish] Set up anything for all players that changes based on new players spawning mid-game
@@ -6393,6 +6753,7 @@ void CCSGameRules::FreezePlayers( void )
 		}
 	}
 }
+
 
 //=============================================================================
 // HPE_END
@@ -6583,6 +6944,15 @@ float CCSGameRules::CheckTotalSmokedLength( float flSmokeRadiusSq, Vector vecGre
 	return 0;
 }
 
+bool CCSGameRules::IsIntermission( void ) const
+{
+#ifndef CLIENT_DLL
+    return m_flIntermissionStartTime + GetIntermissionDuration() > gpGlobals->curtime;
+#endif
+
+    return false;
+}
+
 #ifdef CLIENT_DLL
 
 CCSGameRules::CCSGameRules()
@@ -6653,7 +7023,7 @@ void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType )
 	}
 
 	const char *pEntry = musicTypeStrings[ nMusicType ];
-
+	
 	if( pEntry )
 	{
 		const char* pMusicExtension = snd_music_selection.GetString();
@@ -6833,17 +7203,9 @@ void sv_competitive_minspec_changed_f( IConVar *var, const char *pOldValue, floa
 #endif
 
 static ConVar sv_competitive_minspec( "sv_competitive_minspec",
-									 "0",
+									 "1",
 									 FCVAR_REPLICATED | FCVAR_NOTIFY,
-									 "Enable to force certain client convars to minimum/maximum values to help prevent competitive advantages:\n \
-	r_drawdetailprops = 1\n \
-	r_staticprop_lod = minimum -1 maximum 3\n \
-	fps_max minimum 59 (0 works too)\n \
-	cl_detailfade minimum 400\n \
-	cl_detaildist minimum 1200\n \
-	cl_interp_ratio = minimum 1 maximum 2\n \
-	cl_interp = minimum 0 maximum 0.031\n \
-	"
+									 "Enable to force certain client convars to minimum/maximum values to help prevent competitive advantages."
 #ifdef CLIENT_DLL
 									 ,sv_competitive_minspec_changed_f
 #endif
@@ -6851,13 +7213,17 @@ static ConVar sv_competitive_minspec( "sv_competitive_minspec",
 
 #ifdef CLIENT_DLL
 
-ENABLE_COMPETITIVE_CONVAR( r_drawdetailprops, true, true ); // force r_drawdetailprops on
-ENABLE_COMPETITIVE_CONVAR( r_staticprop_lod, -1, 3 );		// force r_staticprop_lod from -1 to 3
 ENABLE_COMPETITIVE_CONVAR( fps_max, 59, FLT_MAX, 1, 0 );	// force fps_max above 59. One additional value (0) works
-ENABLE_COMPETITIVE_CONVAR( cl_detailfade, 400 );			// force cl_detailfade above 400.
-ENABLE_COMPETITIVE_CONVAR( cl_detaildist, 1200 );			// force cl_detaildist above 1200.
 ENABLE_COMPETITIVE_CONVAR( cl_interp_ratio, 1, 2 );			// force cl_interp_ratio from 1 to 2
-ENABLE_COMPETITIVE_CONVAR( cl_interp, 0, 0.031 );		// force cl_interp from 0.0152 to 0.031
+ENABLE_COMPETITIVE_CONVAR( cl_interp, 0, 0.031 );			// force cl_interp from 0.0152 to 0.031
+ENABLE_COMPETITIVE_CONVAR( cl_updaterate, 10, 150 );		// force cl_updaterate from 10 to 150
+ENABLE_COMPETITIVE_CONVAR( cl_cmdrate, 10, 150 );			// force cl_cmdrate from 10 to 150
+ENABLE_COMPETITIVE_CONVAR( rate, 20480, 786432 );			// force rate above min rate and below max rate
+ENABLE_COMPETITIVE_CONVAR( viewmodel_fov, 54, 68 );			// force viewmodel fov to be between 54 and 68
+ENABLE_COMPETITIVE_CONVAR( viewmodel_offset_x, -2, 2.5 );		// restrict viewmodel positioning
+ENABLE_COMPETITIVE_CONVAR( viewmodel_offset_y, -2, 2 );
+ENABLE_COMPETITIVE_CONVAR( viewmodel_offset_z, -2, 2 );
+ENABLE_COMPETITIVE_CONVAR( cl_bobcycle, 0.98, 0.98 );		// tournament standard
 
 // Stubs for replay client code
 const char *GetMapDisplayName( const char *pMapName )

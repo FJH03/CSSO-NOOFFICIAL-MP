@@ -766,6 +766,8 @@ BEGIN_RECV_TABLE_NOBASE( C_CSPlayer, DT_CSLocalPlayerExclusive )
 	RecvPropInt( RECVINFO( m_iDirection ) ),
 	RecvPropInt( RECVINFO( m_iShotsFired ) ),
 	RecvPropFloat( RECVINFO( m_flVelocityModifier ) ),
+	RecvPropBool( RECVINFO( m_bIsHoldingLookAtWeapon ) ),
+	RecvPropBool( RECVINFO( m_bIsLookingAtWeapon ) ),
 
 	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
 
@@ -860,8 +862,6 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropBool( RECVINFO( m_bNeedToChangeGloves ) ),
 	RecvPropInt( RECVINFO( m_iLoadoutSlotGlovesCT ) ),
 	RecvPropInt( RECVINFO( m_iLoadoutSlotGlovesT ) ),
-	RecvPropBool( RECVINFO( m_bIsLookingAtWeapon ) ),
-	RecvPropBool( RECVINFO( m_bIsHoldingLookAtWeapon ) ),
 	RecvPropBool( RECVINFO( m_bIsWalking ) ),
 	RecvPropBool( RECVINFO( m_bDuckOverride ) ),
 	RecvPropFloat( RECVINFO( m_flGroundAccelLinearFracLastTime ) ),
