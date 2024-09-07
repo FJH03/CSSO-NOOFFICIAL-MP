@@ -52,10 +52,6 @@
 #include "sixense/in_sixense.h"
 #endif
 
-#ifdef CSTRIKE_DLL
-#include "cs_shareddefs.h"
-#endif
-
 // NVNT haptic utils
 #include "haptics/haptic_utils.h"
 // memdbgon must be the last include file in a .cpp file!!!
@@ -93,6 +89,7 @@
 #endif
 
 ConVar sv_infinite_ammo( "sv_infinite_ammo", "0", FCVAR_REPLICATED, "Player's active weapon will never run out of ammo. If set to 2 then player has infinite total ammo but still has to reload the magazine." );
+
 ConVar view_punch_decay( "view_punch_decay", "18", FCVAR_CHEAT | FCVAR_REPLICATED, "Decay factor exponent for view punch" );
 ConVar view_recoil_tracking( "view_recoil_tracking", "0.45", FCVAR_CHEAT | FCVAR_REPLICATED, "How closely the view tracks with the aim punch from weapon recoil" );
 
@@ -550,7 +547,7 @@ void CBasePlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOri
 	float speed;
 	float velrun;
 	float velwalk;
-	int	fLadder;
+	bool fLadder;
 
 	if ( m_flStepSoundTime > 0 )
 	{
@@ -585,12 +582,7 @@ void CBasePlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOri
 	bool movingalongground = ( groundspeed > 0.0001f );
 	bool moving_fast_enough =  ( speed >= velwalk );
 
-#ifdef PORTAL
-	// In Portal we MUST play footstep sounds even when the player is moving very slowly
-	// This is used to count the number of footsteps they take in the challenge mode
-	// -Jeep
-	moving_fast_enough = true;
-#endif
+
 
 	// To hear step sounds you must be either on a ladder or moving along the ground AND
 	// You must be moving fast enough
@@ -600,7 +592,7 @@ void CBasePlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOri
 
 //	MoveHelper()->PlayerSetAnimation( PLAYER_WALK );
 
-	bWalking = speed < velrun;		
+	bWalking = speed < velrun;
 
 	VectorCopy( vecOrigin, knee );
 	VectorCopy( vecOrigin, feet );
@@ -693,8 +685,13 @@ void CBasePlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOri
 		fvol *= 0.65;
 	}
 
+#ifdef CSTRIKE_DLL
+	fvol *= 0.5; // vanilla source 2013 soundsystem sucks
+#endif
 	PlayStepSound( feet, psurface, fvol, false );
 }
+
+ConVar sv_max_distance_transmit_footsteps( "sv_max_distance_transmit_footsteps", "1250.0", FCVAR_REPLICATED, "Maximum distance to transmit footstep sound effects." );
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -702,7 +699,7 @@ void CBasePlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOri
 //			fvol - 
 //			force - force sound to play
 //-----------------------------------------------------------------------------
-void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, float fvol, bool force )
+void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, float fvol, bool bForce )
 {
 	if ( gpGlobals->maxClients > 1 && !sv_footsteps.GetFloat() )
 		return;
@@ -734,11 +731,27 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 	else
 	{
 		IPhysicsSurfaceProps *physprops = MoveHelper()->GetSurfaceProps();
-		const char *pSoundName = physprops->GetString( stepSoundName );
+		
+		// footstep sounds
+		const char *pRawSoundName = physprops->GetString( stepSoundName );
+		const char *pSoundName = NULL;
+		int const nStepCopyLen = V_strlen(pRawSoundName) + 4;
+		char *szStep = ( char * ) stackalloc( nStepCopyLen );
+		if ( GetTeamNumber() == TEAM_CT )
+		{
+			Q_snprintf(szStep, nStepCopyLen, "ct_%s", pRawSoundName);
+		}
+		else
+		{
+			Q_snprintf(szStep, nStepCopyLen, "t_%s", pRawSoundName);
+		}
 
-		// Give child classes an opportunity to override.
-		pSoundName = GetOverrideStepSound( pSoundName );
-
+		pSoundName = szStep;
+		if ( !CBaseEntity::GetParametersForSound( pSoundName, params, NULL ) )
+		{
+			DevMsg( "Can't find specific footstep sound! (%s) - Using the default instead. (%s)\n", pSoundName, pRawSoundName );
+			pSoundName = pRawSoundName;
+		}
 		if ( !CBaseEntity::GetParametersForSound( pSoundName, params, NULL ) )
 			return;
 
@@ -751,31 +764,66 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 	}
 
 	CRecipientFilter filter;
-	filter.AddRecipientsByPAS( vecOrigin );
+	
+#if defined( CLIENT_DLL )
+	// make sure we hear our own jump
+	filter.AddRecipient( this );
+	if ( prediction->InPrediction() && !bForce )
+	{
+		// Only use these rules when in prediction.
+		filter.UsePredictionRules();
+	}
+#endif
+
+	if( !bForce )
+	{
+		filter.AddRecipientsByPAS( vecOrigin );
+	}
 
 #ifndef CLIENT_DLL
 	// in MP, server removes all players in the vecOrigin's PVS, these players generate the footsteps client side
-	if ( gpGlobals->maxClients > 1 )
+	if ( gpGlobals->maxClients > 1 && !bForce )
 	{
 		filter.RemoveRecipientsByPVS( vecOrigin );
 	}
+	
+	if( bForce )
+	{
+		filter.AddAllPlayers();
+	}
+	// the client plays it's own sound
+	filter.RemoveRecipient( this );
+
+	// Don't transmit footsteps if they are outside maximum footstep transmission range.
+	for ( int i = 0; i < filter.GetRecipientCount(); ++i )
+	{
+		int entIndex = filter.GetRecipientIndex( i );
+		IHandleEntity* entity = gEntList.LookupEntityByNetworkIndex( entIndex );
+		if ( entity )
+		{
+			CBasePlayer* player = dynamic_cast<CBasePlayer*>( gEntList.GetBaseEntity( entity->GetRefEHandle() ) );
+			if ( player != NULL )
+			{
+				float dist = vecOrigin.DistTo( player->EyePosition() );
+				if ( dist > sv_max_distance_transmit_footsteps.GetFloat() )
+				{
+					filter.RemoveRecipient( player );
+				}
+			}
+		}
+	}
 #endif
+
+// #if defined( CLIENT_DLL )
+// 	Msg( "CLIENT_DLL: (PlayStepSound) filter recipients = %d\n", filter.GetRecipientCount() );
+// #else
+// 	Msg( "GAME_DLL: (PlayStepSound) filter recipients = %d\n", filter.GetRecipientCount() );
+// #endif
 
 	EmitSound_t ep;
 	ep.m_nChannel = CHAN_BODY;
 	ep.m_pSoundName = params.soundname;
-#if defined ( TF_DLL ) || defined ( TF_CLIENT_DLL )
-	if( TFGameRules()->IsMannVsMachineMode() )
-	{
-		ep.m_flVolume = params.volume;
-	}
-	else
-	{
-		ep.m_flVolume = fvol;
-	}
-#else
 	ep.m_flVolume = fvol;
-#endif
 	ep.m_SoundLevel = params.soundlevel;
 	ep.m_nFlags = 0;
 	ep.m_nPitch = params.pitch;
@@ -783,8 +831,25 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 
 	EmitSound( filter, entindex(), ep );
 
-	// Kyle says: ugggh. This function may as well be called "PerformPileOfDesperateGameSpecificFootstepHacks".
-	OnEmitFootstepSound( params, vecOrigin, fvol );
+	CSoundParameters paramsSuitSound;
+	if (!CBaseEntity::GetParametersForSound((GetTeamNumber() == TEAM_CT) ? "CT_Default.Suit" : "T_Default.Suit", paramsSuitSound, NULL))
+		return;
+
+	EmitSound_t epSuitSound;
+	epSuitSound.m_nChannel = CHAN_AUTO;
+	epSuitSound.m_pSoundName = paramsSuitSound.soundname;
+#ifdef CSTRIKE_DLL
+	epSuitSound.m_flVolume = fvol * 0.25; // vanilla source 2013 soundsystem sucks
+#else
+	epSuitSound.m_flVolume = fvol;
+#endif
+	epSuitSound.m_SoundLevel = paramsSuitSound.soundlevel;
+	epSuitSound.m_nFlags = 0;
+	epSuitSound.m_nPitch = paramsSuitSound.pitch;
+	epSuitSound.m_pOrigin = &vecOrigin;
+
+	EmitSound(filter, entindex(), epSuitSound);
+
 }
 
 void CBasePlayer::UpdateButtonState( int nUserCmdButtonMask )
@@ -1072,7 +1137,7 @@ void CBasePlayer::SelectItem( const char *pstr, int iSubType )
 	// Make sure the current weapon can be holstered
 	if ( GetActiveWeapon() )
 	{
-		if ( !GetActiveWeapon()->CanHolster() )
+		if ( !GetActiveWeapon()->CanHolster() && !pItem->ForceWeaponSwitch() )
 			return;
 
 		ResetAutoaim( );
@@ -1334,7 +1399,6 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 
 	return pNearest;
 }
-
 //-----------------------------------------------------------------------------
 // Purpose: Handles USE keypress
 //-----------------------------------------------------------------------------
@@ -1820,7 +1884,7 @@ void CBasePlayer::CalcPlayerView( Vector& eyeOrigin, QAngle& eyeAngles, float& f
 	CalcViewRoll( eyeAngles );
 
 	CalcAddViewmodelCameraAnimation( eyeOrigin, eyeAngles );
-
+	
 	// Apply punch angles
 	VectorAdd( eyeAngles, m_Local.m_viewPunchAngle, eyeAngles );
 
@@ -2081,6 +2145,7 @@ void CBasePlayer::CalcViewBob( Vector& eyeOrigin )
 	}
 #endif
 }
+
 
 void CBasePlayer::DoMuzzleFlash()
 {
