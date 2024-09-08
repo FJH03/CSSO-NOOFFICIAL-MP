@@ -601,7 +601,7 @@ ConVar snd_music_selection(
 
 	ConVar mp_use_official_map_factions(
 		"mp_use_official_map_factions",
-		"0",
+		"1",
 		FCVAR_REPLICATED | FCVAR_NOTIFY,
 		"Determines wheter to use official factions for the current map or make faction selections free for everyone.\n 0 - Disable\n 1 - Enable for everyone\n 2 - Enable for bots only" );
 
