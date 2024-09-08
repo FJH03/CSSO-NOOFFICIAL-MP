@@ -20,6 +20,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+extern ConVar closeonbuy;
+
 using namespace vgui;
 
 //-----------------------------------------------------------------------------
@@ -132,10 +134,21 @@ void CBuySubMenu::OnCommand( const char *command)
 
 		GetWizardPanel()->OnNextButton();
 	}
-	else 
+	else
 	{
-		GetWizardPanel()->Close();
-		gViewPortInterface->ShowBackGround( false );
+		if ( Q_strncmp( command, "buy ", 4 ) == 0 )
+		{
+			if ( closeonbuy.GetBool() )
+			{
+				GetWizardPanel()->Close();
+				gViewPortInterface->ShowBackGround( false );
+			}
+		}
+		else
+		{
+			GetWizardPanel()->Close();
+			gViewPortInterface->ShowBackGround( false );
+		}
 	
 		if ( Q_stricmp( command, "vguicancel" ) != 0 )
 			engine->ClientCmd( command );

@@ -22,7 +22,7 @@
 #include "c_cs_player.h"
 #include "cs_ammodef.h"
 
-ConVar closeonbuy( "closeonbuy", "0", FCVAR_ARCHIVE, "Set non-zero to close the buy menu after buying something", true, 0, true, 1 );
+ConVar closeonbuy( "closeonbuy", "1", FCVAR_ARCHIVE, "Set non-zero to close the buy menu after buying something", true, 0, true, 1 );
 
 using namespace vgui;
 
