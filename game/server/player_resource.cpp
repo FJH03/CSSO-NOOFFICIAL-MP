@@ -18,6 +18,7 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE(CPlayerResource, DT_PlayerResource)
 	SendPropArray3( SENDINFO_ARRAY3(m_iPing), SendPropInt( SENDINFO_ARRAY(m_iPing), 10, SPROP_UNSIGNED ) ),
 //	SendPropArray( SendPropInt( SENDINFO_ARRAY(m_iPacketloss), 7, SPROP_UNSIGNED ), m_iPacketloss ),
 	SendPropArray3( SENDINFO_ARRAY3(m_iScore), SendPropInt( SENDINFO_ARRAY(m_iScore), 12 ) ),
+	SendPropArray3( SENDINFO_ARRAY3(m_iAssists), SendPropInt( SENDINFO_ARRAY(m_iAssists), 12 ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_iDeaths), SendPropInt( SENDINFO_ARRAY(m_iDeaths), 12 ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_bConnected), SendPropInt( SENDINFO_ARRAY(m_bConnected), 1, SPROP_UNSIGNED ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_iTeam), SendPropInt( SENDINFO_ARRAY(m_iTeam), 4 ) ),
@@ -56,6 +57,7 @@ void CPlayerResource::Spawn( void )
 	{
 		m_iPing.Set( i, 0 );
 		m_iScore.Set( i, 0 );
+		m_iAssists.Set( i, 0 );
 		m_iDeaths.Set( i, 0 );
 		m_bConnected.Set( i, 0 );
 		m_iTeam.Set( i, 0 );
@@ -100,6 +102,7 @@ void CPlayerResource::UpdatePlayerData( void )
 		if ( pPlayer && pPlayer->IsConnected() )
 		{
 			m_iScore.Set( i, pPlayer->FragCount() );
+			m_iAssists.Set( i, pPlayer->AssistsCount() );
 			m_iDeaths.Set( i, pPlayer->DeathCount() );
 			m_bConnected.Set( i, 1 );
 			m_iTeam.Set( i, pPlayer->GetTeamNumber() );

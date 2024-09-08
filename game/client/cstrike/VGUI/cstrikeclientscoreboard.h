@@ -55,6 +55,7 @@ protected:
 		const char*		szClanTag;
 		int				playerIndex;
 		int				frags;
+		int				assists;
 		int				deaths;
 		int				ping;
 		const char*		szStatus;
@@ -66,6 +67,7 @@ protected:
 		vgui::Label*			pNameLabel;
 		vgui::Label*			pClanLabel;
 		vgui::Label*			pScoreLabel;
+		vgui::Label*			pAssistsLabel;
 		vgui::Label*			pDeathsLabel;
 		vgui::Label*			pPingLabel;
 		vgui::Label*			pMVPCountLabel;

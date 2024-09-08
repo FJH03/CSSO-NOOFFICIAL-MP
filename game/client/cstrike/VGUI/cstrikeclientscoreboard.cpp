@@ -143,6 +143,7 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 		pPlayerDisplay->pClanLabel = NULL;
 		pPlayerDisplay->pNameLabel = NULL;
 		pPlayerDisplay->pScoreLabel = NULL;
+		pPlayerDisplay->pAssistsLabel = NULL;
 		pPlayerDisplay->pDeathsLabel = NULL;
 		pPlayerDisplay->pPingLabel = NULL;
 		pPlayerDisplay->pMVPCountLabel = NULL;
@@ -155,6 +156,7 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 		pPlayerDisplay->pClanLabel = NULL;
 		pPlayerDisplay->pNameLabel = NULL;
 		pPlayerDisplay->pScoreLabel = NULL;
+		pPlayerDisplay->pAssistsLabel = NULL;
 		pPlayerDisplay->pDeathsLabel = NULL;
 		pPlayerDisplay->pPingLabel = NULL;
 		pPlayerDisplay->pMVPCountLabel = NULL;
@@ -184,6 +186,7 @@ CCSClientScoreBoardDialog::~CCSClientScoreBoardDialog()
 		delete pPlayerDisplay->pClanLabel;
         delete pPlayerDisplay->pNameLabel;
         delete pPlayerDisplay->pScoreLabel;
+        delete pPlayerDisplay->pAssistsLabel;
         delete pPlayerDisplay->pDeathsLabel;
         delete pPlayerDisplay->pPingLabel;
 		delete pPlayerDisplay->pMVPCountLabel;
@@ -196,6 +199,7 @@ CCSClientScoreBoardDialog::~CCSClientScoreBoardDialog()
 		delete pPlayerDisplay->pClanLabel;
 		delete pPlayerDisplay->pNameLabel;
 		delete pPlayerDisplay->pScoreLabel;
+		delete pPlayerDisplay->pAssistsLabel;
 		delete pPlayerDisplay->pDeathsLabel;
 		delete pPlayerDisplay->pPingLabel;
 		delete pPlayerDisplay->pMVPCountLabel;
@@ -298,6 +302,9 @@ void CCSClientScoreBoardDialog::SetupTeamDisplay( TeamDisplayInfo& teamDisplay, 
 	V_snprintf( tmpName, sizeof(tmpName), "%sPlayerScore0", szTeamPrefix );
 	Panel *pPlayerScore0 = FindChildByName( tmpName );
 
+	V_snprintf( tmpName, sizeof(tmpName), "%sPlayerAssists0", szTeamPrefix );
+	Panel *pPlayerAssists0 = FindChildByName( tmpName );
+
 	V_snprintf( tmpName, sizeof(tmpName), "%sPlayerDeaths0", szTeamPrefix );
 	Panel *pPlayerDeaths0 = FindChildByName( tmpName );
 
@@ -342,6 +349,13 @@ void CCSClientScoreBoardDialog::SetupTeamDisplay( TeamDisplayInfo& teamDisplay, 
 	if ( pPlayerScore0 != NULL )
 	{
 		pPlayerScore0->GetBounds( x, y, wide, tall );
+		teamDisplay.scoreAreaLineHeight = MAX( tall, teamDisplay.scoreAreaLineHeight );
+		teamDisplay.scoreAreaMinX = MIN( teamDisplay.scoreAreaMinX, x );
+		teamDisplay.scoreAreaMaxX = MAX( teamDisplay.scoreAreaMaxX, x + wide );
+	}
+	if ( pPlayerAssists0 != NULL )
+	{
+		pPlayerAssists0->GetBounds( x, y, wide, tall );
 		teamDisplay.scoreAreaLineHeight = MAX( tall, teamDisplay.scoreAreaLineHeight );
 		teamDisplay.scoreAreaMinX = MIN( teamDisplay.scoreAreaMinX, x );
 		teamDisplay.scoreAreaMaxX = MAX( teamDisplay.scoreAreaMaxX, x + wide );
@@ -472,6 +486,21 @@ void CCSClientScoreBoardDialog::SetupTeamDisplay( TeamDisplayInfo& teamDisplay, 
 			playerDisplay.pScoreLabel->SetVisible( false );
 		}
 
+		// assists
+		if ( pPlayerAssists0 != NULL )
+		{
+			pPlayerAssists0->GetBounds( x, y, wide, tall );
+			V_snprintf( tmpName, 32, "_%s_playerassists%d", szTeamPrefix, i );
+			delete playerDisplay.pAssistsLabel;
+			playerDisplay.pAssistsLabel = (Label*) SETUP_PANEL( new Label( this, tmpName, "" ) );
+			playerDisplay.pAssistsLabel->SetFont( m_listItemFont );
+			playerDisplay.pAssistsLabel->SetBounds( x, startY, wide, tall );
+			playerDisplay.pAssistsLabel->SetBgColor( m_PlayerDataBgColor );
+			playerDisplay.pAssistsLabel->SetFgColor( m_teamDisplayCT.playerDataColor );
+			playerDisplay.pAssistsLabel->SetContentAlignment( Label::a_center );
+			playerDisplay.pAssistsLabel->SetVisible( false );
+		}
+
 		// deaths
 		if ( pPlayerDeaths0 != NULL )
 		{
@@ -556,13 +585,19 @@ int CCSClientScoreBoardDialog::PlayerSortFunction( PlayerScoreInfo* const* pLeft
     if ( pPlayer1->frags < pPlayer2->frags )
 		return 1;
 
-    // second compare deaths
+    // second compare assists
+	if ( pPlayer1->assists > pPlayer2->assists )
+		return -1;
+	if ( pPlayer1->assists < pPlayer2->assists )
+		return 1;
+
+    // third compare deaths
     if ( pPlayer1->deaths > pPlayer2->deaths )
 		return 1;
     if ( pPlayer1->deaths < pPlayer2->deaths )
 		return -1;
 
-    // if score and deaths are the same, use player index to get deterministic sort
+    // if score, assists and deaths are the same, use player index to get deterministic sort
     if ( pPlayer1->playerIndex < pPlayer2->playerIndex )
 		return -1;
 	else
@@ -839,7 +874,6 @@ void CCSClientScoreBoardDialog::UpdateTeamPlayerDisplay( TeamDisplayInfo& teamDi
 			if ( pUTF8Name != NULL && V_strlen( pUTF8Name ) > 0 )
 			{
 				bool isAlive = cs_PR->IsAlive( playerIndex );
-
 #if CS_CONTROLLABLE_BOTS_ENABLED
 				if ( cs_PR->GetControlledByPlayer( playerIndex ) > 0 )
 					isAlive = true;
@@ -891,6 +925,17 @@ void CCSClientScoreBoardDialog::UpdateTeamPlayerDisplay( TeamDisplayInfo& teamDi
 					playerDisplay.pScoreLabel->SetPos(xPos, startY);
 				}
 
+				if ( playerDisplay.pAssistsLabel != NULL )
+				{
+					Q_snprintf( tmpbuf, sizeof( tmpbuf ), "%d", pPlayerScore->assists);
+					playerDisplay.pAssistsLabel->SetVisible( true );
+					playerDisplay.pAssistsLabel->SetText( tmpbuf );
+					playerDisplay.pAssistsLabel->SetBgColor( m_PlayerDataBgColor );
+					playerDisplay.pAssistsLabel->SetFgColor( fgColor );
+					playerDisplay.pAssistsLabel->GetPos( xPos, yPos );
+					playerDisplay.pAssistsLabel->SetPos( xPos, startY );
+				}
+
 				if ( playerDisplay.pDeathsLabel != NULL )
 				{
 					Q_snprintf( tmpbuf, sizeof( tmpbuf ), "%d", pPlayerScore->deaths);
@@ -900,7 +945,6 @@ void CCSClientScoreBoardDialog::UpdateTeamPlayerDisplay( TeamDisplayInfo& teamDi
 					playerDisplay.pDeathsLabel->SetFgColor( fgColor );
 					playerDisplay.pDeathsLabel->GetPos(xPos, yPos);
 					playerDisplay.pDeathsLabel->SetPos(xPos, startY);
-
 				}
 
 				if ( playerDisplay.pPingLabel != NULL )
@@ -965,6 +1009,9 @@ void CCSClientScoreBoardDialog::UpdateTeamPlayerDisplay( TeamDisplayInfo& teamDi
 
 		if ( playerDisplay.pScoreLabel != NULL )
 			playerDisplay.pScoreLabel->SetVisible(false);
+
+		if ( playerDisplay.pAssistsLabel != NULL )
+			playerDisplay.pAssistsLabel->SetVisible( false );
 
 		if ( playerDisplay.pDeathsLabel != NULL )
 			playerDisplay.pDeathsLabel->SetVisible(false);
@@ -1334,6 +1381,7 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, PlayerScore
 
     playerScoreInfo.playerIndex = playerIndex;
     playerScoreInfo.frags = g_PR->GetPlayerScore( playerIndex );
+    playerScoreInfo.assists = g_PR->GetAssists( playerIndex );
     playerScoreInfo.deaths = g_PR->GetDeaths( playerIndex );
 
     if ( g_PR->GetPing( playerIndex ) < 1 )
@@ -1390,8 +1438,7 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, PlayerScore
 	if ( cs_PR->GetControlledPlayer( playerIndex ) > 0 )
 		isAlive = false;
 #endif
-
-	if ( !g_PR->IsAlive( playerIndex ) && g_PR->GetTeam( playerIndex ) > TEAM_SPECTATOR )
+	if ( !isAlive )
 	{
 		playerScoreInfo.szStatus = "../hud/scoreboard_dead";
 	}
@@ -1415,7 +1462,7 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, PlayerScore
 		if ( cs_PR->GetControlledPlayer( playerIndex ) > 0 )
 			isAlive = false;
 #endif
-		if ( g_PR->IsAlive( playerIndex ) )
+		if ( isAlive )
 		{
 			playerScoreInfo.szStatus = "../hud/scoreboard_nemesis";
 		}
@@ -1428,14 +1475,14 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, PlayerScore
 	if ( pLocalPlayer->IsPlayerDominated(playerIndex) )
 	{
 		bool isAlive = g_PR->IsAlive( playerIndex );
-		
+
 #if CS_CONTROLLABLE_BOTS_ENABLED
 		if ( cs_PR->GetControlledByPlayer( playerIndex ) > 0 )
 			isAlive = true;
 		if ( cs_PR->GetControlledPlayer( playerIndex ) > 0 )
 			isAlive = false;
 #endif
-		if ( g_PR->IsAlive( playerIndex ) )
+		if ( isAlive )
 		{
 			playerScoreInfo.szStatus = "../hud/scoreboard_dominated";
 		}
@@ -1611,7 +1658,6 @@ void CCSClientScoreBoardDialog::OnThink()
 bool CCSClientScoreBoardDialog::ForceLocalPlayerVisible( TeamDisplayInfo& teamDisplay )
 {
 	int iLocalPlayerIndex = GetLocalPlayerIndex();
-
 #if CS_CONTROLLABLE_BOTS_ENABLED
 	C_CSPlayer* pLocalPlayer = ToCSPlayer( UTIL_PlayerByIndex( iLocalPlayerIndex ) );
 	if ( pLocalPlayer->IsControllingBot() )
