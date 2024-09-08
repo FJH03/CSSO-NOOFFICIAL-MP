@@ -198,16 +198,15 @@ public:
 
 	unsigned int operator()( const NavVisPair_t &item ) const
 	{
-		COMPILE_TIME_ASSERT( sizeof(CNavArea *) == sizeof( intp ) );
-		intp key[2] = { (intp)item.pAreas[0] + item.pAreas[1]->GetID(), (intp)item.pAreas[1] + item.pAreas[0]->GetID() };
-		if ( sizeof( key ) >= 16 )
-		{
-			return Hash16( key );
-		}
-		else
-		{
-			return Hash8( key );
-		}
+#if PLATFORM_64BITS
+		COMPILE_TIME_ASSERT( sizeof(CNavArea *) == 8 );
+		int64 key[2] = { (int64)(item.pAreas[0] + item.pAreas[1]->GetID()), (int64)(item.pAreas[1] + item.pAreas[0]->GetID()) };
+		return Hash16( key );
+#else
+		COMPILE_TIME_ASSERT( sizeof(CNavArea *) == 4 );
+		int key[2] = { (int)(item.pAreas[0] + item.pAreas[1]->GetID()), (int)(item.pAreas[1] + item.pAreas[0]->GetID()) };
+		return Hash8( key );
+#endif
 	}
 };
 
