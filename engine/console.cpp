@@ -1268,7 +1268,8 @@ void CConPanel::Paint()
 
 //-----------------------------------------------------------------------------
 // Purpose: 
-static ConVar mod_version( "mod_version", "0.6", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static ConVar mod_version( "mod_version", "0.7", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
 void CConPanel::PaintBackground()
 {
 	if ( !Con_IsVisible() )
@@ -1277,10 +1278,14 @@ void CConPanel::PaintBackground()
 	int wide = GetWide();
 	char ver[ 100 ];
 	
-       if ( !Q_stricmp( "csso", GetCurrentMod() ) ) // weird hardcode but works
-		Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)  CS:SO v%2.1f by PiMoNFeeD\nUnofficial port by /dev/nvme0n1,den4iklovelinux,AndraMidoxXx\nTelegram channel:@CSSource_Offensive_Android", PROTOCOL_VERSION, build_number(), mod_version.GetFloat() );
-        else
+       if ( !Q_stricmp( "csso", GetCurrentMod() ) ){ // weird hardcode but works
+		Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)  CS:SO v%2.1f by PiMoNFeeD", PROTOCOL_VERSION, build_number(), mod_version.GetFloat() );
+	        Q_snprintf(ver, sizeof( ver ), "Unofficial port by /dev/nvme0n1,den4iklovelinux,AndraMidoxXx");
+                Q_snprintf(ver, sizeof( ver ), "Telegram channel: @CSSource_Offensive_Android");
+        }
+        else{
              Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)", PROTOCOL_VERSION, build_number() );
+        }
 
 	wchar_t unicode[ 200 ];
 	g_pVGuiLocalize->ConvertANSIToUnicode( ver, unicode, sizeof( unicode ) );
