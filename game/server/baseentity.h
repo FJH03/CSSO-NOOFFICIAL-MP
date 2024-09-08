@@ -425,6 +425,9 @@ public:
 	bool					IsCurrentlyTouching( void ) const;
 	const Vector&			GetAbsOrigin( void ) const;
 	const QAngle&			GetAbsAngles( void ) const;
+	inline Vector			Forward() const RESTRICT; ///< get my forward (+x) vector
+	inline Vector			Left() const RESTRICT;    ///< get my left    (+y) vector
+	inline Vector			Up() const RESTRICT;      ///< get my up      (+z) vector
 
 	SolidType_t				GetSolid() const;
 	int			 			GetSolidFlags( void ) const;

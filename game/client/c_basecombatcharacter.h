@@ -39,6 +39,8 @@ public:
 	virtual bool	IsBaseCombatCharacter( void ) { return true; };
 	virtual C_BaseCombatCharacter *MyCombatCharacterPointer( void ) { return this; }
 
+	virtual void DropPhysicsMag( const char *options ) {}
+	
 	// -----------------------
 	// Vision
 	// -----------------------

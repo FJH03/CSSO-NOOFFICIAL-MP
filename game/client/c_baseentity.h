@@ -539,6 +539,9 @@ public:
 	// Sets abs angles, but also sets local angles to be appropriate
 	void							SetAbsOrigin( const Vector& origin );
  	void							SetAbsAngles( const QAngle& angles );
+	inline Vector					Forward() const RESTRICT; ///< get my forward (+x) vector
+	inline Vector					Left() const RESTRICT;    ///< get my left    (+y) vector
+	inline Vector					Up() const RESTRICT;      ///< get my up      (+z) vector
 
 	void							AddFlag( int flags );
 	void							RemoveFlag( int flagsToRemove );

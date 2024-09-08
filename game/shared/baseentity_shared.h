@@ -305,6 +305,27 @@ inline bool IsEntityQAngleVelReasonable( const QAngle &q )
 		q.z > -r && q.z < r;
 }
 
+// convenience functions for fishing out the vectors of this object
+// equivalent to GetVectors(), but doesn't need an intermediate stack 
+// variable (which might cause an LHS anyway)
+inline Vector	CBaseEntity::Forward() const RESTRICT  ///< get my forward (+x) vector
+{
+	const matrix3x4_t &mat = EntityToWorldTransform();
+	return Vector( mat[0][0], mat[1][0], mat[2][0] );
+}
+
+inline Vector	CBaseEntity::Left() const RESTRICT     ///< get my left    (+y) vector
+{
+	const matrix3x4_t &mat = EntityToWorldTransform();
+	return Vector( mat[0][1], mat[1][1], mat[2][1] );
+}
+
+inline Vector	CBaseEntity::Up() const  RESTRICT      ///< get my up      (+z) vector
+{
+	const matrix3x4_t &mat = EntityToWorldTransform();
+	return Vector( mat[0][2], mat[1][2], mat[2][2] );
+}
+
 extern bool CheckEmitReasonablePhysicsSpew();
 
 #endif // BASEENTITY_SHARED_H

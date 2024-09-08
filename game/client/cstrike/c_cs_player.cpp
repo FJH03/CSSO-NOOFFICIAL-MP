@@ -45,6 +45,8 @@
 #include "cs_loadout.h"
 #include "cs_shareddefs.h"
 
+#include "eventlist.h"
+
 // NVNT - haptics system for spectating
 #include "haptics/haptic_utils.h"
 
@@ -60,6 +62,8 @@
 #include "iviewrender.h"				//for view->
 
 #include "iviewrender_beams.h"			// flashlight beam
+
+#include "physpropclientside.h"			// for dropping physics mags
 
 //=============================================================================
 // HPE_BEGIN:
@@ -82,6 +86,9 @@ ConVar cl_left_hand_ik( "cl_left_hand_ik", "0", 0, "Attach player's left hand to
 ConVar cl_crosshair_sniper_width( "cl_crosshair_sniper_width", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If >1 sniper scope cross lines gain extra width (1 for single-pixel hairline)" );
 
 ConVar cl_ragdoll_physics_enable( "cl_ragdoll_physics_enable", "1", 0, "Enable/disable ragdoll physics." );
+
+#define sv_magazine_drop_physics 1
+#define sv_magazine_drop_time 15
 
 ConVar cl_minmodels( "cl_minmodels", "0", 0, "Uses one player model for each team." );
 ConVar cl_min_ct( "cl_min_ct", "1", 0, "Controls which CT model is used when cl_minmodels is set.", true, 1, true, 4 );
@@ -964,6 +971,9 @@ C_CSPlayer::C_CSPlayer() :
 	m_bPlayingHostageCarrySound = false;
 
 	m_iMoveState = MOVESTATE_IDLE;
+
+	m_flNextMagDropTime = 0;
+	m_nLastMagDropAttachmentIndex = -1;
 }
 
 
@@ -2503,6 +2513,145 @@ void C_CSPlayer::PlayReloadEffect()
 	}
 }
 
+void C_CSPlayer::DropPhysicsMag( const char *options )
+{
+	// create a client-side physical magazine model to drop in the world and clatter to the floor. Realism!
+
+	if ( !sv_magazine_drop_physics )
+		return;
+
+	CWeaponCSBase *pWeapon = GetActiveCSWeapon();
+	if ( !pWeapon || pWeapon->GetCSWpnData().m_szMagModel[0] == 0 )
+		return;
+	
+	Vector attachOrigin = GetAbsOrigin() + Vector(0,0,50);
+	QAngle attachAngles = QAngle(0,0,0);
+
+	// find the best attachment position to drop the mag from
+
+	int iMagAttachIndex = -1;
+
+	if ( options && options[0] != 0 )
+	{
+		// if a custom attachment is specified, look for it on the weapon, then the player.
+		iMagAttachIndex = pWeapon->LookupAttachment( options );
+		if ( iMagAttachIndex <= 0 )
+			iMagAttachIndex = LookupAttachment( options );
+	}
+
+	if ( iMagAttachIndex <= 0 )
+	{
+		// we either didn't specify a custom attachment, or the one we did wasn't found. Find the default, 'mag_eject' on the weapon, then the player.
+		iMagAttachIndex = pWeapon->LookupAttachment( "mag_eject" );
+		if ( iMagAttachIndex <= 0 )
+			iMagAttachIndex = LookupAttachment( "mag_eject" );
+	}
+
+	if ( iMagAttachIndex <= 0 )
+	{
+		// no luck looking for the custom attachment, or "mag_eject". How about "shell_eject"? Wrong, but better than nothing...
+		iMagAttachIndex = pWeapon->LookupAttachment( "shell_eject" );
+	}
+	
+
+	// limit mag drops to one per second, in case animations accidentally overlap or events erroneously get fired too rapidly
+	// let new attachment indices through though, for elites
+	if ( m_flNextMagDropTime > gpGlobals->curtime && iMagAttachIndex == m_nLastMagDropAttachmentIndex )
+		return;
+	m_flNextMagDropTime = gpGlobals->curtime + 1;
+	m_nLastMagDropAttachmentIndex = iMagAttachIndex;
+
+	if ( iMagAttachIndex <= 0 )
+	{
+		return;
+	}
+
+	if ( !IsDormant() )
+	{
+		if ( !pWeapon->GetAttachment( iMagAttachIndex, attachOrigin, attachAngles ) )
+		{
+			GetAttachment( iMagAttachIndex, attachOrigin, attachAngles );
+		}
+	}
+
+	// hide the animation-driven w_model magazine
+	pWeapon->SetBodygroup( FindBodygroupByName( "magazine" ), 1 );
+
+	// The local first-person player can't drop mags in the correct world-space location, otherwise the mag would appear in mid-air.
+	// Instead, first try to drop the mag slightly above the origin of the player.
+	// However if the player is looking nearly straight down, they'll still see the mag appear. If this is the case,
+	// drop the mags from 10 units behind their eyes. This means the mag ALWAYS drops in from "off-screen"
+	if ( ( IsLocalPlayer() && !ShouldDraw() ) || GetSpectatorMode() == OBS_MODE_IN_EYE )
+	{
+		if ( EyeAngles().x < 42.0f ) //not looking extremely vertically downward
+		{
+			attachOrigin = GetAbsOrigin() + Vector(0,0,20);
+		}
+		else
+		{
+			attachOrigin = EyePosition() - ( Forward() * 10 );
+		}
+	}
+
+	C_PhysPropClientside *pEntity = C_PhysPropClientside::CreateNew();
+	if ( !pEntity )
+		return;
+
+	pEntity->SetModelName( pWeapon->GetCSWpnData().m_szMagModel );
+	pEntity->SetPhysicsMode( PHYSICS_MULTIPLAYER_CLIENTSIDE );
+	pEntity->SetCollisionGroup( COLLISION_GROUP_DEBRIS );
+	pEntity->SetFadeMinMax( 500.0f, 550.0f );
+	pEntity->SetLocalOrigin( attachOrigin );
+	pEntity->SetLocalAngles( attachAngles );
+	pEntity->m_iHealth = 0;
+	pEntity->m_takedamage = DAMAGE_NO;
+
+	if ( !pEntity->Initialize() )
+	{
+		pEntity->Release();
+		return;
+	}
+
+	// fade out after set time
+	pEntity->StartFadeOut( sv_magazine_drop_time );
+
+	// apply starting velocity
+	IPhysicsObject *pPhysicsObject = pEntity->VPhysicsGetObject();
+	if( pPhysicsObject )
+	{
+		if ( !IsDormant() ) // don't apply velocity to mags dropped by dormant players
+		{
+			Vector vecMagVelocity; vecMagVelocity.Init();
+			Quaternion quatMagAngular; quatMagAngular.Init();
+			if ( !pWeapon->GetAttachmentVelocity( iMagAttachIndex, vecMagVelocity, quatMagAngular ) )
+			{
+				GetAttachmentVelocity( iMagAttachIndex, vecMagVelocity, quatMagAngular );
+			}
+
+			// if the local attachment is returning no motion, pull velocity from the player just to be sure
+			if ( vecMagVelocity == vec3_origin )
+				vecMagVelocity = GetLocalVelocity();
+
+			QAngle angMagAngular; angMagAngular.Init();
+			QuaternionAngles( quatMagAngular, angMagAngular );
+
+			AngularImpulse angImpMagAngular; angImpMagAngular.Init();
+			QAngleToAngularImpulse( angMagAngular, angImpMagAngular );
+
+			// clamp to 300 max
+			if ( vecMagVelocity.Length() > 300.0f )
+				vecMagVelocity = vecMagVelocity.Normalized() * 300.0f;
+
+			pPhysicsObject->SetVelocity( &vecMagVelocity, &angImpMagAngular );
+		}
+	}
+	else
+	{
+		pEntity->Release();
+		return;
+	}
+}
+
 void C_CSPlayer::DoAnimationEvent( PlayerAnimEvent_t event, int nData )
 {
 	if ( event == PLAYERANIMEVENT_THROW_GRENADE )
@@ -2575,6 +2724,27 @@ void C_CSPlayer::FireEvent( const Vector& origin, const QAngle& angles, int even
 			data.m_flScale = random->RandomFloat( 4.0f, 7.0f );
 			DispatchEffect( "waterripple", data );
 		}
+	}
+	else if ( event == AE_CL_EJECT_MAG_UNHIDE )
+	{
+		// mag is unhidden by the server
+		return;
+	}
+	else if ( event == AE_CL_EJECT_MAG )
+	{
+		DropPhysicsMag( options );
+
+		// hack: in first-person, the player isn't playing their third-person gun animations, so the events on the third-person gun model don't fire.
+		// This means the event is fired from the player, and the player only fires ONE mag drop event. So while the elite model drops two data-driven mags
+		// in third person, we need to help it out a little bit in first-person. So here's some one-off code to drop another physics mag only for the elite,
+		// and only in first-person.
+
+		CWeaponCSBase *pWeapon = GetActiveCSWeapon();
+		if ( pWeapon && pWeapon->IsA(WEAPON_ELITE) )
+		{
+			DropPhysicsMag( "mag_eject2" );
+		}
+		return;
 	}
 	else
 		BaseClass::FireEvent( origin, angles, event, options );

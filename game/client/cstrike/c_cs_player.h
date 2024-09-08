@@ -134,6 +134,8 @@ public:
 
 	virtual void FireEvent( const Vector& origin, const QAngle& angles, int event, const char *options );
 
+	virtual void DropPhysicsMag( const char *options ) OVERRIDE;
+
 	bool		 HasC4( void );
 
 	virtual void CreateLightEffects( void ) {}	//no dimlight effects
@@ -511,6 +513,10 @@ private:
 #endif
 public:
 	Vector m_vecLastAliveLocalVelocity;
+
+private:
+	float		m_flNextMagDropTime;
+	int			m_nLastMagDropAttachmentIndex;
 };
 
 C_CSPlayer* GetLocalOrInEyeCSPlayer( void );

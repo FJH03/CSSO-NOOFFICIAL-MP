@@ -18,6 +18,7 @@
 #ifdef CLIENT_DLL
 	#include "prediction.h"
 	#include "npcevent.h"
+	#include "eventlist.h"
 #endif
 // NVNT end extra includes
 
@@ -231,6 +232,20 @@ const unsigned char *CBaseCombatWeapon::GetEncryptionKey( void )
 { 
 	return g_pGameRules->GetEncryptionKey(); 
 }
+
+#ifdef CLIENT_DLL
+void CBaseCombatWeapon::FireEvent( const Vector& origin, const QAngle& angles, int event, const char *options )
+{
+	if ( event == AE_CL_EJECT_MAG )
+	{
+		C_BaseCombatCharacter *pPlayer = GetOwner();
+		if ( pPlayer )
+		{
+			pPlayer->DropPhysicsMag( options );
+		}
+	}
+}
+#endif
 
 //-----------------------------------------------------------------------------
 // Purpose:
