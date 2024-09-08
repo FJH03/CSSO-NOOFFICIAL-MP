@@ -17,7 +17,6 @@
 #include "weapon_csbase.h"
 #include "baseparticleentity.h"
 #include "beamdraw.h"
-#include "cs_loadout.h"
 
 #include "cs_player_shared.h"
 

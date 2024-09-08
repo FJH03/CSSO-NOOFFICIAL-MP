@@ -47,6 +47,7 @@
 
 ConVar sv_showimpacts("sv_showimpacts", "0", FCVAR_REPLICATED, "Shows client (red) and server (blue) bullet impact point (1=both, 2=client-only, 3=server-only)" );
 ConVar sv_showplayerhitboxes( "sv_showplayerhitboxes", "0", FCVAR_REPLICATED, "Show lag compensated hitboxes for the specified player index whenever a player fires." );
+
 extern ConVar mp_respawn_on_death_ct;
 extern ConVar mp_respawn_on_death_t;
 
@@ -61,18 +62,6 @@ void DispatchEffect( const char *pName, const CEffectData &data );
 #define CPlantedC4 C_PlantedC4
 #endif
 
-bool CCSPlayer::IsAbleToInstantRespawn( void )
-{
-	if ( CSGameRules() )
-	{
-		if ( CSGameRules()->IsWarmupPeriod() )
-			return true;
-	}
-
-	// if we use respawn waves AND the next respawn wave is past AND our team is able to respawn OR it is the warmup period
-	return (	CSGameRules() && ( ( mp_respawn_on_death_ct.GetBool() && GetTeamNumber() == TEAM_CT ) || 
-		( mp_respawn_on_death_t.GetBool() && GetTeamNumber() == TEAM_TERRORIST ) ) );
-}
 
 #ifdef _DEBUG
 
@@ -167,6 +156,19 @@ bool CCSPlayer::IsAbleToInstantRespawn( void )
 
 #endif
 
+bool CCSPlayer::IsAbleToInstantRespawn( void )
+{
+	if ( CSGameRules() )
+	{
+		if ( CSGameRules()->IsWarmupPeriod() )
+			return true;
+	}
+
+	// if we use respawn waves AND the next respawn wave is past AND our team is able to respawn OR it is the warmup period
+	return (	CSGameRules() && ( ( mp_respawn_on_death_ct.GetBool() && GetTeamNumber() == TEAM_CT ) || 
+		( mp_respawn_on_death_t.GetBool() && GetTeamNumber() == TEAM_TERRORIST ) ) );
+}
+
 float CCSPlayer::GetPlayerMaxSpeed()
 {
 	if ( GetMoveType() == MOVETYPE_NONE )
@@ -181,7 +183,7 @@ float CCSPlayer::GetPlayerMaxSpeed()
 	}
 
 	bool bValidMoveState = ( State_Get() == STATE_ACTIVE || State_Get() == STATE_OBSERVER_MODE );
-	if ( !bValidMoveState || m_bIsDefusing || CSGameRules()->IsFreezePeriod() )
+	if ( !bValidMoveState || m_bIsDefusing || m_bIsGrabbingHostage || CSGameRules()->IsFreezePeriod() )
 	{
 		// Player should not move during the freeze period
 		return CS_PLAYER_SPEED_STOPPED;
@@ -209,6 +211,11 @@ float CCSPlayer::GetPlayerMaxSpeed()
 				speed = MIN(speed, pWeapon->GetMaxSpeed());
 			}
 		}
+	}
+
+	if ( m_hCarriedHostage != NULL )
+	{
+		speed = MIN(speed, CS_PLAYER_SPEED_HAS_HOSTAGE);
 	}
 
 	return speed;
@@ -279,6 +286,8 @@ bool CCSPlayer::IsOtherEnemy( CCSPlayer *pPlayer )
 
 	return nTeam != nOtherTeam;
 }
+
+
 
 bool CCSPlayer::GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity, CConfigurationForHighPriorityUseEntity_t &cfg )
 {
@@ -1207,6 +1216,10 @@ void CCSPlayer::FireBullet(
 
 }
 
+
+
+
+
 // [dkorus] helper for FireBullet
 //			changes iPenetration to updated value
 //			returns TRUE if we should stop processing more hits after this one
@@ -1486,8 +1499,11 @@ void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 #endif
 #endif
 
-void CCSPlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOrigin, const Vector &vecVelocity  )
+void CCSPlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOrigin, const Vector &vecVelocity )
 {
+	if ( IsBot() && IsDormant() )
+		return;
+
 	if (!IsAlive())
 		return;
 
@@ -1504,16 +1520,16 @@ void CCSPlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOrigi
 			// we start running making it easier to co-ordinate suit and
 			// step sounds.
 			SetStepSoundTime( STEPSOUNDTIME_NORMAL, false );
-		} 
+		}
+
 		return; // player is not running, no footsteps
 	}
-	
+
 	BaseClass::UpdateStepSound( psurface, vecOrigin, vecVelocity  );
 }
 
 ConVar weapon_recoil_view_punch_extra( "weapon_recoil_view_punch_extra", "0.055", FCVAR_CHEAT | FCVAR_REPLICATED, "Additional (non-aim) punch added to view from recoil" );
 
-// GOOSEMAN : Kick the view..
 void CCSPlayer::KickBack( float fAngle, float fMagnitude )
 {
 	QAngle angleVelocity(0,0,0);
@@ -1552,7 +1568,7 @@ bool CCSPlayer::CanMove() const
 
 	bool bValidMoveState = (State_Get() == STATE_ACTIVE || State_Get() == STATE_OBSERVER_MODE);
 
-	if ( m_bIsDefusing || !bValidMoveState || CSGameRules()->IsFreezePeriod() )
+	if ( m_bIsDefusing || m_bIsGrabbingHostage || !bValidMoveState || CSGameRules()->IsFreezePeriod() )
 	{
 		return false;
 	}

@@ -24,6 +24,7 @@
 #include "bot_util.h"
 #include "cdll_int.h"
 #include "steamworks_gamestats.h"
+#include "cs_loadout.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -483,7 +484,7 @@ void CCSGameStats::Event_PlayerKilled_PreWeaponDrop( CBasePlayer *pPlayer, const
 			CSWeaponID attackerWeaponID = attackerWeapon->GetCSWeaponID();
 			CSWeaponID victimWeaponID = victimWeapon->GetCSWeaponID();
 
-			if (attackerWeaponID == WEAPON_KNIFE && victimWeaponID == WEAPON_KNIFE)
+			if ( (CSLoadout()->IsKnife( attackerWeaponID )) && (CSLoadout()->IsKnife( victimWeaponID )) )
 			{
 				IncrementStat(pAttacker, CSSTAT_KILLS_KNIFE_FIGHT, 1);
 			}
@@ -1571,13 +1572,13 @@ void CCSGameStats::TrackKillStats( CCSPlayer *pAttacker, CCSPlayer *pVictim )
     int iPlayerIndexVictim = pVictim->entindex();
 
     PlayerStats_t &statsAttacker = m_aPlayerStats[iPlayerIndexAttacker];
-    PlayerStats_t &statsVictim = m_aPlayerStats[iPlayerIndexVictim];
+	PlayerStats_t &statsVictim = m_aPlayerStats[iPlayerIndexVictim];
 
 #if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( !pVictim->IsControllingBot() )
 #endif
 	{
-	   	statsVictim.statsKills.iNumKilledBy[iPlayerIndexAttacker]++;
+	   statsVictim.statsKills.iNumKilledBy[iPlayerIndexAttacker]++;
 		statsVictim.statsKills.iNumKilledByUnanswered[iPlayerIndexAttacker]++;
 	}
 

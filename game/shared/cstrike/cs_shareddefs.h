@@ -57,9 +57,10 @@
 
 extern const float CS_PLAYER_SPEED_RUN;
 extern const float CS_PLAYER_SPEED_VIP;
-extern const float CS_PLAYER_SPEED_WALK;
+//extern const float CS_PLAYER_SPEED_WALK;
 extern const float CS_PLAYER_SPEED_SHIELD;
 extern const float CS_PLAYER_SPEED_STOPPED;
+extern const float CS_PLAYER_SPEED_HAS_HOSTAGE;
 extern const float CS_PLAYER_SPEED_OBSERVER;
 
 extern const float CS_PLAYER_SPEED_DUCK_MODIFIER;
@@ -143,6 +144,7 @@ extern CUtlVectorInitialized< const char * > CTGIGNPlayerModels;
 extern CUtlVectorInitialized< const char * > CTFBIPlayerModels;
 extern CUtlVectorInitialized< const char * > CTIDFPlayerModels;
 extern CUtlVectorInitialized< const char * > CTSWATPlayerModels;
+
 extern CUtlVectorInitialized< const char* > KnivesEntities;
 
 
@@ -238,7 +240,7 @@ struct PlayerViewmodelArmConfig
 
 static PlayerViewmodelArmConfig s_playerViewmodelArmConfigs[] =
 {
-// character model substr		//skintone index	// default glove model																// associated sleeve															// glove override sleeve (if present, overrides associated sleeve when glove is on)		// remove bare arm bodygroup to save fps
+	// character model substr		//skintone index	// default glove model																// associated sleeve															// glove override sleeve (if present, overrides associated sleeve when glove is on)		// remove bare arm bodygroup to save fps
 	{ "tm_leet_varianth",			BARE_ARM_55,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"",																				"",																						false },
 	{ "tm_leet_varianta",			BARE_ARM_55,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"",																				"",																						false },
 	{ "tm_leet_old",				BARE_ARM_133,		"models/weapons/v_models/arms/glove_leet_old/v_glove_leet_old.mdl",					"",																				"",																						false },
@@ -298,6 +300,7 @@ static PlayerViewmodelArmConfig s_playerViewmodelArmConfigs[] =
 };
 
 const PlayerViewmodelArmConfig *GetPlayerViewmodelArmConfigForPlayerModel( const char* szPlayerModel );
+
 
 // The various states the player can be in during the join game process.
 enum CSPlayerState

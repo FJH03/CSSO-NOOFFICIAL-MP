@@ -516,7 +516,7 @@ public:
 	float m_allowAutoFollowTime;				// bots can auto-follow after this time
 
 	// Have this guy speak a message into his radio.
-	void Radio( const char *szRadioSound, const char *szRadioText = NULL );
+	void Radio( const char *szRadioSound, const char *szRadioText = NULL, bool bTriggeredAutomatically = false );
 	void ConstructRadioFilter( CRecipientFilter& filter );
 	float m_flGotHostageTalkTimer;
 	float m_flDefusingTalkTimer;

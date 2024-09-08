@@ -518,7 +518,7 @@ void CGameMovement::DiffPrint( char const *fmt, ... )
 #endif // !PREDICTION_ERROR_CHECK_LEVEL
 
 #ifndef _XBOX
-void COM_Log( char *pszFile, const char *fmt, ...)
+void COM_Log( const char *pszFile, const char *fmt, ...)
 {
 	va_list		argptr;
 	char		string[1024];
@@ -920,10 +920,9 @@ void CBasePlayer::UpdateWetness()
 //-----------------------------------------------------------------------------
 void CGameMovement::CategorizeGroundSurface( trace_t &pm )
 {
-	IPhysicsSurfaceProps *physprops = MoveHelper()->GetSurfaceProps();
 	player->m_surfaceProps = pm.surface.surfaceProps;
-	player->m_pSurfaceData = physprops->GetSurfaceData( player->m_surfaceProps );
-	physprops->GetPhysicsProperties( player->m_surfaceProps, NULL, NULL, &player->m_surfaceFriction, NULL );
+	player->m_pSurfaceData = MoveHelper()->GetSurfaceProps()->GetSurfaceData( player->m_surfaceProps );
+	MoveHelper()->GetSurfaceProps()->GetPhysicsProperties( player->m_surfaceProps, NULL, NULL, &player->m_surfaceFriction, NULL );
 	
 	// HACKHACK: Scale this to fudge the relationship between vphysics friction values and player friction values.
 	// A value of 0.8f feels pretty normal for vphysics, whereas 1.0f is normal for players.
@@ -1262,10 +1261,10 @@ void CGameMovement::DecayViewPunchAngle( void )
 	}
 	else
 	{
-	player->m_Local.m_viewPunchAngle.Init( 0, 0, 0 );
+		player->m_Local.m_viewPunchAngle.Init( 0, 0, 0 );
 		player->m_Local.m_viewPunchAngleVel.Init( 0, 0, 0 );
 	}
-	*/
+*/
 }
 
 //-----------------------------------------------------------------------------
@@ -3983,6 +3982,19 @@ void CGameMovement::CheckFalling( void )
 
 	// let any subclasses know that the player has landed and how hard
 	OnLand(player->m_Local.m_flFallVelocity);
+
+	float flFallVel = player->m_Local.m_flFallVelocity;
+	if ( flFallVel > 16.0f && flFallVel <= PLAYER_FATAL_FALL_SPEED )
+	{
+		// punch view when we hit the ground
+		QAngle punchAngle = player->GetViewPunchAngle();
+		punchAngle.x = (flFallVel * 0.001);
+	
+		if ( punchAngle.x < 0.75 )
+			punchAngle.x = 0.75;
+
+		player->SetViewPunchAngle( punchAngle );
+	}
 	
 	//
 	// Clear the fall velocity so the impact doesn't happen again.
@@ -4217,7 +4229,8 @@ void CGameMovement::FinishUnDuckJump( trace_t &trace )
 //-----------------------------------------------------------------------------
 void CGameMovement::FinishDuck( void )
 {
-	// if ( player->GetFlags() & FL_DUCKING ) return;
+	if ( player->GetFlags() & FL_DUCKING )
+		return;
 
 	player->AddFlag( FL_DUCKING );
 	player->m_Local.m_bDucked = true;
@@ -4635,7 +4648,7 @@ void CGameMovement::PlayerMove( void )
 	UpdateDuckJumpEyeOffset();
 	Duck();
 
-	// Don't run ladder code if dead on on a train
+	// Don't run ladder code if dead or on a train
 	if ( !player->pl.deadflag && !(player->GetFlags() & FL_ONTRAIN) )
 	{
 		// If was not on a ladder now, but was on one before, 

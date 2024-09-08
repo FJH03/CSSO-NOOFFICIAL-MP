@@ -7,12 +7,13 @@
 #include "cbase.h"
 #include "cs_shareddefs.h"
 
-const float CS_PLAYER_SPEED_RUN		 = 260.0f;
-const float CS_PLAYER_SPEED_VIP		 = 227.0f;
-const float CS_PLAYER_SPEED_WALK	 = 100.0f;
-const float CS_PLAYER_SPEED_SHIELD	 = 160.0f;
-const float CS_PLAYER_SPEED_STOPPED	 =   1.0f;
-const float CS_PLAYER_SPEED_OBSERVER = 900.0f;
+const float CS_PLAYER_SPEED_RUN			= 260.0f;
+const float CS_PLAYER_SPEED_VIP			= 227.0f;
+//const float CS_PLAYER_SPEED_WALK		= 100.0f;
+const float CS_PLAYER_SPEED_SHIELD		= 160.0f;
+const float CS_PLAYER_SPEED_STOPPED		=   1.0f;
+const float CS_PLAYER_SPEED_HAS_HOSTAGE	= 200.0f;
+const float CS_PLAYER_SPEED_OBSERVER	= 900.0f;
 
 const float CS_PLAYER_SPEED_DUCK_MODIFIER	= 0.34f;
 const float CS_PLAYER_SPEED_WALK_MODIFIER	= 0.52f;
@@ -51,6 +52,7 @@ const CCSClassInfo* GetCSClassInfo( int i )
 static PlayerGloves s_playerGloves[MAX_GLOVES+1] =
 {
 	{ NULL, NULL },
+
 	{ "models/weapons/v_models/arms/glove_bloodhound/v_glove_bloodhound.mdl",				"models/weapons/w_models/arms/w_glove_bloodhound.mdl"				},
 	{ "models/weapons/v_models/arms/glove_bloodhound/v_glove_bloodhound_brokenfang.mdl",	"models/weapons/w_models/arms/w_glove_bloodhound_brokenfang.mdl"	},
 	{ "models/weapons/v_models/arms/glove_bloodhound/v_glove_bloodhound_hydra.mdl",			"models/weapons/w_models/arms/w_glove_bloodhound_hydra.mdl"			},
@@ -299,6 +301,7 @@ CUtlVectorInitialized< const char * > CTFBIPlayerModels( CTFBIPlayerModelStrings
 CUtlVectorInitialized< const char * > CTIDFPlayerModels( CTIDFPlayerModelStrings, ARRAYSIZE( CTIDFPlayerModelStrings ) );
 CUtlVectorInitialized< const char * > CTSWATPlayerModels( CTSWATPlayerModelStrings, ARRAYSIZE( CTSWATPlayerModelStrings ) );
 
+// any new knives? add them here
 const char *KnivesEntitiesStrings[] =
 {
 	"weapon_knife",
