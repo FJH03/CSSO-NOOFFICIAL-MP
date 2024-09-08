@@ -831,8 +831,13 @@ float CServerGameDLL::GetTickInterval( void ) const
 	if ( CommandLine()->CheckParm( "-tickrate" ) )
 	{
 		float tickrate = CommandLine()->ParmValue( "-tickrate", 0 );
-		if ( tickrate > 10 )
-			tickinterval = 1.0f / tickrate;
+		if ( tickrate > 0 ){
+			float fDesiredTickInterval = 1.0f / tickrate;
+			float fNumerator = floorf(fDesiredTickInterval * 512.0f + 0.5f);
+			tickinterval = flnumerator/512.0f;
+		}
+
+		tickinterval = clamp (tickinterval, MINIMUM_TICK_INTERVAL, MAXIMUM_TICK_INTERVAL);
 	}
 
 	return tickinterval;
