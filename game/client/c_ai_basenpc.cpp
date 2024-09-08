@@ -135,9 +135,12 @@ void C_AI_BaseNPC::ClientThink( void )
 			int g = 255 * fFade;
 			int b = 0 * fFade;
 
-			debugoverlay->AddLineOverlay( p1, p2, r, g, b, true, 0.05f );
-			debugoverlay->AddLineOverlay( p2, p3, r, g, b, true, 0.05f );
-			debugoverlay->AddLineOverlay( p3, p1, r, g, b, true, 0.05f );
+			if ( debugoverlay )
+			{
+				debugoverlay->AddLineOverlay( p1, p2, r, g, b, true, 0.05f );
+				debugoverlay->AddLineOverlay( p2, p3, r, g, b, true, 0.05f );
+				debugoverlay->AddLineOverlay( p3, p1, r, g, b, true, 0.05f );
+			}
 		}
 	}
 #endif
@@ -155,7 +158,9 @@ void C_AI_BaseNPC::OnDataChanged( DataUpdateType_t type )
 
 void C_AI_BaseNPC::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt )
 {
+
 	ForceSetupBonesAtTime( pDeltaBones0, gpGlobals->curtime - boneDt );
+
 	GetRagdollCurSequenceWithDeathPose( this, pDeltaBones1, gpGlobals->curtime, m_iDeathPose, m_iDeathFrame );
 	float ragdollCreateTime = PhysGetSyncCreateTime();
 	if ( ragdollCreateTime != gpGlobals->curtime )
@@ -171,4 +176,3 @@ void C_AI_BaseNPC::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x
 		SetupBones( pCurrentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
 	}
 }
-

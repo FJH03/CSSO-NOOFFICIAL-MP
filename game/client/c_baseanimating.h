@@ -300,7 +300,6 @@ public:
 	void							CreateUnragdollInfo( C_BaseAnimating *pRagdoll );
 	void							ForceSetupBonesAtTime( matrix3x4_t *pBonesOut, float flTime );
 	virtual void					GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt );
-
 	// For shadows rendering the correct body + sequence...
 	virtual int GetBody()			{ return m_nBody; }
 	virtual int GetSkin()			{ return m_nSkin; }
@@ -675,6 +674,8 @@ public:
 	bool m_bFadeOut;
 	bool m_bImportant;
 	float m_flEffectTime;
+	//virtual void SetSequence(int nSequence);
+
 
 private:
 	int m_iCurrentFriction;

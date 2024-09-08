@@ -36,6 +36,7 @@
 #include "toolframework/itoolentity.h"
 #include "tier0/threadtools.h"
 
+
 class C_Team;
 class IPhysicsObject;
 class IClientVehicle;
@@ -252,6 +253,7 @@ public:
 	// This just picks one of the routes to IClientUnknown.
 	IClientUnknown*					GetIClientUnknown()	{ return this; }
 	virtual C_BaseAnimating*		GetBaseAnimating() { return NULL; }
+	virtual C_BaseAnimating *GetBaseAnimatingOverlay() { return NULL; }
 	virtual void					SetClassname( const char *className );
 
 	string_t						m_iClassname;

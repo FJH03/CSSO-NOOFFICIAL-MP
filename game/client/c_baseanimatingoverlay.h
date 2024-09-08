@@ -37,6 +37,9 @@ public:
 
 	void			CheckForLayerChanges( CStudioHdr *hdr, float currentTime );
 
+	virtual C_BaseAnimatingOverlay *GetBaseAnimatingOverlay() { return this; }
+
+
 	// model specific
 	virtual void	AccumulateLayers( IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime );
 	virtual void DoAnimationEvents( CStudioHdr *pStudioHdr );

@@ -23,8 +23,9 @@ public:
 	ALLOW_DATATABLES_PRIVATE_ACCESS();
 
 	C_AnimationLayer();
+	void SetSequence( int nSequence );
 	void Reset();
-
+	void SetWeight( float flWeight );
 	void SetOrder( int order );
 
 public:
@@ -41,6 +42,7 @@ public:
 	CRangeCheckedVar<float, -2, 2, 0>		m_flCycle;
 
 	float GetFadeout( float flCurTime );
+
 
 	void BlendWeight();
 
@@ -59,6 +61,11 @@ public:
 inline C_AnimationLayer::C_AnimationLayer()
 {
 	Reset();
+}
+
+inline void C_AnimationLayer::SetWeight( float flWeight )
+{
+	m_flWeight = flWeight;
 }
 
 inline void C_AnimationLayer::Reset()

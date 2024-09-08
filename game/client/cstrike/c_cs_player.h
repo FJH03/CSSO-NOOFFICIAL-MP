@@ -510,6 +510,8 @@ private:
 
 	CNetworkVar( bool, m_bHasControlledBotThisRound );
 #endif
+public:
+	Vector m_vecLastAliveLocalVelocity;
 };
 
 C_CSPlayer* GetLocalOrInEyeCSPlayer( void );

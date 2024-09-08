@@ -142,6 +142,10 @@ extern ConVar sv_turbophysics;
 extern ConVar mp_respawn_immunitytime;
 extern ConVar spec_freeze_time;
 extern ConVar spec_freeze_traveltime;
+
+ConVar phys_playerscale( "phys_playerscale", "10.0", FCVAR_REPLICATED, "This multiplies the bullet impact impuse on players for more dramatic results when players are shot." );
+ConVar phys_headshotscale( "phys_headshotscale", "1.3", FCVAR_REPLICATED, "Modifier for the headshot impulse hits on players" );
+
  
 //=============================================================================
 // HPE_END
@@ -2747,6 +2751,8 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 	float flDamage = info.GetDamage();
 
+	bool hitByBullet = false;
+	bool hitByGrenadeProjectile = false;
 	bool bHeadShot = false;
 
 	if ( m_bImmunity )
@@ -2779,6 +2785,13 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 	}
 	else
 	{
+		const CWeaponCSBase* pCSWeapon = dynamic_cast<CWeaponCSBase*>(info.GetWeapon());
+
+		if ( pCSWeapon )
+		{
+			hitByBullet = IsGunWeapon( pCSWeapon->GetWeaponType() );
+			hitByGrenadeProjectile = ((pCSWeapon->GetWeaponType() == WEAPONTYPE_GRENADE) && (info.GetDamageType() & DMG_CLUB) != 0);
+		}
 //=============================================================================
 // HPE_BEGIN:
 // [menglish] Calculate the position this player was hit at in the bone space
@@ -2800,7 +2813,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 		case HITGROUP_HEAD:
 
-			if ( m_bHasHelmet )
+			if ( m_bHasHelmet && !hitByGrenadeProjectile )
 			{
 //				bShouldBleed = false;
 				bShouldSpark = true;
@@ -2918,9 +2931,25 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 		CTakeDamageInfo subInfo = info;
 
 		subInfo.SetDamage( flDamage );
+		float impulseMultiplier = 1.0f;
 
-		if( bHeadShot )
-			subInfo.AddDamageType( DMG_HEADSHOT );
+		if ( hitByBullet )
+		{
+			impulseMultiplier = phys_playerscale.GetFloat();
+			if ( bHeadShot )
+			{
+				subInfo.AddDamageType( DMG_HEADSHOT );
+				impulseMultiplier *= phys_headshotscale.GetFloat();
+			}
+		}
+
+		if ( hitByGrenadeProjectile )
+		{
+			impulseMultiplier = 0.0f;
+		}
+
+
+		subInfo.SetDamageForce( info.GetDamageForce() * impulseMultiplier );
 
 		AddMultiDamage( subInfo, this );
 	}
