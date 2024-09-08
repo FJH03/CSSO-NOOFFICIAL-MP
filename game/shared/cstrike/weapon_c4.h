@@ -94,16 +94,19 @@
 
 		CNetworkVar( float, m_flDefuseLength );		//How long does the defuse take? Depends on if a defuser was used
 		CNetworkVar( float, m_flDefuseCountDown );	//What time does the defuse complete?
+		CNetworkVar( bool, m_bBombDefused );
 
 		// Control panel
 		void GetControlPanelInfo( int nPanelIndex, const char *&pPanelName );
 		void GetControlPanelClassName( int nPanelIndex, const char *&pPanelName );
-		void SpawnControlPanels();
+		void SpawnControlPanels( void );
+		void RemoveControlPanels( void );
 
 		typedef CHandle<CVGuiScreen>	ScreenHandle_t;
 		CUtlVector<ScreenHandle_t>	m_hScreens;
 
 		int m_iProgressBarTime;
+		bool m_bVoiceAlertFired;
 
         //=============================================================================
         // HPE_BEGIN:        
@@ -153,6 +156,7 @@ public:
 
 	#ifdef CLIENT_DLL
 
+		void ClientThink( void );
 		virtual bool OnFireEvent( C_BaseViewModel *pViewModel, const Vector& origin, const QAngle& angles, int event, const char *options );
 		char *GetScreenText( void );
 		char m_szScreenText[32];
@@ -172,10 +176,18 @@ public:
         //=============================================================================
          
         void SetDroppedFromDeath(bool droppedFromDeath) { m_bDroppedFromDeath = droppedFromDeath; }
+	
+		void Think( void );
+		void ResetToLastValidPlayerHeldPosition();
+		virtual void PhysicsTouchTriggers(const Vector *pPrevAbsOrigin = NULL);
          
         //=============================================================================
         // HPE_END
         //=============================================================================
+
+private:
+		Vector m_vecLastValidPlayerHeldPosition;
+public:
         
 	
 	#endif
@@ -183,6 +195,7 @@ public:
 	void AbortBombPlant();
 
 	void PlayArmingBeeps( void );
+	void PlayPlantInitSound( void );
 	virtual void	OnPickedUp( CBaseCombatCharacter *pNewOwner );
 	virtual void	Drop( const Vector &vecVelocity );
 

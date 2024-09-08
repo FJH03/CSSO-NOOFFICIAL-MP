@@ -14,11 +14,13 @@
 #include "iefx.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include <bitbuf.h>
+#include "cs_gamerules.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
 #define PLANTEDC4_MSG_JUSTBLEW 1
+#define TIME_TO_DETONATE_WARNING 10
 
 ConVar cl_c4dynamiclight( "cl_c4dynamiclight", "0", 0, "Draw dynamic light when planted c4 flashes" );
 
@@ -28,6 +30,7 @@ IMPLEMENT_CLIENTCLASS_DT(C_PlantedC4, DT_PlantedC4, CPlantedC4)
 	RecvPropFloat( RECVINFO(m_flTimerLength) ),
 	RecvPropFloat( RECVINFO(m_flDefuseLength) ),
 	RecvPropFloat( RECVINFO(m_flDefuseCountDown) ),
+	RecvPropBool( RECVINFO( m_bBombDefused ) ),
 END_RECV_TABLE()
 
 CUtlVector< C_PlantedC4* > g_PlantedC4s;
@@ -58,6 +61,7 @@ void C_PlantedC4::SetDormant( bool bDormant )
 	if ( bDormant )
 	{
 		g_PlantedC4s.FindAndRemove( this );
+		m_bTenSecWarning = false;
 	}
 	else
 	{
@@ -70,7 +74,13 @@ void C_PlantedC4::Spawn( void )
 {
 	BaseClass::Spawn();
 
+	AddFlag( FL_OBJECT );
+
 	SetNextClientThink( CLIENT_THINK_ALWAYS );
+
+	m_bTenSecWarning = false;
+	m_bExplodeWarning = false;
+	m_bTriggerWarning = false;
 }
 
 void C_PlantedC4::ClientThink( void )
@@ -105,7 +115,7 @@ void C_PlantedC4::ClientThink( void )
 		
 		CSoundParameters params;
 
-		if ( GetParametersForSound( "C4.PlantSound", params, NULL ) )
+		if ( ( m_flC4Blow - gpGlobals->curtime ) > 1.0f && GetParametersForSound( "C4.PlantSound", params, NULL ) )
 		{
 			EmitSound_t ep( params );
 			ep.m_SoundLevel = ATTN_TO_SNDLVL( attenuation );
@@ -118,72 +128,46 @@ void C_PlantedC4::ClientThink( void )
 
 		m_flNextBeep = gpGlobals->curtime + freq;
 	}
+	
+	if( ( m_flC4Blow - gpGlobals->curtime ) <= TIME_TO_DETONATE_WARNING &&
+		!m_bTenSecWarning )
+	{
+		m_bTenSecWarning = true;
+		
+		CLocalPlayerFilter filter;
+		PlayMusicSelection( filter, CSMUSIC_BOMBTEN );
+	}
+
+	if ( (m_flC4Blow - gpGlobals->curtime) < 1.0f &&
+		 !m_bTriggerWarning )
+	{
+		EmitSound( "C4.ExplodeTriggerTrip" );
+
+		int ledAttachmentIndex = LookupAttachment( "led" );
+		DispatchParticleEffect( "c4_timer_light_trigger", PATTACH_POINT_FOLLOW, this, ledAttachmentIndex, false );
+
+		m_bTriggerWarning = true;
+	}
+
+	if ( (m_flC4Blow - gpGlobals->curtime) < 0.0f &&
+		 !m_bExplodeWarning )
+	{
+		EmitSound( "C4.ExplodeWarning" );
+
+		m_bExplodeWarning = true;
+	}
 
 	if( gpGlobals->curtime > m_flNextGlow )
 	{
-		int modelindex = modelinfo->GetModelIndex( "sprites/ledglow.vmt" );
-
-		float scale = 0.8f;
-		Vector vPos = GetAbsOrigin();
-		const Vector offset( 0, 0, 4 );
-
-		// See if the c4 ended up underwater - we need to pull the flash up, or it won't get seen
-		if ( enginetrace->GetPointContents( vPos ) & (CONTENTS_WATER|CONTENTS_SLIME) )
+		if ( gpGlobals->curtime > m_flNextGlow && (m_flC4Blow - gpGlobals->curtime) > 1.0f )
 		{
-			C_CSPlayer *player = GetLocalOrInEyeCSPlayer();
-			if ( player )
-			{
-				const Vector& eyes = player->EyePosition();
-
-				if ( ( enginetrace->GetPointContents( eyes ) & (CONTENTS_WATER|CONTENTS_SLIME) ) == 0 )
-				{
-					// trace from the player to the water
-					trace_t waterTrace;
-					UTIL_TraceLine( eyes, vPos, (CONTENTS_WATER|CONTENTS_SLIME), player, COLLISION_GROUP_NONE, &waterTrace );
-
-					if( waterTrace.allsolid != 1 )
-					{
-						// now trace from the C4 to the edge of the water (in case there was something solid in the water)
-						trace_t solidTrace;
-						UTIL_TraceLine( vPos, waterTrace.endpos, MASK_SOLID, this, COLLISION_GROUP_NONE, &solidTrace );
-
-						if( solidTrace.allsolid != 1 )
-						{
-							float waterDist = (solidTrace.endpos - vPos).Length();
-							float remainingDist = (solidTrace.endpos - eyes).Length();
-
-							scale = scale * remainingDist / ( remainingDist + waterDist );
-							vPos = solidTrace.endpos;
-						}
-					}
-				}
-			}
+			int ledAttachmentIndex = LookupAttachment( "led" );
+			DispatchParticleEffect( "c4_timer_light", PATTACH_POINT_FOLLOW, this, ledAttachmentIndex, false );
 		}
 
-		vPos += offset;
+		float freq = 0.1 + 0.9 * ((m_flC4Blow - gpGlobals->curtime) / m_flTimerLength);
 
-		tempents->TempSprite( vPos, vec3_origin, scale, modelindex, kRenderTransAdd, 0, 1.0, 0.05, FTENT_SPRANIMATE | FTENT_SPRANIMATELOOP );
-
-		if( cl_c4dynamiclight.GetBool() )
-		{
-			dlight_t *dl;
-
-			dl = effects->CL_AllocDlight( entindex() );
-
-			if( dl ) 
-			{
-				dl->origin = GetAbsOrigin() + offset; // can't use vPos because it might have been moved
-				dl->color.r = 255;
-				dl->color.g = 0;
-				dl->color.b = 0;
-				dl->radius = 64;
-				dl->die = gpGlobals->curtime + 0.01;
-			}
-		}
-
-		float freq = 0.1 + 0.9 * ( ( m_flC4Blow - gpGlobals->curtime ) / m_flTimerLength );
-
-		if( freq < 0.15 ) freq = 0.15;
+		if ( freq < 0.15 ) freq = 0.15;
 
 		m_flNextGlow = gpGlobals->curtime + freq;
 	}
