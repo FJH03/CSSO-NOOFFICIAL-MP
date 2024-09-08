@@ -108,12 +108,19 @@ int CCSBot::OnTakeDamage( const CTakeDamageInfo &info )
 	BecomeAlert();
 	StopWaiting();
 
+	if ( info.GetDamageType() == DMG_BURN )
+	{
+		m_burnedByFlamesTimer.Start();
+	}
+
 	// if we were attacked by a teammate, rebuke
 	if (attacker->IsPlayer())
 	{
 		CCSPlayer *player = static_cast<CCSPlayer *>( attacker );
 		
-		if (InSameTeam( player ) && !player->IsBot())
+		bool m_bShouldTalkAboutFF = cv_bot_chatter_friendlyfire_from_bots.GetBool() ? true : !player->IsBot();
+
+		if (InSameTeam( player ) && m_bShouldTalkAboutFF)
 			GetChatter()->FriendlyFire();
 	}
 
@@ -1040,6 +1047,7 @@ const char *CCSBot::GetTaskName( void ) const
 		"MOVE_TO_LAST_KNOWN_ENEMY_POSITION",
 		"MOVE_TO_SNIPER_SPOT",
 		"SNIPING",
+		"ESCAPE_FROM_FLAMES",
 	};
 
 	return name[ (int)GetTask() ];
@@ -1112,6 +1120,18 @@ void CCSBot::BuildUserCmd( CUserCmd& cmd, const QAngle& viewangles, float forwar
 		VectorCopy( viewangles, cmd.viewangles );
 		cmd.random_seed = random->RandomInt( 0, 0x7fffffff );
 	}
+}
+
+//
+// Returns a value in the -1 .. +1 range based on adding some cosines together. Cheap and sloppy.
+float CCSBot::SlowNoise( float fTau ) const
+{
+	int iUniqueOffset = HashInt(entindex()) & 0xFF;
+	float t = (float)iUniqueOffset;
+
+	t = (t + gpGlobals->curtime / fTau) * M_PI * 2.0f;
+
+	return 0.25f * ( cosf( fTau ) + cosf( fTau * 29.f / 47.f ) + cosf( fTau * 59.f / 137.f ) + cosf( fTau * 151.f / 499.f ) );
 }
 
 //--------------------------------------------------------------------------------------------------------------

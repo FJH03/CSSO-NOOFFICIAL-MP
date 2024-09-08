@@ -72,6 +72,14 @@ void CCSBot::EscapeFromBomb( void )
 
 
 //--------------------------------------------------------------------------------------------------------------
+void CCSBot::EscapeFromFlames( void )
+{
+	SetTask( ESCAPE_FROM_FLAMES );
+	SetState( &m_escapeFromFlamesState );
+}
+
+
+//--------------------------------------------------------------------------------------------------------------
 void CCSBot::Follow( CCSPlayer *player )
 {
 	if (player == NULL)
@@ -394,32 +402,10 @@ void CCSBot::Attack( CCSPlayer *victim )
 	// cheat a bit and give the bot the initial location of its victim
 	m_lastEnemyPosition = victimOrigin;
 	m_lastSawEnemyTimestamp = gpGlobals->curtime;
-	m_aimSpreadTimestamp = gpGlobals->curtime;
 
-	// compute the angle difference between where are looking, and where we need to look
-	Vector toEnemy = victimOrigin - GetCentroid( this );
+	m_aimFocus = GetProfile()->GetAimFocusInitial();
 
-	QAngle idealAngle;
-	VectorAngles( toEnemy, idealAngle );
-
-	float deltaYaw = (float)fabs(m_lookYaw - idealAngle.y);
-
-	while( deltaYaw > 180.0f )
-		deltaYaw -= 360.0f;
-
-	if (deltaYaw < 0.0f)
-		deltaYaw = -deltaYaw;
-
-	// immediately aim at enemy - accuracy penalty depending on how far we must turn to aim
-	// accuracy is halved if we have to turn 180 degrees
-	float turn = deltaYaw / 180.0f;
-	float accuracy = GetProfile()->GetSkill() / (1.0f + turn);
-
-	SetAimOffset( accuracy );
-
-	// define time when aim offset will automatically be updated
-	// longer time the more we had to turn (surprise)
-	m_aimOffsetTimestamp = gpGlobals->curtime + RandomFloat( 0.25f + turn, 1.5f );
+	PickNewAimSpot();
 
 	// forget any look at targets we have
 	ClearLookAt();
@@ -466,11 +452,36 @@ bool CCSBot::IsEscapingFromBomb( void ) const
 
 //--------------------------------------------------------------------------------------------------------------
 /**
+ * Return true if we are escaping from a field of flames
+ */
+bool CCSBot::IsEscapingFromFlames( void ) const
+{
+	if ( m_state == static_cast< const BotState * >( &m_escapeFromFlamesState ) )
+		return true;
+
+	return false;
+}
+
+
+//--------------------------------------------------------------------------------------------------------------
+/**
  * Return true if we are defusing the bomb
  */
 bool CCSBot::IsDefusingBomb( void ) const
 {
 	if (m_state == static_cast<const BotState *>( &m_defuseBombState ))
+		return true;
+
+	return false;
+}
+
+//--------------------------------------------------------------------------------------------------------------
+/**
+ * Return true if we are defusing the bomb
+ */
+bool CCSBot::IsPickingupHostage( void ) const
+{
+	if (m_state == static_cast<const BotState *>( &m_pickupHostageState ))
 		return true;
 
 	return false;
@@ -600,6 +611,12 @@ void CCSBot::FetchBomb( void )
 void CCSBot::DefuseBomb( void )
 {
 	SetState( &m_defuseBombState );
+}
+
+void CCSBot::PickupHostage( CBaseEntity *entity )
+{
+	m_pickupHostageState.SetEntity( entity );
+	SetState( &m_pickupHostageState );
 }
 
 

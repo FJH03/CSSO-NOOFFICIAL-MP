@@ -252,6 +252,25 @@ public:
 
 //--------------------------------------------------------------------------------------------------------------
 /**
+* When a CT bot is picking up a hostage
+*/
+class PickupHostageState : public BotState
+{
+public:
+	virtual void OnEnter( CCSBot *bot );
+	virtual void OnUpdate( CCSBot *bot );
+	virtual void OnExit( CCSBot *bot );
+	virtual const char *GetName( void ) const	{ return "PickupHostage"; }
+
+	void SetEntity( CBaseEntity *entity )				{ m_entity = entity; }
+
+private:
+	EHANDLE m_entity;
+};
+
+
+//--------------------------------------------------------------------------------------------------------------
+/**
  * When a bot is hiding in a corner.
  * NOTE: This state also includes MOVING TO that hiding spot, which may be all the way
  * across the map!
@@ -428,6 +447,7 @@ private:
 	CNavArea *m_safeArea;
 };
 
+
 //--------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -510,8 +530,14 @@ public:
 	bool IsDefusingBomb( void ) const;							///< returns true if bot is currently defusing the bomb
 	bool CanSeePlantedBomb( void ) const;						///< return true if we directly see the planted bomb
 
+	void PickupHostage( CBaseEntity *entity );
+	bool IsPickingupHostage( void ) const;
+
 	void EscapeFromBomb( void );
 	bool IsEscapingFromBomb( void ) const;						///< return true if we are escaping from the bomb
+
+	void EscapeFromFlames( void );
+	bool IsEscapingFromFlames( void ) const;					///< return true if we are escaping from a field of flames
 
 	void RescueHostages( void );								///< begin process of rescuing hostages
 
@@ -581,6 +607,7 @@ public:
 		MOVE_TO_LAST_KNOWN_ENEMY_POSITION,
 		MOVE_TO_SNIPER_SPOT,
 		SNIPING,
+		ESCAPE_FROM_FLAMES,
 
 		NUM_TASKS
 	};
@@ -677,6 +704,7 @@ public:
 	float GetLastSawEnemyTimestamp( void ) const;
 	float GetTimeSinceLastSawEnemy( void ) const;
 	float GetTimeSinceAcquiredCurrentEnemy( void ) const;
+	float GetTimeSinceBurnedByFlames( void ) const;
 	bool HasNotSeenEnemyForLongTime( void ) const;				///< return true if we haven't seen an enemy for "a long time"
 	const Vector &GetLastKnownEnemyPosition( void ) const;
 	bool IsEnemyVisible( void ) const;							///< is our current enemy visible
@@ -908,9 +936,12 @@ public:
 
 	void OnEnteredNavArea( CNavArea *newArea );						///< invoked when bot enters a nav area
 
-private:
 	#define IS_FOOTSTEP true
 	void OnAudibleEvent( IGameEvent *event, CBasePlayer *player, float range, PriorityType priority, bool isHostile, bool isFootstep = false, const Vector *actualOrigin = NULL );	///< Checks if the bot can hear the event
+
+protected:
+
+	float SlowNoise( float fTau ) const;
 
 private:
 	friend class CCSBotManager;
@@ -962,11 +993,13 @@ private:
 	FetchBombState			m_fetchBombState;
 	PlantBombState			m_plantBombState;
 	DefuseBombState			m_defuseBombState;
+	PickupHostageState		m_pickupHostageState;
 	HideState				m_hideState;
 	EscapeFromBombState		m_escapeFromBombState;
 	FollowState				m_followState;
 	UseEntityState			m_useEntityState;
 	OpenDoorState			m_openDoorState;
+	EscapeFromFlamesState	m_escapeFromFlamesState;
 
 	/// @todo Allow multiple simultaneous state machines (look around, etc)	
 	void SetState( BotState *state );								///< set the current behavior state
@@ -1164,13 +1197,17 @@ private:
 	float m_lookYawVel;
 
 	//- aim angle mechanism -----------------------------------------------------------------------------------------
-	Vector m_aimOffset;												///< current error added to victim's position to get actual aim spot
-	Vector m_aimOffsetGoal;											///< desired aim offset
-	float m_aimOffsetTimestamp;										///< time of next offset adjustment
-	float m_aimSpreadTimestamp;										///< time used to determine max spread as it begins to tighten up
-	void SetAimOffset( float accuracy );							///< set the current aim offset
-	void UpdateAimOffset( void );									///< wiggle aim error based on m_accuracy
-	Vector m_aimSpot;												///< the spot we are currently aiming to fire at
+	void PickNewAimSpot();											///< set the current aim offset
+	void UpdateAimPrediction( void );								///< wiggle aim based on aim error term
+	Vector m_targetSpot;											///< the spot we currently wish to fire at
+	Vector m_targetSpotVelocity;									///< the spot we currently wish to fire at
+	Vector m_targetSpotPredicted;									///< the spot we currently wish to fire at
+	QAngle m_aimError;
+	QAngle m_aimGoal;
+	float m_targetSpotTime;
+	float m_aimFocus;												///< radius of aim focus
+	float m_aimFocusInterval;										///< time interval of current offset adjustment (can be random)
+	float m_aimFocusNextUpdate;										///< time of next offset adjustment
 
 	struct PartInfo
 	{
@@ -1216,6 +1253,7 @@ private:
 
 	mutable CHandle< CCSPlayer > m_attacker;						///< last enemy that hurt us (may not be same as m_enemy)
 	float m_attackedTimestamp;										///< when we were hurt by the m_attacker
+	IntervalTimer m_burnedByFlamesTimer;
 
 	int m_lastVictimID;												///< the entindex of the last victim we killed, or zero
 	bool m_isAimingAtEnemy;											///< if true, we are trying to aim at our enemy
@@ -1572,6 +1610,11 @@ inline float CCSBot::GetTimeSinceAcquiredCurrentEnemy( void ) const
 	return gpGlobals->curtime - m_currentEnemyAcquireTimestamp;
 }
 
+inline float CCSBot::GetTimeSinceBurnedByFlames( void ) const
+{
+	return m_burnedByFlamesTimer.GetElapsedTime();
+}
+
 inline const Vector &CCSBot::GetLastKnownEnemyPosition( void ) const
 {
 	return m_lastEnemyPosition;
@@ -1793,6 +1836,14 @@ inline bool CCSBot::IsAvoidingGrenade( void ) const
 
 inline void CCSBot::PrimaryAttack( void )
 {
+	// for now the bots only secondary attack with the revolver until I teach them to hold the fire button
+	CWeaponCSBase *weapon = GetActiveCSWeapon();
+	if ( weapon && weapon->IsRevolver() && CanActiveWeaponFire() )
+	{
+		BaseClass::SecondaryAttack();
+		return;
+	}
+
 	if ( IsUsingPistol() && !CanActiveWeaponFire() )
 		return;
 
@@ -2021,6 +2072,7 @@ inline CCSBot *ToCSBot( CBaseEntity *pEntity )
 
 	return dynamic_cast<CCSBot*>( pPlayer );
 }
+
 
 //--------------------------------------------------------------------------------------------------------------
 //

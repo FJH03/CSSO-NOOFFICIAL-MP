@@ -10,6 +10,7 @@
 #include "cbase.h"
 #include "cs_bot.h"
 #include "cs_shareddefs.h"
+#include "cs_gamerules.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -83,6 +84,10 @@ ConVar cv_bot_flipout( "bot_flipout", "0", FCVAR_REPLICATED | FCVAR_CHEAT, "If n
 #if CS_CONTROLLABLE_BOTS_ENABLED
 ConVar cv_bot_controllable( "bot_controllable", "1", FCVAR_REPLICATED, "Determines whether bots can be controlled by players" );
 #endif
+ConVar cv_bot_faction_t( "bot_faction_t", "", FCVAR_REPLICATED, "Determines which faction bots playing as Ts use. Leave blank for random faction.\n 1 - phoenix\n 2 - leet\n 3 - separatist\n 4 - balkan\n 5 - professional\n 6 - anarchist\n 7 - pirate", true, 0, true, 7 );
+ConVar cv_bot_faction_ct( "bot_faction_ct", "", FCVAR_REPLICATED, "Determines which faction bots playing as CTs use. Leave blank for random faction.\n 1 - st6\n 2 - gsg9\n 3 - sas\n 4 - gign\n 5 - fbi\n 6 - idf\n 7 - swat", true, 0, true, 7 );
+ConVar cv_bot_chatter_friendlyfire_from_bots( "bot_chatter_friendlyfire_from_bots", "1", FCVAR_REPLICATED, "Determines whetever the bots will say anything about other bots team-killing or shooting friends." );
+
 
 extern void FinishClientPutInServer( CCSPlayer *pPlayer );
 
@@ -141,14 +146,32 @@ bool CCSBot::Initialize( const BotProfile *profile, int team )
 	if (GetTeamNumber() == 0)
 	{
 		HandleCommand_JoinTeam( m_desiredTeam );
-		int desiredClass = GetProfile()->GetSkin();
-		if ( m_desiredTeam == TEAM_CT && desiredClass )
+
+		// if we have map factions enabled, use them instead of random faction
+		if ( CSGameRules()->UseMapFactionsForThisPlayer( this ) && CSGameRules()->GetMapFactionsForThisPlayer( this ) > -1 )
 		{
-			desiredClass = FIRST_CT_CLASS + desiredClass - 1;
+			HandleCommand_JoinClass( CSGameRules()->GetMapFactionsForThisPlayer( this ) );
+			return true;
 		}
-		else if ( m_desiredTeam == TEAM_TERRORIST && desiredClass )
+
+		int desiredClass = GetProfile()->GetSkin();
+		if ( m_desiredTeam == TEAM_CT )
 		{
-			desiredClass = FIRST_T_CLASS + desiredClass - 1;
+			int bot_faction_ct = cv_bot_faction_ct.GetInt();
+
+			if ( bot_faction_ct > 0 && bot_faction_ct < 8 )
+				desiredClass = FIRST_CT_CLASS + bot_faction_ct - 1;
+			else if ( desiredClass )
+				desiredClass = FIRST_CT_CLASS + desiredClass - 1;
+		}
+		else if ( m_desiredTeam == TEAM_TERRORIST )
+		{
+			int bot_faction_t = cv_bot_faction_t.GetInt();
+
+			if ( bot_faction_t > 0 && bot_faction_t < 8 )
+				desiredClass = FIRST_T_CLASS + bot_faction_t - 1;
+			else if ( desiredClass )
+				desiredClass = FIRST_T_CLASS + desiredClass - 1;
 		}
 		HandleCommand_JoinClass( desiredClass );
 	}
@@ -258,9 +281,17 @@ void CCSBot::ResetValues( void )
 	m_lookYaw = 0.0f;
 	m_lookYawVel = 0.0f;
 
-	m_aimOffsetTimestamp = 0.0f;
-	m_aimSpreadTimestamp = 0.0f;
 	m_lookAtSpotState = NOT_LOOKING_AT_SPOT;
+
+	m_targetSpot.Zero();
+	m_targetSpotVelocity.Zero();
+	m_targetSpotPredicted.Zero();
+	m_aimError.Init();
+	m_aimGoal.Init();
+	m_targetSpotTime = 0.0f;
+	m_aimFocus = 0.0f;
+	m_aimFocusInterval = 0.0f;
+	m_aimFocusNextUpdate = 0.0f;
 
 	for( int p=0; p<MAX_PLAYERS; ++p )
 	{
@@ -335,6 +366,8 @@ void CCSBot::ResetValues( void )
 		m_enemyQueue[i].isReloading = false;
 		m_enemyQueue[i].isProtectedByShield = false;
 	}
+
+	m_burnedByFlamesTimer.Invalidate();
 
 	// start in idle state
 	m_isOpeningDoor = false;

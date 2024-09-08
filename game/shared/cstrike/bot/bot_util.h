@@ -53,6 +53,9 @@ extern ConVar cv_bot_flipout;
 #if CS_CONTROLLABLE_BOTS_ENABLED
 extern ConVar cv_bot_controllable;
 #endif
+extern ConVar cv_bot_faction_ct;
+extern ConVar cv_bot_faction_t;
+extern ConVar cv_bot_chatter_friendlyfire_from_bots;
 
 #define RAD_TO_DEG( deg ) ((deg) * 180.0 / M_PI)
 #define DEG_TO_RAD( rad ) ((rad) * M_PI / 180.0)
