@@ -1169,8 +1169,11 @@ void UpdateClassImageEntity(
 	// in the world.
 	CMatRenderContextPtr pRenderContext( materials );
 	pRenderContext->SetLightingOrigin( vec3_origin );
-	pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
-
+	//pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
+        LightDesc_t ld;
+	ld.InitDirectional(Vector(0.0f,0.0f,-1.0f),Vector(1.0f,1.0f,0.8f));
+        pRenderContext->SetLight(1,ld);
+	
 	static Vector white[6] = 
 	{
 		Vector( 0.6, 0.6, 0.6 ),
@@ -1402,8 +1405,11 @@ void UpdateBuyMenuImageEntity(
 	// in the world.
 	CMatRenderContextPtr pRenderContext( materials );
 	pRenderContext->SetLightingOrigin( vec3_origin );
-	pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
-
+	//pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
+        LightDesc_t ld;
+	ld.InitDirectional(Vector(0.0f,0.0f,-1.0f),Vector(1.0f,1.0f,0.8f));
+        pRenderContext->SetLight(1,ld);
+	
 	static Vector white[6] = 
 	{
 		Vector( 0.6, 0.6, 0.6 ),
