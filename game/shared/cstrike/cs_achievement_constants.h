@@ -4,7 +4,7 @@
 // Desc: 		Declare contants used by achievements (mostly) in one location for simpler tweaking
 // Author: 		Peter Freese <peter@hiddenpath.com>
 // Date: 		2009/03/11
-// Copyright:	© 2009 Hidden Path Entertainment
+// Copyright:	ï¿½ 2009 Hidden Path Entertainment
 //-------------------------------------------------------------
 
 #ifndef CS_ACHIEVEMENT_CONSTANTS_H
@@ -31,6 +31,7 @@ namespace AchievementConsts
     const int   KillEnemiesWhileBlindHard_Kills				= 2;
 	const int	SurviveGrenade_MinDamage                    = 80;
 	const int	KillWhenAtLowHealth_MaxHealth               = 1;
+	const int	KillWhenAtMediumHealth_MaxHealth            = 25;
 	const int	GrenadeMultiKill_MinKills					= 3;
 	const int	BombMultiKill_MinKills						= 5;
 	const float	FastRoundWin_Time							= 30.0f;	
