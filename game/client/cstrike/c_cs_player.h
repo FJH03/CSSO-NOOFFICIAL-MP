@@ -491,11 +491,16 @@ public:
 	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesT );
 
+	float m_flThirdpersonRecoil;
+
 	// taser items	
 	float m_nextTaserShakeTime;
 	float m_firstTaserShakeTime;
 
 	C_CSPlayer( const C_CSPlayer & );
+
+	virtual bool	GetAttachment( int number, Vector &origin );
+	virtual	bool	GetAttachment( int number, Vector &origin, QAngle &angles );
 
 	bool	IsBotOrControllingBot();
 	

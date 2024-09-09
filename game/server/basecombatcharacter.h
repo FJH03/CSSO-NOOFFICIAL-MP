@@ -237,7 +237,7 @@ public:
 	virtual bool		Weapon_SlotOccupied( CBaseCombatWeapon *pWeapon );
 	virtual CBaseCombatWeapon *Weapon_GetSlot( int slot ) const;
 	CBaseCombatWeapon	*Weapon_GetWpnForAmmo( int iAmmoIndex );
-
+	virtual bool		ShouldPickupItemSilently( CBaseCombatCharacter *pNewOwner ) { return false; }
 
 	// For weapon strip
 	void				Weapon_DropAll( bool bDisallowWeaponPickup = false );

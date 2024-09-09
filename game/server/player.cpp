@@ -96,6 +96,7 @@ ConVar autoaim_max_deflect( "autoaim_max_deflect", "0.99" );
 
 #ifdef CSTRIKE_DLL
 ConVar	spec_freeze_time( "spec_freeze_time", "5.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Time spend frozen in observer freeze cam." );
+ConVar	spec_freeze_time_lock( "spec_freeze_time_lock", "1.0", FCVAR_REPLICATED, "Time players are prevented from skipping the freeze cam" );
 ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.7", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01, false, 0 );
 #else
 ConVar	spec_freeze_time( "spec_freeze_time", "4.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Time spend frozen in observer freeze cam." );

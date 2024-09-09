@@ -219,7 +219,7 @@ extern ConVar mp_hostages_spawn_same_every_round;
 
 ConVar mp_buytime( 
 	"mp_buytime", 
-	"1.5",
+	"90",
 	FCVAR_REPLICATED,
 	"How many seconds after round start players can buy items for.",
 	true, 0.25,

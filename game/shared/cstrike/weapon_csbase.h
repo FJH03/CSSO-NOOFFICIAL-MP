@@ -194,7 +194,8 @@ public:
 
 	// return true if this weapon has a silencer equipped
 	virtual bool IsSilenced( void ) const				{ return false; }
-
+	virtual void SetSilencer( bool silencer ) {}
+	
 	virtual void SetWeaponModelIndex( const char *pName );
 	virtual void OnPickedUp( CBaseCombatCharacter *pNewOwner );
 

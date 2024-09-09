@@ -314,6 +314,8 @@ public:
 	// from CBasePlayer
 	virtual void		SetupVisibility( CBaseEntity *pViewEntity, unsigned char *pvs, int pvssize );
 
+	virtual CBaseEntity* FindNextObserverTarget( bool bReverse );
+
 	virtual int 		GetNextObserverSearchStartPoint( bool bReverse );
 // In shared code.
 public:
@@ -463,6 +465,8 @@ public:
 	void MarkAsNotReceivingMoneyNextRound();
 	bool DoesPlayerGetRoundStartMoney(); // self-explanitory :)
 
+	virtual bool ShouldPickupItemSilently( CBaseCombatCharacter *pNewOwner );
+
 	void DropC4();	// Get rid of the C4 bomb.
 
 	CNetworkHandle( CBaseEntity, m_hCarriedHostage );	// networked entity handle
@@ -567,6 +571,8 @@ public:
 	
 	void SetProgressBarTime( int barTime );
 	virtual void PlayerDeathThink();
+
+	virtual bool StartObserverMode( int mode );
 
 	void Weapon_Equip( CBaseCombatWeapon *pWeapon );
 	virtual bool BumpWeapon( CBaseCombatWeapon *pWeapon );

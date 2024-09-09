@@ -2108,31 +2108,47 @@ void CBaseCombatCharacter::Weapon_Equip( CBaseCombatWeapon *pWeapon )
 		}
 		else
 #endif // HL2_DLL
-		GiveAmmo(pWeapon->GetDefaultClip1(), pWeapon->m_iPrimaryAmmoType); 
+		{
+			// non-clip, exhaustible ammo ( such as grenades ) is still held on player.
+			CBaseCombatCharacter * pOwner = NULL;
+
+			if ( pWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE )
+			{
+				pOwner = this;
+				pWeapon->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, pWeapon->GetDefaultClip1(), ShouldPickupItemSilently( this ), pOwner );
+			}
+		}
 	}
 	// If default ammo given is greater than clip
 	// size, fill clips and give extra ammo
-	else if (pWeapon->GetDefaultClip1() >  pWeapon->GetMaxClip1() )
-	{
-		pWeapon->m_iClip1 = pWeapon->GetMaxClip1();
-		GiveAmmo( (pWeapon->GetDefaultClip1() - pWeapon->GetMaxClip1()), pWeapon->m_iPrimaryAmmoType); 
-	}
+//	else if (pWeapon->GetDefaultClip1() >  pWeapon->GetMaxClip1() )
+//	{
+//		pWeapon->m_iClip1 = pWeapon->GetMaxClip1();
+// 		pWeapon->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, (pWeapon->GetDefaultClip1() - pWeapon->GetMaxClip1())); 
+//	}
 
 	// ----------------------
 	//  Give Secondary Ammo
 	// ----------------------
 	// If gun doesn't use clips, just give ammo
-	if (pWeapon->GetMaxClip2() == -1)
+	if ( !pWeapon->UsesClipsForAmmo2() )
 	{
-		GiveAmmo(pWeapon->GetDefaultClip2(), pWeapon->m_iSecondaryAmmoType); 
+		// non-clip, exhaustible ammo ( such as grenades ) is still held on player.
+		CBaseCombatCharacter * pOwner = NULL;
+
+		if ( pWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE )
+		{
+			pOwner = this;
+			pWeapon->SetReserveAmmoCount( AMMO_POSITION_SECONDARY, pWeapon->GetDefaultClip2(), ShouldPickupItemSilently( this ), pOwner );
+		}
 	}
 	// If default ammo given is greater than clip
 	// size, fill clips and give extra ammo
-	else if ( pWeapon->GetDefaultClip2() > pWeapon->GetMaxClip2() )
-	{
-		pWeapon->m_iClip2 = pWeapon->GetMaxClip2();
-		GiveAmmo( (pWeapon->GetDefaultClip2() - pWeapon->GetMaxClip2()), pWeapon->m_iSecondaryAmmoType); 
-	}
+//	else if ( pWeapon->GetDefaultClip2() > pWeapon->GetMaxClip2() )
+//	{
+//		pWeapon->m_iClip2 = pWeapon->GetMaxClip2();
+//		GiveAmmo( (pWeapon->GetDefaultClip2() - pWeapon->GetMaxClip2()), pWeapon->m_iSecondaryAmmoType); 
+//	}
 
 	pWeapon->Equip( this );
 
@@ -2190,8 +2206,15 @@ bool CBaseCombatCharacter::Weapon_EquipAmmoOnly( CBaseCombatWeapon *pWeapon )
 			int	primaryGiven	= (pWeapon->UsesClipsForAmmo1()) ? pWeapon->m_iClip1 : pWeapon->GetPrimaryAmmoCount();
 			int secondaryGiven	= (pWeapon->UsesClipsForAmmo2()) ? pWeapon->m_iClip2 : pWeapon->GetSecondaryAmmoCount();
 
-			int takenPrimary   = GiveAmmo( primaryGiven, pWeapon->m_iPrimaryAmmoType); 
-			int takenSecondary = GiveAmmo( secondaryGiven, pWeapon->m_iSecondaryAmmoType); 
+			bool bSuppressSound = ShouldPickupItemSilently( this );
+
+			CBaseCombatCharacter * pOwner = NULL;
+
+			if ( pWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE )
+				pOwner = this;
+
+			int takenPrimary = pWeapon->GiveReserveAmmo( AMMO_POSITION_PRIMARY, primaryGiven, bSuppressSound, pOwner );
+			int takenSecondary = pWeapon->GiveReserveAmmo( AMMO_POSITION_SECONDARY, secondaryGiven, bSuppressSound, pOwner );
 			
 			if( pWeapon->UsesClipsForAmmo1() )
 			{
