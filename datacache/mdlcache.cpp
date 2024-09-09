@@ -183,7 +183,7 @@ private:
 //-----------------------------------------------------------------------------
 // ConVars
 //-----------------------------------------------------------------------------
-static ConVar r_rootlod( "r_rootlod", "0", FCVAR_ARCHIVE );
+static ConVar r_rootlod( "r_rootlod", "2", FCVAR_ARCHIVE );
 static ConVar mod_forcedata( "mod_forcedata", ( AsyncMdlCache() ) ? "0" : "1",	0, "Forces all model file data into cache on model load." );
 static ConVar mod_test_not_available( "mod_test_not_available", "0", FCVAR_CHEAT );
 static ConVar mod_test_mesh_not_available( "mod_test_mesh_not_available", "0", FCVAR_CHEAT );
