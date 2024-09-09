@@ -77,10 +77,12 @@ IClientMode *g_pClientMode = NULL;
 
 // This is a temporary entity used to render the player's model while drawing the class selection menu.
 CHandle<C_BaseAnimating> g_ClassImagePlayer;	// player
+CHandle<C_BaseAnimating> g_ClassImageGloves;	// gloves
 CHandle<C_BaseAnimating> g_ClassImageWeapon;	// weapon
 
 // This is a temporary entity used to render the player's model while drawing the buy menu.
 CHandle<C_BaseAnimating> g_BuyMenuImagePlayer;	// player
+CHandle<C_BaseAnimating> g_BuyMenuImageGloves;	// gloves
 CHandle<C_BaseAnimating> g_BuyMenuImageWeapon;	// weapon
 
 STUB_WEAPON_CLASS( cycler_weapon,	WeaponCycler,	C_BaseCombatWeapon );
@@ -1045,7 +1047,7 @@ void UpdateClassImageEntity(
 
 	C_BaseAnimating *pPlayerModel = g_ClassImagePlayer.Get();
 
-	//bool bCreateGloves = false;
+	bool bCreateGloves = false;
 
 	// Does the entity even exist yet?
 	bool recreatePlayer = ShouldRecreateImageEntity( pPlayerModel, pModelName );
@@ -1062,11 +1064,11 @@ void UpdateClassImageEntity(
 		g_ClassImagePlayer = pPlayerModel;
 	}
 
-	/*if ( pPlayerModel && pPlayerModel->DoesModelSupportGloves() )
+	if ( pPlayerModel && pPlayerModel->DoesModelSupportGloves() )
 	{
 		if ( CSLoadout()->HasGlovesSet( pLocalPlayer, iTeamNumber ) )
 			bCreateGloves = true;
-	}*/
+	}
 
 	C_BaseAnimating *pWeaponModel = g_ClassImageWeapon.Get();
 
@@ -1088,7 +1090,7 @@ void UpdateClassImageEntity(
 		g_ClassImageWeapon = pWeaponModel;
 	}
 
-	/*C_BaseAnimating *pGlovesModel = g_ClassImageGloves.Get();
+	C_BaseAnimating *pGlovesModel = g_ClassImageGloves.Get();
 
 	if ( bCreateGloves )
 	{
@@ -1104,7 +1106,7 @@ void UpdateClassImageEntity(
 			pGlovesModel->InitializeAsClientEntity( pGlovesName, RENDER_GROUP_OPAQUE_ENTITY );
 			pGlovesModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
 			pGlovesModel->FollowEntity( pPlayerModel ); // attach to player model
-			pGlovesModel->m_nSkin = pLocalPlayer->m_pViewmodelArmConfig->iSkintoneIndex; // set the corrent skin tone
+			pGlovesModel->m_nSkin = GetPlayerViewmodelArmConfigForPlayerModel( pModelName )->iSkintoneIndex; // set the corrent skin tone
 			pGlovesModel->m_flAnimTime = gpGlobals->curtime;
 
 			g_ClassImageGloves = pGlovesModel;
@@ -1113,7 +1115,7 @@ void UpdateClassImageEntity(
 		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 1 );
 	}
 	else if ( pGlovesModel )
-		pGlovesModel->Remove();*/
+		pGlovesModel->Remove();
 
 	Vector origin = pLocalPlayer->EyePosition();
 	Vector lightOrigin = origin;
@@ -1169,11 +1171,8 @@ void UpdateClassImageEntity(
 	// in the world.
 	CMatRenderContextPtr pRenderContext( materials );
 	pRenderContext->SetLightingOrigin( vec3_origin );
-	//pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
-        LightDesc_t ld;
-	ld.InitDirectional(Vector(0.0f,0.0f,-1.0f),Vector(1.0f,1.0f,0.8f));
-        pRenderContext->SetLight(1,ld);
-	
+	pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
+
 	static Vector white[6] = 
 	{
 		Vector( 0.6, 0.6, 0.6 ),
@@ -1197,10 +1196,10 @@ void UpdateClassImageEntity(
 	{
 		pWeaponModel->DrawModel( STUDIO_RENDER );
 	}
-	/*if ( pGlovesModel )
+	if ( pGlovesModel )
 	{
 		pGlovesModel->DrawModel( STUDIO_RENDER );
-	}*/
+	}
 
 	modelrender->SuppressEngineLighting( false );
 
@@ -1280,7 +1279,7 @@ void UpdateBuyMenuImageEntity(
 
 	C_BaseAnimating *pPlayerModel = g_BuyMenuImagePlayer.Get();
 
-	//bool bCreateGloves = false;
+	bool bCreateGloves = false;
 
 	// Does the entity even exist yet?
 	bool recreatePlayer = ShouldRecreateImageEntity( pPlayerModel, modelinfo->GetModelName( pLocalPlayer->GetModel() ) );
@@ -1297,11 +1296,11 @@ void UpdateBuyMenuImageEntity(
 		g_BuyMenuImagePlayer = pPlayerModel;
 	}
 
-	/*if ( pPlayerModel && pPlayerModel->DoesModelSupportGloves() )
+	if ( pPlayerModel && pPlayerModel->DoesModelSupportGloves() )
 	{
 		if ( CSLoadout()->HasGlovesSet( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )
 			bCreateGloves = true;
-	}*/
+	}
 
 	C_BaseAnimating *pWeaponModel = g_BuyMenuImageWeapon.Get();
 
@@ -1323,7 +1322,7 @@ void UpdateBuyMenuImageEntity(
 		g_BuyMenuImageWeapon = pWeaponModel;
 	}
 
-	/*C_BaseAnimating *pGlovesModel = g_BuyMenuImageGloves.Get();
+	C_BaseAnimating *pGlovesModel = g_BuyMenuImageGloves.Get();
 
 	if ( bCreateGloves )
 	{
@@ -1339,7 +1338,7 @@ void UpdateBuyMenuImageEntity(
 			pGlovesModel->InitializeAsClientEntity( pGlovesName, RENDER_GROUP_OPAQUE_ENTITY );
 			pGlovesModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
 			pGlovesModel->FollowEntity( pPlayerModel ); // attach to player model
-			pGlovesModel->m_nSkin = pLocalPlayer->m_pViewmodelArmConfig->iSkintoneIndex; // set the corrent skin tone
+			pGlovesModel->m_nSkin = GetPlayerViewmodelArmConfigForPlayerModel( modelinfo->GetModelName( pLocalPlayer->GetModel() ) )->iSkintoneIndex; // set the corrent skin tone
 			pGlovesModel->m_flAnimTime = gpGlobals->curtime;
 
 			g_BuyMenuImageGloves = pGlovesModel;
@@ -1348,7 +1347,7 @@ void UpdateBuyMenuImageEntity(
 		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 1 );
 	}
 	else if ( pGlovesModel )
-		pGlovesModel->Remove();*/
+		pGlovesModel->Remove();
 
 	Vector origin = pLocalPlayer->EyePosition();
 	Vector lightOrigin = origin;
@@ -1405,11 +1404,8 @@ void UpdateBuyMenuImageEntity(
 	// in the world.
 	CMatRenderContextPtr pRenderContext( materials );
 	pRenderContext->SetLightingOrigin( vec3_origin );
-	//pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
-        LightDesc_t ld;
-	ld.InitDirectional(Vector(0.0f,0.0f,-1.0f),Vector(1.0f,1.0f,0.8f));
-        pRenderContext->SetLight(1,ld);
-	
+	pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
+
 	static Vector white[6] = 
 	{
 		Vector( 0.6, 0.6, 0.6 ),
@@ -1433,16 +1429,15 @@ void UpdateBuyMenuImageEntity(
 	{
 		pWeaponModel->DrawModel( STUDIO_RENDER );
 	}
-	/*if ( pGlovesModel )
+	if ( pGlovesModel )
 	{
 		pGlovesModel->DrawModel( STUDIO_RENDER );
-	}*/
+	}
 
 	modelrender->SuppressEngineLighting( false );
 
 	render->PopView( dummyFrustum );
 }
-
 
 bool WillPanelBeVisible( vgui::VPANEL hPanel )
 {

@@ -50,6 +50,9 @@
 
 extern ConVar r_drawviewmodel;
 
+extern ConVar loadout_slot_gloves_ct;
+extern ConVar loadout_slot_gloves_t;
+
 void PostToolMessage( HTOOLHANDLE hEntity, KeyValues *msg );
 
 void C_BaseViewModel::OnNewParticleEffect( const char *pszParticleName, CNewParticleEffect *pNewParticleEffect )
@@ -625,17 +628,12 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	if ( pPlayer->m_pViewmodelArmConfig == NULL )
 	{
 		RemoveViewmodelArmModels();
-
-		CStudioHdr *pHdr = pPlayer->GetModelPtr();
-		if ( pHdr )
-		{
-			pPlayer->m_pViewmodelArmConfig = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() );
-		}
+		return;
 	}
 
 	if ( pPlayer->m_bNeedToChangeGloves )
 		RemoveViewmodelArmModels();
-
+	
 	// add gloves and sleeves
 	if ( m_vecViewmodelArmModels.Count() == 0 )
 	{

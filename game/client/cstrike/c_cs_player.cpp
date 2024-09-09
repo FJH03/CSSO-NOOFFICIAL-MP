@@ -122,8 +122,9 @@ CAddonInfo g_AddonInfo[] =
 	{ "primary",	0,						0, 0 },	// Primary addon model is looked up based on m_iPrimaryAddon
 	{ "pistol",		0,						0, 0 },	// Pistol addon model is looked up based on m_iSecondaryAddon
 	{ "eholster",	0,						"models/weapons/w_eq_eholster_elite.mdl", "models/weapons/w_eq_eholster.mdl" },
-	{ "knife",		0,						0, 0 },
+	{ "knife",		0,						0, 0 },	// Knife addon model is looked up based on m_iKnifeAddon
 	{ "grenade4",	"weapon_decoy",			0, 0 },
+	{ "",			0,						0, 0 }, // gloves
 };
 
 bool LineGoesThroughSmoke( Vector from, Vector to, bool grenadeBloat )
@@ -290,6 +291,7 @@ private:
 	float m_flRagdollSinkStart;
 	bool m_bInitialized;
 	bool m_bCreatedWhilePlaybackSkipping;
+	C_BaseAnimating* m_pGlovesModel;
 };
 
 
@@ -313,11 +315,18 @@ C_CSRagdoll::C_CSRagdoll()
 	m_flRagdollSinkStart = -1;
 	m_bInitialized = false;
 	m_bCreatedWhilePlaybackSkipping = engine->IsSkippingPlayback();
+	m_pGlovesModel = NULL;
 }
 
 C_CSRagdoll::~C_CSRagdoll()
 {
 	PhysCleanupFrictionSounds( this );
+
+	if ( m_pGlovesModel )
+	{
+		m_pGlovesModel->Remove();
+		m_pGlovesModel = NULL;
+	}
 }
 
 void C_CSRagdoll::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt )
@@ -580,6 +589,27 @@ void C_CSRagdoll::CreateCSRagdoll()
 			pPlayer->SetCycle( 0.0 );
 
 			Interp_Reset( varMap );
+		}
+
+		// add a separate gloves model if needed
+		if ( !m_pGlovesModel && DoesModelSupportGloves() && CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
+		{
+
+			m_pGlovesModel = new C_BaseAnimating;
+			if ( m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY ) )
+			{
+				// hide the gloves first
+				SetBodygroup( FindBodygroupByName( "gloves" ), 1 );
+
+				m_pGlovesModel->FollowEntity( this ); // attach to player model
+				m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
+				m_pGlovesModel->m_nSkin = pPlayer->m_pViewmodelArmConfig ? pPlayer->m_pViewmodelArmConfig->iSkintoneIndex : 0; // set the corrent skin tone
+			}
+			else
+			{
+				m_pGlovesModel->Release();
+				SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
+			}
 		}
 	}
 	else
@@ -856,6 +886,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropInt( RECVINFO( m_iAddonBits ) ),
 	RecvPropInt( RECVINFO( m_iPrimaryAddon ) ),
 	RecvPropInt( RECVINFO( m_iSecondaryAddon ) ),
+	RecvPropInt( RECVINFO( m_iKnifeAddon ) ),
 	RecvPropInt( RECVINFO( m_iThrowGrenadeCounter ) ),
 	RecvPropInt( RECVINFO( m_iPlayerState ) ),
 	RecvPropInt( RECVINFO( m_iAccount ) ),
@@ -974,6 +1005,8 @@ C_CSPlayer::C_CSPlayer() :
 
 	m_flNextMagDropTime = 0;
 	m_nLastMagDropAttachmentIndex = -1;
+
+	m_pViewmodelArmConfig = NULL;
 }
 
 
@@ -1206,6 +1239,50 @@ void InitializeAddonModelFromWeapon( CWeaponCSBase *weapon, C_BreakableProp *add
 	}
 }
 
+class C_PlayerAddonModel : public C_BreakableProp
+{
+public:
+	virtual const Vector& GetAbsOrigin( void ) const
+	{
+		// if the player carrying this addon is in lod state (meaning outside the camera frustum)
+		// we don't need to set up all the player's attachment bones just to find out where exactly
+		// the addon model wants to render. Just return the player's origin.
+
+		CBaseEntity *pMoveParent = GetMoveParent();
+
+		if ( pMoveParent && pMoveParent->IsPlayer() )
+		{
+			C_CSPlayer *pCSPlayer = static_cast<C_CSPlayer *>( pMoveParent );
+
+			if ( pCSPlayer && ( pCSPlayer->IsDormant() || !pCSPlayer->IsVisible() ) )
+				return pCSPlayer->GetAbsOrigin();
+
+		}
+
+		return BaseClass::GetAbsOrigin();
+	}
+
+	virtual bool ShouldDraw()
+	{
+		CBaseEntity *pMoveParent = GetMoveParent();
+		if ( pMoveParent && pMoveParent->IsPlayer() )
+		{
+			C_CSPlayer *pCSPlayer = static_cast<C_CSPlayer *>( pMoveParent );
+			if ( pCSPlayer && ( pCSPlayer->IsDormant() || !pCSPlayer->IsVisible() ) )
+				return false;
+		}
+
+		return BaseClass::ShouldDraw();
+	}
+
+	virtual bool IsFollowingEntity()
+	{
+		// addon models are ALWAYS following players
+		return true;
+	}
+
+};
+
 void C_CSPlayer::CreateAddonModel( int i )
 {
 	COMPILE_TIME_ASSERT( (sizeof( g_AddonInfo ) / sizeof( g_AddonInfo[0] )) == NUM_ADDON_BITS );
@@ -1213,16 +1290,27 @@ void C_CSPlayer::CreateAddonModel( int i )
 	// Create the model entity.
 	CAddonInfo *pAddonInfo = &g_AddonInfo[i];
 
-	int iAttachment = LookupAttachment( pAddonInfo->m_pAttachmentName );
-	if ( iAttachment <= 0 )
-		return;
+	int addonType = (1 << i);
+	int iAttachment;
+	float iScale = 1;
 
-	C_BreakableProp *pEnt = new C_BreakableProp;
+	if ( addonType == ADDON_GLOVES )
+		iAttachment = 0;
+	else
+		iAttachment = LookupAttachment( pAddonInfo->m_pAttachmentName );
 
-	int addonType = (1<<i);
-	if ( addonType == ADDON_PISTOL || addonType == ADDON_PRIMARY )
+	C_PlayerAddonModel *pEnt = new C_PlayerAddonModel;
+
+	if ( addonType == ADDON_PISTOL || addonType == ADDON_PRIMARY || addonType == ADDON_KNIFE )
 	{
-		CCSWeaponInfo *weaponInfo = GetWeaponInfo( (CSWeaponID)((addonType == ADDON_PRIMARY) ? m_iPrimaryAddon.Get() : m_iSecondaryAddon.Get()) );
+		CCSWeaponInfo *weaponInfo;
+		if ( addonType == ADDON_PRIMARY )
+			weaponInfo = GetWeaponInfo( (CSWeaponID) m_iPrimaryAddon.Get() );
+		else if ( addonType == ADDON_PISTOL )
+			weaponInfo = GetWeaponInfo( (CSWeaponID) m_iSecondaryAddon.Get() );
+		else
+			weaponInfo = GetWeaponInfo( (CSWeaponID) m_iKnifeAddon.Get() );
+
 		if ( !weaponInfo )
 		{
 			Warning( "C_CSPlayer::CreateAddonModel: Unable to get weapon info.\n" );
@@ -1237,6 +1325,22 @@ void C_CSPlayer::CreateAddonModel( int i )
 		{
 			pEnt->InitializeAsClientEntity( weaponInfo->m_szAddonModel, RENDER_GROUP_OPAQUE_ENTITY );
 		}
+
+		// check if there's a special attachment specified in weapon config
+		if ( weaponInfo->m_szAddonLocation[0] != 0 )
+		{
+			int iNewAttachment = LookupAttachment( weaponInfo->m_szAddonLocation );
+
+			// does this special attachment exist?
+			if ( iNewAttachment > 0 )
+				iAttachment = iNewAttachment;
+		}
+
+		iScale = weaponInfo->m_flAddonScale;
+	}
+	else if ( addonType == ADDON_GLOVES )
+	{
+		pEnt->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
 	}
 	else if( pAddonInfo->m_pModelName )
 	{
@@ -1274,9 +1378,12 @@ void C_CSPlayer::CreateAddonModel( int i )
 		}
 	}
 
-	if ( Q_strcmp( pAddonInfo->m_pAttachmentName, "c4" ) )
+	if ( addonType != ADDON_GLOVES && iAttachment <= 0 )
+		return;
+
+	if ( Q_strcmp( pAddonInfo->m_pAttachmentName, "c4" ) || addonType == ADDON_GLOVES )
 	{
-		// fade out all attached models except C4
+		// fade out all attached models except C4 and gloves
 		pEnt->SetFadeMinMax( 400, 500 );
 	}
 
@@ -1285,10 +1392,19 @@ void C_CSPlayer::CreateAddonModel( int i )
 
 	pAddon->m_hEnt = pEnt;
 	pAddon->m_iAddon = i;
-	pAddon->m_iAttachmentPoint = iAttachment;
-	pEnt->SetParent( this, pAddon->m_iAttachmentPoint );
-	pEnt->SetLocalOrigin( Vector( 0, 0, 0 ) );
-	pEnt->SetLocalAngles( QAngle( 0, 0, 0 ) );
+	if ( addonType == ADDON_GLOVES )
+	{
+		pEnt->FollowEntity( this ); // attach to player model
+		pEnt->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
+	}
+	else
+	{
+		pAddon->m_iAttachmentPoint = iAttachment;
+		pEnt->SetParent( this, pAddon->m_iAttachmentPoint );
+		pEnt->SetLocalOrigin( Vector( 0, 0, 0 ) );
+		pEnt->SetLocalAngles( QAngle( 0, 0, 0 ) );
+		pEnt->SetModelScale( iScale );
+	}
 	if ( IsLocalPlayer() )
 	{
 		pEnt->SetSolid( SOLID_NONE );
@@ -1367,10 +1483,15 @@ void C_CSPlayer::UpdateAddonModels()
 	if ( pPlayer && pPlayer->GetObserverMode() == OBS_MODE_IN_EYE && pPlayer->GetObserverTarget() == this )
 		iCurAddonBits = 0;
 
+	// remove everything if dead
+	if ( !IsAlive() )
+		iCurAddonBits = 0;
+
 	// Any changes to the attachments we should have?
 	if ( m_iLastAddonBits == iCurAddonBits &&
 		m_iLastPrimaryAddon == m_iPrimaryAddon &&
-		m_iLastSecondaryAddon == m_iSecondaryAddon )
+		m_iLastSecondaryAddon == m_iSecondaryAddon &&
+		m_iLastKnifeAddon == m_iKnifeAddon )
 	{
 		return;
 	}
@@ -1383,6 +1504,7 @@ void C_CSPlayer::UpdateAddonModels()
 	m_iLastAddonBits = iCurAddonBits;
 	m_iLastPrimaryAddon = m_iPrimaryAddon;
 	m_iLastSecondaryAddon = m_iSecondaryAddon;
+	m_iLastKnifeAddon = m_iKnifeAddon;
 
 	// Get rid of any old models.
 	int i,iNext;
@@ -1490,6 +1612,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			UpdateAddonModels();
 
 			m_vecLastAliveLocalVelocity.Init();
+
 			m_pViewmodelArmConfig = NULL;
 		}
 	}
@@ -1564,6 +1687,9 @@ void C_CSPlayer::ClientThink()
 	}
 
 	UpdateSoundEvents();
+
+	if ( m_pViewmodelArmConfig == NULL && GetModelPtr() )
+		m_pViewmodelArmConfig = GetPlayerViewmodelArmConfigForPlayerModel( GetModelPtr()->pszName() );
 
 	UpdateAddonModels();
 
@@ -2380,7 +2506,7 @@ void C_CSPlayer::BuildTransformations( CStudioHdr *pHdr, Vector *pos, Quaternion
 	// First, setup our model's transformations like normal.
 	BaseClass::BuildTransformations( pHdr, pos, q, cameraTransform, boneMask, boneComputed );
 
-	if ( IsLocalPlayer() && !C_BasePlayer::ShouldDrawLocalPlayer() )
+	if ( !IsVisible() || IsDormant() || (IsLocalPlayer() && !C_BasePlayer::ShouldDrawLocalPlayer()) || !ShouldDraw() )
 		return;
 
 	if ( !cl_left_hand_ik.GetInt() )

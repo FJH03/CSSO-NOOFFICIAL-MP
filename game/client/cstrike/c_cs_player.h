@@ -321,6 +321,7 @@ public:
 	// Clients don't know about holstered weapons, so we need to be told about them here
 	CNetworkVar( int, m_iPrimaryAddon );
 	CNetworkVar( int, m_iSecondaryAddon );
+	CNetworkVar( int, m_iKnifeAddon );
 
 	// How long the progress bar takes to get to the end. If this is 0, then the progress bar
 	// should not be drawn.
@@ -468,6 +469,7 @@ private:
 	int m_iLastAddonBits;
 	int m_iLastPrimaryAddon;
 	int m_iLastSecondaryAddon;
+	int m_iLastKnifeAddon;
 
 	int m_cycleLatch;				// server periodically updates this to fix up our anims, here it is a 4 bit fixed point
 	float m_serverIntendedCycle;	// server periodically updates this to fix up our anims, here it is the float we want, or -1 for no override

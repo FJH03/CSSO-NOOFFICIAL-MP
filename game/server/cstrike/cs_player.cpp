@@ -374,6 +374,7 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_iAddonBits ), NUM_ADDON_BITS, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_iPrimaryAddon ), 8, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_iSecondaryAddon ), 8, SPROP_UNSIGNED ),
+	SendPropInt( SENDINFO( m_iKnifeAddon ), 8, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_iPlayerState ), Q_log2( NUM_PLAYER_STATES )+1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_iAccount ), 16, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_bInBombZone ), 1, SPROP_UNSIGNED ),
@@ -604,6 +605,7 @@ CCSPlayer::CCSPlayer()
 
 	m_bNeedToChangeAgent = true;
 	m_bNeedToChangeGloves = true;
+	m_bHasGloves = false;
 	 
 	//=============================================================================
 	// HPE_END
@@ -772,7 +774,7 @@ void CCSPlayer::Precache()
 
 	for ( i=0; i<ARRAYSIZE( s_playerViewmodelArmConfigs ); ++i )
 	{
-	if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedGloveModel ) )
+		if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedGloveModel ) )
 			PrecacheModel( s_playerViewmodelArmConfigs[i].szAssociatedGloveModel );
 
 		if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModelGloveOverride ) )
@@ -789,21 +791,6 @@ void CCSPlayer::Precache()
 		if ( !engine->IsModelPrecached( GetGlovesInfo( i )->szWorldModel ) )
 			PrecacheModel( GetGlovesInfo( i )->szWorldModel );
 	}
-
-	// Sigh - have to force identical VMTs for the player models.  I'm just going to hard-code these
-	// strings here, rather than have char***'s or the CUtlVector<CUtlVector<>> equivalent.
-	engine->ForceSimpleMaterial( "materials/models/player/ct_urban/ct_urban.vmt" );
-	engine->ForceSimpleMaterial( "materials/models/player/ct_urban/ct_urban_glass.vmt" );
-	engine->ForceSimpleMaterial( "materials/models/player/ct_sas/ct_sas.vmt" );
-	engine->ForceSimpleMaterial( "materials/models/player/ct_sas/ct_sas_glass.vmt" );
-	engine->ForceSimpleMaterial( "materials/models/player/ct_gsg9/ct_gsg9.vmt" );
-	engine->ForceSimpleMaterial( "materials/models/player/ct_gign/ct_gign.vmt" );
-	engine->ForceSimpleMaterial( "materials/models/player/ct_gign/ct_gign_glass.vmt" );
-	engine->ForceSimpleMaterial( "materials/models/player/t_phoenix/t_phoenix.vmt" );
-	engine->ForceSimpleMaterial( "materials/models/player/t_guerilla/t_guerilla.vmt" );
-	engine->ForceSimpleMaterial( "materials/models/player/t_leet/t_leet.vmt" );
-	engine->ForceSimpleMaterial( "materials/models/player/t_leet/t_leet_glass.vmt" );
-	engine->ForceSimpleMaterial( "materials/models/player/t_arctic/t_arctic.vmt" );
 
 #ifdef CS_SHIELD_ENABLED
 	PrecacheModel( SHIELD_VIEW_MODEL );
@@ -1171,6 +1158,11 @@ void CCSPlayer::Spawn()
 		m_iLoadoutSlotGlovesT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_gloves_t" ) );
 		m_bNeedToChangeGloves = false;
 	}
+
+	if ( CSLoadout()->HasGlovesSet(this, GetTeamNumber()) && DoesModelSupportGloves() )
+		m_bHasGloves = true;
+	else
+		m_bHasGloves = false;
 
 	m_RateLimitLastCommandTimes.Purge();
 
@@ -1974,6 +1966,27 @@ void CCSPlayer::UpdateAddonBits()
 	else
 	{
 		m_iSecondaryAddon = WEAPON_NONE;
+	}
+
+	weapon = dynamic_cast< CWeaponCSBase * >(Weapon_GetSlot( WEAPON_SLOT_KNIFE ));
+	if ( weapon && weapon != GetActiveWeapon() )
+	{
+		iNewBits |= ADDON_KNIFE;
+		m_iKnifeAddon = weapon->GetWeaponID();
+	}
+	else
+	{
+		m_iKnifeAddon = WEAPON_NONE;
+	}
+
+	if ( m_bHasGloves )
+	{
+		SetBodygroup( FindBodygroupByName( "gloves" ), 1 ); // moved from client as it is not working there
+		iNewBits |= ADDON_GLOVES;
+	}
+	else
+	{
+		SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
 	}
 
 	m_iAddonBits = iNewBits;

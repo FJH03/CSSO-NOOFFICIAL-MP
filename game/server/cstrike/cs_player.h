@@ -439,6 +439,7 @@ public:
 	bool	HasAgentSet( int team );
 	int		GetAgentID( int team );
 	bool	m_bNeedToChangeAgent;
+	bool	m_bHasGloves;
 
 	CNetworkVar( bool, m_bNeedToChangeGloves );
 
@@ -1000,6 +1001,7 @@ private:
 	// Clients don't know about holstered weapons, so we need to tell them the weapon type here
 	CNetworkVar( int, m_iPrimaryAddon );
 	CNetworkVar( int, m_iSecondaryAddon );
+	CNetworkVar( int, m_iKnifeAddon );
 
 //Damage record functions
 public:

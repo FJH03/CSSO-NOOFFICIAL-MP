@@ -317,6 +317,7 @@ CCSWeaponInfo::CCSWeaponInfo()
 	m_flMaxSpeed = 1; // This should always be set in the script.
 	m_szAddonModel[0] = 0;
 	m_szMagModel[0] = 0;
+	m_szAddonLocation[0] = '\0';
 	m_fThrowVelocity = 0.0f;
 	m_iKillAward = 0;
 	m_vecIronsightEyePos.Init();
@@ -385,6 +386,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_iCrosshairMinDistance		= pKeyValuesData->GetInt( "CrosshairMinDistance", 4 );
 	m_iCrosshairDeltaDistance	= pKeyValuesData->GetInt( "CrosshairDeltaDistance", 3 );
 	m_bCanUseWithShield			= !!pKeyValuesData->GetInt( "CanEquipWithShield", false );
+	m_flAddonScale				= pKeyValuesData->GetFloat( "AddonScale", 1 );
 	m_flMuzzleScale				= pKeyValuesData->GetFloat( "MuzzleFlashScale", 1 );
 
 	const char *pMuzzleFlashStyle = pKeyValuesData->GetString( "MuzzleFlashStyle", "CS_MUZZLEFLASH_NORM" );
@@ -561,6 +563,9 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 
 	// Read the magazine model.
 	Q_strncpy( m_szMagModel, pKeyValuesData->GetString( "magazine_model" ), sizeof( m_szMagModel ) );
+
+	// Read a special addon attachment location if not the default location
+	V_strncpy( m_szAddonLocation, pKeyValuesData->GetString( "AddonLocation" ), sizeof( m_szAddonLocation ) );
 
 	// Read the dropped model.
 	Q_strncpy( m_szDroppedModel, pKeyValuesData->GetString( "DroppedModel" ), sizeof( m_szDroppedModel ) );

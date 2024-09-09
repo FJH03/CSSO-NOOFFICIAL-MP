@@ -230,7 +230,9 @@ private:
 	float					m_fCycleOffset;
 
 private:
-
+#ifdef CLIENT_DLL
+	CUtlVector< CHandle< C_ViewmodelAttachmentModel > > m_vecViewmodelArmModels; // gloves, sleeves, etc
+#endif
 
 	typedef CHandle< CBaseCombatWeapon > CBaseCombatWeaponHandle;
 	CNetworkVar( CBaseCombatWeaponHandle, m_hWeapon );
@@ -238,11 +240,6 @@ private:
 	// Control panel
 	typedef CHandle<CVGuiScreen>	ScreenHandle_t;
 	CUtlVector<ScreenHandle_t>	m_hScreens;
-
-private:
-#ifdef CLIENT_DLL
-	CUtlVector< CHandle< C_ViewmodelAttachmentModel > > m_vecViewmodelArmModels; // gloves, sleeves, etc
-#endif
 };
 
 #ifdef CLIENT_DLL
