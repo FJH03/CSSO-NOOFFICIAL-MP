@@ -1587,6 +1587,12 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 				C_CSPlayer *pFlashBangPlayer = GetHudPlayer();
 			}
 		}
+
+		if ( (Q_strcmp( "bot_takeover", name ) == 0) )
+		{
+			// update viewmodel arms when taking control of bot
+			m_pViewmodelArmConfig = NULL;
+		}
 	}
 	else if ( Q_strcmp( "player_death", name ) == 0 )
 	{
