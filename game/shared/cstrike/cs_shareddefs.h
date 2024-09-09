@@ -210,7 +210,7 @@ extern CUtlVectorInitialized< const char* > KnivesEntities;
 //--------------
 #define DMG_HEADSHOT		(DMG_LASTGENERICFLAG<<1)
 
-#define MAX_GLOVES 16
+#define MAX_GLOVES 17
 struct PlayerGloves
 {
 	const char*	szViewModel;
