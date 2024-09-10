@@ -1663,13 +1663,17 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "player_death", name ) == 0 )
 	{
-		C_BasePlayer* pPlayer = UTIL_PlayerByUserId( EventUserID );
-		C_CSPlayer* csPlayer = ToCSPlayer( pPlayer );
-		if (csPlayer && csPlayer->IsLocalPlayer())
+		C_CSPlayer* csPlayer = ToCSPlayer( UTIL_PlayerByUserId( EventUserID ) );
+		if (csPlayer)
 		{
-			C_RecipientFilter filter;
-			filter.AddRecipient( this );
-			PlayMusicSelection( filter, CSMUSIC_DEATHCAM );
+			if ( csPlayer->IsLocalPlayer() )
+			{
+				C_RecipientFilter filter;
+				filter.AddRecipient( this );
+				PlayMusicSelection( filter, CSMUSIC_DEATHCAM );
+			}
+
+			csPlayer->RemoveGlovesModel();
 		}
 	}
 	else if ( Q_strcmp( "player_spawn", name ) == 0 )
@@ -1683,12 +1687,16 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			m_holdTargetIDTimer.Reset();
 
 			UpdateAddonModels();
-			RemoveGlovesModel();
 
 			if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
 				m_bShouldAutobuyDMWeapons = true;
-
-			m_pViewmodelArmConfig = NULL;
+		}
+		
+		C_CSPlayer* csPlayer = ToCSPlayer( UTIL_PlayerByUserId( EventUserID ) );
+		if ( csPlayer )
+		{
+			csPlayer->RemoveGlovesModel();
+			csPlayer->m_pViewmodelArmConfig = NULL;
 		}
 	}
 	else if ( Q_strcmp( "player_update_viewmodel", name ) == 0 )
