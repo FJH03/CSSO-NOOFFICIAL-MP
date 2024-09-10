@@ -21,7 +21,7 @@
 #include "clientmode_csnormal.h"
 #include "c_cs_player.h"
 #include "c_cs_playerresource.h"
-
+#include "cs_gamerules.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"

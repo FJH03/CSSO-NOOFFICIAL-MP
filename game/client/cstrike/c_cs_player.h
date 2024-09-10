@@ -97,6 +97,7 @@ public:
 	// Get the ID target entity index. The ID target is the player that is behind our crosshairs, used to
 	// display the player's name.
 	int GetIDTarget() const;
+	int GetTargetedWeapon( void ) const;
 
 	virtual void NotifyShouldTransmit( ShouldTransmitState_t state );
 	virtual void ClientThink();
@@ -279,6 +280,7 @@ public:
 public:
 
 	void UpdateIDTarget( void );
+	void UpdateTargetedWeapon( void );
 	void RemoveAddonModels( void );
 	void UpdateMinModels( void );
 
@@ -456,6 +458,8 @@ private:
 	// ID Target
 	int					m_iIDEntIndex;
 	CountdownTimer		m_delayTargetIDTimer;
+
+	int					m_iTargetedWeaponEntIndex;
 
 	// Show the ID target after the cursor leaves the entity
 	int					m_iOldIDEntIndex;
