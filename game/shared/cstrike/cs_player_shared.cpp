@@ -1773,7 +1773,7 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 				return AcquireResult::AlreadyOwned;
 		}
 	}
-	/*else if ( nType == WEAPONTYPE_STACKABLEITEM )
+	else if ( nType == WEAPONTYPE_STACKABLEITEM )
 	{
 		int carryLimit = GetAmmoDef()->MaxCarry( pWeaponInfo->iAmmoType, this );
 
@@ -1791,7 +1791,7 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 				}
 			}
 		}
-	}*/
+	}
 	else if ( weaponId == WEAPON_C4 )
 	{
 		// TODO[pmf]: Data drive this from the scripts

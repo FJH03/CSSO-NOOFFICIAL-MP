@@ -40,6 +40,7 @@ WeaponTypeInfo s_weaponTypeInfo[] =
 	{ WEAPONTYPE_C4,			"C4" },
 	{ WEAPONTYPE_GRENADE,		"Grenade" },
 	{ WEAPONTYPE_EQUIPMENT,		"Equipment" },
+	{ WEAPONTYPE_STACKABLEITEM,	"StackableItem" },
 };
 
 
@@ -118,6 +119,8 @@ WeaponNameInfo s_weaponNameInfo[] =
 	{ WEAPON_MOLOTOV,			"weapon_molotov" },
 	{ WEAPON_INCGRENADE,		"weapon_incgrenade" },
 	{ WEAPON_TASER,				"weapon_taser" },
+
+	{ WEAPON_HEALTHSHOT,		"weapon_healthshot" },
 
 	// not sure any of these are needed
 	{ WEAPON_SHIELDGUN,			"weapon_shieldgun" },

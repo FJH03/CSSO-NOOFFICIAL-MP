@@ -58,6 +58,7 @@
 #include "weapon_decoy.h"
 #include "molotov_projectile.h"
 #include "cs_loadout.h"
+#include "item_healthshot.h"
 #include "holiday_gift.h"
 #include "../../shared/cstrike/cs_achievement_constants.h"
 
@@ -7070,7 +7071,7 @@ void CCSPlayer::Weapon_Equip( CBaseCombatWeapon *pWeapon )
 				CSWeaponDrop( pDropWeapon, false, true );
 			}
 		}
-		else if ( pCSWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_GRENADE )
+		else if ( pCSWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_GRENADE || pCSWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_STACKABLEITEM )
 		{
 			//if we already have this weapon, just add the ammo and destroy it
 			if( Weapon_OwnsThisType( pCSWeapon->GetClassname() ) )
@@ -7139,6 +7140,7 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 	// own this type of grenade.
 	bool bPickupGrenade = (pWeapon->GetWeaponType() == WEAPONTYPE_GRENADE);
 
+	bool bStackableItem = (pWeapon->GetWeaponType() == WEAPONTYPE_STACKABLEITEM);
 	/*
 	// ----------------------------------------
 	// If I already have it just take the ammo
