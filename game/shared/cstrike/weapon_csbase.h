@@ -146,6 +146,8 @@ public:
 		virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 		virtual bool IsRemoveable();
+
+		virtual void RemoveUnownedWeaponThink();
 		
 	#endif
 
@@ -322,6 +324,7 @@ private:
 
 	int		m_iExtraPrimaryAmmo;
 
+	float	m_nextOwnerTouchTime;
 	float	m_nextPrevOwnerTouchTime;
 	CCSPlayer *m_prevOwner;
 
@@ -344,6 +347,8 @@ private:
 	float m_gunHeat;
 	unsigned int m_smokeAttachments;
 	float m_lastSmokeTime;
+#else
+	int m_numRemoveUnownedWeaponThink;
 #endif
 
 public:

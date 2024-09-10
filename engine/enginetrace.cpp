@@ -72,7 +72,7 @@ abstract_class CEngineTrace : public IEngineTrace
 public:
 	CEngineTrace() { m_pRootMoveParent = NULL; }
 	// Returns the contents mask at a particular world-space position
-	virtual int		GetPointContents( const Vector &vecAbsPosition, IHandleEntity** ppEntity );
+	virtual int		GetPointContents( const Vector &vecAbsPosition, int contentsMask, IHandleEntity** ppEntity );
 
 	virtual int		GetPointContents_Collideable( ICollideable *pCollide, const Vector &vecAbsPosition );
 
@@ -83,9 +83,9 @@ public:
 	virtual void	TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace );
 
 	// A version that sets up the leaf and entity lists and allows you to pass those in for collision.
-	virtual void	SetupLeafAndEntityListRay( const Ray_t &ray, CTraceListData &traceData );
-	virtual void    SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vector &vecBoxMax, CTraceListData &traceData );
-	virtual void	TraceRayAgainstLeafAndEntityList( const Ray_t &ray, CTraceListData &traceData, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace );
+	virtual void	SetupLeafAndEntityListRay( const Ray_t &ray, ITraceListData *pTraceData );
+	virtual void    SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vector &vecBoxMax, ITraceListData *pTraceData );
+	virtual void	TraceRayAgainstLeafAndEntityList( const Ray_t &ray, ITraceListData *pTraceData, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace );
 
 	// A version that sweeps a collideable through the world
 	// abs start + abs end represents the collision origins you want to sweep the collideable through
@@ -101,7 +101,7 @@ public:
 	virtual void	EnumerateEntities( const Vector &vecAbsMins, const Vector &vecAbsMaxs, IEntityEnumerator *pEnumerator );
 
 	// FIXME: Different versions for client + server. Eventually we need to make these go away
-	virtual void HandleEntityToCollideable( IHandleEntity *pHandleEntity, ICollideable **ppCollide, const char **ppDebugName ) = 0;
+	virtual ICollideable *HandleEntityToCollideable( IHandleEntity *pHandleEntity ) = 0;
 	virtual ICollideable *GetWorldCollideable() = 0;
 
 	// Traces a ray against a particular edict
@@ -124,6 +124,11 @@ public:
 
 	// Walks bsp to find the leaf containing the specified point
 	virtual int GetLeafContainingPoint( const Vector &ptTest );
+
+	virtual ITraceListData *AllocTraceListData() { return new CTraceListData; }
+	virtual void FreeTraceListData(ITraceListData *pTraceListData) { delete pTraceListData; }
+
+	virtual const char* GetDebugName( IHandleEntity* pHandleEntity ) = 0;
 
 private:
 	// FIXME: Different versions for client + server. Eventually we need to make these go away
@@ -168,7 +173,8 @@ private:
 class CEngineTraceServer : public CEngineTrace
 {
 private:
-	virtual void HandleEntityToCollideable( IHandleEntity *pEnt, ICollideable **ppCollide, const char **ppDebugName );
+	virtual ICollideable* HandleEntityToCollideable( IHandleEntity *pEnt );
+	virtual const char* GetDebugName( IHandleEntity* pHandleEntity );
 	virtual void SetTraceEntity( ICollideable *pCollideable, trace_t *pTrace );
 	virtual int SpatialPartitionMask() const;
 	virtual int SpatialPartitionTriggerMask() const;
@@ -183,7 +189,8 @@ public:
 class CEngineTraceClient : public CEngineTrace
 {
 private:
-	virtual void HandleEntityToCollideable( IHandleEntity *pEnt, ICollideable **ppCollide, const char **ppDebugName );
+	virtual ICollideable* HandleEntityToCollideable( IHandleEntity *pEnt );
+	virtual const char* GetDebugName( IHandleEntity* pHandleEntity );
 	virtual void SetTraceEntity( ICollideable *pCollideable, trace_t *pTrace );
 	virtual int SpatialPartitionMask() const;
 	virtual int SpatialPartitionTriggerMask() const;
@@ -277,7 +284,7 @@ int CEngineTraceServer::SpatialPartitionTriggerMask() const
 class CPointContentsEnum : public IPartitionEnumerator
 {
 public:
-	CPointContentsEnum( CEngineTrace *pEngineTrace, const Vector &pos ) : m_Contents(CONTENTS_EMPTY) 
+	CPointContentsEnum( CEngineTrace *pEngineTrace, const Vector &pos, int contentsMask ) : m_Contents(CONTENTS_EMPTY), m_validMask(contentsMask)
 	{
 		m_pEngineTrace = pEngineTrace;
 		m_Pos = pos; 
@@ -288,13 +295,15 @@ public:
 		CEngineTrace *pEngineTrace,
 		ICollideable *pCollide, 
 		const Vector &vPos, 
+		int validMask,
 		int *pContents, 
 		ICollideable **pWorldCollideable )
 	{
 		// Deal with static props
 		// NOTE: I could have added static props to a different list and
 		// enumerated them separately, but that would have been less efficient
-		if ( StaticPropMgr()->IsStaticProp( pCollide->GetEntityHandle() ) )
+
+		if ( (validMask & CONTENTS_SOLID) && StaticPropMgr()->IsStaticProp( pCollide->GetEntityHandle() ) )
 		{
 			Ray_t ray;
 			trace_t trace;
@@ -323,7 +332,7 @@ public:
 			int contents = CM_TransformedPointContents( vPos, nHeadNode, 
 				pCollide->GetCollisionOrigin(), pCollide->GetCollisionAngles() );
 
-			if (contents != CONTENTS_EMPTY)
+			if (contents & validMask)
 			{
 				// Return the contents of the first thing we hit
 				*pContents = contents;
@@ -337,13 +346,11 @@ public:
 
 	IterationRetval_t EnumElement( IHandleEntity *pHandleEntity )
 	{
-		ICollideable *pCollide;
-		const char *pDbgName;
-		m_pEngineTrace->HandleEntityToCollideable( pHandleEntity, &pCollide, &pDbgName );
+		ICollideable *pCollide = m_pEngineTrace->HandleEntityToCollideable( pHandleEntity );
 		if (!pCollide)
 			return ITERATION_CONTINUE;
 
-		if ( CPointContentsEnum::TestEntity( m_pEngineTrace, pCollide, m_Pos, &m_Contents, &m_pCollide ) )
+		if ( CPointContentsEnum::TestEntity( m_pEngineTrace, pCollide, m_Pos, m_validMask, &m_Contents, &m_pCollide ) )
 			return ITERATION_STOP;
 		else
 			return ITERATION_CONTINUE;
@@ -373,37 +380,32 @@ public:
 private:
 	CEngineTrace *m_pEngineTrace;
 	Vector m_Pos;
+	int m_validMask;
 };
 
 
 //-----------------------------------------------------------------------------
 // Returns the contents mask at a particular world-space position
 //-----------------------------------------------------------------------------
-int	CEngineTrace::GetPointContents( const Vector &vecAbsPosition, IHandleEntity** ppEntity )
+int	CEngineTrace::GetPointContents( const Vector &vecAbsPosition, int contentsMask, IHandleEntity** ppEntity )
 {
 	VPROF( "CEngineTrace_GetPointContents" );
-//	VPROF_BUDGET( "CEngineTrace_GetPointContents", "CEngineTrace_GetPointContents" );
-	
+	//	VPROF_BUDGET( "CEngineTrace_GetPointContents", "CEngineTrace_GetPointContents" );
+
 	m_traceStatCounters[TRACE_STAT_COUNTER_POINTCONTENTS]++;
 	// First check the collision model
-	int nContents = CM_PointContents( vecAbsPosition, 0 );
-	if ( nContents & MASK_CURRENT )
-	{
-		nContents = CONTENTS_WATER;
-	}
-	
+	int nContents = CM_PointContents( vecAbsPosition, 0 ) & contentsMask;
+
 	if ( nContents != CONTENTS_SOLID )
 	{
-		CPointContentsEnum contentsEnum(this, vecAbsPosition);
+		CPointContentsEnum contentsEnum( this, vecAbsPosition, contentsMask );
 		SpatialPartition()->EnumerateElementsAtPoint( SpatialPartitionMask(),
-			vecAbsPosition, false, &contentsEnum );
+													  vecAbsPosition, false, &contentsEnum );
 
 		int nEntityContents = contentsEnum.m_Contents;
-		if ( nEntityContents & MASK_CURRENT )
-			nContents = CONTENTS_WATER;
 		if ( nEntityContents != CONTENTS_EMPTY )
 		{
-			if (ppEntity)
+			if ( ppEntity )
 			{
 				*ppEntity = contentsEnum.m_pCollide->GetEntityHandle();
 			}
@@ -412,7 +414,7 @@ int	CEngineTrace::GetPointContents( const Vector &vecAbsPosition, IHandleEntity*
 		}
 	}
 
-	if (ppEntity)
+	if ( ppEntity )
 	{
 		*ppEntity = GetWorldCollideable()->GetEntityHandle();
 	}
@@ -425,7 +427,7 @@ int CEngineTrace::GetPointContents_Collideable( ICollideable *pCollide, const Ve
 {
 	int contents = CONTENTS_EMPTY;
 	ICollideable *pDummy;
-	CPointContentsEnum::TestEntity( this, pCollide, vecAbsPosition, &contents, &pDummy );
+	CPointContentsEnum::TestEntity( this, pCollide, vecAbsPosition, MASK_ALL, &contents, &pDummy );
 	return contents;
 }
 
@@ -1271,55 +1273,60 @@ bool CEngineTrace::ClipTraceToTrace( trace_t &clipTrace, trace_t *pFinalTrace )
 //-----------------------------------------------------------------------------
 // Converts a user id to a collideable + username
 //-----------------------------------------------------------------------------
-void CEngineTraceServer::HandleEntityToCollideable( IHandleEntity *pHandleEntity, ICollideable **ppCollide, const char **ppDebugName )
+ICollideable *CEngineTraceServer::HandleEntityToCollideable( IHandleEntity *pHandleEntity )
 {
-	*ppCollide = StaticPropMgr()->GetStaticProp( pHandleEntity );
-	if ( *ppCollide	)
-	{
-		*ppDebugName = "static prop";
-		return;
-	}
+	ICollideable* pCollideable = StaticPropMgr()->GetStaticProp( pHandleEntity );
+	if ( pCollideable )
+		return pCollideable;
 
-	IServerUnknown *pServerUnknown = static_cast<IServerUnknown*>(pHandleEntity);
-	if ( !pServerUnknown || ! pServerUnknown->GetNetworkable())
+	IServerUnknown* pServerUnknown = static_cast< IServerUnknown* >( pHandleEntity );
+	if ( pServerUnknown )
 	{
-		*ppCollide = NULL;
-		*ppDebugName = "<null>";
-		return;
+		pCollideable = pServerUnknown->GetCollideable();
 	}
+	return pCollideable;
+}
 
-	*ppCollide = pServerUnknown->GetCollideable();
-	*ppDebugName = pServerUnknown->GetNetworkable()->GetClassName();
+const char* CEngineTraceServer::GetDebugName( IHandleEntity* pHandleEntity )
+{
+	if ( StaticPropMgr()->IsStaticProp( pHandleEntity ) )
+		return "static prop";
+
+	IServerUnknown* pServerUnknown = static_cast< IServerUnknown* >( pHandleEntity );
+	if ( !pServerUnknown || !pServerUnknown->GetNetworkable() )
+		return "<null>";
+
+	return pServerUnknown->GetNetworkable()->GetClassName();
 }
 
 #ifndef SWDS
-void CEngineTraceClient::HandleEntityToCollideable( IHandleEntity *pHandleEntity, ICollideable **ppCollide, const char **ppDebugName )
+ICollideable *CEngineTraceClient::HandleEntityToCollideable( IHandleEntity *pHandleEntity )
 {
-	*ppCollide = StaticPropMgr()->GetStaticProp( pHandleEntity );
-	if ( *ppCollide	)
+	ICollideable *pCollideable = StaticPropMgr()->GetStaticProp( pHandleEntity );
+	if ( pCollideable )
+		return pCollideable;
+	IClientUnknown *pUnk = static_cast<IClientUnknown*>(pHandleEntity);
+	if ( pUnk )
 	{
-		*ppDebugName = "static prop";
-		return;
+		pCollideable = pUnk->GetCollideable();
 	}
 
-	IClientUnknown *pUnk = static_cast<IClientUnknown*>(pHandleEntity);
+	return pCollideable;
+}
+
+const char* CEngineTraceClient::GetDebugName( IHandleEntity* pHandleEntity )
+{
+	if ( StaticPropMgr()->IsStaticProp( pHandleEntity ) )
+		return "static prop";
+
+	IClientUnknown* pUnk = static_cast< IClientUnknown* >( pHandleEntity );
 	if ( !pUnk )
-	{
-		*ppCollide = NULL;
-		*ppDebugName = "<null>";
-		return;
-	}
-	
-	*ppCollide = pUnk->GetCollideable();
-	*ppDebugName = "client entity";
-	IClientNetworkable *pNetwork = pUnk->GetClientNetworkable();
-	if (pNetwork)
-	{
-		if (pNetwork->GetClientClass())
-		{
-			*ppDebugName = pNetwork->GetClientClass()->m_pNetworkName;
-		}
-	}
+		return "<null>";
+
+	IClientNetworkable* pNetwork = pUnk->GetClientNetworkable();
+	if ( pNetwork && pNetwork->GetClientClass() )
+		return pNetwork->GetClientClass()->m_pNetworkName;
+	return "client entity";
 }
 #endif
 
@@ -1372,55 +1379,146 @@ void EngineTraceRenderRayCasts()
 #endif
 }
 
+static void ComputeRayBounds( const Ray_t &ray, Vector &mins, Vector &maxs )
+{
+	if ( ray.m_IsRay )
+	{
+		Vector start = ray.m_Start;
+		for ( int i = 0; i < 3; i++ )
+		{
+			if ( ray.m_Delta[i] > 0 )
+			{
+				maxs[i] = start[i] + ray.m_Delta[i];
+				mins[i] = start[i];
+			}
+			else
+			{
+				maxs[i] = start[i];
+				mins[i] = start[i] + ray.m_Delta[i];
+			}
+		}
+	}
+	else
+	{
+		Vector start = ray.m_Start;
+		for ( int i = 0; i < 3; i++ )
+		{
+			if ( ray.m_Delta[i] > 0 )
+			{
+				maxs[i] = start[i] + ray.m_Delta[i] + ray.m_Extents[i];
+				mins[i] = start[i] - ray.m_Extents[i];
+			}
+			else
+			{
+				maxs[i] = start[i] + ray.m_Extents[i];
+				mins[i] = start[i] + ray.m_Delta[i] - ray.m_Extents[i];
+			}
+		}
+	}
+}
+
+static bool IsBoxWithinBounds( const Vector &boxMins, const Vector &boxMaxs, const Vector &boundsMins, const Vector &bounsMaxs )
+{
+	if ( boxMaxs.x <= bounsMaxs.x && boxMins.x >= boundsMins.x &&
+		boxMaxs.y <= bounsMaxs.y && boxMins.y >= boundsMins.y &&
+		boxMaxs.z <= bounsMaxs.z && boxMins.z >= boundsMins.z )
+		return true;
+	return false;
+}
+
+
+bool CTraceListData::CanTraceRay( const Ray_t &ray )
+{
+	Vector rayMins, rayMaxs;
+	ComputeRayBounds( ray, rayMins, rayMaxs );
+	return IsBoxWithinBounds( rayMins, rayMaxs, m_mins, m_maxs );
+}
+
+// implementing members of CTraceListData
+IterationRetval_t CTraceListData::EnumElement( IHandleEntity *pHandleEntity )
+{
+	ICollideable *pCollideable = m_pEngineTrace->HandleEntityToCollideable( pHandleEntity );
+	// Check for error condition.
+	if ( !IsSolid( pCollideable->GetSolid(), pCollideable->GetSolidFlags() ) )
+	{
+		Assert( 0 );
+		if ( pCollideable->GetCollisionModel() )
+		{
+			Msg("%s in solid list (not solid) (%d, %04X) %.*s\n", m_pEngineTrace->GetDebugName(pHandleEntity), pCollideable->GetSolid(), pCollideable->GetSolidFlags(),
+				sizeof( pCollideable->GetCollisionModel()->strName ), pCollideable->GetCollisionModel()->strName );
+		}
+		else
+		{
+			Msg("%s in solid list (not solid) (%d, %04X)\n", m_pEngineTrace->GetDebugName(pHandleEntity), pCollideable->GetSolid(), pCollideable->GetSolidFlags() );
+		}
+	}
+	else
+	{
+		if ( StaticPropMgr()->IsStaticProp( pHandleEntity ) )
+		{
+			int index = m_staticPropList.AddToTail();
+			m_staticPropList[index].pCollideable = pCollideable;
+			m_staticPropList[index].pEntity = pHandleEntity;
+		}
+		else
+		{
+			int index = m_entityList.AddToTail();
+			m_entityList[index].pCollideable = pCollideable;
+			m_entityList[index].pEntity = pHandleEntity;
+		}
+	}
+
+	return ITERATION_CONTINUE;
+}
+
 
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CEngineTrace::SetupLeafAndEntityListRay( const Ray_t &ray, CTraceListData &traceData )
+void CEngineTrace::SetupLeafAndEntityListRay( const Ray_t &ray, ITraceListData *pTraceData )
 {
-	if ( !ray.m_IsSwept )
-	{
-		Vector vecMin, vecMax;
-		VectorSubtract( ray.m_Start, ray.m_Extents, vecMin );
-		VectorAdd( ray.m_Start, ray.m_Extents, vecMax );
-		SetupLeafAndEntityListBox( vecMin, vecMax, traceData );
-		return;
-	}
-
-	// Get the leaves that intersect the ray.
-	traceData.LeafCountReset();
-	CM_RayLeafnums( ray, traceData.m_aLeafList.Base(), traceData.LeafCountMax(), traceData.m_nLeafCount ); 
-
-	// Find all the entities in the voxels that intersect this ray.
-	traceData.EntityCountReset();
-	SpatialPartition()->EnumerateElementsAlongRay( SpatialPartitionMask(), ray, false, &traceData );
+	Vector mins, maxs;
+	ComputeRayBounds( ray, mins, maxs );
+	SetupLeafAndEntityListBox( mins, maxs, pTraceData );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Gives an AABB and returns a leaf and entity list.
 //-----------------------------------------------------------------------------
-void CEngineTrace::SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vector &vecBoxMax, CTraceListData &traceData )
+void CEngineTrace::SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vector &vecBoxMax, ITraceListData *pTraceData )
 {
+	VPROF("SetupLeafAndEntityListBox");
+	CTraceListData &traceData = *static_cast<CTraceListData *>(pTraceData);
+	traceData.Reset();
+	traceData.m_pEngineTrace = this;
+	// increase bounds slightly to catch exact cases
+	for ( int i = 0; i < 3; i++ )
+	{
+		traceData.m_mins[i] = vecBoxMin[i] - 1;
+		traceData.m_maxs[i] = vecBoxMax[i] + 1;
+	}
 	// Get the leaves that intersect this box.
-	int iTopNode = -1;
-	traceData.LeafCountReset();
-	traceData.m_nLeafCount = CM_BoxLeafnums( vecBoxMin, vecBoxMax, traceData.m_aLeafList.Base(), traceData.LeafCountMax(), &iTopNode );
-	
+	CM_GetTraceDataForBSP( traceData.m_mins, traceData.m_maxs, traceData );
 	// Find all entities in the voxels that intersect this box.
-	traceData.EntityCountReset();
-	SpatialPartition()->EnumerateElementsInBox( SpatialPartitionMask(), vecBoxMin, vecBoxMax, false, &traceData );
+	SpatialPartition()->EnumerateElementsInBox( SpatialPartitionMask(), traceData.m_mins, traceData.m_maxs, false, &traceData );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose:
 // NOTE: the fMask is redundant with the stuff below, what do I want to do???
 //-----------------------------------------------------------------------------
-void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, CTraceListData &traceData,
+void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, ITraceListData *pTraceData,
 										             unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace )
 {
-	// Setup the trace data.
-	CM_ClearTrace ( pTrace );
-
+	VPROF("TraceRayAgainstLeafAndEntityList");
+	CTraceListData &traceData = *static_cast<CTraceListData *>(pTraceData);
+	Vector rayMins, rayMaxs;
+	ComputeRayBounds( ray, rayMins, rayMaxs );
+	if ( !IsBoxWithinBounds( rayMins, rayMaxs, traceData.m_mins, traceData.m_maxs ) )
+	{
+		TraceRay( ray, fMask, pTraceFilter, pTrace );
+		return;
+	}
 	// Make sure we have some kind of trace filter.
 	CTraceFilterHitAll traceFilter;
 	if ( !pTraceFilter )
@@ -1433,14 +1531,7 @@ void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, CTraceLis
 	{
 		ICollideable *pCollide = GetWorldCollideable();
 
-		// Make sure the world entity is unrotated
-		// FIXME: BAH! The !pCollide test here is because of
-		// CStaticProp::PrecacheLighting.. it's occurring too early
-		// need to fix that later
-		Assert( !pCollide || pCollide->GetCollisionOrigin() == vec3_origin );
-		Assert( !pCollide || pCollide->GetCollisionAngles() == vec3_angle );
-
-		CM_BoxTraceAgainstLeafList( ray, traceData.m_aLeafList.Base(), traceData.LeafCount(), fMask, true, *pTrace );
+		CM_BoxTraceAgainstLeafList( ray, traceData, fMask, *pTrace );
 		SetTraceEntity( pCollide, pTrace );
 
 		// Blocked by the world or early out because we only are tracing against the world.
@@ -1449,72 +1540,86 @@ void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, CTraceLis
 	}
 	else
 	{
+		// Setup the trace data.
+		CM_ClearTrace ( pTrace );
+
 		// Set initial start and endpos.  This is necessary if the world isn't traced against,
 		// because we may not trace against anything below.
 		VectorAdd( ray.m_Start, ray.m_StartOffset, pTrace->startpos );
 		VectorAdd( pTrace->startpos, ray.m_Delta, pTrace->endpos );
 	}
-
 	// Save the world collision fraction.
 	float flWorldFraction = pTrace->fraction;
+	float flWorldFractionLeftSolidScale = flWorldFraction;
 
-	// Create a ray that extends only until we hit the world and adjust the trace accordingly
+	// Create a ray that extends only until we hit the world
+	// and adjust the trace accordingly
 	Ray_t entityRay = ray;
-	VectorScale( entityRay.m_Delta, pTrace->fraction, entityRay.m_Delta );
 
-	// We know this is safe because if pTrace->fraction == 0, we would have exited above.
-	pTrace->fractionleftsolid /= pTrace->fraction;
- 	pTrace->fraction = 1.0;
+	if ( pTrace->fraction == 0 )
+	{
+		entityRay.m_Delta.Init();
+		flWorldFractionLeftSolidScale = pTrace->fractionleftsolid;
+		pTrace->fractionleftsolid = 1.0f;
+		pTrace->fraction = 1.0f;
+	}
+	else
+	{
+		// Explicitly compute end so that this computation happens at the quantization of
+		// the output (endpos).  That way we won't miss any intersections we would get
+		// by feeding these results back in to the tracer
+		// This is not the same as entityRay.m_Delta *= pTrace->fraction which happens 
+		// at a quantization that is more precise as m_Start moves away from the origin
+		Vector end;
+		VectorMA( entityRay.m_Start, pTrace->fraction, entityRay.m_Delta, end );
+		VectorSubtract(end, entityRay.m_Start, entityRay.m_Delta);
+		// We know this is safe because pTrace->fraction != 0
+		pTrace->fractionleftsolid /= pTrace->fraction;
+		pTrace->fraction = 1.0;
+	}
 
 	// Collide with entities.
 	bool bNoStaticProps = pTraceFilter->GetTraceType() == TRACE_ENTITIES_ONLY;
 	bool bFilterStaticProps = pTraceFilter->GetTraceType() == TRACE_EVERYTHING_FILTER_PROPS;
 
 	trace_t trace;
-	ICollideable *pCollideable;
-	const char *pDebugName;
-	for ( int iEntity = 0; iEntity < traceData.m_nEntityCount; ++iEntity )
+	Vector mins, maxs;
+	if ( !bNoStaticProps )
 	{
-		// Generate a collideable.
-		IHandleEntity *pHandleEntity = traceData.m_aEntityList[iEntity];
-		HandleEntityToCollideable( pHandleEntity, &pCollideable, &pDebugName );
-
-		// Check for error condition.
-		if ( !IsSolid( pCollideable->GetSolid(), pCollideable->GetSolidFlags() ) )
+		int propCount = traceData.m_staticPropList.Count();
+		for ( int iProp = 0; iProp < propCount && !pTrace->allsolid; iProp++ )
 		{
-			Assert( 0 );
-			Msg("%s in solid list (not solid)\n", pDebugName );
-			continue;
-		}
-
-		if ( !StaticPropMgr()->IsStaticProp( pHandleEntity ) )
-		{
-			if ( !pTraceFilter->ShouldHitEntity( pHandleEntity, fMask ) )
-				continue;
-		}
-		else
-		{
-			// FIXME: Could remove this check here by
-			// using a different spatial partition mask. Look into it
-			// if we want more speedups here.
-			if ( bNoStaticProps )
-				continue;
-
+			IHandleEntity *pHandleEntity = traceData.m_staticPropList[iProp].pEntity;
+			ICollideable *pCollideable = traceData.m_staticPropList[iProp].pCollideable;
 			if ( bFilterStaticProps )
 			{
 				if ( !pTraceFilter->ShouldHitEntity( pHandleEntity, fMask ) )
 					continue;
 			}
-		}
+			pCollideable->WorldSpaceSurroundingBounds( &mins, &maxs );
+			if ( !IsBoxIntersectingRay( mins, maxs, entityRay, DIST_EPSILON ) )
+				continue;
+			ClipRayToCollideable( entityRay, fMask, pCollideable, &trace );
 
+			// Make sure the ray is always shorter than it currently is
+			ClipTraceToTrace( trace, pTrace );
+		}
+	}
+	int entityCount = traceData.m_entityList.Count();
+	for ( int iEntity = 0; iEntity < entityCount && !pTrace->allsolid; ++iEntity )
+	{
+		IHandleEntity *pHandleEntity = traceData.m_entityList[iEntity].pEntity;
+		ICollideable *pCollideable = traceData.m_entityList[iEntity].pCollideable;
+		if ( !pTraceFilter->ShouldHitEntity( pHandleEntity, fMask ) )
+			continue;
+
+		pCollideable->WorldSpaceSurroundingBounds( &mins, &maxs );
+		if ( !IsBoxIntersectingRay( mins, maxs, entityRay, DIST_EPSILON ) )
+			continue;
 		ClipRayToCollideable( entityRay, fMask, pCollideable, &trace );
 
 		// Make sure the ray is always shorter than it currently is
 		ClipTraceToTrace( trace, pTrace );
-
-		// Stop if we're in allsolid
-		if ( pTrace->allsolid )
-			break;
 	}
 
 	// Fix up the fractions so they are appropriate given the original unclipped-to-world ray.
@@ -1523,9 +1628,13 @@ void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, CTraceLis
 
 	if ( !ray.m_IsRay )
 	{
-		// Make sure no fractionleftsolid can be used with box sweeps.
+		// Make sure no fractionleftsolid can be used with box sweeps
 		VectorAdd( ray.m_Start, ray.m_StartOffset, pTrace->startpos );
 		pTrace->fractionleftsolid = 0;
+
+#ifdef _DEBUG
+		pTrace->fractionleftsolid = VEC_T_NAN;
+#endif
 	}
 }
 
@@ -1609,23 +1718,23 @@ CON_COMMAND_EXTERN( ray_bench, RayBench, "Time the rays" )
 				{
 
 					VPROF("IntersectStaticProps");
-				for ( int i = 0; i < nCount; ++i )
-				{
-					// Generate a collideable
-					IHandleEntity *pHandleEntity = enumerator.m_EntityHandles[i];
+					for ( int i = 0; i < nCount; ++i )
+					{
+						// Generate a collideable
+						IHandleEntity *pHandleEntity = enumerator.m_EntityHandles[i];
 
-					if ( !StaticPropMgr()->IsStaticProp( pHandleEntity ) )
-						continue;
-					if ( entityRay.m_IsRay )
-						rayVsProp++;
-					else
-						boxVsProp++;
-					s_EngineTraceServer.HandleEntityToCollideable( pHandleEntity, &pCollideable, &pDebugName );
-					s_EngineTraceServer.ClipRayToCollideable( entityRay, MASK_SOLID, pCollideable, &tr );
+						if ( !StaticPropMgr()->IsStaticProp( pHandleEntity ) )
+							continue;
+						if ( entityRay.m_IsRay )
+							rayVsProp++;
+						else
+							boxVsProp++;
+						pCollideable = s_EngineTraceServer.HandleEntityToCollideable( pHandleEntity );
+						s_EngineTraceServer.ClipRayToCollideable( entityRay, MASK_SOLID, pCollideable, &tr );
 
-					// Make sure the ray is always shorter than it currently is
-					s_EngineTraceServer.ClipTraceToTrace( tr, &trace );
-				}
+						// Make sure the ray is always shorter than it currently is
+						s_EngineTraceServer.ClipTraceToTrace( tr, &trace );
+					}
 				}
 			}
 			if ( trace.DidHit() )
@@ -1763,19 +1872,18 @@ void CEngineTrace::TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter 
 
 	trace_t tr;
 	ICollideable *pCollideable;
-	const char *pDebugName;
 	int nCount = enumerator.Count();
 	for ( int i = 0; i < nCount; ++i )
 	{
 		// Generate a collideable
 		IHandleEntity *pHandleEntity = enumerator.m_EntityHandles[i];
-		HandleEntityToCollideable( pHandleEntity, &pCollideable, &pDebugName );
+		pCollideable = HandleEntityToCollideable( pHandleEntity );
 
 		// Check for error condition
 		if ( IsPC() && IsDebug() && !IsSolid( pCollideable->GetSolid(), pCollideable->GetSolidFlags() ) )
 		{
 			Assert( 0 );
-			Msg( "%s in solid list (not solid)\n", pDebugName );
+			Msg( "%s in solid list (not solid)\n", GetDebugName(pHandleEntity) );
 			continue;
 		}
 

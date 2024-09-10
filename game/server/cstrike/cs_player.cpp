@@ -150,7 +150,9 @@ extern ConVar ammo_smokegrenade_max;
 extern ConVar ammo_decoy_max;
 extern ConVar ammo_molotov_max;
 
-extern ConVar mp_buy_anywhere;
+extern ConVar mp_randomspawn;
+extern ConVar mp_randomspawn_los;
+extern ConVar mp_randomspawn_dist;
 
 extern ConVar mp_respawn_immunitytime;
 
@@ -2130,7 +2132,7 @@ void CCSPlayer::UpdateMouseoverHints()
 			CBaseEntity *pObject = tr.m_pEnt;
 			switch ( pObject->Classify() )
 			{
-			case CLASS_PLAYER:
+			/*case CLASS_PLAYER:
 				{
 					const float grenadeBloat = 1.2f; // Be conservative in estimating what a player can distinguish
 					if ( !TheBots->IsLineBlockedBySmoke( EyePosition(), pObject->EyePosition(), grenadeBloat ) )
@@ -2153,7 +2155,7 @@ void CCSPlayer::UpdateMouseoverHints()
 						}
 					}
 				}
-				break;
+				break;*/
 			case CLASS_PLAYER_ALLY:
 				switch ( GetTeamNumber() )
 				{
@@ -2200,7 +2202,8 @@ void CCSPlayer::PostThink()
 
 	if ( !(m_iDisplayHistoryBits & DHF_ROUND_STARTED) && CanPlayerBuy(false) )
 	{
-		HintMessage( "#Hint_press_buy_to_purchase", false );
+		if ( CSGameRules() && CSGameRules()->GetGamemode() != GameModes::DEATHMATCH )
+			HintMessage( "#Hint_press_buy_to_purchase", false );
 		m_iDisplayHistoryBits |= DHF_ROUND_STARTED;
 	}
 	if ( m_flNextMouseoverUpdate < gpGlobals->curtime )
@@ -2264,6 +2267,12 @@ void CCSPlayer::PostThink()
 			//odd that the AFK player 'says' they have dropped the bomb... but it's better than nothing
 			Radio( "SpottedLooseBomb",   "#Cstrike_TitlesTXT_Game_afk_bomb_drop" );
 		}
+	}
+
+	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
+	{
+		// make sure that this player has enough money to buy things
+		m_iAccount = mp_maxmoney.GetInt();
 	}
 }
 
@@ -3741,6 +3750,17 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 {
 	bool bSuccess = false;
 
+	CWeaponCSBase *pCSWeapon = dynamic_cast< CWeaponCSBase* >(pWeapon);
+
+	if ( mp_death_drop_gun.GetInt() == 0 && pCSWeapon && !pCSWeapon->IsA( WEAPON_C4 ) )
+	{
+		if ( pWeapon )
+			UTIL_Remove( pWeapon );
+
+		UpdateAddonBits();
+		return true;
+	}
+
 	if ( HasShield() && bDropShield == true )
 	{
 		DropShield();
@@ -4229,15 +4249,6 @@ bool CCSPlayer::HasSecondaryWeapon( void )
 	return bSuccess;
 }
 
-bool CCSPlayer::IsInBuyZone()
-{
-	if ( mp_buy_anywhere.GetInt() == 1 ||
-		 mp_buy_anywhere.GetInt() == GetTeamNumber() )
-		 return true;
-
-	return m_bInBuyZone && !IsVIP();
-}
-
 bool CCSPlayer::CanPlayerBuy( bool display )
 {
 	// is the player in a buy zone?
@@ -4260,9 +4271,9 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 		return false;
 	}
 
-	int buyTime = (int)mp_buytime.GetFloat();
+	int buyTime = mp_buytime.GetInt();
 
-	if ( mp->IsBuyTimeElapsed() )
+	if ( !IsInBuyPeriod() )
 	{
 		if ( display == true )
 		{
@@ -4477,6 +4488,9 @@ BuyResult_e CCSPlayer::AttemptToBuyShield( void )
 BuyResult_e CCSPlayer::AttemptToBuyDefuser( void )
 {
 	CCSGameRules *MPRules = CSGameRules();
+
+	if ( MPRules->GetGamemode() == GameModes::DEATHMATCH )
+		return BUY_NOT_ALLOWED;
 
 	if( ( GetTeamNumber() == TEAM_CT ) && ( MPRules->IsBombDefuseMap() || MPRules->IsHostageRescueMap() ) )
 	{
@@ -5773,6 +5787,19 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 
 		return true;
 	}
+	else if ( FStrEq( pcmd, "autobuy" ) )
+	{
+		// hijack autobuy for when money isnt relevant and we want random weapons instead, such as deathmatch.
+		if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
+		{
+			engine->ClientCommand( edict(), "dm_togglerandomweapons" );
+		}
+		else
+		{
+			AutoBuy();
+		}
+		return true;
+	}
 //	else if ( FStrEq( pcmd, "buyammo1" ) )
 //	{
 //		AttemptToBuyAmmoSingle(0);
@@ -6444,6 +6471,20 @@ bool CCSPlayer::SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pSpot 
 					continue;
 				}
 
+				if ( mp_randomspawn_los.GetBool() )
+				{
+					if ( CSGameRules() && CSGameRules()->IsSpawnPointHiddenFromOtherPlayers( pSpot, this, TEAM_CT )
+						 && UTIL_IsRandomSpawnFarEnoughAwayFromTeam( pSpot->GetAbsOrigin(), TEAM_CT ) )
+					{
+						return true;
+					}
+				}
+				else
+				{
+					pSpot = gEntList.FindEntityByClassname( pSpot, pEntClassName );
+					continue;
+				}
+
 				// if so, go to pSpot
 				return true;
 			}
@@ -6503,6 +6544,24 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 	}
 	else
 	{
+		if ( mp_randomspawn.GetInt() == GetTeamNumber() || mp_randomspawn.GetInt() == 1 )
+		{
+			pSpot = g_pLastCTSpawn; // reusing g_pLastCTSpawn.
+			// Randomize the start spot
+			for ( int i = random->RandomInt(1,10); i > 0; i-- )
+			{
+				pSpot = gEntList.FindEntityByClassname( pSpot, "info_deathmatch_spawn" );
+			}
+			if ( !pSpot )  // skip over the null point
+				pSpot = gEntList.FindEntityByClassname( pSpot, "info_deathmatch_spawn" );
+
+			if ( SelectSpawnSpot( "info_deathmatch_spawn", pSpot ))
+			{
+				g_pLastCTSpawn = pSpot;
+				goto ReturnSpot;
+			}
+		}
+
 		if ( GetTeamNumber() == TEAM_CT )
 		{
 			pSpot = g_pLastCTSpawn;
@@ -7374,19 +7433,6 @@ void CCSPlayer::EmitPrivateSound( const char *soundName )
 	EmitSound( filter, entindex(), soundName );
 }
 
-
-//=====================
-//Autobuy
-//=====================
-static void AutoBuy( void )
-{
-	CCSPlayer *player = ToCSPlayer( UTIL_GetCommandClient() );
-
-	if ( player )
-		player->AutoBuy();
-}
-static ConCommand autobuy( "autobuy", AutoBuy, "Attempt to purchase items with the order listed in cl_autobuy" );
-
 //==============================================
 //AutoBuy - do the work of deciding what to buy
 //==============================================
@@ -8205,6 +8251,72 @@ BuyResult_e CCSPlayer::RebuyArmor()
 	return BUY_ALREADY_HAVE;
 }
 
+static void BuyRandom( void )
+{
+	CCSPlayer *player = ToCSPlayer( UTIL_GetCommandClient() );
+
+	if ( !player )
+		return;
+
+		player->BuyRandom();
+}
+
+static ConCommand buyrandom( "buyrandom", BuyRandom, "Buy random primary and secondary. Primarily for deathmatch where cost is not an issue.", 0 );
+
+
+void CCSPlayer::BuyRandom( void )
+{
+	if ( !IsInBuyZone() )
+	{
+		EmitPrivateSound( "BuyPreset.CantBuy" );
+		return;
+	}
+
+	m_bIsInAutoBuy = true;
+	// Make lists of primary and secondary weapons.
+	CUtlVector< int > primaryweapons;
+	CUtlVector< int > secondaryweapons;
+
+	for ( int w = WEAPON_FIRST; w < WEAPON_LAST; w++ )
+	{
+		const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( (CSWeaponID)w );
+		if ( pWeaponInfo )
+		{
+			bool isRifle = pWeaponInfo->iSlot == WEAPON_SLOT_RIFLE;
+			bool isPistol = pWeaponInfo->iSlot == WEAPON_SLOT_PISTOL;
+			bool isTeamAppropriate = ( ( pWeaponInfo->m_iTeam == GetTeamNumber() ) ||
+										( pWeaponInfo->m_iTeam == TEAM_UNASSIGNED ) );
+
+			if ( isRifle && isTeamAppropriate )
+			{
+				primaryweapons.AddToTail( w );
+			}
+			else if ( isPistol && isTeamAppropriate )
+			{
+				secondaryweapons.AddToTail( w );
+			}
+
+//			Msg( "%i, %s, %s, %i\n", w, pWeaponInfo->szClassName, ( isRifle ? "primary" : ( isPistol ? "secondary" : "other" ) ), isTeamAppropriate );
+		}
+//		else
+//		{
+//			Msg( "%i, %s\n", w, "*********DOESN'T EXIST" );
+//		}
+	}
+
+	// randomly pick one of each.
+	int primaryToBuy = random->RandomInt( 1, primaryweapons.Count() );
+	int secondaryToBuy = random->RandomInt( 1, secondaryweapons.Count() );
+
+//	Msg( "random pick: p: %i, s: %i", primaryweapons[primaryToBuy], secondaryweapons[secondaryToBuy] );
+
+	// buy
+	// TODO: get itemid
+	HandleCommand_Buy( WeaponIDToAlias( primaryweapons[primaryToBuy - 1] ) );
+	HandleCommand_Buy( WeaponIDToAlias( secondaryweapons[secondaryToBuy - 1] ) );
+	m_bIsInAutoBuy = false;
+}
+
 bool CCSPlayer::IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredCaps )
 {
 	// High priority entities go through a different use code path requiring
@@ -8434,7 +8546,9 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 			return false;
 		}
 */
-		
+		if ( mp_death_drop_gun.GetInt() == 0 && !pCSWeapon->IsA( WEAPON_C4 ) )
+			return true;
+
 		// [dwenger] Determine value of dropped item.
 		if ( !pCSWeapon->IsAPriorOwner( this ) )
 		{
@@ -8519,7 +8633,7 @@ void CCSPlayer::DestroyWeapon( CBaseCombatWeapon *pWeapon )
 void CCSPlayer::DestroyWeapons( bool bDropC4 /* = true */ )
 {
 	// Destroy the Defuser
-	if( HasDefuser() )
+	if ( HasDefuser() && mp_death_drop_defuser.GetBool() )
 	{
 		RemoveDefuser();
 	}
@@ -8606,7 +8720,7 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 //=============================================================================
 
 
-	if( HasDefuser() && !CSGameRules()->IsWarmupPeriod() )
+	if( HasDefuser() && mp_death_drop_defuser.GetBool() )
 	{
 		//Drop an item_defuser
 		Vector vForward, vRight;
@@ -8617,8 +8731,6 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 
 		RemoveDefuser();
 
-		//=============================================================================
-		// HPE_BEGIN:
 		// [menglish] Add the newly created defuser to the dropped equipment list
 		//=============================================================================
 		 
@@ -8626,21 +8738,33 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 		{
 			m_hDroppedEquipment[DROPPED_DEFUSE] = static_cast<CBaseEntity *>(pDefuser);
 		}
-		 
-		//=============================================================================
-		// HPE_END
-		//=============================================================================
 	}
 
 	if( HasShield() )
 	{
 		DropShield();
 	}
-	else
+	
+	if ( mp_death_drop_gun.GetInt() != 0 )
 	{
-		//drop the best weapon we have
-		if( !DropRifle( true ) )
-			DropPistol( true );
+		CWeaponCSBase* pWeapon = NULL;
+
+		if ( mp_death_drop_gun.GetInt() == 2 )
+		{
+			pWeapon = GetActiveCSWeapon();
+			if ( pWeapon && !(pWeapon->GetSlot() == WEAPON_SLOT_PISTOL || pWeapon->GetSlot() == WEAPON_SLOT_RIFLE ) )
+			{
+				pWeapon = NULL;
+			}
+		}
+
+		if ( pWeapon == NULL )
+		{
+			//drop the best weapon we have
+			if ( !DropRifle( true ) )
+				DropPistol( true );
+
+		}
 	}
 
 
@@ -8678,9 +8802,26 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 				bGrenadeDropped = true;
 			}
 		}
+
+		if ( mp_death_drop_grenade.GetInt() == 2 && !bGrenadeDropped )
+		{
+			// drop currently active grenade
+			bGrenadeDropped = CSWeaponDrop(pGrenade, false );
+		}
 	}
 
-	if ( !bGrenadeDropped )
+	if ( mp_death_drop_grenade.GetInt() == 3 )
+	{
+		for ( int i = 0; i < MAX_WEAPONS; ++i )
+		{
+			CBaseCSGrenade *pCurGrenade = dynamic_cast< CBaseCSGrenade * >( GetWeapon( i ) );
+			if ( pCurGrenade && pCurGrenade->HasAmmo() && !pCurGrenade->m_bHasEmittedProjectile )
+			{
+				bGrenadeDropped = CSWeaponDrop( pCurGrenade, false );
+			}
+		}
+	}
+	else if ( mp_death_drop_grenade.GetInt() != 0 && !bGrenadeDropped )
 	{
 		// drop the "best" grenade remaining according to the following priorities
 		const char* GrenadePriorities[] =
@@ -10298,6 +10439,24 @@ int CCSPlayer::GetNumEnemiesDamaged()
 		}
 	}
 	return numberOfEnemiesDamaged;
+}
+
+bool CCSPlayer::ShouldCollide( int collisionGroup, int contentsMask ) const
+{
+	if ( collisionGroup == COLLISION_GROUP_PLAYER_MOVEMENT )
+	{
+		unsigned int myTeamMask = ( PhysicsSolidMaskForEntity() & ( CONTENTS_TEAM1 | CONTENTS_TEAM2 ) );
+		unsigned int otherTeamMask = ( contentsMask & ( CONTENTS_TEAM1 | CONTENTS_TEAM2 ) );
+
+		// See if we have a team and we're on the same team.
+		// If we are on the same team, then don't collide.
+		if ( myTeamMask != 0x0 && myTeamMask == otherTeamMask  )
+		{
+			return false;
+		}
+	}
+
+	return BaseClass::ShouldCollide( collisionGroup, contentsMask );
 }
 
 //=============================================================================

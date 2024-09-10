@@ -8,6 +8,7 @@
 #include "hud_base_account.h"
 #include "c_cs_player.h"
 #include "clientmode_csnormal.h"
+#include "cs_gamerules.h"
 
 using namespace vgui;
 
@@ -37,7 +38,13 @@ bool CHudAccount::ShouldDraw()
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if ( pPlayer )
 	{
-		return !pPlayer->IsObserver();
+		if ( pPlayer->IsObserver() )
+			return false;
+
+		if ( CSGameRules() && CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
+			return false;
+
+		return true;
 	}
 	else
 	{

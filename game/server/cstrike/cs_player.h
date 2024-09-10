@@ -122,8 +122,8 @@ private:
 #define DHF_HOSTAGE_USED		( 1 << 4 )
 #define DHF_HOSTAGE_INJURED		( 1 << 5 )
 #define DHF_HOSTAGE_KILLED		( 1 << 6 )
-#define DHF_FRIEND_SEEN			( 1 << 7 )
-#define DHF_ENEMY_SEEN			( 1 << 8 )
+//#define DHF_FRIEND_SEEN			( 1 << 7 )
+//#define DHF_ENEMY_SEEN			( 1 << 8 )
 #define DHF_FRIEND_INJURED		( 1 << 9 )
 #define DHF_FRIEND_KILLED		( 1 << 10 )
 #define DHF_ENEMY_KILLED		( 1 << 11 )
@@ -314,6 +314,8 @@ public:
 	// from CBasePlayer
 	virtual void		SetupVisibility( CBaseEntity *pViewEntity, unsigned char *pvs, int pvssize );
 
+	virtual	bool		ShouldCollide( int collisionGroup, int contentsMask ) const;
+
 	virtual CBaseEntity* FindNextObserverTarget( bool bReverse );
 
 	virtual int 		GetNextObserverSearchStartPoint( bool bReverse );
@@ -371,6 +373,9 @@ public:
 
 	// Returns true if the player is allowed to move.
 	bool CanMove() const;
+
+	// Returns the player mask which includes the solid mask plus the team mask.
+	virtual unsigned int PhysicsSolidMaskForEntity( void ) const;
 
 	void OnJump( float fImpulse );
 	void OnLand( float fVelocity );
@@ -804,6 +809,7 @@ public:
 	CNetworkVar( int, m_iMoveState );		// Is the player trying to run?  Used for state transitioning after a player lands from a jump etc.
 
 	bool IsInBuyZone();
+	bool IsInBuyPeriod();
 	bool CanPlayerBuy( bool display );
 
 	CNetworkVar( bool, m_bInHostageRescueZone );
@@ -851,7 +857,7 @@ public:
 
 	void SwitchTeamsAtRoundReset( void ) { m_switchTeamsOnNextRoundReset = true; }
 	bool WillSwitchTeamsAtRoundReset( void ) { return m_switchTeamsOnNextRoundReset; }
-	
+
 	CNetworkVar( bool, m_bDetected );
 	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesT );
@@ -1024,7 +1030,8 @@ private:
 
 //Damage record functions
 public:
-
+	void BuyRandom();
+	
 	static void	StartNewBulletGroup();	// global function
 
 	void RecordDamage( CCSPlayer* damageDealer, CCSPlayer* damageTaker, int iDamageDealt, int iActualHealthRemoved );

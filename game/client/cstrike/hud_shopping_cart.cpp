@@ -65,14 +65,7 @@ bool CHudShoppingCart::ShouldDraw()
 {
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 
-	//=============================================================================
-	// HPE_BEGIN:
-	// [tj] Added base class call
-	//=============================================================================
-	return ( pPlayer && pPlayer->IsInBuyZone() && !CSGameRules()->IsBuyTimeElapsed() && CHudElement::ShouldDraw() );
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
+	return ( pPlayer && pPlayer->IsInBuyZone() && pPlayer->GetTeamNumber() != TEAM_UNASSIGNED && !CSGameRules()->IsBuyTimeElapsed() && CHudElement::ShouldDraw() && CSGameRules()->GetGamemode() != GameModes::DEATHMATCH );
 }
 
 

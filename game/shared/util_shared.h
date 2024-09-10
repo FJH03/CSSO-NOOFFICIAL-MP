@@ -124,6 +124,7 @@ public:
 	virtual void SetCollisionGroup( int iCollisionGroup ) { m_collisionGroup = iCollisionGroup; }
 
 	const IHandleEntity *GetPassEntity( void ){ return m_pPassEnt;}
+	int GetCollisionGroup( void ) const { return m_collisionGroup; }
 
 private:
 	const IHandleEntity *m_pPassEnt;
@@ -317,6 +318,16 @@ inline void UTIL_TraceRay( const Ray_t &ray, unsigned int mask,
 	}
 }
 
+inline void UTIL_TraceRay( const Ray_t &ray, unsigned int mask, 
+						  ITraceFilter *pFilter, trace_t *ptr )
+{
+	enginetrace->TraceRay( ray, mask, pFilter, ptr );
+
+	if( r_visualizetraces.GetBool() )
+	{
+		DebugDrawLine( ptr->startpos, ptr->endpos, 255, 0, 0, true, -1.0f );
+	}
+}
 
 // Sweeps a particular entity through the world
 void UTIL_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, const Vector &vecAbsEnd, unsigned int mask, trace_t *ptr );
