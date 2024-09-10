@@ -7153,6 +7153,32 @@ bool CCSPlayer::StartObserverMode( int mode )
 	return true;
 }
 
+bool CCSPlayer::SetObserverTarget(CBaseEntity *target)
+{
+	if ( target )
+	{
+		CCSPlayer *pPlayer = dynamic_cast<CCSPlayer*>( target );
+		if ( pPlayer )
+			pPlayer->RefreshCarriedHostage( false );
+	}
+
+	return BaseClass::SetObserverTarget(target);
+}
+
+void CCSPlayer::CheckObserverSettings( void )
+{
+	BaseClass::CheckObserverSettings();
+
+	if ( m_bForcedObserverMode )
+	{
+		CCSPlayer *pPlayer = ToCSPlayer( m_hObserverTarget.Get() );
+		if ( IsValidObserverTarget( pPlayer ) )
+		{
+			SetObserverMode( m_iObserverLastMode ); // switch to last mode
+			m_bForcedObserverMode = false;	// disable force mode
+		}
+	}
+}
 
 void CCSPlayer::Weapon_Equip( CBaseCombatWeapon *pWeapon )
 {
