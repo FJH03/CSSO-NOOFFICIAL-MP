@@ -659,9 +659,6 @@ bool CCSMapOverview::CanHostageBeSeen( MapPlayer_t *hostage )
 
 	if( GetMode() == MAP_MODE_RADAR )
 	{
-		// This level will be for all the RadarMode thinking.  Base class will be the old way for the other modes.
-		float now = gpGlobals->curtime;
-
 		if( hostage->position == Vector(0,0,0) )
 			return false; // Invalid guy.
 
@@ -675,10 +672,6 @@ bool CCSMapOverview::CanHostageBeSeen( MapPlayer_t *hostage )
 
 		if( localPlayer->GetTeamNumber() == hostage->team )
 			return true;// always yes for teammates.
-
-		// and a living enemy needs to have been seen recently
-		if( csHostage->timeLastSeen != -1  &&  now - csHostage->timeLastSeen < TIME_SPOTS_STAY_SEEN )
-			return true;
 
 		return false;
 	}

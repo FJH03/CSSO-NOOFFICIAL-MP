@@ -164,6 +164,7 @@ extern ConVar ff_damage_reduction_grenade_self;
 extern ConVar ff_damage_reduction_bullets;
 extern ConVar ff_damage_reduction_other;
 
+
 ConVar phys_playerscale( "phys_playerscale", "10.0", FCVAR_REPLICATED, "This multiplies the bullet impact impuse on players for more dramatic results when players are shot." );
 ConVar phys_headshotscale( "phys_headshotscale", "1.3", FCVAR_REPLICATED, "Modifier for the headshot impulse hits on players" );
 
@@ -171,10 +172,10 @@ ConVar sv_spawn_afk_bomb_drop_time( "sv_spawn_afk_bomb_drop_time", "15", FCVAR_R
 
 ConVar mp_drop_knife_enable( "mp_drop_knife_enable", "0", 0, "Allows players to drop knives." );
 
+static ConVar tv_relayradio( "tv_relayradio", "0", 0, "Relay team radio commands to TV: 0=off, 1=on" );
+
 // [Jason] Allow us to turn down the frequency of the damage notification
 ConVar CS_WarnFriendlyDamageInterval( "CS_WarnFriendlyDamageInterval", "3.0", FCVAR_CHEAT, "Defines how frequently the server notifies clients that a player damaged a friend" );
-
-static ConVar tv_relayradio( "tv_relayradio", "0", 0, "Relay team radio commands to TV: 0=off, 1=on" );
 
 ConVar mp_deathcam_skippable( "mp_deathcam_skippable", "1", FCVAR_REPLICATED, "Determines whether a player can early-out of the deathcam." );
 
@@ -835,6 +836,7 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "Player.NightVisionOn" );
 	PrecacheScriptSound( "Player.FlashlightOn" );
 	PrecacheScriptSound( "Player.FlashlightOff" );
+	PrecacheScriptSound( "HealthShot.Success" );
 
 	// CS Bot sounds
 	PrecacheScriptSound( "Bot.StuckSound" );
@@ -3769,17 +3771,6 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 {
 	bool bSuccess = false;
 
-	CWeaponCSBase *pCSWeapon = dynamic_cast< CWeaponCSBase* >(pWeapon);
-
-	if ( mp_death_drop_gun.GetInt() == 0 && pCSWeapon && !pCSWeapon->IsA( WEAPON_C4 ) )
-	{
-		if ( pWeapon )
-			UTIL_Remove( pWeapon );
-
-		UpdateAddonBits();
-		return true;
-	}
-
 	if ( HasShield() && bDropShield == true )
 	{
 		DropShield();
@@ -3931,6 +3922,17 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool bDropShield )
 {
 	bool bSuccess = false;
+
+	CWeaponCSBase *pCSWeapon = dynamic_cast< CWeaponCSBase* >(pWeapon);
+
+	if ( mp_death_drop_gun.GetInt() == 0 && pCSWeapon && !pCSWeapon->IsA( WEAPON_C4 ) )
+	{
+		if ( pWeapon )
+			UTIL_Remove( pWeapon );
+
+		UpdateAddonBits();
+		return true;
+	}
 
 	if ( HasShield() && bDropShield == true )
 	{
@@ -7287,7 +7289,7 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 	//		}
 	//	}
 
-	if ( bPickupC4 || bPickupGrenade || bPickupTaser || /*bPickupCarriableItem || */ !Weapon_SlotOccupied( pWeapon ) )
+	if ( bPickupC4 || bStackableItem || bPickupGrenade || bPickupTaser || /*bPickupCarriableItem || */ !Weapon_SlotOccupied( pWeapon ) )
 	{
 		// we have to do this here because picking up weapons placed in the world don't have their clips set
 		// TODO: give the weapon a clip on spawn and not when picked up!
@@ -7448,6 +7450,7 @@ void CCSPlayer::EmitPrivateSound( const char *soundName )
 	CSingleUserRecipientFilter filter( this );
 	EmitSound( filter, entindex(), soundName );
 }
+
 
 //==============================================
 //AutoBuy - do the work of deciding what to buy
@@ -8267,6 +8270,7 @@ BuyResult_e CCSPlayer::RebuyArmor()
 	return BUY_ALREADY_HAVE;
 }
 
+
 static void BuyRandom( void )
 {
 	CCSPlayer *player = ToCSPlayer( UTIL_GetCommandClient() );
@@ -8564,7 +8568,7 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 */
 		if ( mp_death_drop_gun.GetInt() == 0 && !pCSWeapon->IsA( WEAPON_C4 ) )
 			return true;
-
+		
 		// [dwenger] Determine value of dropped item.
 		if ( !pCSWeapon->IsAPriorOwner( this ) )
 		{
@@ -8735,7 +8739,7 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 // HPE_END
 //=============================================================================
 
-
+	
 	if( HasDefuser() && mp_death_drop_defuser.GetBool() )
 	{
 		//Drop an item_defuser
@@ -8748,8 +8752,6 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 		RemoveDefuser();
 
 		// [menglish] Add the newly created defuser to the dropped equipment list
-		//=============================================================================
-		 
 		if(fromDeath)
 		{
 			m_hDroppedEquipment[DROPPED_DEFUSE] = static_cast<CBaseEntity *>(pDefuser);
@@ -8760,7 +8762,7 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 	{
 		DropShield();
 	}
-	
+
 	if ( mp_death_drop_gun.GetInt() != 0 )
 	{
 		CWeaponCSBase* pWeapon = NULL;
@@ -9649,6 +9651,7 @@ const CCSWeaponInfo* CCSPlayer::GetWeaponInfoFromDamageInfo( const CTakeDamageIn
 	return NULL;
 }
 
+
 /**
  *	static public CCSPlayer::GetCSWeaponIDCausingDamage()
  *
@@ -10498,7 +10501,7 @@ bool CCSPlayer::ShouldCollide( int collisionGroup, int contentsMask ) const
 	{
 		unsigned int myTeamMask = ( PhysicsSolidMaskForEntity() & ( CONTENTS_TEAM1 | CONTENTS_TEAM2 ) );
 		unsigned int otherTeamMask = ( contentsMask & ( CONTENTS_TEAM1 | CONTENTS_TEAM2 ) );
-
+		
 		// See if we have a team and we're on the same team.
 		// If we are on the same team, then don't collide.
 		if ( myTeamMask != 0x0 && myTeamMask == otherTeamMask  )
