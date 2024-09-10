@@ -93,6 +93,8 @@ enum CSWeaponID
 	WEAPON_MOLOTOV,
 	WEAPON_INCGRENADE,
 
+	WEAPON_HEALTHSHOT,
+
 	//knifes massive
 
 	WEAPON_KNIFE,
@@ -121,8 +123,6 @@ enum CSWeaponID
 	WEAPON_KEVLAR,
 	WEAPON_ASSAULTSUIT,
 	WEAPON_NVG,
-
-	WEAPON_HEALTHSHOT,
 
 	WEAPON_MAX,		// number of weapons weapon index
 };
