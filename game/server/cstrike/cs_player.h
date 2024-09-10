@@ -316,6 +316,8 @@ public:
 
 	virtual	bool		ShouldCollide( int collisionGroup, int contentsMask ) const;
 
+	// from CBasePlayer
+	virtual bool		IsValidObserverTarget(CBaseEntity * target);
 	virtual CBaseEntity* FindNextObserverTarget( bool bReverse );
 
 	virtual int 		GetNextObserverSearchStartPoint( bool bReverse );
