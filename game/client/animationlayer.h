@@ -23,9 +23,8 @@ public:
 	ALLOW_DATATABLES_PRIVATE_ACCESS();
 
 	C_AnimationLayer();
-	void SetSequence( int nSequence );
 	void Reset();
-	void SetWeight( float flWeight );
+
 	void SetOrder( int order );
 
 public:
@@ -43,6 +42,16 @@ public:
 
 	float GetFadeout( float flCurTime );
 
+	void SetSequence( int nSequence );
+	void SetCycle( float flCycle );
+	void SetPlaybackRate( float flPlaybackRate );
+	void SetWeight( float flWeight );
+
+	int   GetOrder() const;
+	int   GetSequence() const;
+	float GetCycle() const;
+	float GetPlaybackRate() const;
+	float GetWeight() const;
 
 	void BlendWeight();
 
@@ -63,9 +72,49 @@ inline C_AnimationLayer::C_AnimationLayer()
 	Reset();
 }
 
+inline void C_AnimationLayer::SetSequence( int nSequence )
+{
+	m_nSequence = nSequence;
+}
+
+inline void C_AnimationLayer::SetCycle( float flCycle )
+{
+	m_flCycle = flCycle;
+}
+
 inline void C_AnimationLayer::SetWeight( float flWeight )
 {
 	m_flWeight = flWeight;
+}
+
+FORCEINLINE void C_AnimationLayer::SetPlaybackRate( float flPlaybackRate )
+{
+	m_flPlaybackRate = flPlaybackRate;
+}
+
+FORCEINLINE int	C_AnimationLayer::GetSequence( ) const
+{
+	return m_nSequence;
+}
+
+FORCEINLINE float C_AnimationLayer::GetCycle( ) const
+{
+	return m_flCycle;
+}
+
+FORCEINLINE float C_AnimationLayer::GetPlaybackRate( ) const
+{
+	return m_flPlaybackRate;
+}
+
+FORCEINLINE float C_AnimationLayer::GetWeight( ) const
+{
+	return m_flWeight;
+}
+
+FORCEINLINE int C_AnimationLayer::GetOrder() const
+{
+	return m_nOrder;
 }
 
 inline void C_AnimationLayer::Reset()

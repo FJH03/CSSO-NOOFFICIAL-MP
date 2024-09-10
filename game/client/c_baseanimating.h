@@ -214,6 +214,8 @@ public:
 
 	int		GetHitboxBone( int hitboxIndex );
 
+	void	CopySequenceTransitions( C_BaseAnimating *pCopyFrom );
+
 	//=============================================================================
 	// HPE_END
 	//=============================================================================

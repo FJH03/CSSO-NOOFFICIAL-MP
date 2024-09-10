@@ -46,6 +46,7 @@
 #include "cs_shareddefs.h"
 
 #include "eventlist.h"
+#include "npcevent.h"
 
 // NVNT - haptics system for spectating
 #include "haptics/haptic_utils.h"
@@ -351,7 +352,7 @@ void C_CSRagdoll::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4
 		CAnimationLayer *pLastRagdollLayer = pRagdollOverlay->GetAnimOverlay(n-1);
 		if ( pLastRagdollLayer )
 		{
-			//pLastRagdollLayer->SetSequence( m_iDeathPose );
+			pLastRagdollLayer->SetSequence( m_iDeathPose );
 			pLastRagdollLayer->SetWeight( 1 );
 		}
 	}
@@ -364,7 +365,7 @@ void C_CSRagdoll::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4
 
 	//fallback
 	Vector vecRagdollVelocityPush = m_vecRagdollVelocity;
-
+	
 	C_CSPlayer *pPlayer = dynamic_cast< C_CSPlayer* >( m_hPlayer.Get() );
 	if ( pPlayer )
 	{
@@ -373,7 +374,7 @@ void C_CSRagdoll::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4
 
 	if ( vecRagdollVelocityPush.Length() > CS_PLAYER_SPEED_RUN * 3 )
 		vecRagdollVelocityPush = vecRagdollVelocityPush.Normalized() * CS_PLAYER_SPEED_RUN * 3;
-
+	
 	// apply global extra velocity manually instead of relying on prediction to do it. This means all bones get the same vel...
 	for ( int i=0; i<MAXSTUDIOBONES; i++ )
 	{
@@ -451,34 +452,42 @@ void C_CSRagdoll::ApplyRandomTaserForce( void )
 
 void C_CSRagdoll::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
 {
+	static const float RAGDOLL_IMPACT_MAGNITUDE = 8000.0f;
+
 	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
 
 	if( !pPhysicsObject )
 		return;
 
 	Vector dir = pTrace->endpos - pTrace->startpos;
-
+	
 	if ( iDamageType == DMG_BLAST )
 	{
-		dir *= 4000;  // adjust impact strenght
-
+		VectorNormalize( dir );
+		dir *= RAGDOLL_IMPACT_MAGNITUDE;  // adjust impact strenght
+				
 		// apply force at object mass center
 		pPhysicsObject->ApplyForceCenter( dir );
 	}
 	else
 	{
-		Vector hitpos;
-
+		Vector hitpos;  
+	
 		VectorMA( pTrace->startpos, pTrace->fraction, dir, hitpos );
 		VectorNormalize( dir );
 
-		dir *= 4000;  // adjust impact strenght
+		// apply force where we hit it (shock/taser is handled with a special death type )
+		if ( (iDamageType & DMG_SHOCK ) == 0 )
+		{
+			// Blood spray!
+			float flDamage = 10.0f;
+			// This does smaller splotches on the guy and splats blood on the world.
+			TraceBleed( flDamage, dir, pTrace, iDamageType );
+			FX_CS_BloodSpray( hitpos, dir, flDamage );
 
-		// apply force where we hit it
-		pPhysicsObject->ApplyForceOffset( dir, hitpos );
-
-		// Blood spray!
-		FX_CS_BloodSpray( hitpos, dir, 10 );
+			dir *= RAGDOLL_IMPACT_MAGNITUDE;  // adjust impact strenght
+			pPhysicsObject->ApplyForceOffset( dir, hitpos );
+		}
 	}
 
 	m_pRagdoll->ResetRagdollSleepAfterTime();
@@ -573,24 +582,48 @@ void C_CSRagdoll::CreateCSRagdoll()
 			SetAbsAngles( pPlayer->GetRenderAngles() );
 
 			SetAbsVelocity( m_vecRagdollVelocity );
+		}
 
-			int iSeq = LookupSequence( "walk_lower" );
-			if ( iSeq == -1 )
+		// in addition to base cycle, duplicate overlay layers and pose params onto the ragdoll, 
+		// so the starting pose is as accurate as possible.
+
+		SetCycle( pPlayer->GetCycle() );
+
+		for ( int i=0; i<MAXSTUDIOPOSEPARAM; i++ )
+		{
+			//Msg( "Setting pose param %i to %.2f\n", i, pPlayer->GetPoseParameter( i ) );
+			SetPoseParameter( i, pPlayer->GetPoseParameter( i ) );
+		}
+
+		CBaseAnimatingOverlay *pPlayerOverlay = pPlayer->GetBaseAnimatingOverlay();
+		CBaseAnimatingOverlay *pRagdollOverlay = GetBaseAnimatingOverlay();
+		if ( pPlayerOverlay )
+		{
+			int layerCount = pPlayerOverlay->GetNumAnimOverlays();
+			pRagdollOverlay->SetNumAnimOverlays(layerCount);
+			for( int layerIndex = 0; layerIndex < layerCount; ++layerIndex )
 			{
-				Assert( false );	// missing walk_lower?
-				iSeq = 0;
+				CAnimationLayer *playerLayer = pPlayerOverlay->GetAnimOverlay(layerIndex);
+				CAnimationLayer *ragdollLayer = pRagdollOverlay->GetAnimOverlay(layerIndex);
+				if( playerLayer && ragdollLayer )
+				{
+					ragdollLayer->SetCycle( playerLayer->GetCycle() );
+					ragdollLayer->SetOrder( playerLayer->GetOrder() );
+					ragdollLayer->SetSequence( playerLayer->GetSequence() );
+					ragdollLayer->SetWeight( playerLayer->GetWeight() );
+				}
 			}
+		}
 
-			SetSequence( iSeq );	// walk_lower, basic pose
-			SetCycle( 0.0 );
+		m_flPlaybackRate = pPlayer->GetPlaybackRate();
 
-			// go ahead and set these on the player in case the code below decides to set up bones using
-			// that entity instead of this one.  The local player may not have valid animation
-			pPlayer->SetSequence( iSeq );	// walk_lower, basic pose
-			pPlayer->SetCycle( 0.0 );
 
+		if ( !bRemotePlayer )
+		{
 			Interp_Reset( varMap );
 		}
+
+		CopySequenceTransitions( pPlayer );
 
 		// add a separate gloves model if needed
 		if ( !m_pGlovesModel && DoesModelSupportGloves() && CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
@@ -604,7 +637,7 @@ void C_CSRagdoll::CreateCSRagdoll()
 
 				m_pGlovesModel->FollowEntity( this ); // attach to player model
 				m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
-				
+
 				int skin = 0;
 				if ( pPlayer->m_pViewmodelArmConfig )
 					skin = pPlayer->m_pViewmodelArmConfig->iSkintoneIndex;
@@ -623,6 +656,8 @@ void C_CSRagdoll::CreateCSRagdoll()
 				SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
 			}
 		}
+
+		pPlayer->MoveBoneAttachments( this );
 	}
 	else
 	{
@@ -647,17 +682,12 @@ void C_CSRagdoll::CreateCSRagdoll()
 		matrix3x4_t currentBones[MAXSTUDIOBONES];
 		const float boneDt = 0.05f;
 
-		//=============================================================================
-		// [pfreese], [tj]
-		// There are visual problems with the attempted blending of the 
-		// death pose animations in C_CSRagdoll::GetRagdollInitBoneArrays. The version
-		// in C_BasePlayer::GetRagdollInitBoneArrays doesn't attempt to blend death
-		// poses, so if the player is relevant, use that one regardless of whether the 
-		// player is the local one or not.
-		//=============================================================================
-		if ( pPlayer && !pPlayer->IsDormant() )
+		// We used to get these values from the local player object when he ragdolled, but he had some bad values when using prediction.
+		// It ends up that just getting the bone array values for this ragdoll works best for both the local and remote players.
+		ConVarRef cl_ragdoll_crumple( "cl_ragdoll_crumple" );
+		if ( cl_ragdoll_crumple.GetBool() )
 		{
-			pPlayer->GetRagdollInitBoneArrays( boneDelta0, boneDelta1, currentBones, boneDt );
+			BaseClass::GetRagdollInitBoneArrays( boneDelta0, boneDelta1, currentBones, boneDt );
 		}
 		else
 		{
@@ -1012,6 +1042,7 @@ C_CSPlayer::C_CSPlayer() :
 	ListenForGameEvent( "item_pickup" );
 	ListenForGameEvent( "cs_pre_restart" );
 	ListenForGameEvent( "player_death" );
+	ListenForGameEvent( "player_spawn" );
 	ListenForGameEvent( "player_update_viewmodel" );
 
 	m_bPlayingHostageCarrySound = false;
@@ -1020,6 +1051,8 @@ C_CSPlayer::C_CSPlayer() :
 
 	m_flNextMagDropTime = 0;
 	m_nLastMagDropAttachmentIndex = -1;
+
+	m_vecLastAliveLocalVelocity.Init();
 
 	m_pViewmodelArmConfig = NULL;
 }
@@ -1030,6 +1063,8 @@ C_CSPlayer::~C_CSPlayer()
 	RemoveAddonModels();
 
 	ReleaseFlashlight();
+
+	RemoveGlovesModel();
 
 	m_PlayerAnimState->Release();
 }
@@ -1539,6 +1574,7 @@ void C_CSPlayer::UpdateAddonModels()
 	}
 }
 
+
 void C_CSPlayer::UpdateGlovesModel()
 {
 	if ( !DoesModelSupportGloves() || !CSLoadout()->HasGlovesSet( this, GetTeamNumber() ) || !IsAlive() )
@@ -1553,7 +1589,7 @@ void C_CSPlayer::UpdateGlovesModel()
 		m_pCSGloves = new CBaseCSGloves( pszGlovesModel );
 		m_pCSGloves->Equip( this );
 	}
-
+	
 	const char *pszModelName = m_pCSGloves->GetModelName();
 	if ( pszModelName && pszModelName[0] )
 	{
@@ -1564,11 +1600,13 @@ void C_CSPlayer::UpdateGlovesModel()
 	}
 }
 
+
 void C_CSPlayer::RemoveAddonModels()
 {
 	m_iAddonBits = 0;
 	UpdateAddonModels();
 }
+
 
 void C_CSPlayer::RemoveGlovesModel()
 {
@@ -1578,6 +1616,7 @@ void C_CSPlayer::RemoveGlovesModel()
 		m_pCSGloves = NULL;
 	}
 }
+
 
 void C_CSPlayer::FireGameEvent( IGameEvent *event )
 {
@@ -1641,7 +1680,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			m_holdTargetIDTimer.Reset();
 
 			UpdateAddonModels();
-
 			RemoveGlovesModel();
 
 			m_pViewmodelArmConfig = NULL;
@@ -1705,6 +1743,11 @@ static bool inSpectating_Haptics = false;
 //-----------------------------------------------------------------------------
 void C_CSPlayer::ClientThink()
 {
+	if ( IsAlive() )
+	{
+		m_vecLastAliveLocalVelocity = (m_vecLastAliveLocalVelocity * 0.8) + (GetLocalVelocity() * 0.2);
+	}
+
 	BaseClass::ClientThink();
 
 	// velocity music handling
@@ -1724,9 +1767,6 @@ void C_CSPlayer::ClientThink()
 	}
 
 	UpdateSoundEvents();
-
-	if ( m_pViewmodelArmConfig == NULL && GetModelPtr() )
-		m_pViewmodelArmConfig = GetPlayerViewmodelArmConfigForPlayerModel( GetModelPtr()->pszName() );
 
 	UpdateAddonModels();
 
@@ -3297,3 +3337,4 @@ float C_CSPlayer::GetDeathCamInterpolationTime()
 //=============================================================================
 // HPE_END
 //=============================================================================
+
