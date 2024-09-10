@@ -1198,7 +1198,7 @@ bool CCSBot::IsFriendInTheWay( const Vector &goalPos )
 		// we can pass right thru teammates in the mode - no waiting
 		return false;
 	}
-	
+
 	// do this check less often to ease CPU burden
 	if (!m_avoidFriendTimer.IsElapsed())
 	{
@@ -1228,7 +1228,7 @@ bool CCSBot::IsFriendInTheWay( const Vector &goalPos )
 		if (!player->IsAlive())
 			continue;
 
-		if (!player->InSameTeam( this ))
+		if ( IsOtherEnemy( player ) )
 			continue;
 
 		if (player->entindex() == entindex())

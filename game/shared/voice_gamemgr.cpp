@@ -39,7 +39,6 @@ ConVar voice_serverdebug( "voice_serverdebug", "0" );
 // Muted players still can't talk to each other.
 ConVar sv_alltalk( "sv_alltalk", "0", FCVAR_NOTIFY, "Players can hear all other players, no team restrictions" );
 
-
 CVoiceGameMgr g_VoiceGameMgr;
 
 
@@ -199,7 +198,7 @@ void CVoiceGameMgr::UpdateMasks()
 {
 	m_UpdateInterval = 0;
 
-	bool bAllTalk = !!sv_alltalk.GetInt();
+	// Note: We now check sv_alltalk in the CanPlayerHearPlayer function, so that function is the authority on whether we can hear another player
 
 	for(int iClient=0; iClient < m_nMaxPlayers; iClient++)
 	{
@@ -230,8 +229,8 @@ void CVoiceGameMgr::UpdateMasks()
 			for(int iOtherClient=0; iOtherClient < m_nMaxPlayers; iOtherClient++)
 			{
 				CBaseEntity *pEnt = UTIL_PlayerByIndex(iOtherClient+1);
-				if(pEnt && pEnt->IsPlayer() && 
-					(bAllTalk || m_pHelper->CanPlayerHearPlayer(pPlayer, (CBasePlayer*)pEnt, bProximity )) )
+				if ( pEnt && pEnt->IsPlayer() && 
+					 m_pHelper->CanPlayerHearPlayer( pPlayer, assert_cast<CBasePlayer*>( pEnt ), bProximity ) )
 				{
 					gameRulesMask[iOtherClient] = true;
 					ProximityMask[iOtherClient] = bProximity;

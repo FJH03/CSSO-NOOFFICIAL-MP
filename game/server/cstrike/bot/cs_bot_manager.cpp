@@ -1344,6 +1344,8 @@ void CCSBotManager::ExtractScenarioData( void )
 	m_zoneCount = 0;
 	m_gameScenario = SCENARIO_DEATHMATCH;
 
+	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
+		return;
 
 	//
 	// Search all entities in the map and set the game type and

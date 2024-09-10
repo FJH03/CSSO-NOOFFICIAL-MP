@@ -179,8 +179,7 @@ void MoveToState::OnUpdate( CCSBot *me )
 							const Vector *bombPos = me->GetGameState()->GetBombPosition();
 							if (bombPos && !me->IsReloading())
 							{
-								const float defuseRange = 100.0f;		// 50
-								if ((*bombPos - me->EyePosition()).IsLengthLessThan( defuseRange ))
+								if ((*bombPos - me->EyePosition()).IsLengthLessThan( 72 ) && ( me->EyePosition().AsVector2D().DistTo( bombPos->AsVector2D() ) < 48 ))
 								{
 									// make sure we can see the bomb
 									if (me->IsVisible( *bombPos ))
@@ -295,9 +294,50 @@ void MoveToState::OnUpdate( CCSBot *me )
 
 						// check if we are close enough to the hostage to talk to him
 						const float useRange = PLAYER_USE_RADIUS - 10.0f; // shave off a fudge factor to make sure we're within range
-						if (to.IsLengthLessThan( useRange ))
+						if ( to.IsLengthLessThan( useRange ) )
 						{
-							me->UseEntity( me->GetGoalEntity() );					
+							if ( HOSTAGE_RULE_CAN_PICKUP == 1 )
+							{
+								//me->PickupHostage( me->GetGoalEntity() );
+
+								bool bBeingRescued = false;
+
+								CHostage *hostage = static_cast<CHostage*>(me->GetGoalEntity());
+								if ( hostage && hostage->GetHostageState() != k_EHostageStates_GettingPickedUp &&
+									 hostage->IsFollowingSomeone() == false && me->GetNearbyFriendCount() > 0 )
+								{
+									// see if one of my friends if picking up this hostage
+									for ( int i = 1; i <= gpGlobals->maxClients; ++i )
+									{
+										CCSBot *player = dynamic_cast< CCSBot * >(UTIL_PlayerByIndex( i ));
+
+										if ( player == NULL || !player->IsAlive() ||
+											 me->IsOtherEnemy( player ) || player->entindex() == me->entindex() )
+											 continue;
+
+										if ( player->IsPickingupHostage() )
+										{
+											bBeingRescued = true;
+											break;
+										}
+									}
+								}
+
+								// if not, pick it up
+								if ( bBeingRescued == false )
+									me->PickupHostage( me->GetGoalEntity() );
+								else
+								{
+									if ( hostage && me->IsVisible( hostage->GetAbsOrigin(), false, NULL ) )
+									{
+										// if we can see the hostage, guard it
+										me->GetChatter()->Say( "CoveringFriend" );
+										me->Idle();
+									}
+								}
+							}
+							else
+								me->UseEntity( me->GetGoalEntity() );
 							return;
 						}
 					}

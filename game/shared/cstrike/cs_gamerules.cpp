@@ -215,6 +215,7 @@ ConVar cs_AssistDamageThreshold( "cs_AssistDamageThreshold", "40.0", FCVAR_DEVEL
 extern ConVar sv_stopspeed;
 extern ConVar mp_randomspawn;
 extern ConVar mp_randomspawn_los;
+extern ConVar mp_teammates_are_enemies;
 extern ConVar mp_hostages_max;
 extern ConVar mp_hostages_spawn_farthest;
 extern ConVar mp_hostages_spawn_force_positions;
@@ -448,6 +449,17 @@ ConVar sv_kick_ban_duration(
 	FCVAR_REPLICATED | FCVAR_NOTIFY,
 	"How long should a kick ban from the server should last (in minutes)" );
 
+// [jason] Can the dead speak to the living?
+ConVar sv_deadtalk( "sv_deadtalk", "0",	FCVAR_REPLICATED | FCVAR_NOTIFY, "Dead players can speak (voice, text) to the living" );
+
+// [jason] Override that removes all chat restrictions, including those for spectators
+ConVar sv_full_alltalk( "sv_full_alltalk", "0", FCVAR_REPLICATED, "Any player (including Spectator team) can speak to any other player" );
+
+ConVar sv_talk_enemy_dead( "sv_talk_enemy_dead", "0", FCVAR_REPLICATED, "Dead players can hear all dead enemy communication (voice, chat)" );
+ConVar sv_talk_enemy_living( "sv_talk_enemy_living", "0", FCVAR_REPLICATED, "Living players can hear all living enemy communication (voice, chat)" );
+
+ConVar sv_spec_hear( "sv_spec_hear", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Determines who spectators can hear: 0: only spectators; 1: all players; 2: spectated team; 3: self only; 4: nobody" );
+
 ConVar mp_c4timer( "mp_c4timer", "40", FCVAR_REPLICATED | FCVAR_NOTIFY, "how long from when the C4 is armed until it blows", true, 10, true, 90	);
 
 #ifdef CLIENT_DLL
@@ -543,16 +555,13 @@ ConVar snd_music_selection(
 	public:
 		virtual bool		CanPlayerHearPlayer( CBasePlayer *pListener, CBasePlayer *pTalker, bool &bProximity )
 		{
-			// Dead players can only be heard by other dead team mates
-			if ( pTalker->IsAlive() == false )
-			{
-				if ( pListener->IsAlive() == false )
-					return ( pListener->InSameTeam( pTalker ) );
-
+		 	if ( pListener == NULL || pTalker == NULL )
                 return false;
-			}
 
-			return ( pListener->InSameTeam( pTalker ) );
+            if ( !CSGameRules() )
+                return false;
+
+            return CSGameRules()->CanPlayerHearTalker( pListener, pTalker, false );
         }
 	};
 	CVoiceGameMgrHelper g_VoiceGameMgrHelper;
@@ -770,6 +779,18 @@ ConVar snd_music_selection(
 		"cash_player_killed_hostage",
 		"-1000",
 		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	namespace SpecHear
+	{
+		enum Type
+		{
+			OnlySpectators = 0,
+			AllPlayers = 1,
+			SpectatedTeam = 2,
+			Self = 3,
+			Nobody = 4,
+		};
+	}
 
 	// --------------------------------------------------------------------------------------------------- //
 	// Global helper functions.
@@ -2650,59 +2671,95 @@ ConVar snd_music_selection(
 		bool bNeededPlayers
 	)
 	{
+		bool bCTsRespawn = mp_respawn_on_death_ct.GetBool();
+		bool bTsRespawn = mp_respawn_on_death_t.GetBool();
+
 		if ( ( m_iNumCT > 0 && m_iNumSpawnableCT > 0 ) && ( m_iNumTerrorist > 0 && m_iNumSpawnableTerrorist > 0 ) )
 		{
-			if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && m_iNumSpawnableCT > 0 )
+			// this checks for last man standing rules
+			if ( mp_teammates_are_enemies.GetBool() )
 			{
-				bool nowin = false;
-					
-				for ( int iGrenade=0; iGrenade < g_PlantedC4s.Count(); iGrenade++ )
+				// last CT alive
+				if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && !bTsRespawn && NumAliveCT == 1 )
 				{
-					CPlantedC4 *pC4 = g_PlantedC4s[iGrenade];
-
-					if ( pC4->IsBombActive() )
-						nowin = true;
-				}
-
-				if ( !nowin )
-				{
-					if ( m_bMapHasBombTarget )
-						AddTeamAccount( TEAM_CT, TeamCashAward::ELIMINATION_BOMB_MAP );
-					else
-						AddTeamAccount( TEAM_CT, TeamCashAward::ELIMINATION_HOSTAGE_MAP_CT );
-
-					if ( !bNeededPlayers )
-					{
-						m_iNumCTWins++;
-						// Update the clients team score
-						UpdateTeamScores();
-					}
-
+					m_iNumCTWins++;
+					// Update the clients team score
+					UpdateTeamScores();
 					TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
 					return true;
 				}
-			}
-		
-			// Terrorists WON
-			if ( NumAliveCT == 0 && NumDeadCT != 0 && m_iNumSpawnableTerrorist > 0 )
-			{
-				if ( m_bMapHasBombTarget )
-					AddTeamAccount( TEAM_TERRORIST, TeamCashAward::ELIMINATION_BOMB_MAP );
-				else
-					AddTeamAccount( TEAM_TERRORIST, TeamCashAward::ELIMINATION_HOSTAGE_MAP_T );
 
-				if ( !bNeededPlayers )
+				if ( NumAliveCT == 0 && NumDeadCT != 0 && !bCTsRespawn && NumAliveTerrorist == 1 )
 				{
 					m_iNumTerroristWins++;
 					// Update the clients team score
 					UpdateTeamScores();
+					TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
+					return true;
 				}
 
-				TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
-				return true;
+				if ( NumAliveCT == 0 && !bCTsRespawn && NumAliveTerrorist == 0 && !bTsRespawn && (m_iNumTerrorist > 0 || m_iNumCT > 0) )
+				{
+					TerminateRound( mp_round_restart_delay.GetFloat(), Round_Draw );
+					return true;
+				}
 			}
+			else
+			{
+				// CTs WON (if they don't respawn)
+				if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && !bTsRespawn && m_iNumSpawnableCT > 0 )
+				{
+					bool nowin = false;
+
+					for ( int iGrenade=0; iGrenade < g_PlantedC4s.Count(); iGrenade++ )
+					{
+						CPlantedC4 *pC4 = g_PlantedC4s[iGrenade];
+
+						if ( pC4->IsBombActive() )
+							nowin = true;
+					}
+
+					if ( !nowin )
+					{
+						if ( m_bMapHasBombTarget )
+							AddTeamAccount( TEAM_CT, TeamCashAward::ELIMINATION_BOMB_MAP );
+						else
+							AddTeamAccount( TEAM_CT, TeamCashAward::ELIMINATION_HOSTAGE_MAP_CT );
+
+						if ( !bNeededPlayers )
+						{
+							m_iNumCTWins++;
+							// Update the clients team score
+							UpdateTeamScores();
+						}
+
+						TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
+						return true;
+					}
+				}
+
+				// Terrorists WON (if they don't respawn)
+				if ( NumAliveCT == 0 && NumDeadCT != 0 && !bCTsRespawn && m_iNumSpawnableTerrorist > 0 )
+				{
+					if ( m_bMapHasBombTarget )
+						AddTeamAccount( TEAM_TERRORIST, TeamCashAward::ELIMINATION_BOMB_MAP );
+					else
+						AddTeamAccount( TEAM_TERRORIST, TeamCashAward::ELIMINATION_HOSTAGE_MAP_T );
+
+					if ( !bNeededPlayers )
+					{
+						m_iNumTerroristWins++;
+						// Update the clients team score
+						UpdateTeamScores();
+					}
+
+					TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
+					return true;
+				}
+			}
+		
 		}
-		else if ( NumAliveCT == 0 && NumAliveTerrorist == 0 )
+	else if ( NumAliveCT == 0 && !bCTsRespawn && NumAliveTerrorist == 0 && !bTsRespawn && ( m_iNumTerrorist > 0 || m_iNumCT > 0 ) )
 		{
 			TerminateRound( mp_round_restart_delay.GetFloat(), Round_Draw );
 			return true;
@@ -6403,6 +6460,131 @@ const CViewVectors* CCSGameRules::GetViewVectors() const
 	return &g_CSViewVectors;
 }
 
+#ifdef GAME_DLL
+//=========================================================
+//=========================================================
+bool CCSGameRules::FPlayerCanTakeDamage( CBasePlayer *pPlayer, CBaseEntity *pAttacker, const CTakeDamageInfo &info )
+{
+	CCSPlayer *pCSAttacker = ToCSPlayer( pAttacker );
+	if ( pCSAttacker && PlayerRelationship( pPlayer, pCSAttacker ) == GR_TEAMMATE && !pCSAttacker->IsOtherEnemy( pPlayer->entindex() ) )
+	{
+		// my teammate hit me.
+		if ( (friendlyfire.GetInt() == 0 ) && ( pCSAttacker != pPlayer ) )
+		{
+			// friendly fire is off, and this hit came from someone other than myself,  then don't get hurt
+			return false;
+		}
+	}
+
+	return BaseClass::FPlayerCanTakeDamage( pPlayer, pCSAttacker, info );
+}
+
+//=========================================================
+//=========================================================
+int CCSGameRules::IPointsForKill( CBasePlayer *pAttacker, CBasePlayer *pKilled )
+{
+	CCSPlayer *pCSAttacker = ToCSPlayer( pAttacker );
+
+	if ( !pKilled )
+		return 0;
+
+	if ( !pCSAttacker )
+		return 1;
+
+	if ( pCSAttacker != pKilled && PlayerRelationship( pCSAttacker, pKilled ) == GR_TEAMMATE && !pCSAttacker->IsOtherEnemy( pKilled->entindex() ) )
+		return -1;
+
+	return 1;
+}
+
+/*
+	Helper function which handles both voice and chat. The only difference is which convar to use
+	to determine whether enemies can be heard (sv_alltalk or sv_allchat).
+*/
+bool CanPlayerHear( CBasePlayer* pListener, CBasePlayer *pSpeaker, bool bTeamOnly, bool bHearEnemies )
+{
+	Assert(pListener != NULL && pSpeaker != NULL);
+	if ( pListener == NULL || pSpeaker == NULL )
+		return false;
+
+	// sv_full_alltalk lets everyone can talk to everyone else, except comms specifically flagged as team-only
+	if ( !bTeamOnly && sv_full_alltalk.GetBool() )
+		return true;
+
+	// if either speaker or listener are coaching then for intents and purposes treat them as teammates.
+	int iListenerTeam = pListener->GetTeamNumber();
+	int iSpeakerTeam = pSpeaker->GetTeamNumber();
+
+	// use the observed target's team when sv_spec_hear is mode 2
+	if ( iListenerTeam == TEAM_SPECTATOR && sv_spec_hear.GetInt() == SpecHear::SpectatedTeam && 
+		( pListener->GetObserverMode() == OBS_MODE_IN_EYE || pListener->GetObserverMode() == OBS_MODE_CHASE ) )
+	{
+		CBaseEntity *pTarget = pListener->GetObserverTarget();
+		if ( pTarget && pTarget->IsPlayer() )
+		{
+			iListenerTeam = pTarget->GetTeamNumber();
+		}
+	}
+
+	if ( iListenerTeam == TEAM_SPECTATOR )
+	{
+		if ( sv_spec_hear.GetInt() == SpecHear::Nobody )
+			return false; // spectators are selected to not hear other spectators
+
+		if ( sv_spec_hear.GetInt() == SpecHear::Self )
+			return ( pListener == pSpeaker ); // spectators are selected to not hear other spectators
+
+		// spectators can always hear other spectators
+		if ( iSpeakerTeam == TEAM_SPECTATOR )
+			return true;
+
+		return !bTeamOnly && sv_spec_hear.GetInt() == SpecHear::AllPlayers;
+	}
+
+	// no one else can hear spectators
+	if ( ( iSpeakerTeam != TEAM_TERRORIST ) &&
+		( iSpeakerTeam != TEAM_CT ) )
+		return false;
+
+	// are enemy teams prevented from hearing each other by sv_alltalk/sv_allchat?
+	if ( (bTeamOnly || !bHearEnemies) && iSpeakerTeam != iListenerTeam )
+		return false;
+
+	// living players can only hear dead players if sv_deadtalk is enabled
+	if ( pListener->IsAlive() && !pSpeaker->IsAlive() )
+	{
+		return sv_deadtalk.GetBool();
+	}
+
+	return true;
+}
+
+bool CCSGameRules::CanPlayerHearTalker( CBasePlayer* pListener, CBasePlayer *pSpeaker, bool bTeamOnly  )
+{
+	bool bHearEnemy = false;
+
+	if ( sv_talk_enemy_living.GetBool() && sv_talk_enemy_dead.GetBool() )
+	{
+		bHearEnemy = true;
+	}
+	else if ( !pListener->IsAlive() && !pSpeaker->IsAlive() )
+	{
+		bHearEnemy = sv_talk_enemy_dead.GetBool();
+	}
+	else if ( pListener->IsAlive() && pSpeaker->IsAlive() )
+	{
+		bHearEnemy = sv_talk_enemy_living.GetBool();
+	}
+
+	return CanPlayerHear( pListener, pSpeaker, bTeamOnly, bHearEnemy );
+}
+
+extern ConVar sv_allchat;
+bool CCSGameRules::PlayerCanHearChat( CBasePlayer *pListener, CBasePlayer *pSpeaker, bool bTeamOnly  )
+{
+	return CanPlayerHear( pListener, pSpeaker, bTeamOnly, sv_allchat.GetBool() );
+}
+#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Init CS ammo definitions
