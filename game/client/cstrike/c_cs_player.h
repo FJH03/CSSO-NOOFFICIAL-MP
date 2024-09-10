@@ -309,6 +309,7 @@ public:
 	CNetworkVar( bool, m_bIsGrabbingHostage );	// tracks whether this player is currently grabbing a hostage
 	CNetworkVar( bool, m_bInBombZone );
 	CNetworkVar( bool, m_bInBuyZone );
+	CNetworkVar( bool, m_bInNoDefuseArea );
 	CNetworkVar( int, m_iThrowGrenadeCounter );	// used to trigger grenade throw animations.
 	
 	CNetworkVar( bool, m_bKilledByTaser );

@@ -56,6 +56,7 @@ void CCSPlayerMove::StartCommand( CBasePlayer *player, CUserCmd *cmd )
 	pPlayer->m_bInBombZone = false;
 	pPlayer->m_bInBuyZone = false;
 	pPlayer->m_bInHostageRescueZone = false;
+	pPlayer->m_bInNoDefuseArea = false;
 
 	BaseClass::StartCommand( player, cmd );
 }

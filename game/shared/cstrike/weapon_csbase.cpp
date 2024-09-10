@@ -731,6 +731,8 @@ void CWeaponCSBase::CallSecondaryAttack()
 		CWeaponCSBase::SecondaryAttack();
 	else
 		SecondaryAttack();
+
+	m_fLastShotTime = gpGlobals->curtime;
 }
 
 void CWeaponCSBase::UpdateGunHeat( float heat, int iAttachmentIndex )
