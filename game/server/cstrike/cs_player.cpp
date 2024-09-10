@@ -838,6 +838,8 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "Player.FlashlightOff" );
 	PrecacheScriptSound( "HealthShot.Success" );
 
+	PrecacheScriptSound( "Deathmatch.Kill" );
+
 	// CS Bot sounds
 	PrecacheScriptSound( "Bot.StuckSound" );
 	PrecacheScriptSound( "Bot.StuckStart" );
@@ -4785,10 +4787,6 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 		// do they have enough money?
 		if ( m_iAccount >= pWeaponInfo->GetWeaponPrice() )
 		{
-			return BUY_CANT_AFFORD;
-		}
-		else // essentially means: ( GetAccountBalance() >= pWeaponInfo->GetWeaponPrice( pItem ) )
-		{
 			if ( m_lifeState != LIFE_DEAD )
 			{
 				if ( pWeaponInfo->iSlot == WEAPON_SLOT_PISTOL )
@@ -4801,6 +4799,10 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 				}
 			}
 			bPurchase = true;
+		}
+		else
+		{
+			return BUY_CANT_AFFORD;
 		}
 
 		if ( HasShield() )
