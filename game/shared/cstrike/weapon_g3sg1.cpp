@@ -36,8 +36,6 @@ public:
 	virtual bool Reload();
 	virtual bool Deploy();
 
-	virtual float GetMaxSpeed();
-
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_G3SG1; }
 
 private:
@@ -160,13 +158,4 @@ bool CWeaponG3SG1::Deploy()
 	m_weaponMode = Primary_Mode;
 	
 	return ret;
-}
-
-float CWeaponG3SG1::GetMaxSpeed()
-{
-	CCSPlayer *pPlayer = GetPlayerOwner();
-	if ( pPlayer && pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
-		return BaseClass::GetMaxSpeed();
-	else
-		return 150; // zoomed in
 }

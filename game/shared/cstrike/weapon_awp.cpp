@@ -55,7 +55,6 @@ public:
 	virtual void PrimaryAttack();
 	virtual void SecondaryAttack();
 
-	virtual float GetMaxSpeed() const;
 	virtual bool IsAwp() const;
 	virtual bool Reload();
 	virtual bool Deploy();
@@ -214,29 +213,6 @@ void CWeaponAWP::UnzoomThink( void )
 	pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.1f );
 }
 #endif
-
-
-float CWeaponAWP::GetMaxSpeed() const
-{
-	CCSPlayer *pPlayer = GetPlayerOwner();
-
-	if (pPlayer == NULL)
-	{
-		Assert(pPlayer != NULL);
-		return BaseClass::GetMaxSpeed();
-	}
-
-	if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
-	{
-		return BaseClass::GetMaxSpeed();
-	}
-	else
-	{
-		// Slower speed when zoomed in.
-		return 150;
-	}
-}
-
 
 bool CWeaponAWP::IsAwp() const
 {

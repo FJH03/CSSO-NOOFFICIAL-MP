@@ -36,7 +36,6 @@ public:
 	virtual void PrimaryAttack();
 	virtual void SecondaryAttack();
 
-	virtual float GetMaxSpeed() const;
 	virtual bool Reload();
 	virtual bool Deploy();
 
@@ -158,23 +157,6 @@ void CWeaponSSG08::PrimaryAttack( void )
 // 		#endif
 	}
 }
-
-
-float CWeaponSSG08::GetMaxSpeed() const
-{
-	CCSPlayer *pPlayer = GetPlayerOwner();
-	if (pPlayer == NULL)
-	{
-		Assert(pPlayer != NULL);
-		return BaseClass::GetMaxSpeed();
-	}
-
-	if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
-		return BaseClass::GetMaxSpeed();
-	else
-		return 220;	// zoomed in.
-}
-
 
 bool CWeaponSSG08::Reload()
 {
