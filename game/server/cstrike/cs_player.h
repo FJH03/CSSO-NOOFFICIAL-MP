@@ -679,7 +679,11 @@ public:
 
 	void				SelectDeathPose( const CTakeDamageInfo &info );
 
+	int		m_iKillStreak;
+
 private:
+	bool	m_bWasGivenAHealthshot;
+
 	int	m_iDeathPose;
 	int	m_iDeathFrame;
 	
@@ -715,6 +719,8 @@ public:
 	int m_LastHitBox;			// the last body hitbox that took damage
 	Vector m_vLastHitLocationObjectSpace; //position where last hit occured in space of the bone associated with the hitbox
 	EHANDLE		m_hDroppedEquipment[DROPPED_COUNT];
+
+	void OnHealthshotUsed( void ) { EmitSound( "Healthshot.Success" ); }
 
 	// [tj] overriding the base suicides to trash CS specific stuff
 	virtual void CommitSuicide( bool bExplode = false, bool bForce = false );

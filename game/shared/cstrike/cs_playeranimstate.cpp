@@ -1540,6 +1540,10 @@ int CCSPlayerAnimState::CalcFireLayerSequence(PlayerAnimEvent_t animEvent)
 	if ( !pSuffix )
 		return -1;
 
+	// PiMoN: I cant be bothered to make more animations... for now
+	if ( pWeapon->GetWeaponID() == WEAPON_HEALTHSHOT )
+		return -1;
+
 	char tempsuffix[256];
 	if ( pWeapon->GetWeaponID() == WEAPON_ELITE )
 	{

@@ -7336,42 +7336,6 @@ bool CBasePlayer::Weapon_CanUse( CBaseCombatWeapon *pWeapon )
 	return true;
 }
 
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Override to clear dropped weapon from the hud
-//-----------------------------------------------------------------------------
-void CBasePlayer::Weapon_Drop( CBaseCombatWeapon *pWeapon, const Vector *pvecTarget /* = NULL */, const Vector *pVelocity /* = NULL */ )
-{
-	bool bWasActiveWeapon = false;
-	if ( pWeapon == GetActiveWeapon() )
-	{
-		bWasActiveWeapon = true;
-	}
-
-	if ( pWeapon )
-	{
-		if ( bWasActiveWeapon )
-		{
-			pWeapon->SendWeaponAnim( ACT_VM_IDLE );
-		}
-	}
-
-	BaseClass::Weapon_Drop( pWeapon, pvecTarget, pVelocity );
-
-	if ( bWasActiveWeapon )
-	{
-		if (!SwitchToNextBestWeapon( NULL ))
-		{
-			CBaseViewModel *vm = GetViewModel();
-			if ( vm )
-			{
-				vm->AddEffects( EF_NODRAW );
-			}
-		}
-	}
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : weaponSlot - 
