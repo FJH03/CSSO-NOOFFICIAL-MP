@@ -62,7 +62,7 @@ void IdleState::OnUpdate( CCSBot *me )
 		// if we have a grenade, use it
 		if (!me->EquipGrenade())
 		{
-			// high-skill bots run with the knife, unless using the Scout (which moves faster)
+			// high-skill bots run with the knife
 			if (me->GetProfile()->GetSkill() > 0.33f)
 			{
 				me->EquipKnife();
@@ -260,6 +260,7 @@ void IdleState::OnUpdate( CCSBot *me )
 							{
 								me->SetTask( CCSBot::GUARD_BOMB_DEFUSER );
 								me->Hide( TheNavMesh->GetNavArea( *bombPos ) );
+								me->SetDisposition( CCSBot::OPPORTUNITY_FIRE );
 								return;
 							}
 						}
@@ -267,7 +268,7 @@ void IdleState::OnUpdate( CCSBot *me )
 						{
 							// move to the bomb and defuse it
 							me->SetTask( CCSBot::DEFUSE_BOMB );
-							me->SetDisposition( CCSBot::OPPORTUNITY_FIRE );
+							me->SetDisposition( CCSBot::SELF_DEFENSE );
 							me->MoveTo( *bombPos );
 							return;
 						}
@@ -802,7 +803,11 @@ void IdleState::OnUpdate( CCSBot *me )
 
 				// if we are escorting hostages and there are more hostages to rescue, 
 				// determine whether it's faster to rescue the ones we have, or go get the remaining ones
-				if (hostage)
+				if ( zone && HOSTAGE_RULE_CAN_PICKUP ) // We can only carry one hostage at a time so go ahead and rescue the one we have
+				{
+					rescueHostages = true;
+				}
+				else if ( hostage )
 				{
 					Vector hostageOrigin = GetCentroid( hostage );
 
