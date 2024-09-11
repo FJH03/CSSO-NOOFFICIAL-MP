@@ -64,9 +64,7 @@ void CPureServerWhitelist::Load( int iPureMode )
 	Term();
 
 	// Not pure at all?
-
- //TODO(AndraMidoxXx):Fix sv_pure
-	if ( iPureMode < 2 )
+	if ( iPureMode < 0 )
 		return;
 
 	// Load base trusted keys
