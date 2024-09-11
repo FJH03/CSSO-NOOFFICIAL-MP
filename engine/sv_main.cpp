@@ -124,9 +124,6 @@ int GetSvPureMode()
 
 static void SV_Pure_f( const CCommand &args )
 {
-#if 1
-     return -1;
-#else
     int pure_mode = -2;
     if ( args.ArgC() == 2 )
     {
@@ -188,7 +185,6 @@ static void SV_Pure_f( const CCommand &args )
 		Msg( "Note: Waiting for the next changelevel to apply the current value.\n" );
 	}
     Msg( "--------------------------------------------------------\n" );
-#endif
 }
 
 static ConCommand sv_pure( "sv_pure", SV_Pure_f, "Show user data." );
