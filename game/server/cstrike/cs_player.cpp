@@ -2498,7 +2498,18 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 
 	if ( GetMoveType() == MOVETYPE_NOCLIP || GetMoveType() == MOVETYPE_OBSERVER )
 		return 0;
+        //AndraMidoxXx:OMG,BUDDHAAAA!
+        if ( GetFlags() & FL_GODMODE )
+                return 0;
 
+        if ( m_debugOverlays & OVERLAY_BUDDHA_MODE ) 
+        {
+                if ( ( m_iHealth - info.GetDamage() ) <= 0 )
+                {
+                        m_iHealth = 1;
+                        return 0;
+                }
+	}
 	//if this is C4 bomb damage, make sure it didn't pass through any bomb blockers to reach this player.
 	CPlantedC4 *pInflictorC4 = dynamic_cast< CPlantedC4 * >( pInflictor );
 	if ( pInflictorC4 )
