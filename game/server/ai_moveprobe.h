@@ -130,7 +130,7 @@ private:
 
 	bool				m_bIgnoreTransientEntities;
 
-	ITraceListData *	m_pTraceListData;
+	CTraceListData *	m_pTraceListData;
 
 	EHANDLE				m_hLastBlockingEnt;
 
