@@ -116,7 +116,7 @@ static void SV_CheatsChanged_f( IConVar *pConVar, const char *pOldString, float 
 }
 
 static bool g_sv_pure_waiting_on_reload = false;
-static int g_sv_pure_mode = 0;
+static int g_sv_pure_mode = -1;
 int GetSvPureMode()
 {
 	return g_sv_pure_mode;
