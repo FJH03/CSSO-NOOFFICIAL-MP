@@ -55,8 +55,7 @@ class CUserCmd;
 // Put this in your derived class definition to declare it's activity table
 // UNDONE: Cascade these?
 #define DECLARE_ACTTABLE()		static acttable_t m_acttable[];\
-	acttable_t *ActivityList( void );\
-	int ActivityListCount( void );
+	virtual acttable_t *ActivityList( int &iActivityCount ) OVERRIDE;
 
 // You also need to include the activity table itself in your class' implementation:
 // e.g.
@@ -73,8 +72,7 @@ class CUserCmd;
 // activity table.
 // UNDONE: Cascade these?
 #define IMPLEMENT_ACTTABLE(className) \
-	acttable_t *className::ActivityList( void ) { return m_acttable; } \
-	int className::ActivityListCount( void ) { return ARRAYSIZE(m_acttable); } \
+	acttable_t *className::ActivityList( int &iActivityCount ) { iActivityCount = ARRAYSIZE(m_acttable); return m_acttable; }
 
 typedef struct
 {
@@ -82,6 +80,29 @@ typedef struct
 	int			weaponAct;
 	bool		required;
 } acttable_t;
+
+
+struct poseparamtable_t
+{
+	const char *pszName;
+	float		flValue;
+};
+
+// Put this in your derived class definition to declare it's poseparam table
+#define DECLARE_POSEPARAMTABLE()	static poseparamtable_t m_poseparamtable[];\
+	virtual poseparamtable_t* PoseParamList( int &iPoseParamCount ) { return NULL; }
+
+// You also need to include the activity table itself in your class' implementation:
+// e.g.
+//	acttable_t	CTFGrapplingHook::m_poseparamtable[] = 
+//	{
+//		{ "r_arm", 2 },
+//	};
+//
+// The grapplinghook overrides the r_arm pose param, value to 2.
+
+#define IMPLEMENT_POSEPARAMTABLE(className)\
+	poseparamtable_t* className::PoseParamList( int &iPoseParamCount ) { iPoseParamCount = ARRAYSIZE(m_poseparamtable); return m_poseparamtable; }
 
 class CHudTexture;
 class Color;
@@ -210,7 +231,7 @@ public:
 	virtual bool			SendWeaponAnim( int iActivity );
 	virtual void			SendViewModelAnim( int nSequence );
 	float					GetViewModelSequenceDuration();	// Return how long the current view model sequence is.
-	bool					IsViewModelSequenceFinished( void ); // Returns if the viewmodel's current animation is finished
+	bool					IsViewModelSequenceFinished( void ) const; // Returns if the viewmodel's current animation is finished
 
 	virtual void			SetViewModel();
 
@@ -396,8 +417,10 @@ public:
 	virtual CHudTexture const	*GetSpriteZoomedAutoaim( void ) const;
 
 	virtual Activity		ActivityOverride( Activity baseAct, bool *pRequired );
-	virtual	acttable_t*		ActivityList( void ) { return NULL; }
-	virtual	int				ActivityListCount( void ) { return 0; }
+	virtual	acttable_t*		ActivityList( int &iActivityCount ) { return NULL; }
+
+	virtual void			PoseParameterOverride( bool bReset );
+	virtual poseparamtable_t* PoseParamList( int &iPoseParamCount ) { return NULL; }
 
 	virtual void			Activate( void );
 

@@ -86,6 +86,7 @@ bool CBaseEntity::sm_bDisableTouchFuncs = false;	// Disables PhysicsTouch and Ph
 bool CBaseEntity::sm_bAccurateTriggerBboxChecks = true;	// set to false for legacy behavior in ep1
 
 int CBaseEntity::m_nPredictionRandomSeed = -1;
+int CBaseEntity::m_nPredictionRandomSeedServer = -1;
 CBasePlayer *CBaseEntity::m_pPredictionPlayer = NULL;
 
 // Used to make sure nobody calls UpdateTransmitState directly.
@@ -93,7 +94,6 @@ int g_nInsideDispatchUpdateTransmitState = 0;
 
 // When this is false, throw an assert in debug when GetAbsAnything is called. Used when hierachy is incomplete/invalid.
 bool CBaseEntity::s_bAbsQueriesValid = true;
-
 
 ConVar sv_netvisdist( "sv_netvisdist", "10000", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Test networking visibility distance" );
 
@@ -344,6 +344,8 @@ void CBaseEntityModelLoadProxy::Handler::OnModelLoadComplete( const model_t *pMo
 
 CBaseEntity::CBaseEntity( bool bServerOnly )
 {
+	m_pAttributes = NULL;
+
 	COMPILE_TIME_ASSERT( MOVETYPE_LAST < (1 << MOVETYPE_MAX_BITS) );
 	COMPILE_TIME_ASSERT( MOVECOLLIDE_COUNT < (1 << MOVECOLLIDE_MAX_BITS) );
 
@@ -1259,7 +1261,7 @@ void CBaseEntity::ValidateEntityConnections()
 			typedescription_t *dataDesc = &dmap->dataDesc[i];
 			if ( ( dataDesc->fieldType == FIELD_CUSTOM ) && ( dataDesc->flags & FTYPEDESC_OUTPUT ) )
 			{
-				CBaseEntityOutput *pOutput = (CBaseEntityOutput *)((intp)this + (intp)dataDesc->fieldOffset[0]);
+				CBaseEntityOutput *pOutput = (CBaseEntityOutput *)((int)this + (int)dataDesc->fieldOffset[0]);
 				if ( pOutput->NumberOfElements() )
 					return;
 			}
@@ -1292,7 +1294,7 @@ void CBaseEntity::FireNamedOutput( const char *pszOutput, variant_t variant, CBa
 			typedescription_t *dataDesc = &dmap->dataDesc[i];
 			if ( ( dataDesc->fieldType == FIELD_CUSTOM ) && ( dataDesc->flags & FTYPEDESC_OUTPUT ) )
 			{
-				CBaseEntityOutput *pOutput = ( CBaseEntityOutput * )( ( intp )this + ( intp )dataDesc->fieldOffset[0] );
+				CBaseEntityOutput *pOutput = ( CBaseEntityOutput * )( ( int )this + ( int )dataDesc->fieldOffset[0] );
 				if ( !Q_stricmp( dataDesc->externalName, pszOutput ) )
 				{
 					pOutput->FireOutput( variant, pActivator, pCaller, flDelay );
@@ -1438,10 +1440,10 @@ int CBaseEntity::OnTakeDamage( const CTakeDamageInfo &info )
 //-----------------------------------------------------------------------------
 // Purpose: Scale damage done and call OnTakeDamage
 //-----------------------------------------------------------------------------
-void CBaseEntity::TakeDamage( const CTakeDamageInfo &inputInfo )
+int CBaseEntity::TakeDamage( const CTakeDamageInfo &inputInfo )
 {
 	if ( !g_pGameRules )
-		return;
+		return 0;
 
 	bool bHasPhysicsForceDamage = !g_pGameRules->Damage_NoPhysicsForce( inputInfo.GetDamageType() );
 	if ( bHasPhysicsForceDamage && inputInfo.GetDamageType() != DMG_GENERIC )
@@ -1473,12 +1475,12 @@ void CBaseEntity::TakeDamage( const CTakeDamageInfo &inputInfo )
 	// Make sure our damage filter allows the damage.
 	if ( !PassesDamageFilter( inputInfo ))
 	{
-		return;
+		return 0;
 	}
 
 	if( !g_pGameRules->AllowDamage(this, inputInfo) )
 	{
-		return;
+		return 0;
 	}
 
 	if ( PhysIsInCallback() )
@@ -1500,8 +1502,9 @@ void CBaseEntity::TakeDamage( const CTakeDamageInfo &inputInfo )
 
 		//Msg("%s took %.2f Damage, at %.2f\n", GetClassname(), info.GetDamage(), gpGlobals->curtime );
 
-		OnTakeDamage( info );
+		return OnTakeDamage( info );
 	}
+	return 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -1921,6 +1924,9 @@ BEGIN_DATADESC_NO_BASE( CBaseEntity )
 
 	DEFINE_INPUTFUNC( FIELD_VOID, "DisableShadow", InputDisableShadow ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "EnableShadow", InputEnableShadow ),
+
+	DEFINE_INPUTFUNC( FIELD_VOID, "DisableDraw", InputDisableDraw ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "EnableDraw", InputEnableDraw ),
 
 	DEFINE_INPUTFUNC( FIELD_STRING, "AddOutput", InputAddOutput ),
 
@@ -3365,7 +3371,7 @@ void CBaseEntity::FunctionCheck( void *pFunction, const char *name )
 	// Note, if you crash here and your class is using multiple inheritance, it is
 	// probably the case that CBaseEntity (or a descendant) is not the first
 	// class in your list of ancestors, which it must be.
-	if (pFunction && !UTIL_FunctionToName( GetDataDescMap(), *(inputfunc_t*)pFunction ) )
+	if (pFunction && !UTIL_FunctionToName( GetDataDescMap(), (inputfunc_t *)pFunction ) )
 	{
 		Warning( "FUNCTION NOT IN TABLE!: %s:%s (%08lx)\n", STRING(m_iClassname), name, (unsigned long)pFunction );
 		Assert(0);
@@ -3799,7 +3805,7 @@ void CBaseEntity::OnEntityEvent( EntityEvent_t event, void *pEventData )
 	{
 	case ENTITY_EVENT_WATER_TOUCH:
 		{
-			intp nContents = (intp)pEventData;
+			int nContents = (int)pEventData;
 			if ( !nContents || (nContents & CONTENTS_WATER) )
 			{
 				++m_nWaterTouch;
@@ -3813,7 +3819,7 @@ void CBaseEntity::OnEntityEvent( EntityEvent_t event, void *pEventData )
 
 	case ENTITY_EVENT_WATER_UNTOUCH:
 		{
-			intp nContents = (intp)pEventData;
+			int nContents = (int)pEventData;
 			if ( !nContents || (nContents & CONTENTS_WATER) )
 			{
 				--m_nWaterTouch;
@@ -4334,7 +4340,7 @@ CTeam *CBaseEntity::GetTeam( void ) const
 //-----------------------------------------------------------------------------
 // Purpose: Returns true if these players are both in at least one team together
 //-----------------------------------------------------------------------------
-bool CBaseEntity::InSameTeam( CBaseEntity *pEntity ) const
+bool CBaseEntity::InSameTeam( const CBaseEntity *pEntity ) const
 {
 	if ( !pEntity )
 		return false;
@@ -4822,7 +4828,7 @@ void CBaseEntity::PrecacheModelComponents( int nModelIndex )
 							char token[256];
 							const char *pOptions = pEvent->pszOptions();
 							nexttoken( token, pOptions, ' ' );
-							if ( token ) 
+							if ( token[0] ) 
 							{
 								PrecacheParticleSystem( token );
 							}
@@ -4908,7 +4914,9 @@ int CBaseEntity::PrecacheModel( const char *name, bool bPreload )
 {
 	if ( !name || !*name )
 	{
+#ifdef STAGING_ONLY
 		Msg( "Attempting to precache model, but model name is NULL\n");
+#endif
 		return -1;
 	}
 
@@ -4917,8 +4925,7 @@ int CBaseEntity::PrecacheModel( const char *name, bool bPreload )
 	{
 		if ( !engine->IsModelPrecached( name ) )
 		{
-			Assert( !"CBaseEntity::PrecacheModel:  too late" );
-			Warning( "Late precache of %s\n", name );
+			DevMsg( "Late precache of %s -- not necessarily a bug now that we allow ~everything to be dynamically loaded.\n", name );
 		}
 	}
 #if defined( WATCHACCESS )
@@ -5336,7 +5343,7 @@ public:
 		{
 			const char *target = "", *action = "Use";
 			variant_t value;
-			float delay = 0;
+			int delay = 0;
 
 			target = STRING( AllocPooledString(command.Arg( 1 ) ) );
 
@@ -5728,42 +5735,53 @@ void CBaseEntity::CalcAbsolutePosition( void )
 	if (!IsEFlagSet( EFL_DIRTY_ABSTRANSFORM ))
 		return;
 
-	RemoveEFlags( EFL_DIRTY_ABSTRANSFORM );
-
-	// Plop the entity->parent matrix into m_rgflCoordinateFrame
-	AngleMatrix( m_angRotation, m_vecOrigin, m_rgflCoordinateFrame );
-
-	CBaseEntity *pMoveParent = GetMoveParent();
-	if ( !pMoveParent )
 	{
-		// no move parent, so just copy existing values
-		m_vecAbsOrigin = m_vecOrigin;
-		m_angAbsRotation = m_angRotation;
-		if ( HasDataObjectType( POSITIONWATCHER ) )
+		AUTO_LOCK( m_CalcAbsolutePositionMutex );
+
+		// Test again under the lock, in case another thread did the work in the interim
+		if ( !IsEFlagSet( EFL_DIRTY_ABSTRANSFORM ) )
 		{
-			ReportPositionChanged( this );
+			return;
 		}
-		return;
+
+		// Plop the entity->parent matrix into m_rgflCoordinateFrame
+		AngleMatrix( m_angRotation, m_vecOrigin, m_rgflCoordinateFrame );
+
+		CBaseEntity *pMoveParent = GetMoveParent();
+		if ( !pMoveParent )
+		{
+			// no move parent, so just copy existing values
+			m_vecAbsOrigin = m_vecOrigin;
+			m_angAbsRotation = m_angRotation;
+		}
+		else
+		{
+			// concatenate with our parent's transform
+			matrix3x4_t tmpMatrix, scratchSpace;
+			ConcatTransforms( GetParentToWorldTransform( scratchSpace ), m_rgflCoordinateFrame, tmpMatrix );
+			MatrixCopy( tmpMatrix, m_rgflCoordinateFrame );
+
+			// pull our absolute position out of the matrix
+			MatrixGetColumn( m_rgflCoordinateFrame, 3, m_vecAbsOrigin );
+
+			// if we have any angles, we have to extract our absolute angles from our matrix
+			if ( ( m_angRotation == vec3_angle ) && ( m_iParentAttachment == 0 ) )
+			{
+				// just copy our parent's absolute angles
+				VectorCopy( pMoveParent->GetAbsAngles(), m_angAbsRotation );
+			}
+			else
+			{
+				MatrixAngles( m_rgflCoordinateFrame, m_angAbsRotation );
+			}
+		}
+
+		ThreadMemoryBarrier();
+		RemoveEFlags( EFL_DIRTY_ABSTRANSFORM );
 	}
 
-	// concatenate with our parent's transform
-	matrix3x4_t tmpMatrix, scratchSpace;
-	ConcatTransforms( GetParentToWorldTransform( scratchSpace ), m_rgflCoordinateFrame, tmpMatrix );
-	MatrixCopy( tmpMatrix, m_rgflCoordinateFrame );
-
-	// pull our absolute position out of the matrix
-	MatrixGetColumn( m_rgflCoordinateFrame, 3, m_vecAbsOrigin ); 
-
-	// if we have any angles, we have to extract our absolute angles from our matrix
-	if (( m_angRotation == vec3_angle ) && ( m_iParentAttachment == 0 ))
-	{
-		// just copy our parent's absolute angles
-		VectorCopy( pMoveParent->GetAbsAngles(), m_angAbsRotation );
-	}
-	else
-	{
-		MatrixAngles( m_rgflCoordinateFrame, m_angAbsRotation );
-	}
+	// Do this callback *after* we have updated the position, and (importantly) after we clear the dirty flag, because this callback can potentially
+	// end up recursively calling back in here, so the dirty flag must be cleared to break the recursion in that case.
 	if ( HasDataObjectType( POSITIONWATCHER ) )
 	{
 		ReportPositionChanged( this );
@@ -5965,6 +5983,12 @@ void CBaseEntity::SetAbsAngles( const QAngle& absAngles )
 	{
 		m_angRotation = angNewRotation;
 		SetSimulationTime( gpGlobals->curtime );
+
+		// PRB TODO : HACK FIX
+		// This call fixes the fact that this network var does not get set for some derived classes (eg chickens)
+		// Since we are so close to CERT this will have to do for now, but needs re-visiting.
+
+		m_angRotation.GetForModify();
 	}
 }
 
@@ -6086,7 +6110,7 @@ void CBaseEntity::SetLocalAngles( const QAngle& angles )
 		{
 			Warning( "Bad SetLocalAngles(%f,%f,%f) on %s\n", angles.x, angles.y, angles.z, GetDebugName() );
 		}
-		Assert( false );
+		AssertMsg( false, "Bad SetLocalAngles(%f,%f,%f) on %s\n", angles.x, angles.y, angles.z, GetDebugName() );
 		return;
 	}
 
@@ -6599,6 +6623,20 @@ void CBaseEntity::InputEnableShadow( inputdata_t &inputdata )
 }
 
 //-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CBaseEntity::InputDisableDraw( inputdata_t &inputdata )
+{
+	AddEffects( EF_NODRAW );
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CBaseEntity::InputEnableDraw( inputdata_t &inputdata )
+{
+	RemoveEffects( EF_NODRAW );
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: An input to add a new connection from this entity
 // Input  : &inputdata - 
 //-----------------------------------------------------------------------------
@@ -6651,23 +6689,19 @@ void CBaseEntity::DispatchResponse( const char *conceptName )
 	AI_Response result;
 	bool found = rs->FindBestResponse( set, result );
 	if ( !found )
-	{
 		return;
-	}
 
 	// Handle the response here...
-	char response[ 256 ];
-	result.GetResponse( response, sizeof( response ) );
+	const char *szResponse = result.GetResponsePtr();
 	switch ( result.GetType() )
 	{
 	case RESPONSE_SPEAK:
-		{
-			EmitSound( response );
-		}
+		EmitSound( szResponse );
 		break;
+
 	case RESPONSE_SENTENCE:
 		{
-			int sentenceIndex = SENTENCEG_Lookup( response );
+			int sentenceIndex = SENTENCEG_Lookup( szResponse );
 			if( sentenceIndex == -1 )
 			{
 				// sentence not found
@@ -6679,16 +6713,13 @@ void CBaseEntity::DispatchResponse( const char *conceptName )
 			CBaseEntity::EmitSentenceByIndex( filter, entindex(), CHAN_VOICE, sentenceIndex, 1, result.GetSoundLevel(), 0, PITCH_NORM );
 		}
 		break;
-	case RESPONSE_SCENE:
-		{
-			// Try to fire scene w/o an actor
-			InstancedScriptedScene( NULL, response );
-		}
-		break;
-	case RESPONSE_PRINT:
-		{
 
-		}
+	case RESPONSE_SCENE:
+		// Try to fire scene w/o an actor
+		InstancedScriptedScene( NULL, szResponse );
+		break;
+
+	case RESPONSE_PRINT:
 		break;
 	default:
 		// Don't know how to handle .vcds!!!
@@ -7046,7 +7077,7 @@ void CBaseEntity::SetRefEHandle( const CBaseHandle &handle )
 	if ( edict() )
 	{
 		COMPILE_TIME_ASSERT( NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS <= 8*sizeof( edict()->m_NetworkSerialNumber ) );
-		edict()->m_NetworkSerialNumber = (m_RefEHandle.GetSerialNumber() & (1 << NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS) - 1);
+		edict()->m_NetworkSerialNumber = m_RefEHandle.GetSerialNumber() & ( (1 << NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS) - 1 );
 	}
 }
 
@@ -7404,13 +7435,19 @@ bool CC_GetCommandEnt( const CCommand& args, CBaseEntity **ent, Vector *vecTarge
 	}
 
 	CBasePlayer *pPlayer = UTIL_GetCommandClient();
+	if ( !pPlayer )
+	{
+		Msg( "Command must originate from a player\n" );
+		return false;
+	}
+
 	if ( vecTargetPoint )
 	{
 		trace_t tr;
 		Vector forward;
 		pPlayer->EyeVectors( &forward );
 		UTIL_TraceLine(pPlayer->EyePosition(),
-			pPlayer->EyePosition() + forward * MAX_TRACE_LENGTH,MASK_NPCSOLID, 
+			pPlayer->EyePosition() + forward * MAX_TRACE_LENGTH,MASK_NPCSOLID,
 			pPlayer, COLLISION_GROUP_NONE, &tr );
 
 		if ( tr.fraction != 1.0 )

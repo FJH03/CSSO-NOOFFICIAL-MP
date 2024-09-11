@@ -571,7 +571,8 @@ void SpewInterpolatedVar( CInterpolatedVar< Vector > *pVar )
 {
 	Msg( "--------------------------------------------------\n" );
 	int i = pVar->GetHead();
-	CApparentVelocity<Vector> apparent;
+	Vector v0(0, 0, 0);
+	CApparentVelocity<Vector> apparent(v0);
 	float prevtime = 0.0f;
 	while ( 1 )
 	{
@@ -594,7 +595,8 @@ void SpewInterpolatedVar( CInterpolatedVar< Vector > *pVar, float flNow, float f
 
 	Msg( "--------------------------------------------------\n" );
 	int i = pVar->GetHead();
-	CApparentVelocity<Vector> apparent;
+	Vector v0(0, 0, 0);
+	CApparentVelocity<Vector> apparent(v0);
 	float newtime = 999999.0f;
 	Vector newVec( 0, 0, 0 );
 	bool bSpew = true;
@@ -662,7 +664,7 @@ void SpewInterpolatedVar( CInterpolatedVar< float > *pVar )
 {
 	Msg( "--------------------------------------------------\n" );
 	int i = pVar->GetHead();
-	CApparentVelocity<float> apparent;
+	CApparentVelocity<float> apparent(0.0f);
 	while ( 1 )
 	{
 		float changetime;
@@ -684,7 +686,8 @@ void GetInterpolatedVarTimeRange( CInterpolatedVar<T> *pVar, float &flMin, float
 	flMax = -1e23;
 
 	int i = pVar->GetHead();
-	CApparentVelocity<Vector> apparent;
+	Vector v0(0, 0, 0);
+	CApparentVelocity<Vector> apparent(v0);
 	while ( 1 )
 	{
 		float changetime;
@@ -892,6 +895,8 @@ C_BaseEntity::C_BaseEntity() :
 	m_iv_angRotation( "C_BaseEntity::m_iv_angRotation" ),
 	m_iv_vecVelocity( "C_BaseEntity::m_iv_vecVelocity" )
 {
+	m_pAttributes = NULL;
+
 	AddVar( &m_vecOrigin, &m_iv_vecOrigin, LATCH_SIMULATION_VAR );
 	AddVar( &m_angRotation, &m_iv_angRotation, LATCH_SIMULATION_VAR );
 	// Removing this until we figure out why velocity introduces view hitching.
@@ -903,7 +908,6 @@ C_BaseEntity::C_BaseEntity() :
 
 	m_DataChangeEventRef = -1;
 	m_EntClientFlags = 0;
-	m_bEnableRenderingClipPlane = false;
 
 	m_iParentAttachment = 0;
 	m_nRenderFXBlend = 255;
@@ -941,12 +945,10 @@ C_BaseEntity::C_BaseEntity() :
 #if !defined( NO_ENTITY_PREDICTION )
 	m_pPredictionContext = NULL;
 #endif
+	
 	//NOTE: not virtual! we are in the constructor!
 	C_BaseEntity::Clear();
-
-	SetModelName( NULL_STRING );
-	m_iClassname = NULL_STRING;
-
+	
 	m_InterpolationListEntry = 0xFFFF;
 	m_TeleportListEntry = 0xFFFF;
 
@@ -987,6 +989,7 @@ C_BaseEntity::~C_BaseEntity()
 void C_BaseEntity::Clear( void )
 {
 	m_bDormant = true;
+
 	m_nCreationTick = -1;
 	m_RefEHandle.Term();
 	m_ModelInstance = MODEL_INSTANCE_INVALID;
@@ -1000,7 +1003,6 @@ void C_BaseEntity::Clear( void )
 	SetLocalOrigin( vec3_origin );
 	SetLocalAngles( vec3_angle );
 	model = NULL;
-	m_pOriginalData = NULL;
 	m_vecAbsOrigin.Init();
 	m_angAbsRotation.Init();
 	m_vecVelocity.Init();
@@ -1148,6 +1150,13 @@ bool C_BaseEntity::InitializeAsClientEntityByIndex( int iIndex, RenderGroup_t re
 	return true;
 }
 
+void C_BaseEntity::TrackAngRotation( bool bTrack )
+{
+	if ( bTrack )
+		AddVar( &m_angRotation, &m_iv_angRotation, LATCH_SIMULATION_VAR );
+	else
+		RemoveVar( &m_angRotation, false );
+}
 
 void C_BaseEntity::Term()
 {
@@ -1300,19 +1309,6 @@ bool C_BaseEntity::VPhysicsIsFlesh( void )
 			return true;
 	}
 	return false;
-}
-
-//-----------------------------------------------------------------------------
-// Returns the health fraction
-//-----------------------------------------------------------------------------
-float C_BaseEntity::HealthFraction() const
-{
-	if (GetMaxHealth() == 0)
-		return 1.0f;
-
-	float flFraction = (float)GetHealth() / (float)GetMaxHealth();
-	flFraction = clamp( flFraction, 0.0f, 1.0f );
-	return flFraction;
 }
 
 
@@ -1749,9 +1745,9 @@ void C_BaseEntity::SetNetworkAngles( const QAngle& ang )
 // Purpose: 
 // Input  : index - 
 //-----------------------------------------------------------------------------
-void C_BaseEntity::SetModelIndex( int index )
+void C_BaseEntity::SetModelIndex( int index_ )
 {
-	m_nModelIndex = index;
+	m_nModelIndex = index_;
 	const model_t *pModel = modelinfo->GetModel( m_nModelIndex );
 	SetModelPointer( pModel );
 }
@@ -2043,7 +2039,7 @@ void C_BaseEntity::UpdatePartitionListEntry()
 		list |= PARTITION_CLIENT_RESPONSIVE_EDICTS;
 
 	// add the entity to the KD tree so we will collide against it
-	partition->RemoveAndInsert( PARTITION_CLIENT_SOLID_EDICTS | PARTITION_CLIENT_RESPONSIVE_EDICTS | PARTITION_CLIENT_NON_STATIC_EDICTS, list, CollisionProp()->GetPartitionHandle() );
+	::partition->RemoveAndInsert( PARTITION_CLIENT_SOLID_EDICTS | PARTITION_CLIENT_RESPONSIVE_EDICTS | PARTITION_CLIENT_NON_STATIC_EDICTS, list, CollisionProp()->GetPartitionHandle() );
 }
 
 
@@ -2099,7 +2095,7 @@ void C_BaseEntity::NotifyShouldTransmit( ShouldTransmitState_t state )
 			SetDormant( true );
 			
 			// remove the entity from the KD tree so we won't collide against it
-			partition->Remove( PARTITION_CLIENT_SOLID_EDICTS | PARTITION_CLIENT_RESPONSIVE_EDICTS | PARTITION_CLIENT_NON_STATIC_EDICTS, CollisionProp()->GetPartitionHandle() );
+			::partition->Remove( PARTITION_CLIENT_SOLID_EDICTS | PARTITION_CLIENT_RESPONSIVE_EDICTS | PARTITION_CLIENT_NON_STATIC_EDICTS, CollisionProp()->GetPartitionHandle() );
 		
 		}
 		break;
@@ -2173,6 +2169,7 @@ void C_BaseEntity::PreDataUpdate( DataUpdateType_t updateType )
 	}
 
 	m_ubOldInterpolationFrame = m_ubInterpolationFrame;
+	m_bOldShouldDraw = ShouldDraw();
 }
 
 const Vector& C_BaseEntity::GetOldOrigin()
@@ -2470,37 +2467,36 @@ void C_BaseEntity::UnlinkFromHierarchy()
 void C_BaseEntity::ValidateModelIndex( void )
 {
 #ifdef TF_CLIENT_DLL
+	if ( IsLocalPlayerUsingVisionFilterFlags( TF_VISION_FILTER_HALLOWEEN ) )
+	{
+		if ( m_nModelIndexOverrides[VISION_MODE_HALLOWEEN] > 0 )
+		{
+			SetModelByIndex( m_nModelIndexOverrides[VISION_MODE_HALLOWEEN] );
+			return;
+		}
+	}
+		
+	if ( IsLocalPlayerUsingVisionFilterFlags( TF_VISION_FILTER_PYRO ) )
+	{
+		if ( m_nModelIndexOverrides[VISION_MODE_PYRO] > 0 )
+		{
+			SetModelByIndex( m_nModelIndexOverrides[VISION_MODE_PYRO] );
+			return;
+		}
+	}
+
+	if ( IsLocalPlayerUsingVisionFilterFlags( TF_VISION_FILTER_ROME ) )
+	{
+		if ( m_nModelIndexOverrides[VISION_MODE_ROME] > 0 )
+		{
+			SetModelByIndex( m_nModelIndexOverrides[VISION_MODE_ROME] );
+			return;
+		}
+	}
+
 	if ( m_nModelIndexOverrides[VISION_MODE_NONE] > 0 ) 
 	{
-		if ( IsLocalPlayerUsingVisionFilterFlags( TF_VISION_FILTER_HALLOWEEN ) )
-		{
-			if ( m_nModelIndexOverrides[VISION_MODE_HALLOWEEN] > 0 )
-			{
-				SetModelByIndex( m_nModelIndexOverrides[VISION_MODE_HALLOWEEN] );
-				return;
-			}
-		}
-		
-		if ( IsLocalPlayerUsingVisionFilterFlags( TF_VISION_FILTER_PYRO ) )
-		{
-			if ( m_nModelIndexOverrides[VISION_MODE_PYRO] > 0 )
-			{
-				SetModelByIndex( m_nModelIndexOverrides[VISION_MODE_PYRO] );
-				return;
-			}
-		}
-
-		if ( IsLocalPlayerUsingVisionFilterFlags( TF_VISION_FILTER_ROME ) )
-		{
-			if ( m_nModelIndexOverrides[VISION_MODE_ROME] > 0 )
-			{
-				SetModelByIndex( m_nModelIndexOverrides[VISION_MODE_ROME] );
-				return;
-			}
-		}
-
 		SetModelByIndex( m_nModelIndexOverrides[VISION_MODE_NONE] );		
-
 		return;
 	}
 #endif
@@ -2625,6 +2621,23 @@ void C_BaseEntity::PostDataUpdate( DataUpdateType_t updateType )
 	{
 		UpdateVisibility();
 	}
+
+	// if ShouldDraw state changes, recalculate visibility
+	if ( m_bOldShouldDraw != ShouldDraw() )
+	{
+		UpdateVisibility();
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Latch simulation values when the entity has not changed
+//-----------------------------------------------------------------------------
+void C_BaseEntity::OnDataUnchangedInPVS()
+{
+	Assert( m_hNetworkMoveParent.Get() || !m_hNetworkMoveParent.IsValid() );
+	HierarchySetParent(m_hNetworkMoveParent);
+	
+	MarkMessageReceived();
 }
 
 //-----------------------------------------------------------------------------
@@ -3185,22 +3198,25 @@ void C_BaseEntity::InterpolateServerEntities()
 {
 	VPROF_BUDGET( "C_BaseEntity::InterpolateServerEntities", VPROF_BUDGETGROUP_INTERPOLATION );
 
-	s_bInterpolate = cl_interpolate.GetBool();
+	bool bPrevInterpolate = s_bInterpolate;
+	
+	// Determine whether interpolation is enabled
+	bool bInterpolate = cl_interpolate.GetBool();
+	if ( !bInterpolate && engine->IsConnected() && !engine->IsPlayingDemo() && !engine->IsClientLocalToActiveServer() )
+		bInterpolate = true; // client is connected and not playing demo and not on listen server, force interpolation ON
+	s_bInterpolate = bInterpolate;
 
-	// Don't interpolate during timedemo playback
+	// Don't interpolate during timedemo playback or when engine is paused
 	if ( engine->IsPlayingTimeDemo() || engine->IsPaused() )
 	{										 
 		s_bInterpolate = false;
 	}
 
-	if ( !engine->IsPlayingDemo() )
+	// Don't interpolate, either, if we are timing out
+	INetChannelInfo *nci = engine->GetNetChannelInfo();
+	if ( nci && nci->GetTimeSinceLastReceived() > 0.5f )
 	{
-		// Don't interpolate, either, if we are timing out
-		INetChannelInfo *nci = engine->GetNetChannelInfo();
-		if ( nci && nci->GetTimeSinceLastReceived() > 0.5f )
-		{
-			s_bInterpolate = false;
-		}
+		s_bInterpolate = false;
 	}
 
 	if ( IsSimulatingOnAlternateTicks() != g_bWasSkipping || IsEngineThreaded() != g_bWasThreaded )
@@ -3222,6 +3238,17 @@ void C_BaseEntity::InterpolateServerEntities()
 	if ( cl_extrapolate.GetBool() && !engine->IsPaused() )
 	{
 		context.EnableExtrapolation( true );
+	}
+
+	if ( bPrevInterpolate != s_bInterpolate && !s_bInterpolate )
+	{
+		// Clear interp history when we disable interpolation
+		C_BaseEntityIterator iterator;
+		C_BaseEntity *pEnt;
+		while ( (pEnt = iterator.Next()) != NULL )
+		{
+			pEnt->ResetLatched();
+		}
 	}
 
 	// Smoothly interpolate position for server entities.
@@ -3311,7 +3338,6 @@ void C_BaseEntity::ComputeFxBlend( void )
 	if ( m_nFXComputeFrame == gpGlobals->framecount )
 		return;
 
-	MDLCACHE_CRITICAL_SECTION();
 	int blend=0;
 	float offset;
 
@@ -3749,7 +3775,7 @@ void C_BaseEntity::AddColoredDecal( const Vector& rayStart, const Vector& rayEnd
 
 	case mod_brush:
 		{
-			color32 cColor32 = { (uint8)cColor.r(), (uint8)cColor.g(), (uint8)cColor.b(), (uint8)cColor.a() };
+			color32 cColor32 = { (byte)cColor.r(), (byte)cColor.g(), (byte)cColor.b(), (byte)cColor.a() };
 			effects->DecalColorShoot( decalIndex, index, model, GetAbsOrigin(), GetAbsAngles(), decalCenter, 0, 0, cColor32 );
 		}
 		break;
@@ -3848,7 +3874,7 @@ void C_BaseEntity::operator delete( void *pMem )
 //========================================================================================
 // TEAM HANDLING
 //========================================================================================
-C_Team *C_BaseEntity::GetTeam( void )
+C_Team *C_BaseEntity::GetTeam( void ) const
 {
 	return GetGlobalTeam( m_iTeamNum );
 }
@@ -3873,7 +3899,7 @@ int	C_BaseEntity::GetRenderTeamNumber( void )
 //-----------------------------------------------------------------------------
 // Purpose: Returns true if these entities are both in at least one team together
 //-----------------------------------------------------------------------------
-bool C_BaseEntity::InSameTeam( C_BaseEntity *pEntity )
+bool C_BaseEntity::InSameTeam( const C_BaseEntity *pEntity ) const
 {
 	if ( !pEntity )
 		return false;
@@ -4750,7 +4776,7 @@ C_BaseEntity *C_BaseEntity::Instance( int iEnt )
 
 #ifdef WIN32
 #pragma warning( push )
-#include <typeinfo>
+#include <typeinfo.h>
 #pragma warning( pop )
 #endif
 
@@ -5307,41 +5333,43 @@ int C_BaseEntity::GetIntermediateDataSize( void )
 
 static int g_FieldSizes[FIELD_TYPECOUNT] = 
 {
-	FIELD_SIZE( FIELD_VOID ),
-	FIELD_SIZE( FIELD_FLOAT ),
-	FIELD_SIZE( FIELD_STRING ),
-	FIELD_SIZE( FIELD_VECTOR ),
-	FIELD_SIZE( FIELD_QUATERNION ),
-	FIELD_SIZE( FIELD_INTEGER ),
-	FIELD_SIZE( FIELD_BOOLEAN ),
-	FIELD_SIZE( FIELD_SHORT ),
-	FIELD_SIZE( FIELD_CHARACTER ),
-	FIELD_SIZE( FIELD_COLOR32 ),
-	FIELD_SIZE( FIELD_EMBEDDED ),
-	FIELD_SIZE( FIELD_CUSTOM ),
+	0,					// FIELD_VOID
+	sizeof(float),		// FIELD_FLOAT
+	sizeof(int),		// FIELD_STRING
+	sizeof(Vector),		// FIELD_VECTOR
+	sizeof(Quaternion),	// FIELD_QUATERNION
+	sizeof(int),		// FIELD_INTEGER
+	sizeof(char),		// FIELD_BOOLEAN
+	sizeof(short),		// FIELD_SHORT
+	sizeof(char),		// FIELD_CHARACTER
+	sizeof(color32),	// FIELD_COLOR32
+	sizeof(int),		// FIELD_EMBEDDED	(handled specially)
+	sizeof(int),		// FIELD_CUSTOM		(handled specially)
 	
-	FIELD_SIZE( FIELD_CLASSPTR ),
-	FIELD_SIZE( FIELD_EHANDLE ),
-	FIELD_SIZE( FIELD_EDICT ),
+	//---------------------------------
 
-	FIELD_SIZE( FIELD_POSITION_VECTOR ),
-	FIELD_SIZE( FIELD_TIME ),
-	FIELD_SIZE( FIELD_TICK ),
-	FIELD_SIZE( FIELD_MODELNAME ),
-	FIELD_SIZE( FIELD_SOUNDNAME ),
+	sizeof(int),		// FIELD_CLASSPTR
+	sizeof(EHANDLE),	// FIELD_EHANDLE
+	sizeof(int),		// FIELD_EDICT
 
-	FIELD_SIZE( FIELD_INPUT ),
-	FIELD_SIZE( FIELD_FUNCTION ),
-	FIELD_SIZE( FIELD_VMATRIX ),
-	FIELD_SIZE( FIELD_VMATRIX_WORLDSPACE ),
-	FIELD_SIZE( FIELD_MATRIX3X4_WORLDSPACE ),
-	FIELD_SIZE( FIELD_INTERVAL ),
-	FIELD_SIZE( FIELD_MODELINDEX ),
-	FIELD_SIZE( FIELD_MATERIALINDEX ),
+	sizeof(Vector),		// FIELD_POSITION_VECTOR
+	sizeof(float),		// FIELD_TIME
+	sizeof(int),		// FIELD_TICK
+	sizeof(int),		// FIELD_MODELNAME
+	sizeof(int),		// FIELD_SOUNDNAME
 
-	FIELD_SIZE( FIELD_VECTOR2D ),
-	FIELD_SIZE( FIELD_INTEGER64 ),
-	FIELD_SIZE( FIELD_POINTER ),
+	sizeof(int),		// FIELD_INPUT		(uses custom type)
+#ifdef GNUC
+	// pointer to members under gnuc are 8bytes if you have a virtual func
+	sizeof(uint64),		// FIELD_FUNCTION
+#else
+	sizeof(int *),		// FIELD_FUNCTION
+#endif
+	sizeof(VMatrix),	// FIELD_VMATRIX
+	sizeof(VMatrix),	// FIELD_VMATRIX_WORLDSPACE
+	sizeof(matrix3x4_t),// FIELD_MATRIX3X4_WORLDSPACE	// NOTE: Use array(FIELD_FLOAT, 12) for matrix3x4_t NOT in worldspace
+	sizeof(interval_t), // FIELD_INTERVAL
+	sizeof(int),		// FIELD_MODELINDEX
 };
 
 //-----------------------------------------------------------------------------
@@ -5585,16 +5613,22 @@ void C_BaseEntity::DrawBBoxVisualizations( void )
 {
 	if ( m_fBBoxVisFlags & VISUALIZE_COLLISION_BOUNDS )
 	{
-		debugoverlay->AddBoxOverlay( CollisionProp()->GetCollisionOrigin(), CollisionProp()->OBBMins(),
-			CollisionProp()->OBBMaxs(), CollisionProp()->GetCollisionAngles(), 190, 190, 0, 0, 0.01 );
+		if ( debugoverlay )
+		{
+			debugoverlay->AddBoxOverlay( CollisionProp()->GetCollisionOrigin(), CollisionProp()->OBBMins(),
+				CollisionProp()->OBBMaxs(), CollisionProp()->GetCollisionAngles(), 190, 190, 0, 0, 0.01 );
+		}
 	}
 
 	if ( m_fBBoxVisFlags & VISUALIZE_SURROUNDING_BOUNDS )
 	{
 		Vector vecSurroundMins, vecSurroundMaxs;
 		CollisionProp()->WorldSpaceSurroundingBounds( &vecSurroundMins, &vecSurroundMaxs );
-		debugoverlay->AddBoxOverlay( vec3_origin, vecSurroundMins,
-			vecSurroundMaxs, vec3_angle, 0, 255, 255, 0, 0.01 );
+		if ( debugoverlay )
+		{
+			debugoverlay->AddBoxOverlay( vec3_origin, vecSurroundMins,
+				vecSurroundMaxs, vec3_angle, 0, 255, 255, 0, 0.01 );
+		}
 	}
 
 	if ( m_fBBoxVisFlags & VISUALIZE_RENDER_BOUNDS || r_drawrenderboxes.GetInt() )
@@ -6303,6 +6337,9 @@ bool C_BaseEntity::ValidateEntityAttachedToPlayer( bool &bShouldRetry )
 		if ( FStrEq( pszModel, "models/flag/briefcase.mdl" ) )
 			return true;
 
+		if ( FStrEq( pszModel, "models/passtime/ball/passtime_ball.mdl" ) )
+			return true;
+
 		if ( FStrEq( pszModel, "models/props_doomsday/australium_container.mdl" ) )
 			return true;
 
@@ -6314,6 +6351,16 @@ bool C_BaseEntity::ValidateEntityAttachedToPlayer( bool &bShouldRetry )
 			return true;
 
 		if ( FStrEq( pszModel, "models/props_lakeside_event/bomb_temp_hat.mdl" ) )
+			return true;
+
+		if ( FStrEq( pszModel, "models/props_moonbase/powersupply_flag.mdl" ) )
+			return true;
+
+		// The Halloween 2014 doomsday flag replacement
+		if ( FStrEq( pszModel, "models/flag/ticket_case.mdl" ) )
+			return true;
+
+		if ( FStrEq( pszModel, "models/weapons/c_models/c_grapple_proj/c_grapple_proj.mdl" ) )
 			return true;
 	}
 

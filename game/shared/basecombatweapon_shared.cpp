@@ -168,7 +168,19 @@ void CBaseCombatWeapon::GiveDefaultAmmo( void )
 //-----------------------------------------------------------------------------
 void CBaseCombatWeapon::Spawn( void )
 {
+	bool bPrecacheAllowed = CBaseEntity::IsPrecacheAllowed();
+	if (!bPrecacheAllowed)
+	{
+		tmEnter( TELEMETRY_LEVEL1, TMZF_NONE, "LateWeaponPrecache" );
+	}
+
 	Precache();
+
+	if (!bPrecacheAllowed)
+	{
+		tmLeave( TELEMETRY_LEVEL1 );
+	}
+
 
 	BaseClass::Spawn();
 
@@ -320,6 +332,16 @@ void CBaseCombatWeapon::Precache( void )
 		Warning( "Error reading weapon data file for: %s\n", GetClassname() );
 	//	Remove( );	//don't remove, this gets released soon!
 	}
+
+#if USE_TRACERS
+	const char *pszTracerName = GetTracerType();
+	if ( pszTracerName && pszTracerName[0] )
+	{
+		PrecacheParticleSystem( pszTracerName );
+	}
+
+	PrecacheParticleSystem( "weapon_tracers" );
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -801,6 +823,10 @@ void CBaseCombatWeapon::MakeTracer( const Vector &vecTracerSrc, const trace_t &t
 	}
 
 	const char *pszTracerName = GetTracerType();
+	if ( !pszTracerName )
+	{
+		 pszTracerName = "weapon_tracers";
+	}
 
 	Vector vNewSrc = vecTracerSrc;
 	int iEntIndex = pOwner->entindex();
@@ -808,20 +834,22 @@ void CBaseCombatWeapon::MakeTracer( const Vector &vecTracerSrc, const trace_t &t
 	if ( g_pGameRules->IsMultiplayer() )
 	{
 		iEntIndex = entindex();
+#ifdef CLIENT_DLL
+		C_BasePlayer *player = ToBasePlayer( pOwner );
+		if ( player->IsLocalPlayer() )
+		{
+			CBaseEntity *vm = player->GetViewModel();
+			if ( vm )
+			{
+				iEntIndex = vm->entindex();
+			}
+		}
+#endif
 	}
 
 	int iAttachment = GetTracerAttachment();
 
-	switch ( iTracerType )
-	{
-	case TRACER_LINE:
-		UTIL_Tracer( vNewSrc, tr.endpos, iEntIndex, iAttachment, 0.0f, true, pszTracerName );
-		break;
-
-	case TRACER_LINE_AND_WHIZ:
-		UTIL_Tracer( vNewSrc, tr.endpos, iEntIndex, iAttachment, 0.0f, true, pszTracerName );
-		break;
-	}
+	UTIL_ParticleTracer( pszTracerName, vNewSrc, tr.endpos, iEntIndex, iAttachment, true );
 }
 
 void CBaseCombatWeapon::GiveTo( CBaseEntity *pOther )
@@ -1154,7 +1182,7 @@ float CBaseCombatWeapon::GetViewModelSequenceDuration()
 	return vm->SequenceDuration();
 }
 
-bool CBaseCombatWeapon::IsViewModelSequenceFinished( void )
+bool CBaseCombatWeapon::IsViewModelSequenceFinished( void ) const
 {
 	// These are not valid activities and always complete immediately
 	if ( GetActivity() == ACT_RESET || GetActivity() == ACT_INVALID )
@@ -1298,27 +1326,36 @@ bool CBaseCombatWeapon::UsesSecondaryAmmo( void )
 //-----------------------------------------------------------------------------
 void CBaseCombatWeapon::SetWeaponVisible( bool visible )
 {
-	CBaseViewModel *vm = NULL;
-
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
-	if ( pOwner )
-	{
-		vm = pOwner->GetViewModel( m_nViewModelIndex );
-	}
+	if ( !pOwner )
+		return;
 
+	// PiMoN: had to re-write the whole code so it won't
+	// just hide the primary viewmodel but every viewmodel
+	// existing as we now have separate hands viewmodel
 	if ( visible )
 	{
 		RemoveEffects( EF_NODRAW );
-		if ( vm )
+		int i;
+		for ( i = MAX_VIEWMODELS - 1; i >= 0; i-- )
 		{
+			CBaseViewModel *vm = pOwner->GetViewModel( i );
+			if ( !vm )
+				continue;
+
 			vm->RemoveEffects( EF_NODRAW );
 		}
 	}
 	else
 	{
 		AddEffects( EF_NODRAW );
-		if ( vm )
+		int i;
+		for ( i = MAX_VIEWMODELS - 1; i >= 0; i-- )
 		{
+			CBaseViewModel *vm = pOwner->GetViewModel( i );
+			if ( !vm )
+				continue;
+
 			vm->AddEffects( EF_NODRAW );
 		}
 	}
@@ -1335,7 +1372,13 @@ bool CBaseCombatWeapon::IsWeaponVisible( void )
 	{
 		vm = pOwner->GetViewModel( m_nViewModelIndex );
 		if ( vm )
+		{
+#ifdef CLIENT_DLL
+			return !vm->IsDormant() && !vm->IsEffectActive(EF_NODRAW);
+#else
 			return ( !vm->IsEffectActive(EF_NODRAW) );
+#endif
+		}
 	}
 
 	return false;
@@ -1443,7 +1486,12 @@ selects and deploys each weapon as you pass it. (sjb)
 bool CBaseCombatWeapon::Deploy( )
 {
 	MDLCACHE_CRITICAL_SECTION();
-	return DefaultDeploy( (char*)GetViewModel(), (char*)GetWorldModel(), GetDrawActivity(), (char*)GetAnimPrefix() );
+	bool bResult = DefaultDeploy( (char*)GetViewModel(), (char*)GetWorldModel(), GetDrawActivity(), (char*)GetAnimPrefix() );
+
+	// override pose parameters
+	PoseParameterOverride( false );
+
+	return bResult;
 }
 
 Activity CBaseCombatWeapon::GetDrawActivity( void )
@@ -1501,6 +1549,9 @@ bool CBaseCombatWeapon::Holster( CBaseCombatWeapon *pSwitchingTo )
 		if( m_bReloadHudHintDisplayed )
 			RescindReloadHudHint();
 	}
+
+	// reset pose parameters
+	PoseParameterOverride( true );
 
 	return true;
 }
@@ -2432,21 +2483,50 @@ bool CBaseCombatWeapon::IsLocked( CBaseEntity *pAsker )
 //-----------------------------------------------------------------------------
 Activity CBaseCombatWeapon::ActivityOverride( Activity baseAct, bool *pRequired )
 {
-	acttable_t *pTable = ActivityList();
-	int actCount = ActivityListCount();
+	int actCount = 0;
+	acttable_t *pTable = ActivityList( actCount );
 
-	for ( int i = 0; i < actCount; i++, pTable++ )
+	for ( int i = 0; i < actCount; i++ )
 	{
-		if ( baseAct == pTable->baseAct )
+		const acttable_t& act = pTable[i];
+		if ( baseAct == act.baseAct )
 		{
 			if (pRequired)
 			{
-				*pRequired = pTable->required;
+				*pRequired = act.required;
 			}
-			return (Activity)pTable->weaponAct;
+			return (Activity)act.weaponAct;
 		}
 	}
 	return baseAct;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void CBaseCombatWeapon::PoseParameterOverride( bool bReset )
+{
+	CBaseCombatCharacter *pOwner = GetOwner();
+	if ( !pOwner )
+		return;
+
+	CStudioHdr *pStudioHdr = pOwner->GetModelPtr();
+	if ( !pStudioHdr )
+		return;
+	
+	int iCount = 0;
+	poseparamtable_t *pPoseParamList = PoseParamList( iCount );
+	if ( pPoseParamList )
+	{
+		for ( int i=0; i<iCount; ++i )
+		{
+			int iPoseParam = pOwner->LookupPoseParameter( pStudioHdr, pPoseParamList[i].pszName );
+		
+			if ( iPoseParam != -1 )
+				pOwner->SetPoseParameter( iPoseParam, bReset ? 0 : pPoseParamList[i].flValue );
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------

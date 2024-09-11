@@ -156,7 +156,7 @@ void CBaseCombatCharacter::RemoveAmmo( int iCount, int iAmmoIndex, bool bIgnoreI
 	// Infinite ammo?
 	if ( GetAmmoDef()->CanCarryInfiniteAmmo( iAmmoIndex ) )
 		return;
-
+	
 	if ( !bIgnoreInfiniteAmmo )
 	{
 		extern ConVar sv_infinite_ammo;

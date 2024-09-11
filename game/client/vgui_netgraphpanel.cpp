@@ -20,6 +20,7 @@
 #include <vgui/IScheme.h>
 #include <vgui/ILocalize.h>
 #include "tier0/vprof.h"
+#include "tier0/cpumonitoring.h"
 #include "cdll_bounded_cvars.h"
 
 #include "materialsystem/imaterialsystemstub.h"
@@ -341,7 +342,7 @@ void CNetGraphPanel::OnFontChanged()
 {
 	if ( !m_hFontProportional )
 		return;
-
+	
 	// Estimate the width of our panel.
 	char str[512];
 	wchar_t ustr[512];
@@ -526,10 +527,10 @@ void CNetGraphPanel::DrawTimes( vrect_t vrect, cmdinfo_t *cmdinfo, int x, int w,
 	{
 		i = ( m_OutgoingSequence - a ) & ( TIMINGS - 1 );
 		h = MIN( ( cmdinfo[i].cmd_lerp / 3.0 ) * LERP_HEIGHT, LERP_HEIGHT );
-	if ( h < 0 )
-    {
-        h = LERP_HEIGHT;
-    }
+        if ( h < 0 )
+        {
+            h = LERP_HEIGHT;
+        }
 
 		rcFill.x		= x + w -a - 1;
 		rcFill.width	= 1;
@@ -552,7 +553,7 @@ void CNetGraphPanel::DrawTimes( vrect_t vrect, cmdinfo_t *cmdinfo, int x, int w,
 
 			for ( j = start; j < h; j++ )
 			{
-				DrawLine(&rcFill, colors[j + extrap_point], 255 );
+				DrawLine(&rcFill, colors[j + extrap_point], 255 );	
 				rcFill.y--;
 			}
 		}
@@ -570,7 +571,7 @@ void CNetGraphPanel::DrawTimes( vrect_t vrect, cmdinfo_t *cmdinfo, int x, int w,
 
 			for ( j = 0; j < h; j++ )
 			{
-				DrawLine(&rcFill, colors[j + oldh], 255 );
+				DrawLine(&rcFill, colors[j + oldh], 255 );	
 				rcFill.y--;
 			}
 		}
@@ -860,7 +861,7 @@ void CNetGraphPanel::DrawTextFields( int graphvalue, int x, int y, int w, netban
 		m_AvgLatency = 0.0f;
 
 	int textTall = surface()->GetFontTall( font );
-
+	
 	Q_snprintf( sz, sizeof( sz ), "fps: %5i  var: %4.1f ms  ping: %i ms", (int)(1.0f / m_Framerate), m_flServerFramerateStdDeviation*1000.0f, (int)(m_AvgLatency*1000.0f) );
 	DrawColoredText( font, x, y, textColorDefault, sz );
 
@@ -947,6 +948,7 @@ void CNetGraphPanel::DrawTextFields( int graphvalue, int x, int y, int w, netban
 
 	y += textTall;
 
+
 	Q_snprintf( sz, sizeof( sz ), "tick:%5.1f  ", fTickRate);
 	DrawColoredText( font, x, y, textColorDefault, sz );
 
@@ -954,7 +956,7 @@ void CNetGraphPanel::DrawTextFields( int graphvalue, int x, int y, int w, netban
 	color servercolor = textColorDefault;
 	if ( m_flServerFrameComputationTime > ( 1/fTickRate ) + 0.0001 )
 		servercolor = GetColorFromVariance( m_flServerFrameComputationTime, 1/fTickRate, 0.25f, 0.5f, 0.75f);
-
+	
 	Q_snprintf( sz, sizeof( sz ), "sv:%5.1f %s%4.1f ms   var: %6.3f ms", m_flServerFrameComputationTime*1000.0f,
 		( net_graphholdsvframerate.GetBool() ? "~/" : "+-" ),
 		m_flServerFramerateStdDeviation * 1000.0f, m_flServerFramerateStdDeviation * 1000.0f );
@@ -1002,6 +1004,26 @@ void CNetGraphPanel::DrawTextFields( int graphvalue, int x, int y, int w, netban
 		DrawColoredText( m_hFontSmall, x, y, color(0, 0, 128, 255), "voice" );
 		y -= textTall;
 	}
+	else
+	{
+		const CPUFrequencyResults frequency = GetCPUFrequencyResults();
+		double currentTime = Plat_FloatTime();
+		const double displayTime = 5.0f; // Display frequency results for this long.
+		if ( frequency.m_GHz > 0 && frequency.m_timeStamp + displayTime > currentTime )
+		{
+			// Optionally print out the CPU frequency monitoring data.
+			color cpuColor = textColorDefault;
+			if ( frequency.m_percentage < kCPUMonitoringWarning2 )
+				cpuColor = textColorWarn3;
+			else if ( frequency.m_percentage < kCPUMonitoringWarning1 )
+				cpuColor = textColorWarn2;
+			// Experimental fading out as data becomes stale. Probably too distracting.
+			//float age = currentTime - frequency.m_timeStamp;
+			//cpuColor.a *= ( displayTime - age ) / displayTime;
+			V_sprintf_safe( sz, "CPU frequency percent: %3.1f%%   Min percent: %3.1f%%", frequency.m_percentage, frequency.m_lowestPercentage );
+			DrawColoredText( font, x, y, cpuColor, sz );
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1013,7 +1035,7 @@ int CNetGraphPanel::GraphValue( void )
 	int graphtype;
 
 	graphtype = net_graph.GetInt();
-	
+
 	if ( !graphtype && !( in_graph.state & 1 ) )
 		return 0;
 
@@ -1146,6 +1168,10 @@ void CNetGraphPanel::DrawServerType( int xright, int y )
 	{
 		psz = "demo";
 	}
+	else if ( engine->IsClientLocalToActiveServer() )
+	{
+		psz = "local";
+	}
 	else if ( engine->IsInGame() )
 	{
 		INetChannelInfo *pInfo = engine->GetNetChannelInfo();
@@ -1245,18 +1271,17 @@ void CNetGraphPanel::DrawLargePacketSizes( int x, int w, int graphtype, float wa
 			char sz[ 32 ];
 			Q_snprintf( sz, sizeof( sz ), "%i", nTotalBytes );
 
-			int len = g_pMatSystemSurface->DrawTextLen( m_hFont, "%s", sz );
+			int len = TextWidth(m_hFont, sz );
 
 			int textx, texty;
 
 			textx = rcFill.x - len / 2;
 			texty = MAX( 0, rcFill.y - 11 );
 
-			g_pMatSystemSurface->DrawColoredText( m_hFont, textx, texty, 255, 255, 255, 255, "%s", sz );
+			DrawColoredText( m_hFont, textx, texty, color(255, 255, 255, 255), sz );
 		}
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1306,7 +1331,6 @@ void CNetGraphPanel::Paint()
 		vrect.width  = sw;
 		vrect.height = sh;
 	}
-
 
 	w = MIN( (int)TIMINGS, m_EstimatedWidth );
 	if ( vrect.width < w + 10 )
@@ -1457,7 +1481,7 @@ void CNetGraphPanel::PaintLineArt( int x, int y, int w, int graphtype, int maxms
 
 		if ( !DrawDataSegment( &rcFill, m_Graph[ i ].msgbytes[INetChannelInfo::EVENTS], 0, 255, 255 ) )
 			continue;
-		
+
 		if ( !DrawDataSegment( &rcFill, m_Graph[ i ].msgbytes[INetChannelInfo::USERMESSAGES], 128, 128, 0 ) )
 			continue;
 
@@ -1550,7 +1574,7 @@ void CNetGraphPanel::DrawLineSegments()
 
 		m_pMesh->Draw();
 
-	start += consume;
+		start += consume;
 	}
 }
 

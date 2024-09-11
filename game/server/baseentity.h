@@ -69,6 +69,7 @@ class CTeam;
 class Vector;
 struct gamevcollisionevent_t;
 class CBaseAnimating;
+class CBaseAnimatingOverlay;
 class CBasePlayer;
 class IServerVehicle;
 struct solid_t;
@@ -83,7 +84,7 @@ class CUserCmd;
 class CSkyCamera;
 class CEntityMapData;
 class INextBot;
-
+class IHasAttributes;
 
 typedef CUtlVector< CBaseEntity* > EntityList_t;
 
@@ -665,6 +666,8 @@ public:
 	void InputDispatchResponse( inputdata_t& inputdata );
 	void InputDisableShadow( inputdata_t &inputdata );
 	void InputEnableShadow( inputdata_t &inputdata );
+	void InputDisableDraw( inputdata_t &inputdata );
+	void InputEnableDraw( inputdata_t &inputdata );
 	void InputAddOutput( inputdata_t &inputdata );
 	void InputFireUser1( inputdata_t &inputdata );
 	void InputFireUser2( inputdata_t &inputdata );
@@ -877,8 +880,7 @@ public:
 
 	// Returns a CBaseAnimating if the entity is derived from CBaseAnimating.
 	virtual CBaseAnimating*	GetBaseAnimating() { return 0; }
-	virtual CBaseAnimating *GetBaseAnimatingOverlay() { return NULL; }
-
+	virtual CBaseAnimatingOverlay *GetBaseAnimatingOverlay() { return NULL; }
 
 	virtual IResponseSystem *GetResponseSystem();
 	virtual void	DispatchResponse( const char *conceptName );
@@ -909,7 +911,7 @@ public:
 	virtual int		OnTakeDamage( const CTakeDamageInfo &info );
 
 	// This is what you should call to apply damage to an entity.
-	void TakeDamage( const CTakeDamageInfo &info );
+	int TakeDamage( const CTakeDamageInfo &info );
 	virtual void AdjustDamageDirection( const CTakeDamageInfo &info, Vector &dir, CBaseEntity *pEnt ) {}
 
 	virtual int		TakeHealth( float flHealth, int bitsDamageType );
@@ -970,7 +972,7 @@ public:
 	int				GetTeamNumber( void ) const;		// Get the Team number of the team this entity is on
 	virtual void	ChangeTeam( int iTeamNum );			// Assign this entity to a team.
 	bool			IsInTeam( CTeam *pTeam ) const;		// Returns true if this entity's in the specified team
-	bool			InSameTeam( CBaseEntity *pEntity ) const;	// Returns true if the specified entity is on the same team as this one
+	bool			InSameTeam( const CBaseEntity *pEntity ) const;	// Returns true if the specified entity is on the same team as this one
 	bool			IsInAnyTeam( void ) const;			// Returns true if this entity is in any team
 	const char		*TeamID( void ) const;				// Returns the name of the team this entity is on.
 
@@ -1017,7 +1019,7 @@ public:
 	void					PhysicsImpact( CBaseEntity *other, trace_t &trace );
  	void					PhysicsMarkEntitiesAsTouching( CBaseEntity *other, trace_t &trace );
 	void					PhysicsMarkEntitiesAsTouchingEventDriven( CBaseEntity *other, trace_t &trace );
-	virtual void					PhysicsTouchTriggers( const Vector *pPrevAbsOrigin = NULL );
+	virtual void			PhysicsTouchTriggers( const Vector *pPrevAbsOrigin = NULL );
 
 	// Physics helper
 	static void				PhysicsRemoveTouchedList( CBaseEntity *ent );
@@ -1092,94 +1094,57 @@ public:
 	int		GetHealth() const		{ return m_iHealth; }
 	void	SetHealth( int amt )	{ m_iHealth = amt; }
 
+	float HealthFraction() const;
+
 	// Ugly code to lookup all functions to make sure they are in the table when set.
 #ifdef _DEBUG
 
-#ifdef PLATFORM_64BITS
-#ifdef GNUC
-#define ENTITYFUNCPTR_SIZE	16
-#else
-#define ENTITYFUNCPTR_SIZE	8
-#endif
-#else
 #ifdef GNUC
 #define ENTITYFUNCPTR_SIZE	8
 #else
 #define ENTITYFUNCPTR_SIZE	4
 #endif
-#endif
 
 	void FunctionCheck( void *pFunction, const char *name );
-
 	ENTITYFUNCPTR TouchSet( ENTITYFUNCPTR func, char *name ) 
 	{ 
-#ifdef _DEBUG
-#ifdef PLATFORM_64BITS
-#ifdef GNUC
-	COMPILE_TIME_ASSERT( sizeof(func) == 16 );
-#else
-	COMPILE_TIME_ASSERT( sizeof(func) == 8 );
-#endif
-#else
-#ifdef GNUC
-	COMPILE_TIME_ASSERT( sizeof(func) == 8 );
-#else
-	COMPILE_TIME_ASSERT( sizeof(func) == 4 );
-#endif
-#endif
-#endif
+		COMPILE_TIME_ASSERT( sizeof(func) == ENTITYFUNCPTR_SIZE );
 		m_pfnTouch = func; 
 		FunctionCheck( *(reinterpret_cast<void **>(&m_pfnTouch)), name ); 
 		return func;
 	}
 	USEPTR	UseSet( USEPTR func, char *name ) 
 	{ 
-#ifdef _DEBUG
-#ifdef PLATFORM_64BITS
-#ifdef GNUC
-	COMPILE_TIME_ASSERT( sizeof(func) == 16 );
-#else
-	COMPILE_TIME_ASSERT( sizeof(func) == 8 );
-#endif
-#else
-#ifdef GNUC
-	COMPILE_TIME_ASSERT( sizeof(func) == 8 );
-#else
-	COMPILE_TIME_ASSERT( sizeof(func) == 4 );
-#endif
-#endif
-#endif
+		COMPILE_TIME_ASSERT( sizeof(func) == ENTITYFUNCPTR_SIZE );
 		m_pfnUse = func; 
 		FunctionCheck( *(reinterpret_cast<void **>(&m_pfnUse)), name ); 
 		return func;
 	}
 	ENTITYFUNCPTR	BlockedSet( ENTITYFUNCPTR func, char *name ) 
 	{ 
-#ifdef _DEBUG
-#ifdef PLATFORM_64BITS
-#ifdef GNUC
-	COMPILE_TIME_ASSERT( sizeof(func) == 16 );
-#else
-	COMPILE_TIME_ASSERT( sizeof(func) == 8 );
-#endif
-#else
-#ifdef GNUC
-	COMPILE_TIME_ASSERT( sizeof(func) == 8 );
-#else
-	COMPILE_TIME_ASSERT( sizeof(func) == 4 );
-#endif
-#endif
-#endif
+		COMPILE_TIME_ASSERT( sizeof(func) == ENTITYFUNCPTR_SIZE );
 		m_pfnBlocked = func; 
 		FunctionCheck( *(reinterpret_cast<void **>(&m_pfnBlocked)), name ); 
 		return func;
 	}
 
-#endif
+#endif // _DEBUG
+
 	virtual void	ModifyOrAppendCriteria( AI_CriteriaSet& set );
 	void			AppendContextToCriteria( AI_CriteriaSet& set, const char *prefix = "" );
 	void			DumpResponseCriteria( void );
-	
+
+	// Return the IHasAttributes interface for this base entity. Removes the need for:
+	//	dynamic_cast< IHasAttributes * >( pEntity );
+	// Which is remarkably slow.
+	// GetAttribInterface( CBaseEntity *pEntity ) in attribute_manager.h uses
+	//  this function, tests for NULL, and Asserts m_pAttributes == dynamic_cast.
+	inline IHasAttributes *GetHasAttributesInterfacePtr() const { return m_pAttributes; }
+
+protected:
+	// NOTE: m_pAttributes needs to be set in the leaf class constructor.
+	IHasAttributes *m_pAttributes;
+
 private:
 	friend class CAI_Senses;
 	CBaseEntity	*m_pLink;// used for temporary link-list operations. 
@@ -1459,6 +1424,7 @@ public:
 	inline IPhysicsObject *VPhysicsGetObject( void ) const { return m_pPhysicsObject; }
 	virtual void	VPhysicsUpdate( IPhysicsObject *pPhysics );
 	void			VPhysicsUpdatePusher( IPhysicsObject *pPhysics );
+	float			VPhysicsGetNonShadowMass( void ) const { return m_flNonShadowMass; }
 	
 	// react physically to damage (called from CBaseEntity::OnTakeDamage() by default)
 	virtual int		VPhysicsTakeDamage( const CTakeDamageInfo &info );
@@ -1671,6 +1637,7 @@ private:
 
 	CNetworkVar( int, m_CollisionGroup );		// used to cull collision tests
 	IPhysicsObject	*m_pPhysicsObject;	// pointer to the entity's physics object (vphysics.dll)
+	float m_flNonShadowMass;	// cached mass (shadow controllers set mass to VPHYSICS_MAX_MASS, or 50000)
 
 	CNetworkVar( float, m_flShadowCastDistance );
 	float		m_flDesiredShadowCastDistance;
@@ -1790,6 +1757,7 @@ private:
 	//  randon number generators to spit out the same random numbers on both sides for a particular
 	//  usercmd input.
 	static int						m_nPredictionRandomSeed;
+	static int						m_nPredictionRandomSeedServer;
 	static CBasePlayer				*m_pPredictionPlayer;
 
 	// FIXME: Make hierarchy a member of CBaseEntity
@@ -1803,7 +1771,7 @@ private:
 	
 public:
 	// Accessors for above
-	static int						GetPredictionRandomSeed( void );
+	static int						GetPredictionRandomSeed( bool bUseUnSyncedServerPlatTime = false );
 	static void						SetPredictionRandomSeed( const CUserCmd *cmd );
 	static CBasePlayer				*GetPredictionPlayer( void );
 	static void						SetPredictionPlayer( CBasePlayer *player );
@@ -1841,6 +1809,11 @@ public:
 	{
 		return s_bAbsQueriesValid;
 	}
+
+	virtual bool ShouldBlockNav() const { return true; }
+
+private:
+	CThreadFastMutex m_CalcAbsolutePositionMutex;
 };
 
 // Send tables exposed in this module.

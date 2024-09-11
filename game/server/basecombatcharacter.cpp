@@ -198,6 +198,7 @@ IMPLEMENT_SERVERCLASS_ST(CBaseCombatCharacter, DT_BaseCombatCharacter)
 	// Data that only gets sent to the local player.
 	SendPropDataTable( "bcc_localdata", 0, &REFERENCE_SEND_TABLE(DT_BCCLocalPlayerExclusive), SendProxy_SendBaseCombatCharacterLocalDataTable ),
 
+	SendPropInt( SENDINFO( m_LastHitGroup ), 4, SPROP_UNSIGNED ),
 	SendPropEHandle( SENDINFO( m_hActiveWeapon ) ),
 	SendPropTime( SENDINFO( m_flTimeOfLastInjury ) ),
 	SendPropInt( SENDINFO( m_nRelativeDirectionOfLastInjury ), 3, SPROP_UNSIGNED ),
@@ -735,11 +736,10 @@ CBaseCombatCharacter::CBaseCombatCharacter( void )
 	}
 
 	// not standing on a nav area yet
-#ifdef MEXT_BOT
 	m_lastNavArea = NULL;
-#endif
-
 	m_registeredNavTeam = TEAM_INVALID;
+
+	m_LastHitGroup = HITGROUP_GENERIC;
 
 	for (int i = 0; i < MAX_WEAPONS; i++)
 	{
@@ -784,6 +784,7 @@ void CBaseCombatCharacter::Spawn( void )
 	}
 
 	m_flTimeOfLastInjury = 0.0f;
+	m_LastHitGroup = HITGROUP_GENERIC;
 
 	// not standing on a nav area yet
 	ClearLastKnownArea();
@@ -1943,7 +1944,7 @@ void CBaseCombatCharacter::Weapon_Drop( CBaseCombatWeapon *pWeapon, const Vector
 	if ( IsPlayer() )
 	{
 		Vector vThrowPos = Weapon_ShootPosition() - Vector(0,0,12);
-
+		
 		if( UTIL_PointContents(vThrowPos) & CONTENTS_SOLID )
 		{
 			Msg("Weapon spawning in solid!\n");
@@ -2290,8 +2291,8 @@ CBaseCombatWeapon *CBaseCombatCharacter::Weapon_GetWpnForAmmo( int iAmmoIndex )
 //-----------------------------------------------------------------------------
 bool CBaseCombatCharacter::Weapon_CanUse( CBaseCombatWeapon *pWeapon )
 {
-	acttable_t *pTable		= pWeapon->ActivityList();
-	int			actCount	= pWeapon->ActivityListCount();
+	int	actCount = 0;
+	acttable_t *pTable = pWeapon->ActivityList( actCount );
 
 	if( actCount < 1 )
 	{
@@ -2515,6 +2516,7 @@ int CBaseCombatCharacter::OnTakeDamage( const CTakeDamageInfo &info )
 	}
 }
 
+
 int CBaseCombatCharacter::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 {
 	if ( GetFlags() & FL_GODMODE )
@@ -2556,6 +2558,7 @@ int CBaseCombatCharacter::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 
 	return 1;
 }
+
 
 int CBaseCombatCharacter::OnTakeDamage_Dying( const CTakeDamageInfo &info )
 {
@@ -3538,20 +3541,17 @@ void CBaseCombatCharacter::UpdateLastKnownArea( void )
 //-----------------------------------------------------------------------------
 bool CBaseCombatCharacter::IsAreaTraversable( const CNavArea *area ) const
 {
-#ifdef NEXT_BOT
 	return area ? !area->IsBlocked( GetTeamNumber() ) : false;
-#endif
-	return false;
 }
+
 
 //-----------------------------------------------------------------------------
 // Purpose: Leaving the nav mesh
 //-----------------------------------------------------------------------------
 void CBaseCombatCharacter::ClearLastKnownArea( void )
 {
-#ifdef NEXT_BOT
 	OnNavAreaChanged( NULL, m_lastNavArea );
-
+	
 	if ( m_lastNavArea )
 	{
 		m_lastNavArea->DecrementPlayerCount( m_registeredNavTeam, entindex() );
@@ -3559,21 +3559,20 @@ void CBaseCombatCharacter::ClearLastKnownArea( void )
 		m_lastNavArea = NULL;
 		m_registeredNavTeam = TEAM_INVALID;
 	}
-#endif
 }
+
 
 //-----------------------------------------------------------------------------
 // Purpose: Handling editor removing the area we're standing upon
 //-----------------------------------------------------------------------------
 void CBaseCombatCharacter::OnNavAreaRemoved( CNavArea *removedArea )
 {
-#ifdef NEXT_BOT
 	if ( m_lastNavArea == removedArea )
 	{
 		ClearLastKnownArea();
 	}
-#endif
 }
+
 
 //-----------------------------------------------------------------------------
 // Purpose: Changing team, maintain associated data

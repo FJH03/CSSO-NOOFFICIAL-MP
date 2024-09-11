@@ -562,6 +562,9 @@ public:
 	virtual bool	IsActiveApp();
 	virtual void	DisconnectInternal();
 
+	// is this client running inside the same process as an active server?
+	virtual bool IsClientLocalToActiveServer();
+
 	virtual int		GetInstancesRunningCount( );
 
 	virtual float	GetPausedExpireTime( void ) OVERRIDE;
@@ -1640,6 +1643,11 @@ bool CEngineClient::IsWindowedMode()
 int	CEngineClient::GetClientVersion() const
 {
 	return GetSteamInfIDVersionInfo().ClientVersion;
+}
+
+bool CEngineClient::IsClientLocalToActiveServer()
+{
+	return sv.IsActive() || sv.IsLoading();
 }
 
 bool CEngineClient::IsActiveApp( void )

@@ -282,22 +282,20 @@ void AI_Response::Describe()
 
 //-----------------------------------------------------------------------------
 // Purpose: 
-// Output : char const
 //-----------------------------------------------------------------------------
-void AI_Response::GetName( char *buf, size_t buflen ) const
+const char * AI_Response::GetNamePtr() const
 {
-	Q_strncpy( buf, m_szResponseName, buflen );
+    return m_szResponseName;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
-// Output : char const
 //-----------------------------------------------------------------------------
-void AI_Response::GetResponse( char *buf, size_t buflen ) const
+const char * AI_Response::GetResponsePtr() const
 {
-	GetName( buf, buflen );
+    return m_szResponseName;
 }
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : type - 
