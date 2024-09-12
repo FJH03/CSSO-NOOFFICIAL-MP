@@ -709,6 +709,13 @@ void CWeaponCSBase::SendViewModelAnim( int nSequence )
 			// Don't switch from taunt to idle
 			return;
 		}
+#ifdef CLIENT_DLL
+		if ( !bIsLookingAt )
+		{
+			// Fade down stat trak glow if we're doing anything other than inspecting
+			vm->SetStatTrakGlowMultiplier( 0.0f );
+		}
+#endif
 	}
 
 	BaseClass::SendViewModelAnim( nSequence );
@@ -1323,6 +1330,12 @@ void CWeaponCSBase::Precache( void )
 	if ( GetCSWpnData().m_szMagModel[0] != 0 )
 		PrecacheModel( GetCSWpnData().m_szMagModel );
 
+	if ( GetCSWpnData().m_szAddonModel[0] != 0 )
+		PrecacheModel( GetCSWpnData().m_szAddonModel );
+
+	if ( GetCSWpnData().m_szStatTrakModel[0] != 0 )
+		PrecacheModel( GetCSWpnData().m_szStatTrakModel );
+
 	//if ( GetCSWpnData().m_szEjectBrassEffect[0] != 0 )
 	//	PrecacheParticleSystem( GetCSWpnData().m_szEjectBrassEffect );
 	
@@ -1470,11 +1483,8 @@ bool CWeaponCSBase::Holster( CBaseCombatWeapon *pSwitchingTo )
 	if ( !pPlayer )
 		return false;
 
-	if ( pPlayer )
-		pPlayer->SetFOV( pPlayer, 0 ); // reset the default FOV.
-
-	if ( pPlayer )
-		pPlayer->SetShieldDrawnState( false );
+	pPlayer->SetFOV( pPlayer, 0 ); // reset the default FOV.
+	pPlayer->SetShieldDrawnState( false );
 
 	ResetGunHeat();
 
@@ -2158,6 +2168,11 @@ extern ConVar view_recoil_tracking;
 
 			return true;
 		}*/
+		else if ( event == AE_CL_SET_STATTRAK_GLOW )
+		{
+			pViewModel->SetStatTrakGlowMultiplier( atof( options ) );
+			return true;
+		}
 		else if ( event == AE_WPN_NEXTCLIP_TO_POSEPARAM )
 		{
 			// sets the given pose param to a 0..1 value representing the clip amount after an impending reload

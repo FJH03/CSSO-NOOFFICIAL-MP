@@ -42,6 +42,10 @@
 
 #ifdef CSTRIKE_DLL
 	ConVar cl_righthand( "cl_righthand", "1", FCVAR_ARCHIVE, "Use right-handed view models." );
+
+	extern ConVar loadout_slot_gloves_ct;
+	extern ConVar loadout_slot_gloves_t;
+	extern ConVar loadout_stattrak;
 #endif
 
 #ifdef TF_CLIENT_DLL
@@ -50,10 +54,13 @@
 
 extern ConVar r_drawviewmodel;
 
-extern ConVar loadout_slot_gloves_ct;
-extern ConVar loadout_slot_gloves_t;
-
 void PostToolMessage( HTOOLHANDLE hEntity, KeyValues *msg );
+
+void C_BaseViewModel::UpdateStatTrakGlow( void )
+{
+	//approach the ideal in 2 seconds
+	m_flStatTrakGlowMultiplier = Approach( m_flStatTrakGlowMultiplierIdeal, m_flStatTrakGlowMultiplier, (gpGlobals->frametime * 0.5) );
+}
 
 void C_BaseViewModel::OnNewParticleEffect( const char *pszParticleName, CNewParticleEffect *pNewParticleEffect )
 {
@@ -140,6 +147,7 @@ void C_BaseViewModel::UpdateParticles()
 void C_BaseViewModel::Simulate()
 {
 	UpdateParticles();
+	UpdateStatTrakGlow();
 	BaseClass::Simulate();
 	return;
 }
@@ -448,6 +456,10 @@ int C_BaseViewModel::DrawModel( int flags )
 				m_vecViewmodelArmModels[i]->DrawModel( flags );
 			}
 		}
+		if ( m_viewmodelStatTrakAddon )
+		{
+			m_viewmodelStatTrakAddon->DrawModel( flags );
+		}
 	}
 
 	return ret;
@@ -615,6 +627,7 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	if ( !pPlayer )
 	{
 		RemoveViewmodelArmModels();
+		RemoveViewmodelStatTrak();
 		return;
 	}
 
@@ -622,6 +635,7 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	if ( !pCSWeapon )
 	{
 		RemoveViewmodelArmModels();
+		RemoveViewmodelStatTrak();
 		return;
 	}
 
@@ -641,6 +655,7 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	if ( pPlayer->m_pViewmodelArmConfig == NULL )
 	{
 		RemoveViewmodelArmModels();
+		RemoveViewmodelStatTrak();
 		
 		if ( pHdr )
 		{
@@ -668,6 +683,14 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 			AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModel );
 		}
 	}
+
+	// verify stattrak module and add if necessary
+	if ( loadout_stattrak.GetBool() && pCSWeapon->GetCSWpnData().m_szStatTrakModel && pCSWeapon->GetCSWpnData().m_szStatTrakModel[0] )
+	{
+		AddViewmodelStatTrak( pCSWeapon );
+	}
+	else
+		RemoveViewmodelStatTrak();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -701,6 +724,40 @@ C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *p
 	return NULL;
 }
 
+void C_BaseViewModel::AddViewmodelStatTrak( CWeaponCSBase *pWeapon )
+{
+	// PiMoN: commenting this out to pretend that it "fixes" a bug with stattrak model not updating in time on weapon switch
+	/*if ( m_viewmodelStatTrakAddon && m_viewmodelStatTrakAddon.Get() && m_viewmodelStatTrakAddon->GetMoveParent() )
+		return;*/
+
+	RemoveViewmodelStatTrak();
+
+	if (!pWeapon)
+		return;
+
+	if ( !pWeapon->GetCSWpnData().m_szStatTrakModel && !pWeapon->GetCSWpnData().m_szStatTrakModel[0] )
+		return;
+
+	C_ViewmodelAttachmentModel *pStatTrakEnt = new class C_ViewmodelAttachmentModel;
+	if ( pStatTrakEnt && pStatTrakEnt->InitializeAsClientEntity( pWeapon->GetCSWpnData().m_szStatTrakModel, RENDER_GROUP_VIEW_MODEL_OPAQUE ) )
+	{
+		m_viewmodelStatTrakAddon = pStatTrakEnt;
+		pStatTrakEnt->SetParent( this );
+		pStatTrakEnt->SetLocalOrigin( vec3_origin );
+		pStatTrakEnt->UpdatePartitionListEntry();
+		pStatTrakEnt->CollisionProp()->MarkPartitionHandleDirty();
+		pStatTrakEnt->UpdateVisibility();
+		pStatTrakEnt->AddEffects( EF_BONEMERGE );
+		pStatTrakEnt->AddEffects( EF_BONEMERGE_FASTCULL );
+		pStatTrakEnt->AddEffects( EF_NODRAW );
+
+		if ( !cl_righthand.GetBool() )
+		{
+			pStatTrakEnt->SetBodygroup( 0, 1 ); // use a special mirror-image stattrak module that appears correct for lefties
+		}
+	}
+}
+
 void C_BaseViewModel::RemoveViewmodelArmModels( void )
 {
 	FOR_EACH_VEC_BACK( m_vecViewmodelArmModels, i )
@@ -712,6 +769,15 @@ void C_BaseViewModel::RemoveViewmodelArmModels( void )
 		}
 	}
 	m_vecViewmodelArmModels.RemoveAll();
+}
+
+void C_BaseViewModel::RemoveViewmodelStatTrak( void )
+{
+	C_ViewmodelAttachmentModel *pStatTrakEnt = m_viewmodelStatTrakAddon.Get();
+	if ( pStatTrakEnt )
+	{
+		pStatTrakEnt->Remove();
+	}
 }
 
 //-----------------------------------------------------------------------------

@@ -107,6 +107,8 @@ typedef enum
 
 	AE_BEGIN_TAUNT_LOOP,
 
+	AE_CL_SET_STATTRAK_GLOW,
+
 	LAST_SHARED_ANIMEVENT,
 } Animevent;
 
