@@ -1480,7 +1480,6 @@ void TE_DynamicLight( IRecipientFilter& filter, float delay,
 
 void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 {
-	int iTracerFreq = 1;
 	C_WeaponCSBase *pWeapon = GetActiveCSWeapon();
 
 	if ( pWeapon )
@@ -1532,8 +1531,8 @@ void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 		CPVSFilter filter( vecStart );
 		TE_DynamicLight( filter, 0.0, &vecStart, 255, 192, 64, 5, 70, 0.05, 768 );
 
-		int	nBulletNumber = (pWeapon->GetMaxClip1() - pWeapon->Clip1()) + 1;
-		iTracerFreq = pWeapon->GetCSWpnData().m_iTracerFrequency[pWeapon->m_weaponMode];
+		int	nBulletNumber = pWeapon->GetMaxClip1() - (pWeapon->Clip1() + 1);
+		int iTracerFreq = pWeapon->GetCSWpnData().m_iTracerFrequency[pWeapon->m_weaponMode];
 		if ( ( iTracerFreq != 0 ) && ( nBulletNumber % iTracerFreq ) == 0 )
 		{
 			const char *pszTracerEffect = GetTracerType();
