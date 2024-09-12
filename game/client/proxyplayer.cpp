@@ -12,6 +12,8 @@
 #include "materialsystem/imaterialsystem.h"
 #include "functionproxy.h"
 #include "toolframework_client.h"
+#include "cs_shareddefs.h"
+#include "c_cs_player.h"
 #include "cs_client_gamestats.h"
 
 // memdbgon must be the last include file in a .cpp file!!!

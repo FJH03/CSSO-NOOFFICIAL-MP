@@ -5527,6 +5527,9 @@ ConVar snd_music_selection(
 		{
 			// Perform round-related processing at the point when a round winner has been determined
 			RoundWin();
+
+			if ( GetGamemode() == GameModes::DEATHMATCH )
+				GoToIntermission();
 		}
 	}
 
