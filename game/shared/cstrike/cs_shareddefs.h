@@ -43,6 +43,9 @@
 #define MAX_HOSTAGES				12
 #define MAX_HOSTAGE_RESCUES			4
 #define HOSTAGE_RULE_CAN_PICKUP		1
+#define MAX_KNIVES					18 // any new knives? add them here
+
+#define MAX_MODEL_STRING_SIZE 256
 
 // controllable bots functionality
 #define CS_CONTROLLABLE_BOTS_ENABLED 1
@@ -210,7 +213,7 @@ extern CUtlVectorInitialized< const char* > KnivesEntities;
 //--------------
 #define DMG_HEADSHOT		(DMG_LASTGENERICFLAG<<1)
 
-#define MAX_GLOVES 17
+#define MAX_GLOVES 18
 struct PlayerGloves
 {
 	const char*	szViewModel;
