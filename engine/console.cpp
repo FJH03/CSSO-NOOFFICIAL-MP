@@ -1269,7 +1269,7 @@ void CConPanel::Paint()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-static ConVar mod_version( "mod_version", "0.7", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
+static ConVar mod_version( "mod_version", "0.8", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
 void CConPanel::PaintBackground()
 {
 	if ( !Con_IsVisible() )
