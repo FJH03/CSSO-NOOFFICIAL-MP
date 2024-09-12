@@ -56,6 +56,7 @@ const float C4_DEFUSE_LOCKIN_PERIOD = 0.05f;
 
 extern ConVar mp_c4_cannot_be_defused;
 
+ConVar mp_plant_c4_anywhere( "mp_plant_c4_anywhere", "0", FCVAR_REPLICATED );
 
 #ifdef CLIENT_DLL
 
@@ -1109,7 +1110,7 @@ void CC4::PrimaryAttack()
 
 	if( m_bStartedArming == false && m_bBombPlanted == false )
 	{
-		if( pPlayer->m_bInBombZone && onGround )
+		if( (pPlayer->m_bInBombZone || mp_plant_c4_anywhere.GetBool()) && onGround )
 		{
 			m_bStartedArming = true;
 			m_fArmedTime = gpGlobals->curtime + WEAPON_C4_ARM_TIME;
@@ -1166,7 +1167,7 @@ void CC4::PrimaryAttack()
 		}
 		else
 		{
-			if ( !pPlayer->m_bInBombZone )
+			if ( !pPlayer->m_bInBombZone && !mp_plant_c4_anywhere.GetBool() )
 			{
 				ClientPrint( pPlayer, HUD_PRINTCENTER, "#C4_Plant_At_Bomb_Spot");
 			}
@@ -1181,9 +1182,9 @@ void CC4::PrimaryAttack()
 	}
 	else
 	{
-		if ( !onGround || !pPlayer->m_bInBombZone )
+		if ( !onGround || (!pPlayer->m_bInBombZone && !mp_plant_c4_anywhere.GetBool()) )
 		{
-			if( !pPlayer->m_bInBombZone )
+			if( !pPlayer->m_bInBombZone && !mp_plant_c4_anywhere.GetBool() )
 			{
 				ClientPrint( pPlayer, HUD_PRINTCENTER, "#C4_Arming_Cancelled" );
 			}
@@ -1237,7 +1238,7 @@ void CC4::PrimaryAttack()
 		m_bStartedArming = false;
 		m_fArmedTime = 0;
 		
-		if( pPlayer->m_bInBombZone )
+		if( pPlayer->m_bInBombZone || mp_plant_c4_anywhere.GetBool() )
 		{
 #if !defined( CLIENT_DLL )
 			CPlantedC4 *pC4 = CPlantedC4::ShootSatchelCharge( pPlayer, pPlayer->GetAbsOrigin(), pPlayer->GetAbsAngles() );
