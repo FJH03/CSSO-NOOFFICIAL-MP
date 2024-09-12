@@ -3730,7 +3730,7 @@ ConVar snd_music_selection(
 		}
 
 		// Give C4 to the terrorists
-		if ( m_bMapHasBombTarget == true && !IsWarmupPeriod() )
+		if ( m_bMapHasBombTarget == true && !IsWarmupPeriod() && GetGamemode() != GameModes::DEATHMATCH )
 			GiveC4();
 
 		// Reset game variables
@@ -3909,11 +3909,8 @@ ConVar snd_music_selection(
 
 			Assert( pPlayer && pPlayer->GetTeamNumber() == TEAM_TERRORIST && pPlayer->IsAlive() );
 
-			if ( GetGamemode() != GameModes::DEATHMATCH )
-			{
-				pPlayer->GiveNamedItem( WEAPON_C4_CLASSNAME );
-				pPlayer->SelectItem( WEAPON_C4_CLASSNAME );
-			}
+			pPlayer->GiveNamedItem( WEAPON_C4_CLASSNAME );
+			pPlayer->SelectItem( WEAPON_C4_CLASSNAME );
 			m_pLastBombGuy = pPlayer;
 
 			//pPlayer->SetBombIcon();
@@ -4039,7 +4036,6 @@ ConVar snd_music_selection(
 				UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Match_Will_Start_Chat" );
             }
 #endif
-            //bool bIsPlayingProgressive = CSGameRules() && CSGameRules()->IsPlayingGunGameProgressive();
 			
 			extern ConVar mp_do_warmup_period;
 
@@ -4106,7 +4102,7 @@ ConVar snd_music_selection(
 		
 		if ( m_flRestartRoundTime > 0.0f && m_flRestartRoundTime <= gpGlobals->curtime )
 		{
-            if ( IsWarmupPeriod() && GetWarmupPeriodEndTime() <= gpGlobals->curtime && UTIL_HumansInGame( false ) && m_flGameStartTime != 0 )
+            if ( IsWarmupPeriod() && GetPhase() != GAMEPHASE_MATCH_ENDED && GetWarmupPeriodEndTime() <= gpGlobals->curtime && UTIL_HumansInGame( false ) && m_flGameStartTime != 0 )
             {
                 m_bCompleteReset = true;
                 m_flRestartRoundTime = gpGlobals->curtime + 1;
@@ -4479,6 +4475,8 @@ ConVar snd_music_selection(
 	void CCSGameRules::GoToIntermission( void )
 	{
 		Msg( "Going to intermission...\n" );
+
+		SetPhase( GAMEPHASE_MATCH_ENDED );
 
 		IGameEvent *winEvent = gameeventmanager->CreateEvent( "cs_win_panel_match" );
 

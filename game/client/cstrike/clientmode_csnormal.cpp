@@ -23,6 +23,8 @@
 #include "ivrenderview.h"
 #include "cstrikeclassmenu.h"
 #include "cstrikebuymenu.h"
+#include "c_te_legacytempents.h"
+#include "tempent.h"
 #include "model_types.h"
 #include "iefx.h"
 #include "dlight.h"
@@ -60,11 +62,9 @@
 // [tj] We need to forward declare this, since the definition is all inside the implementation file 
 class CHudHintDisplay;
  
- extern ConVar v_viewmodel_fov;
 //=============================================================================
 // HPE_END
 //=============================================================================
-
 
 
 void __MsgFunc_MatchEndConditions( bf_read &msg );
@@ -96,6 +96,7 @@ extern ConVar cl_detail_max_sway;
 extern ConVar cl_detail_avoid_radius;
 extern ConVar cl_detail_avoid_force;
 extern ConVar cl_detail_avoid_recover_speed;
+extern ConVar v_viewmodel_fov;
 
 //-----------------------------------------------------------------------------
 ConVar cl_autobuy(
@@ -295,13 +296,13 @@ void CCSModeManager::LevelShutdown( void )
 //-----------------------------------------------------------------------------
 ClientModeCSNormal::ClientModeCSNormal()
 {
-	
 	m_CCDeathHandle = INVALID_CLIENT_CCHANDLE;
 	m_CCDeathPercent = 0.0f;
 	m_CCFreezePeriodHandle_CT = INVALID_CLIENT_CCHANDLE;
 	m_CCFreezePeriodPercent_CT = 0.0f;
 	m_CCFreezePeriodHandle_T = INVALID_CLIENT_CCHANDLE;
 	m_CCFreezePeriodPercent_T = 0.0f;
+
 	HOOK_MESSAGE( MatchEndConditions );
 }
 
@@ -319,8 +320,6 @@ void ClientModeCSNormal::Init()
 	ListenForGameEvent( "hostage_follows" );
 	ListenForGameEvent( "hostage_killed" );
 	ListenForGameEvent( "hostage_hurt" );
-	ListenForGameEvent( "hostage_killed" );
-	ListenForGameEvent( "hostage_hurt" );
 	ListenForGameEvent( "round_freeze_end" );
 	ListenForGameEvent( "round_time_warning" );
 	ListenForGameEvent( "round_mvp" );
@@ -328,11 +327,8 @@ void ClientModeCSNormal::Init()
 
 	usermessages->HookMessage( "KillCam", MsgFunc_KillCam );
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [tj] Add the shared HUD elements to the render groups responsible for hiding 
 	//		conflicting UI
-	//=============================================================================
 	CHudElement* hintBox = (CHudElement*)GET_HUDELEMENT( CHudHintDisplay );
 	if (hintBox)
 	{
@@ -346,10 +342,8 @@ void ClientModeCSNormal::Init()
 	{
 		historyResource->RegisterForRenderGroup("hide_for_scoreboard");		
 	}
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
-		if ( m_CCDeathHandle == INVALID_CLIENT_CCHANDLE )
+	
+	if ( m_CCDeathHandle == INVALID_CLIENT_CCHANDLE )
 	{
 		const char *szRawFile = "materials/correction/cc_death.raw";
 		m_CCDeathPercent = 0.0f;
@@ -369,6 +363,8 @@ void ClientModeCSNormal::Init()
 		m_CCFreezePeriodPercent_T = 0.0f;
 		m_CCFreezePeriodHandle_T = g_pColorCorrectionMgr->AddColorCorrection( szRawFile );
 	}
+
+	m_fDelayedCTWinTime = -1.0f;
 }
 
 void ClientModeCSNormal::InitViewport()
@@ -387,8 +383,36 @@ void ClientModeCSNormal::Update()
 	// Override the hud's visibility if this is a logo (like E3 demo) map.
 	if ( CSGameRules() && CSGameRules()->IsLogoMap() )
 		m_pViewport->SetVisible( false );
+
+	if ( (m_fDelayedCTWinTime > 0.0f) && (gpGlobals->curtime >= m_fDelayedCTWinTime) )
+	{
+		CLocalPlayerFilter filter;
+		C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.CTWin");
+
+		m_fDelayedCTWinTime = -1.0f;
+	}
+
+	// halftime music needs a delay thusly
+	static bool bStartedHalfTimeMusic = false;
+	static float flHalfTimeStart = 0.0;
+	
+	if( CSGameRules() && CSGameRules()->GetPhase() == GAMEPHASE_HALFTIME  )
+	{
+		if( !bStartedHalfTimeMusic && gpGlobals->curtime - flHalfTimeStart > 6.5 )
+		{
+			bStartedHalfTimeMusic = true;
+			CSingleUserRecipientFilter filter(C_BasePlayer::GetLocalPlayer());
+			PlayMusicSelection(filter, CSMUSIC_HALFTIME);
+		}
+	}
+	else
+	{
+		flHalfTimeStart = gpGlobals->curtime;
+		bStartedHalfTimeMusic = false;
+	}
 }
 
+//--------------------------------------------------------------------------------------------------------
 void ClientModeCSNormal::UpdateColorCorrectionWeights( void )
 {
 	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
@@ -467,6 +491,7 @@ void ClientModeCSNormal::UpdateColorCorrectionWeights( void )
 		m_CCFreezePeriodPercent_T = 0;
 		m_CCFreezePeriodPercent_CT = 0;
 	}
+
 }
 
 void ClientModeCSNormal::OnColorCorrectionWeightsReset( void )
@@ -476,8 +501,6 @@ void ClientModeCSNormal::OnColorCorrectionWeightsReset( void )
 	g_pColorCorrectionMgr->SetColorCorrectionWeight( m_CCFreezePeriodHandle_CT, m_CCFreezePeriodPercent_CT );
 	g_pColorCorrectionMgr->SetColorCorrectionWeight( m_CCFreezePeriodHandle_T, m_CCFreezePeriodPercent_T );
 }
-
-
 
 /*
 void ClientModeCSNormal::UpdateSpectatorMode( void )
@@ -1181,7 +1204,7 @@ void UpdateClassImageEntity(
 	// in the world.
 	CMatRenderContextPtr pRenderContext( materials );
 	pRenderContext->SetLightingOrigin( vec3_origin );
-	
+
 	LightDesc_t ld;
 	ld.InitDirectional( Vector( 0.0f, 0.0f, -1.0f ), Vector( 1.0f, 1.0f, 0.8f ) );
 	pRenderContext->SetLight( 1, ld );
@@ -1423,7 +1446,7 @@ void UpdateBuyMenuImageEntity(
 	// in the world.
 	CMatRenderContextPtr pRenderContext( materials );
 	pRenderContext->SetLightingOrigin( vec3_origin );
-	
+
 	LightDesc_t ld;
 	ld.InitDirectional( Vector( 0.0f, 0.0f, -1.0f ), Vector( 1.0f, 1.0f, 0.8f ) );
 	pRenderContext->SetLight( 1, ld );
