@@ -211,8 +211,6 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 		Error( "CGameUI::Initialize() failed to get necessary interfaces\n" );
 	}
 
-	vgui::VPANEL rootpanel = enginevguifuncs->GetPanel( PANEL_GAMEUIDLL );
-
 	// setup base panel
 	staticPanel = new CBasePanel();
 	staticPanel->SetBounds(0, 0, 400, 300 );
@@ -222,7 +220,9 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 	staticPanel->SetVisible( true );
 	staticPanel->SetMouseInputEnabled( false );
 	staticPanel->SetKeyBoardInputEnabled( false );
-	staticPanel->SetParent(rootpanel);
+
+	vgui::VPANEL rootpanel = enginevguifuncs->GetPanel( PANEL_GAMEUIDLL );
+	staticPanel->SetParent( rootpanel );
 }
 
 void CGameUI::PostInit()
@@ -1129,6 +1129,7 @@ void CGameUI::SetProgressOnStart()
 	m_bOpenProgressOnStart = true;
 }
 
+
 bool CGameUI::IsBackgroundMusicPlaying( void )
 {
 	if ( m_nBackgroundMusicGUID == 0 )
@@ -1143,7 +1144,7 @@ void CGameUI::ReleaseBackgroundMusic( void )
 {
 	if ( m_nBackgroundMusicGUID == 0 )
 		return;
-
+	
 	enginesound->StopSoundByGuid( m_nBackgroundMusicGUID );
 
 	m_nBackgroundMusicGUID = 0;
@@ -1190,7 +1191,7 @@ void CGameUI::UpdateBackgroundMusic( void )
 				}
 			}
 			m_nBackgroundMusicGUID = enginesound->EmitAmbientSound( sMusicKit, m_flMasterMusicVolume );
-
+			
 		}
 		else
 		{

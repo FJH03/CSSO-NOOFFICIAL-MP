@@ -14,9 +14,9 @@
 #include <vgui_controls/Panel.h>
 #include <vgui_controls/PHandle.h>
 
+
 #define BACKGROUND_MUSIC_FILENAME "mainmenu.mp3"
 #define MAX_BACKGROUND_MUSIC 3
-
 
 class IGameClientExports;
 
@@ -116,6 +116,7 @@ public:
 	bool IsBackgroundMusicPlaying( void );
 	void SetBackgroundMusicDesired( bool bPlayMusic );
 	void StartBackgroundMusicFade( void );
+	void ReleaseBackgroundMusic( void );
 
 private:
 	void SendConnectedToGameMessage();
@@ -134,8 +135,6 @@ private:
 	void ValidateCDKey();
 
 	void UpdateBackgroundMusic( void );
-
-	void ReleaseBackgroundMusic( void );
 
 	CreateInterfaceFn m_GameFactory;
 
