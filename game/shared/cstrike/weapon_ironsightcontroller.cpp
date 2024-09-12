@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Class to control 'aim-down-sights' aka "IronSight" weapon functionality
 //
@@ -442,6 +442,12 @@ bool CIronSightController::IsInIronSight( void )
 		CCSPlayer *pPlayer = ToCSPlayer( m_pAttachedWeapon->GetOwner() );
 		if ( pPlayer && pPlayer->IsLookingAtWeapon() )
 			return false;
+
+#if defined ( CLIENT_DLL )
+		C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+		if ( pLocalPlayer && pLocalPlayer->GetObserverTarget() == pPlayer && pLocalPlayer->GetObserverInterpState() == C_CSPlayer::OBSERVER_INTERP_TRAVELING )
+			return false;
+#endif
 
 		if ( GetIronSightAmount() > 0  && (IsApproachingSighted() || IsApproachingUnSighted()) )
 			return true;

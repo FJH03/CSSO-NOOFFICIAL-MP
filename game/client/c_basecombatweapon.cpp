@@ -486,8 +486,9 @@ int C_BaseCombatWeapon::DrawModel( int flags )
 		// without notification 
 		
 		if ( localplayer->GetObserverMode() == OBS_MODE_IN_EYE &&
-			 localplayer->GetObserverTarget() == GetOwner() ) 
-			return false;
+			localplayer->GetObserverTarget() == GetOwner() &&
+			localplayer->GetObserverInterpState() != C_BasePlayer::OBSERVER_INTERP_TRAVELING ) 
+			return true;
 	}
 
 	return BaseClass::DrawModel( flags );
