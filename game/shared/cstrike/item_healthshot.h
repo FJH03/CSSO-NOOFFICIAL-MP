@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Healthshot, it makes you go
 //
@@ -38,7 +38,6 @@ public:
 	CItem_Healthshot() 	{}
 
 	virtual void	Precache( void );
-	virtual void	Drop( const Vector &vecVelocity );
 
 	virtual bool	CanPrimaryAttack( void );
 
