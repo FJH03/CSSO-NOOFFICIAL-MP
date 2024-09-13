@@ -73,6 +73,8 @@ CCreateMultiplayerGameDialog::CCreateMultiplayerGameDialog(vgui::Panel *parent) 
 		{
 			m_pServerPage->SetMap(startMap);
 		}
+
+		m_pServerPage->SetGameModeID( m_pSavedData->GetInt( "mp_gamemode_override", 0 ) );
 	}
 
 	if ( m_bBotsEnabled )
@@ -116,6 +118,7 @@ bool CCreateMultiplayerGameDialog::OnOK(bool applyOnly)
 
 	// get these values from m_pServerPage and store them temporarily
 	char szMapName[64], szHostName[64], szPassword[64];
+	int iGameModeID = m_pServerPage->GetGameModeID();
 	strncpy(szMapName, m_pServerPage->GetMapName(), sizeof( szMapName ));
 	strncpy(szHostName, m_pGameplayPage->GetHostName(), sizeof( szHostName ));
 	strncpy(szPassword, m_pGameplayPage->GetPassword(), sizeof( szPassword ));
@@ -133,6 +136,8 @@ bool CCreateMultiplayerGameDialog::OnOK(bool applyOnly)
 			m_pSavedData->SetString("map", szMapName);
 		}
 
+		m_pSavedData->SetInt( "mp_gamemode_override", iGameModeID );
+
 		// save config to a file
 		m_pSavedData->SaveToFile( g_pFullFileSystem, "ServerConfig.vdf", "GAME" );
 	}
@@ -140,10 +145,11 @@ bool CCreateMultiplayerGameDialog::OnOK(bool applyOnly)
 	char szMapCommand[1024];
 
 	// create the command to execute
-	Q_snprintf(szMapCommand, sizeof( szMapCommand ), "disconnect\nwait\nwait\nsv_lan 1\nsetmaster enable\nmaxplayers %i\nsv_password \"%s\"\nhostname \"%s\"\nprogress_enable\nmap %s\n",
+	Q_snprintf(szMapCommand, sizeof( szMapCommand ), "disconnect\nwait\nwait\nsv_lan 1\nsetmaster enable\nmaxplayers %i\nsv_password \"%s\"\nhostname \"%s\"\nprogress_enable\nmp_gamemode_override %d\nmap %s\n",
 		m_pGameplayPage->GetMaxPlayers(),
 		szPassword,
 		szHostName,
+		iGameModeID,
 		szMapName
 	);
 

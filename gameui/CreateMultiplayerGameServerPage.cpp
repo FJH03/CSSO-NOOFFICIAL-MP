@@ -17,6 +17,7 @@ using namespace vgui;
 #include "tier1/convar.h"
 #include "EngineInterface.h"
 #include "CvarToggleCheckButton.h"
+#include "cs_shareddefs.h"
 
 #include "ModInfo.h"
 
@@ -41,6 +42,16 @@ CCreateMultiplayerGameServerPage::CCreateMultiplayerGameServerPage(vgui::Panel *
 	m_pEnableBotsCheck = new CheckButton( this, "EnableBotsCheck", "" );
 	m_pEnableBotsCheck->SetVisible( false );
 	m_pEnableBotsCheck->SetEnabled( false );
+
+	m_pGameModeList = new ComboBox( this, "GameModeList", 5, false );
+	for ( int i = 0; i < GameModes::NUM_GAMEMODES; i++ )
+	{
+		char label[64];
+		Q_snprintf( label, sizeof( label ), "#GameUI_GameMode_%d", i );
+		m_pGameModeList->AddItem( label, new KeyValues( "data", "mp_gamemode_override", i ) ); // PiMoN: I wish I could get rid of this frecking KeyValues, its useless!
+	}
+
+	m_pGameModeList->ActivateItem( 0 );
 
 	LoadControlSettings("Resource/CreateMultiplayerGameServerPage.res");
 
@@ -126,7 +137,7 @@ void CCreateMultiplayerGameServerPage::EnableBots( KeyValues *data )
 void CCreateMultiplayerGameServerPage::OnApplyChanges()
 {
 	KeyValues *kv = m_pMapList->GetActiveItemUserData();
-	strncpy(m_szMapName, kv->GetString("mapname", ""), DATA_STR_LENGTH);
+	Q_strncpy(m_szMapName, kv->GetString("mapname", ""), DATA_STR_LENGTH);
 
 	if ( m_pSavedData )
 	{
@@ -177,7 +188,7 @@ void CCreateMultiplayerGameServerPage::LoadMaps( const char *pszPathID )
 
 		// FindFirst ignores the pszPathID, so check it here
 		// TODO: this doesn't find maps in fallback dirs
-		_snprintf( mapname, sizeof(mapname), "maps/%s", pszFilename );
+		Q_snprintf( mapname, sizeof(mapname), "maps/%s", pszFilename );
 		if ( !g_pFullFileSystem->FileExists( mapname, pszPathID ) )
 		{
 			goto nextFile;
@@ -188,11 +199,11 @@ void CCreateMultiplayerGameServerPage::LoadMaps( const char *pszPathID )
 		str = Q_strstr( pszFilename, "maps" );
 		if ( str )
 		{
-			strncpy( mapname, str + 5, sizeof(mapname) - 1 );	// maps + \\ = 5
+			Q_strncpy( mapname, str + 5, sizeof(mapname) - 1 );	// maps + \\ = 5
 		}
 		else
 		{
-			strncpy( mapname, pszFilename, sizeof(mapname) - 1 );
+			Q_strncpy( mapname, pszFilename, sizeof(mapname) - 1 );
 		}
 		ext = Q_strstr( mapname, ".bsp" );
 		if ( ext )
@@ -296,6 +307,22 @@ void CCreateMultiplayerGameServerPage::SetMap(const char *mapName)
 			break;
 		}
 	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CCreateMultiplayerGameServerPage::GetGameModeID()
+{
+	return m_pGameModeList->GetActiveItem();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CCreateMultiplayerGameServerPage::SetGameModeID( int gamemodeid )
+{
+	m_pGameModeList->ActivateItem( gamemodeid );
 }
 
 //-----------------------------------------------------------------------------
