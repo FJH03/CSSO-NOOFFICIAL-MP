@@ -119,6 +119,7 @@ def build(bld):
 		'../common/GameUI',
 		'../game/client',
 		'../game/shared',
+		'../game/shared/cstrike',
 		'../thirdparty'
 	]
 
