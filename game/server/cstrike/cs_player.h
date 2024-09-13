@@ -701,7 +701,6 @@ public:
 	CNetworkVar( bool, m_bIsDefusing );			// tracks whether this player is currently defusing a bomb
 	CNetworkVar( bool, m_bIsGrabbingHostage );			// tracks whether this player is currently grabbing a hostage
 	CNetworkVar( bool, m_bDuckOverride );
-	int m_LastHitGroup;			// the last body region that took damage
 
 	bool m_bIsFemale;
 
@@ -903,6 +902,7 @@ protected:
 	bool SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pSpot );
 
 	void SetModelFromClass( void );
+	void SetRandomClassSkin( void );
 
 public:
 	CNetworkVar( int, m_iClass ); // One of the CS_CLASS_ enums.
