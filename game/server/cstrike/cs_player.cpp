@@ -862,6 +862,10 @@ void CCSPlayer::Precache()
 	PrecacheParticleSystem( "blood_impact_light" );
 	PrecacheParticleSystem( "blood_impact_light_headshot" );
 
+	PrecacheScriptSound( "Bullets.DefaultNearmiss" );
+	PrecacheScriptSound( "FX_RicochetSound.Ricochet" );
+	PrecacheScriptSound( "FX_RicochetSound.Ricochet_Legacy" );
+
 	BaseClass::Precache();
 }
 
@@ -1801,7 +1805,7 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	CCSPlayer* pAttackerPlayer = ToCSPlayer( info.GetAttacker() );
 	if ( pAttackerPlayer )
 	{
-		CWeaponCSBase* pAttackerWeapon = dynamic_cast< CWeaponCSBase * >( pAttackerPlayer->GetActiveCSWeapon() );	// this can be NULL if the kill is by HE/molly/impact/etc. (inflictor is non-NULL and points to grenade then)
+		CWeaponCSBase* pAttackerWeapon = dynamic_cast< CWeaponCSBase * >( info.GetWeapon() );	// this can be NULL if the kill is by HE/molly/impact/etc. (inflictor is non-NULL and points to grenade then)
 
 		// killed by a taser?
 		if ( pAttackerWeapon && pAttackerWeapon->IsA( WEAPON_TASER ) )
