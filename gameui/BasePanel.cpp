@@ -1191,7 +1191,7 @@ void CBasePanel::UpdateBackgroundState()
 		{
 			// fade out background tint
 			targetAlpha = 0.0f;
-			duration = 2.0f;
+			duration = 0.5f;
 		}
 
 		m_bHaveDarkenedBackground = bNeedDarkenedBackground;
@@ -1216,7 +1216,7 @@ void CBasePanel::UpdateBackgroundState()
 		else
 		{
 			// fade in title text
-			duration = 2.0f;
+			duration = 0.5f; 
 			targetTitleAlpha = 255.0f;
 		}
 
@@ -1840,6 +1840,8 @@ void CBasePanel::ApplySchemeSettings(IScheme *pScheme)
 			m_iGameMenuWidth = m_pGameMenu->GetHighestItemWidth();
 
 		m_iGameMenuInset = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.BottomBorder")) );
+
+		m_pGameMenu->SetFont( pClientScheme->GetFont( "GameMenuFont", IsProportional() ) );
 	}
 	else
 	{
