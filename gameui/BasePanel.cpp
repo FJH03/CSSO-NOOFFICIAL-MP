@@ -2235,34 +2235,11 @@ void CBasePanel::RunMenuCommand(const char *command)
 	}
 	else if ( !Q_stricmp( command, "Disconnect" ) )
 	{
-		if ( IsX360() )
-		{
-			OnOpenDisconnectConfirmationDialog();
-		}
-		else
-		{
-			engine->ClientCmd_Unrestricted( "disconnect" );
-		}
+		OnOpenDisconnectConfirmationDialog();
 	}
 	else if ( !Q_stricmp( command, "DisconnectNoConfirm" ) )
 	{
-		ConVarRef commentary( "commentary" );
-		if ( commentary.IsValid() && commentary.GetBool() )
-		{
-			engine->ClientCmd_Unrestricted( "disconnect" );
-
-			CMatchmakingBasePanel *pBase = GetMatchmakingBasePanel();
-			if ( pBase )
-			{
-				pBase->CloseAllDialogs( false );
-				pBase->OnCommand( "OpenWelcomeDialog" );
-			}
-		}
-		else
-		{
-			// Leave our current session, if we have one
-			matchmaking->KickPlayerFromSession( 0 );
-		}
+		engine->ClientCmd_Unrestricted( "disconnect" );
 	}
 	else if ( !Q_stricmp( command, "ReleaseModalWindow" ) )
 	{
@@ -3113,10 +3090,6 @@ void CBasePanel::OnOpenQuitConfirmationDialog()
 //-----------------------------------------------------------------------------
 void CBasePanel::OnOpenDisconnectConfirmationDialog()
 {
-	// THis is for disconnecting from a multiplayer server
-	Assert( m_bUseMatchmaking );
-	Assert( IsX360() );
-
 	if ( GameUI().IsConsoleUI() && GameUI().IsInLevel() )
 	{
 		if ( engine->GetLocalPlayer() == 1 )
@@ -3127,7 +3100,19 @@ void CBasePanel::OnOpenDisconnectConfirmationDialog()
 		{
 			ShowMessageDialog( MD_DISCONNECT_CONFIRMATION );
 		}
+		return;
 	}
+
+	QueryBox *box;
+	if ( GameUI().IsInLevel() && engine->GetLocalPlayer() == 1 )
+		box = new CQuitQueryBox( "#GameUI_DisconnectHostConfirmationTitle", "#GameUI_DisconnectHostConfirmationText", this );
+	else
+		box = new CQuitQueryBox( "#GameUI_DisconnectConfirmationTitle", "#GameUI_DisconnectConfirmationText", this );
+	box->SetOKButtonText( "#GameUI_Disconnect" );
+	box->SetOKCommand( new KeyValues( "Command", "command", "DisconnectNoConfirm" ) );
+	box->SetCancelCommand( new KeyValues( "Command", "command", "ReleaseModalWindow" ) );
+	box->AddActionSignalTarget( this );
+	box->DoModal();
 }
 
 //-----------------------------------------------------------------------------
