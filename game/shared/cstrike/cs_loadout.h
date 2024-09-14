@@ -58,6 +58,9 @@ public:
 	const char*		GetWeaponFromSlot( CBasePlayer* pPlayer, LoadoutSlot_t slot );
 	bool			HasGlovesSet( CCSPlayer* pPlayer, int team );
 	int			GetGlovesForPlayer( CCSPlayer* pPlayer, int team );
+
+	bool			HasKnifeSet( CCSPlayer* pPlayer, int team );
+	int				GetKnifeForPlayer( CCSPlayer* pPlayer, int team );
 };
 extern CCSLoadout *g_pCSLoadout;
 

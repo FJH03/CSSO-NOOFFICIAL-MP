@@ -138,6 +138,7 @@ public:
 	virtual void DropPhysicsMag( const char *options ) OVERRIDE;
 
 	bool		 HasC4( void );
+	bool HasWeaponOfType( int nWeaponID ) const;
 
 	virtual void CreateLightEffects( void ) {}	//no dimlight effects
 
@@ -513,6 +514,8 @@ private:
 	CNetworkVar( bool, m_bIsHoldingLookAtWeapon );
 
 public:
+	CNetworkVar( int, m_iLoadoutSlotKnifeWeaponCT );
+	CNetworkVar( int, m_iLoadoutSlotKnifeWeaponT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesT );
 

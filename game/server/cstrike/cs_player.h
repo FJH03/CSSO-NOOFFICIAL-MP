@@ -413,6 +413,7 @@ public:
 	void InitVCollision( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity );
 	void VPhysicsShadowUpdate( IPhysicsObject *pPhysics );
 
+	bool HasWeaponOfType( int nWeaponID ) const;
 	bool IsPrimaryOrSecondaryWeapon( CSWeaponType nType );
 
 	virtual bool IsLookingAtWeapon( void ) const { return m_bIsLookingAtWeapon; }
@@ -868,13 +869,13 @@ public:
 	bool WillSwitchTeamsAtRoundReset( void ) { return m_switchTeamsOnNextRoundReset; }
 
 	CNetworkVar( bool, m_bDetected );
-	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
-	CNetworkVar( int, m_iLoadoutSlotGlovesT );
 
-	int m_iLoadoutSlotKnifeWeaponCT;
-	int m_iLoadoutSlotKnifeWeaponT;
 	int m_iLoadoutSlotAgentCT;
 	int m_iLoadoutSlotAgentT;
+	CNetworkVar( int, m_iLoadoutSlotKnifeWeaponCT );
+	CNetworkVar( int, m_iLoadoutSlotKnifeWeaponT );
+	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
+	CNetworkVar( int, m_iLoadoutSlotGlovesT );
 	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield = true, bool bThrow = false );
 	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool bDropShield = true );
 	
