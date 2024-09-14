@@ -132,7 +132,6 @@ VPANEL GetGameUIBasePanel()
 
 CGameMenuItem::CGameMenuItem(vgui::Menu *parent, const char *name)  : BaseClass(parent, name, "GameMenuItem") 
 {
-	m_bRightAligned = false;
 	m_bFadeBox = false;
 }
 
@@ -179,11 +178,6 @@ void CGameMenuItem::ApplySchemeSettings(IScheme *pScheme)
 	SetDepressedSound("UI/buttonclick.wav");
 	SetReleasedSound("UI/buttonclickrelease.wav");
 	SetButtonActivationType(Button::ACTIVATE_ONPRESSED);
-
-	if (m_bRightAligned)
-	{
-		SetContentAlignment(Label::a_east);
-	}
 }
 
 void CGameMenuItem::PaintBackground()
@@ -203,11 +197,6 @@ void CGameMenuItem::PaintBackground()
 		DrawBoxFade( 0, 0, wide * 1.5, tall, GetButtonBgColor(), 1.0f, 255, 0, true );
 		DrawBoxFade( 2, 2, wide * 1.5 - 4, tall - 4, Color( 0, 0, 0, 96 ), 1.0f, 255, 0, true );
 	}
-}
-
-void CGameMenuItem::SetRightAlignedText(bool state)
-{
-	m_bRightAligned = state;
 }
 
 class ImageButton : public vgui::Panel
@@ -422,7 +411,6 @@ public:
 		item->AddActionSignalTarget(target);
 		item->SetCommand(command);
 		item->SetText(itemText);
-		item->SetRightAlignedText(true);
 		item->SetUserData(userData);
 		return BaseClass::AddMenuItem(item);
 	}
@@ -675,6 +663,20 @@ public:
 				if ( isInReplay && !kv->GetInt("OnlyInReplay") )
 				{
 					shouldBeVisible = false;
+				}
+
+				// text alignment
+				int align = menuItem->GetAlignmentFromString( kv->GetString( "textAlignment", "" ) );
+				if ( align != -1 )
+				{
+					menuItem->SetContentAlignment( (Label::Alignment) align );
+				}
+
+				// allow menu items to override menu width
+				int width = kv->GetInt( "MenuWidth", 0 );
+				if ( width )
+				{
+					SetFixedWidth( width );
 				}
 
 				menuItem->SetVisible( shouldBeVisible );
@@ -1803,6 +1805,8 @@ void CBasePanel::PerformLayout()
 		m_iGameMenuPos.x = posx;
 	}
 	m_pGameMenu->SetPos(m_iGameMenuPos.x, idealMenuY);
+	if ( m_iGameMenuWidth > 0 )
+		m_pGameMenu->SetFixedWidth( m_iGameMenuWidth );
 
 	UpdateGameMenus();
 }
@@ -1825,7 +1829,7 @@ void CBasePanel::ApplySchemeSettings(IScheme *pScheme)
 		m_iGameTitlePos.RemoveAll();
 		for ( i=0; i<m_pGameMenuButtons.Count(); ++i )
 		{
-			m_pGameMenuButtons[i]->SetFont(pClientScheme->GetFont("ClientTitleFont", true));
+			m_pGameMenuButtons[i]->SetFont(pClientScheme->GetFont(CFmtStr("ClientTitle%dFont", i+1), true));
 			m_iGameTitlePos.AddToTail( coord() );
 			m_iGameTitlePos[i].x = atoi(pClientScheme->GetResourceString( CFmtStr( "Main.Title%d.X", i+1 ) ) );
 			m_iGameTitlePos[i].x = scheme()->GetProportionalScaledValue( m_iGameTitlePos[i].x );
@@ -1844,13 +1848,14 @@ void CBasePanel::ApplySchemeSettings(IScheme *pScheme)
 		}
 #endif // CS_BETA
 
-		m_iGameMenuPos.x = atoi(pClientScheme->GetResourceString("Main.Menu.X"));
-		m_iGameMenuPos.x = scheme()->GetProportionalScaledValue( m_iGameMenuPos.x );
-		m_iGameMenuPos.y = atoi(pClientScheme->GetResourceString("Main.Menu.Y"));
-		m_iGameMenuPos.y = scheme()->GetProportionalScaledValue( m_iGameMenuPos.y );
+		m_iGameMenuPos.x = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.Menu.X")) );
+		m_iGameMenuPos.y = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.Menu.Y")) );
 
-		m_iGameMenuInset = atoi(pClientScheme->GetResourceString("Main.BottomBorder"));
-		m_iGameMenuInset = scheme()->GetProportionalScaledValue( m_iGameMenuInset );
+		m_iGameMenuWidth = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.Menu.Width")) );
+		if ( m_iGameMenuWidth < m_pGameMenu->GetHighestItemWidth() )
+			m_iGameMenuWidth = m_pGameMenu->GetHighestItemWidth();
+
+		m_iGameMenuInset = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.BottomBorder")) );
 	}
 	else
 	{
