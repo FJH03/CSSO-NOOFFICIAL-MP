@@ -19,11 +19,6 @@ class CItemAssaultSuit : public CItem
 		CItem::Spawn( );
 	}
 	
-	void Precache( void )
-	{
-		PrecacheScriptSound( "BaseCombatCharacter.ItemPickup2" );
-	}
-	
 	bool MyTouch( CBasePlayer *pBasePlayer )
 	{
 		CCSPlayer *pPlayer = dynamic_cast< CCSPlayer* >( pBasePlayer );
@@ -35,17 +30,6 @@ class CItemAssaultSuit : public CItem
 
 		pPlayer->m_bHasHelmet = true;
 		pPlayer->SetArmorValue( 100 );
-
-		if ( pPlayer->IsDead() == false )
-		{
-			CPASAttenuationFilter filter( pBasePlayer );
-			EmitSound( filter, entindex(), "BaseCombatCharacter.ItemPickup2" );
-
-			CSingleUserRecipientFilter user( pPlayer );
-			UserMessageBegin( user, "ItemPickup" );
-			WRITE_STRING( "item_assaultsuit" );
-			MessageEnd();
-		}
 
 		return true;		
 	}

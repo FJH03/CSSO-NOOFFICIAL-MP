@@ -56,7 +56,6 @@
 #include "hud_macros.h"
 #include "c_plantedc4.h"
 #include "tier1/fmtstr.h"
-#include "history_resource.h"
 #include "cs_client_gamestats.h"
 
 // [tj] We need to forward declare this, since the definition is all inside the implementation file 
@@ -336,13 +335,6 @@ void ClientModeCSNormal::Init()
 		hintBox->RegisterForRenderGroup("hide_for_round_panel");
 	}
 
-
-	CHudElement* historyResource = (CHudElement*)GET_HUDELEMENT( CHudHistoryResource );
-	if (historyResource)
-	{
-		historyResource->RegisterForRenderGroup("hide_for_scoreboard");		
-	}
-	
 	if ( m_CCDeathHandle == INVALID_CLIENT_CCHANDLE )
 	{
 		const char *szRawFile = "materials/correction/cc_death.raw";
