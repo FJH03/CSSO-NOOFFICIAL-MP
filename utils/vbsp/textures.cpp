@@ -195,7 +195,6 @@ int	FindMiptex (const char *name)
 		if ( ( propVal = GetMaterialVar( matID, "%compileNoDraw" ) ) && StringIsTrue( propVal ) )
 		{								    
 			//		textureref[i].contents |= CONTENTS_DETAIL;
-			textureref[i].contents |= CONTENTS_GRENADECLIP;
 			textureref[i].flags |= SURF_NODRAW | SURF_NOLIGHT;
 		}
 

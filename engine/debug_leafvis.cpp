@@ -391,7 +391,7 @@ void RecomputeClipbrushes( bool bEnabled )
 
 	for ( int v = 0; v < 3; v++ )
 	{
-		int contents[4] = {CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP, CONTENTS_MONSTERCLIP, CONTENTS_PLAYERCLIP, CONTENTS_GRENADECLIP};
+		int contents[3] = {CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP, CONTENTS_MONSTERCLIP, CONTENTS_PLAYERCLIP};
 		g_ClipVis[v] = new leafvis_t;
 		g_ClipVis[v]->color.Init( v != 1 ? 1.0f : 0.5, 0.0f, v != 0 ? 1.0f : 0.0f );
 		CCollisionBSPData *pBSP = GetCollisionBSPData();
@@ -403,7 +403,7 @@ void RecomputeClipbrushes( bool bEnabled )
 		for ( int i = 0; i < lastBrush; i++ )
 		{
 			cbrush_t *pBrush = &pBSP->map_brushes[i];
-			if ( (pBrush->contents & (CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP|CONTENTS_GRENADECLIP)) == contents[v] )
+			if ( (pBrush->contents & (CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP)) == contents[v] )
 			{
 				CUtlVector<cplane_t> planeList;
 				if ( pBrush->IsBox() )

@@ -70,8 +70,6 @@ public:
 	// of weapon they are
 	CCSWeaponInfo *m_pWeaponInfo;
 
-	virtual unsigned int PhysicsSolidMaskForEntity( void ) const;
-
 	void SetThrownBodygroup( void );
 
 protected:

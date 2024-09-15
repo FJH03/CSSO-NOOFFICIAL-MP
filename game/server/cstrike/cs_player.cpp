@@ -4360,7 +4360,7 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool
 			// (we could figure out what kind of object is being thrown, and use a different trace based on that,
 			// but it doesn't really matter since it will just move the drop point slightly back towards your head)
 			trace_t trDropTrace;
-			UTIL_TraceHull( EyePosition(), vecWeaponThrowFromPos, Vector( -5, -5, -5 ), Vector( 5, 5, 5 ), MASK_PLAYERSOLID|CONTENTS_GRENADECLIP, this, COLLISION_GROUP_PLAYER_MOVEMENT, &trDropTrace );
+			UTIL_TraceHull( EyePosition(), vecWeaponThrowFromPos, Vector( -5, -5, -5 ), Vector( 5, 5, 5 ), MASK_PLAYERSOLID, this, COLLISION_GROUP_PLAYER_MOVEMENT, &trDropTrace );
 			if ( trDropTrace.fraction != 1.0 )
 			{
 
