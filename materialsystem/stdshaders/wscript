@@ -113,6 +113,8 @@ def build(bld):
 		'character.cpp',
 		'customweapon_dx9.cpp',
 		'customweapon_dx9_helper.cpp',
+		'weapondecal_dx9.cpp',
+		'weapondecal_dx9_helper.cpp',
 		'volume_clouds.cpp',
 		'volume_clouds_helper.cpp',
 		'vortwarp_dx9.cpp',
