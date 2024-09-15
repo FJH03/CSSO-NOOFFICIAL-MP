@@ -795,7 +795,7 @@ private:
 		int Count() const { return count; } \
 		type m_Value[count]; \
 	protected: \
-		inline void NetworkStateChanged( int net_change_index ) \
+		inline void NetworkStateChanged( int index ) \
 		{ \
 			START_CHECK_USENETWORKVARS \
 			ThisClass *pThis = ((ThisClass*)(((char*)this) - MyOffsetOf(ThisClass,name))); \
