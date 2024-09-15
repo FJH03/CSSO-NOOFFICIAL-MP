@@ -452,10 +452,14 @@ inline CStudioHdr *CBaseAnimating::GetModelPtr( void )
 		return NULL;
 
 #ifdef _DEBUG
-	// GetModelPtr() is often called before OnNewModel() so go ahead and set it up first chance.
-	static IDataCacheSection *pModelCache = datacache->FindSection( "ModelData" );
-	AssertOnce( pModelCache->IsFrameLocking() );
+	if ( !HushAsserts() )
+	{
+		// GetModelPtr() is often called before OnNewModel() so go ahead and set it up first chance.
+		static IDataCacheSection *pModelCache = datacache->FindSection( "ModelData" );
+		AssertOnce( pModelCache->IsFrameLocking() );
+	}
 #endif
+
 	if ( !m_pStudioHdr && GetModel() )
 	{
 		LockStudioHdr();
@@ -533,6 +537,8 @@ inline void CBaseAnimating::ForceCycle( float flCycle )
 	SetCycle( flCycle );
 	m_flLastEventCheck = flCycle;
 }
+
+
 
 EXTERN_SEND_TABLE(DT_BaseAnimating);
 

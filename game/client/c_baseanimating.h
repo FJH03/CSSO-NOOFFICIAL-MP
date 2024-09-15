@@ -147,6 +147,7 @@ public:
 	virtual void UpdateIKLocks( float currentTime );
 	virtual void CalculateIKLocks( float currentTime );
 	virtual bool ShouldDraw();
+	virtual void UpdateVisibility() OVERRIDE;
 	virtual int DrawModel( int flags );
 	virtual int	InternalDrawModel( int flags );
 	virtual bool OnInternalDrawModel( ClientModelRenderInfo_t *pInfo );
@@ -208,21 +209,13 @@ public:
 	void	GetBonePosition( int iBone, Vector &origin, QAngle &angles );
 	void	GetBoneTransform( int iBone, matrix3x4_t &pBoneToWorld );
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [menglish] Finds the bone associated with the given hitbox
-	//=============================================================================
-
 	int		GetHitboxBone( int hitboxIndex );
 
 	void	GetHitboxBonePosition( int iBone, Vector &origin, QAngle &angles, QAngle hitboxOrientation );
 	void	GetHitboxBoneTransform( int iBone, QAngle hitboxOrientation, matrix3x4_t &pOut );
 
 	void	CopySequenceTransitions( C_BaseAnimating *pCopyFrom );
-
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 	// Bone attachments
 	virtual void		AttachEntityToBone( C_BaseAnimating* attachTarget, int boneIndexAttached=-1, Vector bonePosition=Vector(0,0,0), QAngle boneAngles=QAngle(0,0,0) );
@@ -235,6 +228,8 @@ public:
 	C_BaseAnimating*	GetBoneAttachment( int i );
 	virtual void		NotifyBoneAttached( C_BaseAnimating* attachTarget );
 	virtual void		UpdateBoneAttachments( void );
+
+	virtual void		PostBuildTransformations( CStudioHdr *pStudioHdr, Vector *pos, Quaternion q[] ) {}
 
 	//bool solveIK(float a, float b, const Vector &Foot, const Vector &Knee1, Vector &Knee2);
 	//void DebugIK( mstudioikchain_t *pikchain );
@@ -253,7 +248,7 @@ public:
 	void							ForceClientSideAnimationOn();
 	
 	void							AddToClientSideAnimationList();
-	void							RemoveFromClientSideAnimationList();
+	void							RemoveFromClientSideAnimationList( bool bBeingDestroyed = false );
 
 	virtual bool					IsSelfAnimating();
 	virtual void					ResetLatched();
@@ -280,6 +275,8 @@ public:
 	bool							GetAttachmentLocal( int iAttachment, Vector &origin, QAngle &angles );
 	bool                            GetAttachmentLocal( int iAttachment, Vector &origin );
 
+	virtual C_BaseAnimating *		GetBoneSetupDependancy( void ) { return GetMoveParent() ? GetMoveParent()->GetBaseAnimating() : NULL; }
+
 	bool							GetRootBone( matrix3x4_t &rootBone );
 
 	// Should this object cast render-to-texture shadows?
@@ -304,8 +301,9 @@ public:
 	virtual void					Clear( void );
 	void							ClearRagdoll();
 	void							CreateUnragdollInfo( C_BaseAnimating *pRagdoll );
-	void							ForceSetupBonesAtTime( matrix3x4_t *pBonesOut, float flTime );
+	bool							ForceSetupBonesAtTime( matrix3x4_t *pBonesOut, float flTime );
 	virtual void					GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt );
+
 	// For shadows rendering the correct body + sequence...
 	virtual int GetBody()			{ return m_nBody; }
 	virtual int GetSkin()			{ return m_nSkin; }
@@ -359,13 +357,12 @@ public:
 	int GetBodygroup( int iGroup );
 
 	bool DoesModelSupportGloves();
-	
+
 	const char *GetBodygroupName( int iGroup );
 	int FindBodygroupByName( const char *name );
 	int GetBodygroupCount( int iGroup );
 	int GetNumBodyGroups( void );
 
-	class CBoneCache				*GetBoneCache( CStudioHdr *pStudioHdr );
 	void							SetHitboxSet( int setnum );
 	void							SetHitboxSetByName( const char *setname );
 	int								GetHitboxSet( void );
@@ -414,6 +411,7 @@ public:
 	static void						ThreadedBoneSetup();
 	static void						InitBoneSetupThreadPool();
 	static void						ShutdownBoneSetupThreadPool();
+	void							MarkForThreadedBoneSetup();
 
 	// Invalidate bone caches so all SetupBones() calls force bone transforms to be regenerated.
 	static void						InvalidateBoneCaches();
@@ -459,6 +457,8 @@ public:
 	virtual bool					ShouldResetSequenceOnNewModel( void );
 
 	virtual bool					IsViewModel() const;
+	virtual bool					ShouldFlipModel( void ) { return false; }
+	virtual void					UpdateOnRemove( void );
 
 protected:
 	// View models scale their attachment positions to account for FOV. To get the unmodified
@@ -525,6 +525,7 @@ protected:
 	// bone transformation matrix
 	unsigned long					m_iMostRecentModelBoneCounter;
 	unsigned long					m_iMostRecentBoneSetupRequest;
+	C_BaseAnimating *				m_pNextForThreadedBoneSetup;
 	int								m_iPrevBoneMask;
 	int								m_iAccumulatedBoneMask;
 
@@ -622,7 +623,7 @@ private:
 	// Calculated attachment points
 	CUtlVector<CAttachmentData>		m_Attachments;
 
-	void							SetupBones_AttachmentHelper( CStudioHdr *pStudioHdr );
+	bool							SetupBones_AttachmentHelper( CStudioHdr *pStudioHdr );
 
 	EHANDLE							m_hLightingOrigin;
 	EHANDLE							m_hLightingOriginRelative;
@@ -632,6 +633,7 @@ private:
 	unsigned char m_nOldMuzzleFlashParity;
 
 	bool							m_bInitModelEffects;
+	bool							m_bDelayInitModelEffects;
 
 	// Dynamic models
 	bool							m_bDynamicModelAllowed;
@@ -695,8 +697,6 @@ public:
 	bool m_bFadeOut;
 	bool m_bImportant;
 	float m_flEffectTime;
-	//virtual void SetSequence(int nSequence);
-
 
 private:
 	int m_iCurrentFriction;
@@ -785,19 +785,12 @@ inline CStudioHdr *C_BaseAnimating::GetModelPtr() const
 
 inline void C_BaseAnimating::InvalidateMdlCache()
 {
-	if ( m_pStudioHdr )
-	{
-		UnlockStudioHdr();
-		delete m_pStudioHdr;
-		m_pStudioHdr = NULL;
-	}
+	UnlockStudioHdr();
 }
 
-
-inline bool C_BaseAnimating::IsModelScaleFractional() const   /// very fast way to ask if the model scale is < 1.0f
+inline bool C_BaseAnimating::IsModelScaleFractional() const
 {
-	COMPILE_TIME_ASSERT( sizeof( m_flModelScale ) == sizeof( int ) );
-	return *((const int *) &m_flModelScale) < 0x3f800000;
+	return ( m_flModelScale < 1.0f );
 }
 
 inline bool C_BaseAnimating::IsModelScaled() const
