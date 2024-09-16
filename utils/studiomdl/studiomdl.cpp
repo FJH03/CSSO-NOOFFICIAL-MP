@@ -84,7 +84,7 @@ bool g_bZBrush = false;
 bool g_bVerifyOnly = false;
 bool g_bUseBoneInBBox = true;
 bool g_bLockBoneLengths = false;
-bool g_bOverridePreDefinedBones = false;
+bool g_bDefineBonesLockedByDefault = true;
 int g_minLod = 0;
 int g_numAllowedRootLODs = 0;
 bool g_bNoWarnings = false;
@@ -6864,6 +6864,21 @@ void Cmd_BoneMerge( )
 	V_strcpy_safe( g_BoneMerge[nIndex].bonename, token );
 }
 
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void Cmd_BoneAlwaysSetup( )
+{
+	if( g_bCreateMakefile )
+		return;
+
+	int nIndex = g_BoneAlwaysSetup.AddToTail();
+
+	// bone name
+	GetToken (false);
+	V_strcpy_safe( g_BoneAlwaysSetup[nIndex].bonename, token );
+}
+
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -7427,7 +7442,7 @@ void Cmd_LockBoneLengths()
 //-----------------------------------------------------------------------------
 void Cmd_UnlockDefineBones()
 {
-	g_bOverridePreDefinedBones = true;
+	g_bDefineBonesLockedByDefault = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -7659,6 +7674,22 @@ void Cmd_DefineBone( )
 	// parent name
 	GetToken (false);
 	V_strcpy_safe( g_importbone[g_numimportbones].parent, token );
+
+	g_importbone[g_numimportbones].bUnlocked = !g_bDefineBonesLockedByDefault;
+
+	GetToken( false );
+	if ( !V_strcmp( token, "unlocked" ) )
+	{
+		g_importbone[g_numimportbones].bUnlocked = true;
+	}
+	else if ( !V_strcmp( token, "locked" ) )
+	{
+		g_importbone[g_numimportbones].bUnlocked = false;
+	}
+	else
+	{
+		UnGetToken();
+	}
 
 	Vector pos;
 	QAngle angles;
@@ -9177,6 +9208,7 @@ struct
 	{ "$jointcontents", Cmd_JointContents },
 	{ "$attachment", Cmd_Attachment },
 	{ "$bonemerge", Cmd_BoneMerge },
+	{ "$bonealwayssetup", Cmd_BoneAlwaysSetup },
 	{ "$externaltextures", Cmd_ExternalTextures },
 	{ "$cliptotextures", Cmd_ClipToTextures },
 	{ "$renamebone", Cmd_Renamebone },
@@ -9803,7 +9835,7 @@ bool CStudioMDLApp::ParseArguments()
 
 		if ( !Q_stricmp( pArgv, "-overridedefinebones" ) )
 		{
-			g_bOverridePreDefinedBones = true;
+			g_bDefineBonesLockedByDefault = false;
 			continue;
 		}
 
