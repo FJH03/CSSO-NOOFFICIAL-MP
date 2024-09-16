@@ -717,6 +717,7 @@ C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *p
 		pEnt->UpdatePartitionListEntry();
 		pEnt->CollisionProp()->MarkPartitionHandleDirty();
 		pEnt->UpdateVisibility();
+		pEnt->SetUseParentLightingOrigin( true );
 		RemoveEffects( EF_NODRAW );
 		return pEnt;
 	}	
@@ -750,6 +751,7 @@ void C_BaseViewModel::AddViewmodelStatTrak( CWeaponCSBase *pWeapon )
 		pStatTrakEnt->AddEffects( EF_BONEMERGE );
 		pStatTrakEnt->AddEffects( EF_BONEMERGE_FASTCULL );
 		pStatTrakEnt->AddEffects( EF_NODRAW );
+		pStatTrakEnt->SetUseParentLightingOrigin( true );
 
 		if ( !cl_righthand.GetBool() )
 		{
