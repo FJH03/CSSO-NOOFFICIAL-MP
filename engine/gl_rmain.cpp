@@ -42,11 +42,7 @@
 extern ConVar r_waterforceexpensive;
 #endif
 
-ConVar r_aspectratio( "r_aspectratio", "0" 
-#if !defined( _X360 )
-					 , FCVAR_CHEAT
-#endif
-					 );
+ConVar r_aspectratio( "r_aspectratio", "0", FCVAR_ARCHIVE, "fisting anal", true, 0, true, 2);
 ConVar r_dynamiclighting( "r_dynamiclighting", "1", FCVAR_CHEAT );
 extern ConVar building_cubemaps;
 extern float scr_demo_override_fov;	
