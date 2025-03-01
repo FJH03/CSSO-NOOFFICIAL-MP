@@ -1097,7 +1097,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		{
 			CBasePlayer *pSpectatorTarget = UTIL_PlayerByIndex( GetSpectatorTarget() );
 
-			if ( pSpectatorTarget && (GetSpectatorMode() == OBS_MODE_IN_EYE || GetSpectatorMode() == OBS_MODE_CHASE) )
+			if ( pSpectatorTarget && (GetSpectatorMode() == OBS_MODE_IN_EYE || GetSpectatorMode() == OBS_MODE_CHASE || GetSpectatorMode() == OBS_MODE_POI) )
 			{
 				if ( pSpectatorTarget->GetTeamNumber() == team )
 				{

@@ -1714,10 +1714,7 @@ void CBasePlayer::Event_Killed( const CTakeDamageInfo &info )
 
 	SetAnimation( PLAYER_DIE );
 
-	if ( !IsObserver() )
-	{
-		SetViewOffset( VEC_DEAD_VIEWHEIGHT_SCALED( this ) );
-	}
+	SetViewOffset( VEC_DEAD_VIEWHEIGHT );
 	m_lifeState		= LIFE_DYING;
 
 	pl.deadflag = true;
@@ -2366,6 +2363,7 @@ bool CBasePlayer::SetObserverMode(int mode )
 			break;
 
 		case OBS_MODE_CHASE :
+		case OBS_MODE_POI: // PASSTIME
 		case OBS_MODE_IN_EYE :	
 			// udpate FOV and viewmodels
 			SetObserverTarget( m_hObserverTarget );	
@@ -2462,7 +2460,7 @@ void CBasePlayer::CheckObserverSettings()
 
 	// check if our spectating target is still a valid one
 	
-	if (  m_iObserverMode == OBS_MODE_IN_EYE || m_iObserverMode == OBS_MODE_CHASE || m_iObserverMode == OBS_MODE_FIXED )
+	if (  m_iObserverMode == OBS_MODE_IN_EYE || m_iObserverMode == OBS_MODE_CHASE || m_iObserverMode == OBS_MODE_FIXED || m_iObserverMode == OBS_MODE_POI )
 	{
 		ValidateCurrentObserverTarget();
 				
@@ -4580,14 +4578,7 @@ void CBasePlayer::PostThink()
 		{
 			// set correct collision bounds (may have changed in player movement code)
 			VPROF_SCOPE_BEGIN( "CBasePlayer::PostThink-Bounds" );
-			if ( GetFlags() & FL_DUCKING )
-			{
-				SetCollisionBounds( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
-			}
-			else
-			{
-				SetCollisionBounds( VEC_HULL_MIN, VEC_HULL_MAX );
-			}
+			UpdateCollisionBounds();
 			VPROF_SCOPE_END();
 
 			VPROF_SCOPE_BEGIN( "CBasePlayer::PostThink-Use" );
@@ -5048,7 +5039,7 @@ void CBasePlayer::Spawn( void )
 
 	m_Local.m_bDucked = false;// This will persist over round restart if you hold duck otherwise. 
 	m_Local.m_bDucking = false;
-    SetViewOffset( VEC_VIEW_SCALED( this ) );
+    SetViewOffset( VEC_VIEW );
 	Precache();
 	
 	m_bitsDamageType = 0;
@@ -5564,7 +5555,7 @@ bool CBasePlayer::GetInVehicle( IServerVehicle *pVehicle, int nRole )
 	// We cannot be ducking -- do all this before SetPassenger because it
 	// saves our view offset for restoration when we exit the vehicle.
 	RemoveFlag( FL_DUCKING );
-	SetViewOffset( VEC_VIEW_SCALED( this ) );
+	SetViewOffset( VEC_VIEW );
 	m_flDuckAmount = 0.0f;
 	m_Local.m_bDucked = false;
 	m_Local.m_bDucking  = false;
@@ -8069,6 +8060,8 @@ void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const voi
 		SendPropUtlVector( SENDINFO_UTLVECTOR( m_hMyWearables ), MAX_WEARABLES_SENT_FROM_SERVER, SendPropEHandle( NULL, 0 ) ),
 #endif // USES_ECON_ITEMS
 
+		SendPropEHandle	(SENDINFO( m_hViewEntity)),
+
 		SendPropFloat	(SENDINFO(m_flDuckAmount), 0, SPROP_CHANGES_OFTEN ),
 		SendPropFloat	(SENDINFO(m_flDuckSpeed), 0, SPROP_CHANGES_OFTEN ),
 
@@ -8376,7 +8369,7 @@ void CBasePlayer::RefreshCollisionBounds( void )
 	BaseClass::RefreshCollisionBounds();
 
 	InitVCollision( GetAbsOrigin(), GetAbsVelocity() );
-	SetViewOffset( VEC_VIEW_SCALED( this ) );
+	SetViewOffset( VEC_VIEW );
 }
 
 //-----------------------------------------------------------------------------
@@ -8391,8 +8384,8 @@ void CBasePlayer::InitVCollision( const Vector &vecAbsOrigin, const Vector &vecA
 	if ( sv_turbophysics.GetBool() )
 		return;
 	
-	CPhysCollide *pModel = PhysCreateBbox( VEC_HULL_MIN_SCALED( this ), VEC_HULL_MAX_SCALED( this ) );
-	CPhysCollide *pCrouchModel = PhysCreateBbox( VEC_DUCK_HULL_MIN_SCALED( this ), VEC_DUCK_HULL_MAX_SCALED( this ) );
+		CPhysCollide *pModel = PhysCreateBbox( VEC_HULL_MIN, VEC_HULL_MAX );
+		CPhysCollide *pCrouchModel = PhysCreateBbox( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
 
 	SetupVPhysicsShadow( vecAbsOrigin, vecAbsVelocity, pModel, "player_stand", pCrouchModel, "player_crouch" );
 }

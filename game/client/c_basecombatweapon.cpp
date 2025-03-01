@@ -62,13 +62,12 @@ void C_BaseCombatWeapon::NotifyShouldTransmit( ShouldTransmitState_t state )
 	}
 	else if( state == SHOULDTRANSMIT_START )
 	{
-		if( m_iState == WEAPON_IS_CARRIED_BY_PLAYER )
+		// We don't check the value of m_iState because if the weapon is active, we need the state to match reguardless
+		// of what it was.
+		if( GetOwner() && GetOwner()->GetActiveWeapon() == this )
 		{
-			if( GetOwner() && GetOwner()->GetActiveWeapon() == this )
-			{
-				// Restore the Activeness of the weapon if we client-twiddled it off in the first case above.
-				m_iState = WEAPON_IS_ACTIVE;
-			}
+			// Restore the Activeness of the weapon if we client-twiddled it off in the first case above.
+			m_iState = WEAPON_IS_ACTIVE;
 		}
 	}
 }
@@ -132,8 +131,6 @@ void C_BaseCombatWeapon::OnDataChanged( DataUpdateType_t updateType )
 		pWeaponWorldModel->OnDataChanged( updateType );
 	}
 
-	CHandle< C_BaseCombatWeapon > handle = this;
-
 	// If it's being carried by the *local* player, on the first update,
 	// find the registered weapon for this ID
 
@@ -196,10 +193,10 @@ ShadowType_t C_BaseCombatWeapon::ShadowCastType()
 	if (!IsBeingCarried())
 		return SHADOWS_RENDER_TO_TEXTURE;
 
-	if (IsCarriedByLocalPlayer() && !C_BasePlayer::ShouldDrawLocalPlayer())
+		if (IsCarriedByLocalPlayer())
 		return SHADOWS_NONE;
 
-	return SHADOWS_RENDER_TO_TEXTURE;
+		return (m_iState != WEAPON_IS_CARRIED_BY_PLAYER) ? SHADOWS_RENDER_TO_TEXTURE : SHADOWS_NONE;
 }
 
 //-----------------------------------------------------------------------------
