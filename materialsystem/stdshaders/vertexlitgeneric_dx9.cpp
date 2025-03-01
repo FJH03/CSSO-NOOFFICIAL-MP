@@ -134,6 +134,8 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		SHADER_PARAM( DEPTHBLENDSCALE, SHADER_PARAM_TYPE_FLOAT, "50.0", "Amplify or reduce DEPTHBLEND fading. Lower values make harder edges." )
 
 		SHADER_PARAM( BLENDTINTBYBASEALPHA, SHADER_PARAM_TYPE_BOOL, "0", "Use the base alpha to blend in the $color modulation")
+		SHADER_PARAM( ENVMAPLIGHTSCALE, SHADER_PARAM_TYPE_FLOAT, "0.0", "How much the lightmap effects environment map reflection, 0.0 is off, 1.0 will allow complete blackness of the environment map if the lightmap is black" )
+		SHADER_PARAM( ENVMAPLIGHTSCALEMINMAX, SHADER_PARAM_TYPE_VEC2, "[0.0 1.0]", "Thresholds for the lightmap envmap effect.  Setting the min higher increases the minimum light amount at which the envmap gets nerfed to nothing." )
 		SHADER_PARAM( BLENDTINTCOLOROVERBASE, SHADER_PARAM_TYPE_FLOAT, "0", "blend between tint acting as a multiplication versus a replace" )
 	END_SHADER_PARAMS
 
@@ -211,6 +213,8 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		info.m_nSelfIllumMask = SELFILLUMMASK;
 		info.m_nBlendTintByBaseAlpha = BLENDTINTBYBASEALPHA;
 		info.m_nTintReplacesBaseColor = BLENDTINTCOLOROVERBASE;
+		info.m_nEnvMapLightScale = ENVMAPLIGHTSCALE;
+		info.m_nEnvMapLightScaleMinMax = ENVMAPLIGHTSCALEMINMAX;
 	}
 
 	// Cloak Pass

@@ -2078,6 +2078,9 @@ ControlPanel::handleEvent (mxEvent *event)
 			int index = cMessageList->getSelectedIndex();
 			if (index >= 0)
 			{
+				if ( cMaterialList->getSelectedIndex() < 0 )
+				break;
+				
 				studiohdr_t* pStudioR = g_pStudioModel->GetStudioRenderHdr();
 				if ( pStudioR )
 				{
