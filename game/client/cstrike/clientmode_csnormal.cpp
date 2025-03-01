@@ -1086,8 +1086,6 @@ void UpdateClassImageEntity(
 
 	C_BaseAnimating *pPlayerModel = g_ClassImagePlayer.Get();
 
-	bool bCreateGloves = false;
-
 	// Does the entity even exist yet?
 	bool recreatePlayer = ShouldRecreateImageEntity( pPlayerModel, pModelName );
 	if ( recreatePlayer )
@@ -1103,10 +1101,15 @@ void UpdateClassImageEntity(
 		g_ClassImagePlayer = pPlayerModel;
 	}
 
-	if ( pPlayerModel && pPlayerModel->DoesModelSupportGloves() )
+	bool bCreateGloves = false;
+	const char *szGlovesViewModel = NULL;
+	if ( CSLoadout()->HasGlovesSet( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )
 	{
-		if ( CSLoadout()->HasGlovesSet( pLocalPlayer, iTeamNumber ) )
-			bCreateGloves = true;
+		szGlovesViewModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )->szViewModel;
+	}
+	if ( pPlayerModel && szGlovesViewModel && pLocalPlayer->m_szPlayerDefaultGloves && pPlayerModel->DoesModelSupportGloves( szGlovesViewModel, pLocalPlayer->m_szPlayerDefaultGloves ) )
+	{
+		bCreateGloves = true;
 	}
 
 	C_BaseAnimating *pWeaponModel = g_ClassImageWeapon.Get();
@@ -1360,8 +1363,6 @@ void UpdateBuyMenuImageEntity(
 
 	C_BaseAnimating *pPlayerModel = g_BuyMenuImagePlayer.Get();
 
-	bool bCreateGloves = false;
-
 	// Does the entity even exist yet?
 	bool recreatePlayer = ShouldRecreateImageEntity( pPlayerModel, modelinfo->GetModelName( pLocalPlayer->GetModel() ) );
 	if ( recreatePlayer )
@@ -1377,10 +1378,15 @@ void UpdateBuyMenuImageEntity(
 		g_BuyMenuImagePlayer = pPlayerModel;
 	}
 
-	if ( pPlayerModel && pPlayerModel->DoesModelSupportGloves() )
+	bool bCreateGloves = false;
+	const char *szGlovesViewModel = NULL;
+	if ( CSLoadout()->HasGlovesSet( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )
 	{
-		if ( CSLoadout()->HasGlovesSet( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )
-			bCreateGloves = true;
+		szGlovesViewModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )->szViewModel;
+	}
+	if ( pPlayerModel && szGlovesViewModel && pLocalPlayer->m_szPlayerDefaultGloves && pPlayerModel->DoesModelSupportGloves( szGlovesViewModel, pLocalPlayer->m_szPlayerDefaultGloves ) )
+	{
+		bCreateGloves = true;
 	}
 
 	C_BaseAnimating *pWeaponModel = g_BuyMenuImageWeapon.Get();

@@ -556,6 +556,10 @@ private:
 	void UpdateGlovesModel();
 	void RemoveGlovesModel();
 	CBaseCSGloves* m_pCSGloves;
+public:
+	const char *m_szPlayerDefaultGloves;
+
+private:
 
 	void PushawayThink();
 	void FireGameEvent( IGameEvent *event );
