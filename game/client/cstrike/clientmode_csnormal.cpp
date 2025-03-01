@@ -1310,6 +1310,7 @@ void UpdateBuyMenuImageEntity(
 		{
 			Warning( "UpdateBuyMenuImageEntity: Unable to find active weapon for player." );
 			return;
+			pWeaponSequence = "t_buymenu_nowep";
 		}
 	}
 	else
@@ -1400,6 +1401,12 @@ void UpdateBuyMenuImageEntity(
 		if ( silencerBodygroup > -1 )
 			pWeaponModel->SetBodygroup( silencerBodygroup, m_bSilenced ? 0 : 1 );
 		g_BuyMenuImageWeapon = pWeaponModel;
+	}
+	else if ( !pWeaponName || !pWeaponName[0] )
+	{
+		// so the weapon model is gone when playing a nowep sequence
+		if ( pWeaponModel )
+			pWeaponModel->Remove();
 	}
 
 	C_BaseAnimating *pGlovesModel = g_BuyMenuImageGloves.Get();
