@@ -1280,8 +1280,7 @@ void CConPanel::PaintBackground()
 	
        if ( !Q_stricmp( "csso", GetCurrentMod() ) ){ // weird hardcode but works
 		Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)  CS:SO v%2.1f by PiMoNFeeD", PROTOCOL_VERSION, build_number(), mod_version.GetFloat() );
-	        Q_snprintf(ver, sizeof( ver ), "Unofficial port by /dev/nvme0n1,den4iklovelinux,AndraMidoxXx");
-                Q_snprintf(ver, sizeof( ver ), "Telegram channel: @CSSource_Offensive_Android");
+	        Q_snprintf(ver, sizeof( ver ), "Unofficial port by /dev/nvme0n1,den4iklovelinux,kroky,atomic_reactor(compiler)");
         }
         else{
              Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)", PROTOCOL_VERSION, build_number() );
