@@ -300,6 +300,7 @@ public:
 #ifndef CLIENT_DLL
 	bool	UseMapFactionsForThisPlayer( CBasePlayer* pPlayer );
 	int		GetMapFactionsForThisPlayer( CBasePlayer* pPlayer );
+	bool	MapFactionsDefined( int teamnum );
 #endif
 
 	bool IsVIPMap() const;
@@ -347,7 +348,7 @@ public:
 	void AddHostageRescueTime( void );
 
 	bool IsPlayingClassic( void ) const;
-	
+
 	bool IsPlayingAnyCompetitiveStrictRuleset( void ) const;
 
 	virtual bool IsConnectedUserInfoChangeAllowed( CBasePlayer *pPlayer );
@@ -383,13 +384,13 @@ private:
 	int		m_iMapFactionT;
 
 	bool		m_bDontUploadStats;
-
+	
 	GamePhase m_gamePhase;
 
 public:
 	void SetPhase( GamePhase phase );
 	GamePhase GetPhase( void ) const { return m_gamePhase; }
-	
+
 	CNetworkVar( bool, m_bBombDropped );
 	CNetworkVar( bool, m_bBombPlanted );
 	CNetworkVar( int, m_iRoundWinStatus );
@@ -441,12 +442,9 @@ public:
 
 	virtual void ClientCommandKeyValues( edict_t *pEntity, KeyValues *pKeyValues );
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [menglish] Set up anything for all players that changes based on new players spawning mid-game
 	//				Find and return fun fact data
 	// [pfreese] Tracking of "pistol" round
-	//=============================================================================
 	virtual void SpawningLatePlayer(CCSPlayer* pLatePlayer);
 
 	bool IsPistolRound();
@@ -457,20 +455,8 @@ public:
 	bool WasHostageKilled() { return m_hostageWasKilled; }
 	bool WasHostageInjured() { return m_hostageWasInjured; }
 
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
-
-    //=============================================================================
-    // HPE_BEGIN:
     // [tj] So game rules can react to damage taken
-    //=============================================================================
-
     void PlayerTookDamage(CCSPlayer* player, const CTakeDamageInfo &damageInfo);
-
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
 
 
 	virtual bool PlayTextureSounds( void ) { return true; }
@@ -520,12 +506,9 @@ public:
 
 	void TerminateRound( float tmDelay, int reason );
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [tj] A place to check achievements that occur at the end of the round
-	//=============================================================================
 	void ProcessEndOfRoundAchievements(int iWinnerTeam, int iReason);
-	
+
 	// The following round-related functions are called as follows:
 	//
 	// At Match Start:
@@ -565,6 +548,7 @@ public:
 	bool CanPlayerHearTalker( CBasePlayer* pListener, CBasePlayer *pSpeaker, bool bTeamOnly );
 	virtual bool PlayerCanHearChat( CBasePlayer *pListener, CBasePlayer *pSpeaker, bool bTeamOnly );
 
+
 	// Checks if it still needs players to start a round, or if it has enough players to start rounds.
 	// Starts a round and returns true if there are enough players.
 	bool NeededPlayersCheck( bool &bNeededPlayers );
@@ -597,8 +581,10 @@ public:
 
 	void BroadcastSound( const char *sound, int team = -1 );
 
+
 	// GUN GAME PROGRESSIVE FUNCTION
 	bool GunGameProgressiveEndCheck( void );
+
 
 	// VIP FUNCTIONS
 	bool VIPRoundEndCheck( bool bNeededPlayers );
@@ -748,6 +734,7 @@ public:
 	void GetPlayerCounts(TeamPlayerCounts teamCounts[TEAM_MAXCOUNT]);
 
 	int m_nLastFreezeEndBeep;
+
 
 	// PRISON ESCAPE VARIABLES
 	int		m_iHaveEscaped;
