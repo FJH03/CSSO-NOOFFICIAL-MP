@@ -445,6 +445,64 @@ static ConCommand *FindAutoCompleteCommmandFromPartial( const char *partial )
 	return cmd;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: depending on our input mode will match the command or substrings in the command.
+//-----------------------------------------------------------------------------
+bool CConsolePanel::CommandMatchesText(const char *command, const char *text, bool bCheckSubstrings)
+{
+	if (bCheckSubstrings)
+	{
+		int textLeft = Q_strlen( text );
+		int length = 0;
+		char uprCommand[ 256 ];
+		char substring[ 256 ];
+		Q_strncpy( substring, text, sizeof( substring ) );
+		Q_strncpy( uprCommand, command, sizeof( uprCommand ) );
+
+		Q_strupr( uprCommand );
+		Q_strupr( substring );
+
+		char *strStart = substring;
+		char *space;
+		
+		// split the search string based on spaces, keep searching for the substrings until we are out of text
+		do
+		{
+			space = Q_strstr( strStart, " " );
+			if ( space )
+			{
+				*space = 0; // replace the space with an end of string char
+			}
+
+			if( !Q_strstr(uprCommand, strStart) )
+			{
+				return false;
+			}
+			
+			length = Q_strlen(strStart) + 1; // need to do an extra to account for the space
+
+			if( textLeft > length )
+			{
+				textLeft -= length;
+				strStart += length;
+			}
+			else // we hit the end of our substrings - abort
+			{
+				space = NULL;
+			}
+
+		} while (space);
+
+		
+		
+		return true;
+	}
+	else if ( !strnicmp(text, command, Q_strlen(text))) // just try to match the whole string.
+	{
+		return true;
+	}
+	return false;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: rebuilds the list of possible completions from the current entered text
@@ -471,21 +529,20 @@ void CConsolePanel::RebuildCompletionList(const char *text)
 	}
 
 	bool bNormalBuild = true;
+	bool bCheckSubstrings = false;
 
-	// if there is a space in the text, and the command isn't of the type to know how to autocomplet, then command completion is over
 	const char *space = strstr( text, " " );
 	if ( space )
 	{
 		ConCommand *pCommand = FindAutoCompleteCommmandFromPartial( text );
-		if ( !pCommand )
-			return;
+		if ( pCommand )
+		{
+			bNormalBuild = false;
 
-		bNormalBuild = false;
-
-		CUtlVector< CUtlString > commands;
-		int count = pCommand->AutoCompleteSuggest( text, commands );
-		Assert( count <= COMMAND_COMPLETION_MAXITEMS );
-		int i;
+			CUtlVector< CUtlString > commands;
+			int count = pCommand->AutoCompleteSuggest( text, commands );
+			Assert( count <= COMMAND_COMPLETION_MAXITEMS );
+			int i;
 
 		for ( i = 0; i < count; i++ )
 		{
@@ -497,20 +554,24 @@ void CConsolePanel::RebuildCompletionList(const char *text)
 			item->m_pText = new CHistoryItem( commands[ i ].String() );
 		}
 	}
+	else
+	{
+		bCheckSubstrings = true;
+	}
+}
 				 
 	if ( bNormalBuild )
 	{
 		// look through the command list for all matches
-		ConCommandBase const *cmd = (ConCommandBase const *)cvar->GetCommands();
-		while (cmd)
+		ICvar::Iterator iter( g_pCVar );
+		for ( iter.SetFirst() ; iter.IsValid() ; iter.Next() )
 		{
 			if ( cmd->IsFlagSet( FCVAR_DEVELOPMENTONLY ) || cmd->IsFlagSet( FCVAR_HIDDEN ) )
 			{
-				cmd = cmd->GetNext();
 				continue;
 			}
 
-			if ( !strnicmp(text, cmd->GetName(), len))
+			if (CommandMatchesText(cmd->GetName(), text, bCheckSubstrings ))
 			{
 				// match found, add to list
 				CompletionItem *item = new CompletionItem();
@@ -547,38 +608,42 @@ void CConsolePanel::RebuildCompletionList(const char *text)
 					item->m_pText = new CHistoryItem( tst );
 				}
 			}
-
-			cmd = cmd->GetNext();
 		}
 
 		// Now sort the list by command name
 		if ( m_CompletionList.Count() >= 2 )
 		{
-			for ( int i = 0 ; i < m_CompletionList.Count(); i++ )
-			{
-				for ( int j = i + 1; j < m_CompletionList.Count(); j++ )
-				{
-					const CompletionItem *i1, *i2;
-					i1 = m_CompletionList[ i ];
-					i2 = m_CompletionList[ j ];
-
-					if ( Q_stricmp( i1->GetName(), i2->GetName() ) > 0 )
-					{
-						CompletionItem *temp = m_CompletionList[ i ];
-						m_CompletionList[ i ] = m_CompletionList[ j ];
-						m_CompletionList[ j ] = temp;
-					}
-				}
-			}
+			m_CompletionList.Sort( &CompletionItemCompare );
 		}
 	}
+}
 
+bool CConsolePanel::GetCompletionItemText(char *pDest, int completionIndex, int maxLen)
+{
+	pDest[0] = 0;
+
+	if (m_CompletionList.IsValidIndex(completionIndex))
+	{
+		CompletionItem *item = m_CompletionList[completionIndex];
+		Assert(item);
+
+		if ( !item->m_bIsCommand && item->m_pCommand )
+		{
+			Q_strncpy(pDest, item->GetCommand(), maxLen );
+		}
+		else
+		{
+			Q_strncpy(pDest, item->GetItemText(), maxLen );
+		}
+		return true;
+	}
+	return false;
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: auto completes current text
 //-----------------------------------------------------------------------------
-void CConsolePanel::OnAutoComplete(bool reverse)
+void CConsolePanel::OnAutoComplete(eCompletionType completionType)
 {
 	if (!m_bAutoCompleteMode)
 	{
@@ -588,13 +653,13 @@ void CConsolePanel::OnAutoComplete(bool reverse)
 	}
 
 	// if we're in reverse, move back to before the current
-	if (reverse)
+	if (completionType == COMPLETE_TYPE_REVERSE)
 	{
 		m_iNextCompletion -= 2;
 		if (m_iNextCompletion < 0)
 		{
 			// loop around in reverse
-			m_iNextCompletion = m_CompletionList.Size() - 1;
+			m_iNextCompletion = m_CompletionList.Count() - 1;
 		}
 	}
 
@@ -609,30 +674,61 @@ void CConsolePanel::OnAutoComplete(bool reverse)
 	if (!m_CompletionList.IsValidIndex(m_iNextCompletion))
 		return;
 
-	// match found, set text
 	char completedText[256];
-	CompletionItem *item = m_CompletionList[m_iNextCompletion];
-	Assert( item );
-
-	if ( !item->m_bIsCommand && item->m_pCommand )
+	// are we trying to tab-complete our command? We need to have at least two valid entries for that
+	if (completionType == COMPLETE_TYPE_COMMON_STRING && 
+		m_CompletionList.Count() > 1 )
 	{
-		Q_strncpy(completedText, item->GetCommand(), sizeof(completedText) - 2 );
+		// see how many of our characters match between the first and last items in our list.
+		// this should be all of the common characters for all items in our list.
+		char lastMatchText[256];
+		
+		GetCompletionItemText(completedText, 0, sizeof(completedText) - 2 );
+		GetCompletionItemText(lastMatchText, m_CompletionList.Count() - 1, sizeof(lastMatchText) - 2 );
+
+		unsigned int i = 0;
+			
+		// make sure that we aren't doing a sub-string match, we won't be able to tab-complete in that case.
+		if( !Q_strncasecmp(m_szPartialText, completedText, strlen(m_szPartialText)) && !Q_strncasecmp(m_szPartialText, lastMatchText, strlen(m_szPartialText)) )
+		{
+			for( ; i < strlen(completedText); i++ )
+			{
+				if( toupper( completedText[i] ) != toupper( lastMatchText[i] ) )
+				{
+					break;
+				}
+			}	
+		}
+
+		// terminate where we differ
+		completedText[i] = 0;
 	}
 	else
 	{
-		Q_strncpy(completedText, item->GetItemText(), sizeof(completedText) - 2 );
+		GetCompletionItemText(completedText, m_iNextCompletion, sizeof(completedText) - 2 );
+
+		if ( !Q_strstr( completedText, " " ) )
+		{
+			Q_strncat(completedText, " ", sizeof(completedText), COPY_ALL_CHARACTERS );
+		}
+
+		m_iNextCompletion++;
 	}
 
-	if ( !Q_strstr( completedText, " " ) )
+	// Only set our text if we actually changed something
+	if( strlen(completedText) > strlen(m_szPartialText) )
 	{
-		Q_strncat(completedText, " ", sizeof(completedText), COPY_ALL_CHARACTERS );
+		m_pEntry->SetText(completedText);
+		
+		// only do this for tab completion, we don't want to mess up our cycling by rebuilding the completion list.
+		if( completionType == COMPLETE_TYPE_COMMON_STRING )
+		{
+			OnTextChanged( m_pEntry );
+		}
 	}
 
-	m_pEntry->SetText(completedText);
 	m_pEntry->GotoTextEnd();
 	m_pEntry->SelectNone();
-
-	m_iNextCompletion++;
 }
 
 
@@ -797,27 +893,24 @@ void CConsolePanel::OnKeyCodeTyped(KeyCode code)
 	{
 		if (code == KEY_TAB)
 		{
-			bool reverse = false;
 			if (input()->IsKeyDown(KEY_LSHIFT) || input()->IsKeyDown(KEY_RSHIFT))
 			{
-				reverse = true;
+				OnAutoComplete( COMPLETE_TYPE_REVERSE );
 			}
-
-			// attempt auto-completion
-			OnAutoComplete(reverse);
+			else
+			{
+				OnAutoComplete( COMPLETE_TYPE_FORWARD );
+			}
 			m_pEntry->RequestFocus();
 		}
 		else if (code == KEY_DOWN)
 		{
-			OnAutoComplete(false);
-		//	UpdateCompletionListPosition();
-		//	m_pCompletionList->SetVisible(true);
-
+			OnAutoComplete( COMPLETE_TYPE_FORWARD );
 			m_pEntry->RequestFocus();
 		}
 		else if (code == KEY_UP)
 		{
-			OnAutoComplete(true);
+			OnAutoComplete( COMPLETE_TYPE_REVERSE );
 			m_pEntry->RequestFocus();
 		}
 	}
