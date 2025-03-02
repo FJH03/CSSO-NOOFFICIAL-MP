@@ -7219,7 +7219,7 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 			{
 				if ( SelectSpawnSpot( "info_armsrace_terrorist", pSpot ) )
 				{
-					g_pLastCTSpawn = pSpot;
+					g_pLastTerroristSpawn = pSpot;
 					goto ReturnSpot;
 				}
 			}
