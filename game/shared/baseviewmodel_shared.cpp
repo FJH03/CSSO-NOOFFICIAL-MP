@@ -467,7 +467,6 @@ void CBaseViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& eyePos
 		}
 #endif
 		vmorigin += ( viewmodel_offset_y.GetFloat() * vecForward ) + ( viewmodel_offset_z.GetFloat() * vecUp ) + ( viewmodel_offset_x.GetFloat() * vecRight );
-		vmangles += (owner->GetAimPunchAngle() * viewmodel_recoil.GetFloat() * 0.5f); // PiMoN: Valve are probably multiplying it by 0.5 as well... right? I mean it makes it look exactly like in CS:GO
 	}
 
 	CBaseCombatWeapon *pWeapon = m_hWeapon.Get();
