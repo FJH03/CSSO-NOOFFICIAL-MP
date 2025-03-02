@@ -345,7 +345,8 @@ SendTable *RecvTable_ReadInfos( bf_read *pBuf, int nDemoProtocol )
 		}
 
 		pProp->SetFlags( pBuf->ReadUBitLong( nFlagsBits ) );
-
+		pProp->SetPriority( pBuf->ReadByte() );
+		
 		if ( pProp->m_Type == DPT_DataTable )
 		{
 			pProp->m_pExcludeDTName = pBuf->ReadAndAllocateString();

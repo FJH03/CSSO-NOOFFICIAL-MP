@@ -64,17 +64,10 @@
 #include "cs_loadout.h"
 #include "item_healthshot.h"
 #include "holiday_gift.h"
-#include "../../shared/cstrike/cs_achievement_constants.h"
-
-//=============================================================================
-// HPE_BEGIN
-//=============================================================================
-
-// [dwenger] Needed for global hostage list
+#include "cs_achievement_constants.h"
 #include "cs_simple_hostage.h"
-
-// [dwenger] Needed for weapon type used tracking
-#include "../../shared/cstrike/cs_weapon_parse.h"
+#include "cs_weapon_parse.h"
+#include "sendprop_priorities.h"
 
 #define REPORT_PLAYER_DAMAGE 0
 
@@ -353,34 +346,28 @@ LINK_ENTITY_TO_CLASS( player, CCSPlayer );
 PRECACHE_REGISTER(player);
 
 BEGIN_SEND_TABLE_NOBASE( CCSPlayer, DT_CSLocalPlayerExclusive )
+	SendPropVectorXY(SENDINFO(m_vecOrigin),               -1, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_OriginXY, SENDPROP_LOCALPLAYER_ORIGINXY_PRIORITY ),
+	SendPropFloat   (SENDINFO_VECTORELEM(m_vecOrigin, 2), -1, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_OriginZ, SENDPROP_LOCALPLAYER_ORIGINZ_PRIORITY ),
+
 	SendPropFloat( SENDINFO( m_flStamina ), 14, 0, 0, 1400  ),
 	SendPropInt( SENDINFO( m_iDirection ), 1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_iShotsFired ), 8, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO( m_flVelocityModifier ), 8, 0, 0, 1  ),
 
 	SendPropBool( SENDINFO( m_bDuckOverride ) ),
 
-	// send a hi-res origin to the local player for use in prediction
-	SendPropVector	(SENDINFO(m_vecOrigin), -1,  SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
-
-	//=============================================================================
-	// HPE_BEGIN:
+	SendPropFloat( SENDINFO( m_flVelocityModifier ), 8, 0, 0, 1 ),
+	
 	// [tj]Set up the send table for per-client domination data
-	//=============================================================================
- 
+
 	SendPropArray3( SENDINFO_ARRAY3( m_bPlayerDominated ), SendPropBool( SENDINFO_ARRAY( m_bPlayerDominated ) ) ),
 	SendPropArray3( SENDINFO_ARRAY3( m_bPlayerDominatingMe ), SendPropBool( SENDINFO_ARRAY( m_bPlayerDominatingMe ) ) ),
- 
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 END_SEND_TABLE()
 
 
 BEGIN_SEND_TABLE_NOBASE( CCSPlayer, DT_CSNonLocalPlayerExclusive )
-	// send a lo-res origin to other players
-	SendPropVector	(SENDINFO(m_vecOrigin), -1,  SPROP_COORD|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
+	SendPropVectorXY(SENDINFO(m_vecOrigin),               -1, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_OriginXY, SENDPROP_NONLOCALPLAYER_ORIGINXY_PRIORITY ),
+	SendPropFloat   (SENDINFO_VECTORELEM(m_vecOrigin, 2), -1, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_OriginZ, SENDPROP_NONLOCALPLAYER_ORIGINZ_PRIORITY ),
 END_SEND_TABLE()
 
 
@@ -431,18 +418,6 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropBool( SENDINFO( m_bIsScoped ) ),
 	SendPropBool( SENDINFO( m_bIsWalking ) ),
 	SendPropFloat( SENDINFO( m_flGroundAccelLinearFracLastTime ), 0, SPROP_CHANGES_OFTEN ),
-
-	//=============================================================================
-	// HPE_BEGIN:
-	// [dwenger] Added for fun-fact support
-	//=============================================================================
-
-	//SendPropBool( SENDINFO( m_bPickedUpDefuser ) ),
-	//SendPropBool( SENDINFO( m_bDefusedWithPickedUpKit) ),
-
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 	SendPropBool( SENDINFO( m_bInHostageRescueZone ) ),
 	SendPropBool( SENDINFO( m_bIsDefusing ) ),

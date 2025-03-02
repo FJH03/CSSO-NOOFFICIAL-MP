@@ -62,6 +62,7 @@
 #include "env_debughistory.h"
 #include "tier1/utlstring.h"
 #include "utlhashtable.h"
+#include "sendprop_priorities.h"
 
 #if defined( TF_DLL )
 #include "tf_gamerules.h"
@@ -267,8 +268,7 @@ const int SENDPROP_VECORIGIN_FLAGS = SPROP_COORD|SPROP_CHANGES_OFTEN;
 // This table encodes the CBaseEntity data.
 IMPLEMENT_SERVERCLASS_ST_NOBASE( CBaseEntity, DT_BaseEntity )
 	SendPropDataTable( "AnimTimeMustBeFirst", 0, &REFERENCE_SEND_TABLE(DT_AnimTimeMustBeFirst), SendProxy_ClientSideAnimation ),
-	SendPropInt			(SENDINFO(m_flSimulationTime),	SIMULATION_TIME_WINDOW_BITS, SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, SendProxy_SimulationTime),
-
+	SendPropInt			(SENDINFO(m_flSimulationTime),	SIMULATION_TIME_WINDOW_BITS, SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, SendProxy_SimulationTime, SENDPROP_SIMULATION_TIME_PRIORITY ),
 
 	SendPropVector (SENDINFO(m_vecOrigin), 5, SENDPROP_VECORIGIN_FLAGS, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
 
@@ -1880,7 +1880,7 @@ BEGIN_DATADESC_NO_BASE( CBaseEntity )
 	DEFINE_FIELD( m_vecOrigin, FIELD_VECTOR ),			// NOTE: MUST BE IN LOCAL SPACE, NOT POSITION_VECTOR!!! (see CBaseEntity::Restore)
 	DEFINE_FIELD( m_angRotation, FIELD_VECTOR ),
 	DEFINE_FIELD( m_bClientSideRagdoll, FIELD_BOOLEAN ),
-	
+
 	DEFINE_KEYFIELD( m_vecViewOffset, FIELD_VECTOR, "view_ofs" ),
 
 	DEFINE_FIELD( m_fFlags, FIELD_INTEGER ),
