@@ -458,6 +458,23 @@ public:
 
 	virtual bool FAllowNPCs( void );
 
+	struct GrenadeRecording_t
+	{
+		Vector vecSrc;
+		QAngle vecAngles;
+		Vector vecVel;
+		AngularImpulse angImpulse;
+		CBaseCombatCharacter *pPlayer;
+		CSWeaponID weaponID;
+		bool bIsValid;
+	};
+
+#ifndef CLIENT_DLL
+	void RecordGrenadeThrow( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBaseCombatCharacter *pPlayer, CSWeaponID weaponID );
+	void RethrowLastGrenade();
+	GrenadeRecording_t m_pLastGrenade;
+#endif
+
 protected:
 	virtual void GoToIntermission( void );
 
