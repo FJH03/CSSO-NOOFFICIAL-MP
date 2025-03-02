@@ -5,7 +5,6 @@
 // $NoKeywords: $
 //=============================================================================//
  
-#include <algorithm>
 #include <stdarg.h>
 #include "dt_send.h"
 #include "dt.h"
@@ -315,57 +314,28 @@ void SendTable_BuildHierarchy(
 
 void SendTable_SortByPriority(CBuildHierarchyStruct *bhs)
 {
-	CUtlVector<byte> priorities;
+	int i, start = 0;
 
-	// Build a list of priorities 
-
-	// Default entry for SPROP_CHANGES_OFTEN
-	priorities.AddToTail( SENDPROP_CHANGES_OFTEN_PRIORITY );
-
-	for ( int i = 0; i < bhs->m_nProps; i++ )
+	while( true )
 	{
-		const SendProp *p = bhs->m_pProps[i];
-
-		if ( priorities.Find( p->GetPriority() ) < 0 )
+		for ( i = start; i < bhs->m_nProps; i++ )
 		{
-			priorities.AddToTail( p->GetPriority() );
-		}
-	}
+			const SendProp *p = bhs->m_pProps[i];
+			unsigned char c = bhs->m_PropProxyIndices[i];
 
-	// We're using this one because CUtlVector::Sort utilizes qsort, which has different behavior on Windows than on Linux
-	std::stable_sort( priorities.Base(), priorities.Base() + priorities.Count() );
-
-	int start = 0;
-
-	for ( int priorityIndex = 0; priorityIndex < priorities.Count(); ++priorityIndex )
-	{
-		byte priority = priorities[priorityIndex];
-		int i;
-	
-		while( true )
-		{
-			for ( i = start; i < bhs->m_nProps; i++ )
+			if ( p->GetFlags() & SPROP_CHANGES_OFTEN )
 			{
-				const SendProp *p = bhs->m_pProps[i];
-				unsigned char c = bhs->m_PropProxyIndices[i];
-
-				if ( p->GetPriority() == priority ||
-					 ( ( p->GetFlags() & SPROP_CHANGES_OFTEN ) && priority == SENDPROP_CHANGES_OFTEN_PRIORITY ) )
-				{
-					if ( i != start )
-					{
-						bhs->m_pProps[i] = bhs->m_pProps[start];
-						bhs->m_PropProxyIndices[i] = bhs->m_PropProxyIndices[start];
-						bhs->m_pProps[start] = p;
-						bhs->m_PropProxyIndices[start] = c;
-					}
-					start++;
-					break;
-				}
+				bhs->m_pProps[i] = bhs->m_pProps[start];
+				bhs->m_PropProxyIndices[i] = bhs->m_PropProxyIndices[start];
+				bhs->m_pProps[start] = p;
+				bhs->m_PropProxyIndices[start] = c;
+				start++;
+				break;
 			}
-			if ( i == bhs->m_nProps )
-				break; 
 		}
+
+		if ( i == bhs->m_nProps )
+			return; 
 	}
 }
 

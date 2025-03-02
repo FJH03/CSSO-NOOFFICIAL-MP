@@ -653,8 +653,7 @@ bool SendTable_WriteInfos( SendTable *pTable, bf_write *pBuf )
 		// we now have some flags that aren't networked so strip them off
 		unsigned int networkFlags = pProp->GetFlags() & ((1<<PROPINFOBITS_FLAGS)-1);
 		pBuf->WriteUBitLong( networkFlags, PROPINFOBITS_FLAGS );
-		pBuf->WriteByte( pProp->GetPriority() );
-		
+
 		if( pProp->m_Type == DPT_DataTable )
 		{
 			// Just write the name and it will be able to reuse the table with a matching name.
