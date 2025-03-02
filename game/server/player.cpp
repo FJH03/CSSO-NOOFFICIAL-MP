@@ -733,12 +733,13 @@ int CBasePlayer::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 		CBaseEntity *pRecipientEntity = CBaseEntity::Instance( pInfo->m_pClientEnt );
 		
 		Assert( pRecipientEntity->IsPlayer() );
-#if defined( REPLAY_ENABLED )		
+		
 		CBasePlayer *pRecipientPlayer = static_cast<CBasePlayer*>( pRecipientEntity );
+#if defined( REPLAY_ENABLED )
 		if ( pRecipientPlayer->IsHLTV() ||
 			 pRecipientPlayer->IsReplay() )
 #else
-			 if ( pRecipientPlayer->IsHLTV() )
+		if ( pRecipientPlayer->IsHLTV() )
 #endif
 		{
 			// HACK force calling RecomputePVSInformation to update PVS data
