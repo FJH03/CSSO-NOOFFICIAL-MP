@@ -72,7 +72,7 @@ ConVar weapon_recoil_decay_coefficient( "weapon_recoil_decay_coefficient", "2.0"
 
 #ifdef CLIENT_DLL
 void TE_DynamicLight( IRecipientFilter& filter, float delay,
-	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC );
+	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC, bool bNoStaticPropIllum = false );
 #endif
 
 struct WeaponAliasTranslationInfoStruct
