@@ -34,7 +34,6 @@ public:
 	virtual void PrimaryAttack();
 
 	virtual bool Reload();
-	virtual Activity GetDeployActivity();
 
 #ifndef CLIENT_DLL
 	virtual void Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
@@ -123,21 +122,6 @@ void CWeaponCZ75A::PrimaryAttack()
 	Recoil( m_weaponMode );
 
 	m_flRecoilIndex += 1.0f;
-}
-
-Activity CWeaponCZ75A::GetDeployActivity()
-{
-	if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 )
-	{
-		// just to be sure it will work
-		m_iReloadActivityIndex = ACT_SECONDARY_VM_RELOAD;
-		return ACT_VM_DRAW_EMPTY;
-	}
-	else
-	{
-		m_iReloadActivityIndex = ACT_VM_RELOAD;
-		return ACT_VM_DRAW;
-	}
 }
 
 bool CWeaponCZ75A::Reload()
