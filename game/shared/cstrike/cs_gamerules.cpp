@@ -3065,7 +3065,7 @@ ConVar snd_music_selection(
 				if ( pPlayer )
 				{
 					pPlayer->AddFlag( FL_FROZEN );
-					pPlayer->Unblind();
+					//pPlayer->Unblind();
 				}
 			}
 		}
