@@ -3388,13 +3388,6 @@ void* SendProxy_SendNonLocalWeaponDataTable( const SendProp *pProp, const void *
 }
 REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendNonLocalWeaponDataTable );
 
-#else
-void CBaseCombatWeapon::RecvProxy_WeaponState( const CRecvProxyData *pData, void *pStruct, void *pOut )
-{
-	CBaseCombatWeapon *pWeapon = (CBaseCombatWeapon*)pStruct;
-	pWeapon->m_iState = pData->m_Value.m_Int;
-	pWeapon->UpdateVisibility();
-}
 #endif
 
 #if PREDICTION_ERROR_CHECK_LEVEL > 1
@@ -3429,8 +3422,6 @@ END_NETWORK_TABLE()
 //-----------------------------------------------------------------------------
 BEGIN_NETWORK_TABLE_NOBASE( CBaseCombatWeapon, DT_LocalWeaponData )
 #if !defined( CLIENT_DLL )
-	SendPropIntWithMinusOneFlag( SENDINFO(m_iClip1 ), 8 ),
-	SendPropIntWithMinusOneFlag( SENDINFO(m_iClip2 ), 8 ),
 	SendPropInt( SENDINFO(m_iPrimaryAmmoType ), 8 ),
 	SendPropInt( SENDINFO(m_iSecondaryAmmoType ), 8 ),
 
@@ -3443,8 +3434,6 @@ BEGIN_NETWORK_TABLE_NOBASE( CBaseCombatWeapon, DT_LocalWeaponData )
 #endif
 
 #else
-	RecvPropIntWithMinusOneFlag( RECVINFO(m_iClip1 )),
-	RecvPropIntWithMinusOneFlag( RECVINFO(m_iClip2 )),
 	RecvPropInt( RECVINFO(m_iPrimaryAmmoType )),
 	RecvPropInt( RECVINFO(m_iSecondaryAmmoType )),
 
@@ -3455,6 +3444,16 @@ BEGIN_NETWORK_TABLE_NOBASE( CBaseCombatWeapon, DT_LocalWeaponData )
 #endif
 END_NETWORK_TABLE()
 
+#if defined( CLIENT_DLL )
+
+void RecvProxy_State( const CRecvProxyData *pData, void *pStruct, void *pOut )
+{
+	*(int *)pOut = pData->m_Value.m_Int;
+	( (C_BaseEntity*) pStruct )->UpdateVisibility();
+}
+
+#endif
+
 BEGIN_NETWORK_TABLE(CBaseCombatWeapon, DT_BaseCombatWeapon)
 #if !defined( CLIENT_DLL )
 	SendPropDataTable("LocalWeaponData", 0, &REFERENCE_SEND_TABLE(DT_LocalWeaponData), SendProxy_SendLocalWeaponDataTable ),
@@ -3464,6 +3463,8 @@ BEGIN_NETWORK_TABLE(CBaseCombatWeapon, DT_BaseCombatWeapon)
 	SendPropModelIndex( SENDINFO(m_iWorldDroppedModelIndex) ),
 	SendPropInt( SENDINFO(m_iState ), 8, SPROP_UNSIGNED ),
 	SendPropEHandle( SENDINFO(m_hOwner) ),
+	SendPropIntWithMinusOneFlag( SENDINFO(m_iClip1), 8 ),
+	SendPropIntWithMinusOneFlag( SENDINFO(m_iClip2), 8 ),
 
 	SendPropInt( SENDINFO( m_iPrimaryReserveAmmoCount ), 10),
 	SendPropInt( SENDINFO( m_iSecondaryReserveAmmoCount ), 10 ),
@@ -3475,10 +3476,12 @@ BEGIN_NETWORK_TABLE(CBaseCombatWeapon, DT_BaseCombatWeapon)
 	RecvPropInt( RECVINFO(m_iViewModelIndex)),
 	RecvPropInt( RECVINFO(m_iWorldModelIndex)),
 	RecvPropInt( RECVINFO(m_iWorldDroppedModelIndex)),
-	RecvPropInt( RECVINFO(m_iState), 0, &CBaseCombatWeapon::RecvProxy_WeaponState ),
-	RecvPropEHandle( RECVINFO(m_hOwner ) ),
-	RecvPropInt( RECVINFO( m_iPrimaryReserveAmmoCount)),
-	RecvPropInt( RECVINFO( m_iSecondaryReserveAmmoCount)),
+	RecvPropInt( RECVINFO(m_iState), 0, RecvProxy_State ),
+	RecvPropEHandle( RECVINFO(m_hOwner) ),
+	RecvPropIntWithMinusOneFlag( RECVINFO(m_iClip1) ),
+	RecvPropIntWithMinusOneFlag( RECVINFO(m_iClip2) ),
+	RecvPropInt( RECVINFO(m_iPrimaryReserveAmmoCount)),
+	RecvPropInt( RECVINFO(m_iSecondaryReserveAmmoCount)),
 	RecvPropEHandle( RECVINFO(m_hWeaponWorldModel) ),
 	RecvPropInt( RECVINFO( m_iNumEmptyAttacks )),
 #endif
