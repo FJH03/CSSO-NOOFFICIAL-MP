@@ -4377,7 +4377,6 @@ bool C_BaseAnimating::Interpolate( float flCurrentTime )
 
 	Vector oldOrigin;
 	QAngle oldAngles;
-	Vector oldVel;
 	float flOldCycle = GetCycle();
 	int nChangeFlags = 0;
 
@@ -4385,7 +4384,7 @@ bool C_BaseAnimating::Interpolate( float flCurrentTime )
 		m_iv_flCycle.SetLooping( IsSequenceLooping( GetSequence() ) );
 
 	int bNoMoreChanges;
-	int retVal = BaseInterpolatePart1( flCurrentTime, oldOrigin, oldAngles, oldVel, bNoMoreChanges );
+	int retVal = BaseInterpolatePart1( flCurrentTime, oldOrigin, oldAngles, bNoMoreChanges );
 	if ( retVal == INTERPOLATE_STOP )
 	{
 		if ( bNoMoreChanges )
@@ -4401,7 +4400,7 @@ bool C_BaseAnimating::Interpolate( float flCurrentTime )
 	if ( bNoMoreChanges )
 		RemoveFromInterpolationList();
 	
-	BaseInterpolatePart2( oldOrigin, oldAngles, oldVel, nChangeFlags );
+	BaseInterpolatePart2( oldOrigin, oldAngles, nChangeFlags );
 	return true;
 }
 
