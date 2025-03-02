@@ -555,6 +555,8 @@ void C_CSRagdoll::CreateLowViolenceRagdoll( void )
 		{
 			// move my current model instance to the ragdoll's so decals are preserved.
 			pPlayer->SnatchModelInstance( this );
+			// copy bodygroup state
+			m_nBody = pPlayer->GetBody();
 		}
 
 		SetAbsAngles( pPlayer->GetRenderAngles() );
@@ -605,6 +607,8 @@ void C_CSRagdoll::CreateCSRagdoll()
 	{
 		// move my current model instance to the ragdoll's so decals are preserved.
 		pPlayer->SnatchModelInstance( this );
+		// copy bodygroup state
+		m_nBody = pPlayer->GetBody();
 	
 		VarMapping_t *varMap = GetVarMapping();
 
@@ -772,7 +776,8 @@ void C_CSRagdoll::CreateGlovesModel()
 		if ( m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY ) )
 		{
 			// hide the gloves first
-			SetBodygroup( FindBodygroupByName( "gloves" ), 1 );
+			// UNDONE: m_nBody = pPlayer->GetBody(); is now handling this
+			//SetBodygroup( FindBodygroupByName( "gloves" ), 1 );
 
 			m_pGlovesModel->FollowEntity( this ); // attach to player model
 			m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
@@ -792,7 +797,9 @@ void C_CSRagdoll::CreateGlovesModel()
 		else
 		{
 			m_pGlovesModel->Release();
-			SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
+			m_pGlovesModel = NULL;
+			// UNDONE: m_nBody = pPlayer->GetBody(); is now handling this
+			//SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
 		}
 	}
 }
