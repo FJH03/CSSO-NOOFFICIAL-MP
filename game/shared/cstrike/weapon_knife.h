@@ -18,6 +18,7 @@
 
 	#define CKnife C_Knife
 	#define CKnifeT C_KnifeT
+	#define CKnifeGG C_KnifeGG
 	#define CKnifeCSS C_KnifeCSS
 	#define CKnifeKarambit C_KnifeKarambit
 	#define CKnifeFlip C_KnifeFlip
@@ -84,6 +85,15 @@ private:
 #endif
 };
 
+class CKnifeGG : public CKnife
+{
+public:
+	DECLARE_CLASS( CKnifeGG, CKnife );
+	DECLARE_NETWORKCLASS(); 
+	DECLARE_PREDICTABLE();
+
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_GG; }
+};
 
 class CKnifeT : public CKnife
 {

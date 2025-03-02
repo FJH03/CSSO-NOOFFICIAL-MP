@@ -13,6 +13,7 @@
 
 #include "shareddefs.h"
 #include "utlvector.h"
+#include "cs_player.h"
 
 class CBasePlayer;
 class CTeamSpawnPoint;
@@ -60,6 +61,9 @@ public:
 	virtual void RemovePlayer( CBasePlayer *pPlayer );
 	virtual int  GetNumPlayers( void );
 	virtual CBasePlayer *GetPlayer( int iIndex );
+	static int TeamGGSortFunction( CCSPlayer* const *entry1, CCSPlayer* const *entry2 );
+	virtual void DetermineGGLeaderAndSort( void );
+	virtual int GetGGLeader( int nTeam );
 
 	//-----------------------------------------------------------------------------
 	// Scoring
@@ -68,6 +72,7 @@ public:
 	virtual void SetScore( int iScore );
 	virtual int  GetScore( void );
 	virtual void ResetScores( void );
+	virtual void ResetTeamLeaders( void );
 
 	// Round scoring
 	virtual int GetRoundsWon( void ) { return m_iRoundsWon; }
@@ -77,6 +82,13 @@ public:
 	void AwardAchievement( int iAchievement );
 
 	virtual int GetAliveMembers( void );
+
+	float m_flLastPlayerSortTime;
+	static int m_nStaticGGLeader_CT;
+	static int m_nStaticGGLeader_T;
+
+	int m_nLastGGLeader_CT;
+	int m_nLastGGLeader_T;
 
 public:
 	CUtlVector< CTeamSpawnPoint * > m_aSpawnPoints;
@@ -88,6 +100,11 @@ public:
 	CNetworkVar( int, m_iRoundsWon );
 	int		m_iDeaths;
 
+	CNetworkVar( int, m_nGGLeaderEntIndex_CT );
+	CNetworkVar( int, m_nGGLeaderEntIndex_T );
+	bool	m_bGGHasLeader_CT;
+	bool	m_bGGHasLeader_T;
+	
 	// Spawnpoints
 	int		m_iLastSpawn;		// Index of the last spawnpoint used
 

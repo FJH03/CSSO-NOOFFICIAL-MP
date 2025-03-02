@@ -84,6 +84,7 @@ WeaponNameInfo s_weaponNameInfo[] =
 	//knife massive
 	{ WEAPON_KNIFE,				"weapon_knife" },
 	{ WEAPON_KNIFE_T,			"weapon_knife_t" },
+	{ WEAPON_KNIFE_GG,			"weapon_knifegg" },
 	{ WEAPON_KNIFE_CSS,			"weapon_knife_css" },
 	{ WEAPON_KNIFE_KARAMBIT,	"weapon_knife_karambit" },
 	{ WEAPON_KNIFE_FLIP,		"weapon_knife_flip" },

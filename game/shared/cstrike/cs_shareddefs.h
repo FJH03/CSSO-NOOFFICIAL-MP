@@ -99,8 +99,7 @@ namespace GameModes
 
 		DEATHMATCH = CLASSIC_GAMEMODES,
 		FLYING_SCOUTSMAN,
-
-
+		ARMS_RACE,
 
 		NUM_GAMEMODES,
 	};
