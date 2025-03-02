@@ -1400,10 +1400,10 @@ void ClientModeCSNormal::PostRenderVGui()
 			pPanel->LocalToScreen( x, y );
 
 			// Allow for the border.
-			x += 2;
-			y += 5;
-			w -= 4;
-			h -= 10;
+			x += 1;
+			y += 1;
+			w -= 2;
+			h -= 2;
 
 			UpdateImageEntity( NULL, pPanel->m_ModelName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, true );
 			return;
@@ -1421,10 +1421,10 @@ void ClientModeCSNormal::PostRenderVGui()
 			pPanel->GetBounds( x, y, w, h );
 
 			// Allow for the border.
-			x += 2;
-			y += 5;
-			w -= 4;
-			h -= 10;
+			x += 1;
+			y += 1;
+			w -= 2;
+			h -= 2;
 
 			UpdateImageEntity( NULL, NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, false );
 			return;
@@ -1443,10 +1443,10 @@ void ClientModeCSNormal::PostRenderVGui()
 			pPanel->LocalToScreen( x, y );
 
 			// Allow for the border.
-			x += 3;
-			y += 5;
+			x += 1;
+			y += 1;
 			w -= 2;
-			h -= 10;
+			h -= 2;
 
 			UpdateImageEntity( pPanel->m_WeaponName, NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, false );
 			return;
