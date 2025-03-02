@@ -154,19 +154,12 @@ void InitParamsVertexLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** para
 	if ( info.m_nEnvMapLightScaleMinMax != -1 )
 		InitVecParam( info.m_nEnvMapLightScaleMinMax, params, 0.0f, 1.0f );
 	InitFloatParam( info.m_nSeamlessScale, params, 0.0 );
-	InitIntParam( info.m_nEnvmapOptional, params, 0 );
 
 	// handle line art parms
 	InitFloatParam( info.m_nEdgeSoftnessStart, params, 0.5 );
 	InitFloatParam( info.m_nEdgeSoftnessEnd, params, 0.5 );
 	InitFloatParam( info.m_nGlowAlpha, params, 1.0 );
 	InitFloatParam( info.m_nOutlineAlpha, params, 1.0 );
-    
-	// Get rid of the envmap if it's optional for this dx level.
-	if ( info.m_nEnvmapOptional >= 0 && params[info.m_nEnvmapOptional]->IsDefined() && params[info.m_nEnvmapOptional]->GetIntValue() && params[info.m_nEnvmapOptional]->GetIntValue() > g_pHardwareConfig->GetDXSupportLevel() )
-	{
-		params[info.m_nEnvmap]->SetUndefined();
-	}
 
 	// No texture means no self-illum or env mask in base alpha
 	if ( info.m_nBaseTexture != -1 && !params[info.m_nBaseTexture]->IsDefined() )
