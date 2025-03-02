@@ -342,6 +342,7 @@ void ClientModeCSNormal::Init()
 		hintBox->RegisterForRenderGroup("hide_for_round_panel");
 	}
 
+
 	if ( m_CCDeathHandle == INVALID_CLIENT_CCHANDLE )
 	{
 		const char *szRawFile = "materials/correction/cc_death.raw";
@@ -1084,7 +1085,6 @@ bool ShouldRecreateImageEntity( C_BaseAnimating *pEnt, const char *pNewModelName
 }
 
 ConVar cl_simple_player_lighting( "cl_simple_player_lighting", "0", FCVAR_ARCHIVE );
-
 void UpdateImageEntity(
 	const char *szWeaponClassname,
 	const char *szPlayerModel,
@@ -1312,7 +1312,7 @@ void UpdateImageEntity(
 
 	Vector playerPos = vec3_origin;
 	pPlayerModel->SetAbsOrigin( playerPos );
-	pPlayerModel->SetAbsAngles( QAngle( 0, 180, 0 ) );
+	pPlayerModel->SetAbsAngles( vec3_angle );
 
 	// now set the sequence for this player model if needed
 	if ( !bIsClassSelection )
@@ -1321,7 +1321,6 @@ void UpdateImageEntity(
 		if ( pPlayerModel->GetSequence() != sequence )
 			pPlayerModel->SetSequence( sequence );
 	}
-
 	pPlayerModel->FrameAdvance( gpGlobals->frametime );
 
 	// Now draw it.
@@ -1337,7 +1336,7 @@ void UpdateImageEntity(
 	Vector viewOrigin = playerPos + Vector( viewX, viewY, viewZ );
 	view.origin = viewOrigin;
 
-	view.angles.Init();
+	view.angles.Init( 0.0f, 180.0f, 0.0f );
 	view.zNear = VIEW_NEARZ;
 	view.zFar = 1000;
 
@@ -1348,7 +1347,7 @@ void UpdateImageEntity(
 
 	pRenderContext->SetLightingOrigin( vec3_origin );
 	pRenderContext->SetAmbientLight( 0.4, 0.4, 0.4 );
-    
+
 	// PiMoN: let this model have a proper lighting for once!
 	if ( cl_simple_player_lighting.GetBool() )
 	{
@@ -1363,10 +1362,6 @@ void UpdateImageEntity(
 		lights[2].InitSpot( Vector( 66.32f, -17.06f, 124.60f ), Vector( 1.10f, 1.25f, 1.35f ), Vector( 0.0f, 0.0f, 56.0f ), 0.25f, 1.0f );
 		g_pStudioRender->SetLocalLights( 3, lights );
 	}
-
-	// PiMoN: let this model have a proper lighting for once!
-	LightDesc_t spotLight( playerPos + Vector( -128, 0, 128 ), Vector( 1, 1, 1 ), playerPos + Vector( 0, 0, 64 ), 0.5f, 1.0f );
-	g_pStudioRender->SetLocalLights( 1, &spotLight );
 
 	Frustum dummyFrustum;
 	render->Push3DView( view, 0, NULL, dummyFrustum );
