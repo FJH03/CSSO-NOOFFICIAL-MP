@@ -265,9 +265,6 @@ void Con_ToggleConsole_f( void )
 	if (EngineVGui()->IsConsoleVisible())
 	{
 		Con_HideConsole_f();
-
-		// If we hide the console, we also hide the game UI
-		EngineVGui()->HideGameUI();
 	}
 	else
 	{

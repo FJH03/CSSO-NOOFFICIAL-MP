@@ -806,7 +806,7 @@ void CEngineVGui::Init()
 	if ( staticGameConsole )
 	{
 		staticGameConsole->Initialize();
-		staticGameConsole->SetParent(staticGameUIPanel->GetVPanel());
+		//staticGameConsole->SetParent(staticGameUIPanel->GetVPanel());
 	}
 
 	if ( IsX360() )
@@ -817,7 +817,6 @@ void CEngineVGui::Init()
 
 	// show the game UI
 	COM_TimestampedLog( "ActivateGameUI()" );
-	ActivateGameUI();
 
 	if ( staticGameConsole && 
 		!CommandLine()->CheckParm( "-forcestartupmenu" ) && 
@@ -1150,7 +1149,7 @@ bool CEngineVGui::IsConsoleVisible()
 {
 	if ( IsPC() )
 	{
-		return IsGameUIVisible() && staticGameConsole && staticGameConsole->IsConsoleVisible();
+		return staticGameConsole && staticGameConsole->IsConsoleVisible();
 	}
 	else
 	{
