@@ -2969,6 +2969,8 @@ void MarkDLightsOnStaticProps( void )
 			continue;
 		if (l->flags & DLIGHT_NO_STATIC_PROP_ILLUMINATION)
 			continue;
+		if (l->flags & DLIGHT_NO_STATIC_PROP_ILLUMINATION)
+			continue;
 		if (l->die < cl.GetTime() || !l->IsRadiusGreaterThanZero() )
 			continue;
 		// If the light's not active, then continue

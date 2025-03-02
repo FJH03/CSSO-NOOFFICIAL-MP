@@ -1337,26 +1337,6 @@ void UpdateImageEntity(
 	Frustum dummyFrustum;
 	render->Push3DView( view, 0, NULL, dummyFrustum );
 
-	// [mhansen] We don't want to light the model in the world. We want it to 
-	// always be lit normal like even if you are standing in a dark (or green) area
-	// in the world.
-	CMatRenderContextPtr pRenderContext( materials );
-	pRenderContext->SetLightingOrigin( vec3_origin );
-	pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
-
-	static Vector white[6] = 
-	{
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-	};
-
-	g_pStudioRender->SetAmbientLightColors( white );
-	g_pStudioRender->SetLocalLights( 0, NULL );
-
 	modelrender->SuppressEngineLighting( true );
 	float color[3] = { 1.0f, 1.0f, 1.0f };
 	render->SetColorModulation( color );
