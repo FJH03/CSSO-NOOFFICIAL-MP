@@ -160,7 +160,6 @@ void CGameMenuItem::ApplySchemeSettings(IScheme *pScheme)
 	{
 		SetFont( pScheme->GetFont( "MenuLarge", IsProportional() ) );
 	}
-	SetTextInset( 0, 0 );
 
 	KeyValues *kv = GetUserData();
 	if ( kv )
@@ -658,13 +657,6 @@ public:
 					shouldBeVisible = false;
 				}
 
-				// text alignment
-				int align = menuItem->GetAlignmentFromString( kv->GetString( "textAlignment", "" ) );
-				if ( align != -1 )
-				{
-					menuItem->SetContentAlignment( (Label::Alignment) align );
-				}
-
 				menuItem->SetVisible( shouldBeVisible );
 			}
 		}
@@ -772,16 +764,11 @@ CBasePanel::CBasePanel() : Panel(NULL, "BaseGameUIPanel")
 	m_eBackgroundState = BACKGROUND_INITIAL;
 	m_flTransitionStartTime = 0.0f;
 	m_flTransitionEndTime = 0.0f;
-	m_flFrameFadeInTime = 0.5f;
 	m_bRenderingBackgroundTransition = false;
 	m_bFadingInMenus = false;
 	m_bEverActivated = false;
 	m_iGameMenuInset = 24;
 	m_bPlatformMenuInitialized = false;
-	m_bHaveDarkenedBackground = false;
-	m_bHaveDarkenedTitleText = true;
-	m_bForceTitleTextUpdate = true;
-	m_BackdropColor = Color(0, 0, 0, 128);
 	m_pConsoleAnimationController = NULL;
 	m_pConsoleControlSettings = NULL;
 	m_bCopyFrameBuffer = false;
@@ -1078,14 +1065,6 @@ void CBasePanel::PaintBackground()
 		// only valid during loading from level to level
 		m_bUseRenderTargetImage = false;
 	}
-
-	if ( m_flBackgroundFillAlpha )
-	{
-		int swide, stall;
-		surface()->GetScreenSize(swide, stall);
-		surface()->DrawSetColor(0, 0, 0, m_flBackgroundFillAlpha);
-		surface()->DrawFilledRect(0, 0, swide, stall);
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1122,116 +1101,6 @@ void CBasePanel::UpdateBackgroundState()
 	else if ( m_bEverActivated && m_bPlatformMenuInitialized )
 	{
 		SetBackgroundRenderState( BACKGROUND_DISCONNECTED );
-	}
-
-	if ( GameUI().IsConsoleUI() )
-	{
-		if ( !m_ExitingFrameCount && !m_bLevelLoading && !g_hLoadingDialog.Get() && GameUI().IsInLevel() )
-		{
-			// paused
-			if ( m_flBackgroundFillAlpha == 0.0f )
-				m_flBackgroundFillAlpha = 120.0f;
-		}
-		else
-		{
-			m_flBackgroundFillAlpha = 0;
-		}
-
-		// console ui has completely different menu/dialog/fill/fading behavior
-		return;
-	}
-
-	// don't evaluate the rest until we've initialized the menus
-	if ( !m_bPlatformMenuInitialized )
-		return;
-
-	// check for background fill
-	// fill over the top if we have any dialogs up
-	int i;
-	bool bHaveActiveDialogs = false;
-	bool bIsInLevel = GameUI().IsInLevel();
-	for ( i = 0; i < GetChildCount(); ++i )
-	{
-		VPANEL child = ipanel()->GetChild( GetVPanel(), i );
-		if ( child 
-			&& ipanel()->IsVisible( child ) 
-			&& ipanel()->IsPopup( child )
-			&& child != m_pGameMenu->GetVPanel() )
-		{
-			bHaveActiveDialogs = true;
-		}
-	}
-	// see if the base gameui panel has dialogs hanging off it (engine stuff, console, bug reporter)
-	VPANEL parent = GetVParent();
-	for ( i = 0; i < ipanel()->GetChildCount( parent ); ++i )
-	{
-		VPANEL child = ipanel()->GetChild( parent, i );
-		if ( child 
-			&& ipanel()->IsVisible( child ) 
-			&& ipanel()->IsPopup( child )
-			&& child != GetVPanel() )
-		{
-			bHaveActiveDialogs = true;
-		}
-	}
-
-	// check to see if we need to fade in the background fill
-	bool bNeedDarkenedBackground = (bHaveActiveDialogs || bIsInLevel);
-	if ( m_bHaveDarkenedBackground != bNeedDarkenedBackground )
-	{
-		// fade in faster than we fade out
-		float targetAlpha, duration;
-		if ( bNeedDarkenedBackground )
-		{
-			// fade in background tint
-			targetAlpha = m_BackdropColor[3];
-			duration = m_flFrameFadeInTime;
-		}
-		else
-		{
-			// fade out background tint
-			targetAlpha = 0.0f;
-			duration = 0.5f;
-		}
-
-		m_bHaveDarkenedBackground = bNeedDarkenedBackground;
-		vgui::GetAnimationController()->RunAnimationCommand( this, "m_flBackgroundFillAlpha", targetAlpha, 0.0f, duration, AnimationController::INTERPOLATOR_LINEAR );
-	}
-
-	// check to see if the game title should be dimmed
-	// don't transition on level change
-	if ( m_bLevelLoading )
-		return;
-
-	bool bNeedDarkenedTitleText = bHaveActiveDialogs;
-	if (m_bHaveDarkenedTitleText != bNeedDarkenedTitleText || m_bForceTitleTextUpdate)
-	{
-		float targetTitleAlpha, duration;
-		if (bHaveActiveDialogs)
-		{
-			// fade out title text
-			duration = m_flFrameFadeInTime;
-			targetTitleAlpha = 32.0f;
-		}
-		else
-		{
-			// fade in title text
-			duration = 0.5f; 
-			targetTitleAlpha = 255.0f;
-		}
-
-		if ( m_pGameLogo )
-		{
-			vgui::GetAnimationController()->RunAnimationCommand( m_pGameLogo, "alpha", targetTitleAlpha, 0.0f, duration, AnimationController::INTERPOLATOR_LINEAR );
-		}
-
-		// Msg( "animating title (%d => %d at time %.2f)\n", m_pGameMenuButtons[0]->GetAlpha(), (int)targetTitleAlpha, engine->Time());
-		for ( i=0; i<m_pGameMenuButtons.Count(); ++i )
-		{
-			vgui::GetAnimationController()->RunAnimationCommand( m_pGameMenuButtons[i], "alpha", targetTitleAlpha, 0.0f, duration, AnimationController::INTERPOLATOR_LINEAR );
-		}
-		m_bHaveDarkenedTitleText = bNeedDarkenedTitleText;
-		m_bForceTitleTextUpdate = false;
 	}
 }
 
@@ -1489,7 +1358,7 @@ void CBasePanel::DrawBackgroundImage()
 			// goes from [0..255]
 			alpha = (frametime - m_flFadeMenuStartTime) / (m_flFadeMenuEndTime - m_flFadeMenuStartTime) * 255;
 			alpha = clamp( alpha, 0, 255 );
-			m_pGameMenu->SetAlpha( alpha );
+			SetMenuAlpha( alpha );
 			if ( alpha == 255 )
 			{
 				m_bFadingInMenus = false;
@@ -1538,9 +1407,6 @@ void CBasePanel::CreateGameLogo()
 		{
 			SETUP_PANEL( m_pGameLogo );
 			m_pGameLogo->InvalidateLayout( true, true );
-
-			// start invisible
-			m_pGameLogo->SetAlpha( 0 );
 		}
 	}
 	else
@@ -1838,10 +1704,17 @@ void CBasePanel::ApplySchemeSettings(IScheme *pScheme)
 		m_iGameMenuPos.x = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.Menu.X")), true );
 		m_iGameMenuPos.y = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.Menu.Y")) );
 
-		m_iGameMenuWidth = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.Menu.Width")), true );
 		m_iGameMenuInset = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.BottomBorder")) );
+        
+		bool bProportionalWidth = !!atoi( pClientScheme->GetResourceString( "Main.Menu.IsProportional" ) );
+		if ( bProportionalWidth )
+			m_iGameMenuWidth = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString( "Main.Menu.Width")) );
+		else
+			m_iGameMenuWidth = atoi(pClientScheme->GetResourceString( "Main.Menu.Width"));
 
 		m_pGameMenu->SetFont( pClientScheme->GetFont( "GameMenuFont", IsProportional() ) );
+		m_pGameMenu->SetBgColor( pClientScheme->GetColor( "Main.Menu.BgColor", Color( 0, 0, 0, 0 ) ) );
+		m_pGameMenu->SetPaintBackgroundType( 2 ); // Rounded Corner Box
 	}
 	else
 	{
@@ -1859,12 +1732,8 @@ void CBasePanel::ApplySchemeSettings(IScheme *pScheme)
 		m_pGameMenuButtons[i]->SetDepressedColor(buttonColor[i], Color(0, 0, 0, 0));
 	}
 
-	m_flFrameFadeInTime = atof(pScheme->GetResourceString("Frame.TransitionEffectTime"));
-
 	// work out current focus - find the topmost panel
 	SetBgColor(Color(0, 0, 0, 0));
-
-	m_BackdropColor = pScheme->GetColor("mainmenu.backdrop", Color(0, 0, 0, 128));
 
 	char filename[MAX_PATH];
 	if ( IsX360() )
@@ -3820,7 +3689,6 @@ void CBasePanel::SetMenuAlpha(int alpha)
 	{
 		m_pGameMenuButtons[i]->SetAlpha(alpha);
 	}
-	m_bForceTitleTextUpdate = true;
 }
 
 //-----------------------------------------------------------------------------

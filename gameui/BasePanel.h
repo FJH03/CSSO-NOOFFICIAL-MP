@@ -436,14 +436,6 @@ private:
 	bool m_bSinglePlayer;
 	uint m_iGameID;	// matches context value in hl2orange.spa.h
 
-	// background fill transition
-	bool m_bHaveDarkenedBackground;
-	bool m_bHaveDarkenedTitleText;
-	bool m_bForceTitleTextUpdate;
-	float m_flFrameFadeInTime;
-	Color m_BackdropColor;
-	CPanelAnimationVar( float, m_flBackgroundFillAlpha, "m_flBackgroundFillAlpha", "0" );
-
 	// fading to game
 	MESSAGE_FUNC_CHARPTR( RunEngineCommand, "RunEngineCommand", command );
 	MESSAGE_FUNC( FinishDialogClose, "FinishDialogClose" );

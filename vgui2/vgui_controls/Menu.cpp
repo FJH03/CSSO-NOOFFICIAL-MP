@@ -2621,7 +2621,7 @@ void Menu::SetFont( HFont font )
 	m_hItemFont = font;
 	if ( font )
 	{
-		m_iMenuItemHeight = surface()->GetFontTall( font ) + 2;
+		m_iMenuItemHeight = surface()->GetFontTall( font ) + scheme()->GetProportionalScaledValue( 2 );
 	}
 	InvalidateLayout();
 }
