@@ -1340,10 +1340,6 @@ Color CBaseHudChat::GetTextColorForClient( TextColor colorNum, int clientIndex )
 	Color c;
 	switch ( colorNum )
 	{
-	case COLOR_CUSTOM:
-		c = m_ColorCustom;
-		break;
-
 	case COLOR_PLAYERNAME:
 		c = GetClientColor( clientIndex );
 		break;
@@ -1423,7 +1419,7 @@ void CBaseHudChatLine::InsertAndColorizeText( wchar_t *buf, int clientIndex )
 	wchar_t *txt = m_text;
 	int lineLen = wcslen( m_text );
 	Color colCustom;
-	if ( m_text[0] == COLOR_PLAYERNAME || m_text[0] == COLOR_LOCATION || m_text[0] == COLOR_NORMAL || m_text[0] == COLOR_ACHIEVEMENT || m_text[0] == COLOR_CUSTOM || m_text[0] == COLOR_HEXCODE || m_text[0] == COLOR_HEXCODE_ALPHA )
+	if ( m_text[0] == COLOR_PLAYERNAME || m_text[0] == COLOR_LOCATION || m_text[0] == COLOR_NORMAL || m_text[0] == COLOR_ACHIEVEMENT || m_text[0] == COLOR_PENALTY || m_text[0] == COLOR_AWARD || m_text[0] == COLOR_HEXCODE || m_text[0] == COLOR_HEXCODE_ALPHA )
 	{
 		while ( txt && *txt )
 		{
@@ -1434,7 +1430,26 @@ void CBaseHudChatLine::InsertAndColorizeText( wchar_t *buf, int clientIndex )
 
 			switch ( *txt )
 			{
-			case COLOR_CUSTOM:
+			case COLOR_PENALTY:
+				{
+					// save this start
+					range.start = nBytesIn + 1;
+					range.color = g_ColorRed;
+					range.end = lineLen;
+					bFoundColorCode = true;
+				}
+				++txt;
+				break;
+			case COLOR_AWARD:
+				{
+					// save this start
+					range.start = nBytesIn + 1;
+					range.color = Color( 162, 255, 71 );
+					range.end = lineLen;
+					bFoundColorCode = true;
+				}
+				++txt;
+				break;
 			case COLOR_PLAYERNAME:
 			case COLOR_LOCATION:
 			case COLOR_ACHIEVEMENT:

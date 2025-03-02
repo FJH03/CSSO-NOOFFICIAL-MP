@@ -76,9 +76,10 @@ enum TextColor
 	COLOR_PLAYERNAME = 3,
 	COLOR_LOCATION = 4,
 	COLOR_ACHIEVEMENT = 5,
-	COLOR_CUSTOM = 6,		// Will use the most recently SetCustomColor()
+	COLOR_PENALTY = 6,
 	COLOR_HEXCODE = 7,		// Reads the color from the next six characters
 	COLOR_HEXCODE_ALPHA = 8,// Reads the color and alpha from the next eight characters
+	COLOR_AWARD = 9,
 	COLOR_MAX
 };
 
