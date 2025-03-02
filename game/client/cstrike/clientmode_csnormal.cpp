@@ -1372,6 +1372,7 @@ void UpdateImageEntity(
 	render->PopView( dummyFrustum );
 
 	pRenderContext->BindLocalCubemap( NULL );
+	pRenderContext.SafeRelease();
 }
 
 bool WillPanelBeVisible( vgui::VPANEL hPanel )
