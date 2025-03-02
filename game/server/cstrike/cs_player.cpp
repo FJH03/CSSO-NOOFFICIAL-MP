@@ -7113,7 +7113,7 @@ bool CCSPlayer::SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pStart
 			}
 
 				// if we're back to the start of the list
-			if ( pSpawnpoint == pStartSpot )
+			if ( pSpawnpoint == pStartSpot || !pSpawnpoint )
 			{
 				// use the valid but unfortunately visible spot.
 				if ( pSpotValidButVisible != NULL )
@@ -7224,9 +7224,7 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 				}
 			}
 
-			const char* szTSpawnEntName = "info_player_terrorist";
-
-			if ( SelectSpawnSpot( szTSpawnEntName, pSpot ) )
+			if ( SelectSpawnSpot( "info_player_terrorist", pSpot ) )
 			{
 				g_pLastTerroristSpawn = pSpot;
 				goto ReturnSpot;
