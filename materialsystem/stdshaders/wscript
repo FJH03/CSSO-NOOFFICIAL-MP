@@ -132,6 +132,7 @@ def build(bld):
 		'writez_dx9.cpp',
 		'writestencil_dx9.cpp',
 		'eyeball.cpp',
+		'splinerope.cpp',
 		'../../public/tier0/memoverride.cpp'
 #		$Folder	'stdshader_dbg Files', [$X360]
 #		{
