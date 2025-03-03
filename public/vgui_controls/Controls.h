@@ -132,6 +132,7 @@ class TextTooltip;
 class TreeView;
 class CTreeViewListControl;
 class URLLabel;
+class VectorImagePanel;
 class WizardPanel;
 class WizardSubPanel;
 
