@@ -51,7 +51,6 @@ def build(bld):
 		'dmxloader',
 		'vgui_controls',
 		'lunasvg',
-		'plutovg',
 		'matsys_controls',
 		'tier1',
 		'tier2',
