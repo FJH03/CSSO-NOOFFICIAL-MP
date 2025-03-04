@@ -22,7 +22,7 @@ CCSHudWeaponSelection::CCSHudWeaponSelection( const char* pElementName ) : CHudE
 	vgui::Panel *pParent = g_pClientMode->GetViewport();
 	SetParent( pParent );
 
-	SetHiddenBits( HIDEHUD_PLAYERDEAD );
+	SetHiddenBits( HIDEHUD_NOT_OBSERVING_PLAYERS );
 
 	m_flFadeStartTime = 0;
 	m_flUpdateInventoryAt = -1;
@@ -410,7 +410,8 @@ void CCSHudWeaponSelection::UpdatePanelPositions( void )
 		nStartWepSlotPos = MAX_WEAPON_POSITIONS;
 	}
 
-	if ( !C_BasePlayer::GetLocalPlayer() )
+	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pLocalPlayer )
 		return;
 
 	CHudWeaponSelection *pHudSelection = (CHudWeaponSelection *) GET_HUDELEMENT( CHudWeaponSelection );
@@ -419,10 +420,6 @@ void CCSHudWeaponSelection::UpdatePanelPositions( void )
 
 	C_CSPlayer *pPlayer = GetHudPlayer();
 	if ( !pPlayer )
-		return;
-
-	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
-	if ( !pLocalPlayer )
 		return;
 
 	C_WeaponCSBase *pNextWeapon = NULL;
@@ -568,11 +565,6 @@ void CCSHudWeaponSelection::FireGameEvent( IGameEvent *event )
 
 	int nPlayerUserID = pLocalPlayer->GetUserID();
 	int nEventUserID = event->GetInt( "userid" );
-
-	bool bLocalPlayerDeath = false;
-	if ( StringHasPrefix( type, "player_death" ) && nPlayerUserID == nEventUserID )
-		bLocalPlayerDeath = true;
-
 
 	if ( StringHasPrefix( type, "round_start" ) )
 	{
