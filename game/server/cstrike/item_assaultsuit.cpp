@@ -31,6 +31,24 @@ class CItemAssaultSuit : public CItem
 		pPlayer->m_bHasHelmet = true;
 		pPlayer->SetArmorValue( 100 );
 
+		if ( pPlayer->IsAlive() )
+		{
+			CBroadcastRecipientFilter filter;
+			if (pPlayer->GetTeamNumber() == TEAM_CT)
+			{
+				// Play the CT Suit sound
+				EmitSound(filter, entindex(), "Player.EquipArmor_CT");
+
+			}
+			else
+			{
+				// Play the T Suit sound
+				EmitSound(filter, entindex(), "Player.EquipArmor_T");
+			}
+
+			//EmitSound( filter, entindex(), "BaseCombatCharacter.ItemPickup2" );
+		}
+
 		return true;		
 	}
 };

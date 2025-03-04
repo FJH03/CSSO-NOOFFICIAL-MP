@@ -342,6 +342,8 @@ void ClientPrecache( void )
 	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelected" );
 	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelectionClose" );
 	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelectionMoveSlot" );
+	CBaseEntity::PrecacheScriptSound( "Player.EquipArmor_CT" );
+	CBaseEntity::PrecacheScriptSound( "Player.EquipArmor_T" );
 
 	// General legacy temp ents sounds
 	CBaseEntity::PrecacheScriptSound( "Bounce.Glass" );
