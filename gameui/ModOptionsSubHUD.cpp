@@ -53,6 +53,7 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 	m_pSimplePlayerModelLighting = new CLabeledCommandComboBox( this, "SimplePlayerModelLightingComboBox" );
 	m_pHUDColor = new CLabeledCommandComboBox( this, "HUDColorComboBox" );
 	m_pHUDBackgroundAlpha = new CCvarSlider( this, "HUDBackgroundAlphaSlider", "", 0.0f, 1.0f, "cl_hud_background_alpha" );
+	m_pRadarScale = new CCvarSlider( this, "RadarScaleSlider", "", 0.25f, 1.0f, "cl_radar_scale" );
 	m_pAlwaysShowInventory = new CCvarToggleCheckButton( this, "AlwaysShowInventoryCheckbox", "#GameUI_HUD_AlwaysShowInventory", "cl_showloadout" );
 
 	m_pPlayerCountPos->AddItem( "#GameUI_HUD_PlayerCount_Top", "hud_playercount_pos 0" );
@@ -78,6 +79,7 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 	m_pSimplePlayerModelLighting->AddActionSignalTarget( this );
 	m_pHUDColor->AddActionSignalTarget( this );
 	m_pHUDBackgroundAlpha->AddActionSignalTarget( this );
+	m_pRadarScale->AddActionSignalTarget( this );
 	m_pAlwaysShowInventory->AddActionSignalTarget( this );
 
 	LoadControlSettings( "Resource/ModOptionsSubHUD.res" );
@@ -121,6 +123,7 @@ void CModOptionsSubHUD::OnResetData()
 		m_pHUDColor->SetInitialItem( cl_hud_color.GetInt() );
 
 	m_pHUDBackgroundAlpha->Reset();
+	m_pRadarScale->Reset();
 	m_pAlwaysShowInventory->Reset();
 }
 
@@ -134,5 +137,6 @@ void CModOptionsSubHUD::OnApplyChanges()
 	m_pSimplePlayerModelLighting->ApplyChanges();
 	m_pHUDColor->ApplyChanges();
 	m_pHUDBackgroundAlpha->ApplyChanges();
+	m_pRadarScale->ApplyChanges();
 	m_pAlwaysShowInventory->ApplyChanges();
 }

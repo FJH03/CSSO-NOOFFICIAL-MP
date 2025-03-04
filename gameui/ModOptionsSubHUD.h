@@ -45,6 +45,7 @@ private:
 	CLabeledCommandComboBox*	m_pSimplePlayerModelLighting;
 	CLabeledCommandComboBox*	m_pHUDColor;
 	CCvarSlider*				m_pHUDBackgroundAlpha;
+	CCvarSlider*				m_pRadarScale;
 	CCvarToggleCheckButton*		m_pAlwaysShowInventory;
 };
 
