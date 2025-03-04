@@ -453,6 +453,7 @@ public:
 
 	CNetworkVar( bool, m_bHasMovedSinceSpawn ); // Whether player has moved from spawn position
 	CNetworkVar( float, m_fImmuneToDamageTime );	// When gun game spawn damage immunity will expire
+	float m_fImmuneToDamageTimeLast;
 	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune
 	CNetworkVar( bool, m_bMadeFinalGunGameProgressiveKill );
 	CNetworkVar( int, m_iGunGameProgressiveWeaponIndex ); // index of current gun game weapon

@@ -1154,6 +1154,8 @@ C_CSPlayer::C_CSPlayer() :
 
 	m_bOldIsScoped = false;
 
+	m_fImmuneToDamageTimeLast = 0;
+
     m_bPlayingFreezeCamSound = false;
 
 	m_nextTaserShakeTime = 0.0f;
@@ -2631,10 +2633,10 @@ void C_CSPlayer::ClientThink()
 		}
 	}
 
-	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && this == GetLocalPlayer() && IsAlive() && GetObserverMode() == OBS_MODE_NONE )
+	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && IsLocalPlayer() && IsAlive() && GetObserverMode() == OBS_MODE_NONE )
 	{
 		float flTimeLeft = m_fImmuneToDamageTime - gpGlobals->curtime;
-		if ( flTimeLeft >= 0 )
+		if ( m_fImmuneToDamageTimeLast != 0 || flTimeLeft >= 0 )
 		{
 			//wchar_t szNotice[64] = L"";
 			wchar_t wzTime[8] = L"";
@@ -2672,6 +2674,8 @@ void C_CSPlayer::ClientThink()
 			char szLocalized[256];
 			g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof( szLocalized ) );
 			internalCenterPrint->Print( szLocalized );
+
+			m_fImmuneToDamageTimeLast = m_fImmuneToDamageTime;
 		}
 	}
 
