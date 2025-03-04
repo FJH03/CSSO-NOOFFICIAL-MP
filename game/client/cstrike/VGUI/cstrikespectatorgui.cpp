@@ -1153,45 +1153,46 @@ void CCSMapOverview::PaintBackground()
 	int mapInset = GetBorderSize();
 	int pwidth, pheight;
 	GetSize( pwidth, pheight );
-	if ( GetMode() == MAP_MODE_RADAR && m_bRoundRadar )
+	if ( GetMode() == MAP_MODE_RADAR )
 	{
-		// draw a transparent outline first
-		surface()->DrawSetColor( 255, 255, 255, cl_radaralpha.GetInt() * 0.5f );
-		surface()->DrawSetTexture( m_nCircleBackgroundTextureID );
-		surface()->DrawTexturedRect( 0, 0, pwidth, pheight );
-
-		// now draw the actual background
-		Vertex_t points[CIRCLE_SEGMENTS];
-		float invDelta = 2.0f * M_PI / CIRCLE_SEGMENTS;
-		for ( int i = 0; i < CIRCLE_SEGMENTS; ++i )
+		if ( m_bRoundRadar )
 		{
-			float flRadians = i * invDelta;
-			float ca = cos( flRadians );
-			float sa = sin( flRadians );
+			// draw a transparent outline first
+			surface()->DrawSetColor( 255, 255, 255, cl_radaralpha.GetInt() * 0.5f );
+			surface()->DrawSetTexture( m_nCircleBackgroundTextureID );
+			surface()->DrawTexturedRect( 0, 0, pwidth, pheight );
 
-			// Rotate it around the circle
-			float x = pwidth / 2 + ((pwidth - mapInset) / 2 * ca);
-			float y = pheight / 2 + ((pheight - mapInset) / 2 * sa);
-			Vector2D position( x, y );
+			// now draw the actual background
+			Vertex_t points[CIRCLE_SEGMENTS];
+			float invDelta = 2.0f * M_PI / CIRCLE_SEGMENTS;
+			for ( int i = 0; i < CIRCLE_SEGMENTS; ++i )
+			{
+				float flRadians = i * invDelta;
+				float ca = cos( flRadians );
+				float sa = sin( flRadians );
 
-			points[i].m_Position = position;
+				// Rotate it around the circle
+				float x = pwidth / 2 + ((pwidth - mapInset) / 2 * ca);
+				float y = pheight / 2 + ((pheight - mapInset) / 2 * sa);
+				Vector2D position( x, y );
+
+				points[i].m_Position = position;
+			}
+
+			g_pMatSystemSurface->DrawSetColor( GetBgColor() );
+			g_pMatSystemSurface->DrawFilledPolygon( CIRCLE_SEGMENTS, points );
 		}
-
-		g_pMatSystemSurface->DrawSetColor( GetBgColor() );
-		g_pMatSystemSurface->DrawFilledPolygon( CIRCLE_SEGMENTS, points );
-	}
-	else
-	{
-		surface()->DrawSetColor( GetBgColor() );
-		surface()->DrawFilledRect( 0, 0, pwidth, pheight );
+		else
+		{
+			surface()->DrawSetColor( GetBgColor() );
+			surface()->DrawFilledRect( 0, 0, pwidth, pheight );
+		}
 	}
 }
 
 void CCSMapOverview::DrawMapTexture()
 {
 	int alpha = GetMasterAlpha();
-
-	SetPaintBackgroundEnabled( m_bRoundRadar );// no background in big mode
 
 	int textureIDToUse = m_nMapTextureID;
 	if( m_nRadarMapTextureID != -1 && GetMode() == MAP_MODE_RADAR )
@@ -2063,6 +2064,38 @@ void CCSMapOverview::FireGameEvent( IGameEvent *event )
 		playerCS->overrideFadeTime = gpGlobals->curtime + DEATH_ICON_FADE;
 		playerCS->overrideExpirationTime = gpGlobals->curtime + DEATH_ICON_DURATION;
 	}
+	else if ( Q_strcmp(type,"player_spawn") == 0 )
+	{
+		MapPlayer_t *player = GetPlayerByUserID( event->GetInt("userid") );
+
+		if ( !player )
+			return;
+
+		player->health = 0;
+		Q_memset( player->trail, 0, sizeof(player->trail) ); // clear trails
+
+		CSMapPlayer_t *playerCS = GetCSInfoForPlayer(player);
+
+		if ( !playerCS )
+			return;
+
+		playerCS->isDead = false;
+
+		playerCS->overrideFadeTime = -1;
+		playerCS->overrideExpirationTime = -1;
+		playerCS->overrideIcon = -1;
+		playerCS->overrideIconOffscreen = -1;
+		playerCS->overridePosition = Vector( 0, 0, 0 );
+		playerCS->overrideAngle = QAngle( 0, 0, 0 );
+
+		playerCS->timeLastSeen = -1;
+		playerCS->timeFirstSeen = -1;
+		playerCS->isHostage = false;
+
+		playerCS->flashUntilTime = -1;
+		playerCS->nextFlashPeakTime = -1;
+		playerCS->currentFlashAlpha = 0;
+	}
 	else if ( Q_strcmp(type,"player_team") == 0 )
 	{
 		MapPlayer_t *player = GetPlayerByUserID( event->GetInt("userid") );
@@ -2135,6 +2168,7 @@ void CCSMapOverview::UpdateSizeAndPosition()
 			m_vSize.y = w;// Intentionally not 't'.  We need to enforce square-ness to prevent people from seeing more of the map by fiddling their HudLayout
 			break;
 		}
+
 	default:
 		{
 			m_vSize.x = w;
@@ -2278,6 +2312,7 @@ void CCSMapOverview::UpdateFlashes()
 		}
 	}
 }
+
 
 //-----------------------------------------------------------------------------
 int CCSMapOverview::GetIconNumberFromTeamNumber( int teamNumber )
