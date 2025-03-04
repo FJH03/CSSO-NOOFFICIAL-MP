@@ -241,6 +241,7 @@ enum PlayerViewmodelSkinTone
 	BARE_ARM_78,
 	BARE_ARM_PRO_VARF,
 	BARE_ARM_135,
+	BARE_ARM_44,
 };
 
 struct PlayerViewmodelArmConfig
@@ -261,6 +262,10 @@ static PlayerViewmodelArmConfig s_playerViewmodelArmConfigs[] =
 	{ "tm_leet",					BARE_ARM_133,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"",																				"",																						false },
 	{ "tm_jumpsuit_varianta",		BARE_ARM_55,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"models/weapons/v_models/arms/jumpsuit/v_sleeve_jumpsuit.mdl",					"",																						false },
 	{ "tm_jumpsuit",				BARE_ARM_133,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"models/weapons/v_models/arms/jumpsuit/v_sleeve_jumpsuit.mdl",					"",																						false },
+	{ "tm_jungle_raider_varianta",	BARE_ARM_44,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"",																				"",																						false },
+	{ "tm_jungle_raider_variantd",	BARE_ARM_55,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"",																				"",																						false },
+	{ "tm_jungle_raider_variante",	BARE_ARM_66,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"",																				"",																						false },
+	{ "tm_jungle_raider",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"",																				"",																						false },
 	{ "tm_phoenix_varianta",		BARE_ARM_103,		"models/weapons/v_models/arms/glove_fullfinger/v_glove_fullfinger.mdl",				"",																				"",																						false },
 	{ "tm_phoenix_variantb",		BARE_ARM_66,		"models/weapons/v_models/arms/glove_fullfinger/v_glove_fullfinger.mdl",				"",																				"",																						false },
 	{ "tm_phoenix_varianti",		BARE_ARM_103,		"models/weapons/v_models/arms/glove_fullfinger/v_glove_fullfinger.mdl",				"",																				"",																						false },
@@ -292,6 +297,7 @@ static PlayerViewmodelArmConfig s_playerViewmodelArmConfigs[] =
 	{ "ctm_st6_variantk",			BARE_ARM_66,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_st6_v2_variantk.mdl",				"",																						true },
 	{ "ctm_st6_variantl",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_st6_v2_variantl.mdl",				"",																						true },
 	{ "ctm_st6_variantm",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_st6_v2_variantm.mdl",				"",																						true },
+	{ "ctm_st6_variantn",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_st6_v2_variantn.mdl",				"",																						true },
 	{ "ctm_st6",					BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_st6.mdl",							"",																						true },
 	{ "ctm_idf",					BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/idf/v_sleeve_idf.mdl",							"",																						true },
 	{ "ctm_gign",					BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/gign/v_sleeve_gign.mdl",							"",																						true },
@@ -302,15 +308,21 @@ static PlayerViewmodelArmConfig s_playerViewmodelArmConfigs[] =
 	{ "ctm_swat_varianth",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/swat/v_sleeve_swat_gasmask_green.mdl",			"",																						true },
 	{ "ctm_swat_varianti",			BARE_ARM_103,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/swat/v_sleeve_swat_generic.mdl",					"",																						true },
 	{ "ctm_swat_variantj",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/swat/v_sleeve_swat_gasmask_blue.mdl",				"",																						true },
+	{ "ctm_swat_variantk",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/swat/v_sleeve_swat_breecher_variantk.mdl",		"",																						true },
 	{ "ctm_swat",					BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/swat/v_sleeve_swat.mdl",							"",																						true },
 	{ "ctm_gsg9",					BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_blue.mdl",		"models/weapons/v_models/arms/gsg9/v_sleeve_gsg9.mdl",							"",																						true },
-	{ "ctm_sas_variantf",			BARE_ARM_55,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/sas/v_sleeve_sas_ukmtp.mdl",						"",																						true },
+	{ "ctm_sas_variantf",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/sas/v_sleeve_sas_ukmtp.mdl",						"",																						true },
+	{ "ctm_sas_variantg",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/sas/v_sleeve_sas_variantg.mdl",					"",																						true },
 	{ "ctm_sas_old",				BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/sas/v_sleeve_sas_old.mdl",						"",																						true },
 	{ "ctm_sas",					BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/sas/v_sleeve_sas.mdl",							"",																						true },
+	{ "ctm_gendarmerie_variantc",	BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/gendarmerie/v_sleeve_gendarmerie_variantc.mdl",	"",																						true },
+	{ "ctm_gendarmerie",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/gendarmerie/v_sleeve_gendarmerie.mdl",			"",																						true },
 	{ "ctm_fbi_variantb",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/fbi/v_sleeve_fbi_dark.mdl",						"",																						true },
 	{ "ctm_fbi_variantc",			BARE_ARM_78,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/fbi/v_sleeve_fbi.mdl",							"",																						true },
 	{ "ctm_fbi_variantf",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/fbi/v_sleeve_fbi_green.mdl",						"",																						true },
 	{ "ctm_fbi_variantg",			BARE_ARM_78,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/fbi/v_sleeve_fbi_light_green.mdl",				"",																						true },
+	{ "ctm_diver_variantc",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"",																				"",																						false },
+	{ "ctm_diver",					BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/diver/v_sleeve_diver_wetsuit.mdl",				"",																						true },
 	{ "ctm_fbi_varianth",			BARE_ARM_103,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/fbi/v_sleeve_fbi_gray.mdl",						"",																						true },
 	{ "ctm_fbi_old",				BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/fbi/v_sleeve_fbi_old.mdl",						"",																						true },
 	{ "ctm_fbi",					BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle_black.mdl",		"models/weapons/v_models/arms/fbi/v_sleeve_fbi.mdl",							"",																						true },
@@ -456,8 +468,8 @@ struct CCSClassInfo
 
 const CCSClassInfo* GetCSClassInfo( int i );
 
-#define MAX_AGENTS_CT 28
-#define MAX_AGENTS_T 32
+#define MAX_AGENTS_CT 39
+#define MAX_AGENTS_T 42
 
 struct CCSAgentInfo
 {
