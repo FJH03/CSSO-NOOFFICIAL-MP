@@ -1396,6 +1396,7 @@ void CCSMapOverview::DrawBomb()
 	DrawIconCS(bombIcon, bombIcon, m_bomb.position, m_flIconSize, 0, alpha);
 }
 
+#define ICON_SCALE_FACTOR 0.25
 bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector pos, float scale, float angle, int alpha, bool allowRotation, const char *text, Color *textColor, float status, Color *statusColor )
 {
 	if( GetMode() == MAP_MODE_RADAR  &&  cl_radaralpha.GetInt() == 0 )
@@ -1404,8 +1405,9 @@ bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector p
 	if( alpha <= 0 )
 		return false;
 
-	// scale the icons
-	scale *= 1.0f / (m_fZoom * m_fFullZoom * 2);
+	// magic trick to make the icons appear the same on different map scale
+	scale *= m_fMapScale;
+	scale *= ICON_SCALE_FACTOR;
 
 	Vector2D pospanel = WorldToMap( pos );
 	pospanel = MapToPanel( pospanel );
