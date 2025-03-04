@@ -16,37 +16,29 @@ def configure(conf):
 
 def build(bld):
 	source = [
-'plutovg.c',
-'plutovg-paint.c',
-'plutovg-geometry.c',
-'plutovg-blend.c',
-'plutovg-rle.c',
-'plutovg-dash.c',
-'plutovg-ft-raster.c',
-'plutovg-ft-stroker.c',
-'plutovg-ft-math.c',
-'lunasvg.cpp',
-'element.cpp',
-'property.cpp',
-'parser.cpp',
-'layoutcontext.cpp',
-'canvas.cpp',
-'clippathelement.cpp',
-'defselement.cpp',
-'gelement.cpp',
-'geometryelement.cpp',
-'graphicselement.cpp',
-'maskelement.cpp',
-'markerelement.cpp',
-'paintelement.cpp',
-'stopelement.cpp',
-'styledelement.cpp',
-'styleelement.cpp',
-'svgelement.cpp',
-'symbolelement.cpp',
-'useelement.cpp',
+    "plutovg-blend.c",
+    "plutovg-canvas.c",
+    "plutovg-font.c",
+    "plutovg-matrix.c",
+    "plutovg-paint.c",
+    "plutovg-path.c",
+    "plutovg-rasterize.c",
+    "plutovg-surface.c",
+    "plutovg-ft-math.c",
+    "plutovg-ft-raster.c",
+    "plutovg-ft-stroker.c",
+    "lunasvg.cpp",
+    "graphics.cpp",
+    "svgelement.cpp",
+    "svggeometryelement.cpp",
+    "svglayoutstate.cpp",
+    "svgpaintelement.cpp",
+    "svgparser.cpp",
+    "svgproperty.cpp",
+    "svgrenderstate.cpp",
+    "svgtextelement.cpp"
 	]
-	
+
 	if bld.env.DEST_OS == 'win32':
 		source += [
 		]
@@ -62,7 +54,7 @@ def build(bld):
 	defines = ['RAD_TELEMETRY_DISABLED']
 
 	libs = []
-	
+
 	bld.stlib(
 		source   = source,
 		target   = PROJECT_NAME,
