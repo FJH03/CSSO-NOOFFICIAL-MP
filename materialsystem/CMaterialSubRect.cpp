@@ -1003,6 +1003,30 @@ static IMaterialVar* CreateMatrixMaterialVarFromKeyValue( IMaterial* pMaterial, 
 	Vector2D scale, center;
 	float angle;
 	Vector2D translation;
+
+	//scan for pre-rotation scale and translation with assumed center syntax
+	count = sscanf( pScan, " scale %f %f translate %f %f rotate %f",
+		&scale.x, &scale.y, &translation.x, &translation.y, &angle );
+	if (count == 5)
+	{
+		VMatrix temp;
+
+		MatrixBuildTranslation( mat, translation.x - 0.5, translation.y - 0.5, 0.0f );
+		MatrixBuildScale( temp, scale.x, scale.y, 1.0f );
+		MatrixMultiply( mat, temp, mat );
+		MatrixBuildRotateZ( temp, angle );
+		MatrixMultiply( mat, temp, mat );
+
+		Vector2D vOffset;
+		vOffset.Init( 0.5f / ( scale.x != 0 ? scale.x : 1.0 ), 0.5f / ( scale.y != 0 ? scale.y : 1.0 ) );
+		Vector2DRotate( vOffset, -angle, vOffset );
+
+		MatrixBuildTranslation( temp, vOffset.x, vOffset.y, 0.0f );
+		MatrixMultiply( mat, temp, mat );
+
+		return IMaterialVar::Create( pMaterial, pKeyValue->GetName(), mat );
+	}
+	
 	count = sscanf( pScan, " center %f %f scale %f %f rotate %f translate %f %f",
 		&center.x, &center.y, &scale.x, &scale.y, &angle, &translation.x, &translation.y );
 	if (count != 7)
