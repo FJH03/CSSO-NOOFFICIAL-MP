@@ -18,6 +18,7 @@
 #include <vgui_controls/Label.h>
 #include <vgui_controls/EditablePanel.h>
 #include <vgui_controls/ProgressBar.h>
+#include <vgui_controls/VectorImagePanel.h>
 
 using namespace vgui;
 
@@ -168,12 +169,9 @@ class CHudHealthArmor : public CHudElement, public EditablePanel
 public:
 	CHudHealthArmor( const char *pElementName );
 	virtual void Init( void );
-	virtual void VidInit( void );
 	virtual void Reset( void );
 	virtual void OnThink();
 
-	virtual void Paint( void );
-	virtual void ApplySchemeSettings( IScheme *scheme );
 	virtual void ApplySettings( KeyValues *inResourceData );
 
 private:
@@ -182,9 +180,9 @@ private:
 	int		m_iHealth;
 	int		m_iArmor;
 
-	CHudTexture	*m_pHealthIcon;
-	CHudTexture	*m_pArmorIcon;
-	CHudTexture	*m_pArmorHelmetIcon;
+	VectorImagePanel	*m_pHealthIcon;
+	VectorImagePanel	*m_pArmorIcon;
+	VectorImagePanel	*m_pHelmetIcon;
 	// TODO: if adding heavy armor, it has a separate, bigger armor icon
 
 	Label		*m_pHealthLabel;
@@ -231,6 +229,10 @@ CHudHealthArmor::CHudHealthArmor( const char *pElementName ) : CHudElement( pEle
 	m_iOriginalWide = 0;
 	m_iOriginalTall = 0;
 
+	m_pHealthIcon = new VectorImagePanel( this, "HealthIcon" );
+	m_pArmorIcon = new VectorImagePanel( this, "ArmorIcon" );
+	m_pHelmetIcon = new VectorImagePanel( this, "HelmetIcon" );
+
 	m_pHealthLabel = new Label( this, "HealthLabel", "" );
 	m_pArmorLabel = new Label( this, "ArmorLabel", "" );
 	m_pSimpleArmorLabel = new Label( this, "SimpleArmorLabel", "" );
@@ -252,24 +254,6 @@ void CHudHealthArmor::Init()
 	m_flBackgroundAlpha = 0.0f;
 }
 
-void CHudHealthArmor::ApplySchemeSettings( IScheme *scheme )
-{
-	BaseClass::ApplySchemeSettings( scheme );
-
-	if( !m_pHealthIcon )
-	{
-		m_pHealthIcon = gHUD.GetIcon( "health_icon" );
-	}
-	if ( !m_pArmorIcon )
-	{
-		m_pArmorIcon = gHUD.GetIcon( "shield_bright" );
-	}
-	if ( !m_pArmorHelmetIcon )
-	{
-		m_pArmorHelmetIcon = gHUD.GetIcon( "shield_kevlar_bright" );
-	}
-}
-
 void CHudHealthArmor::ApplySettings( KeyValues *inResourceData )
 {
 	BaseClass::ApplySettings( inResourceData );
@@ -283,13 +267,6 @@ void CHudHealthArmor::ApplySettings( KeyValues *inResourceData )
 void CHudHealthArmor::Reset()
 {
 	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence("HealthRestored");
-}
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-void CHudHealthArmor::VidInit()
-{
 }
 
 //-----------------------------------------------------------------------------
@@ -311,6 +288,10 @@ void CHudHealthArmor::OnThink()
 
 				m_pArmorLabel->SetVisible( true );
 				m_pSimpleArmorLabel->SetVisible( false );
+
+				m_pHealthIcon->SetPos( health_icon_xpos, health_icon_ypos );
+				m_pArmorIcon->SetPos( armor_icon_xpos, armor_icon_ypos );
+				m_pHelmetIcon->SetPos( armor_icon_xpos, armor_icon_ypos );
 				break;
 
 			case HUD_STYLE_SIMPLE:
@@ -321,6 +302,10 @@ void CHudHealthArmor::OnThink()
 
 				m_pArmorLabel->SetVisible( false );
 				m_pSimpleArmorLabel->SetVisible( true );
+
+				m_pHealthIcon->SetPos( simple_health_icon_xpos, simple_health_icon_ypos );
+				m_pArmorIcon->SetPos( simple_armor_icon_xpos, simple_armor_icon_ypos );
+				m_pHelmetIcon->SetPos( simple_armor_icon_xpos, simple_armor_icon_ypos );
 				break;
 		}
 	}
@@ -335,12 +320,12 @@ void CHudHealthArmor::OnThink()
 	int realHealth = 0;
 	int realArmor = 0;
 	C_CSPlayer *local = C_CSPlayer::GetLocalCSPlayer();
-	if ( local )
-	{
-		// Never below zero
-		realHealth = MAX( local->GetHealth(), 0 );
-		realArmor = MAX( local->ArmorValue(), 0 );
-	}
+	if ( !local )
+		return;
+	
+	// Never below zero
+	realHealth = MAX( local->GetHealth(), 0 );
+	realArmor = MAX( local->ArmorValue(), 0 );
 
 	// Only update the fade if we've changed health
 	if ( realHealth != m_iHealth )
@@ -375,60 +360,6 @@ void CHudHealthArmor::OnThink()
 		m_pSimpleArmorLabel->SetText( szArmorText );
 		m_pArmorProgress->SetProgress( clamp( m_iArmor / 100.0f, 0.0f, 1.0f ) );
 	}
-}
 
-void CHudHealthArmor::Paint( void )
-{
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-	if ( !pPlayer )
-		return;
-
-	if ( m_pHealthIcon )
-	{
-		switch ( m_iStyle )
-		{
-			case HUD_STYLE_DEFAULT:
-				m_pHealthIcon->DrawSelf( health_icon_xpos, health_icon_ypos, m_clrHealthIconFg );
-				break;
-
-			case HUD_STYLE_SIMPLE:
-				m_pHealthIcon->DrawSelf( simple_health_icon_xpos, simple_health_icon_ypos, m_clrHealthIconFg );
-				break;
-		}
-	}
-	if ( pPlayer->HasHelmet() && m_iArmor > 0 )
-	{
-		if ( m_pArmorHelmetIcon )
-		{
-			switch ( m_iStyle )
-			{
-				case HUD_STYLE_DEFAULT:
-					m_pArmorHelmetIcon->DrawSelf( armor_icon_xpos, armor_icon_ypos, m_clrArmorIconFg );
-					break;
-
-				case HUD_STYLE_SIMPLE:
-					m_pArmorHelmetIcon->DrawSelf( simple_armor_icon_xpos, simple_armor_icon_ypos, m_clrArmorIconFg );
-					break;
-			}
-		}
-	}
-	else
-	{
-		if ( m_pArmorIcon )
-		{
-			switch ( m_iStyle )
-			{
-				case HUD_STYLE_DEFAULT:
-					m_pArmorIcon->DrawSelf( armor_icon_xpos, armor_icon_ypos, m_clrArmorIconFg );
-					break;
-
-				case HUD_STYLE_SIMPLE:
-					m_pArmorIcon->DrawSelf( simple_armor_icon_xpos, simple_armor_icon_ypos, m_clrArmorIconFg );
-					break;
-			}
-		}
-	}
-
-	//draw the health icon
-	BaseClass::Paint();
+	m_pHelmetIcon->SetVisible( local->HasHelmet() );
 }
