@@ -225,7 +225,7 @@ void CHudAmmo::OnThink()
 			m_bBurstMode = m_pActiveWeapon->IsInBurstMode();
 			m_pBurstIcon->SetTexture( m_bBurstMode ? "materials/vgui/hud/svg/bullet_burst.svg" : "materials/vgui/hud/svg/bullet_burst_outline.svg" );
 		}
-
+	}
 	// don't do it every frame, only do it when needed
 	if ( m_bIsExhaustible && (m_iStyle == 0) )
 	{
