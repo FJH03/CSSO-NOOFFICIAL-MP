@@ -111,6 +111,7 @@ ConVar cl_ragdoll_crumple( "cl_ragdoll_crumple", "1" );
 
 ConVar cl_dm_buyrandomweapons( "cl_dm_buyrandomweapons", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Player will automatically receive a random weapon on spawn in deathmatch if this is set to 1 (otherwise, they will receive the last weapon)" );
 ConVar cl_hud_background_alpha( "cl_hud_background_alpha", "0.5", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "", true, 0.0f, true, 1.0f );
+ConVar cl_hud_healthammo_style( "cl_hud_healthammo_style", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "" );
 
 const float CycleLatchTolerance = 0.15;	// amount we can diverge from the server's cycle before we're corrected
 

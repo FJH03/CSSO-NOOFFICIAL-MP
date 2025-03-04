@@ -39,7 +39,7 @@ protected:
 
 private:
 	CLabeledCommandComboBox*	m_pPlayerCountPos;
-	CLabeledCommandComboBox*	m_pHealthArmorStyle;
+	CLabeledCommandComboBox*	m_pHealthAmmoStyle;
 	CLabeledCommandComboBox*	m_pSimplePlayerModelLighting;
 };
 

@@ -31,17 +31,6 @@ typedef struct wrect_s
 	int bottom;
 } wrect_t;
 
-#ifdef CSTRIKE_DLL
-enum HudStyle_t
-{
-	HUD_STYLE_DEFAULT = 0,
-	HUD_STYLE_SIMPLE,
-	//HUD_STYLE_LEGACY,
-
-	HUD_STYLE_MAX = HUD_STYLE_SIMPLE
-};
-#endif
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------

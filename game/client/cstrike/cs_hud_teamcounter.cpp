@@ -13,6 +13,7 @@
 #include "c_cs_team.h"
 #include "c_cs_playerresource.h"
 #include "cs_gamerules.h"
+#include <vgui_controls/AnimationController.h>
 #include <vgui_controls/EditablePanel.h>
 #include <vgui_controls/Label.h>
 #include <vgui_controls/ImagePanel.h>
@@ -28,9 +29,11 @@ class CHudTeamCounter: public CHudElement, public EditablePanel
 
 public:
 	CHudTeamCounter( const char *pElementName );
+	virtual void Init( void );
 	virtual void ApplySettings( KeyValues *inResourceData );
+	virtual void Reset( void );
 	virtual bool ShouldDraw();
-	virtual void Think();
+	virtual void OnThink();
 
 private:
 	Label	*m_pCTWinCounterLabel;
@@ -43,9 +46,10 @@ private:
 	ImagePanel	*m_pCTSkullImage;
 	ImagePanel	*m_pTSkullImage;
 
+	int m_iRoundTime;
+
 	int m_iOriginalXPos;
 	int m_iOriginalYPos;
-
 	bool m_bIsAtTheBottom;
 };
 
@@ -57,8 +61,6 @@ CHudTeamCounter::CHudTeamCounter( const char *pElementName ): CHudElement( pElem
 	SetParent( pParent );
 
 	SetHiddenBits( HIDEHUD_PLAYERDEAD );
-
-	m_bIsAtTheBottom = false;
 
 	m_pCTWinCounterLabel = new Label( this, "CTWinCounterLabel", "0" );
 	m_pCTAliveCounterLabel = new Label( this, "CTAliveCounterLabel", "0" );
@@ -73,11 +75,23 @@ CHudTeamCounter::CHudTeamCounter( const char *pElementName ): CHudElement( pElem
 	LoadControlSettings( "resource/hud/teamcounter.res" );
 }
 
+void CHudTeamCounter::Init( void )
+{
+	m_iRoundTime = 0;
+
+	m_bIsAtTheBottom = false;
+}
+
 void CHudTeamCounter::ApplySettings( KeyValues *inResourceData )
 {
 	BaseClass::ApplySettings( inResourceData );
 
 	GetPos( m_iOriginalXPos, m_iOriginalYPos );
+}
+
+void CHudTeamCounter::Reset()
+{
+	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "RoundTimerReset" );
 }
 
 bool CHudTeamCounter::ShouldDraw()
@@ -92,7 +106,7 @@ bool CHudTeamCounter::ShouldDraw()
 	return true;
 }
 
-void CHudTeamCounter::Think()
+void CHudTeamCounter::OnThink()
 {
 	if ( m_bIsAtTheBottom != hud_playercount_pos.GetBool() )
 	{
@@ -111,10 +125,18 @@ void CHudTeamCounter::Think()
 
 	C_CSTeam *teamCT = GetGlobalCSTeam( TEAM_CT );
 	C_CSTeam *teamT = GetGlobalCSTeam( TEAM_TERRORIST );
+
+	wchar_t unicode[8];
 	if ( teamCT )
-		m_pCTWinCounterLabel->SetText( UTIL_VarArgs( "%d", teamCT->Get_Score() ) );
+	{
+		V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", teamCT->Get_Score() );
+		m_pCTWinCounterLabel->SetText( unicode );
+	}
 	if ( teamT )
-		m_pTWinCounterLabel->SetText( UTIL_VarArgs( "%d", teamT->Get_Score() ) );
+	{
+		V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", teamT->Get_Score() );
+		m_pCTWinCounterLabel->SetText( unicode );
+	}
 
 	if ( g_PR )
 	{
@@ -133,8 +155,11 @@ void CHudTeamCounter::Think()
 			}
 		}
 
-		m_pCTAliveCounterLabel->SetText( UTIL_VarArgs( "%d", iCTCounter ) );
-		m_pTAliveCounterLabel->SetText( UTIL_VarArgs( "%d", iTCounter ) );
+		V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", iCTCounter );
+		m_pCTAliveCounterLabel->SetText( unicode );
+
+		V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", iTCounter );
+		m_pTAliveCounterLabel->SetText( unicode );
 
 		m_pCTAliveCounterLabel->SetVisible( iCTCounter > 0 );
 		m_pCTAliveTextLabel->SetVisible( iCTCounter > 0 );
@@ -148,25 +173,32 @@ void CHudTeamCounter::Think()
 	if ( !pRules )
 		return;
 
-	int iTimer = (int) ceil( pRules->GetRoundRemainingTime() );
+	if ( m_iRoundTime < (int) ceil( pRules->GetRoundRemainingTime() ) )
+		g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "RoundTimerReset" );
+
+	m_iRoundTime = (int) ceil( pRules->GetRoundRemainingTime() );
 
 	if ( pRules->IsWarmupPeriod() && !pRules->IsWarmupPeriodPaused() )
 	{
-		iTimer = (int) ceil( pRules->GetWarmupRemainingTime() );
+		m_iRoundTime = (int) ceil( pRules->GetWarmupRemainingTime() );
 	}
 	if ( pRules->IsFreezePeriod() )
 	{
-		// in freeze period countdown to round start time
-		iTimer = (int) ceil( pRules->GetRoundStartTime() - gpGlobals->curtime );
+		{
+			// in freeze period countdown to round start time
+			m_iRoundTime = (int) ceil( pRules->GetRoundStartTime() - gpGlobals->curtime );
+		}
 	}
 
-	if ( iTimer < 0 )
-		iTimer = 0;
+	if ( m_iRoundTime < 0 )
+		m_iRoundTime = 0;
 
-	int iMinutes = iTimer / 60;
-	int iSeconds = iTimer % 60;
-	
-	wchar_t unicode[8];
+	if ( m_iRoundTime <= 10 )
+		g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "RoundTimerLow" );
+
+	int iMinutes = m_iRoundTime / 60;
+	int iSeconds = m_iRoundTime % 60;
+
 	V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d : %.2d", iMinutes, iSeconds );
 	m_pRoundTimerLabel->SetText( unicode );
 }

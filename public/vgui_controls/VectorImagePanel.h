@@ -32,10 +32,14 @@ public:
 	virtual void Paint();
 
 	void SetTexture( const char *szFilePath );
+	void SetRepeatsCount( int repeats ) { m_nRepeatsCount = repeats; }
 	void DestroyTexture();
 
 private:
-	int	m_nTextureId;
+	int m_nTextureId;
+	int m_iRenderSize[2];
+	int m_iRepeatMargin[2];
+	int m_nRepeatsCount; // how many times we need to render it over and over?
 };
 
 }
