@@ -109,8 +109,9 @@ void VectorImagePanel::Paint()
 	if ( m_nTextureId == -1 )
 		return;
 
-	int wide, tall;
-	vgui::surface()->DrawGetTextureSize( m_nTextureId, wide, tall );
+	int wide, tall, textureWide, textureTall;
+	GetSize( wide, tall );
+	vgui::surface()->DrawGetTextureSize( m_nTextureId, textureWide, textureTall );
 
 	vgui::surface()->DrawSetTexture( m_nTextureId );
 	vgui::surface()->DrawSetColor( GetFgColor() );
@@ -118,7 +119,19 @@ void VectorImagePanel::Paint()
 	g_pMatSystemSurface->DisableClipping( true );
 	for ( int i = 0; i < m_nRepeatsCount; i++ )
 	{
-		vgui::surface()->DrawTexturedRect( m_iRepeatMargin[0] * i, m_iRepeatMargin[1] * i, (m_iRepeatMargin[0] * i) + wide, (m_iRepeatMargin[1] * i) + tall);
+		// PiMoN TODO: this is some brutal hackery to only get the needed rect size to render instead of the
+		// entire texture which often might have lots of empty space that sometimes can instead be emo-pattern
+		// tldr: source needs power-of-2 texture so for that it fills the empty space either with nothing (good)
+		// or emo pattern (bad) and I couldnt understand why
+		int x0 = m_iRepeatMargin[0] * i;
+		int x1 = x0 + wide;
+		int y0 = m_iRepeatMargin[1] * i;
+		int y1 = y0 + tall;
+		float texs0 = 0.0f; // xpos / texture wide, always 0
+		float text0 = 0.0f; // ypos / texture tall, always 0
+		float texs1 = (float)wide / (float)textureWide;
+		float text1 = (float)tall / (float)textureTall;
+		vgui::surface()->DrawTexturedSubRect( x0, y0, x1, y1, texs0, text0, texs1, text1 );
 	}
 	g_pMatSystemSurface->DisableClipping( false );
 }
