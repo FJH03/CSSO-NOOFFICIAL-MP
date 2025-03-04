@@ -342,12 +342,7 @@ void CHudHealthArmor::OnThink()
 	// Only update the fade if we've changed health
 	if ( realHealth != m_iHealth )
 	{
-		if ( realHealth > m_iHealth )
-		{
-			// round restarted, we have 100 again
-			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( gHUD.GetSequenceNameForHUDColor( "HealthRestored", m_iHUDColor ) );
-		}
-		else if ( realHealth <= 20 )
+		if ( realHealth <= 20 )
 		{
 			// we are badly injured
 			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "HealthLow" );
@@ -356,6 +351,11 @@ void CHudHealthArmor::OnThink()
 		{
 			// took a hit
 			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( gHUD.GetSequenceNameForHUDColor( "HealthTookDamage", m_iHUDColor ) );
+		}
+		else
+		{
+			// round restarted, we have 100 again
+			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( gHUD.GetSequenceNameForHUDColor( "HealthRestored", m_iHUDColor ) );
 		}
 
 		m_iHealth = realHealth;
