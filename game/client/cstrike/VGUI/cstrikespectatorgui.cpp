@@ -671,6 +671,7 @@ CCSMapOverview::CCSMapOverview( const char *pElementName ) : BaseClass( pElement
 	m_nRadarMapTextureID = -1;
 	m_nCircleBackgroundTextureID = -1;
 	m_nCircleOverlayTextureID = -1;
+	m_nSquareOverlayTextureID = -1;
 
 	g_pMapOverview = this;  // for cvars access etc
 
@@ -693,6 +694,11 @@ void CCSMapOverview::Init( void )
 	{
 		m_nCircleOverlayTextureID = surface()->CreateNewTextureID();
 		surface()->DrawSetTextureFile( m_nCircleOverlayTextureID, "vgui/hud/circle_radar_overlay", true, false );
+	}
+	if ( m_nSquareOverlayTextureID == -1 )
+	{
+		m_nSquareOverlayTextureID = surface()->CreateNewTextureID();
+		surface()->DrawSetTextureFile( m_nSquareOverlayTextureID, "vgui/hud/square_radar_overlay", true, false );
 	}
 
 	// register for events as client listener
@@ -1238,35 +1244,35 @@ void CCSMapOverview::DrawMapTexture()
 
 	if ( GetMode() == MAP_MODE_RADAR && m_bRoundRadar )
 	{
-		Vertex_t points[CIRCLE_SEGMENTS];
-		float invDelta = 2.0f * M_PI / CIRCLE_SEGMENTS;
-		for ( int i = 0; i < CIRCLE_SEGMENTS; ++i )
-		{
-			float flRadians = i * invDelta;
-			float ca = cos( flRadians );
-			float sa = sin( flRadians );
-
-			// Rotate it around the circle
-			float x = pwidth / 2 + ((pwidth - mapInset) / 2 * ca);
-			float y = pheight / 2 + ((pheight - mapInset) / 2 * sa);
-			Vector2D position( x, y );
-			Vector2D texCoord( PanelToMap( position ) );
-
-			points[i].m_Position = position;
-			points[i].m_TexCoord = texCoord / OVERVIEW_MAP_SIZE;
-		}
-
 		if ( textureIDToUse > 0 )
 		{
+			Vertex_t points[CIRCLE_SEGMENTS];
+			float invDelta = 2.0f * M_PI / CIRCLE_SEGMENTS;
+			for ( int i = 0; i < CIRCLE_SEGMENTS; ++i )
+			{
+				float flRadians = i * invDelta;
+				float ca = cos( flRadians );
+				float sa = sin( flRadians );
+
+				// Rotate it around the circle
+				float x = pwidth / 2 + ((pwidth - mapInset) / 2 * ca);
+				float y = pheight / 2 + ((pheight - mapInset) / 2 * sa);
+				Vector2D position( x, y );
+				Vector2D texCoord( PanelToMap( position ) );
+
+				points[i].m_Position = position;
+				points[i].m_TexCoord = texCoord / OVERVIEW_MAP_SIZE;
+			}
+
 			surface()->DrawSetColor( 255, 255, 255, alpha );
 			surface()->DrawSetTexture( textureIDToUse );
 			surface()->DrawTexturedPolygon( CIRCLE_SEGMENTS, points );
-		}
 
-		// last, draw an overlay texture
-		surface()->DrawSetTexture( m_nCircleOverlayTextureID );
-		surface()->DrawSetColor( 255, 255, 255, 255 );
-		surface()->DrawTexturedRect( 0, 0, pwidth, pheight );
+			// last, draw an overlay texture
+			surface()->DrawSetTexture( m_nCircleOverlayTextureID );
+			surface()->DrawSetColor( 255, 255, 255, 255 );
+			surface()->DrawTexturedRect( 0, 0, pwidth, pheight );
+		}
 	}
 	else
 	{
@@ -1302,6 +1308,11 @@ void CCSMapOverview::DrawMapTexture()
 			surface()->DrawSetColor( 255, 255, 255, alpha );
 			surface()->DrawSetTexture( textureIDToUse );
 			surface()->DrawTexturedPolygon( 4, points );
+
+			// last, draw an overlay texture
+			surface()->DrawSetTexture( m_nSquareOverlayTextureID );
+			surface()->DrawSetColor( 255, 255, 255, 255 );
+			surface()->DrawTexturedRect( 0, 0, pwidth, pheight );
 		}
 	}
 }
@@ -2443,6 +2454,9 @@ int CCSMapOverview::GetMasterAlpha( void )
 int CCSMapOverview::GetBorderSize( void )
 {
 	if ( GetMode() == MAP_MODE_OFF )
+		return 0;
+
+	if ( !m_bRoundRadar )
 		return 0;
 
 	return m_nBorderSize;
