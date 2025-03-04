@@ -2065,6 +2065,88 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 		}
 
 		HandleOutOfAmmoKnifeKills( pAttackerPlayer, pAttackerWeapon );
+	
+		// here we figure out if the attacker saved another person
+		Vector forward;
+		AngleVectors( EyeAngles(), &forward, NULL, NULL);
+		CTeam *pAttackerTeam = GetGlobalTeam( pAttackerPlayer->GetTeamNumber() );
+		if ( pAttackerTeam && !( m_LastDamageType & DMG_FALL ) && !m_wasNotKilledNaturally )
+		{
+			for ( int iPlayer = 0; iPlayer < pAttackerTeam->GetNumPlayers(); iPlayer++ )
+			{
+				CCSPlayer *pPlayer = ToCSPlayer( pAttackerTeam->GetPlayer( iPlayer ) );
+				if ( !pPlayer || pAttackerPlayer == this || pPlayer == this || pPlayer == pAttackerPlayer )
+					continue;
+
+				if ( pAttackerPlayer->IsOtherEnemy( pPlayer->entindex() ) )
+					continue;
+
+				Assert( pPlayer->GetTeamNumber() == pAttackerTeam->GetTeamNumber() );
+
+				if ( pPlayer->m_lifeState == LIFE_ALIVE )
+				{
+					Vector toAimSpot = pPlayer->EyePosition() - EyePosition();
+					toAimSpot.NormalizeInPlace();
+					float flKillerCone = DotProduct( toAimSpot, forward );
+					// aiming tolerance depends on how close the target is - closer targets subtend larger angles
+					float aimTolerance = 0.8f;
+					if ( flKillerCone >= aimTolerance )
+					{
+						// the target was aiming at this player, now do a quick trace to them to see if they could actually shoot them
+						trace_t result;
+						UTIL_TraceLine( EyePosition(), pPlayer->EyePosition(), MASK_SOLID, this, COLLISION_GROUP_NONE, &result );
+						if ( !result.m_pEnt || result.m_pEnt != pPlayer )
+							continue;
+
+						if ( GetActiveCSWeapon() )
+						{
+							// if they are holding a grenade or the c4, don't count it
+							if ( GetActiveCSWeapon()->GetWeaponType() == WEAPONTYPE_GRENADE || GetActiveCSWeapon()->GetWeaponType() == WEAPONTYPE_C4 )
+								continue;
+
+							Vector vecLength = (result.startpos - result.endpos);
+
+							// if they are holding a knife or taser, check knife range
+							if ( GetActiveCSWeapon()->GetWeaponType() == WEAPONTYPE_KNIFE && ( vecLength.Length() > 80.0f ) )
+								continue;
+							if ( GetActiveCSWeapon()->GetCSWeaponID() == WEAPON_TASER && ( vecLength.Length() > 200.0f ) )
+								continue;
+						}
+						// now make sure that the "saved" player wasn't looking directly at the guy who was killed
+						Vector vecAttackerFwd;
+						AngleVectors( pPlayer->EyeAngles(), &vecAttackerFwd, NULL, NULL);
+						Vector toKilledSpot = EyePosition() - pPlayer->EyePosition();
+						toKilledSpot.NormalizeInPlace();
+						float flKilledCone = DotProduct( toKilledSpot, vecAttackerFwd );
+						if ( flKilledCone < 0.65f )
+						{
+							// we got it!  send a message to the "saved"
+							CSingleUserRecipientFilter usersaved( pPlayer );
+							usersaved.MakeReliable();
+							CFmtStr fmtEntName( "#ENTNAME[%d]%s", entindex(), GetPlayerName() );
+							UTIL_ClientPrintFilter( usersaved, HUD_PRINTTALK, "#Chat_SavePlayer_Saved",
+								CFmtStr( "#ENTNAME[%d]%s", pAttackerPlayer->entindex(), pAttackerPlayer->GetPlayerName() ),
+								CFmtStr( "#ENTNAME[%d]%s", entindex(), GetPlayerName() ) );
+
+							// now send a message to the "savior"
+							CSingleUserRecipientFilter usersavior( pAttackerPlayer );
+							usersavior.MakeReliable();
+							UTIL_ClientPrintFilter( usersavior, HUD_PRINTTALK, "#Chat_SavePlayer_Savior",
+								CFmtStr( "#ENTNAME[%d]%s", pPlayer->entindex(), pPlayer->GetPlayerName() ),
+								CFmtStr( "#ENTNAME[%d]%s", entindex(), GetPlayerName() ) );
+
+							// now send a message to the "savior"
+							CTeamRecipientFilter teamfilter( TEAM_SPECTATOR, true );
+							UTIL_ClientPrintFilter( teamfilter, HUD_PRINTTALK, "#Chat_SavePlayer_Spectator",
+								CFmtStr( "#ENTNAME[%d]%s", pAttackerPlayer->entindex(), pAttackerPlayer->GetPlayerName() ),
+								CFmtStr( "#ENTNAME[%d]%s", pPlayer->entindex(), pPlayer->GetPlayerName() ),
+								CFmtStr( "#ENTNAME[%d]%s", entindex(), GetPlayerName() ) );
+							break;
+						}		
+					}
+				}
+			}
+		}
 	}
 
 	// if we died from killing ourself, check if we should lose a weapon in progressive
