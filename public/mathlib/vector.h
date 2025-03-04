@@ -143,7 +143,8 @@ public:
 				z > -tolerance && z < tolerance);
 	}
 
-	vec_t	NormalizeInPlace();
+	vec_t	NormalizeInPlace();								///< Normalize all components
+	vec_t	NormalizeInPlaceSafe( const Vector &vFallback );///< Normalize all components
 	Vector	Normalized() const;
 	bool	IsLengthGreaterThan( float val ) const;
 	bool	IsLengthLessThan( float val ) const;
@@ -2298,6 +2299,16 @@ FORCEINLINE void VectorNormalizeFast( Vector &vec )
 inline vec_t Vector::NormalizeInPlace()
 {
 	return VectorNormalize( *this );
+}
+
+inline vec_t Vector::NormalizeInPlaceSafe( const Vector &vFallback )
+{
+	float flLength = VectorNormalize( *this );
+	if ( flLength == 0.0f )
+	{
+		*this = vFallback;
+	}
+	return flLength;
 }
 
 inline Vector Vector::Normalized() const
