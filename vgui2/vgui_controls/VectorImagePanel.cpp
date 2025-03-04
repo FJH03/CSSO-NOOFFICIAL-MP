@@ -29,6 +29,8 @@ VectorImagePanel::VectorImagePanel( Panel *parent, const char *name ): Panel( pa
 {
 	m_nTextureId = -1;
 	m_iRenderSize[0] = m_iRenderSize[1] = 0;
+	m_iRepeatMargin[0] = m_iRepeatMargin[1] = 0;
+	m_nRepeatsCount = 1;
 }
 
 VectorImagePanel::~VectorImagePanel()
