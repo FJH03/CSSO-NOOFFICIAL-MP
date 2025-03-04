@@ -16,6 +16,7 @@ games = {
 	'hl1': ['server_base.vpc', 'server_hl1.vpc'],
 	'hl1mp': ['server_base.vpc', 'server_hl1mp.vpc'],
 	'cstrike': ['server_base.vpc', 'server_cstrike.vpc', 'nav_mesh.vpc'],
+	'csso': ['server_base.vpc', 'server_csso.vpc', 'nav_mesh.vpc'],
 	'dod': ['server_base.vpc', 'server_dod.vpc'],
 	'tf': [
 		'server_base.vpc',
