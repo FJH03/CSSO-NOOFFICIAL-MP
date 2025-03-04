@@ -88,6 +88,7 @@ projects={
 		'vgui2/vgui_surfacelib',
 		'vguimatsurface',
 		'video',
+		'video/video_bink',
 		'vphysics',
 		'vpklib',
 		'vstdlib',
@@ -393,6 +394,9 @@ def check_deps(conf):
 			else:
 				conf.check_pkg('freetype2', 'FT2', FT2_CHECK)
 				conf.check_pkg('fontconfig', 'FC', FC_CHECK)
+				conf.check_cfg(package='libavformat', uselib_store='avformat', args=['--cflags', '--libs'])
+				conf.check_cfg(package='libavcodec', uselib_store='avcodec', args=['--cflags', '--libs'])
+				conf.check_cfg(package='libavutil', uselib_store='avutil', args=['--cflags', '--libs'])
 				if conf.env.DEST_OS == "darwin":
 					conf.env.FRAMEWORK_OPENAL = "OpenAL"
 				else:
