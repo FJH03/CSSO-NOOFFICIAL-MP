@@ -22,7 +22,7 @@
 #define HISTORY_DRAW_TIME	"5"
 
 ConVar hud_drawhistory_time( "hud_drawhistory_time", HISTORY_DRAW_TIME, 0 );
-ConVar hud_fastswitch( "hud_fastswitch", "0", FCVAR_ARCHIVE | FCVAR_ARCHIVE_XBOX );
+ConVar hud_fastswitch( "hud_fastswitch", "1", FCVAR_ARCHIVE | FCVAR_ARCHIVE_XBOX );
 
 //-----------------------------------------------------------------------------
 // Purpose: Weapon Selection commands
@@ -38,6 +38,8 @@ DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, Slot8, "CHudWeaponSelection");
 DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, Slot9, "CHudWeaponSelection");
 DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, Slot0, "CHudWeaponSelection");
 DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, Slot10, "CHudWeaponSelection");
+DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, Slot11, "CHudWeaponSelection");
+DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, Slot12, "CHudWeaponSelection");
 DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, Close, "CHudWeaponSelection");
 DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, NextWeapon, "CHudWeaponSelection");
 DECLARE_HUD_COMMAND_NAME(CBaseHudWeaponSelection, PrevWeapon, "CHudWeaponSelection");
@@ -57,6 +59,8 @@ HOOK_COMMAND( slot8, Slot8 );
 HOOK_COMMAND( slot9, Slot9 );
 HOOK_COMMAND( slot0, Slot0 );
 HOOK_COMMAND( slot10, Slot10 );
+HOOK_COMMAND( slot11, Slot11 );
+HOOK_COMMAND( slot12, Slot12 );
 HOOK_COMMAND( cancelselect, Close );
 HOOK_COMMAND( invnext, NextWeapon );
 HOOK_COMMAND( invprev, PrevWeapon );
@@ -370,6 +374,16 @@ void CBaseHudWeaponSelection::UserCmd_Slot0(void)
 void CBaseHudWeaponSelection::UserCmd_Slot10(void)
 {
 	SelectSlot( 10 );
+}
+
+void CBaseHudWeaponSelection::UserCmd_Slot11(void)
+{
+	SelectSlot( 11 );
+}
+
+void CBaseHudWeaponSelection::UserCmd_Slot12(void)
+{
+	SelectSlot( 12 );
 }
 
 //-----------------------------------------------------------------------------

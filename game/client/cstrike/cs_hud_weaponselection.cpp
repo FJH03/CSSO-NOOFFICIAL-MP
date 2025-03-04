@@ -88,12 +88,9 @@ bool CHudWeaponSelection::IsHudMenuPreventingWeaponSelection()
 //-----------------------------------------------------------------------------
 bool CHudWeaponSelection::ShouldDraw()
 {
-	// [jason] Moving into Scaleform: sfhudhealthammopanel
+	// PiMoN: moving into a separate class
 #if defined( CSTRIKE_DLL )
-	if ( !IsPC() )
-	{
-		return false;
-	}
+	return false;
 #endif
 
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
@@ -545,6 +542,12 @@ void CHudWeaponSelection::UserCmd_Slot3( void )
 	CycleToNextWeapon( WEAPON_SELECTION_MELEE );
 }
 
+// Cycle grenades
+void CHudWeaponSelection::UserCmd_Slot4( void )
+{
+	CycleToNextWeapon( WEAPON_SELECTION_GRENADE );
+}
+
 // Switch to breach charges
 void CHudWeaponSelection::UserCmd_Slot5( void )
 {
@@ -575,17 +578,30 @@ void CHudWeaponSelection::UserCmd_Slot9( void )
 	SelectSpecificWeapon( WEAPON_DECOY );
 }
 
-// Switch to taser
+// Switch to molotov
 void CHudWeaponSelection::UserCmd_Slot10( void )
+{
+	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+
+	if ( !pPlayer )
+		return;
+
+	if ( pPlayer->HasWeaponOfType( WEAPON_MOLOTOV ) )
+		SelectSpecificWeapon( WEAPON_MOLOTOV );
+	else
+		SelectSpecificWeapon( WEAPON_INCGRENADE );
+}
+
+// Switch to taser
+void CHudWeaponSelection::UserCmd_Slot11( void )
 {
 	SelectSpecificWeapon( WEAPON_TASER );
 }
 
-
-// Cycle grenades
-void CHudWeaponSelection::UserCmd_Slot4( void )
+// Switch to healthshot
+void CHudWeaponSelection::UserCmd_Slot12( void )
 {
-	CycleToNextWeapon( WEAPON_SELECTION_GRENADE );
+	SelectSpecificWeapon( WEAPON_HEALTHSHOT );
 }
 
 

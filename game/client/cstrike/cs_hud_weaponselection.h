@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -63,6 +63,8 @@ public:
 	virtual void UserCmd_Slot8( void );
 	virtual void UserCmd_Slot9( void );
 	virtual void UserCmd_Slot10( void );
+	virtual void UserCmd_Slot11( void );
+	virtual void UserCmd_Slot12( void );
 
 	virtual C_BaseCombatWeapon *GetWeaponInSlot( int iSlot, int iSlotPos );
 	virtual C_BaseCombatWeapon *GetWeaponInSlotForTarget( C_BasePlayer *player, int iSlot, int iSlotPos );

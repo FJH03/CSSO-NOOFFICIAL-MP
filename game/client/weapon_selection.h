@@ -75,6 +75,8 @@ public:
 	virtual void UserCmd_Slot9( void );
 	void UserCmd_Slot0( void );
 	virtual void UserCmd_Slot10( void );
+	virtual void UserCmd_Slot11( void );
+	virtual void UserCmd_Slot12( void );
 	void UserCmd_Close( void );
 	void UserCmd_NextWeapon( void );
 	void UserCmd_PrevWeapon( void );
