@@ -47,6 +47,8 @@ private:
 	CCvarSlider*				m_pHUDBackgroundAlpha;
 	CCvarSlider*				m_pRadarScale;
 	CCvarToggleCheckButton*		m_pAlwaysShowInventory;
+	CCvarToggleCheckButton*		m_pRadarRotate;
+	CLabeledCommandComboBox*	m_pRadarSquare;
 };
 
 #endif // ModOptionsSubHUD_H

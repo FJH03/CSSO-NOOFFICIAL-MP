@@ -55,6 +55,8 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 	m_pHUDBackgroundAlpha = new CCvarSlider( this, "HUDBackgroundAlphaSlider", "", 0.0f, 1.0f, "cl_hud_background_alpha" );
 	m_pRadarScale = new CCvarSlider( this, "RadarScaleSlider", "", 0.25f, 1.0f, "cl_radar_scale" );
 	m_pAlwaysShowInventory = new CCvarToggleCheckButton( this, "AlwaysShowInventoryCheckbox", "#GameUI_HUD_AlwaysShowInventory", "cl_showloadout" );
+	m_pRadarRotate = new CCvarToggleCheckButton( this, "RadarRotateCheckbox", "#GameUI_HUD_RotateRadar", "cl_radar_rotate" );
+	m_pRadarSquare = new CLabeledCommandComboBox( this, "RadarSquareComboBox" );
 
 	m_pPlayerCountPos->AddItem( "#GameUI_HUD_PlayerCount_Top", "hud_playercount_pos 0" );
 	m_pPlayerCountPos->AddItem( "#GameUI_HUD_PlayerCount_Bottom", "hud_playercount_pos 1" );
@@ -64,6 +66,10 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 
 	m_pSimplePlayerModelLighting->AddItem( "#GameUI_HUD_SimplePlayerModelLighting_0", "cl_simple_player_lighting 0" );
 	m_pSimplePlayerModelLighting->AddItem( "#GameUI_HUD_SimplePlayerModelLighting_1", "cl_simple_player_lighting 1" );
+
+	m_pRadarSquare->AddItem( "#GameUI_HUD_RadarSquare_0", "cl_radar_square 0" );
+	m_pRadarSquare->AddItem( "#GameUI_HUD_RadarSquare_1", "cl_radar_square 1" );
+	m_pRadarSquare->AddItem( "#GameUI_HUD_RadarSquare_2", "cl_radar_square 2" );
 
 	char localization[64];
 	char command[64];
@@ -81,6 +87,8 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 	m_pHUDBackgroundAlpha->AddActionSignalTarget( this );
 	m_pRadarScale->AddActionSignalTarget( this );
 	m_pAlwaysShowInventory->AddActionSignalTarget( this );
+	m_pRadarRotate->AddActionSignalTarget( this );
+	m_pRadarSquare->AddActionSignalTarget( this );
 
 	LoadControlSettings( "Resource/ModOptionsSubHUD.res" );
 }
@@ -122,9 +130,14 @@ void CModOptionsSubHUD::OnResetData()
 	if ( cl_hud_color.IsValid() )
 		m_pHUDColor->SetInitialItem( cl_hud_color.GetInt() );
 
+	ConVarRef cl_radar_square( "cl_radar_square" );
+	if ( cl_radar_square.IsValid() )
+		m_pRadarSquare->SetInitialItem( cl_radar_square.GetInt() );
+
 	m_pHUDBackgroundAlpha->Reset();
 	m_pRadarScale->Reset();
 	m_pAlwaysShowInventory->Reset();
+	m_pRadarRotate->Reset();
 }
 
 //-----------------------------------------------------------------------------
@@ -139,4 +152,6 @@ void CModOptionsSubHUD::OnApplyChanges()
 	m_pHUDBackgroundAlpha->ApplyChanges();
 	m_pRadarScale->ApplyChanges();
 	m_pAlwaysShowInventory->ApplyChanges();
+	m_pRadarRotate->ApplyChanges();
+	m_pRadarSquare->ApplyChanges();
 }
