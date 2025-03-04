@@ -105,6 +105,7 @@ public:
 	int			m_nSkin;
 };
 
+#define MATERIAL_MAX_LIGHT_COUNT 4
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -120,7 +121,8 @@ public:
 		m_vecAbsAngles.Init();
 		m_vecOriginOffset.Init();
 		m_vecFramedOriginOffset.Init();
-		m_bUseSpotlight = false;
+		m_nNumLightDescs = 0;
+		m_vecAmbientLight.Init( 0.4f, 0.4f, 0.4f );
 	}
 
 	~CModelPanelModelInfo()
@@ -143,6 +145,11 @@ public:
 			m_pszVCD = NULL;
 		}
 
+		for ( int i = 0; i < m_nNumLightDescs; i++ )
+		{
+			delete m_pLightDesc[i];
+		}
+
 		m_Animations.PurgeAndDeleteElements();
 		m_AttachedModelsInfo.PurgeAndDeleteElements();
 	}
@@ -156,8 +163,10 @@ public:
 	Vector		m_vecOriginOffset;
 	Vector2D	m_vecViewportOffset;
 	Vector		m_vecFramedOriginOffset;
-	bool		m_bUseSpotlight;
 	CUtlMap< int, int > m_mapBodygroupValues;
+	LightDesc_t *m_pLightDesc[MATERIAL_MAX_LIGHT_COUNT];
+	int			m_nNumLightDescs;
+	Vector		m_vecAmbientLight;
 
 	CUtlVector<CModelPanelModelAnimation*>		m_Animations;
 	CUtlVector<CModelPanelAttachedModelInfo*>	m_AttachedModelsInfo;
@@ -166,8 +175,9 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CModelPanel : public vgui::EditablePanel, public CGameEventListener
+class CModelPanel: public vgui::EditablePanel, public CGameEventListener
 {
+//	typedef vgui::EditablePanel BaseClass;
 public:
 	DECLARE_CLASS_SIMPLE( CModelPanel, vgui::EditablePanel );
 
@@ -189,10 +199,19 @@ public:
 	MESSAGE_FUNC_PARAMS( OnAddAnimation, "AddAnimation", data );
 	MESSAGE_FUNC_PARAMS( OnSetAnimation, "SetAnimation", data );
 
+	// Manipulation.
+	virtual void OnMousePressed ( vgui::MouseCode code );
+	virtual void OnMouseReleased( vgui::MouseCode code );
+	virtual void OnCursorMoved( int x, int y );
+
+	void		RotateYaw( float flDelta );
+	void		RotatePitch( float flDelta );
+
 	void	SetDefaultAnimation( const char *pszName );
 	void	SwapModel( const char *pszName, const char *pszAttached = NULL );
 
 	virtual void ParseModelInfo( KeyValues *inResourceData );
+	void ParseLightInfo( KeyValues *inResourceData );
 
 	void		ClearAttachedModelInfos( void );
 
@@ -213,11 +232,16 @@ private:
 	int FindAnimByName( const char *pszName );
 	void CalculateFrameDistanceInternal( const model_t *pModel );
 
+	void EnableMouseCapture( bool enable, vgui::MouseCode code = vgui::MouseCode( -1 ) );
+	bool WarpMouse( int &x, int &y );
+
 public:
 	int								m_nFOV;
 	float							m_flFrameDistance;
 	bool							m_bStartFramed;
 	CModelPanelModelInfo			*m_pModelInfo;
+	Vector							m_vecCameraPos;
+	QAngle							m_angCameraAng;
 
 	CHandle<CModelPanelModel>				m_hModel;
 	CUtlVector<CHandle<C_BaseAnimating> >	m_AttachedModels;
@@ -232,6 +256,18 @@ private:
 
 	CTextureReference m_DefaultEnvCubemap;
 	CTextureReference m_DefaultHDREnvCubemap;
+
+	int m_nClickStartX;
+	int m_nClickStartY;
+	int m_nManipStartX;
+	int m_nManipStartY;
+	bool m_bMousePressed;
+	vgui::MouseCode m_nCaptureMouseCode;
+	int m_xoffset, m_yoffset;
+	bool m_bAllowRotation;
+	bool m_bAllowPitch;
+
+	CPanelAnimationVar( float, m_flMaxPitch, "max_pitch", "90" );
 };
 
 

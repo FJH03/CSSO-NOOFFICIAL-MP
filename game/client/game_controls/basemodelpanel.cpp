@@ -16,9 +16,11 @@
 #include <vgui/ISurface.h>
 #include <vgui/IImage.h>
 #include <vgui_controls/Label.h>
+#include <vgui/IInput.h>
 
 #include "materialsystem/imaterialsystem.h"
 #include "engine/ivmodelinfo.h"
+#include "inputsystem/iinputsystem.h"
 
 #include "c_sceneentity.h"
 #include "gamestringpool.h"
@@ -42,7 +44,7 @@ DECLARE_BUILD_FACTORY( CModelPanel );
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CModelPanel::CModelPanel( vgui::Panel *pParent, const char *pName ) : vgui::EditablePanel( pParent, pName )
+CModelPanel::CModelPanel( vgui::Panel *pParent, const char *pName ): BaseClass( pParent, pName )
 {
 	m_nFOV = 54;
 	m_hModel = NULL;
@@ -52,6 +54,11 @@ CModelPanel::CModelPanel( vgui::Panel *pParent, const char *pName ) : vgui::Edit
 	m_bPanelDirty = true;
 	m_bStartFramed = false;
 	m_bAllowOffscreen = false;
+	m_bMousePressed = false;
+	m_bAllowRotation = false;
+	m_bAllowPitch = false;
+	m_vecCameraPos.Init();
+	m_angCameraAng.Init();
 
 	ListenForGameEvent( "game_newmap" );
 }
@@ -78,9 +85,24 @@ void CModelPanel::ApplySettings( KeyValues *inResourceData )
 {
 	BaseClass::ApplySettings( inResourceData );
 
+	const char *pCameraOrigin = inResourceData->GetString( "camera_origin" );
+	if ( pCameraOrigin[0] != 0 )
+	{
+		sscanf( pCameraOrigin, "%f %f %f", &m_vecCameraPos.x, &m_vecCameraPos.y, &m_vecCameraPos.z );
+	}
+	const char *pCameraAngles = inResourceData->GetString( "camera_angles" );
+	if ( pCameraAngles[0] != 0 )
+	{
+		sscanf( pCameraAngles, "%f %f %f", &m_angCameraAng.x, &m_angCameraAng.y, &m_angCameraAng.z );
+	}
+
 	m_nFOV = inResourceData->GetInt( "fov", 54 );
-	m_bStartFramed = inResourceData->GetInt( "start_framed", false );
-	m_bAllowOffscreen = inResourceData->GetInt( "allow_offscreen", false );
+	m_bStartFramed = inResourceData->GetBool( "start_framed", false );
+	m_bAllowOffscreen = inResourceData->GetBool( "allow_offscreen", false );
+
+	// Do we allow rotation on these panels.
+	m_bAllowRotation = inResourceData->GetBool( "allow_rot", false );
+	m_bAllowPitch = inResourceData->GetBool( "allow_pitch", false );
 
 	// do we have a valid "model" section in the .res file?
 	for ( KeyValues *pData = inResourceData->GetFirstSubKey() ; pData != NULL ; pData = pData->GetNextKey() )
@@ -88,6 +110,10 @@ void CModelPanel::ApplySettings( KeyValues *inResourceData )
 		if ( !Q_stricmp( pData->GetName(), "model" ) )
 		{
 			ParseModelInfo( pData );
+		}
+		if ( !Q_stricmp( pData->GetName(), "lights" ) )
+		{
+			ParseLightInfo( pData );
 		}
 	}
 }
@@ -128,10 +154,9 @@ void CModelPanel::ParseModelInfo( KeyValues *inResourceData )
 	m_pModelInfo->m_pszModelName_HWM = ReadAndAllocStringValue( inResourceData, "modelname_hwm" );
 	m_pModelInfo->m_nSkin = inResourceData->GetInt( "skin", -1 );
 	m_pModelInfo->m_vecAbsAngles.Init( inResourceData->GetFloat( "angles_x", 0.0 ), inResourceData->GetFloat( "angles_y", 0.0 ), inResourceData->GetFloat( "angles_z", 0.0 ) );
-	m_pModelInfo->m_vecOriginOffset.Init( inResourceData->GetFloat( "origin_x", 110.0 ), inResourceData->GetFloat( "origin_y", 5.0 ), inResourceData->GetFloat( "origin_z", 5.0 ) );
-	m_pModelInfo->m_vecFramedOriginOffset.Init( inResourceData->GetFloat( "frame_origin_x", 110.0 ), inResourceData->GetFloat( "frame_origin_y", 5.0 ), inResourceData->GetFloat( "frame_origin_z", 5.0 ) );
+	m_pModelInfo->m_vecOriginOffset.Init( inResourceData->GetFloat( "origin_x", 0.0 ), inResourceData->GetFloat( "origin_y", 0.0 ), inResourceData->GetFloat( "origin_z", 0.0 ) );
+	m_pModelInfo->m_vecFramedOriginOffset.Init( inResourceData->GetFloat( "frame_origin_x", 0.0 ), inResourceData->GetFloat( "frame_origin_y", 0.0 ), inResourceData->GetFloat( "frame_origin_z", 0.0 ) );
 	m_pModelInfo->m_pszVCD = ReadAndAllocStringValue( inResourceData, "vcd" );
-	m_pModelInfo->m_bUseSpotlight = ( inResourceData->GetInt( "spotlight", 0 ) == 1 );
 	m_pModelInfo->m_vecViewportOffset.Init();
 
 	for ( KeyValues *pData = inResourceData->GetFirstSubKey(); pData != NULL; pData = pData->GetNextKey() )
@@ -155,6 +180,101 @@ void CModelPanel::ParseModelInfo( KeyValues *inResourceData )
 	}
 
 	m_bPanelDirty = true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CModelPanel::ParseLightInfo( KeyValues *inResourceData )
+{
+	if ( !m_pModelInfo )
+		return;
+
+	const char *pAmbientColor = inResourceData->GetString( "ambient_light" );
+	if ( pAmbientColor[0] != 0 )
+	{
+		sscanf( pAmbientColor, "%f %f %f", &(m_pModelInfo->m_vecAmbientLight.x), &(m_pModelInfo->m_vecAmbientLight.y), &(m_pModelInfo->m_vecAmbientLight.z) );
+	}
+
+	KeyValues *pLightKeys = inResourceData->GetFirstTrueSubKey();
+	while ( pLightKeys )
+	{
+		if ( m_pModelInfo->m_nNumLightDescs >= MATERIAL_MAX_LIGHT_COUNT )
+		{
+			DevMsg( "Too many lights defined in %s. Only using first %d. \n", GetName(), MATERIAL_MAX_LIGHT_COUNT );
+			break;
+		}
+
+		const char *pLightType = pLightKeys->GetName();
+		if ( pLightType[0] != 0 )
+		{
+			LightType_t lightType = MATERIAL_LIGHT_DISABLE;
+
+			if ( V_strnicmp( pLightType, "point_light", 11 ) == 0 )
+			{
+				lightType = MATERIAL_LIGHT_POINT;
+			}
+			else if ( V_strnicmp( pLightType, "directional_light", 17 ) == 0 )
+			{
+				lightType = MATERIAL_LIGHT_DIRECTIONAL;
+			}
+			else if ( V_strnicmp( pLightType, "spot_light", 10 ) == 0 )
+			{
+				lightType = MATERIAL_LIGHT_SPOT;
+			}
+			else
+			{
+				DevMsg( "Error Parsing lights in %s! Unknown light type %s. \n", GetName(), pLightType );
+			}
+
+			if ( lightType != MATERIAL_LIGHT_DISABLE )
+			{
+				Vector lightPosOrDir( 0, 0, 0 );
+				Vector lightColor( 0, 0, 0 );
+				const char *pLightPosOrDir = pLightKeys->GetString( (lightType == MATERIAL_LIGHT_DIRECTIONAL) ? "direction" : "position" );
+				if ( pLightPosOrDir[0] != 0 )
+				{
+					sscanf( pLightPosOrDir, "%f %f %f", &(lightPosOrDir.x), &(lightPosOrDir.y), &(lightPosOrDir.z) );
+				}
+				const char *pLightColor = pLightKeys->GetString( "color" );
+				if ( pLightColor[0] != 0 )
+				{
+					sscanf( pLightColor, "%f %f %f", &(lightColor.x), &(lightColor.y), &(lightColor.z) );
+				}
+
+				Vector lightLookAt( 0, 0, 0 );
+				float lightInnerCone = 1.0f;
+				float lightOuterCone = 10.0f;
+				if ( lightType == MATERIAL_LIGHT_SPOT )
+				{
+					const char *pLightLookAt = pLightKeys->GetString( "lookat" );
+					if ( pLightLookAt[0] != 0 )
+					{
+						sscanf( pLightLookAt, "%f %f %f", &(lightLookAt.x), &(lightLookAt.y), &(lightLookAt.z) );
+					}
+					lightInnerCone = pLightKeys->GetFloat( "inner_cone", 1.0f );
+					lightOuterCone = pLightKeys->GetFloat( "outer_cone", 8.0f );
+				}
+
+				m_pModelInfo->m_pLightDesc[m_pModelInfo->m_nNumLightDescs] = new LightDesc_t;
+				switch ( lightType )
+				{
+					case MATERIAL_LIGHT_DIRECTIONAL:
+						m_pModelInfo->m_pLightDesc[m_pModelInfo->m_nNumLightDescs]->InitDirectional( lightPosOrDir, lightColor );
+						break;
+					case MATERIAL_LIGHT_POINT:
+						m_pModelInfo->m_pLightDesc[m_pModelInfo->m_nNumLightDescs]->InitPoint( lightPosOrDir, lightColor );
+						break;
+					case MATERIAL_LIGHT_SPOT:
+						m_pModelInfo->m_pLightDesc[m_pModelInfo->m_nNumLightDescs]->InitSpot( lightPosOrDir, lightColor, lightLookAt, lightInnerCone, lightOuterCone );
+						break;
+				}
+				m_pModelInfo->m_nNumLightDescs++;
+			}
+		}
+
+		pLightKeys = pLightKeys->GetNextTrueSubKey();
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -188,6 +308,194 @@ void CModelPanel::OnAddAnimation( KeyValues *pData )
 			m_iDefaultAnimation = m_pModelInfo->m_Animations.Find( pAnimation );
 		}
 	}
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CModelPanel::OnMousePressed( vgui::MouseCode code )
+{
+	if ( !m_bAllowRotation && !m_bAllowPitch )
+		return;
+
+	RequestFocus();
+
+	EnableMouseCapture( true, code );
+
+	// Save where they clicked
+	input()->GetCursorPosition( m_nClickStartX, m_nClickStartY );
+
+	// Warp the mouse to the center of the screen
+	int width, height;
+	GetSize( width, height );
+	int x = width / 2;
+	int y = height / 2;
+
+	int xpos = x;
+	int ypos = y;
+	LocalToScreen( xpos, ypos );
+	input()->SetCursorPos( xpos, ypos );
+
+	m_nManipStartX = xpos;
+	m_nManipStartY = ypos;
+
+	m_bMousePressed = true;
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CModelPanel::OnMouseReleased( vgui::MouseCode code )
+{
+	if ( !m_bAllowRotation && !m_bAllowPitch )
+		return;
+
+	EnableMouseCapture( false );
+	m_bMousePressed = false;
+
+	// Restore the cursor to where the clicked
+	input()->SetCursorPos( m_nClickStartX, m_nClickStartY );
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CModelPanel::OnCursorMoved( int x, int y )
+{
+	if ( !m_bAllowRotation && !m_bAllowPitch )
+		return;
+
+	if ( m_bMousePressed )
+	{
+		WarpMouse( x, y );
+		int xpos, ypos;
+		input()->GetCursorPos( xpos, ypos );
+
+		if ( m_bAllowRotation )
+		{
+			// Only want the x delta.
+			float flDelta = xpos - m_nManipStartX;
+
+
+			// Apply the delta and rotate the player.
+			RotateYaw( flDelta );
+		}
+
+		if ( m_bAllowPitch )
+		{
+			// Only want the y delta.
+			float flDelta = ypos - m_nManipStartY;
+
+
+			// Apply the delta and rotate the player.
+			RotatePitch( flDelta );
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CModelPanel::RotateYaw( float flDelta )
+{
+	if ( !m_pModelInfo )
+		return;
+
+	m_pModelInfo->m_vecAbsAngles.y += flDelta;
+	if ( m_pModelInfo->m_vecAbsAngles.y > 360.0f )
+	{
+		m_pModelInfo->m_vecAbsAngles.y = m_pModelInfo->m_vecAbsAngles.y - 360.0f;
+	}
+	else if ( m_pModelInfo->m_vecAbsAngles.y < -360.0f )
+	{
+		m_pModelInfo->m_vecAbsAngles.y = m_pModelInfo->m_vecAbsAngles.y + 360.0f;
+	}
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CModelPanel::RotatePitch( float flDelta )
+{
+	if ( !m_pModelInfo )
+		return;
+
+	m_pModelInfo->m_vecAbsAngles.x += flDelta;
+	if ( m_pModelInfo->m_vecAbsAngles.x > m_flMaxPitch )
+	{
+		m_pModelInfo->m_vecAbsAngles.x = m_flMaxPitch;
+	}
+	else if ( m_pModelInfo->m_vecAbsAngles.x < -m_flMaxPitch )
+	{
+		m_pModelInfo->m_vecAbsAngles.x = -m_flMaxPitch;
+	}
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CModelPanel::EnableMouseCapture( bool enable, vgui::MouseCode mouseCode /* = -1 */ )
+{
+	if ( enable )
+	{
+		m_nCaptureMouseCode = mouseCode;
+		SetCursor( vgui::dc_none );
+		input()->SetMouseCaptureEx( GetVPanel(), m_nCaptureMouseCode );
+	}
+	else
+	{
+		m_nCaptureMouseCode = vgui::MouseCode( -1 );
+		input()->SetMouseCapture( (VPANEL)0 );
+		SetCursor( vgui::dc_arrow );
+	}
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+bool CModelPanel::WarpMouse( int &x, int &y )
+{
+	// Re-force capture if it was lost...
+	if ( input()->GetMouseCapture() != GetVPanel() )
+	{
+		input()->GetCursorPos( m_nManipStartX, m_nManipStartY );
+		EnableMouseCapture( true, m_nCaptureMouseCode );
+	}
+
+	int width, height;
+	GetSize( width, height );
+
+	int centerx = width / 2;
+	int centery = height / 2;
+
+	// skip this event
+	if ( x == centerx && y == centery )
+		return false; 
+
+	int xpos = centerx;
+	int ypos = centery;
+	LocalToScreen( xpos, ypos );
+
+#if defined( DX_TO_GL_ABSTRACTION )
+	//
+	// Really reset the cursor to the center for the PotteryWheel Control
+	//
+	// In TF2's edit loadout dialog there is a character model that you can rotate
+	// around using the mouse.  This control resets the cursor to the center of the window
+	// after each mouse move.  Except the input()->SetCursorPos results (after a lot of redirection) to
+	// vgui/matsurface/Cursor.cpp function CursorSetPos but it has a (needed) test to not move the 
+	// cursor if it's currently hidden. Rather than change all the levels between here and there
+	// to support a flag, we are just jumping to the chase and directly calling the inputsystem
+	// SetCursorPosition on OpenGL platforms
+	//
+	g_pInputSystem->SetCursorPosition( xpos, ypos );
+#else
+	input()->SetCursorPos( xpos, ypos );
+#endif
+
+	int dx = x - centerx;
+	int dy = y - centery;
+
+	x += m_xoffset;
+	y += m_yoffset;
+
+	m_xoffset += dx;
+	m_yoffset += dy;
+
+	return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -241,10 +549,10 @@ void CModelPanel::SwapModel( const char *pszName, const char *pszAttached )
 	Q_strncpy( pAlloced, pszName, len );
 	m_pModelInfo->m_pszModelName = pAlloced;
 
-	ClearAttachedModelInfos();
-
 	if ( pszAttached )
 	{
+		ClearAttachedModelInfos();
+
 		CModelPanelAttachedModelInfo *pAttachedModelInfo = new CModelPanelAttachedModelInfo;
 		if ( pAttachedModelInfo )
 		{
@@ -568,25 +876,7 @@ void CModelPanel::Paint()
 		x = 0;
 	}
 
-	Vector vecExtraModelOffset( 0, 0, 0 );
-	float flWidthRatio = ((float)w / (float)h ) / ( 4.0f / 3.0f );
-
-	// is this a player model?
-	if ( Q_strstr( GetModelName(), "models/player/" ) )
-	{
-		// need to know if the ratio is not 4/3
-		// HACK! HACK! to get our player models to appear the way they do in 4/3 if we're using other aspect ratios
-		if ( flWidthRatio > 1.05f ) 
-		{
-			vecExtraModelOffset.Init( -60, 0, 0 );
-		}
-		else if ( flWidthRatio < 0.95f )
-		{
-			vecExtraModelOffset.Init( 15, 0, 0 );
-		}
-	}
-
-	m_hModel->SetAbsOrigin( m_pModelInfo->m_vecOriginOffset + vecExtraModelOffset );
+	m_hModel->SetAbsOrigin( m_pModelInfo->m_vecOriginOffset );
 	m_hModel->SetAbsAngles( QAngle( m_pModelInfo->m_vecAbsAngles.x, m_pModelInfo->m_vecAbsAngles.y, m_pModelInfo->m_vecAbsAngles.z ) );
 
 	// do we have a valid sequence?
@@ -611,10 +901,11 @@ void CModelPanel::Paint()
 	view.m_bOrtho = false;
 
 	// scale the FOV for aspect ratios other than 4/3
+	float flWidthRatio = ((float) w / (float) h) / (4.0f / 3.0f);
 	view.fov = ScaleFOVByWidthRatio( m_nFOV, flWidthRatio );
 
-	view.origin = vec3_origin;
-	view.angles.Init();
+	view.origin = m_vecCameraPos;
+	view.angles = m_angCameraAng;
 	view.zNear = VIEW_NEARZ;
 	view.zFar = 1000;
 
@@ -633,28 +924,9 @@ void CModelPanel::Paint()
 	}
 
 	pRenderContext->SetLightingOrigin( vec3_origin );
-	pRenderContext->SetAmbientLight( 0.4, 0.4, 0.4 );
+	pRenderContext->SetAmbientLight( m_pModelInfo->m_vecAmbientLight.x, m_pModelInfo->m_vecAmbientLight.y, m_pModelInfo->m_vecAmbientLight.z );
 
-	static Vector white[6] = 
-	{
-		Vector( 0.4, 0.4, 0.4 ),
-		Vector( 0.4, 0.4, 0.4 ),
-		Vector( 0.4, 0.4, 0.4 ),
-		Vector( 0.4, 0.4, 0.4 ),
-		Vector( 0.4, 0.4, 0.4 ),
-		Vector( 0.4, 0.4, 0.4 ),
-	};
-
-	g_pStudioRender->SetAmbientLightColors( white );
-	g_pStudioRender->SetLocalLights( 0, NULL );
-
-	if ( m_pModelInfo->m_bUseSpotlight )
-	{
-		Vector vecMins, vecMaxs;
-		m_hModel->GetRenderBounds( vecMins, vecMaxs );
-		LightDesc_t spotLight( vec3_origin + Vector( 0, 0, 200 ), Vector( 1, 1, 1 ), m_hModel->GetAbsOrigin() + Vector( 0, 0, ( vecMaxs.z - vecMins.z ) * 0.75 ), 0.035, 0.873 );
-		g_pStudioRender->SetLocalLights( 1, &spotLight );
-	}
+	g_pStudioRender->SetLocalLights( m_pModelInfo->m_nNumLightDescs, *m_pModelInfo->m_pLightDesc );
 
 	Frustum dummyFrustum;
 	render->Push3DView( view, 0, NULL, dummyFrustum );
