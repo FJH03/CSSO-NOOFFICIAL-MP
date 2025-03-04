@@ -58,6 +58,8 @@ public:
 	// gets the length of an animation sequence, in seconds
 	float GetAnimationSequenceLength(const char *sequenceName);
 
+	bool DoesSequenceExist(const char *sequenceName);
+
 	// sets that the script file should be reloaded each time a script is ran
 	// used for development
 	void SetAutoReloadScript(bool state);

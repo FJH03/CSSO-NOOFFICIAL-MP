@@ -1221,3 +1221,12 @@ Color CHud::GetHUDColor( int i )
 {
 	return m_clrHUDColors[Clamp( i, 0, MAX_HUD_COLORS )]; // prevent out-of-bounds
 }
+
+const char* CHud::GetSequenceNameForHUDColor( const char* szSeqName, int i )
+{
+	const char *szNewSeqName = UTIL_VarArgs( "%s%d", szSeqName, i );
+	if ( g_pClientMode->GetViewportAnimationController()->DoesSequenceExist( szNewSeqName ) )
+		return szNewSeqName;
+	else
+		return szSeqName;
+}

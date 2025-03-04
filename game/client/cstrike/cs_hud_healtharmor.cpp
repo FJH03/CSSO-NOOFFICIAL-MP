@@ -255,7 +255,7 @@ void CHudHealthArmor::ApplySettings( KeyValues *inResourceData )
 //-----------------------------------------------------------------------------
 void CHudHealthArmor::Reset()
 {
-	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence("HealthRestored");
+	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( gHUD.GetSequenceNameForHUDColor( "HealthRestored", m_iHUDColor ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -306,7 +306,19 @@ void CHudHealthArmor::OnThink()
 		SetBgColor( newColor );
 	}
 
-	
+	if ( m_iHUDColor != cl_hud_color.GetInt() )
+	{
+		m_iHUDColor = cl_hud_color.GetInt();
+		Color clr = gHUD.GetHUDColor( m_iHUDColor );
+
+		m_pHealthIcon->SetFgColor( clr );
+		m_pArmorIcon->SetFgColor( clr );
+		m_pHealthLabel->SetFgColor( clr );
+		m_pArmorLabel->SetFgColor( clr );
+		m_pSimpleArmorLabel->SetFgColor( clr );
+		m_pHealthProgress->SetFgColor( clr );
+		m_pArmorProgress->SetFgColor( clr );
+	}	
 
 	C_CSPlayer *pPlayer = GetHudPlayer();
 	if ( !pPlayer )
@@ -330,7 +342,7 @@ void CHudHealthArmor::OnThink()
 		if ( realHealth > m_iHealth )
 		{
 			// round restarted, we have 100 again
-			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "HealthRestored" );
+			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( gHUD.GetSequenceNameForHUDColor( "HealthRestored", m_iHUDColor ) );
 		}
 		else if ( realHealth <= 20 )
 		{
@@ -340,7 +352,7 @@ void CHudHealthArmor::OnThink()
 		else if ( realHealth < m_iHealth )
 		{
 			// took a hit
-			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "HealthTookDamage" );
+			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( gHUD.GetSequenceNameForHUDColor( "HealthTookDamage", m_iHUDColor ) );
 		}
 
 		m_iHealth = realHealth;

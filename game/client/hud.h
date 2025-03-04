@@ -164,6 +164,7 @@ public:
 	void						SetScreenShotTime( float flTime ){ m_flScreenShotTime = flTime; }
 
 	Color						GetHUDColor( int i );
+	const char					*GetSequenceNameForHUDColor( const char* szAnimName, int i );
 
 public:
 

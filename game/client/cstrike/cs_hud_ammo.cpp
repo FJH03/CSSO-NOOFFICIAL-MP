@@ -113,7 +113,7 @@ void CHudAmmo::ApplySettings( KeyValues *inResourceData )
 
 void CHudAmmo::Reset()
 {
-	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "AmmoCounterReset" );
+	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( gHUD.GetSequenceNameForHUDColor( "AmmoCounterReset", m_iHUDColor ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -155,7 +155,7 @@ void CHudAmmo::OnThink()
 		m_pPrimaryReserveAmmoLabel->SetFgColor( clr );
 		m_pBulletIcon->SetFgColor( clr );
 	}
-	
+
 	C_CSPlayer *pPlayer = GetHudPlayer();
 	if ( !pPlayer )
 	{
@@ -197,7 +197,7 @@ void CHudAmmo::OnThink()
 	if ( m_bUsesClips )
 	{
 		if ( m_iAmmoCount < m_pActiveWeapon->Clip1() )
-			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "AmmoCounterReset" );
+			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( gHUD.GetSequenceNameForHUDColor( "AmmoCounterReset", m_iHUDColor ) );
 
 		m_iAmmoCount = m_pActiveWeapon->Clip1();
 

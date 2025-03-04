@@ -1214,6 +1214,26 @@ float AnimationController::GetAnimationSequenceLength(const char *sequenceName)
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: returns true if the animation exists, false if doesn't
+//-----------------------------------------------------------------------------
+bool AnimationController::DoesSequenceExist( const char *sequenceName )
+{
+	// lookup the symbol for the name
+	UtlSymId_t seqName = g_ScriptSymbols.Find(sequenceName);
+	if (seqName == UTL_INVAL_SYMBOL)
+		return false;
+
+	// look through for the sequence
+	for (int i = 0; i < m_Sequences.Count(); i++)
+	{
+		// sequence found
+		if (m_Sequences[i].name == seqName)
+			return true;
+	}
+	return false;
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: removes an existing set of commands from the queue
 //-----------------------------------------------------------------------------
 void AnimationController::RemoveQueuedAnimationCommands(UtlSymId_t seqName, Panel *pWithinParent)
