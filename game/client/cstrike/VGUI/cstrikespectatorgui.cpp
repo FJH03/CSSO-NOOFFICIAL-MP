@@ -707,7 +707,24 @@ void CCSMapOverview::UpdateFollowEntity()
 {
 	if ( m_bRoundRadar )
 	{
-		BaseClass::UpdateFollowEntity();
+		if ( m_nFollowEntity != 0 )
+		{
+			C_BaseEntity *ent = ClientEntityList().GetEnt( m_nFollowEntity );
+
+			if ( ent )
+			{
+				Vector position = MainViewOrigin();	// Use MainViewOrigin so SourceTV works in 3rd person
+				QAngle angle = ent->EyeAngles();
+
+				if ( m_nFollowEntity <= MAX_PLAYERS )
+				{
+					SetPlayerPositions( m_nFollowEntity - 1, position, angle );
+				}
+
+				SetCenter( WorldToMap( position ) );
+				SetAngle( angle[YAW] );
+			}
+		}
 	}
 	else
 	{
@@ -1362,8 +1379,8 @@ bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector p
 	if( alpha <= 0 )
 		return false;
 
-	// scale the icons cuz they look too big with new radar scale
-	scale *= ((DESIRED_RADAR_RESOLUTION * m_fMapScale) / (OVERVIEW_MAP_SIZE * m_fFullZoom)) * (1.0f / m_fZoom);
+	// scale the icons
+	scale *= 1.0f / (m_fZoom * m_fFullZoom * 2);
 
 	Vector2D pospanel = WorldToMap( pos );
 	pospanel = MapToPanel( pospanel );
@@ -1373,9 +1390,9 @@ bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector p
 
 	Vector2D oldPos = pospanel;
 	Vector2D adjustment(0,0);
-	if( AdjustPointToPanel( &pospanel ) )
+	if( AdjustPointToPanel( &pospanel ) && m_bRoundRadar )
 	{
-		if( offscreenTextureID == -1 )
+		if ( offscreenTextureID == -1 )
 			return false; //Doesn't want to draw if off screen.
 
 		// Move it in to on panel, and change the icon.
@@ -2128,7 +2145,7 @@ void CCSMapOverview::SetMode(int mode)
 	if ( mode == MAP_MODE_RADAR )
 	{
 		m_flChangeSpeed = 0; // change size instantly
-		m_fZoom = cl_radar_scale.GetFloat();
+		m_fZoom = cl_radar_scale.GetFloat() * (OVERVIEW_MAP_SIZE / DESIRED_RADAR_RESOLUTION);
 
 		if( CBasePlayer::GetLocalPlayer() )
 			SetFollowEntity( CBasePlayer::GetLocalPlayer()->entindex() );
@@ -2214,22 +2231,19 @@ void CCSMapOverview::UpdateSizeAndPosition()
 		if ( engine->IsHLTV() || pPlayer->GetTeamNumber() == TEAM_SPECTATOR || (panel->IsVisible() && cl_radar_square_with_scoreboard.GetBool()) )
 		{
 			m_bRoundRadar = false;
-			m_fZoom = 0.95f; // fit the entire map in square (don't forget about border)
+			m_fZoom = 1.0f; // fit the entire map in a square
 		}
 		else if ( pPlayer->IsObserver() && iObserverMode > OBS_MODE_DEATHCAM )
 		{
 			m_bRoundRadar = false;
-			m_fZoom = 0.95f; // fit the entire map in square (don't forget about border)
+			m_fZoom = 1.0f; // fit the entire map in a square
 		}
 		else
 		{
 			m_bRoundRadar = true;
 
-			if ( m_fZoom != cl_radar_scale.GetFloat() )
-			{
-				m_flChangeSpeed = 0; // change size instantly
-				m_fZoom = cl_radar_scale.GetFloat();
-			}
+			m_flChangeSpeed = 0; // change size instantly
+			m_fZoom = cl_radar_scale.GetFloat() * (OVERVIEW_MAP_SIZE / DESIRED_RADAR_RESOLUTION);
 		}
 	}
 }
