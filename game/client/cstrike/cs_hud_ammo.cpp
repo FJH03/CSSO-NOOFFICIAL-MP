@@ -19,7 +19,6 @@
 #include "c_cs_player.h"
 #include "cs_gamerules.h"
 
-
 using namespace vgui;
 
 extern ConVar cl_hud_healthammo_style;
@@ -48,18 +47,7 @@ private:
 	Label				*m_pPrimaryReserveAmmoLabel;
 	VectorImagePanel	*m_pBulletIcon;
 
-	// PiMoN: this one is tricky, I only need one single instance of VectorImagePanel and just need to use
-	// SetTexture() every time i need to change the weapon icon, but in reality whenever I use SetTexture()
-	// in-game the engine produces an emo-pattern instead of a transparent background, so i have to use
-	// this dumb workaround :( at least there isn't much weapons with ITEM_FLAG_EXHAUSTIBLE
-	//VectorImagePanel	*m_pExhaustibleWeaponIcon;
-	VectorImagePanel	*m_pDecoyIcon;
-	VectorImagePanel	*m_pFlashbangIcon;
-	VectorImagePanel	*m_pHealthshotIcon;
-	VectorImagePanel	*m_pHEGrenadeIcon;
-	VectorImagePanel	*m_pIncGrenadeIcon;
-	VectorImagePanel	*m_pMolotovIcon;
-	VectorImagePanel	*m_pSmokeGrenadeIcon;
+	VectorImagePanel	*m_pExhaustibleWeaponIcon;
 
 	CPanelAnimationVarAliasType( int, simple_wide, "simple_wide", "0", "proportional_width" );
 	CPanelAnimationVarAliasType( int, simple_tall, "simple_tall", "0", "proportional_height" );
@@ -102,14 +90,7 @@ CHudAmmo::CHudAmmo( const char *pElementName ): CHudElement( pElementName ), Edi
 	m_pPrimaryAmmoLabel = new Label( this, "PrimaryAmmoLabel", "10" );
 	m_pPrimaryReserveAmmoLabel = new Label( this, "PrimaryReserveAmmoLabel", "/ 20" );
 	m_pBulletIcon = new VectorImagePanel( this, "BulletIcon" );
-	//m_pExhaustibleWeaponIcon = new VectorImagePanel( this, "ExhaustibleWeaponIcon" );
-	m_pDecoyIcon = new VectorImagePanel( this, "DecoyIcon" );
-	m_pFlashbangIcon = new VectorImagePanel( this, "FlashbangIcon" );
-	m_pHealthshotIcon = new VectorImagePanel( this, "HealthshotIcon" );
-	m_pHEGrenadeIcon = new VectorImagePanel( this, "HEGrenadeIcon" );
-	m_pIncGrenadeIcon = new VectorImagePanel( this, "IncGrenadeIcon" );
-	m_pMolotovIcon = new VectorImagePanel( this, "MolotovIcon" );
-	m_pSmokeGrenadeIcon = new VectorImagePanel( this, "SmokeGrenadeIcon" );
+	m_pExhaustibleWeaponIcon = new VectorImagePanel( this, "ExhaustibleWeaponIcon" );
 
 	LoadControlSettings( "resource/hud/ammo.res" );
 }
@@ -188,6 +169,7 @@ void CHudAmmo::OnThink()
 		SetPaintBackgroundEnabled( false );
 		return;
 	}
+
 	if ( pWeapon != m_pActiveWeapon )
 	{
 		m_pActiveWeapon = pWeapon;
@@ -206,14 +188,7 @@ void CHudAmmo::OnThink()
 
 		m_pBulletIcon->SetVisible( m_bUsesClips && (m_iStyle == 0) );
 
-		//m_pExhaustibleWeaponIcon->SetVisible( m_bIsExhaustible && (m_iStyle == 0) );
-		m_pDecoyIcon->SetVisible( m_bIsExhaustible && m_pActiveWeapon->GetWeaponID() == WEAPON_DECOY && (m_iStyle == 0) );
-		m_pFlashbangIcon->SetVisible( m_bIsExhaustible && m_pActiveWeapon->GetWeaponID() == WEAPON_FLASHBANG && (m_iStyle == 0) );
-		m_pHealthshotIcon->SetVisible( m_bIsExhaustible && m_pActiveWeapon->GetWeaponID() == WEAPON_HEALTHSHOT && (m_iStyle == 0) );
-		m_pHEGrenadeIcon->SetVisible( m_bIsExhaustible && m_pActiveWeapon->GetWeaponID() == WEAPON_HEGRENADE && (m_iStyle == 0) );
-		m_pIncGrenadeIcon->SetVisible( m_bIsExhaustible && m_pActiveWeapon->GetWeaponID() == WEAPON_INCGRENADE && (m_iStyle == 0) );
-		m_pMolotovIcon->SetVisible( m_bIsExhaustible &&  m_pActiveWeapon->GetWeaponID() == WEAPON_MOLOTOV && (m_iStyle == 0) );
-		m_pSmokeGrenadeIcon->SetVisible( m_bIsExhaustible && m_pActiveWeapon->GetWeaponID() == WEAPON_SMOKEGRENADE && (m_iStyle == 0) );
+		m_pExhaustibleWeaponIcon->SetVisible( m_bIsExhaustible && (m_iStyle == 0) );
 	}
 
 	if ( m_bUsesClips )
@@ -243,15 +218,8 @@ void CHudAmmo::OnThink()
 	// don't do it every frame, only do it when needed
 	if ( m_bIsExhaustible && (m_iStyle == 0) )
 	{
-		//m_pExhaustibleWeaponIcon->SetRepeatsCount( pPlayer->GetAmmoCount( pWeapon->GetPrimaryAmmoType() ) );
-		m_pDecoyIcon->SetRepeatsCount( pPlayer->GetAmmoCount( AMMO_TYPE_DECOY ) );
-		m_pFlashbangIcon->SetRepeatsCount( pPlayer->GetAmmoCount( AMMO_TYPE_FLASHBANG ) );
-		m_pHealthshotIcon->SetRepeatsCount( pPlayer->GetAmmoCount( AMMO_TYPE_HEALTHSHOT ) );
-		m_pHEGrenadeIcon->SetRepeatsCount( pPlayer->GetAmmoCount( AMMO_TYPE_HEGRENADE ) );
-		m_pIncGrenadeIcon->SetRepeatsCount( pPlayer->GetAmmoCount( AMMO_TYPE_MOLOTOV ) );
-		m_pMolotovIcon->SetRepeatsCount( pPlayer->GetAmmoCount( AMMO_TYPE_MOLOTOV ) );
-		m_pSmokeGrenadeIcon->SetRepeatsCount( pPlayer->GetAmmoCount( AMMO_TYPE_SMOKEGRENADE ) );
-		/*if ( bWeaponChanged )
-			m_pExhaustibleWeaponIcon->SetTexture( UTIL_VarArgs( "materials/vgui/weapons/svg/%s.svg", pWeapon->GetClassname() + 7 ) );*/
+		m_pExhaustibleWeaponIcon->SetRepeatsCount( pPlayer->GetAmmoCount( pWeapon->GetPrimaryAmmoType() ) );
+		if ( bWeaponChanged )
+			m_pExhaustibleWeaponIcon->SetTexture( UTIL_VarArgs( "materials/vgui/weapons/svg/%s.svg", pWeapon->GetClassname() + 7 ) );
 	}
 }
