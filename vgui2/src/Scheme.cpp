@@ -174,18 +174,18 @@ public:
 	// gets the proportional coordinates for doing screen-size independant panel layouts
 	// use these for font, image and panel size scaling (they all use the pixel height of the display for scaling)
 	virtual int GetProportionalScaledValue(int normalizedValue, bool byWidth = false);
-	virtual int GetProportionalNormalizedValue(int scaledValue);
+	virtual int GetProportionalNormalizedValue(int scaledValue, bool byWidth = false);
 
 	// gets the proportional coordinates for doing screen-size independant panel layouts
 	// use these for font, image and panel size scaling (they all use the pixel height of the display for scaling)
-	virtual int GetProportionalScaledValueEx( HScheme scheme, int normalizedValue );
+	virtual int GetProportionalScaledValueEx( HScheme scheme, int normalizedValue, bool byWidth = false );
 	virtual int GetProportionalNormalizedValueEx( HScheme scheme, int scaledValue );
 
 	virtual bool DeleteImage( const char *pImageName );
 
 	// gets the proportional coordinates for doing screen-size independant panel layouts
 	// use these for font, image and panel size scaling (they all use the pixel height of the display for scaling)
-	int GetProportionalScaledValueEx( CScheme *pScheme, int normalizedValue );
+	int GetProportionalScaledValueEx( CScheme *pScheme, int normalizedValue, bool byWidth = false );
 	int GetProportionalNormalizedValueEx( CScheme *pScheme, int scaledValue );
 
 	void SpewFonts();
@@ -193,7 +193,7 @@ public:
 private:
 
 	int GetProportionalScaledValue_( int rootWide, int rootTall, int normalizedValue, bool byWidth = false );
-	int GetProportionalNormalizedValue_( int rootWide, int rootTall, int scaledValue );
+	int GetProportionalNormalizedValue_( int rootWide, int rootTall, int scaledValue, bool byWidth = false );
 
 	// Search for already-loaded schemes
 	HScheme FindLoadedScheme(const char *fileName);
