@@ -259,6 +259,8 @@ public:
 	virtual void	ItemPostFrame();
 	virtual void	ItemBusyFrame();
 	virtual const char		*GetViewModel( int viewmodelindex = 0 ) const;
+	virtual bool	WeaponHasBurst() const { return false; }
+	virtual bool	IsInBurstMode() { return false; }
 
 	virtual bool IsRevolver() const { return GetCSWeaponID() == WEAPON_REVOLVER; }
 
@@ -327,7 +329,7 @@ private:
 
 	float	m_nextOwnerTouchTime;
 	float	m_nextPrevOwnerTouchTime;
-	
+
 	CNetworkHandle( CBasePlayer, m_hPrevOwner );
 
 	int m_iDefaultExtraAmmo;
