@@ -3870,131 +3870,6 @@ ConVar snd_music_selection(
 			}
 		}
         
-        //=============================================================================
-        // HPE_BEGIN:
-        // [tj] Keep track of number of players per side and if they have the same uniform
-        //=============================================================================
- 
-        int terroristUniform = -1;
-        bool allTerroristsWearingSameUniform = true;
-        int numberOfTerrorists = 0;
-        int ctUniform = -1;
-        bool allCtsWearingSameUniform = true;
-        int numberOfCts = 0;
- 
-        //=============================================================================
-        // HPE_END
-        //=============================================================================
-
-		// know respawn all players
-		for ( i = 1; i <= gpGlobals->maxClients; i++ )
-		{
-			CCSPlayer *pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( i );
-
-			if ( !pPlayer )
-				continue;
-
-			if ( pPlayer->GetTeamNumber() == TEAM_CT && pPlayer->PlayerClass() >= FIRST_CT_CLASS && pPlayer->PlayerClass() <= LAST_CT_CLASS )
-			{
-                //=============================================================================
-                // HPE_BEGIN:
-                // [tj] Increment CT count and check CT uniforms.
-                //=============================================================================
-                 
-                numberOfCts++;
-                if (ctUniform == -1)
-                {
-                    ctUniform = pPlayer->PlayerClass();
-                }
-                else if (pPlayer->PlayerClass() != ctUniform)
-                {
-                    allCtsWearingSameUniform = false;
-                }
-                 
-                //=============================================================================
-                // HPE_END
-                //=============================================================================
-                
-				pPlayer->RoundRespawn();
-			}
-
-			if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST && pPlayer->PlayerClass() >= FIRST_T_CLASS && pPlayer->PlayerClass() <= LAST_T_CLASS )
-			{
-                //=============================================================================
-                // HPE_BEGIN:
-                // [tj] Increment terrorist count and check terrorist uniforms
-                //=============================================================================
-                 
-                numberOfTerrorists++;
-                if (terroristUniform == -1)
-                {
-                    terroristUniform = pPlayer->PlayerClass();
-                }
-                else if (pPlayer->PlayerClass() != terroristUniform)
-                {
-                    allTerroristsWearingSameUniform = false;
-                }
-                 
-                //=============================================================================
-                // HPE_END
-                //=============================================================================
-                
-				pPlayer->RoundRespawn();
-			}
-			else
-			{
-				pPlayer->ObserverRoundRespawn();
-			}
-		}
-
-        //=============================================================================
-        // HPE_BEGIN:
-        //=============================================================================
-
-        // [tj] Award same uniform achievement for qualifying teams
-        for ( i = 1; i <= gpGlobals->maxClients; i++ )
-        {
-            CCSPlayer *pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( i );
-
-            if ( !pPlayer )
-                continue;
-
-            if ( pPlayer->GetTeamNumber() == TEAM_CT && allCtsWearingSameUniform && numberOfCts >= AchievementConsts::SameUniform_MinPlayers)
-            {
-                pPlayer->AwardAchievement(CSSameUniform);
-            }
-
-            if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST && allTerroristsWearingSameUniform && numberOfTerrorists >= AchievementConsts::SameUniform_MinPlayers)
-            {
-                pPlayer->AwardAchievement(CSSameUniform);
-            }
-        }
-
-		// [menglish] reset per-round achievement variables for each player
-		for ( i = 1; i <= gpGlobals->maxClients; i++ )
-		{
-			CCSPlayer *pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( i );
-			if( pPlayer )
-			{
-				pPlayer->ResetRoundBasedAchievementVariables();
-			}
-		}
-
-		// [pfreese] Reset all round or match stats, depending on type of restart
-		if ( m_bCompleteReset )
-		{
-			CCS_GameStats.ResetAllStats();
-			CCS_GameStats.ResetPlayerClassMatchStats();
-		}
-		else
-		{
-			CCS_GameStats.ResetRoundStats();
-		}
-
-		//=============================================================================
-		// HPE_END
-		//=============================================================================
-
 		// Respawn entities (glass, doors, etc..)
 		CleanUpMap();
 
@@ -4193,6 +4068,131 @@ ConVar snd_music_selection(
 			fmtHostagePositions.AppendFormat( "\n" );
 			ConMsg( "%s", fmtHostagePositions.Access() );
 		}
+
+		//=============================================================================
+        // HPE_BEGIN:
+        // [tj] Keep track of number of players per side and if they have the same uniform
+        //=============================================================================
+ 
+        int terroristUniform = -1;
+        bool allTerroristsWearingSameUniform = true;
+        int numberOfTerrorists = 0;
+        int ctUniform = -1;
+        bool allCtsWearingSameUniform = true;
+        int numberOfCts = 0;
+ 
+        //=============================================================================
+        // HPE_END
+        //=============================================================================
+
+		// now respawn all players
+		for ( i = 1; i <= gpGlobals->maxClients; i++ )
+		{
+			CCSPlayer *pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( i );
+
+			if ( !pPlayer )
+				continue;
+
+			if ( pPlayer->GetTeamNumber() == TEAM_CT && pPlayer->PlayerClass() >= FIRST_CT_CLASS && pPlayer->PlayerClass() <= LAST_CT_CLASS )
+			{
+                //=============================================================================
+                // HPE_BEGIN:
+                // [tj] Increment CT count and check CT uniforms.
+                //=============================================================================
+                 
+                numberOfCts++;
+                if (ctUniform == -1)
+                {
+                    ctUniform = pPlayer->PlayerClass();
+                }
+                else if (pPlayer->PlayerClass() != ctUniform)
+                {
+                    allCtsWearingSameUniform = false;
+                }
+                 
+                //=============================================================================
+                // HPE_END
+                //=============================================================================
+                
+				pPlayer->RoundRespawn();
+			}
+
+			if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST && pPlayer->PlayerClass() >= FIRST_T_CLASS && pPlayer->PlayerClass() <= LAST_T_CLASS )
+			{
+                //=============================================================================
+                // HPE_BEGIN:
+                // [tj] Increment terrorist count and check terrorist uniforms
+                //=============================================================================
+                 
+                numberOfTerrorists++;
+                if (terroristUniform == -1)
+                {
+                    terroristUniform = pPlayer->PlayerClass();
+                }
+                else if (pPlayer->PlayerClass() != terroristUniform)
+                {
+                    allTerroristsWearingSameUniform = false;
+                }
+                 
+                //=============================================================================
+                // HPE_END
+                //=============================================================================
+                
+				pPlayer->RoundRespawn();
+			}
+			else
+			{
+				pPlayer->ObserverRoundRespawn();
+			}
+		}
+
+        //=============================================================================
+        // HPE_BEGIN:
+        //=============================================================================
+
+        // [tj] Award same uniform achievement for qualifying teams
+        for ( i = 1; i <= gpGlobals->maxClients; i++ )
+        {
+            CCSPlayer *pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( i );
+
+            if ( !pPlayer )
+                continue;
+
+            if ( pPlayer->GetTeamNumber() == TEAM_CT && allCtsWearingSameUniform && numberOfCts >= AchievementConsts::SameUniform_MinPlayers)
+            {
+                pPlayer->AwardAchievement(CSSameUniform);
+            }
+
+            if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST && allTerroristsWearingSameUniform && numberOfTerrorists >= AchievementConsts::SameUniform_MinPlayers)
+            {
+                pPlayer->AwardAchievement(CSSameUniform);
+            }
+        }
+
+		// [menglish] reset per-round achievement variables for each player
+		for ( i = 1; i <= gpGlobals->maxClients; i++ )
+		{
+			CCSPlayer *pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( i );
+			if( pPlayer )
+			{
+				pPlayer->ResetRoundBasedAchievementVariables();
+			}
+		}
+
+		// [pfreese] Reset all round or match stats, depending on type of restart
+		if ( m_bCompleteReset )
+		{
+			CCS_GameStats.ResetAllStats();
+			CCS_GameStats.ResetPlayerClassMatchStats();
+		}
+		else
+		{
+			CCS_GameStats.ResetRoundStats();
+		}
+
+		//=============================================================================
+		// HPE_END
+		//=============================================================================
 
 		// now run a tkpunish check, after the map has been cleaned up
 		for ( i = 1; i <= gpGlobals->maxClients; i++ )
@@ -6807,20 +6807,12 @@ ConVar snd_music_selection(
 		CBaseEntity *pCur = gEntList.FirstEnt();
 		while ( pCur )
 		{
-			CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase* >( pCur );
+			CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase* >(pCur);
 			// Weapons with owners don't want to be removed..
 			if ( pWeapon )
 			{
-                //=============================================================================
-                // HPE_BEGIN:
                 // [dwenger] Handle round restart processing for the weapon.
-                //=============================================================================
-
-                pWeapon->OnRoundRestart();
-
-                //=============================================================================
-                // HPE_END
-                //=============================================================================
+				pWeapon->OnRoundRestart();
 
                 if ( pWeapon->ShouldRemoveOnRoundRestart() )
 				{
