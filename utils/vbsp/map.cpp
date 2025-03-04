@@ -3019,7 +3019,8 @@ ChunkFileResult_t CMapFile::LoadSolidCallback(CChunkFile *pFile, LoadEntity_t *p
 		//
 		// only do this on the world entity
 		//
-		if ( b->entitynum == 0 )
+		// UNDONE (wills) CSGO wants lots of unique textures for different clip brush material types
+		/*if ( b->entitynum == 0 )
 		{
 			if (b->contents & (CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP) )
 			{
@@ -3033,7 +3034,7 @@ ChunkFileResult_t CMapFile::LoadSolidCallback(CChunkFile *pFile, LoadEntity_t *p
 					b->original_sides[i].texinfo = TEXINFO_NODE;
 				}
 			}
-		}
+		}*/
 
 		//
 		// origin brushes are removed, but they set
