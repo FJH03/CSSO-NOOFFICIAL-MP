@@ -215,6 +215,7 @@ public:
 	virtual void ValidateModelIndex( void );
 
 	virtual int	GetMaxHealth() const;
+	virtual int GetMaxArmor() const;
 
 	bool		Weapon_CanSwitchTo(C_BaseCombatWeapon *pWeapon);
 

@@ -2900,6 +2900,12 @@ int	C_CSPlayer::GetMaxHealth() const
 	return 100;
 }
 
+int	C_CSPlayer::GetMaxArmor() const
+{
+	// TODO: if adding heavy armor, add the check here
+	return 100;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Return the local player, or the player being spectated in-eye
 //-----------------------------------------------------------------------------

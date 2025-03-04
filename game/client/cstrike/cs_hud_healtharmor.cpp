@@ -331,23 +331,25 @@ void CHudHealthArmor::OnThink()
 	SetPaintEnabled( true );
 	SetPaintBackgroundEnabled( true );
 
-	int realHealth = 0;
-	int realArmor = 0;
+	int iRealHealth = 0;
+	int iRealArmor = 0;
+	int iMaxHealth = pPlayer->GetMaxHealth();
+	int iMaxArmor = pPlayer->GetMaxArmor();
 	
 	// Never below zero
-	realHealth = MAX( pPlayer->GetHealth(), 0 );
-	realArmor = MAX( pPlayer->ArmorValue(), 0 );
+	iRealHealth = MAX( pPlayer->GetHealth(), 0 );
+	iRealArmor = MAX( pPlayer->ArmorValue(), 0 );
 
 	wchar_t unicode[8];
 	// Only update the fade if we've changed health
-	if ( realHealth != m_iHealth )
+	if ( iRealHealth != m_iHealth )
 	{
-		if ( realHealth <= 20 )
+		if ( iRealHealth <= 20 )
 		{
 			// we are badly injured
 			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "HealthLow" );
 		}
-		else if ( realHealth < m_iHealth )
+		else if ( iRealHealth < m_iHealth )
 		{
 			// took a hit
 			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( gHUD.GetSequenceNameForHUDColor( "HealthTookDamage", m_iHUDColor ) );
@@ -358,21 +360,21 @@ void CHudHealthArmor::OnThink()
 			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( gHUD.GetSequenceNameForHUDColor( "HealthRestored", m_iHUDColor ) );
 		}
 
-		m_iHealth = realHealth;
+		m_iHealth = iRealHealth;
 
 		V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", m_iHealth );
 		m_pHealthLabel->SetText( unicode );
-		m_pHealthProgress->SetProgress( clamp( m_iHealth / 100.0f, 0.0f, 1.0f ) );
+		m_pHealthProgress->SetProgress( clamp( (float)m_iArmor / (float)iMaxHealth, 0.0f, 1.0f ) );
 	}
 
-	if ( realArmor != m_iArmor )
+	if ( iRealArmor != m_iArmor )
 	{
-		m_iArmor = realArmor;
+		m_iArmor = iRealArmor;
 
 		V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", m_iArmor );
 		m_pArmorLabel->SetText( unicode );
 		m_pSimpleArmorLabel->SetText( unicode );
-		m_pArmorProgress->SetProgress( clamp( m_iArmor / 100.0f, 0.0f, 1.0f ) );
+		m_pArmorProgress->SetProgress( clamp( (float)m_iArmor / (float)iMaxArmor, 0.0f, 1.0f ) );
 	}
 
 	m_pHelmetIcon->SetVisible( pPlayer->HasHelmet() );
