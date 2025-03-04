@@ -3999,7 +3999,6 @@ void C_BaseEntity::SetDormant( bool bDormant )
 
 	ParticleProp()->OwnerSetDormantTo( bDormant );
 
-	OnSetDormant( bDormant );
 }
 
 //-----------------------------------------------------------------------------
