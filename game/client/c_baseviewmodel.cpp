@@ -43,8 +43,6 @@
 #ifdef CSTRIKE_DLL
 	ConVar cl_righthand( "cl_righthand", "1", FCVAR_ARCHIVE, "Use right-handed view models." );
 
-	extern ConVar loadout_slot_gloves_ct;
-	extern ConVar loadout_slot_gloves_t;
 	extern ConVar loadout_stattrak;
 #endif
 
