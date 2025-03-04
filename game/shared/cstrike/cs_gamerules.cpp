@@ -2293,6 +2293,7 @@ ConVar snd_music_selection(
 		CBasePlayer *pScorer = GetDeathScorer( pKiller, pInflictor );
 		CCSPlayer *pCSVictim = (CCSPlayer *)pVictim;
 		CCSPlayer *pCSScorer = (CCSPlayer *)pScorer;
+		CWeaponCSBase* pWeapon = dynamic_cast<CWeaponCSBase *>( info.GetWeapon() );
 
 		CCS_GameStats.PlayerKilled( pVictim, info );
 
@@ -2403,13 +2404,8 @@ ConVar snd_music_selection(
 				}
 				else
 				{
-					bool bIsGrenade = ((Q_strcmp( pInflictor->GetClassname(), "hegrenade_projectile" ) == 0) ||
-										(Q_strcmp( pInflictor->GetClassname(), "flashbang_projectile" ) == 0) ||
-										(Q_strcmp( pInflictor->GetClassname(), "smokegrenade_projectile" ) == 0));
-					CWeaponCSBase* pCSWeapon = dynamic_cast<CWeaponCSBase*>(pScorer->GetActiveWeapon());
-
-					if ( pCSWeapon && !bIsGrenade )
-						pCSScorer->AddAccountAward( PlayerCashAward::KILLED_ENEMY, pCSWeapon->GetKillAward(), pCSWeapon );
+					if ( pWeapon )
+						pCSScorer->AddAccountAward( PlayerCashAward::KILLED_ENEMY, pWeapon->GetKillAward(), pWeapon );
 					else
 						pCSScorer->AddAccountAward( PlayerCashAward::KILLED_ENEMY );
 				}
