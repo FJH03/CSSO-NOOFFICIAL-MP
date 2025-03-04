@@ -17,8 +17,11 @@
 #include <vgui/ISurface.h>
 
 #include "LabeledCommandComboBox.h"
+#include "cvarslider.h"
 #include "EngineInterface.h"
 #include "tier1/convar.h"
+
+#include "hud.h" // for MAX_HUD_COLORS
 
 #if defined( _X360 )
 #include "xbox/xbox_win32stubs.h"
@@ -47,6 +50,8 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 	m_pPlayerCountPos = new CLabeledCommandComboBox( this, "PlayerCountPositionComboBox" );
 	m_pHealthAmmoStyle = new CLabeledCommandComboBox( this, "HealthAmmoStyleComboBox" );
 	m_pSimplePlayerModelLighting = new CLabeledCommandComboBox( this, "SimplePlayerModelLightingComboBox" );
+	m_pHUDColor = new CLabeledCommandComboBox( this, "HUDColorComboBox" );
+	m_pHUDBackgroundAlpha = new CCvarSlider( this, "HUDBackgroundAlphaSlider", "", 0.0f, 1.0f, "cl_hud_background_alpha" );
 
 	m_pPlayerCountPos->AddItem( "#GameUI_HUD_PlayerCount_Top", "hud_playercount_pos 0" );
 	m_pPlayerCountPos->AddItem( "#GameUI_HUD_PlayerCount_Bottom", "hud_playercount_pos 1" );
@@ -57,9 +62,20 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 	m_pSimplePlayerModelLighting->AddItem( "#GameUI_HUD_SimplePlayerModelLighting_0", "cl_simple_player_lighting 0" );
 	m_pSimplePlayerModelLighting->AddItem( "#GameUI_HUD_SimplePlayerModelLighting_1", "cl_simple_player_lighting 1" );
 
+	char localization[64];
+	char command[64];
+	for ( int i = 0; i < MAX_HUD_COLORS; i++ )
+	{
+		Q_snprintf( localization, sizeof( localization ), "#GameUI_HUD_Color_%d", i );
+		Q_snprintf( command, sizeof( command ), "cl_hud_color %d", i );
+		m_pHUDColor->AddItem( localization, command );
+	}
+
 	m_pPlayerCountPos->AddActionSignalTarget( this );
 	m_pHealthAmmoStyle->AddActionSignalTarget( this );
 	m_pSimplePlayerModelLighting->AddActionSignalTarget( this );
+	m_pHUDColor->AddActionSignalTarget( this );
+	m_pHUDBackgroundAlpha->AddActionSignalTarget( this );
 
 	LoadControlSettings( "Resource/ModOptionsSubHUD.res" );
 }
@@ -96,6 +112,12 @@ void CModOptionsSubHUD::OnResetData()
 	ConVarRef cl_simple_player_lighting( "cl_simple_player_lighting" );
 	if ( cl_simple_player_lighting.IsValid() )
 		m_pSimplePlayerModelLighting->SetInitialItem( cl_simple_player_lighting.GetInt() );
+
+	ConVarRef cl_hud_color( "cl_hud_color" );
+	if ( cl_hud_color.IsValid() )
+		m_pHUDColor->SetInitialItem( cl_hud_color.GetInt() );
+
+	m_pHUDBackgroundAlpha->Reset();
 }
 
 //-----------------------------------------------------------------------------
@@ -106,4 +128,6 @@ void CModOptionsSubHUD::OnApplyChanges()
 	m_pPlayerCountPos->ApplyChanges();
 	m_pHealthAmmoStyle->ApplyChanges();
 	m_pSimplePlayerModelLighting->ApplyChanges();
+	m_pHUDColor->ApplyChanges();
+	m_pHUDBackgroundAlpha->ApplyChanges();
 }

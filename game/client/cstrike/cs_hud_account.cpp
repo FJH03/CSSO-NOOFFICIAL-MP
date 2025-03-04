@@ -29,6 +29,7 @@ using namespace vgui;
 
 extern ConVar cl_hud_background_alpha;
 extern ConVar mp_maxmoney;
+extern ConVar cl_hud_color;
 
 //-----------------------------------------------------------------------------
 // Purpose: Money panel
@@ -44,8 +45,6 @@ public:
 	virtual bool ShouldDraw();
 
 private:
-	float	m_flBackgroundAlpha;
-
 	int		m_iAccount;
 
 	VectorImagePanel	*m_pBuyZoneIcon;
@@ -83,7 +82,6 @@ CHudAccount::CHudAccount( const char *pElementName ) : CHudElement( pElementName
 void CHudAccount::Init()
 {
 	m_iAccount			= -1;
-	m_flBackgroundAlpha = 0.0f;
 }
 
 //-----------------------------------------------------------------------------
@@ -96,6 +94,15 @@ void CHudAccount::OnThink()
 		Color oldColor = GetBgColor();
 		Color newColor( oldColor.r(), oldColor.g(), oldColor.b(), cl_hud_background_alpha.GetFloat() * 255 );
 		SetBgColor( newColor );
+	}
+
+	if ( m_iHUDColor != cl_hud_color.GetInt() )
+	{
+		m_iHUDColor = cl_hud_color.GetInt();
+		Color clr = gHUD.GetHUDColor( m_iHUDColor );
+
+		m_pBuyZoneIcon->SetFgColor( clr );
+		m_pAccountLabel->SetFgColor( clr );
 	}
 
 	int realAccount = 0;

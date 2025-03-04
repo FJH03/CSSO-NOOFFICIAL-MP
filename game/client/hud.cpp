@@ -31,6 +31,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+ConVar cl_hud_color( "cl_hud_color", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "", true, 0, true, MAX_HUD_COLORS );
+
 static 	CClassMemoryPool< CHudTexture >	 g_HudTextureMemoryPool( 128 );
 
 //-----------------------------------------------------------------------------
@@ -239,6 +241,9 @@ CHudElement::CHudElement( const char *pElementName )
 	m_pElementName = pElementName;
 	SetNeedsRemove( false );
 	m_bIsParentedToClientDLLRootPanel = false;
+	m_iHUDColor = -1;
+	m_flBackgroundAlpha = 0.0f;
+	m_iStyle = -1;
 
 	// Make this for all hud elements, but when its a bit safer
 #if defined( TF_CLIENT_DLL ) || defined( DOD_DLL )
@@ -480,6 +485,14 @@ void CHud::InitColors( vgui::IScheme *scheme )
 	m_clrNormal = scheme->GetColor( "Normal", Color( 255, 208, 64 ,255 ) );
 	m_clrCaution = scheme->GetColor( "Caution", Color( 255, 48, 0, 255 ) );
 	m_clrYellowish = scheme->GetColor( "Yellowish", Color( 255, 160, 0, 255 ) );
+
+	// init hud colors separately
+	vgui::IScheme *pClientScheme = vgui::scheme()->GetIScheme( vgui::scheme()->GetScheme( "ClientScheme" ) );
+
+	for ( int i = 0; i < MAX_HUD_COLORS; i++ )
+	{
+		m_clrHUDColors[i] = pClientScheme->GetColor( UTIL_VarArgs( "HudColor%d", i ), m_clrNormal );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1204,3 +1217,7 @@ CON_COMMAND_F( testhudanim, "Test a hud element animation.\n\tArguments: <anim n
 	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( args[1] );
 }
 
+Color CHud::GetHUDColor( int i )
+{
+	return m_clrHUDColors[Clamp( i, 0, MAX_HUD_COLORS )]; // prevent out-of-bounds
+}

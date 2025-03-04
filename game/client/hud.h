@@ -31,6 +31,8 @@ typedef struct wrect_s
 	int bottom;
 } wrect_t;
 
+#define MAX_HUD_COLORS 12
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -161,6 +163,8 @@ public:
 
 	void						SetScreenShotTime( float flTime ){ m_flScreenShotTime = flTime; }
 
+	Color						GetHUDColor( int i );
+
 public:
 
 	int							m_iKeyBits;
@@ -190,6 +194,8 @@ private:
 	CUtlMap< int, CHudRenderGroup * >		m_RenderGroups;
 
 	float						m_flScreenShotTime; // used to take end-game screenshots
+
+	Color						m_clrHUDColors[MAX_HUD_COLORS];
 };
 
 extern CHud gHUD;

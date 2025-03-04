@@ -15,6 +15,7 @@
 #include <vgui_controls/Label.h>
 
 class CLabeledCommandComboBox;
+class CCvarSlider;
 
 class CModOptionsSubHUD;
 
@@ -41,6 +42,8 @@ private:
 	CLabeledCommandComboBox*	m_pPlayerCountPos;
 	CLabeledCommandComboBox*	m_pHealthAmmoStyle;
 	CLabeledCommandComboBox*	m_pSimplePlayerModelLighting;
+	CLabeledCommandComboBox*	m_pHUDColor;
+	CCvarSlider*				m_pHUDBackgroundAlpha;
 };
 
 #endif // ModOptionsSubHUD_H

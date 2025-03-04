@@ -23,6 +23,7 @@ using namespace vgui;
 
 extern ConVar cl_hud_healthammo_style;
 extern ConVar cl_hud_background_alpha;
+extern ConVar cl_hud_color;
 
 //-----------------------------------------------------------------------------
 // Purpose: Displays current ammunition level
@@ -39,14 +40,11 @@ public:
 	virtual void OnThink();
 	
 private:
-	float	m_flBackgroundAlpha;
-
 	CHandle<C_BaseCombatWeapon>	m_pActiveWeapon;
 
 	Label				*m_pPrimaryAmmoLabel;
 	Label				*m_pPrimaryReserveAmmoLabel;
 	VectorImagePanel	*m_pBulletIcon;
-
 	VectorImagePanel	*m_pExhaustibleWeaponIcon;
 
 	CPanelAnimationVarAliasType( int, simple_wide, "simple_wide", "0", "proportional_width" );
@@ -55,8 +53,6 @@ private:
 	bool	m_bUsesClips;
 	bool	m_bIsExhaustible;
 	int		m_iAmmoCount;
-
-	int		m_iStyle;
 	
 	int		m_iSimpleXPos;
 	int		m_iSimpleYPos;
@@ -97,9 +93,6 @@ CHudAmmo::CHudAmmo( const char *pElementName ): CHudElement( pElementName ), Edi
 
 void CHudAmmo::Init( void )
 {
-	m_flBackgroundAlpha = 0.0f;
-	m_iStyle			= -1;
-
 	m_bUsesClips		= false;
 	m_bIsExhaustible	= false;
 	m_iAmmoCount		= 0;
@@ -153,6 +146,16 @@ void CHudAmmo::OnThink()
 		SetBgColor( newColor );
 	}
 
+	if ( m_iHUDColor != cl_hud_color.GetInt() )
+	{
+		m_iHUDColor = cl_hud_color.GetInt();
+		Color clr = gHUD.GetHUDColor( m_iHUDColor );
+
+		m_pPrimaryAmmoLabel->SetFgColor( clr );
+		m_pPrimaryReserveAmmoLabel->SetFgColor( clr );
+		m_pBulletIcon->SetFgColor( clr );
+	}
+	
 	C_CSPlayer *pPlayer = GetHudPlayer();
 	if ( !pPlayer )
 	{

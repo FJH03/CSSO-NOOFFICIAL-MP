@@ -116,6 +116,11 @@ public:
 protected:
 	int							m_iHiddenBits;
 
+	// HUD customization
+	int							m_iHUDColor;
+	float						m_flBackgroundAlpha;
+	int							m_iStyle;
+
 private:
 	const char					*m_pElementName;
 	bool						m_bNeedsRemove;
