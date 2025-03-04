@@ -42,6 +42,10 @@ VectorImagePanel::~VectorImagePanel()
 
 void VectorImagePanel::SetTexture( const char *szFilePath )
 {
+	// don't even bother doing anything without a file
+	if ( !szFilePath )
+		return;
+	
 	DestroyTexture();
 
 	char szFullPath[MAX_PATH];

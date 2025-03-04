@@ -31,12 +31,27 @@ CCSHudWeaponSelection::CCSHudWeaponSelection( const char* pElementName ) : CHudE
 	V_memset( m_weaponPanels, 0, sizeof( m_weaponPanels ) );
 	m_clrNotSelected = Color( 255, 255, 255, 255 );
 
+	m_pDefuserIcon = new VectorImagePanel( pParent, "DefuserIcon" ); // has to be the parent of viewport so it isn't affected by alpha
+	m_pDefuserIcon->ClearSchemeUpdateFlag(); // again, I will not even risk that cuz there is no color overrider
+	m_bHasDefuser = false;
+
 	ListenForGameEvent( "round_prestart" );
 	ListenForGameEvent( "round_start" );
 	ListenForGameEvent( "bot_takeover" );
 	ListenForGameEvent( "spec_mode_updated" );
 	ListenForGameEvent( "spec_target_updated" );
 	ListenForGameEvent( "hltv_changed_mode" );
+}
+
+void CCSHudWeaponSelection::ApplySettings( KeyValues *inResourceData )
+{
+	BaseClass::ApplySettings( inResourceData );
+
+	m_pDefuserIcon->SetRenderSize( defuser_icon_wide, defuser_icon_tall );
+	m_pDefuserIcon->SetTexture( inResourceData->GetString( "defuser_icon", NULL ) );
+	m_pDefuserIcon->SetPos( GetWide() - icons_base_xpos - m_pDefuserIcon->GetWide() + defuser_icon_xpos,
+							defuser_icon_ypos );
+	m_pDefuserIcon->SetVisible( false );
 }
 
 void CCSHudWeaponSelection::OnThink()
@@ -48,6 +63,18 @@ void CCSHudWeaponSelection::OnThink()
 		m_clrNotSelected = Color( clr.r()*0.5f, clr.g()*0.5f, clr.b()*0.5f, clr.a() );
 
 		UpdateIconColors();
+	}
+
+	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pLocalPlayer )
+		return;
+
+	if ( m_bHasDefuser != pLocalPlayer->HasDefuser() )
+	{
+		m_bHasDefuser = pLocalPlayer->HasDefuser();
+		m_pDefuserIcon->SetFgColor( m_clrDefuser ); // it gets updated after initializing so just change it here
+		m_pDefuserIcon->SetVisible( m_bHasDefuser );
+		ShowAndUpdateSelection( WEPSELECT_SWITCH ); // update panel positions
 	}
 }
 
@@ -449,7 +476,7 @@ void CCSHudWeaponSelection::UpdatePanelPositions( void )
 
 					if ( pPlayer && pPlayer->HasDefuser() )
 					{
-						nYPos = icons_base_ypos - weapon_icon_slot_margin;
+						nYPos = icons_base_ypos - weapon_icon_defuser_margin;
 					}
 					else
 					{
