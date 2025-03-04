@@ -29,7 +29,7 @@ AutoBuyInfoStruct g_autoBuyInfo[] =
 	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "fn57", "weapon_fiveseven" },	// fn57
 	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "hkp2000", "weapon_hkp2000" }, // hkp2000
 	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "p250", "weapon_p250" }, // p250
-	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "cz75", "weapon_cz75" },	// cz75
+	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "cz75a", "weapon_cz75a" },	// cz75a
 	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL), "tec9", "weapon_tec9" },	// tec9
 	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_PISTOL),	"taser", "weapon_taser" },	// taser
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SHOTGUN), "nova", "weapon_nova" }, // nova

@@ -12,7 +12,7 @@
 
 #if defined( CLIENT_DLL )
 
-	#define CWeaponCZ75 C_WeaponCZ75
+    #define CWeaponCZ75A C_WeaponCZ75A
 	#include "c_cs_player.h"
 
 #else
@@ -22,14 +22,14 @@
 #endif
 
 
-class CWeaponCZ75 : public CWeaponCSBase
+class CWeaponCZ75A : public CWeaponCSBase
 {
 public:
-	DECLARE_CLASS( CWeaponCZ75, CWeaponCSBase );
+    DECLARE_CLASS( CWeaponCZ75A, CWeaponCSBase );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CWeaponCZ75();
+	CWeaponCZ75A();
 
 	virtual void PrimaryAttack();
 
@@ -40,35 +40,35 @@ public:
 	virtual void Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
 #endif
 
-	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_CZ75; }
+    virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_CZ75A; }
 
 private:
 	
-	CWeaponCZ75( const CWeaponCZ75 & );
+    CWeaponCZ75A( const CWeaponCZ75A & );
 
 	Activity m_iReloadActivityIndex;
 };
 
-IMPLEMENT_NETWORKCLASS_ALIASED( WeaponCZ75, DT_WeaponCZ75 )
+IMPLEMENT_NETWORKCLASS_ALIASED( WeaponCZ75A, DT_WeaponCZ75A )
 
-BEGIN_NETWORK_TABLE( CWeaponCZ75, DT_WeaponCZ75 )
+BEGIN_NETWORK_TABLE( CWeaponCZ75A, DT_WeaponCZ75A )
 END_NETWORK_TABLE()
 
 #if defined CLIENT_DLL
-BEGIN_PREDICTION_DATA( CWeaponCZ75 )
+BEGIN_PREDICTION_DATA( CWeaponCZ75A )
 END_PREDICTION_DATA()
 #endif
 
-LINK_ENTITY_TO_CLASS( weapon_cz75, CWeaponCZ75 );
-PRECACHE_WEAPON_REGISTER( weapon_cz75 );
+LINK_ENTITY_TO_CLASS( weapon_cz75a, CWeaponCZ75A );
+PRECACHE_WEAPON_REGISTER( weapon_cz75a );
 
 
 
-CWeaponCZ75::CWeaponCZ75()
+CWeaponCZ75A::CWeaponCZ75A()
 {
 }
 
-void CWeaponCZ75::PrimaryAttack()
+void CWeaponCZ75A::PrimaryAttack()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
@@ -125,7 +125,7 @@ void CWeaponCZ75::PrimaryAttack()
 	m_flRecoilIndex += 1.0f;
 }
 
-Activity CWeaponCZ75::GetDeployActivity()
+Activity CWeaponCZ75A::GetDeployActivity()
 {
 	if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 )
 	{
@@ -140,7 +140,7 @@ Activity CWeaponCZ75::GetDeployActivity()
 	}
 }
 
-bool CWeaponCZ75::Reload()
+bool CWeaponCZ75A::Reload()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
@@ -158,7 +158,7 @@ bool CWeaponCZ75::Reload()
 }
 
 #ifndef CLIENT_DLL
-void CWeaponCZ75::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator )
+void CWeaponCZ75A::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator )
 {
 	int nEvent = pEvent->event;
 

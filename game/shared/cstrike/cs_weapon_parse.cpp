@@ -111,7 +111,7 @@ WeaponNameInfo s_weaponNameInfo[] =
 	{ WEAPON_TEC9,				"weapon_tec9" },
 	{ WEAPON_M4A4,				"weapon_m4a4" },
 	{ WEAPON_REVOLVER,			"weapon_revolver" },
-	{ WEAPON_CZ75,				"weapon_cz75" },
+	{ WEAPON_CZ75A,				"weapon_cz75a" },
 	{ WEAPON_MAG7,				"weapon_mag7" },
 	{ WEAPON_SAWEDOFF,			"weapon_sawedoff" },
 	{ WEAPON_NEGEV,				"weapon_negev" },

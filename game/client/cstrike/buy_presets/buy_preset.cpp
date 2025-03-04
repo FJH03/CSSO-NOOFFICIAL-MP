@@ -964,7 +964,7 @@ const char *ImageFnameFromWeaponID( CSWeaponID weaponID, bool isPrimary )
 		return "gfx/vgui/tec9";
 	case WEAPON_REVOLVER:
 		return "gfx/vgui/revolver";
-	case WEAPON_CZ75:
+	case WEAPON_CZ75A:
 		return "gfx/vgui/cz75";
 
 	default:

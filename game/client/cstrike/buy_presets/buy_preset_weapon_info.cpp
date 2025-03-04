@@ -60,7 +60,7 @@ static WeaponDisplayNameInfo weaponDisplayNameInfo[] =
 	{ WEAPON_TEC9,		"#Cstrike_TitlesTXT_Tec9" },
 	{ WEAPON_M4A4,		"#Cstrike_TitlesTXT_M4A4" },
 	{ WEAPON_REVOLVER,	"#Cstrike_TitlesTXT_Revolver" },
-	{ WEAPON_CZ75,		"#Cstrike_TitlesTXT_CZ75" },
+	{ WEAPON_CZ75A,		"#Cstrike_TitlesTXT_CZ75" },
 	{ WEAPON_MAG7,		"#Cstrike_TitlesTXT_MAG7" },
 	{ WEAPON_SAWEDOFF,	"#Cstrike_TitlesTXT_SawedOff" },
 	{ WEAPON_NEGEV,		"#Cstrike_TitlesTXT_Negev" },
