@@ -23,6 +23,7 @@ using namespace vgui;
 
 #include "hudelement.h"
 #include "c_cs_player.h"
+#include "cs_gamerules.h"
 
 #include "convar.h"
 
