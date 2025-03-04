@@ -361,36 +361,36 @@ void ClientPrecache( void )
 
 #ifdef CSTRIKE_DLL
 	// nav_edit
-	CBaseEntity::PrecacheModel( "Bot.EditSwitchOn" );
-	CBaseEntity::PrecacheModel( "EDIT_TOGGLE_PLACE_MODE" );
-	CBaseEntity::PrecacheModel( "Bot.EditSwitchOff" );
-	CBaseEntity::PrecacheModel( "EDIT_PLACE_PICK" );
-	CBaseEntity::PrecacheModel( "EDIT_DELETE" );
-	CBaseEntity::PrecacheModel( "EDIT.ToggleAttribute" );
-	CBaseEntity::PrecacheModel( "EDIT_SPLIT.MarkedArea" );
-	CBaseEntity::PrecacheModel( "EDIT_SPLIT.NoMarkedArea" );
-	CBaseEntity::PrecacheModel( "EDIT_MERGE.Enable" );
-	CBaseEntity::PrecacheModel( "EDIT_MERGE.Disable" );
-	CBaseEntity::PrecacheModel( "EDIT_MARK.Enable" );
-	CBaseEntity::PrecacheModel( "EDIT_MARK.Disable" );
-	CBaseEntity::PrecacheModel( "EDIT_MARK_UNNAMED.Enable" );
-	CBaseEntity::PrecacheModel( "EDIT_MARK_UNNAMED.NoMarkedArea" );
-	CBaseEntity::PrecacheModel( "EDIT_MARK_UNNAMED.MarkedArea" );
-	CBaseEntity::PrecacheModel( "EDIT_CONNECT.AllDirections" );
-	CBaseEntity::PrecacheModel( "EDIT_CONNECT.Added" );
-	CBaseEntity::PrecacheModel( "EDIT_DISCONNECT.MarkedArea" );
-	CBaseEntity::PrecacheModel( "EDIT_DISCONNECT.NoMarkedArea" );
-	CBaseEntity::PrecacheModel( "EDIT_SPLICE.MarkedArea" );
-	CBaseEntity::PrecacheModel( "EDIT_SPLICE.NoMarkedArea" );
-	CBaseEntity::PrecacheModel( "EDIT_SELECT_CORNER.MarkedArea" );
-	CBaseEntity::PrecacheModel( "EDIT_SELECT_CORNER.NoMarkedArea" );
-	CBaseEntity::PrecacheModel( "EDIT_MOVE_CORNER.MarkedArea" );
-	CBaseEntity::PrecacheModel( "EDIT_MOVE_CORNER.NoMarkedArea" );
-	CBaseEntity::PrecacheModel( "EDIT_BEGIN_AREA.Creating" );
-	CBaseEntity::PrecacheModel( "EDIT_BEGIN_AREA.NotCreating" );
-	CBaseEntity::PrecacheModel( "EDIT_END_AREA.Creating" );
-	CBaseEntity::PrecacheModel( "EDIT_END_AREA.NotCreating" );
-	CBaseEntity::PrecacheModel( "EDIT_WARP_TO_MARK" );
+	CBaseEntity::PrecacheScriptSound( "Bot.EditSwitchOn" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_TOGGLE_PLACE_MODE" );
+	CBaseEntity::PrecacheScriptSound( "Bot.EditSwitchOff" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_PLACE_PICK" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_DELETE" );
+	CBaseEntity::PrecacheScriptSound( "EDIT.ToggleAttribute" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_SPLIT.MarkedArea" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_SPLIT.NoMarkedArea" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_MERGE.Enable" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_MERGE.Disable" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_MARK.Enable" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_MARK.Disable" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_MARK_UNNAMED.Enable" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_MARK_UNNAMED.NoMarkedArea" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_MARK_UNNAMED.MarkedArea" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_CONNECT.AllDirections" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_CONNECT.Added" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_DISCONNECT.MarkedArea" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_DISCONNECT.NoMarkedArea" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_SPLICE.MarkedArea" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_SPLICE.NoMarkedArea" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_SELECT_CORNER.MarkedArea" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_SELECT_CORNER.NoMarkedArea" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_MOVE_CORNER.MarkedArea" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_MOVE_CORNER.NoMarkedArea" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_BEGIN_AREA.Creating" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_BEGIN_AREA.NotCreating" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_END_AREA.Creating" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_END_AREA.NotCreating" );
+	CBaseEntity::PrecacheScriptSound( "EDIT_WARP_TO_MARK" );
 #endif
 
 	ClientGamePrecache();
