@@ -566,6 +566,7 @@ void CConsolePanel::RebuildCompletionList(const char *text)
 		ICvar::Iterator iter( g_pCVar );
 		for ( iter.SetFirst() ; iter.IsValid() ; iter.Next() )
 		{
+			ConCommandBase *cmd = iter.Get();
 			if ( cmd->IsFlagSet( FCVAR_DEVELOPMENTONLY ) || cmd->IsFlagSet( FCVAR_HIDDEN ) )
 			{
 				continue;
