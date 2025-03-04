@@ -294,6 +294,11 @@ const char* CTGSG9PlayerModelStrings[MAX_FACTION_SKINS] =
 const char* CTSASPlayerModelStrings[MAX_SAS_SKINS] =
 {
 	"models/player/custom_player/legacy/ctm_sas.mdl",
+	"models/player/custom_player/legacy/ctm_sas_varianta.mdl",
+	"models/player/custom_player/legacy/ctm_sas_variantb.mdl",
+	"models/player/custom_player/legacy/ctm_sas_variantc.mdl",
+	"models/player/custom_player/legacy/ctm_sas_variantd.mdl",
+	"models/player/custom_player/legacy/ctm_sas_variante.mdl",
 };
 const char* CTGIGNPlayerModelStrings[MAX_FACTION_SKINS] =
 {
@@ -311,7 +316,7 @@ const char* CTFBIPlayerModelStrings[MAX_FACTION_SKINS] =
 	"models/player/custom_player/legacy/ctm_fbi_variantd.mdl",
 	"models/player/custom_player/legacy/ctm_fbi_variante.mdl",
 };
-const char* CTIDFPlayerModelStrings[MAX_IDF_SKINS] =
+const char* CTIDFPlayerModelStrings[MAX_SAS_SKINS] =
 {
 	"models/player/custom_player/legacy/ctm_idf.mdl",
 	"models/player/custom_player/legacy/ctm_idf_variantb.mdl",

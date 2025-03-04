@@ -140,8 +140,7 @@ const float MolotovGrenadeRadius = CONSTANT_UNITS_GENERICGRENADERADIUS;
 const float DecoyGrenadeRadius = CONSTANT_UNITS_GENERICGRENADERADIUS;
 
 #define MAX_FACTION_SKINS 5
-#define MAX_SAS_SKINS 1
-#define MAX_IDF_SKINS 6
+#define MAX_SAS_SKINS 6
 
 extern const char* TPhoenixPlayerModelStrings[MAX_FACTION_SKINS];
 extern const char* TLeetPlayerModelStrings[MAX_FACTION_SKINS];
@@ -156,7 +155,7 @@ extern const char* CTGSG9PlayerModelStrings[MAX_FACTION_SKINS];
 extern const char* CTSASPlayerModelStrings[MAX_SAS_SKINS];
 extern const char* CTGIGNPlayerModelStrings[MAX_FACTION_SKINS];
 extern const char* CTFBIPlayerModelStrings[MAX_FACTION_SKINS];
-extern const char* CTIDFPlayerModelStrings[MAX_IDF_SKINS];
+extern const char* CTIDFPlayerModelStrings[MAX_SAS_SKINS];
 extern const char* CTSWATPlayerModelStrings[MAX_FACTION_SKINS];
 
 extern const char *KnivesEntitiesStrings[MAX_KNIVES];
