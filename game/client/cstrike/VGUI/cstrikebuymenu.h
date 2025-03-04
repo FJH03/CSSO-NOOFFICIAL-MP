@@ -12,6 +12,7 @@
 #endif
 
 #include <vgui_controls/WizardPanel.h>
+#include "cstrikerotatingplayerpanel.h"
 
 #include <buymenu.h>
 
@@ -20,11 +21,11 @@
 // model on top of them.
 //-----------------------------------------------------------------------------
 
-class CCSBuyMenuPlayerImagePanel : public vgui::ImagePanel
+class CCSBuyMenuPlayerImagePanel: public CCSRotatingPlayerImagePanel
 {
 public:
 
-	typedef vgui::ImagePanel BaseClass;
+	typedef CCSRotatingPlayerImagePanel BaseClass;
 
 	CCSBuyMenuPlayerImagePanel( vgui::Panel *pParent, const char *pName );
 	virtual ~CCSBuyMenuPlayerImagePanel();
@@ -32,10 +33,10 @@ public:
 
 
 public:
-	float m_ViewXPos;
-	float m_ViewYPos;
-	float m_ViewZPos;
-	float m_ViewFOV;
+	float m_flViewXPos;
+	float m_flViewYPos;
+	float m_flViewZPos;
+	float m_flViewFOV;
 };
 
 extern CUtlVector<CCSBuyMenuPlayerImagePanel*> g_BuyMenuPlayerImagePanels;
@@ -55,24 +56,23 @@ enum
 	NUM_BUY_PRESET_BUTTONS = 4,
 };
 
-class CCSBuyMenuImagePanel : public vgui::ImagePanel
+class CCSBuyMenuImagePanel: public vgui::Panel
 {
-public:
+	typedef vgui::Panel BaseClass;
 
-	typedef vgui::ImagePanel BaseClass;
+public:
 
 	CCSBuyMenuImagePanel( vgui::Panel *pParent, const char *pName );
 	virtual ~CCSBuyMenuImagePanel();
 	virtual void ApplySettings( KeyValues *inResourceData );
-	virtual void Paint();
 
 
 public:
-	char m_WeaponName[128];
-	float m_ViewXPos;
-	float m_ViewYPos;
-	float m_ViewZPos;
-	float m_ViewFOV;
+	char m_szWeaponName[80];
+	float m_flViewXPos;
+	float m_flViewYPos;
+	float m_flViewZPos;
+	float m_flViewFOV;
 };
 
 extern CUtlVector<CCSBuyMenuImagePanel*> g_BuyMenuImagePanels;

@@ -1090,6 +1090,7 @@ void UpdateImageEntity(
 	const char *szPlayerModel,
 	int x, int y, int width, int height,
 	float viewX, float viewY, float viewZ, float viewFOV,
+	float modelYaw,
 	bool bIsClassSelection )
 {
 	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
@@ -1311,8 +1312,9 @@ void UpdateImageEntity(
 	}
 
 	Vector playerPos = vec3_origin;
+	QAngle playerAng = QAngle( 0.0f, modelYaw, 0.0f );
 	pPlayerModel->SetAbsOrigin( playerPos );
-	pPlayerModel->SetAbsAngles( vec3_angle );
+	pPlayerModel->SetAbsAngles( playerAng );
 
 	// now set the sequence for this player model if needed
 	if ( !bIsClassSelection )
@@ -1418,7 +1420,7 @@ void ClientModeCSNormal::PostRenderVGui()
 			w -= 2;
 			h -= 2;
 
-			UpdateImageEntity( NULL, pPanel->m_ModelName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, pPanel->m_ViewFOV, true );
+			UpdateImageEntity( NULL, pPanel->m_szModelName, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, 0.0f, true );
 			return;
 		}
 	}
@@ -1439,7 +1441,7 @@ void ClientModeCSNormal::PostRenderVGui()
 			w -= 2;
 			h -= 2;
 
-			UpdateImageEntity( NULL, NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, pPanel->m_ViewFOV, false );
+			UpdateImageEntity( NULL, NULL, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, pPanel->m_flModelYaw, false );
 			return;
 		}
 	}
@@ -1461,7 +1463,7 @@ void ClientModeCSNormal::PostRenderVGui()
 			w -= 2;
 			h -= 2;
 
-			UpdateImageEntity( pPanel->m_WeaponName, NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, pPanel->m_ViewFOV, false );
+			UpdateImageEntity( pPanel->m_szWeaponName, NULL, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, 0.0f, false );
 			return;
 		}
 	}

@@ -28,24 +28,22 @@ using namespace vgui;
 // model on top of them.
 //-----------------------------------------------------------------------------
 
-class CCSClassImagePanel : public vgui::ImagePanel
+class CCSClassImagePanel: public vgui::Panel
 {
-public:
+	typedef vgui::Panel BaseClass;
 
-	typedef vgui::ImagePanel BaseClass;
+public:
 
 	CCSClassImagePanel( vgui::Panel *pParent, const char *pName );
 	virtual ~CCSClassImagePanel();
 	virtual void ApplySettings( KeyValues *inResourceData );
-	virtual void Paint();
-
 
 public:
-	char m_ModelName[128];
-	float m_ViewXPos;
-	float m_ViewYPos;
-	float m_ViewZPos;
-	float m_ViewFOV;
+	char m_szModelName[80];
+	float m_flViewXPos;
+	float m_flViewYPos;
+	float m_flViewZPos;
+	float m_flViewFOV;
 };
 
 extern CUtlVector<CCSClassImagePanel*> g_ClassImagePanels;
