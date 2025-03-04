@@ -57,75 +57,6 @@ static int AdjustValue( int curValue, int targetValue, int amount )
 	return curValue;
 }
 
-CON_COMMAND( overview_zoom, "Sets overview map zoom: <zoom> [<time>] [rel]" )
-{
-	if ( !g_pMapOverview || args.ArgC() < 2 )
-		return;
-
-	float zoom = Q_atof( args[ 1 ] );
-
-	float time = 0;
-	
-	if ( args.ArgC() >= 3 )
-		time = Q_atof( args[ 2 ] );
-
-	if ( args.ArgC() == 4 )
-		zoom *= g_pMapOverview->GetZoom();
-
-	// We are going to store their zoom pick as the resultant overview size that it sees.  This way, the value will remain
-	// correct even on a different map that has a different intrinsic zoom.
-	float desiredViewSize = 0.0f;
-	desiredViewSize = (zoom * OVERVIEW_MAP_SIZE * g_pMapOverview->GetFullZoom()) / g_pMapOverview->GetMapScale();
-	g_pMapOverview->SetPlayerPreferredViewSize( desiredViewSize );
-
-	if( !g_pMapOverview->AllowConCommandsWhileAlive() )
-	{
-		C_BasePlayer *localPlayer = CBasePlayer::GetLocalPlayer();
-		if( localPlayer && CBasePlayer::GetLocalPlayer()->IsAlive() )
-			return;// Not allowed to execute commands while alive
-		else if( localPlayer && localPlayer->GetObserverMode() == OBS_MODE_DEATHCAM )
-			return;// In the death cam spiral counts as alive
-	}
-
-	g_pClientMode->GetViewportAnimationController()->RunAnimationCommand( g_pMapOverview->GetAsPanel(), "zoom", zoom, 0.0, time, vgui::AnimationController::INTERPOLATOR_LINEAR );
-}
-
-CON_COMMAND( overview_mode, "Sets overview map mode off,small,large: <0|1|2>" )
-{
-	if ( !g_pMapOverview )
-		return;
-
-	int mode;
-
-	if ( args.ArgC() < 2 )
-	{
-		// toggle modes
-		mode = g_pMapOverview->GetMode() + 1;
-
-		if ( mode >  CMapOverview::MAP_MODE_FULL )
-			mode = CMapOverview::MAP_MODE_OFF;
-	}
-	else
-	{
-		// set specific mode
-		mode = Q_atoi( args[ 1 ] );
-	}
-
-	if( mode != CMapOverview::MAP_MODE_RADAR )
-		g_pMapOverview->SetPlayerPreferredMode( mode );
-
-	if( !g_pMapOverview->AllowConCommandsWhileAlive() )
-	{
-		C_BasePlayer *localPlayer = CBasePlayer::GetLocalPlayer();
-		if( localPlayer && CBasePlayer::GetLocalPlayer()->IsAlive() )
-			return;// Not allowed to execute commands while alive
-		else if( localPlayer && localPlayer->GetObserverMode() == OBS_MODE_DEATHCAM )
-			return;// In the death cam spiral counts as alive
-	}
-
-	g_pMapOverview->SetMode( mode );
-}
-
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -1011,50 +942,7 @@ void CMapOverview::SetMode(int mode)
 
 		g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "MapOff" );
 	}
-	else if ( mode == MAP_MODE_INSET )
-	{
-		if( m_nMapTextureID == -1 )
-		{
-			SetMode( MAP_MODE_OFF );
-			return;
-		}
-
-		if ( m_nMode != MAP_MODE_OFF )
-			m_flChangeSpeed = 1000; // zoom effect
-
-		C_BasePlayer *pPlayer = CBasePlayer::GetLocalPlayer();
-
-		if ( pPlayer )
-            SetFollowEntity( pPlayer->entindex() );
-
-		ShowPanel( true );
-
-		if ( mode != m_nMode && RunHudAnimations() )
-		{
-			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "MapZoomToSmall" );
-		}
-	}
-	else if ( mode == MAP_MODE_FULL )
-	{
-		if( m_nMapTextureID == -1 )
-		{
-			SetMode( MAP_MODE_OFF );
-			return;
-		}
-
-		if ( m_nMode != MAP_MODE_OFF )
-			m_flChangeSpeed = 1000; // zoom effect
-
-		SetFollowEntity( 0 );
-
-		ShowPanel( true );
-
-		if ( mode != m_nMode && RunHudAnimations() )
-		{
-			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "MapZoomToLarge" );
-		}
-	}
-
+	
 	// finally set mode
 	m_nMode = mode;
 

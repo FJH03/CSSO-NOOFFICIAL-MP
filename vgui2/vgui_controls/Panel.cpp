@@ -25,6 +25,8 @@
 #include <KeyValues.h>
 #include <vgui/MouseCode.h>
 
+#include <VGuiMatSurface/IMatSystemSurface.h>
+
 #include <vgui_controls/Panel.h>
 #include <vgui_controls/BuildGroup.h>
 #include <vgui_controls/Tooltip.h>
@@ -747,6 +749,9 @@ void Panel::Init( int x, int y, int wide, int tall )
 
 	m_iBackgroundBoxFadeAlphaStart = 255;
 	m_iBackgroundBoxFadeAlphaEnd = 0;
+
+	m_iBaseResolutionOverride[0] = BASE_WIDTH;
+	m_iBaseResolutionOverride[1] = BASE_HEIGHT;
 }
 
 //-----------------------------------------------------------------------------
@@ -4311,6 +4316,10 @@ void Panel::ApplySettings(KeyValues *inResourceData)
 {
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s - %s", __FUNCTION__, GetName() );
 
+	// Initialize base resolution overrides before computing anything
+	m_iBaseResolutionOverride[0] = inResourceData->GetInt( "base_resolution_wide", BASE_WIDTH );
+	m_iBaseResolutionOverride[1] = inResourceData->GetInt( "base_resolution_tall", BASE_HEIGHT );
+
 	// First restore to default values
 	if ( _flags.IsFlagSet( NEEDS_DEFAULT_SETTINGS_APPLIED ) )
 	{
@@ -4373,15 +4382,15 @@ void Panel::ApplySettings(KeyValues *inResourceData)
 	}
 
 	// size
-	int wide = ComputeWide( this, _buildModeFlags, inResourceData, alignScreenWide, alignScreenTall, false );
-	int tall = ComputeTall( this, _buildModeFlags, inResourceData, alignScreenWide, alignScreenTall, false );
+	int wide = ComputeWide( this, _buildModeFlags, inResourceData, alignScreenWide, alignScreenTall, m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1], false );
+	int tall = ComputeTall( this, _buildModeFlags, inResourceData, alignScreenWide, alignScreenTall, m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1], false );
 
 	int x, y;
 	GetPos(x, y);
 	const char *xstr = inResourceData->GetString( "xpos", NULL );
 	const char *ystr = inResourceData->GetString( "ypos", NULL );
-	_buildModeFlags |= ComputePos( this, xstr, x, wide, alignScreenWide, true, OP_SET );
-	_buildModeFlags |= ComputePos( this, ystr, y, tall, alignScreenTall, false, OP_SET );
+	_buildModeFlags |= ComputePos( this, xstr, x, wide, alignScreenWide, m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1], true, OP_SET );
+	_buildModeFlags |= ComputePos( this, ystr, y, tall, alignScreenTall, m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1], false, OP_SET );
 	
 
 	bool bUsesTitleSafeArea = false;
@@ -5841,7 +5850,7 @@ public:
 	int	ExtractValue( Panel *pPanel, const char *pszKey )
 	{
 		int nPos = 0;
-		ComputePos( pPanel, pszKey, nPos, GetPanelDimension( pPanel ), GetScreenSize( pPanel ), true, OP_SET );
+		ComputePos( pPanel, pszKey, nPos, GetPanelDimension( pPanel ), GetScreenSize( pPanel ), pPanel->m_iBaseResolutionOverride[0], pPanel->m_iBaseResolutionOverride[1], true, OP_SET );
 		return nPos;
 	}
 
@@ -5960,7 +5969,7 @@ private:
 		KeyValuesAD kv( "temp" );
 		kv->SetString( "wide", pszKey );
 
-		return ComputeWide( pPanel, nBuildFlags, kv, nParentWide, nParentTall, false );
+		return ComputeWide( pPanel, nBuildFlags, kv, nParentWide, nParentTall, pPanel->m_iBaseResolutionOverride[0], pPanel->m_iBaseResolutionOverride[1], false );
 	}
 };
 
@@ -5972,7 +5981,7 @@ private:
 		KeyValuesAD kv( "temp" );
 		kv->SetString( "tall", pszKey );
 
-		return ComputeTall(pPanel, nBuildFlags, kv, nParentWide, nParentTall, false);
+		return ComputeTall( pPanel, nBuildFlags, kv, nParentWide, nParentTall, pPanel->m_iBaseResolutionOverride[0], pPanel->m_iBaseResolutionOverride[1], false );
 	}
 
 };
@@ -8655,8 +8664,11 @@ int VguiPanelNavigateSortedChildButtonList( void *pSortedPanels, int nDir )
 }
 
 
-int ComputeWide(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceData, int nParentWide, int nParentTall, bool bComputingOther)
+int ComputeWide(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceData, int nParentWide, int nParentTall, int nBaseResWide, int nBaseResTall, bool bComputingOther)
 {
+	// Override base resolution first
+	g_pMatSystemSurface->OverrideProportionalBase( nBaseResWide, nBaseResTall );
+
 	int wide = pPanel->GetWide();
 
 	const char *wstr = inResourceData->GetString("wide", NULL);
@@ -8682,11 +8694,15 @@ int ComputeWide(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceD
 				if (bComputingOther)
 				{
 					Warning("Wide and Tall of panel %s are set to be each other!\n", pPanel->GetName());
+
+					// Restore original proportional base so other panels are not affected
+					g_pMatSystemSurface->RestoreProportionalBase();
+
 					return 0;
 				}
 
 				nBuildFlags |= Panel::BUILDMODE_SAVE_WIDE_PROPORTIONAL_TALL;
-				wide = ComputeTall(pPanel, nBuildFlags, inResourceData, nParentWide, nParentTall, true);
+				wide = ComputeTall(pPanel, nBuildFlags, inResourceData, nParentWide, nParentTall, nBaseResWide, nBaseResTall, true);
 
 				if (pPanel->IsProportional())
 				{
@@ -8741,11 +8757,17 @@ int ComputeWide(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceD
 		}
 	}
 
+	// Last, restore original proportional base so other panels are not affected
+	g_pMatSystemSurface->RestoreProportionalBase();
+
 	return wide;
 }
 
-int ComputeTall(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceData, int nParentWide, int nParentTall, bool bComputingOther)
+int ComputeTall(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceData, int nParentWide, int nParentTall, int nBaseResWide, int nBaseResTall, bool bComputingOther)
 {
+	// Override base resolution first
+	g_pMatSystemSurface->OverrideProportionalBase( nBaseResWide, nBaseResTall );
+
 	int tall = pPanel->GetTall();
 
 	// allow tall to be use the "fill" option, set to the height of the parent/screen
@@ -8772,11 +8794,15 @@ int ComputeTall(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceD
 				if (bComputingOther)
 				{
 					Warning("Wide and Tall of panel %s are set to be each other!\n", pPanel->GetName());
+
+					// Restore original proportional base so other panels are not affected
+					g_pMatSystemSurface->RestoreProportionalBase();
+
 					return 0;
 				}
 
 				nBuildFlags |= Panel::BUILDMODE_SAVE_TALL_PROPORTIONAL_WIDE;
-				tall = ComputeWide(pPanel, nBuildFlags, inResourceData, nParentWide, nParentTall, true);
+				tall = ComputeWide(pPanel, nBuildFlags, inResourceData, nParentWide, nParentTall, nBaseResWide, nBaseResTall, true);
 				if (pPanel->IsProportional())
 				{
 					tall = scheme()->GetProportionalNormalizedValue(tall);
@@ -8831,11 +8857,17 @@ int ComputeTall(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceD
 		}
 	}
 
+	// Last, restore original proportional base so other panels are not affected
+	g_pMatSystemSurface->RestoreProportionalBase();
+
 	return tall;
 }
 
-int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize, const int& nParentSize, const bool& bX, EOperator eOp)
+int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize, const int& nParentSize, int nBaseResWide, int nBaseResTall, const bool& bX, EOperator eOp)
 {
+	// Override base resolution first
+	g_pMatSystemSurface->OverrideProportionalBase( nBaseResWide, nBaseResTall );
+
 	const int nFlagRightAlign = bX ? Panel::BUILDMODE_SAVE_XPOS_RIGHTALIGNED : Panel::BUILDMODE_SAVE_YPOS_BOTTOMALIGNED;
 	const int nFlagCenterAlign = bX ? Panel::BUILDMODE_SAVE_XPOS_CENTERALIGNED : Panel::BUILDMODE_SAVE_YPOS_CENTERALIGNED;
 	const int nFlagProportionalSelf = bX ? Panel::BUILDMODE_SAVE_XPOS_PROPORTIONAL_SELF : Panel::BUILDMODE_SAVE_YPOS_PROPORTIONAL_SELF;
@@ -8950,10 +8982,10 @@ int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize
 			switch (pszInput[0])
 			{
 			case '+':
-				ComputePos( pPanel, ++pszInput, nPos, nSize, nParentSize, bX, OP_ADD);
+				ComputePos( pPanel, ++pszInput, nPos, nSize, nParentSize, nBaseResWide, nBaseResTall, bX, OP_ADD );
 				break;
 			case '-':
-				ComputePos( pPanel, ++pszInput, nPos, nSize, nParentSize, bX, OP_SUB);
+				ComputePos( pPanel, ++pszInput, nPos, nSize, nParentSize, nBaseResWide, nBaseResTall, bX, OP_SUB );
 				break;
 			}
 		}
@@ -8966,6 +8998,9 @@ int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize
 			nFlags, nPos, nParentSize, nPosDelta, nSize, pPanel->GetParent(), pPanel->GetParent() ? pPanel->GetParent()->GetName() : "??",
 			pszInput ? pszInput : "??");
 	}
+
+	// Last, restore original proportional base so other panels are not affected
+	g_pMatSystemSurface->RestoreProportionalBase();
 
 	return nFlags;
 }

@@ -272,8 +272,11 @@ public:
 
 	// new stuff for Alfreds VGUI2 port!!
 	virtual bool InEngine() { return true; }
-	void GetProportionalBase( int &width, int &height ) { width = BASE_WIDTH; height = BASE_HEIGHT; }
+	virtual void GetProportionalBase( int &width, int &height ) { width = m_iBaseResolutionOverride[0]; height = m_iBaseResolutionOverride[1]; }
 	virtual bool HasCursorPosFunctions() { return true; }
+
+	virtual void OverrideProportionalBase( int width, int height ) { m_iBaseResolutionOverride[0] = width; m_iBaseResolutionOverride[1] = height; }
+	virtual void RestoreProportionalBase() { m_iBaseResolutionOverride[0] = BASE_WIDTH, m_iBaseResolutionOverride[1] = BASE_HEIGHT; }
 
 	virtual void SetModalPanel(VPANEL );
 	virtual VPANEL GetModalPanel();
@@ -363,7 +366,11 @@ private:
 	void DrawRenderCharInternal( const CharRenderInfo& info );
 
 private:
+	// THIS HAS TO MUCH Panel.h!
 	enum { BASE_HEIGHT = 480, BASE_WIDTH = 640 };
+
+	// An overrider for BASE_HEIGHT and BASE_WIDTH
+	int m_iBaseResolutionOverride[2];
 
 	struct PaintState_t
 	{

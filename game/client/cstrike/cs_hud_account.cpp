@@ -53,10 +53,10 @@ private:
 
 	CPanelAnimationVarAliasType( int, buyzone_icon_xpos, "buyzone_icon_xpos", "0", "proportional_xpos" );
 	CPanelAnimationVarAliasType( int, buyzone_icon_ypos, "buyzone_icon_ypos", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, margin_right, "margin_right", "0", "proportional_width" );
+	CPanelAnimationVarAliasType( int, buyzone_icon_margin_right, "buyzone_icon_margin_right", "0", "proportional_width" );
 
 	CPanelAnimationVar( Color, m_clrBuyZoneIconFg, "BuyZoneIconFg", "FgColor" );
-	CPanelAnimationVar( int, margin_right, "margin_right", "0" );
-	CPanelAnimationVar( int, buyzone_icon_margin_right, "buyzone_icon_margin_right", "0" );
 };
 
 DECLARE_HUDELEMENT( CHudAccount );
@@ -69,7 +69,7 @@ CHudAccount::CHudAccount( const char *pElementName ) : CHudElement( pElementName
 	vgui::Panel *pParent = g_pClientMode->GetViewport();
 	SetParent( pParent );
 
-	SetHiddenBits( HIDEHUD_PLAYERDEAD );
+	SetHiddenBits( HIDEHUD_NOT_OBSERVING_PLAYERS );
 
 	m_pAccountLabel = new Label( this, "AccountLabel", "" );
 	m_pBuyZoneIcon = new VectorImagePanel( this, "BuyZoneIcon" );
@@ -99,12 +99,15 @@ void CHudAccount::OnThink()
 	}
 
 	int realAccount = 0;
-	C_CSPlayer *local = C_CSPlayer::GetLocalCSPlayer();
-	if ( !local )
+	C_CSPlayer *pPlayer = GetHudPlayer();
+	if ( !pPlayer )
+	{
+		SetPaintEnabled( false );
+		SetPaintBackgroundEnabled( false );
 		return;
-
+	}
 	// Never below zero
-	realAccount = MAX( local->GetAccount(), 0 );
+	realAccount = MAX( pPlayer->GetAccount(), 0 );
 
 	if ( realAccount != m_iAccount )
 	{
@@ -118,18 +121,11 @@ void CHudAccount::OnThink()
 		m_pBuyZoneIcon->SetPos( m_pAccountLabel->GetXPos() + m_pAccountLabel->GetWide() + buyzone_icon_margin_right, m_pBuyZoneIcon->GetYPos() );
 	}
 
-	m_pBuyZoneIcon->SetVisible( m_pBuyZoneIcon && local->IsInBuyZone() && !CSGameRules()->IsBuyTimeElapsed() );
+	m_pBuyZoneIcon->SetVisible( m_pBuyZoneIcon && pPlayer->IsInBuyZone() && !CSGameRules()->IsBuyTimeElapsed() );
 }
 
 bool CHudAccount::ShouldDraw()
 {
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-	if ( !pPlayer )
-		return false;
-
-	if ( pPlayer->IsObserver() )
-		return false;
-
 	if ( mp_maxmoney.GetInt() <= 0 )
 		return false;
 

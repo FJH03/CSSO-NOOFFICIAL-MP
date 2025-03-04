@@ -35,15 +35,6 @@ public:
 	virtual void UpdateSpectatorPlayerList( void );
 	virtual void Update( void );
 	virtual bool NeedsUpdate( void );
-	//=============================================================================
-	// HPE_BEGIN:
-	// [smessick]
-	//=============================================================================
-	virtual void ShowPanel( bool bShow );
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
-
 protected:
 
 	void UpdateTimer();
@@ -98,9 +89,8 @@ public:
 	virtual bool ShouldDraw( void );
 	vgui::Panel *GetAsPanel(){ return this; }
 	virtual bool AllowConCommandsWhileAlive(){return false;}
-	virtual void SetPlayerPreferredMode( int mode );
-	virtual void SetPlayerPreferredViewSize( float viewSize );
 	virtual void ApplySchemeSettings( vgui::IScheme *scheme );
+	virtual void ApplySettings( KeyValues *inResourceData );
 
 protected:	// private structures & types
 
@@ -241,6 +231,8 @@ private:
 	CSMapPlayer_t* GetCSInfoForHostage(MapPlayer_t *hostage);
 	bool CanHostageBeSeen(MapPlayer_t *hostage);
 
+	int		m_nBorderSize;
+
 	CSMapPlayer_t	m_PlayersCSInfo[MAX_PLAYERS];
 	CSMapBomb_t		m_bomb;
 	MapPlayer_t		m_Hostages[MAX_HOSTAGES];
@@ -276,8 +268,6 @@ private:
 
 	int m_nRadarMapTextureID;	// texture id for radar version of current overview image
 	int m_nCircleBackgroundTextureID;
-
-	int m_playerPreferredMode; // The mode the player wants to be in for when we aren't being the radar
 
 	int m_nCurrentRadarVerticalSection;
 

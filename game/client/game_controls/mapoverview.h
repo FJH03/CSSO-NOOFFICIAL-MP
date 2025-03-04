@@ -30,8 +30,6 @@ public:
 	virtual float GetZoom( void ) = 0;
 	virtual vgui::Panel *GetAsPanel() = 0;
 	virtual bool AllowConCommandsWhileAlive() = 0;
-	virtual void SetPlayerPreferredMode( int mode ) = 0;
-	virtual void SetPlayerPreferredViewSize( float viewSize ) = 0;
 	virtual bool IsVisible() = 0;
 	virtual void GetBounds(int &x, int &y, int &wide, int &tall) = 0;
 	virtual float GetFullZoom( void ) = 0;
@@ -53,8 +51,6 @@ public:
 	enum
 	{
 		MAP_MODE_OFF = 0,	// Totally off
-		MAP_MODE_INSET,		// A little map up in a corner
-		MAP_MODE_FULL,		// Full screen, full map
 		MAP_MODE_RADAR		// In game radar, extra functionality
 	};
 
@@ -64,8 +60,6 @@ public:
 	virtual bool ShouldDraw( void );
 	vgui::Panel *GetAsPanel(){ return this; }
 	virtual bool AllowConCommandsWhileAlive(){return true;}
-	virtual void SetPlayerPreferredMode( int mode ){}
-	virtual void SetPlayerPreferredViewSize( float viewSize ){};
 
 protected:	// private structures & types
 

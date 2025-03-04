@@ -342,6 +342,10 @@ InitReturnVal_t CMatSystemSurface::Init( void )
 	if ( nRetVal != INIT_OK )
 		return nRetVal;
 
+	// Initialize base resolution override
+	m_iBaseResolutionOverride[0] = BASE_WIDTH;
+	m_iBaseResolutionOverride[1] = BASE_HEIGHT;
+
 	// Allocate a white material
 	KeyValues *pVMTKeyValues = new KeyValues( "UnlitGeneric" );
 	pVMTKeyValues->SetInt( "$vertexcolor", 1 );

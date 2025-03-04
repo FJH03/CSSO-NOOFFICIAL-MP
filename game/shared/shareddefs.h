@@ -204,8 +204,9 @@ enum AmmoPosition_t
 #define	HIDEHUD_VEHICLE_CROSSHAIR	( 1<<9 )	// Hide vehicle crosshair
 #define HIDEHUD_INVEHICLE			( 1<<10 )
 #define HIDEHUD_BONUS_PROGRESS		( 1<<11 )	// Hide bonus progress display (for bonus map challenges)
+#define HIDEHUD_NOT_OBSERVING_PLAYERS	( 1<<12 )	// Hide when local player is observer but not observing players
 
-#define HIDEHUD_BITCOUNT			12
+#define HIDEHUD_BITCOUNT			13
 
 //===================================================================================================================
 // suit usage bits

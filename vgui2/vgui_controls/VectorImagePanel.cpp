@@ -93,8 +93,12 @@ void VectorImagePanel::ApplySettings( KeyValues *inResourceData )
 		SetTexture( szSVGPath );
 	}
 
-	m_iRepeatMargin[0] = inResourceData->GetInt( "repeat_xpos", 0 );
-	m_iRepeatMargin[1] = inResourceData->GetInt( "repeat_ypos", 0 );
+	int alignScreenWide, alignScreenTall;
+	surface()->GetScreenSize( alignScreenWide, alignScreenTall );
+	ComputePos( this, inResourceData->GetString( "repeat_xpos", NULL ), m_iRepeatMargin[0], m_iRenderSize[0],
+				alignScreenWide, m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1], true, OP_SET );
+	ComputePos( this, inResourceData->GetString( "repeat_ypos", NULL ), m_iRepeatMargin[1], m_iRenderSize[1],
+				alignScreenTall, m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1], false, OP_SET );
 	m_nRepeatsCount = inResourceData->GetInt( "repeats_count", 1 );
 }
 

@@ -707,9 +707,6 @@ void C_HLTVCamera::FireGameEvent( IGameEvent * event)
 
 		if ( engine->IsPlayingDemo() )
         {
-			// for demo playback show full menu
-			gViewPortInterface->ShowPanel( PANEL_SPECMENU, true );
-
 			SetMode( OBS_MODE_ROAMING );
 		}
 		else

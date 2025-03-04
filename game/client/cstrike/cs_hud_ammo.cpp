@@ -88,7 +88,7 @@ CHudAmmo::CHudAmmo( const char *pElementName ): CHudElement( pElementName ), Edi
 	vgui::Panel *pParent = g_pClientMode->GetViewport();
 	SetParent( pParent );
 
-	SetHiddenBits( HIDEHUD_HEALTH | HIDEHUD_PLAYERDEAD | HIDEHUD_WEAPONSELECTION );
+	SetHiddenBits( HIDEHUD_WEAPONSELECTION | HIDEHUD_NOT_OBSERVING_PLAYERS );
 
 	m_iSimpleXPos = 0;
 	m_iSimpleYPos = 0;
@@ -133,8 +133,8 @@ void CHudAmmo::ApplySettings( KeyValues *inResourceData )
 	int alignScreenWide, alignScreenTall;
 	surface()->GetScreenSize( alignScreenWide, alignScreenTall );
 	// these values have to be computed outside of PanelAnimationVars since those are recomputed before everything else (why??)
-	ComputePos( this, inResourceData->GetString( "simple_xpos", NULL ), m_iSimpleXPos, simple_wide, alignScreenWide, true, OP_SET );
-	ComputePos( this, inResourceData->GetString( "simple_ypos", NULL ), m_iSimpleYPos, simple_tall, alignScreenTall, false, OP_SET );
+	ComputePos( this, inResourceData->GetString( "simple_xpos", NULL ), m_iSimpleXPos, simple_wide, alignScreenWide, m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1], true, OP_SET );
+	ComputePos( this, inResourceData->GetString( "simple_ypos", NULL ), m_iSimpleYPos, simple_tall, alignScreenTall, m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1], false, OP_SET );
 }
 
 void CHudAmmo::Reset()
@@ -172,7 +172,22 @@ void CHudAmmo::OnThink()
 		SetBgColor( newColor );
 	}
 
-	C_BaseCombatWeapon *pWeapon = GetActiveWeapon();
+	C_CSPlayer *pPlayer = GetHudPlayer();
+	if ( !pPlayer )
+	{
+		SetPaintEnabled( false );
+		SetPaintBackgroundEnabled( false );
+		return;
+	}
+
+	C_BaseCombatWeapon *pWeapon = pPlayer->GetActiveWeapon();
+	if ( !pWeapon )
+	{
+		m_pActiveWeapon = NULL;
+		SetPaintEnabled( false );
+		SetPaintBackgroundEnabled( false );
+		return;
+	}
 	if ( pWeapon != m_pActiveWeapon )
 	{
 		m_pActiveWeapon = pWeapon;
@@ -181,8 +196,8 @@ void CHudAmmo::OnThink()
 
 	if ( bWeaponChanged )
 	{
-		m_bUsesClips = m_pActiveWeapon && !(m_pActiveWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE) && m_pActiveWeapon->UsesClipsForAmmo1();
-		m_bIsExhaustible = m_pActiveWeapon && (m_pActiveWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE) && !m_pActiveWeapon->UsesClipsForAmmo1();
+		m_bUsesClips = !(m_pActiveWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE) && m_pActiveWeapon->UsesClipsForAmmo1();
+		m_bIsExhaustible = (m_pActiveWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE) && !m_pActiveWeapon->UsesClipsForAmmo1();
 
 		SetPaintBackgroundEnabled( m_bUsesClips );
 
@@ -224,10 +239,6 @@ void CHudAmmo::OnThink()
 	{
 		m_pBulletIcon->SetVisible( false );
 	}
-
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-	if ( !pPlayer )
-		return;
 
 	// don't do it every frame, only do it when needed
 	if ( m_bIsExhaustible && (m_iStyle == 0) )

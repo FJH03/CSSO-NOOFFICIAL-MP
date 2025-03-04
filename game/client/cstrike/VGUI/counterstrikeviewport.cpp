@@ -161,9 +161,6 @@ CON_COMMAND_F( spec_menu, "Activates spectator menu", FCVAR_CLIENTCMD_CAN_EXECUT
 	{
 		 bShowIt = atoi( args[ 1 ] ) == 1;
 	}
-	
-	if ( gViewPortInterface )
-		gViewPortInterface->ShowPanel( PANEL_SPECMENU, bShowIt );
 }
 
 CON_COMMAND_F( togglescores, "Toggles score panel", FCVAR_CLIENTCMD_CAN_EXECUTE)

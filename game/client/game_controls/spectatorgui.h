@@ -102,57 +102,6 @@ protected:
 	bool m_bSpecScoreboard;
 };
 
-
-//-----------------------------------------------------------------------------
-// Purpose: the bottom bar panel, this is a separate panel because it
-// wants mouse input and the main window doesn't
-//----------------------------------------------------------------------------
-class CSpectatorMenu : public vgui::Frame, public IViewPortPanel, public CGameEventListener
-{
-	DECLARE_CLASS_SIMPLE(  CSpectatorMenu, vgui::Frame );
-
-public:
-	CSpectatorMenu( IViewPort *pViewPort );
-	~CSpectatorMenu() {}
-
-	virtual const char *GetName( void ) { return PANEL_SPECMENU; }
-	virtual void SetData(KeyValues *data) {};
-	virtual void Reset( void ) { m_pPlayerList->DeleteAllItems(); }
-	virtual void Update( void );
-	virtual bool NeedsUpdate( void ) { return false; }
-	virtual bool HasInputElements( void ) { return true; }
-	virtual void ShowPanel( bool bShow );
-	virtual void FireGameEvent( IGameEvent *event );
-
-	// both vgui::Frame and IViewPortPanel define these, so explicitly define them here as passthroughs to vgui
-	virtual bool IsVisible() { return BaseClass::IsVisible(); }
-	vgui::VPANEL GetVPanel( void ) { return BaseClass::GetVPanel(); }
-	virtual void SetParent(vgui::VPANEL parent) { BaseClass::SetParent(parent); }
-
-	virtual GameActionSet_t GetPreferredActionSet() { return GAME_ACTION_SET_SPECTATOR; }
-
-private:
-	// VGUI2 overrides
-	MESSAGE_FUNC_PARAMS( OnTextChanged, "TextChanged", data );
-	virtual void OnCommand( const char *command );
-	virtual void OnKeyCodePressed(vgui::KeyCode code);
-	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
-	virtual void PerformLayout();
-
-	void SetViewModeText( const char *text ) { m_pViewOptions->SetText( text ); }
-	void SetPlayerFgColor( Color c1 ) { m_pPlayerList->SetFgColor(c1); }
-
-	vgui::ComboBox *m_pPlayerList;
-	vgui::ComboBox *m_pViewOptions;
-	vgui::ComboBox *m_pConfigSettings;
-
-	vgui::Button *m_pLeftButton;
-	vgui::Button *m_pRightButton;
-
-	IViewPort *m_pViewPort;
-	ButtonCode_t m_iDuckKey;
-};
-
 extern CSpectatorGUI * g_pSpectatorGUI;
 
 #endif // SPECTATORGUI_H

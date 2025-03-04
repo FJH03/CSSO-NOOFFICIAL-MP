@@ -118,6 +118,9 @@ public:
 
 	// same as DrawTexturedPolygon but uses color instead of texture
 	virtual void DrawFilledPolygon( int n, vgui::Vertex_t *pVertices, bool bClipVertices = true ) = 0;
+
+	virtual void OverrideProportionalBase( int width, int height ) = 0;
+	virtual void RestoreProportionalBase() = 0;
 };
 
 

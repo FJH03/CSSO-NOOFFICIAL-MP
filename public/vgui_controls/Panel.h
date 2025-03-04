@@ -753,6 +753,8 @@ public:
 		BUILDMODE_SAVE_YPOS_FULL = 1 << 20,
 	};
 
+	int m_iBaseResolutionOverride[2];
+
 protected:
 	//this will return m_NavDown and will not look for the next visible panel
 	Panel* GetNavUpPanel();
@@ -1032,12 +1034,14 @@ public:
 	}
 };
 
+// THIS HAS TO MUCH MatSystemSurface.h!
+enum { BASE_HEIGHT = 480, BASE_WIDTH = 640 };
 
 void VguiPanelGetSortedChildPanelList( Panel *pParentPanel, void *pSortedPanels );
 void VguiPanelGetSortedChildButtonList( Panel *pParentPanel, void *pSortedPanels, char *pchFilter = NULL, int nFilterType = 0 );
 int VguiPanelNavigateSortedChildButtonList( void *pSortedPanels, int nDir );
-int ComputeWide(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceData, int nParentWide, int nParentTall, bool bComputingForTall);
-int ComputeTall(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceData, int nParentWide, int nParentTall, bool bComputingForWide);
+int ComputeWide(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceData, int nParentWide, int nParentTall, int nBaseResWide, int nBaseResTall, bool bComputingForTall );
+int ComputeTall(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceData, int nParentWide, int nParentTall, int nBaseResWide, int nBaseResTall, bool bComputingForWide);
 
 enum EOperator
 {
@@ -1045,7 +1049,7 @@ enum EOperator
 	OP_SUB,
 	OP_SET,
 };
-int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize, const int& nParentSize, const bool& bX, EOperator eOp );
+int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize, const int& nParentSize, int nBaseResWide, int nBaseResTall, const bool& bX, EOperator eOp );
 
 
 } // namespace vgui

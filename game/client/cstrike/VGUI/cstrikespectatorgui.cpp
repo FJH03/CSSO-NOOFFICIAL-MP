@@ -39,17 +39,6 @@ ConVar cl_radaralpha( "cl_radaralpha", "200", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, N
 ConVar cl_radar_rotate( "cl_radar_rotate", "1", FCVAR_ARCHIVE, "1" );
 ConVar cl_radar_scale( "cl_radar_scale", "0.7", FCVAR_ARCHIVE, "Sets the radar scale. Valid values are 0.25 to 1.0.", true, 0.25f, true, 1.0f );
 
-void PreferredOverviewModeChanged( IConVar *pConVar, const char *oldString, float flOldValue )
-{
-	ConVarRef var( pConVar );
-	char cmd[32];
-	V_snprintf( cmd, sizeof( cmd ), "overview_mode %d\n", var.GetInt() );
-	engine->ClientCmd( cmd );
-}
-ConVar overview_preferred_mode( "overview_preferred_mode", "1", FCVAR_ARCHIVE, "Preferred overview mode", PreferredOverviewModeChanged );
-
-ConVar overview_preferred_view_size( "overview_preferred_view_size", "600", FCVAR_ARCHIVE, "Preferred overview view size" );
-
 #define HOSTAGE_RESCUE_DURATION (2.5f)
 #define BOMB_FADE_DURATION (2.5f)
 #define DEATH_ICON_FADE (7.5f)
@@ -147,26 +136,6 @@ bool CCSSpectatorGUI::NeedsUpdate( void )
 
 	return BaseClass::NeedsUpdate();
 }
-
-//=============================================================================
-// HPE_BEGIN:
-// [smessick]
-//=============================================================================
-void CCSSpectatorGUI::ShowPanel( bool bShow )
-{
-	BaseClass::ShowPanel( bShow );
-
-	if ( bShow )
-	{
-		// Resend the overview command.
-		char cmd[32];
-		V_snprintf( cmd, sizeof( cmd ), "overview_mode %d\n", overview_preferred_mode.GetInt() );
-		engine->ClientCmd( cmd );
-	}
-}
-//=============================================================================
-// HPE_END
-//=============================================================================
 
 //-----------------------------------------------------------------------------
 // Purpose: Updates the timer label if one exists
@@ -506,6 +475,16 @@ void CCSMapOverview::ApplySchemeSettings(vgui::IScheme *scheme)
 }
 
 //-----------------------------------------------------------------------------
+void CCSMapOverview::ApplySettings(KeyValues *inResourceData)
+{
+	BaseClass::ApplySettings( inResourceData );
+
+	g_pMatSystemSurface->OverrideProportionalBase( m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1] );
+	m_nBorderSize = scheme()->GetProportionalScaledValue( inResourceData->GetInt( "transparent_border_size" ) );
+	g_pMatSystemSurface->RestoreProportionalBase();
+}
+
+//-----------------------------------------------------------------------------
 void CCSMapOverview::Update( void )
 {
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
@@ -513,46 +492,18 @@ void CCSMapOverview::Update( void )
 	if ( !pPlayer )
 		return;
 
-	int team = pPlayer->GetTeamNumber();
-
-	// if dead with fadetoblack on, we can't show anything
-	if ( mp_fadetoblack.GetBool() && team > TEAM_SPECTATOR && !pPlayer->IsAlive() )
-	{
-		SetMode( MAP_MODE_OFF );
-		return;
-	}
-
 	bool inRadarMode = (GetMode() == MAP_MODE_RADAR);
-	int specmode = pPlayer->GetObserverMode();
 	// if alive, we can only be in radar mode
-	if( !inRadarMode  &&  pPlayer->IsAlive())
+	if( !inRadarMode && pPlayer->IsAlive())
 	{
 		SetMode( MAP_MODE_RADAR );
 		inRadarMode = true;
 	}
 
-	if( inRadarMode )
-	{
-		if( specmode > OBS_MODE_DEATHCAM )
-		{
-			// If fully dead, we don't want to be radar any more
-			SetMode( m_playerPreferredMode );
-			m_flChangeSpeed = 0;
-		}
-		else
-		{
-			SetFollowEntity(pPlayer->entindex());
-			UpdatePlayers();
-		}
-	}
+	SetFollowEntity(pPlayer->entindex());
+	UpdatePlayers();
 
 	BaseClass::Update();
-
-	if ( GetSpectatorMode() == OBS_MODE_CHASE )
-	{
-		// Follow the local player in chase cam, so the map rotates using the local player's angles
-		SetFollowEntity( pPlayer->entindex() );
-	}
 
 	if ( m_vecRadarVerticalSections.Count() )
 	{
@@ -721,22 +672,6 @@ CCSMapOverview::CCSMapOverview( const char *pElementName ) : BaseClass( pElement
 	m_nCircleBackgroundTextureID = -1;
 
 	g_pMapOverview = this;  // for cvars access etc
-
-	// restore non-radar modes
-	switch ( overview_preferred_mode.GetInt() )
-	{
-	case MAP_MODE_INSET:
-		m_playerPreferredMode = MAP_MODE_INSET;
-		break;
-
-	case MAP_MODE_FULL:
-		m_playerPreferredMode = MAP_MODE_FULL;
-		break;
-
-	default:
-		m_playerPreferredMode = MAP_MODE_OFF;
-		break;
-	}
 
 	m_nCurrentRadarVerticalSection = -1;
 	m_vecRadarVerticalSections.RemoveAll();
@@ -1091,7 +1026,7 @@ bool CCSMapOverview::ShouldDraw( void )
 	// HPE_BEGIN:
 	// [smessick] Turn off large map display when in freezecam.
 	//=============================================================================
-	if ( IsInFreezeCam() && GetMode() == MAP_MODE_FULL )
+	if ( IsInFreezeCam() && m_bRoundRadar )
 	{
 		return false;
 	}
@@ -1256,7 +1191,7 @@ void CCSMapOverview::DrawMapTexture()
 {
 	int alpha = GetMasterAlpha();
 
-	SetPaintBackgroundEnabled( GetMode() != MAP_MODE_FULL );// no background in big mode
+	SetPaintBackgroundEnabled( m_bRoundRadar );// no background in big mode
 
 	int textureIDToUse = m_nMapTextureID;
 	if( m_nRadarMapTextureID != -1 && GetMode() == MAP_MODE_RADAR )
@@ -2168,14 +2103,6 @@ void CCSMapOverview::SetMode(int mode)
 		SetPaintBackgroundEnabled( true );
 		ShowPanel( true );
 	}
-	else if ( mode == MAP_MODE_INSET )
-	{
-		SetPaintBackgroundEnabled( false );
-
-		float desiredZoom = (overview_preferred_view_size.GetFloat() * m_fMapScale) / (OVERVIEW_MAP_SIZE * m_fFullZoom);
-
-		g_pClientMode->GetViewportAnimationController()->RunAnimationCommand( this, "zoom", desiredZoom, 0.0f, 0.2f, vgui::AnimationController::INTERPOLATOR_LINEAR );
-	}
 	else 
 	{
 		SetPaintBackgroundEnabled( false );
@@ -2204,32 +2131,10 @@ void CCSMapOverview::UpdateSizeAndPosition()
 			m_vPosition.x = x;
 			m_vPosition.y = y;
 
-			if ( g_pSpectatorGUI && g_pSpectatorGUI->IsVisible() )
-			{
-				m_vPosition.y += g_pSpectatorGUI->GetTopBarHeight();
-			}
-
 			m_vSize.x = w;
 			m_vSize.y = w;// Intentionally not 't'.  We need to enforce square-ness to prevent people from seeing more of the map by fiddling their HudLayout
 			break;
 		}
-
-	case MAP_MODE_INSET:
-		{
-			m_vPosition.x = XRES(16);
-			m_vPosition.y = YRES(16);
-
-			if ( g_pSpectatorGUI && g_pSpectatorGUI->IsVisible() )
-			{
-				m_vPosition.y += g_pSpectatorGUI->GetTopBarHeight();
-			}
-
-			m_vSize.x = w/4;
-			m_vSize.y = m_vSize.x/1.333;
-			break;
-		}
-
-	case MAP_MODE_FULL:
 	default:
 		{
 			m_vSize.x = w;
@@ -2237,13 +2142,6 @@ void CCSMapOverview::UpdateSizeAndPosition()
 
 			m_vPosition.x = 0;
 			m_vPosition.y = 0;
-
-			if ( g_pSpectatorGUI && g_pSpectatorGUI->IsVisible() )
-			{
-				m_vPosition.y += g_pSpectatorGUI->GetTopBarHeight();
-				m_vSize.y -= g_pSpectatorGUI->GetTopBarHeight();
-				m_vSize.y -= g_pSpectatorGUI->GetBottomBarHeight();
-			}
 			break;
 		}
 	}
@@ -2284,11 +2182,7 @@ void CCSMapOverview::UpdateSizeAndPosition()
 			m_bRoundRadar = false;
 			m_fZoom = 0.95f; // fit the entire map in square (don't forget about border)
 		}
-		else if ( pPlayer->IsAlive() == false &&
-				  (iObserverMode == OBS_MODE_FIXED ||
-				  iObserverMode == OBS_MODE_CHASE ||
-				  iObserverMode == OBS_MODE_ROAMING ||
-				  iObserverMode == OBS_MODE_IN_EYE) )
+		else if ( pPlayer->IsObserver() && iObserverMode > OBS_MODE_DEATHCAM )
 		{
 			m_bRoundRadar = false;
 			m_fZoom = 0.95f; // fit the entire map in square (don't forget about border)
@@ -2384,37 +2278,6 @@ void CCSMapOverview::UpdateFlashes()
 		}
 	}
 }
-
-
-//-----------------------------------------------------------------------------
-void CCSMapOverview::SetPlayerPreferredMode( int mode )
-{
-	// A player has given an explicit overview_mode command, so we need to honor that when we are done being the radar.
-	m_playerPreferredMode = mode;
-
-	// save off non-radar preferred modes
-	switch ( mode )
-	{
-	case MAP_MODE_OFF:
-		overview_preferred_mode.SetValue( MAP_MODE_OFF );
-		break;
-
-	case MAP_MODE_INSET:
-		overview_preferred_mode.SetValue( MAP_MODE_INSET );
-		break;
-
-	case MAP_MODE_FULL:
-		overview_preferred_mode.SetValue( MAP_MODE_FULL );
-		break;
-	}
-}
-
-//-----------------------------------------------------------------------------
-void CCSMapOverview::SetPlayerPreferredViewSize( float viewSize )
-{
-	overview_preferred_view_size.SetValue( viewSize );
-}
-
 
 //-----------------------------------------------------------------------------
 int CCSMapOverview::GetIconNumberFromTeamNumber( int teamNumber )
@@ -2516,16 +2379,10 @@ int CCSMapOverview::GetMasterAlpha( void )
 //-----------------------------------------------------------------------------
 int CCSMapOverview::GetBorderSize( void )
 {
-	switch( GetMode() )
-	{
-		case MAP_MODE_RADAR:
-			return 4;
-		case MAP_MODE_INSET:
-			return 4;
-		case MAP_MODE_FULL:
-		default:
-			return 0;
-	}
+	if ( GetMode() == MAP_MODE_OFF )
+		return 0;
+
+	return m_nBorderSize;
 }
 
 //-----------------------------------------------------------------------------

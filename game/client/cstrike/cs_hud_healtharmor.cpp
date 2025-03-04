@@ -218,7 +218,7 @@ CHudHealthArmor::CHudHealthArmor( const char *pElementName ) : CHudElement( pEle
 	vgui::Panel *pParent = g_pClientMode->GetViewport();
 	SetParent( pParent );
 
-	SetHiddenBits( HIDEHUD_HEALTH | HIDEHUD_PLAYERDEAD );
+	SetHiddenBits( HIDEHUD_NOT_OBSERVING_PLAYERS );
 
 	m_iOriginalWide = 0;
 	m_iOriginalTall = 0;
@@ -312,15 +312,20 @@ void CHudHealthArmor::OnThink()
 		SetBgColor( newColor );
 	}
 
+	C_CSPlayer *pPlayer = GetHudPlayer();
+	if ( !pPlayer )
+	{
+		SetPaintEnabled( false );
+		SetPaintBackgroundEnabled( false );
+		return;
+	}
+
 	int realHealth = 0;
 	int realArmor = 0;
-	C_CSPlayer *local = C_CSPlayer::GetLocalCSPlayer();
-	if ( !local )
-		return;
 	
 	// Never below zero
-	realHealth = MAX( local->GetHealth(), 0 );
-	realArmor = MAX( local->ArmorValue(), 0 );
+	realHealth = MAX( pPlayer->GetHealth(), 0 );
+	realArmor = MAX( pPlayer->ArmorValue(), 0 );
 
 	wchar_t unicode[8];
 	// Only update the fade if we've changed health
@@ -359,5 +364,5 @@ void CHudHealthArmor::OnThink()
 		m_pArmorProgress->SetProgress( clamp( m_iArmor / 100.0f, 0.0f, 1.0f ) );
 	}
 
-	m_pHelmetIcon->SetVisible( local->HasHelmet() );
+	m_pHelmetIcon->SetVisible( pPlayer->HasHelmet() );
 }

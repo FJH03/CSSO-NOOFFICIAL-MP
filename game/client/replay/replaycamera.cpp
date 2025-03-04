@@ -877,7 +877,7 @@ void C_ReplayCamera::FireGameEvent( IGameEvent * event)
 		else
 		{
 			// during live broadcast only show black bars
-			gViewPortInterface->ShowPanel( PANEL_SPECMENU, true );
+			gViewPortInterface->ShowPanel( PANEL_SPECGUI, true );
 		}
 
 		return;

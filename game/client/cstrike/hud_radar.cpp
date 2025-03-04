@@ -55,9 +55,6 @@ CHudRadar::CHudRadar( const char *pName ) :	vgui::Panel( NULL, "HudRadar" ), CHu
 	m_bHideRadar = false;
 
 	s_Radar = this;
-
-	SetHiddenBits( HIDEHUD_PLAYERDEAD );
-
 }
 
 
@@ -186,16 +183,8 @@ void CHudRadar::MsgFunc_UpdateRadar(bf_read &msg )
 
 bool CHudRadar::ShouldDraw()
 {
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-	
-	//=============================================================================
-	// HPE_BEGIN:
 	// [tj] Added base class call
-	//=============================================================================
-	return pPlayer && pPlayer->IsAlive() && !m_bHideRadar && CHudElement::ShouldDraw();
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
+	return !m_bHideRadar && CHudElement::ShouldDraw();
 }
 
 void CHudRadar::SetVisible(bool state)
@@ -472,8 +461,6 @@ bool CHudLocation::ShouldDraw()
 	CCSMapOverview *pCSMapOverview = (CCSMapOverview *)GET_HUDELEMENT( CCSMapOverview );
 
 	if( g_pMapOverview && g_pMapOverview->GetMode() == CMapOverview::MAP_MODE_RADAR && pCSMapOverview && pCSMapOverview->ShouldDraw() == true )
-		return true;
-	else if( g_pMapOverview && g_pMapOverview->GetMode() == CMapOverview::MAP_MODE_INSET )	
 		return true;
 
 	return false;
