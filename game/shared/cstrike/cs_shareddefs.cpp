@@ -189,8 +189,8 @@ CCSAgentInfo g_AgentInfosT[MAX_AGENTS_T + 1] =
 	{ "models/player/custom_player/legacy/tm_jungle_raider_variantc.mdl",	"Jungle_Male",		CS_CLASS_PHOENIX_CONNNECTION,	false	},
 	{ "models/player/custom_player/legacy/tm_jungle_raider_variantd.mdl",	"Jungle_Male",		CS_CLASS_PHOENIX_CONNNECTION,	false	},
 	{ "models/player/custom_player/legacy/tm_jungle_raider_variante.mdl",	"Jungle_Fem_Epic",	CS_CLASS_PHOENIX_CONNNECTION,	true	},
-	{ "models/player/custom_player/legacy/tm_jungle_raider_variantf.mdl",	"Jungle_Male",		CS_CLASS_PHOENIX_CONNNECTION,	true	},
-	{ "models/player/custom_player/legacy/tm_jungle_raider_variantf2.mdl",	"Jungle_Male",		CS_CLASS_PHOENIX_CONNNECTION,	true	},
+	{ "models/player/custom_player/legacy/tm_jungle_raider_variantf.mdl",	"Jungle_Fem",		CS_CLASS_PHOENIX_CONNNECTION,	true	},
+	{ "models/player/custom_player/legacy/tm_jungle_raider_variantf2.mdl",	"Jungle_Fem",		CS_CLASS_PHOENIX_CONNNECTION,	true	},
 	{ "models/player/custom_player/legacy/tm_leet_variantj.mdl",			"Leet",				CS_CLASS_L337_KREW,				false	},
 	{ "models/player/custom_player/legacy/tm_professional_varf5.mdl",		"Professional_Epic",CS_CLASS_PROFESSIONAL,			false	},
 	// what?
