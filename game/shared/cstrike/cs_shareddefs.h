@@ -43,7 +43,7 @@
 #define MAX_HOSTAGES				12
 #define MAX_HOSTAGE_RESCUES			4
 #define HOSTAGE_RULE_CAN_PICKUP		1
-#define MAX_KNIVES					19 // any new knives? add them here
+#define MAX_KNIVES					19
 
 #define MAX_MODEL_STRING_SIZE 256
 
@@ -71,17 +71,6 @@ extern const float CS_PLAYER_SPEED_WALK_MODIFIER;
 extern const float CS_PLAYER_SPEED_CLIMB_MODIFIER;
 
 extern const float CS_PLAYER_DUCK_SPEED_IDEAL;
-
-
-template< class T >
-class CUtlVectorInitialized : public CUtlVector< T >
-{
-public:
-	CUtlVectorInitialized( T* pMemory, int numElements ) : CUtlVector< T >( pMemory, numElements )
-	{
-		this->SetSize( numElements );
-	}
-};
 
 #define CS_HOSTAGE_TRANSTIME_PICKUP		0.1
 #define CS_HOSTAGE_TRANSTIME_DROP		0.25
@@ -150,24 +139,27 @@ const float HEGrenadeRadius = CONSTANT_UNITS_GENERICGRENADERADIUS;
 const float MolotovGrenadeRadius = CONSTANT_UNITS_GENERICGRENADERADIUS;
 const float DecoyGrenadeRadius = CONSTANT_UNITS_GENERICGRENADERADIUS;
 
-extern CUtlVectorInitialized< const char * > TPhoenixPlayerModels;
-extern CUtlVectorInitialized< const char * > TLeetPlayerModels;
-extern CUtlVectorInitialized< const char * > TSeparatistPlayerModels;
-extern CUtlVectorInitialized< const char * > TBalkanPlayerModels;
-extern CUtlVectorInitialized< const char * > TProfessionalPlayerModels;
-extern CUtlVectorInitialized< const char * > TAnarchistPlayerModels;
-extern CUtlVectorInitialized< const char * > TPiratePlayerModels;
+#define MAX_FACTION_SKINS 5
+#define MAX_SAS_SKINS 1
+#define MAX_IDF_SKINS 6
 
-extern CUtlVectorInitialized< const char * > CTST6PlayerModels;
-extern CUtlVectorInitialized< const char * > CTGSG9PlayerModels;
-extern CUtlVectorInitialized< const char * > CTSASPlayerModels;
-extern CUtlVectorInitialized< const char * > CTGIGNPlayerModels;
-extern CUtlVectorInitialized< const char * > CTFBIPlayerModels;
-extern CUtlVectorInitialized< const char * > CTIDFPlayerModels;
-extern CUtlVectorInitialized< const char * > CTSWATPlayerModels;
+extern const char* TPhoenixPlayerModelStrings[MAX_FACTION_SKINS];
+extern const char* TLeetPlayerModelStrings[MAX_FACTION_SKINS];
+extern const char* TSeparatistPlayerModelStrings[MAX_FACTION_SKINS];
+extern const char* TBalkanPlayerModelStrings[MAX_FACTION_SKINS];
+extern const char* TProfessionalPlayerModelStrings[MAX_FACTION_SKINS];
+extern const char* TAnarchistPlayerModelStrings[MAX_FACTION_SKINS];
+extern const char* TPiratePlayerModelStrings[MAX_FACTION_SKINS];
 
-extern CUtlVectorInitialized< const char* > KnivesEntities;
+extern const char* CTST6PlayerModelStrings[MAX_FACTION_SKINS];
+extern const char* CTGSG9PlayerModelStrings[MAX_FACTION_SKINS];
+extern const char* CTSASPlayerModelStrings[MAX_SAS_SKINS];
+extern const char* CTGIGNPlayerModelStrings[MAX_FACTION_SKINS];
+extern const char* CTFBIPlayerModelStrings[MAX_FACTION_SKINS];
+extern const char* CTIDFPlayerModelStrings[MAX_IDF_SKINS];
+extern const char* CTSWATPlayerModelStrings[MAX_FACTION_SKINS];
 
+extern const char *KnivesEntitiesStrings[MAX_KNIVES];
 
 // These go in CCSPlayer::m_iAddonBits and get sent to the client so it can create
 // grenade models hanging off players.

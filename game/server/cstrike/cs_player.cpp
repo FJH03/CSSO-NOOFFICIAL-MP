@@ -720,117 +720,117 @@ void CCSPlayer::Precache()
 	Vector maxs( 14, 30, 80 );
 
 	int i;
-	for ( i=0; i<CTST6PlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( CTST6PlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( CTST6PlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( CTST6PlayerModelStrings[i] ) )
 		{
-			PrecacheModel( CTST6PlayerModels[i] );
-			engine->ForceModelBounds( CTST6PlayerModels[i], mins, maxs );
+			PrecacheModel( CTST6PlayerModelStrings[i] );
+			engine->ForceModelBounds( CTST6PlayerModelStrings[i], mins, maxs );
 		}
 	}
-	for ( i=0; i<CTGSG9PlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( CTGSG9PlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( CTGSG9PlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( CTGSG9PlayerModelStrings[i] ) )
 		{
-			PrecacheModel( CTGSG9PlayerModels[i] );
-			engine->ForceModelBounds( CTGSG9PlayerModels[i], mins, maxs );
+			PrecacheModel( CTGSG9PlayerModelStrings[i] );
+			engine->ForceModelBounds( CTGSG9PlayerModelStrings[i], mins, maxs );
 		}
 	}
-	for ( i=0; i<CTSASPlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( CTSASPlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( CTSASPlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( CTSASPlayerModelStrings[i] ) )
 		{
-			PrecacheModel( CTSASPlayerModels[i] );
-			engine->ForceModelBounds( CTSASPlayerModels[i], mins, maxs );
+			PrecacheModel( CTSASPlayerModelStrings[i] );
+			engine->ForceModelBounds( CTSASPlayerModelStrings[i], mins, maxs );
 		}
 	}
-	for ( i=0; i<CTGIGNPlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( CTGIGNPlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( CTGIGNPlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( CTGIGNPlayerModelStrings[i] ) )
 		{
-			PrecacheModel( CTGIGNPlayerModels[i] );
-			engine->ForceModelBounds( CTGIGNPlayerModels[i], mins, maxs );
+			PrecacheModel( CTGIGNPlayerModelStrings[i] );
+			engine->ForceModelBounds( CTGIGNPlayerModelStrings[i], mins, maxs );
 		}
 	}
-	for ( i=0; i<CTFBIPlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( CTFBIPlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( CTFBIPlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( CTFBIPlayerModelStrings[i] ) )
 		{
-			PrecacheModel( CTFBIPlayerModels[i] );
-			engine->ForceModelBounds( CTFBIPlayerModels[i], mins, maxs );
+			PrecacheModel( CTFBIPlayerModelStrings[i] );
+			engine->ForceModelBounds( CTFBIPlayerModelStrings[i], mins, maxs );
 		}
 	}
-	for ( i=0; i<CTIDFPlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( CTIDFPlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( CTIDFPlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( CTIDFPlayerModelStrings[i] ) )
 		{
-			PrecacheModel( CTIDFPlayerModels[i] );
-			engine->ForceModelBounds( CTIDFPlayerModels[i], mins, maxs );
+			PrecacheModel( CTIDFPlayerModelStrings[i] );
+			engine->ForceModelBounds( CTIDFPlayerModelStrings[i], mins, maxs );
 		}
 	}
-	for ( i=0; i<CTSWATPlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( CTSWATPlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( CTSWATPlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( CTSWATPlayerModelStrings[i] ) )
 		{
-			PrecacheModel( CTSWATPlayerModels[i] );
-			engine->ForceModelBounds( CTSWATPlayerModels[i], mins, maxs );
+			PrecacheModel( CTSWATPlayerModelStrings[i] );
+			engine->ForceModelBounds( CTSWATPlayerModelStrings[i], mins, maxs );
 		}
 	}
 
-	for ( i=0; i<TPhoenixPlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( TPhoenixPlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( TPhoenixPlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( TPhoenixPlayerModelStrings[i] ) )
 		{
-			PrecacheModel( TPhoenixPlayerModels[i] );
-			engine->ForceModelBounds( TPhoenixPlayerModels[i], mins, maxs );
+			PrecacheModel( TPhoenixPlayerModelStrings[i] );
+			engine->ForceModelBounds( TPhoenixPlayerModelStrings[i], mins, maxs );
 		}
 	}
-	for ( i=0; i<TLeetPlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( TLeetPlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( TLeetPlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( TLeetPlayerModelStrings[i] ) )
 		{
-			PrecacheModel( TLeetPlayerModels[i] );
-			engine->ForceModelBounds( TLeetPlayerModels[i], mins, maxs );
+			PrecacheModel( TLeetPlayerModelStrings[i] );
+			engine->ForceModelBounds( TLeetPlayerModelStrings[i], mins, maxs );
 		}
 	}
-	for ( i=0; i<TSeparatistPlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( TSeparatistPlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( TSeparatistPlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( TSeparatistPlayerModelStrings[i] ) )
 		{
-			PrecacheModel( TSeparatistPlayerModels[i] );
-			engine->ForceModelBounds( TSeparatistPlayerModels[i], mins, maxs );
+			PrecacheModel( TSeparatistPlayerModelStrings[i] );
+			engine->ForceModelBounds( TSeparatistPlayerModelStrings[i], mins, maxs );
 		}
 	}
-	for ( i=0; i<TBalkanPlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( TBalkanPlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( TBalkanPlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( TBalkanPlayerModelStrings[i] ) )
 		{
-			PrecacheModel( TBalkanPlayerModels[i] );
-			engine->ForceModelBounds( TBalkanPlayerModels[i], mins, maxs );
+			PrecacheModel( TBalkanPlayerModelStrings[i] );
+			engine->ForceModelBounds( TBalkanPlayerModelStrings[i], mins, maxs );
 		}
 	}
-	for ( i=0; i<TProfessionalPlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( TProfessionalPlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( TProfessionalPlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( TProfessionalPlayerModelStrings[i] ) )
 		{
-			PrecacheModel( TProfessionalPlayerModels[i] );
-			engine->ForceModelBounds( TProfessionalPlayerModels[i], mins, maxs );
+			PrecacheModel( TProfessionalPlayerModelStrings[i] );
+			engine->ForceModelBounds( TProfessionalPlayerModelStrings[i], mins, maxs );
 		}
 	}
-	for ( i=0; i<TAnarchistPlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( TAnarchistPlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( TAnarchistPlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( TAnarchistPlayerModelStrings[i] ) )
 		{
-			PrecacheModel( TAnarchistPlayerModels[i] );
-			engine->ForceModelBounds( TAnarchistPlayerModels[i], mins, maxs );
+			PrecacheModel( TAnarchistPlayerModelStrings[i] );
+			engine->ForceModelBounds( TAnarchistPlayerModelStrings[i], mins, maxs );
 		}
 	}
-	for ( i=0; i<TPiratePlayerModels.Count(); ++i )
+	for ( i = 0; i<ARRAYSIZE( TPiratePlayerModelStrings ); ++i )
 	{
-		if ( !engine->IsModelPrecached( TPiratePlayerModels[i] ) )
+		if ( !engine->IsModelPrecached( TPiratePlayerModelStrings[i] ) )
 		{
-			PrecacheModel( TPiratePlayerModels[i] );
-			engine->ForceModelBounds( TPiratePlayerModels[i], mins, maxs );
+			PrecacheModel( TPiratePlayerModelStrings[i] );
+			engine->ForceModelBounds( TPiratePlayerModelStrings[i], mins, maxs );
 		}
 	}
 
@@ -1146,37 +1146,37 @@ void CCSPlayer::SetModelFromClass( void )
 		{
 			case CS_CLASS_PHOENIX_CONNNECTION:
 			{
-				SetModel( TPhoenixPlayerModels[m_iSkin] );
+				SetModel( TPhoenixPlayerModelStrings[m_iSkin] );
 				break;
 			}
 			case CS_CLASS_L337_KREW:
 			{
-				SetModel( TLeetPlayerModels[m_iSkin] );
+				SetModel( TLeetPlayerModelStrings[m_iSkin] );
 				break;
 			}
 			case CS_CLASS_SEPARATIST:
 			{
-				SetModel( TSeparatistPlayerModels[m_iSkin] );
+				SetModel( TSeparatistPlayerModelStrings[m_iSkin] );
 				break;
 			}
 			case CS_CLASS_BALKAN:
 			{
-				SetModel( TBalkanPlayerModels[m_iSkin] );
+				SetModel( TBalkanPlayerModelStrings[m_iSkin] );
 				break;
 			}
 			case CS_CLASS_PROFESSIONAL:
 			{
-				SetModel( TProfessionalPlayerModels[m_iSkin] );
+				SetModel( TProfessionalPlayerModelStrings[m_iSkin] );
 				break;
 			}
 			case CS_CLASS_ANARCHIST:
 			{
-				SetModel( TAnarchistPlayerModels[m_iSkin] );
+				SetModel( TAnarchistPlayerModelStrings[m_iSkin] );
 				break;
 			}
 			case CS_CLASS_PIRATE:
 			{
-				SetModel( TPiratePlayerModels[m_iSkin] );
+				SetModel( TPiratePlayerModelStrings[m_iSkin] );
 				break;
 			}
 			default:
@@ -1200,37 +1200,37 @@ void CCSPlayer::SetModelFromClass( void )
 		{
 			case CS_CLASS_SEAL_TEAM_6:
 			{
-				SetModel( CTST6PlayerModels[m_iSkin] );
+				SetModel( CTST6PlayerModelStrings[m_iSkin] );
 				break;
 			}
 			case CS_CLASS_GSG_9:
 			{
-				SetModel( CTGSG9PlayerModels[m_iSkin] );
+				SetModel( CTGSG9PlayerModelStrings[m_iSkin] );
 				break;
 			}
 			case CS_CLASS_SAS:
 			{
-				SetModel( CTSASPlayerModels[m_iSkin] );
+				SetModel( CTSASPlayerModelStrings[m_iSkin] );
 				break;
 			}
 			case CS_CLASS_GIGN:
 			{
-				SetModel( CTGIGNPlayerModels[m_iSkin] );
+				SetModel( CTGIGNPlayerModelStrings[m_iSkin] );
 				break;
 			}
 			case CS_CLASS_FBI:
 			{
-				SetModel( CTFBIPlayerModels[m_iSkin] );
+				SetModel( CTFBIPlayerModelStrings[m_iSkin] );
 				break;
 			}
 			case CS_CLASS_IDF:
 			{
-				SetModel( CTIDFPlayerModels[m_iSkin] );
+				SetModel( CTIDFPlayerModelStrings[m_iSkin] );
 				break;
 			}
 			case CS_CLASS_SWAT:
 			{
-				SetModel( CTSWATPlayerModels[m_iSkin] );
+				SetModel( CTSWATPlayerModelStrings[m_iSkin] );
 				break;
 			}
 			default:
@@ -1259,73 +1259,73 @@ void CCSPlayer::SetRandomClassSkin( void )
 	{
 		case CS_CLASS_PHOENIX_CONNNECTION:
 		{
-			m_iSkin = RandomInt( 0, TPhoenixPlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(TPhoenixPlayerModelStrings) - 1 );
 			break;
 		}
 		case CS_CLASS_L337_KREW:
 		{
-			m_iSkin = RandomInt( 0, TLeetPlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(TLeetPlayerModelStrings) - 1 );
 			break;
 		}
 		case CS_CLASS_SEPARATIST:
 		{
-			m_iSkin = RandomInt( 0, TSeparatistPlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(TSeparatistPlayerModelStrings) - 1 );
 			break;
 		}
 		case CS_CLASS_BALKAN:
 		{
-			m_iSkin = RandomInt( 0, TBalkanPlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(TBalkanPlayerModelStrings) - 1 );
 			break;
 		}
 		case CS_CLASS_PROFESSIONAL:
 		{
-			m_iSkin = RandomInt( 0, TProfessionalPlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(TProfessionalPlayerModelStrings) - 1 );
 			break;
 		}
 		case CS_CLASS_ANARCHIST:
 		{
-			m_iSkin = RandomInt( 0, TAnarchistPlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(TAnarchistPlayerModelStrings) - 1 );
 			break;
 		}
 		case CS_CLASS_PIRATE:
 		{
-			m_iSkin = RandomInt( 0, TPiratePlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(TPiratePlayerModelStrings) - 1 );
 			break;
 		}
 
 		case CS_CLASS_SEAL_TEAM_6:
 		{
-			m_iSkin = RandomInt( 0, CTST6PlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(CTST6PlayerModelStrings) - 1 );
 			break;
 		}
 		case CS_CLASS_GSG_9:
 		{
-			m_iSkin = RandomInt( 0, CTGSG9PlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(CTGSG9PlayerModelStrings) - 1 );
 			break;
 		}
 		case CS_CLASS_SAS:
 		{
-			m_iSkin = RandomInt( 0, CTSASPlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(CTSASPlayerModelStrings) - 1 );
 			break;
 		}
 		case CS_CLASS_GIGN:
 		{
-			m_iSkin = RandomInt( 0, CTGIGNPlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(CTGIGNPlayerModelStrings) - 1 );
 			break;
 		}
 		case CS_CLASS_FBI:
 		{
-			m_iSkin = RandomInt( 0, CTFBIPlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(CTFBIPlayerModelStrings) - 1 );
 			break;
 		}
 		case CS_CLASS_IDF:
 		{
-			m_iSkin = RandomInt( 0, CTIDFPlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(CTIDFPlayerModelStrings) - 1 );
 			break;
 		}
 		case CS_CLASS_SWAT:
 		{
-			m_iSkin = RandomInt( 0, CTSWATPlayerModels.Count() - 1 );
+			m_iSkin = RandomInt( 0, ARRAYSIZE(CTSWATPlayerModelStrings) - 1 );
 			break;
 		}
 		default:
@@ -1615,7 +1615,7 @@ void CCSPlayer::GiveDefaultItems()
 	const char *pchTeamKnifeName = GetTeamNumber() == TEAM_TERRORIST ? "weapon_knife_t" : "weapon_knife";
 
 	if ( CSLoadout()->HasKnifeSet( this, GetTeamNumber() ) )
-		 pchTeamKnifeName = KnivesEntities[CSLoadout()->GetKnifeForPlayer(this, GetTeamNumber())];
+		pchTeamKnifeName = KnivesEntitiesStrings[CSLoadout()->GetKnifeForPlayer(this, GetTeamNumber())];
 
 	// don't give default items if the player is in deathmatch- we control weapon giving in DM, the player could get a random weapon
 	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )

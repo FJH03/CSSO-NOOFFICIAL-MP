@@ -194,7 +194,7 @@ const char *pszWinPanelCategoryHeaders[] =
 };
 
 // todo: rewrite this because it's TOO MASSIVE!
-const char* TPhoenixPlayerModelStrings[] =
+const char* TPhoenixPlayerModelStrings[MAX_FACTION_SKINS] =
 {
 	"models/player/custom_player/legacy/tm_phoenix.mdl",
 	"models/player/custom_player/legacy/tm_phoenix_varianta.mdl",
@@ -202,7 +202,7 @@ const char* TPhoenixPlayerModelStrings[] =
 	"models/player/custom_player/legacy/tm_phoenix_variantc.mdl",
 	"models/player/custom_player/legacy/tm_phoenix_variantd.mdl",
 };
-const char* TLeetPlayerModelStrings[] =
+const char* TLeetPlayerModelStrings[MAX_FACTION_SKINS] =
 {
 	"models/player/custom_player/legacy/tm_leet_variantA.mdl",
 	"models/player/custom_player/legacy/tm_leet_variantB.mdl",
@@ -211,7 +211,7 @@ const char* TLeetPlayerModelStrings[] =
 	"models/player/custom_player/legacy/tm_leet_variantE.mdl",
 
 };
-const char* TSeparatistPlayerModelStrings[] =
+const char* TSeparatistPlayerModelStrings[MAX_FACTION_SKINS] =
 {
 	"models/player/custom_player/legacy/tm_separatist.mdl",
 	"models/player/custom_player/legacy/tm_separatist_varianta.mdl",
@@ -219,7 +219,7 @@ const char* TSeparatistPlayerModelStrings[] =
 	"models/player/custom_player/legacy/tm_separatist_variantc.mdl",
 	"models/player/custom_player/legacy/tm_separatist_variantd.mdl",
 };
-const char* TBalkanPlayerModelStrings[] =
+const char* TBalkanPlayerModelStrings[MAX_FACTION_SKINS] =
 {
 	"models/player/custom_player/legacy/tm_balkan_varianta.mdl",
 	"models/player/custom_player/legacy/tm_balkan_variantb.mdl",
@@ -227,7 +227,7 @@ const char* TBalkanPlayerModelStrings[] =
 	"models/player/custom_player/legacy/tm_balkan_variantd.mdl",
 	"models/player/custom_player/legacy/tm_balkan_variante.mdl",
 };
-const char* TProfessionalPlayerModelStrings[] =
+const char* TProfessionalPlayerModelStrings[MAX_FACTION_SKINS] =
 {
 	"models/player/custom_player/legacy/tm_professional.mdl",
 	"models/player/custom_player/legacy/tm_professional_var1.mdl",
@@ -235,7 +235,7 @@ const char* TProfessionalPlayerModelStrings[] =
 	"models/player/custom_player/legacy/tm_professional_var3.mdl",
 	"models/player/custom_player/legacy/tm_professional_var4.mdl",
 };
-const char* TAnarchistPlayerModelStrings[] =
+const char* TAnarchistPlayerModelStrings[MAX_FACTION_SKINS] =
 {
 	"models/player/custom_player/legacy/tm_anarchist.mdl",
 	"models/player/custom_player/legacy/tm_anarchist_varianta.mdl",
@@ -243,7 +243,7 @@ const char* TAnarchistPlayerModelStrings[] =
 	"models/player/custom_player/legacy/tm_anarchist_variantc.mdl",
 	"models/player/custom_player/legacy/tm_anarchist_variantd.mdl",
 };
-const char* TPiratePlayerModelStrings[] =
+const char* TPiratePlayerModelStrings[MAX_FACTION_SKINS] =
 {
 	"models/player/custom_player/legacy/tm_pirate.mdl",
 	"models/player/custom_player/legacy/tm_pirate_varianta.mdl",
@@ -251,15 +251,8 @@ const char* TPiratePlayerModelStrings[] =
 	"models/player/custom_player/legacy/tm_pirate_variantc.mdl",
 	"models/player/custom_player/legacy/tm_pirate_variantd.mdl",
 };
-CUtlVectorInitialized< const char * > TPhoenixPlayerModels( TPhoenixPlayerModelStrings, ARRAYSIZE( TPhoenixPlayerModelStrings ) );
-CUtlVectorInitialized< const char * > TLeetPlayerModels( TLeetPlayerModelStrings, ARRAYSIZE( TLeetPlayerModelStrings ) );
-CUtlVectorInitialized< const char * > TSeparatistPlayerModels( TSeparatistPlayerModelStrings, ARRAYSIZE( TSeparatistPlayerModelStrings ) );
-CUtlVectorInitialized< const char * > TBalkanPlayerModels( TBalkanPlayerModelStrings, ARRAYSIZE( TBalkanPlayerModelStrings ) );
-CUtlVectorInitialized< const char * > TProfessionalPlayerModels( TProfessionalPlayerModelStrings, ARRAYSIZE( TProfessionalPlayerModelStrings ) );
-CUtlVectorInitialized< const char * > TAnarchistPlayerModels( TAnarchistPlayerModelStrings, ARRAYSIZE( TAnarchistPlayerModelStrings ) );
-CUtlVectorInitialized< const char * > TPiratePlayerModels( TPiratePlayerModelStrings, ARRAYSIZE( TPiratePlayerModelStrings ) );
 
-const char* CTST6PlayerModelStrings[] =
+const char* CTST6PlayerModelStrings[MAX_FACTION_SKINS] =
 {
 	"models/player/custom_player/legacy/ctm_st6.mdl",
 	"models/player/custom_player/legacy/ctm_st6_varianta.mdl",
@@ -267,7 +260,7 @@ const char* CTST6PlayerModelStrings[] =
 	"models/player/custom_player/legacy/ctm_st6_variantc.mdl",
 	"models/player/custom_player/legacy/ctm_st6_variantd.mdl",
 };
-const char* CTGSG9PlayerModelStrings[] =
+const char* CTGSG9PlayerModelStrings[MAX_FACTION_SKINS] =
 {
 	"models/player/custom_player/legacy/ctm_gsg9.mdl",
 	"models/player/custom_player/legacy/ctm_gsg9_varianta.mdl",
@@ -275,11 +268,11 @@ const char* CTGSG9PlayerModelStrings[] =
 	"models/player/custom_player/legacy/ctm_gsg9_variantc.mdl",
 	"models/player/custom_player/legacy/ctm_gsg9_variantd.mdl",
 };
-const char* CTSASPlayerModelStrings[] =
+const char* CTSASPlayerModelStrings[MAX_SAS_SKINS] =
 {
 	"models/player/custom_player/legacy/ctm_sas.mdl",
 };
-const char* CTGIGNPlayerModelStrings[] =
+const char* CTGIGNPlayerModelStrings[MAX_FACTION_SKINS] =
 {
 	"models/player/custom_player/legacy/ctm_gign.mdl",
 	"models/player/custom_player/legacy/ctm_gign_varianta.mdl",
@@ -287,7 +280,7 @@ const char* CTGIGNPlayerModelStrings[] =
 	"models/player/custom_player/legacy/ctm_gign_variantc.mdl",
 	"models/player/custom_player/legacy/ctm_gign_variantd.mdl",
 };
-const char* CTFBIPlayerModelStrings[] =
+const char* CTFBIPlayerModelStrings[MAX_FACTION_SKINS] =
 {
 	"models/player/custom_player/legacy/ctm_fbi.mdl",
 	"models/player/custom_player/legacy/ctm_fbi_varianta.mdl",
@@ -295,7 +288,7 @@ const char* CTFBIPlayerModelStrings[] =
 	"models/player/custom_player/legacy/ctm_fbi_variantd.mdl",
 	"models/player/custom_player/legacy/ctm_fbi_variante.mdl",
 };
-const char* CTIDFPlayerModelStrings[] =
+const char* CTIDFPlayerModelStrings[MAX_IDF_SKINS] =
 {
 	"models/player/custom_player/legacy/ctm_idf.mdl",
 	"models/player/custom_player/legacy/ctm_idf_variantb.mdl",
@@ -304,7 +297,7 @@ const char* CTIDFPlayerModelStrings[] =
 	"models/player/custom_player/legacy/ctm_idf_variante.mdl",
 	"models/player/custom_player/legacy/ctm_idf_variantf.mdl",
 };
-const char* CTSWATPlayerModelStrings[] =
+const char* CTSWATPlayerModelStrings[MAX_FACTION_SKINS] =
 {
 	"models/player/custom_player/legacy/ctm_swat.mdl",
 	"models/player/custom_player/legacy/ctm_swat_varianta.mdl",
@@ -312,20 +305,10 @@ const char* CTSWATPlayerModelStrings[] =
 	"models/player/custom_player/legacy/ctm_swat_variantc.mdl",
 	"models/player/custom_player/legacy/ctm_swat_variantd.mdl",
 };
-CUtlVectorInitialized< const char * > CTST6PlayerModels( CTST6PlayerModelStrings, ARRAYSIZE( CTST6PlayerModelStrings ) );
-CUtlVectorInitialized< const char * > CTGSG9PlayerModels( CTGSG9PlayerModelStrings, ARRAYSIZE( CTGSG9PlayerModelStrings ) );
-CUtlVectorInitialized< const char * > CTSASPlayerModels( CTSASPlayerModelStrings, ARRAYSIZE( CTSASPlayerModelStrings ) );
-CUtlVectorInitialized< const char * > CTGIGNPlayerModels( CTGIGNPlayerModelStrings, ARRAYSIZE( CTGIGNPlayerModelStrings ) );
-CUtlVectorInitialized< const char * > CTFBIPlayerModels( CTFBIPlayerModelStrings, ARRAYSIZE( CTFBIPlayerModelStrings ) );
-CUtlVectorInitialized< const char * > CTIDFPlayerModels( CTIDFPlayerModelStrings, ARRAYSIZE( CTIDFPlayerModelStrings ) );
-CUtlVectorInitialized< const char * > CTSWATPlayerModels( CTSWATPlayerModelStrings, ARRAYSIZE( CTSWATPlayerModelStrings ) );
 
 // any new knives? add them here
-const char *KnivesEntitiesStrings[] =
+const char *KnivesEntitiesStrings[MAX_KNIVES] =
 {
-	"weapon_knife",
-	"weapon_knife_t",
-	"weapon_knifegg",
 	"weapon_knife_css",
 	"weapon_knife_karambit",
 	"weapon_knife_flip",
@@ -346,4 +329,3 @@ const char *KnivesEntitiesStrings[] =
 	"weapon_knife_widowmaker",
 	"weapon_knife_push",
 };
-CUtlVectorInitialized< const char * > KnivesEntities( KnivesEntitiesStrings, ARRAYSIZE( KnivesEntitiesStrings ) );
