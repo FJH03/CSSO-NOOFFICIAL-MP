@@ -11,11 +11,11 @@
 #pragma once
 #endif
 
-#include <vgui_controls/Frame.h>
+#include <vgui_controls/EditablePanel.h>
 
-class CCSRotatingPlayerImagePanel: public vgui::Panel
+class CCSRotatingPlayerImagePanel: public vgui::EditablePanel
 {
-	typedef vgui::Panel BaseClass;
+	typedef vgui::EditablePanel BaseClass;
 
 public:
 	CCSRotatingPlayerImagePanel( vgui::Panel *pParent, const char *pName );
