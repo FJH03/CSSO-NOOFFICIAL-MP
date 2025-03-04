@@ -641,6 +641,8 @@ public:
 	void		SetParentNeedsCursorMoveEvents( bool bNeedsEvents ) { m_bParentNeedsCursorMoveEvents = bNeedsEvents; }
 	bool		ParentNeedsCursorMoveEvents() const { return m_bParentNeedsCursorMoveEvents; }
 
+	void		ClearSchemeUpdateFlag();
+
 	// For 360: support directional navigation between UI controls via dpad
 	enum NAV_DIRECTION { ND_UP, ND_DOWN, ND_LEFT, ND_RIGHT, ND_BACK, ND_NONE };
 	virtual Panel* NavigateUp();
@@ -972,6 +974,11 @@ inline void Panel::DisableMouseInputForThisPanel( bool bDisable )
 inline bool	Panel::IsMouseInputDisabledForThisPanel() const
 {
 	return _flags.IsFlagSet( IS_MOUSE_DISABLED_FOR_THIS_PANEL_ONLY );
+}
+
+inline void Panel::ClearSchemeUpdateFlag()
+{
+	_flags.ClearFlag( NEEDS_SCHEME_UPDATE );
 }
 
 #if 0

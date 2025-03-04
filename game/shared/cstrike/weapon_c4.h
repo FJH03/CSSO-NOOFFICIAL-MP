@@ -158,6 +158,7 @@ public:
 	#ifdef CLIENT_DLL
 
 		void ClientThink( void );
+		virtual void UpdateOnRemove( void );
 		virtual bool OnFireEvent( C_BaseViewModel *pViewModel, const Vector& origin, const QAngle& angles, int event, const char *options );
 		char *GetScreenText( void );
 		char m_szScreenText[32];

@@ -366,6 +366,7 @@ SendPropTime( SENDINFO( m_flDoneSwitchingSilencer ) ),
 // world weapon models have no aminations
 SendPropExclude( "DT_AnimTimeMustBeFirst", "m_flAnimTime" ),
 SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
+SendPropEHandle( SENDINFO( m_hPrevOwner ) ),
 //	SendPropExclude( "DT_LocalActiveWeaponData", "m_flTimeWeaponIdle" ),
 SendPropTime( SENDINFO( m_flPostponeFireReadyTime ) ),
 #if IRONSIGHT
@@ -376,6 +377,7 @@ RecvPropInt( RECVINFO( m_weaponMode ) ),
 RecvPropFloat( RECVINFO( m_fAccuracyPenalty ) ),
 RecvPropFloat( RECVINFO( m_fLastShotTime ) ),
 RecvPropFloat( RECVINFO( m_flRecoilIndex ) ),
+RecvPropEHandle( RECVINFO( m_hPrevOwner ) ),
 RecvPropBool( RECVINFO( m_bReloadVisuallyComplete ) ),
 RecvPropTime( RECVINFO( m_flDoneSwitchingSilencer ) ),
 RecvPropTime( RECVINFO( m_flPostponeFireReadyTime ) ),
@@ -500,7 +502,7 @@ CWeaponCSBase::CWeaponCSBase()
 	m_bDelayFire = true;
 	m_nextOwnerTouchTime = 0.0f;
 	m_nextPrevOwnerTouchTime = 0.0;
-	m_prevOwner = NULL;
+	m_hPrevOwner = NULL;
 	AddSolidFlags( FSOLID_TRIGGER ); // Nothing collides with these but it gets touches.
 
 #ifdef CLIENT_DLL
@@ -1570,6 +1572,10 @@ bool CWeaponCSBase::IsRemoveable()
 		}
 	}
 
+	// currently held or never had an owner (level designer placed)
+	if ( GetOwner() || !m_hPrevOwner.m_Value.IsValid() )
+		return false;
+
 	return BaseClass::IsRemoveable();
 }
 
@@ -1665,7 +1671,7 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 	// pick up a weapon in the same frame that it is thrown down by a different player.
 	// The m_nextOwnerTouchTime delay fixes that.
 	m_nextOwnerTouchTime = gpGlobals->curtime + 0.1f;
-	m_prevOwner = GetPlayerOwner();
+	m_hPrevOwner = GetPlayerOwner();
 
 	SetOwnerEntity( NULL );
 	SetOwner( NULL );
@@ -1730,7 +1736,7 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 		return;
 	}
 
-	if ( ( m_prevOwner != NULL ) && ( pOther == m_prevOwner ) && ( gpGlobals->curtime < m_nextPrevOwnerTouchTime ) )
+	if ( ( m_hPrevOwner != NULL ) && ( pOther == m_hPrevOwner ) && ( gpGlobals->curtime < m_nextPrevOwnerTouchTime ) )
 	{
 		return;
 	}
@@ -2099,8 +2105,6 @@ extern ConVar view_recoil_tracking;
 
 	void CWeaponCSBase::OnDataChanged( DataUpdateType_t type )
 	{
-		BaseClass::OnDataChanged( type );
-
 		C_BaseCombatCharacter *pOwner = GetPreviousOwner();
 
 		if ( GetWeaponType() == WEAPONTYPE_GRENADE )
@@ -2126,6 +2130,8 @@ extern ConVar view_recoil_tracking;
 				}
 			}
 		}
+
+		BaseClass::OnDataChanged( type );
 
 #if IRONSIGHT
 		UpdateIronSightController();
@@ -2751,22 +2757,16 @@ extern ConVar view_recoil_tracking;
 
 		ResetGunHeat();
 
-		m_nextPrevOwnerTouchTime = 0.0;
-		m_prevOwner = NULL;
+		m_nextOwnerTouchTime = 0.0f;
+		m_nextPrevOwnerTouchTime = 0.0f;
 
-        //=============================================================================
-        // HPE_BEGIN:
-        //=============================================================================
+        m_hPrevOwner = NULL;
 
         // [tj] initialize donor of this weapon
         m_donor = NULL;
         m_donated = false;
 
 		m_weaponMode = Primary_Mode;
-
-        //=============================================================================
-        // HPE_END
-        //=============================================================================
 
 #if IRONSIGHT
 		UpdateIronSightController();

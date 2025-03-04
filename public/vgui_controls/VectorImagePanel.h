@@ -34,12 +34,17 @@ public:
 	void SetTexture( const char *szFilePath );
 	void SetRepeatsCount( int repeats ) { m_nRepeatsCount = repeats; }
 	void DestroyTexture();
+	void SetRenderSize( int wide, int tall );
+	void SetMirrorX( bool state ) { m_bMirrorX = state; }
+	void SetMirrorY( bool state ) { m_bMirrorY = state; }
 
 private:
 	int m_nTextureId;
 	int m_iRenderSize[2];
 	int m_iRepeatMargin[2];
 	int m_nRepeatsCount; // how many times we need to render it over and over?
+	bool m_bMirrorX;
+	bool m_bMirrorY;
 };
 
 }

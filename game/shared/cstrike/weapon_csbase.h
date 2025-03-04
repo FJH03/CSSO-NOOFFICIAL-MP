@@ -299,8 +299,8 @@ public:
 	bool IsSwitchingSilencer( void ) { return (m_flDoneSwitchingSilencer >= gpGlobals->curtime); }
 
     // [tj] Accessors for the previous owner of the gun
-	void SetPreviousOwner(CCSPlayer* player) { m_prevOwner = player; }
-	CCSPlayer* GetPreviousOwner() { return m_prevOwner; }
+	void SetPreviousOwner( CCSPlayer* player ) { m_hPrevOwner = ( CBasePlayer * )player; }
+	CCSPlayer* GetPreviousOwner() const { return ( CCSPlayer* )m_hPrevOwner.Get(); }
 
     // [tj] Accessors for the donor system
     void SetDonor(CCSPlayer* player) { m_donor = player; }
@@ -327,7 +327,8 @@ private:
 
 	float	m_nextOwnerTouchTime;
 	float	m_nextPrevOwnerTouchTime;
-	CCSPlayer *m_prevOwner;
+	
+	CNetworkHandle( CBasePlayer, m_hPrevOwner );
 
 	int m_iDefaultExtraAmmo;
 

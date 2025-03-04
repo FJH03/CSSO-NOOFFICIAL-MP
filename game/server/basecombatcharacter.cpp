@@ -2238,8 +2238,20 @@ bool CBaseCombatCharacter::Weapon_EquipAmmoOnly( CBaseCombatWeapon *pWeapon )
 			
 			//Only succeed if we've taken ammo from the weapon
 			if ( takenPrimary > 0 || takenSecondary > 0 )
+			{
+#if defined (CSTRIKE_DLL)
+				IGameEvent * event = gameeventmanager->CreateEvent( "ammo_pickup" );
+				if( event )
+				{
+					const char *weaponName = pWeapon->GetClassname();
+					event->SetInt( "userid", engine->GetPlayerUserId( edict() ) );
+					event->SetString( "item", weaponName + 7 );
+					event->SetInt( "index", m_hMyWeapons[i].Get()->entindex() );
+					gameeventmanager->FireEvent( event );
+				}
+#endif
 				return true;
-			
+			}
 			return false;
 		}
 	}

@@ -59,6 +59,9 @@ public:
 	bool IsLoopingSoundPlaying( void ) { return m_bLoopingSoundPlaying; }
 	void SetLoopingSoundPlaying( bool bPlaying ) { m_bLoopingSoundPlaying = bPlaying; }
 
+	// true if grenade has been thrown or dropped
+	bool			GetIsThrown( void ) { return !m_bIsHeldByPlayer; }
+
 	bool			IsThrownUnderhand( void ) { return (m_flThrowStrength <= GRENADE_UNDERHAND_THRESHOLD); }
 	float			GetThrownStrength( void ) { return m_flThrowStrength; }
 	float			ApproachThrownStrength( void );

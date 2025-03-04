@@ -20,6 +20,7 @@
 
 	#include "c_cs_player.h"
 	#include "weapon_selection.h"
+	#include "cs_hud_weaponselection.h"
 
 #else
 
@@ -368,6 +369,27 @@ void CBaseCSGrenade::ItemPostFrame()
 			else
 			{
 				pPlayer->SwitchToNextBestWeapon( this );
+			}
+#endif
+#if defined (CLIENT_DLL)
+			// when a grenade is removed, force the local player to update thier inventory screen
+			C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+			if ( pLocalPlayer && pLocalPlayer == pPlayer )
+			{
+				CCSHudWeaponSelection *pHudWS = GET_HUDELEMENT( CCSHudWeaponSelection );
+				if ( pHudWS )
+				{
+					int nAmmoCount = pPlayer->GetAmmoCount(m_iPrimaryAmmoType);
+					if ( nAmmoCount <= 0 )
+					{
+						pHudWS->ShowAndUpdateSelection( WEPSELECT_DROP, this );
+					}
+					else
+					{
+						// we need to tell the hud that this weapon still exists and then update the selected weapon
+						pHudWS->ShowAndUpdateSelection( WEPSELECT_PICKUP, this );
+					}
+				}
 			}
 #endif
 			return;	//don't animate this grenade any more!

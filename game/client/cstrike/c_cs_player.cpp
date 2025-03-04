@@ -40,6 +40,7 @@
 #include "c_cs_hostage.h"
 #include "prediction.h"
 
+#include "weapon_selection.h"
 #include "vguicenterprint.h"
 #include <vgui_controls/Panel.h>
 #include "ragdoll_shared.h"
@@ -927,18 +928,12 @@ void RecvProxy_HasDefuser( const CRecvProxyData *pData, void *pStruct, void *pOu
 		return;
 	}
 
-	bool drawIcon = false;
-
 	if (pData->m_Value.m_Int == 0)
 	{
 		pPlayerData->RemoveDefuser();
 	}
 	else
 	{
-		if (pPlayerData->HasDefuser() == false)
-		{
-			drawIcon = true;
-		}
 		pPlayerData->GiveDefuser();
 	}
 }
@@ -1166,6 +1161,7 @@ C_CSPlayer::C_CSPlayer() :
 
 	ListenForGameEvent( "round_start" );
 	ListenForGameEvent( "item_pickup" );
+	ListenForGameEvent( "ammo_pickup" );
 	ListenForGameEvent( "cs_pre_restart" );
 	ListenForGameEvent( "player_death" );
 	ListenForGameEvent( "player_spawn" );
@@ -2330,6 +2326,26 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			// if we aren't playing the sound on the server, play a "silent" version on the client
 			if ( event->GetBool( "silent" ) )
 				EmitSound( "Player.PickupWeaponSilent" );
+		}
+	}
+	else if ( Q_strcmp( "ammo_pickup", name ) == 0 )
+	{
+		// this is to catch the case where a grenade was just thrown and we picked up another grenade immediately before the one iun our inventory has a chance to remove itself
+		// what happens here is that the one we just picked up adds to the "ammo" of the one that we have and we then remove the one that we picked up
+		C_CSPlayer *pObservedPlayer = GetHudPlayer();
+
+		// check if weapon was dropped by local player or the player we are observing
+		if ( pObservedPlayer && pObservedPlayer->GetUserID() == EventUserID )
+		{
+			C_WeaponCSBase *pWeapon = dynamic_cast<C_WeaponCSBase*>( ClientEntityList().GetEnt( event->GetInt( "index" ) ) );
+			if ( pWeapon && pWeapon->ShouldDrawPickup() )
+			{
+				CBaseHudWeaponSelection *pHudSelection = GetHudWeaponSelection();
+				if ( pHudSelection )
+				{
+					pHudSelection->OnWeaponPickup( pWeapon );
+				}
+			}
 		}
 	}
 	else if ( Q_strcmp( "round_start", name ) == 0 )

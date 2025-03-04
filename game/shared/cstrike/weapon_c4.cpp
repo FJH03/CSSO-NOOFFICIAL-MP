@@ -17,6 +17,7 @@
 
 #if defined( CLIENT_DLL )
 	#include "c_cs_player.h"
+	#include "cs_hud_weaponselection.h"
 #else
 	#include "cs_player.h"
 	#include "explode.h"
@@ -940,6 +941,22 @@ void CC4::ItemPostFrame()
 }
 
 #if defined( CLIENT_DLL )
+
+	void CC4::UpdateOnRemove( void )
+	{
+		BaseClass::UpdateOnRemove();
+
+		// when a c4 is removed, force the local player to update thier inventory screen
+		C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+		if ( pPlayer )
+		{
+			CCSHudWeaponSelection *pHudWS = GET_HUDELEMENT( CCSHudWeaponSelection );
+			if ( pHudWS )
+			{
+				pHudWS->ShowAndUpdateSelection( WEPSELECT_SWITCH, NULL );
+			}
+		}
+	}
 
 	void CC4::ClientThink( void )
 	{

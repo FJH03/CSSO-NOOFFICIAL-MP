@@ -1,4 +1,4 @@
-//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -10,139 +10,100 @@
 #pragma once
 #endif
 
-#include "weapon_selection.h"
-#include <vgui_controls/Panel.h>
-#include "cs_weapon_parse.h"
+#include <vgui_controls/EditablePanel.h>
+#include <vgui_controls/VectorImagePanel.h>
+#include <vgui_controls/Label.h>
+#include "hudelement.h"
+#include "cs_weapon_selection.h"
+#include "weapon_csbase.h"
 
-enum
+using namespace vgui;
+
+#define MAX_WEP_SELECT_PANELS 5
+#define MAX_WEP_SELECT_POSITIONS 6
+#define WEAPON_SELECTION_FADE_TIME_SEC 0.1
+#define WEAPON_SELECTION_FADE_SPEED 100.0 / WEAPON_SELECTION_FADE_TIME_SEC
+#define WEAPON_SELECTION_FADE_DELAY 5.0
+
+struct WeaponSelectPanel
 {
-	WEPSELECT_PICKUP = 0,
-	WEPSELECT_DROP,
-	WEPSELECT_SWITCH,
-};
-
-//-----------------------------------------------------------------------------
-// Purpose: cstrike weapon selection hud element
-//-----------------------------------------------------------------------------
-class CHudWeaponSelection : public CBaseHudWeaponSelection, public vgui::Panel
-{
-	DECLARE_CLASS_SIMPLE( CHudWeaponSelection, vgui::Panel );
-
-public:
-	explicit CHudWeaponSelection(const char *pElementName );
-
-	virtual bool ShouldDraw();
-	virtual void OnWeaponPickup( C_BaseCombatWeapon *pWeapon );
-	virtual void OnWeaponDrop( C_BaseCombatWeapon *pWeapon );
-	virtual void OnWeaponSwitch( C_BaseCombatWeapon *pWeapon );
-
-	virtual void CycleToNextWeapon( void );
-	virtual void CycleToPrevWeapon( void );
-	virtual void SwitchToLastWeapon( void );
-
-	typedef enum
+	WeaponSelectPanel()
 	{
-		WEAPON_SELECTION_NORMAL = 0,
-		WEAPON_SELECTION_MELEE,
-		WEAPON_SELECTION_GRENADE_AND_BOMB,
-		WEAPON_SELECTION_GRENADE_AND_BOMB_AND_MELEE,
-		WEAPON_SELECTION_NO_GRENADE_AND_BOMB,
-		WEAPON_SELECTION_GRENADE,
-		WEAPON_SELECTION_ITEMSLOT,
-	} WEAPON_SELECTION_MODE;
-
-	void CycleToNextWeapon(WEAPON_SELECTION_MODE selectionMode);
-	virtual void CycleToNextGrenadeOrBomb( void );
-	virtual void CycleToNextGrenadeBombOrMelee( void );
-	virtual void CycleToNextNonGrenadeOrBomb( void );
-	virtual void UserCmd_Slot3( void );
-	virtual void UserCmd_Slot4( void );
-	virtual void UserCmd_Slot5( void );
-	virtual void UserCmd_Slot6( void );
-	virtual void UserCmd_Slot7( void );
-	virtual void UserCmd_Slot8( void );
-	virtual void UserCmd_Slot9( void );
-	virtual void UserCmd_Slot10( void );
-	virtual void UserCmd_Slot11( void );
-	virtual void UserCmd_Slot12( void );
-
-	virtual C_BaseCombatWeapon *GetWeaponInSlot( int iSlot, int iSlotPos );
-	virtual C_BaseCombatWeapon *GetWeaponInSlotForTarget( C_BasePlayer *player, int iSlot, int iSlotPos );
-	virtual void SelectWeaponSlot( int iSlot );
-	virtual void SelectWeapon( void );
-
-	virtual C_BaseCombatWeapon	*GetSelectedWeapon( void )
-	{ 
-		return static_cast< C_BaseCombatWeapon* >( m_hSelectedWeapon.Get() );
+		pSVGPanel = NULL;
+		pNameLabel = NULL;
+		pCountLabel = NULL;
+		bShowCountNumber = false;
+		hWeapon = NULL;
+		bInitialized = false;
+		bSelected = false;
 	}
 
-	virtual void OpenSelection( void );
-	virtual void HideSelection( void );
+	VectorImagePanel *pSVGPanel;
+	Label *pNameLabel;
+	Label *pCountLabel;
+	bool bShowCountNumber;
+	EHANDLE hWeapon;
+	bool bInitialized;
+	bool bSelected;
+};
 
-	virtual void CancelWeaponSelection( void );
 
-	virtual void LevelInit();
+// CHudWeaponSelection is already taken :(
+class CCSHudWeaponSelection: public CHudElement, public EditablePanel
+{
+	DECLARE_CLASS_SIMPLE( CCSHudWeaponSelection, EditablePanel );
+public:
+	CCSHudWeaponSelection( const char *pElementName );
+	virtual void OnThink();
+	virtual void ProcessInput( void );
+	virtual void LevelShutdown( void );
 
-	C_BaseCombatWeapon *FindNextWeaponInWeaponSelection(int iCurrentSlot, int iCurrentPosition, WEAPON_SELECTION_MODE selectionMode=WEAPON_SELECTION_NORMAL);
-	//C_BaseCombatWeapon *FindNextWeaponInWeaponSelection(int iCurrentSlot, int iCurrentPosition);
-	C_BaseCombatWeapon *FindPrevWeaponInWeaponSelection(int iCurrentSlot, int iCurrentPosition);
+	void AddWeapon( C_BaseCombatWeapon *pWeapon, bool bSelected );
+	void RemoveWeapon( int nSlot, int nPos );
+	void RemoveAllItems( void );
+	WeaponSelectPanel CreateNewPanel( int nSlot, int nPos, C_BaseCombatWeapon *pWeapon = NULL, bool bSelected = false );
+	void ShowAndUpdateSelection( int nType = WEPSELECT_SWITCH, C_BaseCombatWeapon *pWeapon = NULL );
+	void UpdatePanelPositions( void );
+	void UpdateIconColors();
+	void UpdateCountLabels();
 
 protected:
-	virtual void OnThink();
-	virtual void Paint();
-	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
-
-	virtual bool IsWeaponSelectable()
-	{ 
-		if (IsInSelectionMode())
-			return true;
-
-		return false;
+	virtual C_WeaponCSBase	*GetSelectedWeapon( void )
+	{
+		return dynamic_cast<C_WeaponCSBase*>(m_hSelectedWeapon.Get());
 	}
 
-	virtual bool IsHudMenuTakingInput();
-	virtual bool IsHudMenuPreventingWeaponSelection();
+	// CGameEventListener methods
+	virtual void FireGameEvent( IGameEvent *event );
 
 private:
-	void SelectSpecificWeapon( CSWeaponID weaponID );
+	float	m_flLastUpdate;
+	float	m_flFadeStartTime;
 
-	virtual	void SetSelectedWeapon( C_BaseCombatWeapon *pWeapon );
+	WeaponSelectPanel m_weaponPanels[MAX_WEP_SELECT_PANELS][MAX_WEP_SELECT_POSITIONS];
+	CHandle< C_BaseCombatWeapon > m_hSelectedWeapon;
 
-	void DrawBox(int x, int y, int wide, int tall, Color color, float normalizedAlpha, int number);
+	float	m_flUpdateInventoryAt;
+	bool	m_bUpdateInventoryReset;
 
-	CPanelAnimationVar( vgui::HFont, m_hNumberFont, "NumberFont", "HudSelectionNumbers" );
-	CPanelAnimationVar( vgui::HFont, m_hTextFont, "TextFont", "HudSelectionText" );
+	Color	m_clrNotSelected;
 
-	CPanelAnimationVarAliasType( float, m_flSmallBoxSize, "SmallBoxSize", "32", "proportional_float" );
-	CPanelAnimationVarAliasType( float, m_flLargeBoxWide, "LargeBoxWide", "108", "proportional_float" );
-	CPanelAnimationVarAliasType( float, m_flLargeBoxTall, "LargeBoxTall", "72", "proportional_float" );
+	int m_nPrevWepAlignSlot;
 
-	CPanelAnimationVarAliasType( float, m_flBoxGap, "BoxGap", "12", "proportional_float" );
+	CPanelAnimationVarAliasType( int, icons_base_xpos, "icons_base_xpos", "0", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, icons_base_ypos, "icons_base_ypos", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, name_label_xpos, "name_label_xpos", "0", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, name_label_ypos, "name_label_ypos", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, count_label_xpos, "count_label_xpos", "0", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, count_label_ypos, "count_label_ypos", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, weapon_icon_wide, "weapon_icon_wide", "0", "proportional_width" );
+	CPanelAnimationVarAliasType( int, weapon_icon_tall, "weapon_icon_tall", "0", "proportional_height" );
+	CPanelAnimationVarAliasType( int, weapon_icon_slot_margin, "weapon_icon_slot_margin", "0", "proportional_height" );
+	CPanelAnimationVarAliasType( int, weapon_icon_pos_margin, "weapon_icon_pos_margin", "0", "proportional_width" );
+	CPanelAnimationVar( Color, m_clrSelected, "selected_weapon_color", "White" );
+	CPanelAnimationVar( HFont, m_hNameLabelFont, "name_label_font", "WeaponSelectionNameLabelFont" );
+	CPanelAnimationVar( HFont, m_hCountLabelFont, "count_label_font", "WeaponSelectionCountLabelFont" );
 
-	CPanelAnimationVarAliasType( float, m_flSelectionNumberXPos, "SelectionNumberXPos", "4", "proportional_float" );
-	CPanelAnimationVarAliasType( float, m_flSelectionNumberYPos, "SelectionNumberYPos", "4", "proportional_float" );
-
-	CPanelAnimationVarAliasType( float, m_flIconXPos, "IconXPos", "16", "proportional_float" );
-	CPanelAnimationVarAliasType( float, m_flIconYPos, "IconYPos", "8", "proportional_float" );
-
-	CPanelAnimationVarAliasType( float, m_flTextYPos, "TextYPos", "54", "proportional_float" );
-
-	CPanelAnimationVar( float, m_flAlphaOverride, "Alpha", "255" );
-	CPanelAnimationVar( float, m_flSelectionAlphaOverride, "SelectionAlpha", "255" );
-
-
-	CPanelAnimationVar( Color, m_TextColor, "TextColor", "SelectionTextFg" );
-	CPanelAnimationVar( Color, m_NumberColor, "NumberColor", "SelectionNumberFg" );
-	CPanelAnimationVar( Color, m_EmptyBoxColor, "EmptyBoxColor", "SelectionEmptyBoxBg" );
-	CPanelAnimationVar( Color, m_BoxColor, "BoxColor", "SelectionBoxBg" );
-	CPanelAnimationVar( Color, m_SelectedBoxColor, "SelectedBoxClor", "SelectionSelectedBoxBg" );
-
-	CPanelAnimationVar( float, m_flWeaponPickupGrowTime, "SelectionGrowTime", "0.1" );
-
-	CPanelAnimationVar( float, m_flTextScan, "TextScan", "1.0" );
-
-	CPanelAnimationVar( int, m_iMaxSlots, "MaxSlots", "6" );
-	CPanelAnimationVar( bool, m_bPlaySelectionSounds, "PlaySelectSounds", "1" );
 };
 
-#endif	//CS_HUD_CHAT_H
+#endif	//CS_HUD_WEAPONSELECTION_H

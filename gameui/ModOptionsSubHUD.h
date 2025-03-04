@@ -16,6 +16,7 @@
 
 class CLabeledCommandComboBox;
 class CCvarSlider;
+class CCvarToggleCheckButton;
 
 class CModOptionsSubHUD;
 
@@ -44,6 +45,7 @@ private:
 	CLabeledCommandComboBox*	m_pSimplePlayerModelLighting;
 	CLabeledCommandComboBox*	m_pHUDColor;
 	CCvarSlider*				m_pHUDBackgroundAlpha;
+	CCvarToggleCheckButton*		m_pAlwaysShowInventory;
 };
 
 #endif // ModOptionsSubHUD_H

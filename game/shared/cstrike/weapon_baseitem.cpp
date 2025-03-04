@@ -11,6 +11,7 @@
 
 #if defined( CLIENT_DLL )
 #include "c_cs_player.h"
+#include "cs_hud_weaponselection.h"
 #else
 #include "cs_player.h"
 #endif // CLIENT_DLL
@@ -207,13 +208,39 @@ void CWeaponBaseItem::ItemPostFrame( void )
 		m_UseTimer.Invalidate();
 
 		// remove the ammo
-		pPlayer->RemoveAmmo( 1, m_iPrimaryAmmoType, true );
+		pPlayer->RemoveAmmo( 1, m_iPrimaryAmmoType );
 
-		pPlayer->SwitchToNextBestWeapon( this );
-#ifndef CLIENT_DLL
 		if ( pPlayer->GetAmmoCount(m_iPrimaryAmmoType) <= 0 )
 		{
+			pPlayer->Weapon_Drop( this, NULL, NULL );
+#ifndef CLIENT_DLL	
 			UTIL_Remove( this );
+#endif
+		}
+		else
+		{
+			pPlayer->SwitchToNextBestWeapon( this );
+		}
+
+#if defined (CLIENT_DLL)
+		// when an item is removed, force the local player to update their inventory screen
+		C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+		if ( pLocalPlayer && pLocalPlayer == pPlayer )
+		{
+			CCSHudWeaponSelection *pHudWS = GET_HUDELEMENT( CCSHudWeaponSelection );
+			if ( pHudWS )
+			{
+				int nAmmoCount = pPlayer->GetAmmoCount( m_iPrimaryAmmoType );
+				if ( nAmmoCount <= 0 )
+				{
+					pHudWS->ShowAndUpdateSelection( WEPSELECT_DROP, this );
+				}
+				else
+				{
+					// we need to tell the hud that this weapon still exists and then update the selected weapon
+					pHudWS->ShowAndUpdateSelection( WEPSELECT_PICKUP, this );
+				}
+			}
 		}
 #endif
 	}

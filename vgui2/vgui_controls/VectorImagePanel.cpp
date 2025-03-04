@@ -31,6 +31,8 @@ VectorImagePanel::VectorImagePanel( Panel *parent, const char *name ): Panel( pa
 	m_iRenderSize[0] = m_iRenderSize[1] = 0;
 	m_iRepeatMargin[0] = m_iRepeatMargin[1] = 0;
 	m_nRepeatsCount = 1;
+	m_bMirrorX = false;
+	m_bMirrorY = false;
 }
 
 VectorImagePanel::~VectorImagePanel()
@@ -83,6 +85,13 @@ void VectorImagePanel::DestroyTexture()
 	}
 }
 
+void VectorImagePanel::SetRenderSize( int wide, int tall )
+{
+	m_iRenderSize[0] = wide;
+	m_iRenderSize[1] = tall;
+	SetSize( wide, tall );
+}
+
 void VectorImagePanel::ApplySettings( KeyValues *inResourceData )
 {
 	BaseClass::ApplySettings( inResourceData );
@@ -102,6 +111,9 @@ void VectorImagePanel::ApplySettings( KeyValues *inResourceData )
 	ComputePos( this, inResourceData->GetString( "repeat_ypos", NULL ), m_iRepeatMargin[1], m_iRenderSize[1],
 				alignScreenTall, m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1], false, OP_SET );
 	m_nRepeatsCount = inResourceData->GetInt( "repeats_count", 1 );
+
+	m_bMirrorX = inResourceData->GetBool( "mirror_x" );
+	m_bMirrorY = inResourceData->GetBool( "mirror_y" );
 }
 
 void VectorImagePanel::Paint()
@@ -127,10 +139,10 @@ void VectorImagePanel::Paint()
 		int x1 = x0 + wide;
 		int y0 = m_iRepeatMargin[1] * i;
 		int y1 = y0 + tall;
-		float texs0 = 0.0f; // xpos / texture wide, always 0
-		float text0 = 0.0f; // ypos / texture tall, always 0
-		float texs1 = (float)wide / (float)textureWide;
-		float text1 = (float)tall / (float)textureTall;
+		float texs0 = m_bMirrorX ? (float)wide / (float)textureWide : 0.0f; // xpos / texture wide, always 0
+		float text0 = m_bMirrorY ? (float)tall / (float)textureTall : 0.0f; // ypos / texture tall, always 0
+		float texs1 = m_bMirrorX ? 0.0f : (float)wide / (float)textureWide;
+		float text1 = m_bMirrorY ? 0.0f : (float)tall / (float)textureTall;
 		vgui::surface()->DrawTexturedSubRect( x0, y0, x1, y1, texs0, text0, texs1, text1 );
 	}
 	g_pMatSystemSurface->DisableClipping( false );
