@@ -34,7 +34,7 @@ extern ConVar overview_names;
 extern ConVar overview_tracks;
 extern ConVar overview_locked;
 extern ConVar overview_alpha;
-extern ConVar cl_radar_square_with_scoreboard;
+ConVar cl_radar_square( "cl_radar_square", "2", FCVAR_ARCHIVE, "0 - round radar, 1 - square radar, 2 - square when scoreboard is visible", true, 0, true, 2 );
 ConVar cl_radaralpha( "cl_radaralpha", "200", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, NULL, true, 0, true, 255 );
 ConVar cl_radar_rotate( "cl_radar_rotate", "1", FCVAR_ARCHIVE, "1" );
 ConVar cl_radar_scale( "cl_radar_scale", "0.7", FCVAR_ARCHIVE, "Sets the radar scale. Valid values are 0.25 to 1.0.", true, 0.25f, true, 1.0f );
@@ -717,7 +717,7 @@ CCSMapOverview::~CCSMapOverview()
 
 void CCSMapOverview::UpdateFollowEntity()
 {
-	if ( m_bRoundRadar )
+	if ( m_bRoundRadar || cl_radar_square.GetInt() == 1 ) // if the radar is round or square but not in scoreboard mode
 	{
 		if ( m_nFollowEntity != 0 )
 		{
@@ -1213,8 +1213,22 @@ void CCSMapOverview::PaintBackground()
 		}
 		else
 		{
-			surface()->DrawSetColor( GetBgColor() );
-			surface()->DrawFilledRect( 0, 0, pwidth, pheight );
+			if ( cl_radar_square.GetInt() == 1 ) // always square
+			{
+				// draw a transparent outline first
+				Color clr = GetBgColor();
+				surface()->DrawSetColor( clr.r(), clr.g(), clr.b(), cl_radaralpha.GetInt() * 0.25f );
+				surface()->DrawFilledRect( 0, 0, pwidth, pheight );
+
+				// now draw the actual background
+				surface()->DrawSetColor( GetBgColor() );
+				surface()->DrawFilledRect( mapInset, mapInset, pwidth - mapInset, pheight - mapInset );
+			}
+			else
+			{
+				surface()->DrawSetColor( GetBgColor() );
+				surface()->DrawFilledRect( 0, 0, pwidth, pheight );
+			}
 		}
 	}
 }
@@ -1417,7 +1431,7 @@ bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector p
 
 	Vector2D oldPos = pospanel;
 	Vector2D adjustment(0,0);
-	if( AdjustPointToPanel( &pospanel ) && m_bRoundRadar )
+	if( AdjustPointToPanel( &pospanel ) && (m_bRoundRadar || cl_radar_square.GetInt() == 1) )
 	{
 		if ( offscreenTextureID == -1 )
 			return false; //Doesn't want to draw if off screen.
@@ -2254,23 +2268,32 @@ void CCSMapOverview::UpdateSizeAndPosition()
 	{
 		// Radar type
 		int iObserverMode = pPlayer->GetObserverMode();
-		IViewPortPanel* panel = gViewPortInterface->FindPanelByName( PANEL_SCOREBOARD );
-		if ( engine->IsHLTV() || pPlayer->GetTeamNumber() == TEAM_SPECTATOR || (panel->IsVisible() && cl_radar_square_with_scoreboard.GetBool()) )
-		{
-			m_bRoundRadar = false;
-			m_fZoom = 1.0f; // fit the entire map in a square
-		}
-		else if ( pPlayer->IsObserver() && iObserverMode > OBS_MODE_DEATHCAM )
+		if ( engine->IsHLTV() || pPlayer->GetTeamNumber() == TEAM_SPECTATOR ||
+			 pPlayer->IsObserver() && iObserverMode > OBS_MODE_DEATHCAM )
 		{
 			m_bRoundRadar = false;
 			m_fZoom = 1.0f; // fit the entire map in a square
 		}
 		else
 		{
-			m_bRoundRadar = true;
-
 			m_flChangeSpeed = 0; // change size instantly
-			m_fZoom = cl_radar_scale.GetFloat() * (OVERVIEW_MAP_SIZE / DESIRED_RADAR_RESOLUTION);
+			switch ( cl_radar_square.GetInt() )
+			{
+				case 0: // always round
+					m_bRoundRadar = true;
+					m_fZoom = cl_radar_scale.GetFloat() * (OVERVIEW_MAP_SIZE / DESIRED_RADAR_RESOLUTION);
+					break;
+				case 1: // always square
+					m_bRoundRadar = false;
+					m_fZoom = cl_radar_scale.GetFloat() * (OVERVIEW_MAP_SIZE / DESIRED_RADAR_RESOLUTION);
+					break;
+				case 2: // squre with scoreboard
+					IViewPortPanel* panel = gViewPortInterface->FindPanelByName( PANEL_SCOREBOARD );
+					bool bScoreboardIsVisible = panel->IsVisible();
+					m_bRoundRadar = !bScoreboardIsVisible;
+					m_fZoom = bScoreboardIsVisible ? 1.0f : cl_radar_scale.GetFloat() * (OVERVIEW_MAP_SIZE / DESIRED_RADAR_RESOLUTION); // fit the entire map in a square with scoreboard
+					break;
+			}
 		}
 	}
 }
@@ -2458,7 +2481,7 @@ int CCSMapOverview::GetBorderSize( void )
 	if ( GetMode() == MAP_MODE_OFF )
 		return 0;
 
-	if ( !m_bRoundRadar )
+	if ( !m_bRoundRadar && cl_radar_square.GetInt() != 1 )
 		return 0;
 
 	return m_nBorderSize;
