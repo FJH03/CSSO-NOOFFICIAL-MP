@@ -328,6 +328,9 @@ void CHudHealthArmor::OnThink()
 		return;
 	}
 
+	SetPaintEnabled( true );
+	SetPaintBackgroundEnabled( true );
+
 	int realHealth = 0;
 	int realArmor = 0;
 	

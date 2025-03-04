@@ -112,6 +112,10 @@ void CHudAccount::OnThink()
 		SetPaintBackgroundEnabled( false );
 		return;
 	}
+
+	SetPaintEnabled( true );
+	SetPaintBackgroundEnabled( true );
+	
 	// Never below zero
 	realAccount = MAX( pPlayer->GetAccount(), 0 );
 

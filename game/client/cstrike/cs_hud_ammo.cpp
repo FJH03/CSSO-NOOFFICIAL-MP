@@ -173,6 +173,8 @@ void CHudAmmo::OnThink()
 		return;
 	}
 
+	SetPaintEnabled( true );
+
 	if ( pWeapon != m_pActiveWeapon )
 	{
 		m_pActiveWeapon = pWeapon;
