@@ -47,6 +47,9 @@ public:
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_GLOCK; }
 
+	virtual bool	WeaponHasBurst() const { return true; }
+	virtual bool	IsInBurstMode() { return m_bBurstMode; }
+
 private:
 	
 	CWeaponGlock( const CWeaponGlock & );

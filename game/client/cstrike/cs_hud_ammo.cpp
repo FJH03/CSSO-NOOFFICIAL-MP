@@ -40,12 +40,13 @@ public:
 	virtual void OnThink();
 	
 private:
-	CHandle<C_BaseCombatWeapon>	m_pActiveWeapon;
+	CHandle<C_WeaponCSBase>	m_pActiveWeapon;
 
 	Label				*m_pPrimaryAmmoLabel;
 	Label				*m_pPrimaryReserveAmmoLabel;
 	VectorImagePanel	*m_pBulletIcon;
 	VectorImagePanel	*m_pExhaustibleWeaponIcon;
+	VectorImagePanel	*m_pBurstIcon;
 
 	CPanelAnimationVarAliasType( int, simple_wide, "simple_wide", "0", "proportional_width" );
 	CPanelAnimationVarAliasType( int, simple_tall, "simple_tall", "0", "proportional_height" );
@@ -53,6 +54,7 @@ private:
 	bool	m_bUsesClips;
 	bool	m_bIsExhaustible;
 	int		m_iAmmoCount;
+	bool	m_bBurstMode;
 	
 	int		m_iSimpleXPos;
 	int		m_iSimpleYPos;
@@ -87,6 +89,7 @@ CHudAmmo::CHudAmmo( const char *pElementName ): CHudElement( pElementName ), Edi
 	m_pPrimaryReserveAmmoLabel = new Label( this, "PrimaryReserveAmmoLabel", "/ 20" );
 	m_pBulletIcon = new VectorImagePanel( this, "BulletIcon" );
 	m_pExhaustibleWeaponIcon = new VectorImagePanel( this, "ExhaustibleWeaponIcon" );
+	m_pBurstIcon = new VectorImagePanel( this, "BurstIcon" );
 
 	LoadControlSettings( "resource/hud/ammo.res" );
 }
@@ -96,6 +99,7 @@ void CHudAmmo::Init( void )
 	m_bUsesClips		= false;
 	m_bIsExhaustible	= false;
 	m_iAmmoCount		= 0;
+	m_bBurstMode		= false;
 }
 
 void CHudAmmo::ApplySettings( KeyValues *inResourceData )
@@ -194,6 +198,7 @@ void CHudAmmo::OnThink()
 		m_pBulletIcon->SetVisible( m_bUsesClips && (m_iStyle == 0) );
 
 		m_pExhaustibleWeaponIcon->SetVisible( m_bIsExhaustible && (m_iStyle == 0) );
+		m_pBurstIcon->SetVisible( m_pActiveWeapon->WeaponHasBurst() );
 	}
 
 	if ( m_bUsesClips )
@@ -214,11 +219,12 @@ void CHudAmmo::OnThink()
 		m_pPrimaryReserveAmmoLabel->SetText( unicode );
 
 		m_pBulletIcon->SetRepeatsCount( Clamp( m_iAmmoCount, 0, 5 ) );
-	}
-	else
-	{
-		m_pBulletIcon->SetVisible( false );
-	}
+		
+		if ( m_bBurstMode != m_pActiveWeapon->IsInBurstMode() )
+		{
+			m_bBurstMode = m_pActiveWeapon->IsInBurstMode();
+			m_pBurstIcon->SetTexture( m_bBurstMode ? "materials/vgui/hud/svg/bullet_burst.svg" : "materials/vgui/hud/svg/bullet_burst_outline.svg" );
+		}
 
 	// don't do it every frame, only do it when needed
 	if ( m_bIsExhaustible && (m_iStyle == 0) )
