@@ -35,6 +35,7 @@
 #include <vgui_controls/URLLabel.h>
 #include <vgui_controls/RichText.h>
 #include <vgui_controls/BitmapImagePanel.h>
+#include <vgui_controls/VectorImagePanel.h>
 
 #include "filesystem.h"
 #include "fmtstr.h"

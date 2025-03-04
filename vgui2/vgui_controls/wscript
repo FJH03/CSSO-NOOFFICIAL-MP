@@ -90,9 +90,11 @@ def build(bld):
 		'TreeView.cpp',
 		'TreeViewListControl.cpp',
 		'URLLabel.cpp',
+		'VectorImagePanel.cpp',
 		'WizardPanel.cpp',
 		'WizardSubPanel.cpp',
-		'../src/vgui_key_translation.cpp'
+		'../src/vgui_key_translation.cpp',
+
 	]
 
 	includes = [

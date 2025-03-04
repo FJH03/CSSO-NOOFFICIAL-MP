@@ -126,7 +126,7 @@ def build(bld):
 
 	defines = []
 
-	libs = ['tier0','vgui_controls','tier1','tier2','tier3','vstdlib','vtf','bitmap','mathlib','SDL2','steam_api','matsys_controls','JPEG','PNG','ZLIB']
+	libs = ['tier0','vgui_controls','tier1','tier2','tier3','vstdlib','vtf','bitmap','mathlib','SDL2','steam_api','matsys_controls','JPEG','PNG','ZLIB', 'lunasvg']
 
 	if bld.env.DEST_OS == 'win32':
 		libs += ['USER32', 'GDI32']

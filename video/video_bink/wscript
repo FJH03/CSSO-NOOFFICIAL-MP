@@ -16,10 +16,9 @@ def configure(conf):
 
 def build(bld):
 	source = [
-		'bink_material.cpp',
 		'bink_video.cpp',
-		'yuv_rgb.c',
-		'../../public/tier0/memoverride.cpp'
+		'bink_material.cpp',
+		'yuv_rgb.c'
 	]
 
 	includes = [
@@ -32,7 +31,7 @@ def build(bld):
 	] + bld.env.INCLUDES_SDL2
 
 	defines = []
-
+	bld.env.LIB = ['avutil', 'avformat', 'avcodec']
 	libs = ['tier0','tier1','tier2','tier3','vstdlib', 'AVCODEC', 'AVUTIL', 'AVFORMAT']
 
 	if bld.env.DEST_OS == 'win32':

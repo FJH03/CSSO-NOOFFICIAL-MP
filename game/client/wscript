@@ -46,12 +46,12 @@ def build(bld):
 		'../../vgui2/controls',
 		'../shared'
 	]
-
 	libs = [
 		'tier0',
 		'particles',
 		'dmxloader',
 		'vgui_controls',
+		'lunasvg',
 		'matsys_controls',
 		'tier1',
 		'tier2',
@@ -92,4 +92,4 @@ def build(bld):
 		subsystem = bld.env.MSVC_SUBSYSTEM,
 		idx      = bld.get_taskgen_count()
 	)
-
+	bld.libpath = ["../../lunasvg"]
