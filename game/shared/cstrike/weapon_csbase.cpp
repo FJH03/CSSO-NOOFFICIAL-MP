@@ -2107,11 +2107,6 @@ extern ConVar view_recoil_tracking;
 	{
 		C_BaseCombatCharacter *pOwner = GetPreviousOwner();
 
-		if ( GetWeaponType() == WEAPONTYPE_GRENADE )
-		{
-			pOwner = ((CBaseGrenade *) this)->GetThrower();
-		}
-
 		if ( pOwner )
 		{
 			C_BasePlayer *pPlayer = ToBasePlayer( pOwner );

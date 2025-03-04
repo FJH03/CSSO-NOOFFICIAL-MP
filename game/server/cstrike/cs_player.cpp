@@ -181,7 +181,8 @@ ConVar phys_headshotscale( "phys_headshotscale", "1.3", FCVAR_REPLICATED, "Modif
 
 ConVar sv_spawn_afk_bomb_drop_time( "sv_spawn_afk_bomb_drop_time", "15", FCVAR_REPLICATED, "Players that have never moved since they spawned will drop the bomb after this amount of time." );
 
-ConVar mp_drop_knife_enable( "mp_drop_knife_enable", "0", 0, "Allows players to drop knives." );
+ConVar mp_drop_knife_enable( "mp_drop_knife_enable", "0", FCVAR_NONE, "Allows players to drop knives." );
+ConVar mp_drop_grenade_enable( "mp_drop_grenade_enable", "1", FCVAR_NONE, "Allows players to drop grenades." );
 
 static ConVar tv_relayradio( "tv_relayradio", "0", 0, "Relay team radio commands to TV: 0=off, 1=on" );
 
@@ -4531,7 +4532,7 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool
 	if ( pWeapon )
 		pWeapon->ShowWeaponWorldModel( false );
 
-	if ( mp_death_drop_gun.GetInt() == 0 && pCSWeapon && !pCSWeapon->IsA( WEAPON_C4 ) )
+	if ( mp_death_drop_gun.GetInt() == 0 && pCSWeapon && !pCSWeapon->IsA( WEAPON_C4 ) && pCSWeapon->GetWeaponType() != WEAPONTYPE_GRENADE )
 	{
 		if ( pWeapon )
 			UTIL_Remove( pWeapon );
@@ -9229,7 +9230,8 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 			return false;
 		}
 */
-		if ( mp_death_drop_gun.GetInt() == 0 && !pCSWeapon->IsA( WEAPON_C4 ) )
+        CSWeaponType type = pCSWeapon->GetWeaponType();
+        if ( mp_death_drop_gun.GetInt() == 0 && !pCSWeapon->IsA( WEAPON_C4 ) && type != WEAPONTYPE_GRENADE )
 			return true;
 		
 		// [dwenger] Determine value of dropped item.
@@ -9252,7 +9254,6 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 			return true;
 		}
 
-		CSWeaponType type = pCSWeapon->GetWeaponType();
 		switch ( type )
 		{
 		// Only certail weapons can be dropped when drop is initiated by player
@@ -9278,8 +9279,9 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 
 		default:
 		{
-			// let dedicated servers optionally allow droppable knives
-			if ( type == WEAPONTYPE_KNIFE && mp_drop_knife_enable.GetBool( ) || pCSWeapon->GetCSWeaponID() == WEAPON_TASER )
+			// let dedicated servers optionally allow droppable knives and grenades
+			if ( (type == WEAPONTYPE_KNIFE && mp_drop_knife_enable.GetBool( )) || pCSWeapon->GetCSWeaponID() == WEAPON_TASER ||
+				 (type == WEAPONTYPE_GRENADE && mp_drop_grenade_enable.GetBool( )) )
 			{
 				if ( CSGameRules( )->GetCanDonateWeapon( ) && !pCSWeapon->GetDonated( ) )
 				{
