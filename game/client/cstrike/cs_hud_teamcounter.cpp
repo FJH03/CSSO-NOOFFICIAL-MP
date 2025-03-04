@@ -12,6 +12,7 @@
 #include "c_cs_player.h"
 #include "c_cs_team.h"
 #include "c_cs_playerresource.h"
+#include "cs_gamerules.h"
 #include <vgui_controls/EditablePanel.h>
 #include <vgui_controls/Label.h>
 #include <vgui_controls/ImagePanel.h>
@@ -155,30 +156,17 @@ void CHudTeamCounter::Think()
 	}
 	if ( pRules->IsFreezePeriod() )
 	{
-		if ( pRules->IsTimeOutActive() )
-		{
-			C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-			if ( pPlayer )
-			{
-				switch ( pPlayer->GetTeamNumber() )
-				{
-					case TEAM_CT:
-						iTimer = (int) ceil( pRules->GetCTTimeOutRemaining() );
-						break;
-					case TEAM_TERRORIST:
-						iTimer = (int) ceil( pRules->GetTerroristTimeOutRemaining() );
-						break;
-				}
-			}
-		}
-		else
-		{
-			// in freeze period countdown to round start time
-			iTimer = (int) ceil( pRules->GetRoundStartTime() - gpGlobals->curtime );
-		}
+		// in freeze period countdown to round start time
+		iTimer = (int) ceil( pRules->GetRoundStartTime() - gpGlobals->curtime );
 	}
+
+	if ( iTimer < 0 )
+		iTimer = 0;
 
 	int iMinutes = iTimer / 60;
 	int iSeconds = iTimer % 60;
-	m_pRoundTimerLabel->SetText( UTIL_VarArgs( "%d : %d", iMinutes, iSeconds ) );
+	
+	wchar_t unicode[8];
+	V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d : %.2d", iMinutes, iSeconds );
+	m_pRoundTimerLabel->SetText( unicode );
 }
