@@ -670,6 +670,7 @@ CCSMapOverview::CCSMapOverview( const char *pElementName ) : BaseClass( pElement
 {
 	m_nRadarMapTextureID = -1;
 	m_nCircleBackgroundTextureID = -1;
+	m_nCircleOverlayTextureID = -1;
 
 	g_pMapOverview = this;  // for cvars access etc
 
@@ -687,6 +688,11 @@ void CCSMapOverview::Init( void )
 	{
 		m_nCircleBackgroundTextureID = surface()->CreateNewTextureID();
 		surface()->DrawSetTextureFile( m_nCircleBackgroundTextureID, "vgui/hud/circle_radar_background", true, false );
+	}
+	if ( m_nCircleOverlayTextureID == -1 )
+	{
+		m_nCircleOverlayTextureID = surface()->CreateNewTextureID();
+		surface()->DrawSetTextureFile( m_nCircleOverlayTextureID, "vgui/hud/circle_radar_overlay", true, false );
 	}
 
 	// register for events as client listener
@@ -1175,7 +1181,7 @@ void CCSMapOverview::PaintBackground()
 		if ( m_bRoundRadar )
 		{
 			// draw a transparent outline first
-			surface()->DrawSetColor( 255, 255, 255, cl_radaralpha.GetInt() * 0.5f );
+			surface()->DrawSetColor( 255, 255, 255, cl_radaralpha.GetInt() * 0.25f );
 			surface()->DrawSetTexture( m_nCircleBackgroundTextureID );
 			surface()->DrawTexturedRect( 0, 0, pwidth, pheight );
 
@@ -1210,6 +1216,9 @@ void CCSMapOverview::PaintBackground()
 void CCSMapOverview::DrawMapTexture()
 {
 	int alpha = GetMasterAlpha();
+
+	if ( alpha == 0 )
+		return;
 
 	int textureIDToUse = m_nMapTextureID;
 	if( m_nRadarMapTextureID != -1 && GetMode() == MAP_MODE_RADAR )
@@ -1253,6 +1262,11 @@ void CCSMapOverview::DrawMapTexture()
 			surface()->DrawSetTexture( textureIDToUse );
 			surface()->DrawTexturedPolygon( CIRCLE_SEGMENTS, points );
 		}
+
+		// last, draw an overlay texture
+		surface()->DrawSetTexture( m_nCircleOverlayTextureID );
+		surface()->DrawSetColor( 255, 255, 255, 255 );
+		surface()->DrawTexturedRect( 0, 0, pwidth, pheight );
 	}
 	else
 	{
