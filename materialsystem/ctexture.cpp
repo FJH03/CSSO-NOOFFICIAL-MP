@@ -3243,6 +3243,7 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 	if ( m_bStreamingFileReadFailed )
 	{
 		Assert( m_pStreamingVTF == NULL );
+		Warning( "Texture not loaded: %s\n", pCacheFileName );
 		return HandleFileLoadFailedTexture( GetScratchVTFTexture() );
 	}
 
@@ -3261,12 +3262,16 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 		FileHandle_t fileHandle = FILESYSTEM_INVALID_HANDLE;
 
 		if ( !GetFileHandle( &fileHandle, pCacheFileName, ppResolvedFilename ) )
-			return HandleFileLoadFailedTexture( pVTFTexture );
+		{
+			Warning( "Texture not loaded: %s\n", pCacheFileName );
+		    return HandleFileLoadFailedTexture( pVTFTexture );
+        }
 
 		TextureLODControlSettings_t settings = m_cachedFileLodSettings;
 		if ( !SLoadTextureBitsFromFile( &pVTFTexture, fileHandle, m_nFlags | nPreserveFlags, &settings, m_nDesiredDimensionLimit, &m_nStreamingMips, GetName(), pCacheFileName, &m_dimsMapping, &m_dimsActual, &m_dimsAllocated, &stripFlags ) )
 		{
 			g_pFullFileSystem->Close( fileHandle );
+			Warning( "Texture not loaded: %s\n", pCacheFileName );
 			return HandleFileLoadFailedTexture( pVTFTexture );
 		}
 
