@@ -9,13 +9,7 @@
 // implementation of CHudHealthArmor class
 //
 #include "cbase.h"
-#include "hud.h"
-#include "hud_macros.h"
-#include "view.h"
-
 #include "iclientmode.h"
-
-#define PAIN_NAME "sprites/%d_pain.vmt"
 
 #include <KeyValues.h>
 #include <vgui/ISurface.h>
@@ -28,8 +22,7 @@
 using namespace vgui;
 
 #include "hudelement.h"
-#include "hud_numericdisplay.h"
-#include "cs_gamerules.h"
+#include "c_cs_player.h"
 
 #include "convar.h"
 
@@ -184,10 +177,10 @@ public:
 	virtual void ApplySettings( KeyValues *inResourceData );
 
 private:
+	float	m_flBackgroundAlpha;
+
 	int		m_iHealth;
 	int		m_iArmor;
-
-	float	m_flBackgroundAlpha;
 
 	CHudTexture	*m_pHealthIcon;
 	CHudTexture	*m_pArmorIcon;
