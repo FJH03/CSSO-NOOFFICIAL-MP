@@ -24,6 +24,7 @@
 #include "voice_status.h"
 #include "hud_radar.h"
 #include "view.h"
+#include "VGuiMatSurface/IMatSystemSurface.h"
 
 using namespace vgui;
 DECLARE_HUDELEMENT( CCSMapOverview )
@@ -33,8 +34,10 @@ extern ConVar overview_names;
 extern ConVar overview_tracks;
 extern ConVar overview_locked;
 extern ConVar overview_alpha;
-extern ConVar cl_radaralpha;
-ConVar cl_radar_locked( "cl_radar_locked", "0", FCVAR_ARCHIVE, "Lock the angle of the radar display?" );
+extern ConVar cl_radar_square_with_scoreboard;
+ConVar cl_radaralpha( "cl_radaralpha", "200", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, NULL, true, 0, true, 255 );
+ConVar cl_radar_rotate( "cl_radar_rotate", "1", FCVAR_ARCHIVE, "1" );
+ConVar cl_radar_scale( "cl_radar_scale", "0.7", FCVAR_ARCHIVE, "Sets the radar scale. Valid values are 0.25 to 1.0.", true, 0.25f, true, 1.0f );
 
 void PreferredOverviewModeChanged( IConVar *pConVar, const char *oldString, float flOldValue )
 {
@@ -715,6 +718,7 @@ bool CCSMapOverview::CanHostageBeSeen( MapPlayer_t *hostage )
 CCSMapOverview::CCSMapOverview( const char *pElementName ) : BaseClass( pElementName )
 {
 	m_nRadarMapTextureID = -1;
+	m_nCircleBackgroundTextureID = -1;
 
 	g_pMapOverview = this;  // for cvars access etc
 
@@ -736,11 +740,19 @@ CCSMapOverview::CCSMapOverview( const char *pElementName ) : BaseClass( pElement
 
 	m_nCurrentRadarVerticalSection = -1;
 	m_vecRadarVerticalSections.RemoveAll();
+
+	m_bRoundRadar = true;
 }
 
 void CCSMapOverview::Init( void )
 {
 	BaseClass::Init();
+
+	if ( m_nCircleBackgroundTextureID == -1 )
+	{
+		m_nCircleBackgroundTextureID = surface()->CreateNewTextureID();
+		surface()->DrawSetTextureFile( m_nCircleBackgroundTextureID, "vgui/hud/circle_radar_background", true, false );
+	}
 
 	// register for events as client listener
 	ListenForGameEvent( "hostage_killed" );
@@ -754,6 +766,19 @@ CCSMapOverview::~CCSMapOverview()
 	g_pMapOverview = NULL;
 
 	//TODO release Textures ? clear lists
+}
+
+void CCSMapOverview::UpdateFollowEntity()
+{
+	if ( m_bRoundRadar )
+	{
+		BaseClass::UpdateFollowEntity();
+	}
+	else
+	{
+		SetCenter( Vector2D( OVERVIEW_MAP_SIZE / 2, OVERVIEW_MAP_SIZE / 2 ) );
+		SetAngle( 0 );
+	}
 }
 
 void CCSMapOverview::UpdatePlayers()
@@ -1136,51 +1161,107 @@ bool CCSMapOverview::AdjustPointToPanel(Vector2D *pos)
 	if( mapInset != 0 )
 		mapInset += BORDER_WIDTH; // And this gives us the border inside the map edge to give us room for offscreen icons.
 
-	int x,y,w,t;
+	int w,t;
 
 	//MapTpPanel has already offset the x and y.  That's why we use 0 for left and top.
-	GetBounds( x,y,w,t );
+	GetSize( w,t );
 
 	bool madeChange = false;
-	if( pos->x < mapInset )
+
+	if ( GetMode() == MAP_MODE_RADAR && m_bRoundRadar )
 	{
-		pos->x = mapInset;
-		madeChange = true;
+		float radius = (w - mapInset + BORDER_WIDTH*2) / 2;
+		Vector2D newMapPosition = *pos;
+		Vector2D center( w / 2, t / 2 ); // center of the radar
+		newMapPosition -= center;
+
+		float dist = newMapPosition.LengthSqr();
+		if ( dist >= radius*radius )
+		{
+			newMapPosition *= sqrt( radius*radius / dist );
+			pos->Init( newMapPosition.x + center.x, newMapPosition.y + center.y );
+
+			madeChange = true;
+		}
 	}
-	if( pos->x > w - mapInset )
+	else
 	{
-		pos->x = w - mapInset;
-		madeChange = true;
-	}
-	if( pos->y < mapInset )
-	{
-		pos->y = mapInset;
-		madeChange = true;
-	}
-	if( pos->y > t - mapInset )
-	{
-		pos->y = t - mapInset;
-		madeChange = true;
+		if ( pos->x < mapInset )
+		{
+			pos->x = mapInset;
+			madeChange = true;
+		}
+		if ( pos->x > w - mapInset )
+		{
+			pos->x = w - mapInset;
+			madeChange = true;
+		}
+		if ( pos->y < mapInset )
+		{
+			pos->y = mapInset;
+			madeChange = true;
+		}
+		if ( pos->y > t - mapInset )
+		{
+			pos->y = t - mapInset;
+			madeChange = true;
+		}
 	}
 
 	return madeChange;
+}
+
+#define CIRCLE_SEGMENTS 180 // ideally 360, but dont forget about dx8 folks :sunglasses:
+
+void CCSMapOverview::PaintBackground()
+{
+	int mapInset = GetBorderSize();
+	int pwidth, pheight;
+	GetSize( pwidth, pheight );
+	if ( GetMode() == MAP_MODE_RADAR && m_bRoundRadar )
+	{
+		// draw a transparent outline first
+		surface()->DrawSetColor( 255, 255, 255, cl_radaralpha.GetInt() * 0.5f );
+		surface()->DrawSetTexture( m_nCircleBackgroundTextureID );
+		surface()->DrawTexturedRect( 0, 0, pwidth, pheight );
+
+		// now draw the actual background
+		Vertex_t points[CIRCLE_SEGMENTS];
+		float invDelta = 2.0f * M_PI / CIRCLE_SEGMENTS;
+		for ( int i = 0; i < CIRCLE_SEGMENTS; ++i )
+		{
+			float flRadians = i * invDelta;
+			float ca = cos( flRadians );
+			float sa = sin( flRadians );
+
+			// Rotate it around the circle
+			float x = pwidth / 2 + ((pwidth - mapInset) / 2 * ca);
+			float y = pheight / 2 + ((pheight - mapInset) / 2 * sa);
+			Vector2D position( x, y );
+
+			points[i].m_Position = position;
+		}
+
+		g_pMatSystemSurface->DrawSetColor( GetBgColor() );
+		g_pMatSystemSurface->DrawFilledPolygon( CIRCLE_SEGMENTS, points );
+	}
+	else
+	{
+		surface()->DrawSetColor( GetBgColor() );
+		surface()->DrawFilledRect( 0, 0, pwidth, pheight );
+	}
 }
 
 void CCSMapOverview::DrawMapTexture()
 {
 	int alpha = GetMasterAlpha();
 
-	if( GetMode() == MAP_MODE_FULL )
-		SetBgColor( Color(0,0,0,0) );// no background in big mode
-	else
-		SetBgColor( Color(0,0,0,alpha * 0.5) );
+	SetPaintBackgroundEnabled( GetMode() != MAP_MODE_FULL );// no background in big mode
 
 	int textureIDToUse = m_nMapTextureID;
-	bool foundRadarVersion = false;
 	if( m_nRadarMapTextureID != -1 && GetMode() == MAP_MODE_RADAR )
 	{
 		textureIDToUse = m_nRadarMapTextureID;
-		foundRadarVersion = true;
 	}
 
 	if ( m_vecRadarVerticalSections.Count() )
@@ -1193,45 +1274,68 @@ void CCSMapOverview::DrawMapTexture()
 	int pwidth, pheight; 
 	GetSize(pwidth, pheight);
 
-	if ( textureIDToUse > 0 )
+	if ( GetMode() == MAP_MODE_RADAR && m_bRoundRadar )
 	{
-		// We are drawing to the whole panel with a little border
-		Vector2D panelTL = Vector2D( mapInset, mapInset );
-		Vector2D panelTR = Vector2D( pwidth - mapInset, mapInset );
-		Vector2D panelBR = Vector2D( pwidth - mapInset, pheight - mapInset );
-		Vector2D panelBL = Vector2D( mapInset, pheight - mapInset );
-
-		// So where are those four points on the great big map?
-		Vector2D textureTL = PanelToMap( panelTL );// The top left corner of the display is where on the master map?
-		textureTL /= OVERVIEW_MAP_SIZE;// Texture Vec2D is 0 to 1
-		Vector2D textureTR = PanelToMap( panelTR );
-		textureTR /= OVERVIEW_MAP_SIZE;
-		Vector2D textureBR = PanelToMap( panelBR );
-		textureBR /= OVERVIEW_MAP_SIZE;
-		Vector2D textureBL = PanelToMap( panelBL );
-		textureBL /= OVERVIEW_MAP_SIZE;
-
-		Vertex_t points[4] =
+		Vertex_t points[CIRCLE_SEGMENTS];
+		float invDelta = 2.0f * M_PI / CIRCLE_SEGMENTS;
+		for ( int i = 0; i < CIRCLE_SEGMENTS; ++i )
 		{
-			// To draw a textured polygon, the first column is where you want to draw (to), and the second is what you want to draw (from).
-			// We want to draw to the panel (pulled in for a border), and we want to draw the part of the map texture that should be seen.
-			// First column is in panel coords, second column is in 0-1 texture coords
-			Vertex_t( panelTL, textureTL ),
-			Vertex_t( panelTR, textureTR ),
-			Vertex_t( panelBR, textureBR ),
-			Vertex_t( panelBL, textureBL )
-		};
+			float flRadians = i * invDelta;
+			float ca = cos( flRadians );
+			float sa = sin( flRadians );
 
-		surface()->DrawSetColor( 255, 255, 255, alpha );
-		surface()->DrawSetTexture( textureIDToUse );
-		surface()->DrawTexturedPolygon( 4, points );
+			// Rotate it around the circle
+			float x = pwidth / 2 + ((pwidth - mapInset) / 2 * ca);
+			float y = pheight / 2 + ((pheight - mapInset) / 2 * sa);
+			Vector2D position( x, y );
+			Vector2D texCoord( PanelToMap( position ) );
+
+			points[i].m_Position = position;
+			points[i].m_TexCoord = texCoord / OVERVIEW_MAP_SIZE;
+		}
+
+		if ( textureIDToUse > 0 )
+		{
+			surface()->DrawSetColor( 255, 255, 255, alpha );
+			surface()->DrawSetTexture( textureIDToUse );
+			surface()->DrawTexturedPolygon( CIRCLE_SEGMENTS, points );
+		}
 	}
-
-	// If we didn't find the greenscale version of the map, then at least do a tint.
-	if( !foundRadarVersion && GetMode() == MAP_MODE_RADAR )
+	else
 	{
-		surface()->DrawSetColor( 0,255,0, alpha / 4 );
-		surface()->DrawFilledRect( mapInset, mapInset, m_vSize.x - 1 - mapInset, m_vSize.y - 1 - mapInset );
+		if ( textureIDToUse > 0 )
+		{
+			// We are drawing to the whole panel with a little border
+			Vector2D panelTL = Vector2D( mapInset, mapInset );
+			Vector2D panelTR = Vector2D( pwidth - mapInset, mapInset );
+			Vector2D panelBR = Vector2D( pwidth - mapInset, pheight - mapInset );
+			Vector2D panelBL = Vector2D( mapInset, pheight - mapInset );
+
+			// So where are those four points on the great big map?
+			Vector2D textureTL = PanelToMap( panelTL );// The top left corner of the display is where on the master map?
+			textureTL /= OVERVIEW_MAP_SIZE;// Texture Vec2D is 0 to 1
+			Vector2D textureTR = PanelToMap( panelTR );
+			textureTR /= OVERVIEW_MAP_SIZE;
+			Vector2D textureBR = PanelToMap( panelBR );
+			textureBR /= OVERVIEW_MAP_SIZE;
+			Vector2D textureBL = PanelToMap( panelBL );
+			textureBL /= OVERVIEW_MAP_SIZE;
+
+			Vertex_t points[4] =
+			{
+				// To draw a textured polygon, the first column is where you want to draw (to), and the second is what you want to draw (from).
+				// We want to draw to the panel (pulled in for a border), and we want to draw the part of the map texture that should be seen.
+				// First column is in panel coords, second column is in 0-1 texture coords
+				Vertex_t( panelTL, textureTL ),
+				Vertex_t( panelTR, textureTR ),
+				Vertex_t( panelBR, textureBR ),
+				Vertex_t( panelBL, textureBL )
+			};
+
+			surface()->DrawSetColor( 255, 255, 255, alpha );
+			surface()->DrawSetTexture( textureIDToUse );
+			surface()->DrawTexturedPolygon( 4, points );
+		}
 	}
 }
 
@@ -1321,6 +1425,9 @@ bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector p
 
 	if( alpha <= 0 )
 		return false;
+
+	// scale the icons cuz they look too big with new radar scale
+	scale *= ((DESIRED_RADAR_RESOLUTION * m_fMapScale) / (OVERVIEW_MAP_SIZE * m_fFullZoom)) * (1.0f / m_fZoom);
 
 	Vector2D pospanel = WorldToMap( pos );
 	pospanel = MapToPanel( pospanel );
@@ -2053,20 +2160,17 @@ void CCSMapOverview::SetMode(int mode)
 	if ( mode == MAP_MODE_RADAR )
 	{
 		m_flChangeSpeed = 0; // change size instantly
-		// We want the _output_ of the radar to be consistant, so we need to take the map scale in to account.
-		float desiredZoom = (DESIRED_RADAR_RESOLUTION * m_fMapScale) / (OVERVIEW_MAP_SIZE * m_fFullZoom);
-
-		g_pClientMode->GetViewportAnimationController()->RunAnimationCommand( this, "zoom", desiredZoom, 0.0, 0, vgui::AnimationController::INTERPOLATOR_LINEAR );
+		m_fZoom = cl_radar_scale.GetFloat();
 
 		if( CBasePlayer::GetLocalPlayer() )
 			SetFollowEntity( CBasePlayer::GetLocalPlayer()->entindex() );
 
-		SetPaintBackgroundType( 2 );// rounded corners
+		SetPaintBackgroundEnabled( true );
 		ShowPanel( true );
 	}
 	else if ( mode == MAP_MODE_INSET )
 	{
-		SetPaintBackgroundType( 2 );// rounded corners
+		SetPaintBackgroundEnabled( false );
 
 		float desiredZoom = (overview_preferred_view_size.GetFloat() * m_fMapScale) / (OVERVIEW_MAP_SIZE * m_fFullZoom);
 
@@ -2074,7 +2178,7 @@ void CCSMapOverview::SetMode(int mode)
 	}
 	else 
 	{
-		SetPaintBackgroundType( 0 );// square corners
+		SetPaintBackgroundEnabled( false );
 
 		float desiredZoom = 1.0f;
 
@@ -2165,6 +2269,41 @@ void CCSMapOverview::UpdateSizeAndPosition()
 	}
 
 	SetBounds( x,y,w,h );
+
+	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( !pPlayer )
+		return;
+
+	if ( GetMode() == MAP_MODE_RADAR )
+	{
+		// Radar type
+		int iObserverMode = pPlayer->GetObserverMode();
+		IViewPortPanel* panel = gViewPortInterface->FindPanelByName( PANEL_SCOREBOARD );
+		if ( engine->IsHLTV() || pPlayer->GetTeamNumber() == TEAM_SPECTATOR || (panel->IsVisible() && cl_radar_square_with_scoreboard.GetBool()) )
+		{
+			m_bRoundRadar = false;
+			m_fZoom = 0.95f; // fit the entire map in square (don't forget about border)
+		}
+		else if ( pPlayer->IsAlive() == false &&
+				  (iObserverMode == OBS_MODE_FIXED ||
+				  iObserverMode == OBS_MODE_CHASE ||
+				  iObserverMode == OBS_MODE_ROAMING ||
+				  iObserverMode == OBS_MODE_IN_EYE) )
+		{
+			m_bRoundRadar = false;
+			m_fZoom = 0.95f; // fit the entire map in square (don't forget about border)
+		}
+		else
+		{
+			m_bRoundRadar = true;
+
+			if ( m_fZoom != cl_radar_scale.GetFloat() )
+			{
+				m_flChangeSpeed = 0; // change size instantly
+				m_fZoom = cl_radar_scale.GetFloat();
+			}
+		}
+	}
 }
 
 void CCSMapOverview::SetPlayerSeen( int index )
@@ -2356,7 +2495,7 @@ void CCSMapOverview::DrawGoalIcons()
 //-----------------------------------------------------------------------------
 bool CCSMapOverview::IsRadarLocked() 
 {
-	return cl_radar_locked.GetBool();
+	return m_bRoundRadar ? !cl_radar_rotate.GetBool() : false;
 }
 
 //-----------------------------------------------------------------------------
