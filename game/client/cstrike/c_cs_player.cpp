@@ -2483,7 +2483,7 @@ void C_CSPlayer::ToggleRandomWeapons( void )
 		cl_dm_buyrandomweapons.SetValue(false);
 		if ( flTimeLeft <= 0 )
 		{
-			HintMessage( "#Cstrike_TitlesTXT_DM_RandomOFF" ); // PiMoN: better to use ClientPrint but who cares you cant even display any hints from client
+			internalCenterPrint->Print( "#Cstrike_TitlesTXT_DM_RandomOFF" );
 		}
 	}
 	else
@@ -2491,7 +2491,7 @@ void C_CSPlayer::ToggleRandomWeapons( void )
 		cl_dm_buyrandomweapons.SetValue(true);
 		if ( flTimeLeft <= 0 )
 		{
-			HintMessage( "#Cstrike_TitlesTXT_DM_RandomON" ); // PiMoN: better to use ClientPrint but who cares you cant even display any hints from client
+			internalCenterPrint->Print( "#Cstrike_TitlesTXT_DM_RandomON" );
 		}
 		engine->ClientCmd_Unrestricted( "buyrandom" );
 	}
@@ -2671,7 +2671,7 @@ void C_CSPlayer::ClientThink()
 
 			char szLocalized[256];
 			g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof( szLocalized ) );
-			HintMessage( szLocalized ); // PiMoN: better to use ClientPrint but who cares you cant even display any hints from client
+			internalCenterPrint->Print( szLocalized );
 		}
 	}
 

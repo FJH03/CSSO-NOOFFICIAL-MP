@@ -211,6 +211,11 @@ bool CCSPlayer::IsInBuyPeriod()
 	}
 }
 
+bool CCSPlayer::CanBuyDuringImmunity()
+{
+	return ( mp_buy_during_immunity.GetInt() == 1 ) || ( mp_buy_during_immunity.GetInt() == GetTeamNumber() ); 
+}
+
 bool CCSPlayer::IsAbleToInstantRespawn( void )
 {
 	if ( CSGameRules() )

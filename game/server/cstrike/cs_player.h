@@ -847,6 +847,7 @@ public:
 
 	bool IsInBuyZone();
 	bool IsInBuyPeriod();
+	bool CanBuyDuringImmunity();
 	bool CanPlayerBuy( bool display );
 
 	CNetworkVar( bool, m_bInHostageRescueZone );

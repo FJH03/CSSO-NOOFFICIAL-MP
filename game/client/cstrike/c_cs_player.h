@@ -178,6 +178,7 @@ public:
 
 	bool IsInBuyZone();
 	bool IsInBuyPeriod();
+	bool CanBuyDuringImmunity();
 	bool CanShowTeamMenu() const;	// Returns true if we're allowed to show the team menu right now.
 
 	// Get the amount of armor the player has.
