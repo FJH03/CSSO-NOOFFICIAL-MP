@@ -15,6 +15,7 @@
 #include "const.h"
 #include "c_baseentity.h"
 #include <igameresources.h>
+#include "tier3/tier3.h"
 
 #define PLAYER_UNCONNECTED_NAME	"unconnected"
 #define PLAYER_ERROR_NAME		"ERRORNAME"
@@ -59,6 +60,7 @@ public : // IGameResources intreface
 
 protected:
 	void	UpdatePlayerName( int slot );
+	void	UpdateAsLocalizedFakePlayerName( int slot, char const *pchRawPlayerName );
 
 	// Data for each player that's propagated to all clients
 	// Stored in individual arrays so they can be sent down via datatables

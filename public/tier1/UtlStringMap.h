@@ -55,6 +55,34 @@ public:
 		return m_SymbolTable.Find( pString );
 	}
 
+	/// Add a string to the map and also insert an item at 
+	/// its location in the same operation. Returns the 
+	/// newly created index (or the one that was just 
+	/// overwritten, if pString already existed.)
+	UtlSymId_t Insert( const char *pString, const T &item )
+	{
+		CUtlSymbol symbol = m_SymbolTable.AddString( pString );
+		UtlSymId_t index = symbol; // implicit coercion
+		if ( m_Vector.Count() > index ) 
+		{
+			// this string is already in the dictionary.
+
+		}
+		else if ( m_Vector.Count() == index )
+		{
+			// this is the expected case when we've added one more to the tail.
+			m_Vector.AddToTail( item );
+		}
+		else // ( m_Vector.Count() < index )
+		{
+			// this is a strange shouldn't-happen case.
+			AssertMsg( false, "CUtlStringMap insert unexpected entries." );
+			m_Vector.EnsureCount( index + 1 );
+			m_Vector[index] = item;
+		}
+		return index;
+	}
+
 	static UtlSymId_t InvalidIndex()
 	{
 		return UTL_INVAL_SYMBOL;

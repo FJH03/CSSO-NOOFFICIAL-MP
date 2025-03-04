@@ -8,6 +8,8 @@
 #include "c_playerresource.h"
 #include "c_team.h"
 #include "gamestringpool.h"
+#include "vgui/ILocalize.h"
+#include "tier1/fmtstr.h"
 
 #ifdef HL2MP
 #include "hl2mp_gamerules.h"
@@ -94,6 +96,41 @@ void C_PlayerResource::OnDataChanged(DataUpdateType_t updateType)
 	}
 }
 
+void C_PlayerResource::UpdateAsLocalizedFakePlayerName( int slot, char const *pchPlayerName )
+{
+	static CUtlStringMap< CUtlString > s_mapLocalizedNames;
+	UtlSymId_t symName = s_mapLocalizedNames.Find( pchPlayerName );
+	if ( symName == UTL_INVAL_SYMBOL )
+	{
+		// Need to localize it from scratch
+		CUtlVector< char * > arrLocTokens;
+		CFmtStr1024 strComposite;
+		V_SplitString( pchPlayerName, " ", arrLocTokens );
+		FOR_EACH_VEC( arrLocTokens, i )
+		{
+			if ( i ) strComposite.Append( " " );
+
+			if ( wchar_t const * const kwszLocalizedToken = g_pVGuiLocalize->Find( CFmtStr( "#CS_FakePlayer_%s", arrLocTokens[ i ] ) ) )
+			{
+				char chUtf8token[ MAX_PLAYER_NAME_LENGTH ] = {};
+				V_UnicodeToUTF8( kwszLocalizedToken, chUtf8token, sizeof( chUtf8token ) );
+				strComposite.Append( chUtf8token );
+			}
+			else
+			{
+				strComposite.Append( arrLocTokens[ i ] );
+				Warning( "Failed to localize fake player name '#CS_FakePlayer_%s'\n", arrLocTokens[ i ] );
+			}
+		}
+		symName = s_mapLocalizedNames.Insert( pchPlayerName, strComposite.Access() );
+		arrLocTokens.PurgeAndDeleteElements();
+	}
+
+	Assert( symName != UTL_INVAL_SYMBOL );
+
+	m_szName[ slot ] = s_mapLocalizedNames[ symName ];
+}
+
 void C_PlayerResource::UpdatePlayerName( int slot )
 {
 	if ( slot < 1 || slot > MAX_PLAYERS )
@@ -101,17 +138,23 @@ void C_PlayerResource::UpdatePlayerName( int slot )
 		Error( "UpdatePlayerName with bogus slot %d\n", slot );
 		return;
 	}
-	if (!m_szUnconnectedName )
-		m_szUnconnectedName = AllocPooledString( PLAYER_UNCONNECTED_NAME );
 	
 	player_info_t sPlayerInfo;
-	if ( IsConnected( slot ) && engine->GetPlayerInfo( slot, &sPlayerInfo ) )
+	char const *pchPlayerName = PLAYER_UNCONNECTED_NAME;
+	if ( IsConnected( slot ) && 
+		engine->GetPlayerInfo( slot, &sPlayerInfo ) )
 	{
-		m_szName[slot] = AllocPooledString( sPlayerInfo.name );
+		pchPlayerName = sPlayerInfo.name;
+
+		if ( sPlayerInfo.fakeplayer && *pchPlayerName )
+		{
+			UpdateAsLocalizedFakePlayerName( slot, pchPlayerName );
+			return;
+		}
 	}
-	else 
+	if ( !m_szName[slot] || Q_stricmp( m_szName[slot], pchPlayerName ) )
 	{
-		m_szName[slot] = m_szUnconnectedName;
+		m_szName[slot] = AllocPooledString( pchPlayerName );
 	}
 }
 
