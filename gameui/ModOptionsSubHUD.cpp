@@ -54,7 +54,7 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 
 	m_pHealthArmorStyle->AddItem( "#GameUI_HUD_HealthArmorStyle_0", "hud_healtharmor_style 0" );
 	m_pHealthArmorStyle->AddItem( "#GameUI_HUD_HealthArmorStyle_1", "hud_healtharmor_style 1" );
-	m_pHealthArmorStyle->AddItem( "#GameUI_HUD_HealthArmorStyle_2", "hud_healtharmor_style 2" );
+	//m_pHealthArmorStyle->AddItem( "#GameUI_HUD_HealthArmorStyle_2", "hud_healtharmor_style 2" );
 
 	m_pAccountStyle->AddItem( "#GameUI_HUD_AccountStyle_0", "hud_account_style 0" );
 	m_pAccountStyle->AddItem( "#GameUI_HUD_AccountStyle_1", "hud_account_style 1" );

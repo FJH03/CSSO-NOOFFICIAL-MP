@@ -198,7 +198,6 @@ void ProgressBar::ApplySchemeSettings(IScheme *pScheme)
 
 	SetFgColor(GetSchemeColor("ProgressBar.FgColor", pScheme));
 	SetBgColor(GetSchemeColor("ProgressBar.BgColor", pScheme));
-	SetBorder(pScheme->GetBorder("ButtonDepressedBorder"));
 }
 
 //-----------------------------------------------------------------------------
@@ -334,6 +333,8 @@ int ProgressBar::GetMargin()
 //-----------------------------------------------------------------------------
 void ProgressBar::ApplySettings(KeyValues *inResourceData)
 {
+	BaseClass::ApplySettings( inResourceData );
+
 	_progress = inResourceData->GetFloat("progress", 0.0f);
 
 	const char *dialogVar = inResourceData->GetString("variable", "");
@@ -343,7 +344,9 @@ void ProgressBar::ApplySettings(KeyValues *inResourceData)
 		strcpy(m_pszDialogVar, dialogVar);
 	}
 
-	BaseClass::ApplySettings(inResourceData);
+	// override default border value from vgui::Panel
+	IScheme *pScheme = scheme()->GetIScheme( GetScheme() );
+	SetBorder( pScheme->GetBorder( inResourceData->GetString( "border", "ButtonDepressedBorder" ) ) );
 }
 
 //-----------------------------------------------------------------------------
