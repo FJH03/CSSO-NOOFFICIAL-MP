@@ -221,19 +221,19 @@ Matrix& Matrix::invert()
 Matrix& Matrix::operator*=(const Matrix& matrix)
 {
     *this = *this * matrix;
-    return *this; 
+    return *this;
 }
 
 Matrix& Matrix::premultiply(const Matrix& matrix)
 {
     *this = matrix * *this;
-    return *this; 
+    return *this;
 }
 
 Matrix& Matrix::postmultiply(const Matrix& matrix)
 {
     *this = *this * matrix;
-    return *this; 
+    return *this;
 }
 
 Matrix Matrix::inverted() const
@@ -343,7 +343,7 @@ void Document::render(Bitmap bitmap, const Matrix& matrix) const
     root->render(state);
 }
 
-Bitmap Document::renderToBitmap(std::uint32_t width, std::uint32_t height, std::uint32_t backgroundColor) const
+Bitmap Document::renderToBitmap(int width, int height, uint32_t backgroundColor) const
 {
     if(root->width == 0.0 || root->height == 0.0)
         return Bitmap{};

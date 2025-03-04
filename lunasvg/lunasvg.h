@@ -199,7 +199,7 @@ public:
      * @param backgroundColor - background color in 0xRRGGBBAA format
      * @return the raster representation of the document
      */
-    Bitmap renderToBitmap(std::uint32_t width = 0, std::uint32_t height = 0, std::uint32_t backgroundColor = 0x00000000) const;
+    Bitmap renderToBitmap(int width = -1, int height = -1, uint32_t backgroundColor = 0x00000000) const;
 
     ~Document();
 private:
