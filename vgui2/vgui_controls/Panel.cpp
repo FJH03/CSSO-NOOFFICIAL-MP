@@ -8675,9 +8675,15 @@ int ComputeWide(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceD
 	if (wstr)
 	{
 		bool bIgnoreProportions = false;
+		bool bByWidth = false;
 		if (wstr[0] == 'i' || wstr[0] == 'I')
 		{
 			bIgnoreProportions = true;
+			wstr++;
+		}
+		else if (wstr[0] == 'w' || wstr[0] == 'W')
+		{
+			bByWidth = true;
 			wstr++;
 		}
 
@@ -8706,7 +8712,7 @@ int ComputeWide(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceD
 
 				if (pPanel->IsProportional())
 				{
-					wide = scheme()->GetProportionalNormalizedValue(wide);
+					wide = scheme()->GetProportionalNormalizedValue(wide, bByWidth);
 				}
 			}
 			else if (wstr[0] == 'p' || wstr[0] == 'P')
@@ -8729,12 +8735,12 @@ int ComputeWide(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceD
 
 		if (nBuildFlags & Panel::BUILDMODE_SAVE_WIDE_PROPORTIONAL_TALL)
 		{
-			wide = scheme()->GetProportionalScaledValueEx(pPanel->GetScheme(), wide);
+			wide = scheme()->GetProportionalScaledValueEx(pPanel->GetScheme(), wide, bByWidth);
 			wide *= flWide;
 		}
 		else if (nBuildFlags & Panel::BUILDMODE_SAVE_WIDE_PROPORTIONAL)
 		{
-			wide = scheme()->GetProportionalScaledValueEx(pPanel->GetScheme(), wide);
+			wide = scheme()->GetProportionalScaledValueEx(pPanel->GetScheme(), wide, bByWidth);
 			wide = nParentWide - wide;
 			wide *= flWide;
 		}
@@ -8747,7 +8753,7 @@ int ComputeWide(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceD
 			if (!bIgnoreProportions && pPanel->IsProportional())
 			{
 				// scale the width up to our screen co-ords
-				wide = scheme()->GetProportionalScaledValueEx(pPanel->GetScheme(), wide);
+				wide = scheme()->GetProportionalScaledValueEx(pPanel->GetScheme(), wide, bByWidth);
 			}
 			// now correct the alignment
 			if (nBuildFlags & Panel::BUILDMODE_SAVE_WIDE_FULL)

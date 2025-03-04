@@ -1132,11 +1132,15 @@ int CSchemeManager::GetProportionalScaledValue_( int rootWide, int rootTall, int
 	return (int)( normalizedValue * scale );
 }
 
-int CSchemeManager::GetProportionalNormalizedValue_( int rootWide, int rootTall, int scaledValue )
+int CSchemeManager::GetProportionalNormalizedValue_( int rootWide, int rootTall, int scaledValue, bool byWidth )
 {
 	int proH, proW;
 	g_pSurface->GetProportionalBase( proW, proH );
-	float scale = (float)rootTall / (float)proH;
+	float scale;
+	if ( byWidth )
+		scale = (float)rootWide / (float)proW;
+	else
+		scale = (float)rootTall / (float)proH;
 
 	return (int)( scaledValue / scale );
 }
@@ -1154,26 +1158,26 @@ int CSchemeManager::GetProportionalScaledValue(int normalizedValue, bool byWidth
 //-----------------------------------------------------------------------------
 // Purpose: converts a value out of proportional mode
 //-----------------------------------------------------------------------------
-int CSchemeManager::GetProportionalNormalizedValue(int scaledValue)
+int CSchemeManager::GetProportionalNormalizedValue(int scaledValue, bool byWidth)
 {
 	int wide, tall;
 	g_pSurface->GetScreenSize( wide, tall );
-	return GetProportionalNormalizedValue_( wide, tall, scaledValue );
+	return GetProportionalNormalizedValue_( wide, tall, scaledValue, byWidth );
 }
 
 // gets the proportional coordinates for doing screen-size independant panel layouts
 // use these for font, image and panel size scaling (they all use the pixel height of the display for scaling)
-int CSchemeManager::GetProportionalScaledValueEx( CScheme *pScheme, int normalizedValue )
+int CSchemeManager::GetProportionalScaledValueEx( CScheme *pScheme, int normalizedValue, bool byWidth )
 {
 	VPANEL sizing = pScheme->GetSizingPanel();
 	if ( !sizing )
 	{
-		return GetProportionalScaledValue( normalizedValue );
+		return GetProportionalScaledValue( normalizedValue, byWidth );
 	}
 
 	int w, h;
 	g_pIPanel->GetSize( sizing, w, h );
-	return GetProportionalScaledValue_( w, h, normalizedValue );
+	return GetProportionalScaledValue_( w, h, normalizedValue, byWidth );
 }
 
 int CSchemeManager::GetProportionalNormalizedValueEx( CScheme *pScheme, int scaledValue )
@@ -1189,17 +1193,17 @@ int CSchemeManager::GetProportionalNormalizedValueEx( CScheme *pScheme, int scal
 	return GetProportionalNormalizedValue_( w, h, scaledValue );
 }
 
-int CSchemeManager::GetProportionalScaledValueEx( HScheme scheme, int normalizedValue )
+int CSchemeManager::GetProportionalScaledValueEx( HScheme scheme, int normalizedValue, bool byWidth )
 {
 	IScheme *pscheme = GetIScheme( scheme );
 	if ( !pscheme )
 	{
 		Assert( 0 );
-		return GetProportionalScaledValue( normalizedValue );
+		return GetProportionalScaledValue( normalizedValue, byWidth );
 	}
 
 	CScheme *p = static_cast< CScheme * >( pscheme );
-	return GetProportionalScaledValueEx( p, normalizedValue );
+	return GetProportionalScaledValueEx( p, normalizedValue, byWidth );
 }
 
 int CSchemeManager::GetProportionalNormalizedValueEx( HScheme scheme, int scaledValue )

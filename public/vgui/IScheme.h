@@ -104,14 +104,14 @@ public:
 	// gets the proportional coordinates for doing screen-size independant panel layouts
 	// use these for font, image and panel size scaling (they all use the pixel height of the display for scaling)
 	virtual int GetProportionalScaledValue( int normalizedValue, bool byWidth = false ) = 0;
-	virtual int GetProportionalNormalizedValue(int scaledValue) = 0;
+	virtual int GetProportionalNormalizedValue( int scaledValue, bool byWidth = false ) = 0;
 
 	// loads a scheme from a file
 	// first scheme loaded becomes the default scheme, and all subsequent loaded scheme are derivitives of that
 	virtual HScheme LoadSchemeFromFileEx( VPANEL sizingPanel, const char *fileName, const char *tag) = 0;
 	// gets the proportional coordinates for doing screen-size independant panel layouts
 	// use these for font, image and panel size scaling (they all use the pixel height of the display for scaling)
-	virtual int GetProportionalScaledValueEx( HScheme scheme, int normalizedValue ) = 0;
+	virtual int GetProportionalScaledValueEx( HScheme scheme, int normalizedValue, bool byWidth = false ) = 0;
 	virtual int GetProportionalNormalizedValueEx( HScheme scheme, int scaledValue ) = 0;
 
 	// Returns true if image evicted, false otherwise
