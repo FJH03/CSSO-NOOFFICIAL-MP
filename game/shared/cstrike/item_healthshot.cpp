@@ -95,7 +95,7 @@ void CItem_Healthshot::DropHealthshot( void )
 	}
 	else	
 	{
-		pPlayer->RemoveAmmo( 1, AMMO_TYPE_HEALTHSHOT, true );
+		pPlayer->RemoveAmmo( 1, AMMO_TYPE_HEALTHSHOT );
 
 		CItem_Healthshot *pHealth = static_cast< CItem_Healthshot * >( CreateEntityByName( "weapon_healthshot" ) );
 

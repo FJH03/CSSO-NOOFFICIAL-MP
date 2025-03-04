@@ -9323,7 +9323,6 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 			CCS_GameStats.IncrementStat(this, CSTAT_ITEMS_DROPPED_VALUE, pCSWeapon->GetCSWpnData().GetWeaponPrice() );
 		}
 
-		// PiMoN: uncomment this when we have healthshots
 		if ( pCSWeapon->IsA( WEAPON_HEALTHSHOT ) )
 		{
 			CItem_Healthshot* pHealth = dynamic_cast< CItem_Healthshot* >( pCSWeapon );
@@ -9334,6 +9333,20 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 				
 			}
 			return true;
+		}
+
+		if ( type == WEAPONTYPE_GRENADE )
+		{
+			if ( mp_drop_grenade_enable.GetBool() )
+			{
+				CBaseCSGrenade* pGrenade = dynamic_cast< CBaseCSGrenade* >(pCSWeapon);
+				if ( pGrenade )
+				{
+					pGrenade->DropPlayerGrenade();
+					ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
+				}
+				return true;
+			}
 		}
 
 		switch ( type )
@@ -9361,9 +9374,8 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 
 		default:
 		{
-			// let dedicated servers optionally allow droppable knives and grenades
-			if ( (type == WEAPONTYPE_KNIFE && mp_drop_knife_enable.GetBool( )) || pCSWeapon->GetCSWeaponID() == WEAPON_TASER ||
-				 (type == WEAPONTYPE_GRENADE && mp_drop_grenade_enable.GetBool( )) )
+			// let dedicated servers optionally allow droppable knives
+			if ( (type == WEAPONTYPE_KNIFE && mp_drop_knife_enable.GetBool( )) || pCSWeapon->GetCSWeaponID() == WEAPON_TASER )
 			{
 				if ( CSGameRules( )->GetCanDonateWeapon( ) && !pCSWeapon->GetDonated( ) )
 				{
@@ -10732,7 +10744,12 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			ToCSPlayer(pAttacker)->AwardAchievement(CSPosthumousGrenadeKill);
 		}
 
-		if (pAttacker->GetActiveWeapon() && pAttacker->GetActiveWeapon()->Clip1() == 0 && pAttackerWeapon && pAttackerWeapon->GetCSWpnData().m_WeaponType != WEAPONTYPE_SNIPER_RIFLE && attackerWeaponId != WEAPON_TASER )
+		if ( pAttacker->GetActiveWeapon() && 
+			pAttacker->GetActiveWeapon()->Clip1() == 1 && 
+			pAttackerWeapon && 
+			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_SNIPER_RIFLE &&
+			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_KNIFE &&
+			attackerWeaponId != WEAPON_TASER )
 		{
 			if (pInflictor == pAttacker)
 			{
@@ -10746,8 +10763,14 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		// [dwenger] Fun-fact processing
 		//=============================================================================
 
-		if (pVictimWeapon && pVictimWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_KNIFE && pAttackerWeapon &&
-			pAttackerWeapon->GetCSWpnData().m_WeaponType != WEAPONTYPE_KNIFE && pAttackerWeapon->GetCSWpnData().m_WeaponType != WEAPONTYPE_C4 && pAttackerWeapon->GetCSWpnData().m_WeaponType != WEAPONTYPE_GRENADE)
+		if ( pVictimWeapon && pVictimWeapon->GetWeaponType() == WEAPONTYPE_KNIFE && !pVictimWeapon->IsA( WEAPON_TASER ) && 
+			pInflictor == pAttacker && 
+			pAttackerWeapon && 
+			!pAttackerWeapon->IsA( WEAPON_KNIFE ) && 
+			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_C4 && 
+			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_GRENADE &&
+			!pVictim->HasControlledBotThisRound() &&
+			!pVictim->HasBeenControlledThisRound() )
 		{
 			// Victim was wielding knife when killed by a gun
 			pVictim->WieldingKnifeAndKilledByGun(true);

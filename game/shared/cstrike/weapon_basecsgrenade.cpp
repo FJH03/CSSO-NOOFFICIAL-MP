@@ -467,6 +467,55 @@ void CBaseCSGrenade::ItemPostFrame()
 		m_fThrowTime = gpGlobals->curtime + 0.1f;
 	}
 
+	void CBaseCSGrenade::DropPlayerGrenade()
+	{
+		CCSPlayer *pPlayer = ToCSPlayer( GetPlayerOwner() );
+		if ( !pPlayer )
+			return;
+
+		int iAmount = pPlayer->GetAmmoCount( GetPrimaryAmmoType() );
+		if ( iAmount <= 1 )
+		{
+			pPlayer->CSWeaponDrop( this, true );
+			return;
+		}
+		else
+		{
+			DecrementAmmo( pPlayer );
+
+			CBaseCSGrenade *pGrenade = static_cast< CBaseCSGrenade * >(CreateEntityByName( GetClassname() ));
+
+			if ( pGrenade )
+			{
+				Vector vecWeaponThrowFromPos = pPlayer->EyePosition();
+				QAngle angWeaponThrowFromAngle = pPlayer->EyeAngles();
+
+				Vector vForward;
+				AngleVectors( angWeaponThrowFromAngle, &vForward, NULL, NULL );
+				vecWeaponThrowFromPos = vecWeaponThrowFromPos + (vForward * 100);
+				//NDebugOverlay::Box( vecWeaponThrowFromPos, Vector( 10, 10, 10 ), Vector( -10, -10, -10 ), 255, 0, 0, 200, 3 );
+
+				DispatchSpawn( pGrenade );
+
+				// set it non-solid because it hits itself during the trace when trying to throw it
+				pGrenade->SetSolidFlags( FSOLID_NOT_SOLID );
+				pGrenade->SetMoveCollide( MOVECOLLIDE_FLY_BOUNCE );
+
+				pPlayer->Weapon_Drop( pGrenade, &vecWeaponThrowFromPos, NULL );
+
+				pGrenade->SetSolidFlags( FSOLID_NOT_STANDABLE | FSOLID_TRIGGER | FSOLID_USE_TRIGGER_BOUNDS );
+				pGrenade->SetPreviousOwner( pPlayer );
+
+				// TODO: this only works when weapon is idling!
+				/*SendWeaponAnim( GetDeployActivity() );
+
+				pPlayer->SetNextAttack( gpGlobals->curtime + SequenceDuration() );
+				m_flNextPrimaryAttack = gpGlobals->curtime;
+				m_flNextSecondaryAttack = gpGlobals->curtime;*/
+			}
+		}
+	}
+
 	void CBaseCSGrenade::ThrowGrenade()
 	{
 		CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
