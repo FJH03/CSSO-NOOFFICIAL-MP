@@ -12,6 +12,9 @@
 #include <KeyValues.h>
 #include "filesystem.h"
 #include "iinput.h"
+#ifdef CSTRIKE_DLL
+#include "cs_shareddefs.h"
+#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -603,9 +606,21 @@ void CBaseHudWeaponSelection::SelectWeapon( void )
 	
 		engine->ClientCmd( "cancelselect\n" );
 
-		// Play the "weapon selected" sound
+#ifdef CSTRIKE_DLL
+		if (player->GetTeamNumber() == TEAM_CT)
+		{
+			// Play the "weapon selected" sound
+			player->EmitSound("Player.WeaponSelected_CT");
+
+		}
+		else
+		{
+			// Play the "weapon selected" sound
+			player->EmitSound("Player.WeaponSelected_T");
+		}
+#else
 		player->EmitSound( "Player.WeaponSelected" );
-		
+#endif	
 	}
 }
 
@@ -627,11 +642,22 @@ void CBaseHudWeaponSelection::CancelWeaponSelection( void )
 
 		m_hSelectedWeapon = NULL;
 
-		// Play the "close weapon selection" sound based on faction
-		//player->EmitSound( "Player.WeaponSelectionClose" );
+#ifdef CSTRIKE_DLL
+		if (player->GetTeamNumber() == TEAM_CT)
+		{
+			// Play the CT Suit sound
+			player->EmitSound("Player.WeaponSelectionClose_CT");
 
-		// Play the "weapon selected" sound
-		player->EmitSound( "Player.WeaponSelected" );
+		}
+		else
+		{
+			// Play the T Suit sound
+			player->EmitSound("Player.WeaponSelectionClose_T");
+		}
+#else
+		// Play the "close weapon selection" sound
+		player->EmitSound( "Player.WeaponSelectionClose" );
+#endif
 
 	}
 	else

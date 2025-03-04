@@ -340,6 +340,10 @@ void ClientPrecache( void )
 	CBaseEntity::PrecacheScriptSound( "Player.PickupWeapon" );
 	CBaseEntity::PrecacheScriptSound( "Player.DenyWeaponSelection" );
 	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelected" );
+	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelected_CT" );
+	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelected_T" );
+	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelectionClose_CT" );
+	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelectionClose_T" );
 	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelectionClose" );
 	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelectionMoveSlot" );
 	CBaseEntity::PrecacheScriptSound( "Player.EquipArmor_CT" );
