@@ -738,6 +738,22 @@ void Label::SizeToContents()
 	SetSize(wide, tall);
 }
 
+void Label::WideToContents()
+{
+	int wide, tall;
+	GetContentSize(wide, tall);
+
+	SetWide(wide);
+}
+
+void Label::TallToContents()
+{
+	int wide, tall;
+	GetContentSize(wide, tall);
+
+	SetTall(tall);
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Set the font the text is drawn in
 //-----------------------------------------------------------------------------

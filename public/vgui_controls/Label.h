@@ -143,6 +143,8 @@ public:
 	*/
 
 	virtual void SizeToContents();
+	virtual void WideToContents();
+	virtual void TallToContents();
 
 	// the +8 is padding to the content size
 	// the code which uses it should really set that itself; 
