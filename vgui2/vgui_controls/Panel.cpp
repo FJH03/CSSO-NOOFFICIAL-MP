@@ -8652,6 +8652,13 @@ int ComputeWide(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceD
 	const char *wstr = inResourceData->GetString("wide", NULL);
 	if (wstr)
 	{
+		bool bIgnoreProportions = false;
+		if (wstr[0] == 'i' || wstr[0] == 'I')
+		{
+			bIgnoreProportions = true;
+			wstr++;
+		}
+
 		if (wstr[0] == 'f' || wstr[0] == 'F')
 		{
 			nBuildFlags |= Panel::BUILDMODE_SAVE_WIDE_FULL;
@@ -8711,7 +8718,7 @@ int ComputeWide(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceD
 		}
 		else
 		{
-			if (pPanel->IsProportional())
+			if (!bIgnoreProportions && pPanel->IsProportional())
 			{
 				// scale the width up to our screen co-ords
 				wide = scheme()->GetProportionalScaledValueEx(pPanel->GetScheme(), wide);
@@ -8735,6 +8742,13 @@ int ComputeTall(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceD
 	const char *tstr = inResourceData->GetString("tall", NULL);
 	if (tstr)
 	{
+		bool bIgnoreProportions = false;
+		if (tstr[0] == 'i' || tstr[0] == 'I')
+		{
+			bIgnoreProportions = true;
+			tstr++;
+		}
+
 		if (tstr[0] == 'f' || tstr[0] == 'F')
 		{
 			nBuildFlags |= Panel::BUILDMODE_SAVE_TALL_FULL;
@@ -8794,7 +8808,7 @@ int ComputeTall(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceD
 		}
 		else
 		{
-			if (pPanel->IsProportional())
+			if (!bIgnoreProportions && pPanel->IsProportional())
 			{
 				// scale the height up to our screen co-ords
 				tall = scheme()->GetProportionalScaledValueEx(pPanel->GetScheme(), tall);
@@ -8822,6 +8836,13 @@ int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize
 	int nPosDelta = 0;
 	if (pszInput)
 	{
+		bool bIgnoreProportions = false;
+		if (pszInput[0] == 'i' || pszInput[0] == 'I')
+		{
+			bIgnoreProportions = true;
+			pszInput++;
+		}
+
 		if ( pszInput[0] == 'f' || pszInput[0] == 'F' )
 		{
 			nFlags |= nFlagFull;
@@ -8857,7 +8878,7 @@ int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize
 
 		float flProportion = 1.f;
 		// scale the x up to our screen co-ords
-		if ( !(nFlags & nFlagFull) && pPanel->IsProportional() )
+		if ( !(nFlags & nFlagFull) && !bIgnoreProportions && pPanel->IsProportional() )
 		{
 			int nOldPos = nNewPos;
 			nNewPos = scheme()->GetProportionalScaledValueEx( pPanel->GetScheme(), nNewPos );
