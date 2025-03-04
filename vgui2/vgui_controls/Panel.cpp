@@ -32,6 +32,7 @@
 #include <vgui_controls/Controls.h>
 #include "vgui_controls/Menu.h"
 #include "vgui_controls/MenuItem.h"
+#include <vgui_controls/VectorImagePanel.h>
 
 #include "UtlSortVector.h"
 
@@ -1176,9 +1177,18 @@ void Panel::PaintTraverse( bool repaint, bool allowForce )
 
 	int clipRect[4];
 	ipanel()->GetClipRect( vpanel, clipRect[0], clipRect[1], clipRect[2], clipRect[3] );
-	if ( ( clipRect[2] <= clipRect[0] ) || ( clipRect[3] <= clipRect[1] ) )
+	VectorImagePanel *pSVGPanel = dynamic_cast<VectorImagePanel*>(this);
+	if ( pSVGPanel )
 	{
-		repaint = false;
+		// SVG panels might have either width or height set to 0
+		// so the image size is calculated procedurally
+		if ( (clipRect[2] <= clipRect[0]) && (clipRect[3] <= clipRect[1]) )
+			repaint = false;
+	}
+	else
+	{
+		if ( (clipRect[2] <= clipRect[0]) || (clipRect[3] <= clipRect[1]) )
+			repaint = false;
 	}
 
 	// set global alpha
