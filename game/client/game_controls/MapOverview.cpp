@@ -324,7 +324,7 @@ bool CMapOverview::CanPlayerBeSeen(MapPlayer_t *player)
 	{
 		// true if both players are on the same team
 #ifdef CSTRIKE_DLL
-		return (!localPlayer->IsOtherEnemy( dynamic_cast<C_CSPlayer*>(UTIL_PlayerByUserId( player->userid )) ));
+		return (!localPlayer->IsOtherEnemy( player->index ));
 #else
 		return (localPlayer->GetTeamNumber() == player->team );
 #endif

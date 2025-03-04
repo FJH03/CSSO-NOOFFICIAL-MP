@@ -14,6 +14,8 @@
 #include "cs_bot_manager.h"
 #include "cs_gamerules.h"
 
+extern ConVar mp_teammates_are_enemies;
+
 // Datatable
 IMPLEMENT_SERVERCLASS_ST(CCSPlayerResource, DT_CSPlayerResource)
 	SendPropInt( SENDINFO( m_iPlayerC4 ), 8, SPROP_UNSIGNED ),
@@ -73,8 +75,16 @@ public:
 
 	bool operator()( CBasePlayer *player )
 	{
-		if ( !player->IsAlive() || player->GetTeamNumber() != m_team )
-			return true;
+		if ( m_targetEntity->IsPlayer() )
+		{
+			if ( !mp_teammates_are_enemies.GetBool() && (!player->IsAlive() || player->GetTeamNumber() != m_team) )
+				return true;
+		}
+		else
+		{
+			if ( !player->IsAlive() || player->GetTeamNumber() != m_team )
+				return true;
+		}
 
 		CCSPlayer *csPlayer = ToCSPlayer( player );
 		if ( !csPlayer )

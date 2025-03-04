@@ -577,7 +577,7 @@ CCSMapOverview::CSMapPlayer_t* CCSMapOverview::GetCSInfoForHostage(MapPlayer_t *
 // rules that define if you can see a player on the overview or not
 bool CCSMapOverview::CanPlayerBeSeen( MapPlayer_t *player )
 {
-	C_BasePlayer *localPlayer = C_BasePlayer::GetLocalPlayer();
+	C_CSPlayer *localPlayer = C_CSPlayer::GetLocalCSPlayer();
 
 	if (!localPlayer || !player )
 		return false;
@@ -603,8 +603,11 @@ bool CCSMapOverview::CanPlayerBeSeen( MapPlayer_t *player )
 		if( player->health <= 0 )
 			return false;
 
-		if( localPlayer->GetTeamNumber() == player->team )
-			return true;// always yes for teammates.
+		if ( localPlayer->GetUserID() == player->userid )
+			return true; // always yes for local player
+
+		if ( !localPlayer->IsOtherEnemy( player->index+1 ) ) // MapPlayer_t::index is entindex - 1 so add that
+			return true; // always yes for teammates.
 
 		// and a living enemy needs to have been seen recently, and have been for a while
 		if( csPlayer->timeLastSeen != -1  
@@ -717,7 +720,11 @@ CCSMapOverview::~CCSMapOverview()
 
 void CCSMapOverview::UpdateFollowEntity()
 {
-	if ( m_bRoundRadar || cl_radar_square.GetInt() == 1 ) // if the radar is round or square but not in scoreboard mode
+	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( !pPlayer )
+		return;
+
+	if ( m_bRoundRadar || (cl_radar_square.GetInt() == 1 && pPlayer->IsAlive()) ) // if the radar is round or square but not in scoreboard mode
 	{
 		if ( m_nFollowEntity != 0 )
 		{
@@ -762,7 +769,7 @@ void CCSMapOverview::UpdatePlayers()
 
 	float now = gpGlobals->curtime;
 
-	CBasePlayer *localPlayer = C_BasePlayer::GetLocalPlayer();
+	C_CSPlayer *localPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if( localPlayer == NULL )
 		return;
 
@@ -827,20 +834,20 @@ void CCSMapOverview::UpdatePlayers()
 		// Check for teammates spotting enemy players
 		for ( int i = 1; i<= gpGlobals->maxClients; ++i )
 		{
+			MapPlayer_t *baseEnemy = &m_Players[i - 1];
 			if ( !pCSPR->IsConnected(i) )
 				continue;
 
 			if ( !pCSPR->IsAlive(i) )
 				continue;
 
-			if ( pCSPR->GetTeam(i) == localMapPlayer->team )
+			if ( !localPlayer->IsOtherEnemy( baseEnemy->index+1 ) ) // MapPlayer_t::index is entindex - 1 so add that
 				continue;
 
 			if ( pCSPR->IsPlayerSpotted(i) )
 			{
 				SetPlayerSeen( i-1 );
 
-				MapPlayer_t *baseEnemy = &m_Players[i-1];
 				if( baseEnemy->health > 0 )
 				{
 					// They were just seen, so if they are alive get rid of their "last known" icon
@@ -873,7 +880,7 @@ void CCSMapOverview::UpdatePlayers()
 				continue;
 			if( player->health <= 0 )
 				continue;// We don't need to spot dead guys, since they always show
-			if( player->team == localMapPlayer->team )
+			if( !localPlayer->IsOtherEnemy( player->index+1 ) ) // MapPlayer_t::index is entindex - 1 so add that
 				continue;// We don't need to spot our own guys
 
 			// Now that everyone has had a say on people they can see for us, go through and handle baddies that can no longer be seen.
@@ -1051,17 +1058,11 @@ bool CCSMapOverview::ShouldDraw( void )
 	if( alpha == 0 )
 		return false;// we have been set to fully transparent
 
-	//=============================================================================
-	// HPE_BEGIN:
-	// [smessick] Turn off large map display when in freezecam.
-	//=============================================================================
-	if ( IsInFreezeCam() && m_bRoundRadar )
+	// [smessick] Turn off map display when in freezecam.
+	if ( IsInFreezeCam() )
 	{
 		return false;
 	}
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 	float now = gpGlobals->curtime;
 	if( GetMode() == MAP_MODE_RADAR )
@@ -1179,6 +1180,10 @@ bool CCSMapOverview::AdjustPointToPanel(Vector2D *pos)
 
 void CCSMapOverview::PaintBackground()
 {
+	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( !pPlayer )
+		return;
+
 	int mapInset = GetBorderSize();
 	int pwidth, pheight;
 	GetSize( pwidth, pheight );
@@ -1213,7 +1218,7 @@ void CCSMapOverview::PaintBackground()
 		}
 		else
 		{
-			if ( cl_radar_square.GetInt() == 1 ) // always square
+			if ( cl_radar_square.GetInt() == 1 && pPlayer->IsAlive() ) // always square
 			{
 				// draw a transparent outline first
 				Color clr = GetBgColor();
@@ -1413,6 +1418,10 @@ void CCSMapOverview::DrawBomb()
 #define ICON_SCALE_FACTOR 0.25
 bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector pos, float scale, float angle, int alpha, bool allowRotation, const char *text, Color *textColor, float status, Color *statusColor )
 {
+	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( !pPlayer )
+		return false;
+
 	if( GetMode() == MAP_MODE_RADAR  &&  cl_radaralpha.GetInt() == 0 )
 		return false;
 
@@ -1431,7 +1440,7 @@ bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector p
 
 	Vector2D oldPos = pospanel;
 	Vector2D adjustment(0,0);
-	if( AdjustPointToPanel( &pospanel ) && (m_bRoundRadar || cl_radar_square.GetInt() == 1) )
+	if( AdjustPointToPanel( &pospanel ) && (m_bRoundRadar || (cl_radar_square.GetInt() == 1 && pPlayer->IsAlive())) )
 	{
 		if ( offscreenTextureID == -1 )
 			return false; //Doesn't want to draw if off screen.
@@ -2287,7 +2296,7 @@ void CCSMapOverview::UpdateSizeAndPosition()
 					m_bRoundRadar = false;
 					m_fZoom = cl_radar_scale.GetFloat() * (OVERVIEW_MAP_SIZE / DESIRED_RADAR_RESOLUTION);
 					break;
-				case 2: // squre with scoreboard
+				case 2: // square with scoreboard
 					IViewPortPanel* panel = gViewPortInterface->FindPanelByName( PANEL_SCOREBOARD );
 					bool bScoreboardIsVisible = panel->IsVisible();
 					m_bRoundRadar = !bScoreboardIsVisible;
