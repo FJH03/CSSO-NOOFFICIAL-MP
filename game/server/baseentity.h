@@ -563,6 +563,7 @@ public:
 	virtual void PostConstructor( const char *szClassname );
 	virtual void PostClientActive( void );
 	virtual void ParseMapData( CEntityMapData *mapData );
+	virtual void OnParseMapDataFinished();
 	virtual bool KeyValue( const char *szKeyName, const char *szValue );
 	virtual bool KeyValue( const char *szKeyName, float flValue );
 	virtual bool KeyValue( const char *szKeyName, const Vector &vecValue );
@@ -1750,6 +1751,7 @@ public:
 	static bool						PrecacheSound( const char *name );
 	static void						PrefetchSound( const char *name );
 	void							Remove( ); // UTIL_Remove( this );
+    bool							ShouldLagCompensate() const;
 
 private:
 
@@ -1768,7 +1770,8 @@ private:
 	friend void UnlinkAllChildren( CBaseEntity *pParent );
 	friend void UnlinkFromParent( CBaseEntity *pRemove );
 	friend void TransferChildren( CBaseEntity *pOldParent, CBaseEntity *pNewParent );
-	
+	bool m_bLagCompensate; // Special flag for certain l4d2 props to use
+
 public:
 	// Accessors for above
 	static int						GetPredictionRandomSeed( bool bUseUnSyncedServerPlatTime = false );

@@ -6450,6 +6450,10 @@ int C_BaseEntity::GetCreationTick() const
 	return m_nCreationTick;
 }
 
+void C_BaseEntity::OnParseMapDataFinished()
+{
+}
+
 //------------------------------------------------------------------------------
 void CC_CL_Find_Ent( const CCommand& args )
 {
