@@ -364,7 +364,8 @@ void CHudHealthArmor::OnThink()
 
 		V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", m_iHealth );
 		m_pHealthLabel->SetText( unicode );
-		m_pHealthProgress->SetProgress( clamp( (float)m_iArmor / (float)iMaxHealth, 0.0f, 1.0f ) );
+		m_pHealthProgress->SetProgress( clamp( (float)m_iHealth / (float)iMaxHealth, 0.0f, 1.0f ) );
+
 	}
 
 	if ( iRealArmor != m_iArmor )
