@@ -4290,13 +4290,6 @@ ConVar snd_music_selection(
 	
 		UploadGameStats();
 
-		// [pfreese] I commented out this call to CreateWeaponManager, as the 
-		// CGameWeaponManager object doesn't appear to be actually used by the CSS
-		// code, and in any case, the weapon manager does not support wildcards in 
-		// entity names (as seemingly indicated) below. When the manager fails to 
-		// create its factory, it removes itself in any case.
-		// CreateWeaponManager( "weapon_*", gpGlobals->maxClients * 2 );
-
 		if ( bClearAccountsAfterHalftime && IsPlayingClassic() && HasHalfTime() )
 		{
 			// Loop through all players and give them only the starting money
@@ -4327,28 +4320,23 @@ ConVar snd_music_selection(
 		// should we show an announcement to declare that this round might be the last round?
 		if ( IsLastRoundBeforeHalfTime() )
 		{
-			IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_last_round_half" );
-			if ( event )
-				gameeventmanager->FireEvent( event );
+			UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Last_Round_Half" );
 		}
-		else if ( IsLastRoundOfMatch() )
-		{
-			// don't send the final round event if one of the teams just won the round by clinching
-			int iNumWinsToClinch = GetNumWinsToClinch();
-			if ( m_iNumCTWins != iNumWinsToClinch && m_iNumTerroristWins != iNumWinsToClinch )
-			{
-				IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_final" );
-				if ( event )
-					gameeventmanager->FireEvent( event );
-			}
-		}
-		else if ( IsMatchPoint() )
-		{
-			IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_match_point" );
-			if ( event )
-				gameeventmanager->FireEvent( event );
 
-		}
+		//=============================================================================
+		// HPE_BEGIN:
+		// [pfreese] I commented out this call to CreateWeaponManager, as the 
+		// CGameWeaponManager object doesn't appear to be actually used by the CSS
+		// code, and in any case, the weapon manager does not support wildcards in 
+		// entity names (as seemingly indicated) below. When the manager fails to 
+		// create its factory, it removes itself in any case.
+		//=============================================================================
+
+		// CreateWeaponManager( "weapon_*", gpGlobals->maxClients * 2 );
+		
+		//=============================================================================
+		// HPE_END
+		//=============================================================================
 	}
 
 	void CCSGameRules::GiveC4()
@@ -8726,32 +8714,6 @@ int CCSGameRules::GetNumWinsToClinch() const
 {
 	int iNumWinsToClinch = (mp_maxrounds.GetInt() > 0 && mp_match_can_clinch.GetBool()) ? ( mp_maxrounds.GetInt() / 2 ) + 1 + GetOvertimePlaying() * ( mp_overtime_maxrounds.GetInt() / 2 ) : -1;
 	return iNumWinsToClinch;
-}
-
-bool CCSGameRules::IsLastRoundOfMatch() const
-{
-	bool bLastRound = mp_maxrounds.GetInt() > 0 ? ( GetTotalRoundsPlayed() == ( mp_maxrounds.GetInt()-1 + GetOvertimePlaying()*mp_overtime_maxrounds.GetInt() ) ) : false;
-	return bLastRound;
-}
-
-bool CCSGameRules::IsMatchPoint() const
-{
-	int iNumWinsToClinch = GetNumWinsToClinch();
-	bool bMatchPoint = false;
-#ifdef CLIENT_DLL
-	if ( GetGamePhase() != GAMEPHASE_PLAYING_FIRST_HALF )
-	{
-		C_Team *pTerrorists = GetGlobalTeam( TEAM_TERRORIST );
-		C_Team *pCTs = GetGlobalTeam( TEAM_CT );
-		bMatchPoint = ( pCTs && ( pCTs->Get_Score() == iNumWinsToClinch-1 ) ) || ( pTerrorists && ( pTerrorists->Get_Score() == iNumWinsToClinch-1 ) );
-	}
-#else
-	if ( GetPhase() != GAMEPHASE_PLAYING_FIRST_HALF )
-	{
-		bMatchPoint = ( m_iNumCTWins == iNumWinsToClinch-1 || m_iNumTerroristWins == iNumWinsToClinch-1);
-	}
-#endif
-	return bMatchPoint;
 }
 
 #else

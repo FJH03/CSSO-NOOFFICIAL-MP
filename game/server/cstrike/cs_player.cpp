@@ -891,9 +891,6 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "HealthShot.Success" );
 	PrecacheScriptSound( "Player.Respawn" );
 
-	PrecacheScriptSound( "Music.Final_Round_Stinger" );
-	PrecacheScriptSound( "Music.Match_Point_Stinger" );
-
 	PrecacheScriptSound( "UI.ArmsRace.BecomeMatchLeader" );
 	PrecacheScriptSound( "UI.ArmsRace.BecomeTeamLeader" );
 	PrecacheScriptSound( "UI.ArmsRace.Demoted" );

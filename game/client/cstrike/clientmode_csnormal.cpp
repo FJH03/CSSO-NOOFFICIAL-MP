@@ -316,9 +316,6 @@ void ClientModeCSNormal::Init()
 
 	ListenForGameEvent( "round_end" );
 	ListenForGameEvent( "round_start" );
-	ListenForGameEvent( "round_announce_final" );
-	ListenForGameEvent( "round_announce_match_point" );
-	ListenForGameEvent( "round_announce_last_round_half" );
 	ListenForGameEvent( "round_time_warning" );
 	ListenForGameEvent( "cs_round_start_beep" );
 	ListenForGameEvent( "cs_round_final_beep" );
@@ -709,31 +706,6 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 
 		// Remove any left over particle effects from the last round.
 		ParticleMgr()->SetRemoveAllParticleEffects();
-	}
-	else if ( Q_strcmp( "round_announce_final", eventname ) == 0 ||
-			  Q_strcmp( "round_announce_last_round_half", eventname ) == 0 ||
-			  Q_strcmp( "round_announce_match_point", eventname ) == 0 )
-	{
-		if ( Q_strcmp( "round_announce_final", eventname ) == 0 )
-		{
-			internalCenterPrint->HintPrint( g_pVGuiLocalize->Find( "#Cstrike_TitlesTXT_Final_Round" ) );
-
-			C_RecipientFilter filter;
-			filter.AddRecipient( pLocalPlayer );
-			C_BaseEntity::EmitSound( filter, SOUND_FROM_WORLD, "Music.Final_Round_Stinger" );
-		}
-		else if ( Q_strcmp( "round_announce_match_point", eventname ) == 0 )
-		{
-			internalCenterPrint->HintPrint( g_pVGuiLocalize->Find( "#Cstrike_TitlesTXT_Match_Point" ) );
-
-			C_RecipientFilter filter;
-			filter.AddRecipient( pLocalPlayer );
-			C_BaseEntity::EmitSound( filter, SOUND_FROM_WORLD, "Music.Match_Point_Stinger" );
-		}
-		else if ( Q_strcmp( "round_announce_last_round_half", eventname ) == 0 )
-		{
-			internalCenterPrint->HintPrint( g_pVGuiLocalize->Find( "#Cstrike_TitlesTXT_Last_Round_Half" ) );
-		}
 	}
 	else if ( Q_strcmp( "round_end", eventname ) == 0 )
 	{
