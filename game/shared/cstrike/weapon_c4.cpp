@@ -1075,6 +1075,7 @@ void CC4::PhysicsTouchTriggers(const Vector *pPrevAbsOrigin)
 		PrecacheScriptSound( "c4.explode" );
 		PrecacheScriptSound( "c4.disarmstart" );
 		PrecacheScriptSound( "c4.plant" );
+		PrecacheScriptSound( "c4.plantquiet" );
 		PrecacheScriptSound( "C4.PlantSound" );
 		PrecacheScriptSound( "C4.PlantSoundB" );
 
@@ -1355,9 +1356,10 @@ void CC4::PrimaryAttack()
 			CSGameRules()->m_bBombPlanted = true;
 
 			// Play the plant sound.
+			// don't play a bomb plant sound for everyone anymore ?
 			Vector plantPosition = pPlayer->GetAbsOrigin() + Vector( 0, 0, 5 );
 			CPASAttenuationFilter filter( plantPosition );
-			EmitSound( filter, entindex(), "c4.plant" );
+			EmitSound( filter, 0, "c4.plantquiet", &GetAbsOrigin() );
 
 			// No more c4!
 			pPlayer->Weapon_Drop( this, NULL, NULL );
