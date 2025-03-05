@@ -1405,11 +1405,11 @@ ConVar snd_music_selection(
 
 				// now pick a random one from the list we created above for each category
 				CUtlVector< GGWeaponAliasName > pWeaponProgression;
-				for ( int i=0; i<nNumSMGs; i++ )
+				for ( int i=0; i<nNumSnipers; i++ )
 				{
-					int nPick = RandomInt( 0, pSMGs.Count()-1 );
-					pWeaponProgression.AddToTail(pSMGs[nPick]);
-					pSMGs.FastRemove( nPick );
+					int nPick = RandomInt( 0, pSnipers.Count()-1 );
+					pWeaponProgression.AddToTail(pSnipers[nPick]);
+					pSnipers.FastRemove( nPick );
 				}
 				for ( int i=0; i<nNumRifles; i++ )
 				{
@@ -1417,29 +1417,29 @@ ConVar snd_music_selection(
 					pWeaponProgression.AddToTail(pRifles[nPick]);
 					pRifles.FastRemove( nPick );
 				}
-				for ( int i=0; i<nNumShotguns; i++ )
-				{
-					int nPick = RandomInt( 0, pShotguns.Count()-1 );
-					pWeaponProgression.AddToTail(pShotguns[nPick]);
-					pShotguns.FastRemove( nPick );
-				}
-				for ( int i=0; i<nNumSnipers; i++ )
-				{
-					int nPick = RandomInt( 0, pSnipers.Count()-1 );
-					pWeaponProgression.AddToTail(pSnipers[nPick]);
-					pSnipers.FastRemove( nPick );
-				}
 				for ( int i=0; i<nNumMGs; i++ )
 				{
 					int nPick = RandomInt( 0, pMGs.Count()-1 );
 					pWeaponProgression.AddToTail(pMGs[nPick]);
 					pMGs.FastRemove( nPick );
 				}
+				for ( int i=0; i<nNumSMGs; i++ )
+				{
+					int nPick = RandomInt( 0, pSMGs.Count()-1 );
+					pWeaponProgression.AddToTail(pSMGs[nPick]);
+					pSMGs.FastRemove( nPick );
+				}
 				for ( int i=0; i<nNumPistols; i++ )
 				{
 					int nPick = RandomInt( 0, pPistols.Count()-1 );
 					pWeaponProgression.AddToTail(pPistols[nPick]);
 					pPistols.FastRemove( nPick );
+				}
+				for ( int i=0; i<nNumShotguns; i++ )
+				{
+					int nPick = RandomInt( 0, pShotguns.Count()-1 );
+					pWeaponProgression.AddToTail(pShotguns[nPick]);
+					pShotguns.FastRemove( nPick );
 				}
 
 				// go through the list we build and add them to the final list that will get used in the game
