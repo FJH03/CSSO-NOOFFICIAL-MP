@@ -59,28 +59,16 @@
 #include "eventlist.h"
 #include "cs_gamestats.h"
 #include "gamestats.h"
+#include "holiday_gift.h"
+#include "cs_achievement_constants.h"
+#include "cs_simple_hostage.h"
+#include "cs_weapon_parse.h"
 #include "weapon_decoy.h"
 #include "molotov_projectile.h"
 #include "cs_loadout.h"
 #include "item_healthshot.h"
-#include "holiday_gift.h"
-#include "../../shared/cstrike/cs_achievement_constants.h"
-
-//=============================================================================
-// HPE_BEGIN
-//=============================================================================
-
-// [dwenger] Needed for global hostage list
-#include "cs_simple_hostage.h"
-
-// [dwenger] Needed for weapon type used tracking
-#include "../../shared/cstrike/cs_weapon_parse.h"
 
 #define REPORT_PLAYER_DAMAGE 0
-
-//=============================================================================
-// HPE_END
-//=============================================================================
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -364,17 +352,9 @@ BEGIN_SEND_TABLE_NOBASE( CCSPlayer, DT_CSLocalPlayerExclusive )
 	// send a hi-res origin to the local player for use in prediction
 	SendPropVector	(SENDINFO(m_vecOrigin), -1,  SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [tj]Set up the send table for per-client domination data
-	//=============================================================================
- 
 	SendPropArray3( SENDINFO_ARRAY3( m_bPlayerDominated ), SendPropBool( SENDINFO_ARRAY( m_bPlayerDominated ) ) ),
 	SendPropArray3( SENDINFO_ARRAY3( m_bPlayerDominatingMe ), SendPropBool( SENDINFO_ARRAY( m_bPlayerDominatingMe ) ) ),
- 
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 END_SEND_TABLE()
 
@@ -432,18 +412,6 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropBool( SENDINFO( m_bIsScoped ) ),
 	SendPropBool( SENDINFO( m_bIsWalking ) ),
 	SendPropFloat( SENDINFO( m_flGroundAccelLinearFracLastTime ), 0, SPROP_CHANGES_OFTEN ),
-
-	//=============================================================================
-	// HPE_BEGIN:
-	// [dwenger] Added for fun-fact support
-	//=============================================================================
-
-	//SendPropBool( SENDINFO( m_bPickedUpDefuser ) ),
-	//SendPropBool( SENDINFO( m_bDefusedWithPickedUpKit) ),
-
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 	SendPropBool( SENDINFO( m_bInHostageRescueZone ) ),
 	SendPropBool( SENDINFO( m_bIsDefusing ) ),
@@ -693,7 +661,7 @@ CCSPlayer::~CCSPlayer()
 
 	// delete the records of damage taken and given
 	ResetDamageCounters();
-	
+
 	if ( m_PlayerAnimState )
 		m_PlayerAnimState->Release();
 
@@ -716,9 +684,14 @@ void CCSPlayer::Precache()
 	PrecacheModel( "models/weapons/w_eq_taser.mdl" );
 	PrecacheModel( "models/weapons/w_defuser.mdl" );
 
+	// PiMoN: hardcoding this stuff to (hopefully) get rid of some cheaters
+	engine->ForceSimpleMaterial( "materials/vgui/white.vmt" );
+	engine->ForceSimpleMaterial( "materials/vgui/white_additive.vmt" );
+	engine->ForceSimpleMaterial( "materials/effects/flashbang.vmt" );
+	engine->ForceSimpleMaterial( "materials/effects/flashbang_white.vmt" );
+
 	Vector mins( -14, -30, -10 );
 	Vector maxs( 14, 30, 80 );
-
 	int i;
 	for ( i = 0; i<ARRAYSIZE( CTST6PlayerModelStrings ); ++i )
 	{
@@ -1091,10 +1064,9 @@ void CCSPlayer::InitialSpawn( void )
 	State_Enter( STATE_WELCOME );
 
 	// [tj] We reset the stats at the beginning of the map (including domination tracking)
-	 
 	CCS_GameStats.ResetPlayerStats(this);
 	RemoveNemesisRelationships();
-	 
+
 	// for late joiners, we want to give them a fighting chance in gun game so, give them the lowest level reached by a player already
 	int nMinWep = 0;
 	for ( int i = 1; i <= MAX_PLAYERS; i++ )
@@ -1242,7 +1214,6 @@ void CCSPlayer::SetModelFromClass( void )
 	}
 	else
 	{
-		// todo: can we actually get here?
 		Assert( false ); // we shouldn't be here
 		//SetModel( CTST6PlayerModels[0] );
 	}
@@ -1521,7 +1492,18 @@ void CCSPlayer::Spawn()
 
 	if ( flImmuneTime > 0 || CSGameRules()->IsWarmupPeriod() )
 	{
-		if ( CSGameRules()->IsWarmupPeriod() )
+		//Make sure we can't move if we respawn in gun game after the rounds ends
+		if ( CSGameRules()->GetPhase() == GAMEPHASE_MATCH_ENDED )
+		{
+			AddFlag( FL_FROZEN );
+		}
+
+		if ( CSGameRules()->IsPlayingDeathmatch() && !IsBot() )
+		{
+			// set immune time to super high and open the buy menu
+			m_bInBuyZone = true;
+		}
+		else if ( CSGameRules()->IsWarmupPeriod() )
 		{
 			flImmuneTime = 3;
 		}
@@ -1623,7 +1605,7 @@ void CCSPlayer::GiveDefaultItems()
 	const char *pchTeamKnifeName = GetTeamNumber() == TEAM_TERRORIST ? "weapon_knife_t" : "weapon_knife";
 
 	if ( CSLoadout()->HasKnifeSet( this, GetTeamNumber() ) )
-		pchTeamKnifeName = KnivesEntitiesStrings[CSLoadout()->GetKnifeForPlayer(this, GetTeamNumber())];
+		 pchTeamKnifeName = KnivesEntitiesStrings[CSLoadout()->GetKnifeForPlayer(this, GetTeamNumber())];
 
 	// don't give default items if the player is in deathmatch- we control weapon giving in DM, the player could get a random weapon
 	if ( CSGameRules()->IsPlayingDeathmatch() )
@@ -1683,7 +1665,7 @@ void CCSPlayer::GiveDefaultItems()
 
 		return;
 	}
-
+	
 	CBaseCombatWeapon *knife = Weapon_GetSlot( WEAPON_SLOT_KNIFE );
 	CBaseCombatWeapon *pistol = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
 	CBaseCombatWeapon *rifle = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
@@ -1691,7 +1673,6 @@ void CCSPlayer::GiveDefaultItems()
 	m_bUsingDefaultPistol = true;
 
 	const char *meleeString = NULL;
-
 	if ( GetTeamNumber() == TEAM_CT )
 		meleeString = mp_ct_default_melee.GetString();
 	else if ( GetTeamNumber() == TEAM_TERRORIST )
@@ -1733,7 +1714,7 @@ void CCSPlayer::GiveDefaultItems()
 			meleeString = engine->ParseFile( meleeString, token, sizeof( token ) );
 		}
 	}
-	
+
 	if ( !pistol )
 	{
 		const char *secondaryString = NULL;
@@ -1818,7 +1799,7 @@ void CCSPlayer::GiveDefaultItems()
 	{
 		Weapon_GetSlot( WEAPON_SLOT_RIFLE )->GiveReserveAmmo( AMMO_POSITION_PRIMARY, 250 );
 	}
-
+	
 	m_bPickedUpWeapon = false; // make sure this is set after getting default weapons
 }
 
@@ -1989,7 +1970,7 @@ int CCSPlayer::GetPercentageOfEnemyTeamKilled()
 void CCSPlayer::HandleOutOfAmmoKnifeKills( CCSPlayer* pAttackerPlayer, CWeaponCSBase* pAttackerWeapon )
 {
 	if ( pAttackerWeapon && 
-		CSLoadout()->IsKnife( pAttackerWeapon->GetCSWeaponID() ) )
+		 CSLoadout()->IsKnife( pAttackerWeapon->GetCSWeaponID() ) )
 	{
 		// if they were out of ammo in their primary and secondary AND had a primary or secondary, log as an out of ammo knife kill
 
@@ -2174,7 +2155,6 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	m_bNightVisionOn = false;
 
 	// [dwenger] Added for fun-fact support
-
 	m_bPickedUpDefuser = false;
 	m_bDefusedWithPickedUpKit = false;
 	m_bPickedUpWeapon = false;
@@ -2667,8 +2647,6 @@ bool CCSPlayer::IsValidObserverTarget( CBaseEntity * target )
 	return BaseClass::IsValidObserverTarget( target );
 }
 
-
-
 CBaseEntity* CCSPlayer::FindNextObserverTarget( bool bReverse )
 {
 	CBaseEntity* pTarget = BaseClass::FindNextObserverTarget( bReverse );
@@ -2882,7 +2860,7 @@ void CCSPlayer::PostThink()
 		StopSound( "Player.AmbientUnderWater" );
 		SetPlayerUnderwater( false );
 	}
-
+	
 	if( !m_bUseNewAnimstate && IsAlive() && m_cycleLatchTimer.IsElapsed() )
 	{
 		m_cycleLatchTimer.Start( CycleLatchInterval );
@@ -2921,6 +2899,7 @@ void CCSPlayer::PushawayThink()
 	SetNextThink( gpGlobals->curtime + PUSHAWAY_THINK_INTERVAL, CS_PUSHAWAY_THINK_CONTEXT );
 }
 
+
 void CCSPlayer::SetModel( const char *szModelName )
 {
 	// PiMoN: pure shitcode but there's no other way to check
@@ -2936,7 +2915,7 @@ void CCSPlayer::SetModel( const char *szModelName )
 		else
 			m_bUseNewAnimstate = false;
 
-			m_szPlayerDefaultGloves = GetPlayerViewmodelArmConfigForPlayerModel( modelinfo->GetModelName( pModel ) )->szAssociatedGloveModel;
+		m_szPlayerDefaultGloves = GetPlayerViewmodelArmConfigForPlayerModel( modelinfo->GetModelName( pModel ) )->szAssociatedGloveModel;
 	}
 	else
 	{
@@ -3119,18 +3098,7 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 
 	if ( GetMoveType() == MOVETYPE_NOCLIP || GetMoveType() == MOVETYPE_OBSERVER )
 		return 0;
-        //AndraMidoxXx:OMG,BUDDHAAAA!
-        if ( GetFlags() & FL_GODMODE )
-                return 0;
 
-        if ( m_debugOverlays & OVERLAY_BUDDHA_MODE ) 
-        {
-                if ( ( m_iHealth - info.GetDamage() ) <= 0 )
-                {
-                        m_iHealth = 1;
-                        return 0;
-                }
-	}
 	//if this is C4 bomb damage, make sure it didn't pass through any bomb blockers to reach this player.
 	CPlantedC4 *pInflictorC4 = dynamic_cast< CPlantedC4 * >( pInflictor );
 	if ( pInflictorC4 )
@@ -4071,7 +4039,7 @@ void CCSPlayer::Blind( float holdTime, float fadeTime, float startingAlpha )
 
 			m_flFlashDuration = MAX( remainingDuration, fadeTime );
 			m_flFlashMaxAlpha = MAX( m_flFlashMaxAlpha, startingAlpha );
-		}
+	}
 
 		// allow bots to react
 		IGameEvent * event = gameeventmanager->CreateEvent( "player_blind" );
@@ -4991,6 +4959,7 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 
 		return false;
 	}
+
 	return true;
 }
 
@@ -5285,7 +5254,6 @@ BuyResult_e CCSPlayer::AttemptToBuyTaser( void )
 
 //[tj]  This is essentially a shim so I can easily check the return
 //      value without adding new code to all the return points.
-
 BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item )
 {
 	const char* loadoutItem = CSLoadout()->GetWeaponFromSlot( this, CSLoadout()->GetSlotFromWeapon( GetTeamNumber(), item ) );
@@ -5331,9 +5299,9 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 		{
 			result = AttemptToBuyAmmo( 1 );
 		}
-		else*/ if ( Q_stristr( wpnName, "defuser" )  )
+		else*/ if ( Q_stristr( wpnName, "defuser" ) )
 		{
-			if( CanPlayerBuy( true ) )
+			if ( CanPlayerBuy( true ) )
 			{
 				result = AttemptToBuyDefuser();
 			}
@@ -5341,7 +5309,6 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 	}
 	else
 	{
-
 		if( !CanPlayerBuy( true ) )
 		{
 			return BUY_PLAYER_CANT_BUY;
@@ -5390,7 +5357,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 		{
 			equipResult = AttemptToBuyShield();
 		}
-		else if ( Q_stristr( wpnName, "nightvision" )  )
+		else if ( Q_stristr( wpnName, "nightvision" ) )
 		{
 			equipResult = AttemptToBuyNightVision();
 		}
@@ -5420,6 +5387,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 					DropRifle();
 				}
 			}
+
 			bPurchase = true;
 		}
 		else
@@ -5435,7 +5403,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 			}
 		}
 
-		if( bPurchase )
+		if ( bPurchase )
 		{
 			result = BUY_BOUGHT;
 
@@ -5443,7 +5411,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 				m_bUsingDefaultPistol = false;
 
 			GiveNamedItem( pWeaponInfo->szClassName );
-            AddAccount( -pWeaponInfo->GetWeaponPrice(), true, true, pWeaponInfo->szClassName );
+			AddAccount( -pWeaponInfo->GetWeaponPrice(), true, true, pWeaponInfo->szClassName );
 			BlackMarketAddWeapon( wpnName, this );
 		}
 	}
@@ -7065,7 +7033,7 @@ bool CCSPlayer::SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pStart
 						pStartSpot = pSpawnpoint;
 						return true;
 					}
-					else
+					else	// the spawn point is either hidden, or we don't care
 					{
 						pSpotValidButVisible = pSpawnpoint;
 					}
@@ -7076,7 +7044,7 @@ bool CCSPlayer::SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pStart
 				}
 			}
 
-				// if we're back to the start of the list
+			// if we're back to the start of the list
 			if ( pSpawnpoint == pStartSpot || !pSpawnpoint )
 			{
 				// use the valid but unfortunately visible spot.
@@ -7098,6 +7066,7 @@ bool CCSPlayer::SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pStart
 				break;
 			}
 		}
+
 		DevMsg( "CCSPlayer::SelectSpawnSpot: couldn't find valid spawn point.\n" );
 	}
 
@@ -7120,7 +7089,7 @@ void CCSPlayer::PostSpawnPointSelection()
 CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 {
 	CBaseEntity *pSpot;
-
+	
 	pSpot = NULL;
 	if ( CSGameRules()->IsLogoMap() )
 	{
@@ -7167,7 +7136,6 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 
 			if ( SelectSpawnSpot( "info_player_counterterrorist", pSpot ) )
 			{
-
 				g_pLastCTSpawn = pSpot;
 				goto ReturnSpot;
 			}
@@ -7178,15 +7146,15 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 		else if ( GetTeamNumber() == TEAM_TERRORIST )
 		{
 			pSpot = g_pLastTerroristSpawn;
-
-			if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
-			{
-				if ( SelectSpawnSpot( "info_armsrace_terrorist", pSpot ) )
-				{
-					g_pLastTerroristSpawn = pSpot;
-					goto ReturnSpot;
-				}
-			}
+			
+ 			if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+ 			{
+ 				if ( SelectSpawnSpot( "info_armsrace_terrorist", pSpot ) )
+ 				{
+ 					g_pLastTerroristSpawn = pSpot;
+ 					goto ReturnSpot;
+ 				}
+ 			}
 
 			if ( SelectSpawnSpot( "info_player_terrorist", pSpot ) )
 			{
@@ -7744,6 +7712,7 @@ void CCSPlayer::CheckObserverSettings( void )
 		}
 	}
 }
+
 
 void CCSPlayer::Weapon_Equip( CBaseCombatWeapon *pWeapon )
 {
@@ -9205,6 +9174,7 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 			CCS_GameStats.IncrementStat(this, CSTAT_ITEMS_DROPPED_VALUE, pCSWeapon->GetCSWpnData().GetWeaponPrice() );
 		}
 
+		// PiMoN: uncomment this when we have healthshots
 		if ( pCSWeapon->IsA( WEAPON_HEALTHSHOT ) )
 		{
 			CItem_Healthshot* pHealth = dynamic_cast< CItem_Healthshot* >( pCSWeapon );
@@ -10623,12 +10593,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			ToCSPlayer(pAttacker)->AwardAchievement(CSPosthumousGrenadeKill);
 		}
 
-		if ( pAttacker->GetActiveWeapon() && 
-			pAttacker->GetActiveWeapon()->Clip1() == 1 && 
-			pAttackerWeapon && 
-			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_SNIPER_RIFLE &&
-			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_KNIFE &&
-			attackerWeaponId != WEAPON_TASER )
+		if (pAttacker->GetActiveWeapon() && pAttacker->GetActiveWeapon()->Clip1() == 0 && pAttackerWeapon && pAttackerWeapon->GetCSWpnData().m_WeaponType != WEAPONTYPE_SNIPER_RIFLE && attackerWeaponId != WEAPON_TASER )
 		{
 			if (pInflictor == pAttacker)
 			{
@@ -10642,14 +10607,8 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		// [dwenger] Fun-fact processing
 		//=============================================================================
 
-		if ( pVictimWeapon && pVictimWeapon->GetWeaponType() == WEAPONTYPE_KNIFE && !pVictimWeapon->IsA( WEAPON_TASER ) && 
-			pInflictor == pAttacker && 
-			pAttackerWeapon && 
-			!pAttackerWeapon->IsA( WEAPON_KNIFE ) && 
-			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_C4 && 
-			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_GRENADE &&
-			!pVictim->HasControlledBotThisRound() &&
-			!pVictim->HasBeenControlledThisRound() )
+		if (pVictimWeapon && pVictimWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_KNIFE && pAttackerWeapon &&
+			pAttackerWeapon->GetCSWpnData().m_WeaponType != WEAPONTYPE_KNIFE && pAttackerWeapon->GetCSWpnData().m_WeaponType != WEAPONTYPE_C4 && pAttackerWeapon->GetCSWpnData().m_WeaponType != WEAPONTYPE_GRENADE)
 		{
 			// Victim was wielding knife when killed by a gun
 			pVictim->WieldingKnifeAndKilledByGun(true);
@@ -10826,7 +10785,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 
 	// Achievement check for being the last player alive in a match
 	if (pAlivePlayer)
-	{		
+	{
 		int alivePlayerTeam = pAlivePlayer->GetTeamNumber();
 		int alivePlayerOpposingTeam = alivePlayerTeam == TEAM_CT ? TEAM_TERRORIST : TEAM_CT;
 		if (livePlayerCount == 1 
@@ -11179,7 +11138,6 @@ bool CCSPlayer::UpdateTeamLeaderPlaySound( int nTeam )
 }
 
 // [menglish] MVP functions
- 
 void CCSPlayer::IncrementNumMVPs( CSMvpReason_t mvpReason )
 {
 	// [Forrest] Allow MVP to be turned off for a server
@@ -11188,7 +11146,7 @@ void CCSPlayer::IncrementNumMVPs( CSMvpReason_t mvpReason )
 		Msg( "Round MVP disabled: sv_nomvp is set.\n" );
 		return;
 	}
-	
+
 	m_iMVPs++;
 	CCS_GameStats.Event_MVPEarned( this );
 	IGameEvent *mvpEvent = gameeventmanager->CreateEvent( "round_mvp" );
