@@ -135,7 +135,7 @@ void BuyState::OnEnter( CCSBot *me )
 		{
 			if (me->GetAccountBalance() > 2500)
 			{
-				f (me->GetAccountBalance() < 4000)
+				if (me->GetAccountBalance() < 4000)
 					m_buyShield = (RandomFloat( 0, 100.0f ) < 33.3f) ? true : false;
 				else
 					m_buyShield = (RandomFloat( 0, 100.0f ) < 10.0f) ? true : false;

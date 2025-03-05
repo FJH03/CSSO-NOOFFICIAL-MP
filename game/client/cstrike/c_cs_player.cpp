@@ -45,7 +45,6 @@
 #include <vgui_controls/Panel.h>
 #include "ragdoll_shared.h"
 #include "collisionutils.h"
-#include "cs_loadout.h"
 #include "cs_shareddefs.h"
 
 #include "eventlist.h"
@@ -57,6 +56,8 @@
 #include "steam/steam_api.h"
 
 #include "cs_blackmarket.h"				// for vest/helmet prices
+
+#include "cs_loadout.h"
 
 #include <vgui/ILocalize.h>
 
@@ -84,6 +85,11 @@ extern ConVar	spec_freeze_distance_min;
 extern ConVar	spec_freeze_distance_max;
 extern ConVar	spec_freeze_target_fov;
 extern ConVar	spec_freeze_target_fov_long;
+
+ConVar spec_freeze_cinematiclight_r( "spec_freeze_cinematiclight_r", "1.5", FCVAR_CHEAT );
+ConVar spec_freeze_cinematiclight_g( "spec_freeze_cinematiclight_g", "1.2", FCVAR_CHEAT );
+ConVar spec_freeze_cinematiclight_b( "spec_freeze_cinematiclight_b", "1.0", FCVAR_CHEAT );
+ConVar spec_freeze_cinematiclight_scale( "spec_freeze_cinematiclight_scale", "2.0", FCVAR_CHEAT );
 
 ConVar cl_crosshair_sniper_width( "cl_crosshair_sniper_width", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If >1 sniper scope cross lines gain extra width (1 for single-pixel hairline)" );
 
@@ -748,7 +754,7 @@ void C_CSRagdoll::CreateCSRagdoll()
 
 				//Msg( "C_CSRagdoll::CreateCSRagdoll at {%.1f,%.1f,%.1f}, player at {%.1f,%.1f,%.1f}, spawning at {%.1f,%.1f,%.1f}\n", vRagdollOrigin.x, vRagdollOrigin.y, vRagdollOrigin.z, vPlayerOrigin.x, vPlayerOrigin.y, vPlayerOrigin.z, vResultOrigin.x, vResultOrigin.y, vResultOrigin.z );
 
-				InitAsClientRagdoll( currentBones, currentBones, currentBones, boneDt );
+				InitAsClientRagdoll( boneDelta0, boneDelta1, currentBones, boneDt );
 			}
 		}
 	}
@@ -1011,11 +1017,11 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropDataTable( "csnonlocaldata", 0, 0, &REFERENCE_RECV_TABLE(DT_CSNonLocalPlayerExclusive) ),
 	RecvPropFloat( RECVINFO( m_angEyeAngles[0] ) ),
 	RecvPropFloat( RECVINFO( m_angEyeAngles[1] ) ),
+	RecvPropInt( RECVINFO( m_iThrowGrenadeCounter ) ),
 	RecvPropInt( RECVINFO( m_iAddonBits ) ),
 	RecvPropInt( RECVINFO( m_iPrimaryAddon ) ),
 	RecvPropInt( RECVINFO( m_iSecondaryAddon ) ),
 	RecvPropInt( RECVINFO( m_iKnifeAddon ) ),
-	RecvPropInt( RECVINFO( m_iThrowGrenadeCounter ) ),
 	RecvPropInt( RECVINFO( m_iPlayerState ) ),
 	RecvPropInt( RECVINFO( m_iAccount ) ),
 	RecvPropBool( RECVINFO( m_bInBombZone ) ),
@@ -1023,42 +1029,26 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropInt( RECVINFO( m_bInNoDefuseArea ) ),
 	RecvPropBool( RECVINFO( m_bKilledByTaser ) ),
 	RecvPropInt( RECVINFO( m_iMoveState ) ),
-	RecvPropBool( RECVINFO( m_bIsScoped ) ),
 	RecvPropInt( RECVINFO( m_iClass ) ),
 	RecvPropInt( RECVINFO( m_ArmorValue ) ),
-	RecvPropQAngles( RECVINFO( m_angEyeAngles ) ),
-	RecvPropFloat( RECVINFO( m_flStamina ) ),
 	RecvPropInt( RECVINFO( m_bHasDefuser ), 0, RecvProxy_HasDefuser ),
 	RecvPropInt( RECVINFO( m_bNightVisionOn), 0, RecvProxy_NightVision ),
 	RecvPropBool( RECVINFO( m_bHasNightVision ) ),
 	RecvPropBool( RECVINFO( m_bIsGrabbingHostage ) ),
 	RecvPropEHandle( RECVINFO( m_hCarriedHostage ) ),
 	RecvPropEHandle( RECVINFO( m_hCarriedHostageProp ) ),
+	RecvPropBool( RECVINFO( m_bIsScoped ) ),
 	RecvPropBool( RECVINFO( m_bIsWalking ) ),
 	RecvPropFloat( RECVINFO( m_flGroundAccelLinearFracLastTime ) ),
 
-
-    //=============================================================================
-    // HPE_BEGIN:
-    // [dwenger] Added for fun-fact support
-    //=============================================================================
-
-    //RecvPropBool( RECVINFO( m_bPickedUpDefuser ) ),
-    //RecvPropBool( RECVINFO( m_bDefusedWithPickedUpKit ) ),
-
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
-
     RecvPropBool( RECVINFO( m_bInHostageRescueZone ) ),
-	RecvPropInt( RECVINFO( m_ArmorValue ) ),
 	RecvPropBool( RECVINFO( m_bIsDefusing ) ),
 	RecvPropBool( RECVINFO( m_bResumeZoom ) ),
-	RecvPropFloat( RECVINFO( m_fImmuneToDamageTime ) ),
-	RecvPropBool( RECVINFO( m_bImmunity ) ),
 	RecvPropBool( RECVINFO( m_bHasMovedSinceSpawn ) ),
 	RecvPropBool( RECVINFO( m_bMadeFinalGunGameProgressiveKill ) ),
 	RecvPropInt( RECVINFO( m_iGunGameProgressiveWeaponIndex ) ),
+	RecvPropFloat( RECVINFO( m_fImmuneToDamageTime ) ),
+	RecvPropBool( RECVINFO( m_bImmunity ) ),
 	RecvPropInt( RECVINFO( m_iLastZoom ) ),
 
 #ifdef CS_SHIELD_ENABLED
@@ -1066,7 +1056,6 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropBool( RECVINFO( m_bShieldDrawn ) ),
 #endif
 	RecvPropInt( RECVINFO( m_bHasHelmet ) ),
-	RecvPropVector( RECVINFO( m_vecRagdollVelocity ) ),
 	RecvPropFloat( RECVINFO( m_flFlashDuration ), 0, RecvProxy_FlashTime ),
 	RecvPropFloat( RECVINFO( m_flFlashMaxAlpha)),
 	RecvPropInt( RECVINFO( m_iProgressBarDuration ) ),
@@ -1080,8 +1069,8 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropBool( RECVINFO( m_bCanControlObservedBot ) ),
 	RecvPropInt( RECVINFO( m_iControlledBotEntIndex ) ),
 #endif
-	RecvPropBool( RECVINFO( m_bIsHoldingLookAtWeapon ) ),
 	RecvPropBool( RECVINFO( m_bIsLookingAtWeapon ) ),
+	RecvPropBool( RECVINFO( m_bIsHoldingLookAtWeapon ) ),
 
 	RecvPropFloat( RECVINFO( m_flLowerBodyYawTarget ) ),
 	RecvPropBool( RECVINFO( m_bStrafing ) ),
@@ -1218,7 +1207,6 @@ C_CSPlayer::C_CSPlayer() :
 C_CSPlayer::~C_CSPlayer()
 {
 	MDLCACHE_CRITICAL_SECTION();
-
 	RemoveAddonModels();
 
 	ReleaseFlashlight();
@@ -1230,6 +1218,7 @@ C_CSPlayer::~C_CSPlayer()
 	if ( m_PlayerAnimStateCSGO )
 		m_PlayerAnimStateCSGO->Release();
 }
+
 
 class CTraceFilterOmitPlayers : public CTraceFilterSimple
 {
@@ -1720,7 +1709,7 @@ int C_CSPlayer::GetAccount() const
 {
 	if ( CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
 		return 99999;
-	
+
 	return m_iAccount;
 }
 
@@ -1750,7 +1739,6 @@ int C_CSPlayer::DrawModel( int flags )
 {
 	if ( IsDormant() || !IsVisible() )
 	{
-
 		if ( !IsVisible() )
 		{
 			// fixme: players spectators fly towards return false to IsVisible? Special case for now:
@@ -1882,23 +1870,6 @@ int C_CSPlayer::GetTargetedWeapon( void ) const
 	return m_iTargetedWeaponEntIndex;
 }
 
-void InitializeAddonModelFromWeapon( CWeaponCSBase *weapon, C_BreakableProp *addon )
-{
-	if ( !weapon )
-	{
-		return;
-	}
-
-	const CCSWeaponInfo& weaponInfo = weapon->GetCSWpnData();
-	if ( weaponInfo.m_szAddonModel[0] == 0 )
-	{
-		addon->InitializeAsClientEntity( weaponInfo.szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
-	}
-	else
-	{
-		addon->InitializeAsClientEntity( weaponInfo.m_szAddonModel, RENDER_GROUP_OPAQUE_ENTITY );
-	}
-}
 
 class C_PlayerAddonModel : public C_BreakableProp
 {
@@ -2054,7 +2025,7 @@ void C_CSPlayer::CreateAddonModel( int i )
 
 	if ( Q_strcmp( pAddonInfo->m_pAttachmentName, "c4" ) )
 	{
-		// fade out all attached models except C4 and gloves
+		// fade out all attached models except C4
 		pEnt->SetFadeMinMax( 400, 500 );
 	}
 
@@ -2244,6 +2215,7 @@ void C_CSPlayer::UpdateAddonModels( bool bForce )
 			CreateAddonModel( i );
 		}
 	}
+
 	m_bAddonModelsAreOutOfDate = false;
 }
 
@@ -2282,6 +2254,7 @@ void C_CSPlayer::UpdateGlovesModel()
 void C_CSPlayer::RemoveAddonModels()
 {
 	m_iAddonBits = 0;
+	
 	if ( !m_AddonModels.Count() )
 		return;
 
@@ -2422,13 +2395,14 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 				m_PlayerAnimStateCSGO->Reset();
 			}
 		}
-		
+
 		C_CSPlayer* csPlayer = ToCSPlayer( UTIL_PlayerByUserId( EventUserID ) );
 		if ( csPlayer )
 		{
 			csPlayer->RemoveGlovesModel();
 			csPlayer->m_pViewmodelArmConfig = NULL;
 		}
+
 	}
 	else if ( Q_strcmp( "player_update_viewmodel", name ) == 0 )
 	{
@@ -2533,6 +2507,7 @@ void C_CSPlayer::Spawn( void )
 		m_PlayerAnimStateCSGO->Update( EyeAngles()[YAW], EyeAngles()[PITCH] );
 	}
 }
+
 
 void C_CSPlayer::NotifyShouldTransmit( ShouldTransmitState_t state )
 {
@@ -2697,7 +2672,7 @@ void C_CSPlayer::ClientThink()
 			m_fImmuneToDamageTimeLast = m_fImmuneToDamageTime;
 		}
 	}
-
+	
 	// Otherwise buy random or get previous round's gear, depending on cl_dm_buyrandomweapons.
 	if ( m_bShouldAutobuyDMWeapons )
 	{
@@ -2836,7 +2811,7 @@ void C_CSPlayer::ValidateModelIndex( void )
 void C_CSPlayer::SetModelPointer( const model_t *pModel )
 {
 	bool bModelPointerIsChanged = ( pModel != GetModel() );
-
+	
 	BaseClass::SetModelPointer( pModel );
 
 	if ( bModelPointerIsChanged )
@@ -2845,7 +2820,7 @@ void C_CSPlayer::SetModelPointer( const model_t *pModel )
 		m_bUseNewAnimstate = (LookupBone( "spine_0" ) != -1);
 		m_bAddonModelsAreOutOfDate = true; // next time we update addon models, do a complete refresh
 		m_szPlayerDefaultGloves = GetPlayerViewmodelArmConfigForPlayerModel(modelinfo->GetModelName(pModel))->szAssociatedGloveModel; // get a new default gloves model
-		
+
 		// apply BONE_ALWAYS_SETUP flag to certain hardcoded bone names, in case they're missing the flags in content
 		CStudioHdr *pHdr = GetModelPtr();
 		Assert( pHdr );
@@ -3285,7 +3260,6 @@ void C_CSPlayer::UpdateClientSideAnimation()
 	{
 		m_PlayerAnimStateCSGO->Update( EyeAngles()[YAW], EyeAngles()[PITCH] );
 	}
-
 	else
 	{
 		// We do this in a different order than the base class.
@@ -3322,7 +3296,7 @@ void C_CSPlayer::UpdateClientSideAnimation()
 		CWeaponCSBase *pWeapon = GetActiveCSWeapon();
 		if ( pWeapon )
 		{
-			C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>( GetViewModel( pWeapon->m_nViewModelIndex ) );
+			C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>(GetViewModel( pWeapon->m_nViewModelIndex ));
 			if ( pViewModel )
 			{
 				pViewModel->UpdateAllViewmodelAddons();
@@ -3333,7 +3307,7 @@ void C_CSPlayer::UpdateClientSideAnimation()
 			//We have a null weapon so remove the add ons for all the view models for this player.
 			for ( int i = 0; i < MAX_VIEWMODELS; ++i )
 			{
-				C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>( GetViewModel( i ) );
+				C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>(GetViewModel( i ));
 				if ( pViewModel )
 				{
 					pViewModel->RemoveViewmodelArmModels();
@@ -3521,7 +3495,7 @@ void C_CSPlayer::AccumulateLayers( IBoneSetup &boneSetup, Vector pos[], Quaterni
 		m_boneSnapshots[BONESNAPSHOT_UPPER_BODY].UpdateReadOnly();
 
 		m_BoneAccessor.SetReadableBones( oldReadableBones );
-
+		
 		AccumulateInterleavedDispatchedLayers( pWeaponWorldModel, boneSetup, pos, q, currentTime, GetLocalOrInEyeCSPlayer() == this );
 		return;
 	}
@@ -3692,7 +3666,7 @@ void CBoneSnapshot::PlaybackSnapshot( void )
 
 		Quaternion qLerpOutput;
 		QuaternionSlerp( qCurrent, qCached, flWeightedElement, qLerpOutput );
-
+		
 		Vector posLerpOutput = Lerp( flWeightedElement, posCurrent, posCached );
 
 		AngleMatrix( RadianEuler( qLerpOutput ), posLerpOutput, m_pEnt->GetBoneForWrite(i) );
@@ -3744,12 +3718,11 @@ void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Qu
 {
 	if ( !m_bUseNewAnimstate || !m_PlayerAnimStateCSGO )
 		return;
-
+	
 	if ( !IsVisible() || (IsLocalPlayer() && !C_BasePlayer::ShouldDrawLocalPlayer()) || !ShouldDraw() )
 		return;
 
 	mstudioikchain_t *pLeftArmChain = NULL;
-
 	int nLeftHandBoneIndex = LookupBone( "hand_L" );
 
 	Assert( nLeftHandBoneIndex != -1 );
@@ -3788,10 +3761,11 @@ void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Qu
 					int nWepAttach = pWeaponWorldModel->GetLeftHandAttachBoneIndex();
 					if ( nWepAttach > -1 )
 					{
+						// make sure the left hand attach bone is marked for setup
 						CStudioHdr *pHdr = pWeaponWorldModel->GetModelPtr();
 						if ( !( pHdr->boneFlags(nWepAttach) & BONE_ALWAYS_SETUP ) )
 							pHdr->setBoneFlags( nWepAttach, BONE_ALWAYS_SETUP );
-						
+
 						if ( pHdr->boneParent( nWepAttach ) != -1 && pWeaponWorldModel->isBoneAvailableForRead(nWepAttach) )
 						{
 							pIKContext->BuildBoneChain( pos, q, nRightHandWepBoneIndex, boneToWorld, boneComputed );
@@ -4301,6 +4275,7 @@ void C_CSPlayer::FireEvent( const Vector& origin, const QAngle& angles, int even
 			{
 				DropPhysicsMag( "mag_eject2" );
 			}
+
 		}
 		return;
 	}
@@ -4478,6 +4453,7 @@ float C_CSPlayer::GetFOV( void )
 	return flCurFOV;
 }
 
+
 //-----------------------------------------------------------------------------
 void C_CSPlayer::CalcObserverView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov )
 {
@@ -4560,7 +4536,7 @@ void C_CSPlayer::InterpolateObserverView( Vector& vOutOrigin, QAngle& vOutAngles
 		// as the first frame after an observer target change will draw at the final position.
 		if ( m_bObserverInterpolationNeedsDeferredSetup )
 		{
-
+			
 			// Initial setup
 			m_vecObserverInterpolateOffset = vOutOrigin - m_vecObserverInterpStartPos;
 			m_flObsInterp_PathLength = m_vecObserverInterpolateOffset.Length();
@@ -4742,6 +4718,7 @@ void C_CSPlayer::SetObserverTarget( EHANDLE hTarget )
 		StartObserverInterpolation( EyeAngles() );
 	}
 }
+
 // [tj] checks if this player has another given player on their Steam friends list.
 bool C_CSPlayer::HasPlayerAsFriend(C_CSPlayer* player)
 {
@@ -5044,7 +5021,7 @@ void C_CSPlayer::CalcFreezeCamView( Vector& eyeOrigin, QAngle& eyeAngles, float&
 			bStopCamera = true;
 		}
 
-	if ( bStopCamera )
+		if ( bStopCamera )
 		{
 			eyeOrigin = prevEyeOrigin;
 			eyeAngles = prevEyeAngles;
@@ -5138,7 +5115,7 @@ void C_CSPlayer::CalcDeathCamView( Vector& eyeOrigin, QAngle& eyeAngles, float& 
 	fov = GetFOV();
 }
 
+
 //=============================================================================
 // HPE_END
 //=============================================================================
-
