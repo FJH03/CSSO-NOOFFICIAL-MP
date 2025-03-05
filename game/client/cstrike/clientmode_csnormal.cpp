@@ -1302,7 +1302,7 @@ void UpdateImageEntity(
 	}
 
 	Vector playerPos = vec3_origin;
-	QAngle playerAng = QAngle( 0.0f, modelYaw, 0.0f );
+	QAngle playerAng = vec3_angle;
 	pPlayerModel->SetAbsOrigin( playerPos );
 	pPlayerModel->SetAbsAngles( playerAng );
 
@@ -1425,13 +1425,8 @@ void ClientModeCSNormal::PostRenderVGui()
 			int x, y, w, h;
 			pPanel->GetBounds( x, y, w, h );
 
-			// Allow for the border.
-			x += 1;
-			y += 1;
-			w -= 2;
-			h -= 2;
 
-			UpdateImageEntity( NULL, NULL, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, pPanel->m_flModelYaw, false );
+			UpdateImageEntity( NULL, NULL, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, 0.0f, false );
 			return;
 		}
 	}
@@ -1445,13 +1440,7 @@ void ClientModeCSNormal::PostRenderVGui()
 			// Ok, we have a visible class image panel.
 			int x, y, w, h;
 			pPanel->GetBounds( x, y, w, h );
-			pPanel->LocalToScreen( x, y );
-
-			// Allow for the border.
-			x += 1;
-			y += 1;
-			w -= 2;
-			h -= 2;
+			pPanel->ParentLocalToScreen( x, y ); // this is parented to a sub panel, not directly to the buy menu
 
 			UpdateImageEntity( pPanel->m_szWeaponName, NULL, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, 0.0f, false );
 			return;

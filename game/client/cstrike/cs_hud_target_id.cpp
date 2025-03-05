@@ -373,9 +373,19 @@ void CTargetID::Paint()
 		CWeaponCSBase *pWeapon = static_cast<CWeaponCSBase*>(cl_entitylist->GetEnt( iWeaponEntIndex ));
 		if ( pWeapon )
 		{
-			if ( pWeapon->GetWeaponFlags() & ITEM_FLAG_EXHAUSTIBLE )
+			if ( pPlayer->CanAcquire( pWeapon->GetCSWeaponID(), AcquireMethod::PickUp ) == AcquireResult::Allowed ||
+				pPlayer->IsPrimaryOrSecondaryWeapon( pWeapon->GetCSWpnData().m_WeaponType ) )
 			{
-				g_pVGuiLocalize->ConstructString( sIDString, sizeof( sIDString ), g_pVGuiLocalize->Find( pWeapon->GetCSWpnData().szPrintName ), 0 );
+				if ( pPlayer->Weapon_GetSlot( pWeapon->GetSlot() ) )
+				{
+					static wchar_t wszUseBind[32] = L"";
+					UTIL_ReplaceKeyBindings( L"%+use%", 0, wszUseBind, sizeof( wszUseBind ) );
+					g_pVGuiLocalize->ConstructString( sIDString, sizeof( sIDString ), g_pVGuiLocalize->Find( "#Cstrike_weaponid_pickup" ), 2, wszUseBind, g_pVGuiLocalize->Find( pWeapon->GetPrintName() ) );
+				}
+				else
+				{
+					sIDString[0] = 0;
+				}
 			}
 			else
 			{
@@ -399,12 +409,6 @@ void CTargetID::Paint()
 
 			int ypos = YRES( 260 ) - tall / 2;
 			int xpos = (ScreenWidth() - wide) / 2;
-			
-			// make a badass shadow so you could actually see the thing
-			vgui::surface()->DrawSetTextFont( m_hFont );
-			vgui::surface()->DrawSetTextPos( xpos + XRES(2), ypos + YRES(2) );
-			vgui::surface()->DrawSetTextColor( Color( 0, 0, 0, 128 ) );
-			vgui::surface()->DrawPrintText( sIDString, wcslen( sIDString ) );
 
 			vgui::surface()->DrawSetTextPos( xpos, ypos );
 			vgui::surface()->DrawSetTextColor( Color( 240, 240, 240, 255 ) );
