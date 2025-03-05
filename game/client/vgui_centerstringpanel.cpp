@@ -321,6 +321,15 @@ void CCenterPrint::HintPrint( char *text )
 	}
 }
 
+void CCenterPrint::HintPrint( wchar_t *text )
+{
+	if ( vguiNotificationPanel )
+	{
+		SetIsAlert( false );
+		vguiNotificationPanel->ColorPrint( 255, 255, 255, 255, text );
+	}
+}
+
 void CCenterPrint::Clear( void )
 {
 	if ( vguiNotificationPanel )

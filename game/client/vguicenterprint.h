@@ -41,6 +41,7 @@ public:
 	virtual void		ColorPrint( int r, int g, int b, int a, char *text );
 	virtual void		ColorPrint( int r, int g, int b, int a, wchar_t *text );
 	virtual void		HintPrint( char *text );
+	virtual void		HintPrint( wchar_t *text );
 	virtual void		Clear( void );
 
 	void				SetIsAlert( bool bState );
