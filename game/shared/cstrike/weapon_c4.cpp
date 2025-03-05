@@ -1556,15 +1556,7 @@ void CC4::OnPickedUp( CBaseCombatCharacter *pNewOwner )
 
 	CSGameRules()->m_bBombDropped = false;
 
-	if ( pPlayer->m_bShowHints && !(pPlayer->m_iDisplayHistoryBits & DHF_BOMB_RETRIEVED) && pPlayer->GetTeamNumber() == TEAM_TERRORIST )
-	{
-		pPlayer->m_iDisplayHistoryBits |= DHF_BOMB_RETRIEVED;
-		pPlayer->HintMessage( "#Hint_you_have_the_bomb", false );
-	}
-	else
-	{
-		ClientPrint( pPlayer, HUD_PRINTCENTER, "#Got_bomb" );
-	}
+	ClientPrint( pPlayer, HUD_PRINTCENTER, "#Got_bomb" );
 
     pPlayer->SetBombPickupTime(gpGlobals->curtime);
 #endif

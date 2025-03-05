@@ -2410,12 +2410,6 @@ ConVar snd_music_selection(
 						pCSScorer->AddAccountAward( PlayerCashAward::KILLED_ENEMY );
 				}
 			}
-
-			if ( !(pCSScorer->m_iDisplayHistoryBits & DHF_ENEMY_KILLED) )
-			{
-				pCSScorer->m_iDisplayHistoryBits |= DHF_ENEMY_KILLED;
-				pCSScorer->HintMessage( "#Hint_win_round_by_killing_enemy", false );
-			}
 		}
 	}
 
@@ -4400,9 +4394,6 @@ ConVar snd_music_selection(
 
 			//pPlayer->SetBombIcon();
 			//pPlayer->pev->body = 1;
-			
-			pPlayer->m_iDisplayHistoryBits |= DHF_BOMB_RETRIEVED;
-			pPlayer->HintMessage( "#Hint_you_have_the_bomb", false, true );
 
 			// Log this information
 			//UTIL_LogPrintf("\"%s<%i><%s><TERRORIST>\" triggered \"Spawned_With_The_Bomb\"\n", 
@@ -5826,8 +5817,8 @@ ConVar snd_music_selection(
 			// let the players know
 			char strRestartDelay[64];
 			Q_snprintf( strRestartDelay, sizeof( strRestartDelay ), "%d", iRestartDelay );
-			UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Game_will_restart_in", strRestartDelay, iRestartDelay == 1 ? "SECOND" : "SECONDS" );
-			UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "#Game_will_restart_in", strRestartDelay, iRestartDelay == 1 ? "SECOND" : "SECONDS" );
+			UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Game_will_restart_in", strRestartDelay, iRestartDelay == 1 ? "#Cstrike_Second" : "#Cstrike_Seconds" );
+			UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "#Game_will_restart_in", strRestartDelay, iRestartDelay == 1 ? "#Cstrike_Second" : "#Cstrike_Seconds" );
 
 			m_flRestartRoundTime = gpGlobals->curtime + iRestartDelay;
 			m_bCompleteReset = true;

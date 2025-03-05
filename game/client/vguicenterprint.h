@@ -23,11 +23,11 @@ namespace vgui
 class Panel;
 }
 
-class CCenterStringLabel;
+class CNotificationPanel;
 class CCenterPrint : public ICenterPrint
 {
 private:
-	CCenterStringLabel	*vguiCenterString;
+	CNotificationPanel	*vguiNotificationPanel;
 
 public:
 						CCenterPrint( void );
@@ -40,7 +40,10 @@ public:
 	virtual void		Print( wchar_t *text );
 	virtual void		ColorPrint( int r, int g, int b, int a, char *text );
 	virtual void		ColorPrint( int r, int g, int b, int a, wchar_t *text );
+	virtual void		HintPrint( char *text );
 	virtual void		Clear( void );
+
+	void				SetIsAlert( bool bState );
 };
 
 extern CCenterPrint *internalCenterPrint;

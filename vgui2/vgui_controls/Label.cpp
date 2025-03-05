@@ -121,6 +121,9 @@ void Label::GetContentSize(int &wide, int &tall)
 		}
 	}
 
+	// PiMoN: the correct size isn't always ready since it might change
+	// the next frame on Paint() only while we need it right now
+	_textImage->ResizeImageToContent();
 
 	int tx0, ty0, tx1, ty1;
 	ComputeAlignment(tx0, ty0, tx1, ty1);

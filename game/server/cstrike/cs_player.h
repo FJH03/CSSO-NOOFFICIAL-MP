@@ -467,8 +467,6 @@ public:
 	unsigned int m_iDisplayHistoryBits;
 	bool m_bShowHints;
 	float m_flLastAttackedTeammate;
-	float m_flNextMouseoverUpdate;
-	void UpdateMouseoverHints();
 
 	// mark this player as not receiving money at the start of the next round.
 	void MarkAsNotReceivingMoneyNextRound();

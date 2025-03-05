@@ -119,13 +119,17 @@ void CWeaponGlock::SecondaryAttack()
 
 	if ( m_bBurstMode )
 	{
-		ClientPrint( pPlayer, HUD_PRINTCENTER, "#Switch_To_SemiAuto" );
+#ifndef CLIENT_DLL
+		pPlayer->HintMessage( "#Switch_To_SemiAuto", false );
+#endif
 		m_bBurstMode = false;
 		m_weaponMode = Primary_Mode;
 	}
 	else
 	{
-		ClientPrint( pPlayer, HUD_PRINTCENTER, "#Switch_To_BurstFire" );
+#ifndef CLIENT_DLL
+		pPlayer->HintMessage( "#Switch_To_BurstFire", false );
+#endif
 		m_bBurstMode = true;
 		m_weaponMode = Secondary_Mode;
 	}

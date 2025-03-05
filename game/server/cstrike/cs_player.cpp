@@ -595,7 +595,6 @@ CCSPlayer::CCSPlayer()
 	m_pHintMessageQueue = new CHintMessageQueue(this);
 	m_iDisplayHistoryBits = 0;
 	m_bShowHints = true;
-	m_flNextMouseoverUpdate = gpGlobals->curtime;
 
 	m_lastDamageHealth = 0;
 	m_lastDamageArmor = 0;
@@ -2831,84 +2830,6 @@ void CCSPlayer::UpdateRadar()
 	MessageEnd();
 }
 
-void CCSPlayer::UpdateMouseoverHints()
-{
-	if ( IsBlind() || IsObserver() )
-		return;
-
-	Vector forward, up;
-	EyeVectors( &forward, NULL, &up );
-
-	trace_t tr;
-	// Search for objects in a sphere (tests for entities that are not solid, yet still useable)
-	Vector searchStart = EyePosition();
-	Vector searchEnd = searchStart + forward * 2048;
-
-	int useableContents = MASK_NPCSOLID_BRUSHONLY | MASK_VISIBLE_AND_NPCS;
-
-	UTIL_TraceLine( searchStart, searchEnd, useableContents, this, COLLISION_GROUP_NONE, &tr );
-
-	if ( tr.fraction != 1.0f )
-	{
-		if (tr.DidHitNonWorldEntity() && tr.m_pEnt)
-		{
-			CBaseEntity *pObject = tr.m_pEnt;
-			switch ( pObject->Classify() )
-			{
-			/*case CLASS_PLAYER:
-				{
-					const float grenadeBloat = 1.2f; // Be conservative in estimating what a player can distinguish
-					if ( !TheBots->IsLineBlockedBySmoke( EyePosition(), pObject->EyePosition(), grenadeBloat ) )
-					{
-						if ( g_pGameRules->PlayerRelationship( this, pObject ) == GR_TEAMMATE )
-						{
-							if ( !(m_iDisplayHistoryBits & DHF_FRIEND_SEEN) )
-							{
-								m_iDisplayHistoryBits |= DHF_FRIEND_SEEN;
-								HintMessage( "#Hint_spotted_a_friend", true );
-							}
-						}
-						else
-						{
-							if ( !(m_iDisplayHistoryBits & DHF_ENEMY_SEEN) )
-							{
-								m_iDisplayHistoryBits |= DHF_ENEMY_SEEN;
-								HintMessage( "#Hint_spotted_an_enemy", true );
-							}
-						}
-					}
-				}
-				break;*/
-			case CLASS_PLAYER_ALLY:
-				switch ( GetTeamNumber() )
-				{
-				case TEAM_CT:
-					if ( !(m_iDisplayHistoryBits & DHF_HOSTAGE_SEEN_FAR) && tr.fraction > 0.1f )
-					{
-						m_iDisplayHistoryBits |= DHF_HOSTAGE_SEEN_FAR;
-						HintMessage( "#Hint_rescue_the_hostages", true );
-					}
-					else if ( !(m_iDisplayHistoryBits & DHF_HOSTAGE_SEEN_NEAR) && tr.fraction <= 0.1f )
-					{
-						m_iDisplayHistoryBits |= DHF_HOSTAGE_SEEN_FAR;
-						m_iDisplayHistoryBits |= DHF_HOSTAGE_SEEN_NEAR;
-						HintMessage( "#Hint_press_use_so_hostage_will_follow", false );
-					}
-					break;
-				case TEAM_TERRORIST:
-					if ( !(m_iDisplayHistoryBits & DHF_HOSTAGE_SEEN_FAR) )
-					{
-						m_iDisplayHistoryBits |= DHF_HOSTAGE_SEEN_FAR;
-						HintMessage( "#Hint_prevent_hostage_rescue", true );
-					}
-					break;
-				}
-				break;
-			}
-		}
-	}
-}
-
 void CCSPlayer::PostThink()
 {
 	BaseClass::PostThink();
@@ -2933,31 +2854,6 @@ void CCSPlayer::PostThink()
 	UpdateAddonBits();
 
 	UpdateRadar();
-
-	if ( !(m_iDisplayHistoryBits & DHF_ROUND_STARTED) && CanPlayerBuy(false) )
-	{
-		if ( CSGameRules() && CSGameRules()->GetGamemode() != GameModes::DEATHMATCH )
-			HintMessage( "#Hint_press_buy_to_purchase", false );
-		m_iDisplayHistoryBits |= DHF_ROUND_STARTED;
-	}
-	if ( m_flNextMouseoverUpdate < gpGlobals->curtime )
-	{
-		m_flNextMouseoverUpdate = gpGlobals->curtime + 0.2f;
-		if ( m_bShowHints )
-		{
-			UpdateMouseoverHints();
-		}
-	}
-	if ( GetActiveWeapon() && !(m_iDisplayHistoryBits & DHF_AMMO_EXHAUSTED) )
-	{
-		CBaseCombatWeapon *pWeapon = GetActiveWeapon();
-		CWeaponCSBase* pCSWeapon = dynamic_cast<CWeaponCSBase*>(pWeapon);
-		if ( !pWeapon->HasAnyAmmo() && !(pWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE) && pCSWeapon->GetWeaponID() != WEAPON_TASER )
-		{
-			m_iDisplayHistoryBits |= DHF_AMMO_EXHAUSTED;
-			HintMessage( "#Hint_out_of_ammo", false );
-		}
-	}
 
 	QAngle angles = GetLocalAngles();
 	angles[PITCH] = 0;
@@ -5344,11 +5240,6 @@ BuyResult_e CCSPlayer::AttemptToBuyNightVision( void )
 		AddAccount( -iNVGPrice, true, true );
 		BlackMarketAddWeapon( "nightvision", this );
 
-		if ( !(m_iDisplayHistoryBits & DHF_NIGHTVISION) )
-		{
-			HintMessage( "#Hint_use_nightvision", false );
-			m_iDisplayHistoryBits |= DHF_NIGHTVISION;
-		}
 		return BUY_BOUGHT;
 	}
 }
@@ -6889,12 +6780,6 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 		m_iClass = (int)CS_CLASS_NONE;
 		m_iSkin = 0;
 
-		if ( !(m_iDisplayHistoryBits & DHF_SPEC_DUCK) )
-		{
-			m_iDisplayHistoryBits |= DHF_SPEC_DUCK;
-			HintMessage( "#Spec_Duck", true, true );
-		}
-
 		// do we have fadetoblack on? (need to fade their screen back in)
 		if ( mp_fadetoblack.GetBool() )
 		{
@@ -7064,11 +6949,6 @@ void CCSPlayer::GetIntoGame()
 		//pev->flags		   &= ( FL_PROXY | FL_FAKECLIENT );	// clear flags, but keep proxy and bot flags that might already be set
 		//pev->flags		   |= FL_CLIENT | FL_SPECTATOR;
 		//SetThink(PlayerDeathThink);
-		if ( !(m_iDisplayHistoryBits & DHF_SPEC_DUCK) )
-		{
-			m_iDisplayHistoryBits |= DHF_SPEC_DUCK;
-			HintMessage( "#Spec_Duck", true, true );
-		}
 
 		State_Transition( STATE_OBSERVER_MODE );
 
