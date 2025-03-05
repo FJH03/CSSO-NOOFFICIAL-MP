@@ -1491,29 +1491,11 @@ void CBaseHudChatLine::InsertAndColorizeText( wchar_t *buf, int clientIndex )
 
 			switch ( *txt )
 			{
-			case COLOR_PENALTY:
-				{
-					// save this start
-					range.start = nBytesIn + 1;
-					range.color = g_ColorRed;
-					range.end = lineLen;
-					bFoundColorCode = true;
-				}
-				++txt;
-				break;
-			case COLOR_AWARD:
-				{
-					// save this start
-					range.start = nBytesIn + 1;
-					range.color = Color( 162, 255, 71 );
-					range.end = lineLen;
-					bFoundColorCode = true;
-				}
-				++txt;
-				break;
 			case COLOR_PLAYERNAME:
 			case COLOR_LOCATION:
 			case COLOR_ACHIEVEMENT:
+			case COLOR_PENALTY:
+			case COLOR_AWARD:
 			case COLOR_NORMAL:
 				{
 					// save this start

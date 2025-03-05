@@ -293,12 +293,9 @@ Color CHudChat::GetTextColorForClient( TextColor colorNum, int clientIndex )
 		c = g_ColorDarkGreen;
 		break;
 
-    //=============================================================================
-    // HPE_BEGIN:
+
     // [tj] Adding support for achievement coloring. 
     //      Just doing what all the other games do
-    //=============================================================================
-     
     case COLOR_ACHIEVEMENT:
         {
             vgui::IScheme *pSourceScheme = vgui::scheme()->GetIScheme( vgui::scheme()->GetScheme( "SourceScheme" ) ); 
@@ -312,11 +309,14 @@ Color CHudChat::GetTextColorForClient( TextColor colorNum, int clientIndex )
             }
         }
         break;
-     
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
-    
+
+	case COLOR_AWARD:
+		c = Color( 162, 255, 71 );
+		break;
+
+	case COLOR_PENALTY:
+		c = g_ColorRed;
+		break;
 
 	default:
 		c = g_ColorYellow;
