@@ -1493,6 +1493,7 @@ ConVar snd_music_selection(
 			case GameModes::FLYING_SCOUTSMAN:
 				engine->ServerCommand( "exec gamemode_flying_scoutsman.cfg\n" );
 				engine->ServerExecute();
+				break;
 			case GameModes::ARMS_RACE:
 				engine->ServerCommand( "exec gamemode_armsrace.cfg\n" );
 				engine->ServerExecute();
