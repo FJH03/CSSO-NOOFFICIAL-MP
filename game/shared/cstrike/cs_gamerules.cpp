@@ -278,11 +278,8 @@ ConVar ammo_buckshot_max( "ammo_buckshot_max", "32", FCVAR_REPLICATED );
 ConVar ammo_45acp_max( "ammo_45acp_max", "100", FCVAR_REPLICATED );
 ConVar ammo_357sig_max( "ammo_357sig_max", "52", FCVAR_REPLICATED );
 ConVar ammo_57mm_max( "ammo_57mm_max", "100", FCVAR_REPLICATED );
-ConVar ammo_hegrenade_max( "ammo_hegrenade_max", "1", FCVAR_REPLICATED );
-ConVar ammo_flashbang_max( "ammo_flashbang_max", "2", FCVAR_REPLICATED );
-ConVar ammo_smokegrenade_max( "ammo_smokegrenade_max", "1", FCVAR_REPLICATED );
-ConVar ammo_decoy_max( "ammo_decoy_max", "1", FCVAR_REPLICATED );
-ConVar ammo_molotov_max( "ammo_molotov_max", "1", FCVAR_REPLICATED );
+ConVar ammo_grenade_limit_default( "ammo_grenade_limit_default", "1", FCVAR_REPLICATED );
+ConVar ammo_grenade_limit_flashbang( "ammo_grenade_limit_flashbang", "1", FCVAR_REPLICATED );
 ConVar ammo_grenade_limit_total( "ammo_grenade_limit_total", "3", FCVAR_REPLICATED );
 
 ConVar ammo_item_limit_healthshot( "ammo_item_limit_healthshot", "4", FCVAR_REPLICATED );
@@ -7645,11 +7642,11 @@ CAmmoDef* GetAmmoDef()
 		ammoDef.AddAmmoType( BULLET_PLAYER_45ACP,		DMG_BULLET, TRACER_LINE, 0, 0, "ammo_45acp_max",	2100 * BULLET_IMPULSE_EXAGGERATION, 0, 6, 10 );
 		ammoDef.AddAmmoType( BULLET_PLAYER_357SIG,		DMG_BULLET, TRACER_LINE, 0, 0, "ammo_357sig_max",	2000 * BULLET_IMPULSE_EXAGGERATION, 0, 4, 8 );
 		ammoDef.AddAmmoType( BULLET_PLAYER_57MM,		DMG_BULLET, TRACER_LINE, 0, 0, "ammo_57mm_max",		2000 * BULLET_IMPULSE_EXAGGERATION, 0, 4, 8 );
-		ammoDef.AddAmmoType( AMMO_TYPE_HEGRENADE,		DMG_BLAST,	TRACER_LINE, 0, 0, "ammo_hegrenade_max", 1, 0 );
-		ammoDef.AddAmmoType( AMMO_TYPE_FLASHBANG,		0,			TRACER_LINE, 0,	0, "ammo_flashbang_max", 1, 0 );
-		ammoDef.AddAmmoType( AMMO_TYPE_SMOKEGRENADE,	0,			TRACER_LINE, 0, 0, "ammo_smokegrenade_max", 1, 0 );
-		ammoDef.AddAmmoType( AMMO_TYPE_MOLOTOV,			DMG_BURN,	TRACER_NONE, 0, 0, "ammo_molotov_max", 0, 0, 0 );
-        ammoDef.AddAmmoType( AMMO_TYPE_DECOY,			0,			TRACER_NONE, 0, 0, "ammo_decoy_max", 0, 0, 0 );
+		ammoDef.AddAmmoType( AMMO_TYPE_HEGRENADE,		DMG_BLAST,	TRACER_LINE, 0, 0, "ammo_grenade_limit_default", 0, 0, 0 );
+        ammoDef.AddAmmoType( AMMO_TYPE_FLASHBANG,		0,			TRACER_LINE, 0,	0, "ammo_grenade_limit_flashbang", 0, 0, 0 );
+        ammoDef.AddAmmoType( AMMO_TYPE_SMOKEGRENADE,	0,			TRACER_LINE, 0, 0, "ammo_grenade_limit_default", 0, 0, 0 );
+        ammoDef.AddAmmoType( AMMO_TYPE_MOLOTOV,			DMG_BURN,	TRACER_NONE, 0, 0, "ammo_grenade_limit_default", 0, 0, 0 );
+        ammoDef.AddAmmoType( AMMO_TYPE_DECOY,			0,			TRACER_NONE, 0, 0, "ammo_grenade_limit_default", 0, 0, 0 );
         ammoDef.AddAmmoType( AMMO_TYPE_TASERCHARGE,		DMG_SHOCK,	TRACER_BEAM, 0, 0, 0, 0, 0, 0 );
 		ammoDef.AddAmmoType( AMMO_TYPE_HEALTHSHOT,		0,			TRACER_LINE, 0, 0, "ammo_item_limit_healthshot", 0, 0, 0 );
 
