@@ -2283,12 +2283,6 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 		HintMessage( "#Hint_cannot_play_because_tk", true, true );
 	}
 
-	if ( !(m_iDisplayHistoryBits & DHF_SPEC_DUCK) )
-	{
-		m_iDisplayHistoryBits |= DHF_SPEC_DUCK;
-		HintMessage( "#Spec_Duck", true, true );
-	}
-
 #if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( IsControllingBot() )	// Should this be here, or at the top?
 	{
