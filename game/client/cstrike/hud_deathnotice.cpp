@@ -516,13 +516,13 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	}
 
 	// Get the names of the players
-	wchar_t szKillerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
-	wchar_t szVictimName[MAX_DECORATED_PLAYER_NAME_LENGTH];
-	wchar_t szAssisterName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+	wchar_t wszKillerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+	wchar_t wszVictimName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+	wchar_t wszAssisterName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 
-	szKillerName[0] = L'\0';
-	szVictimName[0] = L'\0';
-	szAssisterName[0] = L'\0';
+	wszKillerName[0] = L'\0';
+	wszVictimName[0] = L'\0';
+	wszAssisterName[0] = L'\0';
 
 	EDecoratedPlayerNameFlag_t kDontShowClanName = k_EDecoratedPlayerNameFlag_DontShowClanName;
 	if ( cl_show_clan_in_death_notice.GetInt() > 0 )
@@ -530,12 +530,12 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 
 	if ( iKiller > 0 )
 	{
-		cs_PR->GetDecoratedPlayerName( iKiller, szKillerName, sizeof( szKillerName ), EDecoratedPlayerNameFlag_t( k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot | kDontShowClanName ) );
+		cs_PR->GetDecoratedPlayerName( iKiller, wszKillerName, sizeof( wszKillerName ), EDecoratedPlayerNameFlag_t( k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot | kDontShowClanName ) );
 	}
 
 	if ( iVictim > 0 )
 	{
-		cs_PR->GetDecoratedPlayerName( iVictim, szVictimName, sizeof( szVictimName ), EDecoratedPlayerNameFlag_t( k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot | kDontShowClanName ) );
+		cs_PR->GetDecoratedPlayerName( iVictim, wszVictimName, sizeof( wszVictimName ), EDecoratedPlayerNameFlag_t( k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot | kDontShowClanName ) );
 	}
 
 	if ( iAssister > 0 )
@@ -545,7 +545,7 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 			iAssister = 0;
 		else
 		{
-			cs_PR->GetDecoratedPlayerName( iAssister, szAssisterName, sizeof( szAssisterName ), EDecoratedPlayerNameFlag_t( k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot | kDontShowClanName ) );
+			cs_PR->GetDecoratedPlayerName( iAssister, wszAssisterName, sizeof( wszAssisterName ), EDecoratedPlayerNameFlag_t( k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot | kDontShowClanName ) );
 		}
 	}
 
@@ -557,9 +557,9 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	deathMsg.Killer.color = iKiller > 0 ? m_teamColors[g_PR->GetTeam(iKiller)] : COLOR_WHITE;
 	deathMsg.Victim.color = iVictim > 0 ? m_teamColors[g_PR->GetTeam(iVictim)] : COLOR_WHITE;
 	deathMsg.Assister.color = iAssister > 0 ? m_teamColors[g_PR->GetTeam(iAssister)] : COLOR_WHITE;
-	Q_wcsncpy( deathMsg.Killer.wszName, szKillerName, MAX_DECORATED_PLAYER_NAME_LENGTH );
-	Q_wcsncpy( deathMsg.Victim.wszName, szVictimName, MAX_DECORATED_PLAYER_NAME_LENGTH );
-	Q_wcsncpy( deathMsg.Assister.wszName, szAssisterName, MAX_DECORATED_PLAYER_NAME_LENGTH );
+	Q_wcsncpy( deathMsg.Killer.wszName, wszKillerName, MAX_DECORATED_PLAYER_NAME_LENGTH );
+	Q_wcsncpy( deathMsg.Victim.wszName, wszVictimName, MAX_DECORATED_PLAYER_NAME_LENGTH );
+	Q_wcsncpy( deathMsg.Assister.wszName, wszAssisterName, MAX_DECORATED_PLAYER_NAME_LENGTH );
 	deathMsg.flDisplayTime = gpGlobals->curtime + hud_deathnotice_time.GetFloat();
 	deathMsg.bSuicide = ( !iKiller || iKiller == iVictim );
 	deathMsg.bHeadshot = headshot;
@@ -584,30 +584,34 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	m_DeathNotices.AddToTail( deathMsg );
 
 	char sDeathMsg[512];
+	char szVictimName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+	char szKillerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+	g_pVGuiLocalize->ConvertUnicodeToANSI( wszVictimName, szVictimName, sizeof( szVictimName ) );
+	g_pVGuiLocalize->ConvertUnicodeToANSI( wszKillerName, szKillerName, sizeof( szKillerName ) );
 
 	// Record the death notice in the console
 	if ( deathMsg.bSuicide )
 	{
 		if ( !strcmp( fullkilledwith, "d_planted_c4" ) )
 		{
-			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s was a bit too close to the c4.\n", deathMsg.Victim.wszName );
+			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s was a bit too close to the c4.\n", szVictimName );
 		}
 		else if ( !strcmp( fullkilledwith, "d_worldspawn" ) )
 		{
-			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s died.\n", deathMsg.Victim.wszName );
+			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s died.\n", szVictimName );
 		}
 		else	//d_world
 		{
-			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s suicided.\n", deathMsg.Victim.wszName );
+			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s suicided.\n", szVictimName );
 		}
 	}
 	else
 	{
-		Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s killed %s", deathMsg.Killer.wszName, deathMsg.Victim.wszName );
+		Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s killed %s", szKillerName, szVictimName );
 
 		if ( fullkilledwith && *fullkilledwith && (*fullkilledwith > 13 ) )
 		{
-			Q_strncat( sDeathMsg, VarArgs( " with %s.\n", fullkilledwith+2 ), sizeof( sDeathMsg ), COPY_ALL_CHARACTERS );
+			Q_strncat( sDeathMsg, VarArgs( " with %s.\n", fullkilledwith + 2 ), sizeof( sDeathMsg ), COPY_ALL_CHARACTERS );
 		}
 	}
 
@@ -621,3 +625,5 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 		C_BaseEntity::EmitSound( filter, -1, "Deathmatch.Kill" );
 	}
 }
+
+
