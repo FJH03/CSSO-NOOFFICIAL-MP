@@ -2488,7 +2488,10 @@ void C_CSPlayer::ToggleRandomWeapons( void )
 		{
 			internalCenterPrint->Print( "#Cstrike_TitlesTXT_DM_RandomON" );
 		}
-		engine->ClientCmd_Unrestricted( "buyrandom" );
+		else
+		{
+			engine->ClientCmd_Unrestricted( "buyrandom" );
+		}
 	}
 
 	CLocalPlayerFilter filter;
