@@ -57,12 +57,6 @@ public:
 	virtual void		SetAlertVisibility( bool bState );
 	bool				m_bIsAlert;
 
-protected:
-	MESSAGE_FUNC_INT_INT( OnScreenSizeChanged, "OnScreenSizeChanged", oldwide, oldtall );
-
-	CPanelAnimationVarAliasType( int, alert_icon_margin, "alert_icon_margin", "0", "proportional_width" );
-	CPanelAnimationVarAliasType( int, bottom_margin, "bottom_margin", "0", "proportional_height" );
-
 private:
 	void ComputeSize( void );
 
@@ -71,9 +65,15 @@ private:
 	vgui::VectorImagePanel	*m_pAlertIcon;
 	vgui::VectorImagePanel	*m_pInfoIcon;
 
+	CPanelAnimationVarAliasType( int, alert_icon_margin, "alert_icon_margin", "0", "proportional_width" );
+	CPanelAnimationVarAliasType( int, bottom_margin, "bottom_margin", "0", "proportional_height" );
+
 	int						m_iOrigXPos;
 	int						m_iOrigYPos;
 	float					m_flCentertimeOff;
+	float					m_flCentertimeOn;
+	bool					m_bIsDrawing;
+	bool					m_bIsFirstDraw;
 };
 
 static void __MsgFunc_HintText( bf_read &msg )
@@ -101,12 +101,14 @@ CNotificationPanel::CNotificationPanel( vgui::VPANEL parent ) :
 	SetMouseInputEnabled( false );
 	SetScheme( "ClientScheme" );
 
-	m_flCentertimeOff = 0.0;
+	m_flCentertimeOff = m_flCentertimeOn = 0.0;
 
 	vgui::ivgui()->AddTickSignal( GetVPanel(), 100 );
 
 	m_iOrigXPos = m_iOrigYPos = 0;
 	m_bIsAlert = true;
+	m_bIsDrawing = false;
+	m_bIsFirstDraw = true;
 
 	m_pTextLabel = new vgui::Label( this, "NotificationText", " " );
 	m_pAlertLabel = new vgui::Label( this, "AlertTitleLabel", "#UI_Alert" );
@@ -135,15 +137,6 @@ CNotificationPanel::~CNotificationPanel( void )
 void CNotificationPanel::FireGameEvent( IGameEvent * event )
 {
 	internalCenterPrint->HintPrint( hudtextmessage->LookupString( event->GetString( "hintmessage" ), NULL ) );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Updates panel to handle the new screen size
-//-----------------------------------------------------------------------------
-void CNotificationPanel::OnScreenSizeChanged(int iOldWide, int iOldTall)
-{
-	BaseClass::OnScreenSizeChanged(iOldWide, iOldTall);
-	ComputeSize();
 }
 
 //-----------------------------------------------------------------------------
@@ -189,10 +182,9 @@ void CNotificationPanel::SetTextColor( int r, int g, int b, int a )
 void CNotificationPanel::Print( char *text )
 {
 	m_pTextLabel->SetText( text );
-	ComputeSize();
 	SetAlertVisibility( m_bIsAlert );
 
-	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "NotificationShow" );
+	m_bIsDrawing = true;
 	
 	m_flCentertimeOff = scr_centertime.GetFloat() + gpGlobals->curtime;
 }
@@ -203,10 +195,9 @@ void CNotificationPanel::Print( char *text )
 void CNotificationPanel::Print( wchar_t *text )
 {
 	m_pTextLabel->SetText( text );
-	ComputeSize();
 	SetAlertVisibility( m_bIsAlert );
 
-	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "NotificationShow" );
+	m_bIsDrawing = true;
 	
 	m_flCentertimeOff = scr_centertime.GetFloat() + gpGlobals->curtime;
 }
@@ -235,6 +226,8 @@ void CNotificationPanel::ColorPrint( int r, int g, int b, int a, wchar_t *text )
 void CNotificationPanel::Clear( void )
 {
 	m_flCentertimeOff = 0;
+	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "NotificationHide" );
+	m_bIsDrawing = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -242,10 +235,30 @@ void CNotificationPanel::Clear( void )
 //-----------------------------------------------------------------------------
 void CNotificationPanel::OnTick( void )
 {
-	SetVisible( !engine->IsDrawingLoadingImage() );
+	bool bVisibility = !engine->IsDrawingLoadingImage() && m_bIsDrawing;
+	if ( bVisibility != IsVisible() )
+	{
+		SetVisible( bVisibility );
+		if ( bVisibility )
+		{
+			ComputeSize();
+			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "NotificationShow" );
+		}
+	}
 
-	if ( m_flCentertimeOff <= gpGlobals->curtime )
-		g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "NotificationHide" );
+	if ( m_bIsDrawing )
+	{
+		// fucking piece of shit called vgui i hope you die!!!
+		if ( m_bIsFirstDraw )
+			ComputeSize();
+
+		if ( m_flCentertimeOff <= gpGlobals->curtime )
+		{
+			m_bIsDrawing = false;
+			m_bIsFirstDraw = false;
+			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "NotificationHide" );
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------
