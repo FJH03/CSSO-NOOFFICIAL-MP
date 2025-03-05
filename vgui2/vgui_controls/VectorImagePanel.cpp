@@ -48,11 +48,24 @@ void VectorImagePanel::SetTexture( const char *szFilePath )
 	
 	DestroyTexture();
 
-	char szFullPath[MAX_PATH];
-	g_pFullFileSystem->RelativePathToFullPath( szFilePath, "MOD", szFullPath, sizeof( szFullPath ) );
+	FileHandle_t f = g_pFullFileSystem->Open( szFilePath, "rt" );
+	// g_pFullFileSystem->RelativePathToFullPath( szFilePath, "MOD", szFullPath, sizeof( szFullPath ) );
 
-	std::unique_ptr<Document> document = Document::loadFromFile( szFullPath ); // load the svg
-
+	// read the whole thing into memory
+	int size = g_pFullFileSystem->Size( f );
+	// read into temporary memory block
+	int nBufSize = size + 1;
+	if ( IsXbox() )
+	{
+		nBufSize = AlignValue( nBufSize, 512 );
+	}
+	char *pMem = (char *) malloc( nBufSize );
+	int bytesRead = g_pFullFileSystem->ReadEx( pMem, nBufSize, size, f );
+	Assert( bytesRead <= size );
+	pMem[bytesRead] = 0;
+	g_pFullFileSystem->Close( f );
+	std::unique_ptr<Document> document = Document::loadFromData( pMem ); // load the svg
+	free( pMem );
 	if ( !document )
 	{
 		Warning( "VectorImagePanel: %s failed to load file \"%s\".\n", GetName(), szFilePath );
