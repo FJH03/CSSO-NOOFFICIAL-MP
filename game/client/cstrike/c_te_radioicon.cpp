@@ -13,7 +13,7 @@
 #include "cbase.h"
 #include "c_basetempentity.h"
 #include "c_cs_player.h"
-#include "hud_radar.h"
+#include "cstrikespectatorgui.h"
 #include "radio_status.h"
 
 

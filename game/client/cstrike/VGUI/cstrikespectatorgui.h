@@ -19,6 +19,21 @@ extern ConVar mp_playerid; // in cs_gamerules.h
 extern ConVar mp_forcecamera; // in gamevars_shared.h
 extern ConVar mp_fadetoblack;
 
+void Radar_FlashPlayer( int iPlayer );
+
+class CPlayerRadarFlash
+{
+public:
+	CPlayerRadarFlash()
+	{
+		m_flNextRadarFlashTime = 0.0f;
+		m_iNumRadarFlashes = 0;
+		m_bRadarFlash = false;
+	}
+	float m_flNextRadarFlashTime;	// when to next toggle the flash on the radar
+	int	m_iNumRadarFlashes;			// how many flashes more to do
+	bool m_bRadarFlash;				// flash or do not, there is no try
+};
 
 //-----------------------------------------------------------------------------
 // Purpose: Cstrike Spectator UI
@@ -181,6 +196,7 @@ public: // IViewPortPanel interface:
 
 	virtual int GetIconNumberFromTeamNumber( int teamNumber );
 
+	void MsgFunc_UpdateRadar( bf_read &msg );
 protected:
 
 	virtual void	PaintBackground();

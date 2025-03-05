@@ -37,6 +37,18 @@ ConVar overview_alpha( "overview_alpha",  "1.0", FCVAR_ARCHIVE | FCVAR_CLIENTCMD
 
 IMapOverviewPanel *g_pMapOverview = NULL; // we assume only one overview is created
 
+CON_COMMAND( drawradar, "Draws HUD radar" )
+{
+	if ( g_pMapOverview )
+		g_pMapOverview->ShowRadar( true );
+}
+
+CON_COMMAND( hideradar, "Hides HUD radar" )
+{
+	if ( g_pMapOverview )
+		g_pMapOverview->ShowRadar( false );
+}
+
 static int AdjustValue( int curValue, int targetValue, int amount )
 {
 	if ( curValue > targetValue )
@@ -94,7 +106,6 @@ CMapOverview::CMapOverview( const char *pElementName ) : BaseClass( NULL, pEleme
 	m_bShowHealth = true;
 	m_bShowTrails = true;
 
-	m_flChangeSpeed = 1000;
 	m_flIconSize = 64.0f;
 
 	m_ObjectCounterID = 1;
@@ -106,6 +117,7 @@ CMapOverview::CMapOverview( const char *pElementName ) : BaseClass( NULL, pEleme
 	InitTeamColorsAndIcons();
 
 	g_pMapOverview = this;  // for cvars access etc
+	m_bShowRadar = true;
 }
 
 void CMapOverview::Init( void )
@@ -120,6 +132,12 @@ void CMapOverview::Init( void )
 	ListenForGameEvent( "player_death" );
 	ListenForGameEvent( "player_disconnect" );
 }
+
+void CMapOverview::LevelInit()
+{
+	SetMode( MAP_MODE_RADAR );
+}
+
 
 void CMapOverview::InitTeamColorsAndIcons()
 {
@@ -323,11 +341,7 @@ bool CMapOverview::CanPlayerBeSeen(MapPlayer_t *player)
 	if ( mp_forcecamera.GetInt() == OBS_ALLOW_TEAM )
 	{
 		// true if both players are on the same team
-#ifdef CSTRIKE_DLL
-		return (!localPlayer->IsOtherEnemy( player->index ));
-#else
-		return (localPlayer->GetTeamNumber() == player->team );
-#endif
+		return(!IsOtherEnemy( localPlayer->entindex(), player->index+1 ));
 	}
 
 	// by default we can see all players
@@ -354,11 +368,7 @@ bool CMapOverview::CanPlayerHealthBeSeen(MapPlayer_t *player)
 	if ( mp_forcecamera.GetInt() != OBS_ALLOW_ALL )
 	{
 		// if forcecamera is on, only show health for teammates
-#ifdef CSTRIKE_DLL
-		return (!localPlayer->IsOtherEnemy( dynamic_cast<C_CSPlayer*>(UTIL_PlayerByUserId( player->userid )) ));
-#else
-		return (localPlayer->GetTeamNumber() == player->team );
-#endif
+		return(!IsOtherEnemy( localPlayer->entindex(), player->index+1 ));
 	}
 
 	return true;
@@ -376,6 +386,31 @@ void CMapOverview::SetPlayerPositions(int index, const Vector &position, const Q
 
 	p->angle = angle;
 	p->position = position;
+}
+
+bool CMapOverview::IsOtherEnemy( int index1, int index2 )
+{
+	// PiMoN: HACK: client shouldnt't have a pointer to enemy players outside our PVS
+	// but for some reason it *does* on CSSO
+
+	// we are never an enemy of ourselves
+	if ( index1 == index2 )
+		return false;
+
+	if ( g_PR )
+	{
+		int nTeam = g_PR->GetTeam( index1 );
+		int nOtherTeam = g_PR->GetTeam( index2 );
+
+		if ( mp_teammates_are_enemies.GetBool() && nTeam == nOtherTeam )
+		{
+			return true;
+		}
+
+		return nTeam != nOtherTeam;
+	}
+
+	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -420,6 +455,7 @@ void CMapOverview::Update( void )
 
 void CMapOverview::Reset( void )
 {
+	SetMode( MAP_MODE_RADAR );
 }
 
 void CMapOverview::SetData(KeyValues *data)
@@ -934,8 +970,6 @@ void CMapOverview::FireGameEvent( IGameEvent *event )
 
 void CMapOverview::SetMode(int mode)
 {
-	m_flChangeSpeed = 0; // change size instantly
-
 	if ( mode == MAP_MODE_OFF )
 	{
 		ShowPanel( false );
@@ -951,7 +985,7 @@ void CMapOverview::SetMode(int mode)
 
 bool CMapOverview::ShouldDraw( void )
 {
-	return ( m_nMode != MAP_MODE_OFF ) && CHudElement::ShouldDraw();
+	return m_bShowRadar && ( m_nMode != MAP_MODE_OFF ) && CHudElement::ShouldDraw();
 }
 
 void CMapOverview::UpdateSizeAndPosition()

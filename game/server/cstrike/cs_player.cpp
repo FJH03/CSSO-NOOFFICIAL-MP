@@ -1456,7 +1456,6 @@ void CCSPlayer::Spawn()
 
 	ResetStamina();
 
-	m_flLastRadarUpdateTime = 0.0f;
 
 	m_fNextMolotovDamageSoundTime = 0.0f;
 
@@ -2785,11 +2784,6 @@ void CCSPlayer::UpdateAddonBits()
 
 void CCSPlayer::UpdateRadar()
 {
-	// update once a second
-	if ( (m_flLastRadarUpdateTime + 1.0) > gpGlobals->curtime )
-		return;
-
-	m_flLastRadarUpdateTime = gpGlobals->curtime;
 
 	// update positions of all players outside of my PVS
 	CBitVec< ABSOLUTE_PLAYER_LIMIT > playerbits;

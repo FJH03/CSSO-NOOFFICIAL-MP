@@ -34,6 +34,7 @@ public:
 	virtual void GetBounds(int &x, int &y, int &wide, int &tall) = 0;
 	virtual float GetFullZoom( void ) = 0;
 	virtual float GetMapScale( void ) = 0;
+	virtual void ShowRadar( bool value ) = 0;
 };
 
 #define MAX_TRAIL_LENGTH	30
@@ -113,6 +114,7 @@ public: // IViewPortPanel interface:
 	virtual bool HasInputElements( void ) { return false; }
 	virtual void ShowPanel( bool bShow );
 	virtual void Init( void );
+	virtual void LevelInit();
 
 	// both vgui::Frame and IViewPortPanel define these, so explicitly define them here as passthroughs to vgui
 	vgui::VPANEL GetVPanel( void ) { return BaseClass::GetVPanel(); }
@@ -137,12 +139,14 @@ public:
 	virtual int GetMode( void );
 	virtual float GetFullZoom( void ){ return m_fFullZoom; }
 	virtual float GetMapScale( void ){ return m_fMapScale; }
+	virtual void ShowRadar( bool value ) { m_bShowRadar = value; }
 
 	// Player settings:
 	virtual void ShowPlayerNames(bool state);
 	virtual void ShowPlayerHealth(bool state);
 	virtual void ShowPlayerTracks(float seconds); 
 	virtual void SetPlayerPositions(int index, const Vector &position, const QAngle &angle);
+	virtual bool IsOtherEnemy( int index1, int index2 );
 
 	// general settings:
 	virtual void SetMap(const char * map);
@@ -218,9 +222,9 @@ protected:
 	int				m_nMode;
 	Vector2D		m_vPosition;
 	Vector2D		m_vSize;
-	float			m_flChangeSpeed;
 	float			m_flIconSize;
-
+	// this is set by a con command to hide the whole radar
+	bool m_bShowRadar;
 
 	IViewPort *		m_pViewPort;
 	MapPlayer_t		m_Players[MAX_PLAYERS];

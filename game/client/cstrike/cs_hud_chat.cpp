@@ -5,7 +5,7 @@
 //=============================================================================//
 
 #include "cbase.h"
-#include "hud_radar.h"
+#include "cstrikespectatorgui.h"
 #include "cs_hud_chat.h"
 #include "c_cs_player.h"
 #include "c_cs_playerresource.h"

@@ -22,12 +22,30 @@
 #include "clientmode.h"
 #include <vgui_controls/AnimationController.h>
 #include "voice_status.h"
-#include "hud_radar.h"
 #include "view.h"
 #include "VGuiMatSurface/IMatSystemSurface.h"
-
+#include "coordsize.h"
+#include "hud_macros.h"
 using namespace vgui;
 DECLARE_HUDELEMENT( CCSMapOverview )
+DECLARE_HUD_MESSAGE( CCSMapOverview, UpdateRadar );
+
+CUtlVector<CPlayerRadarFlash> g_RadarFlashes;
+
+void Radar_FlashPlayer( int iPlayer )
+{
+	if ( g_RadarFlashes.Count() <= iPlayer )
+	{
+		g_RadarFlashes.AddMultipleToTail( iPlayer - g_RadarFlashes.Count() + 1 );
+	}
+
+	CPlayerRadarFlash *pFlash = &g_RadarFlashes[iPlayer];
+	pFlash->m_flNextRadarFlashTime = gpGlobals->curtime;
+	pFlash->m_iNumRadarFlashes = 16;
+	pFlash->m_bRadarFlash = false;
+
+	g_pMapOverview->FlashEntity(iPlayer);
+}
 
 extern ConVar overview_health;
 extern ConVar overview_names;
@@ -606,7 +624,7 @@ bool CCSMapOverview::CanPlayerBeSeen( MapPlayer_t *player )
 		if ( localPlayer->GetUserID() == player->userid )
 			return true; // always yes for local player
 
-		if ( !localPlayer->IsOtherEnemy( player->index+1 ) ) // MapPlayer_t::index is entindex - 1 so add that
+		if ( !IsOtherEnemy( localPlayer->entindex(), player->index+1 ) )
 			return true; // always yes for teammates.
 
 		// and a living enemy needs to have been seen recently, and have been for a while
@@ -709,6 +727,7 @@ void CCSMapOverview::Init( void )
 	ListenForGameEvent( "hostage_rescued" );
 	ListenForGameEvent( "bomb_defused" );
 	ListenForGameEvent( "bomb_exploded" );
+	HOOK_HUD_MESSAGE( CCSMapOverview, UpdateRadar );
 }
 
 CCSMapOverview::~CCSMapOverview()
@@ -841,7 +860,7 @@ void CCSMapOverview::UpdatePlayers()
 			if ( !pCSPR->IsAlive(i) )
 				continue;
 
-			if ( !localPlayer->IsOtherEnemy( baseEnemy->index+1 ) ) // MapPlayer_t::index is entindex - 1 so add that
+			if ( !IsOtherEnemy( localPlayer->entindex(), baseEnemy->index+1 ) )
 				continue;
 
 			if ( pCSPR->IsPlayerSpotted(i) )
@@ -880,7 +899,7 @@ void CCSMapOverview::UpdatePlayers()
 				continue;
 			if( player->health <= 0 )
 				continue;// We don't need to spot dead guys, since they always show
-			if( !localPlayer->IsOtherEnemy( player->index+1 ) ) // MapPlayer_t::index is entindex - 1 so add that
+			if ( !IsOtherEnemy( localPlayer->entindex(), player->index+1 ) )
 				continue;// We don't need to spot our own guys
 
 			// Now that everyone has had a say on people they can see for us, go through and handle baddies that can no longer be seen.
@@ -1067,10 +1086,6 @@ bool CCSMapOverview::ShouldDraw( void )
 	float now = gpGlobals->curtime;
 	if( GetMode() == MAP_MODE_RADAR )
 	{
-		if ( (GET_HUDELEMENT( CHudRadar ))->ShouldDraw() == false )
-		{
-			return false; 
-		}
 
 		// We have to be alive and not blind to draw in this mode.
 		C_CSPlayer *pCSPlayer = C_CSPlayer::GetLocalCSPlayer();
@@ -1585,6 +1600,8 @@ void CCSMapOverview::DrawMapPlayers()
 
 		float status = -1;
 		const char *name = NULL;
+
+		bool bIsTeammate = (!IsOtherEnemy( localPlayer->entindex(), player->index+1 ));
 
 		if ( m_bShowNames && CanPlayerNameBeSeen( player ) )
 			name = player->name;
@@ -2194,7 +2211,6 @@ void CCSMapOverview::SetMode(int mode)
 {
 	if ( mode == MAP_MODE_RADAR )
 	{
-		m_flChangeSpeed = 0; // change size instantly
 		m_fZoom = cl_radar_scale.GetFloat() * (OVERVIEW_MAP_SIZE / DESIRED_RADAR_RESOLUTION);
 
 		if( CBasePlayer::GetLocalPlayer() )
@@ -2217,57 +2233,6 @@ void CCSMapOverview::SetMode(int mode)
 
 void CCSMapOverview::UpdateSizeAndPosition()
 {
-	int x,y,w,h;
-
-	vgui::surface()->GetScreenSize( w, h );
-
-	switch( m_nMode )
-	{
-	case MAP_MODE_RADAR:
-		{
-			// To allow custom hud scripts to work, get our size from the HudRadar element that people already tweak.
-			int x, y, w, t;
-			(GET_HUDELEMENT( CHudRadar ))->GetBounds(x, y, w, t);
-			m_vPosition.x = x;
-			m_vPosition.y = y;
-
-			m_vSize.x = w;
-			m_vSize.y = w;// Intentionally not 't'.  We need to enforce square-ness to prevent people from seeing more of the map by fiddling their HudLayout
-			break;
-		}
-
-	default:
-		{
-			m_vSize.x = w;
-			m_vSize.y = h;
-
-			m_vPosition.x = 0;
-			m_vPosition.y = 0;
-			break;
-		}
-	}
-
-	GetBounds( x,y,w,h );
-
-	if ( m_flChangeSpeed > 0 )
-	{
-		// adjust slowly
-		int pixels = m_flChangeSpeed * gpGlobals->frametime;
-		x = AdjustValue( x, m_vPosition.x, pixels );
-		y = AdjustValue( y, m_vPosition.y, pixels );
-		w = AdjustValue( w, m_vSize.x, pixels );
-		h = AdjustValue( h, m_vSize.y, pixels );
-	}
-	else
-	{
-		// set instantly
-		x = m_vPosition.x;
-		y = m_vPosition.y;
-		w = m_vSize.x;
-		h = m_vSize.y;
-	}
-
-	SetBounds( x,y,w,h );
 
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	if ( !pPlayer )
@@ -2285,7 +2250,6 @@ void CCSMapOverview::UpdateSizeAndPosition()
 		}
 		else
 		{
-			m_flChangeSpeed = 0; // change size instantly
 			switch ( cl_radar_square.GetInt() )
 			{
 				case 0: // always round
@@ -2519,4 +2483,35 @@ Vector2D CCSMapOverview::PanelToMap( const Vector2D &panelPos )
 	mapPos.y = offset.y + m_MapCenter.y;
 
 	return mapPos;
+}
+void CCSMapOverview::MsgFunc_UpdateRadar( bf_read &msg )
+{
+	int iPlayerEntity = msg.ReadByte();
+
+	//Draw objects on the radar
+	//=============================
+	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+
+	if ( !pLocalPlayer )
+		return;
+
+	C_CS_PlayerResource *pCSPR = (C_CS_PlayerResource*) GameResources();
+
+	if ( !pCSPR )
+		return;
+
+	while ( iPlayerEntity > 0 )
+	{
+		int x = msg.ReadSBitLong( COORD_INTEGER_BITS - 1 ) * 4;
+		int y = msg.ReadSBitLong( COORD_INTEGER_BITS - 1 ) * 4;
+		int z = msg.ReadSBitLong( COORD_INTEGER_BITS - 1 ) * 4;
+		int a = msg.ReadSBitLong( 9 );
+
+		Vector origin( x, y, z );
+		QAngle angles( 0, a, 0 );
+
+		SetPlayerPositions( iPlayerEntity - 1, origin, angles );
+
+		iPlayerEntity = msg.ReadByte(); // read index for next player
+	}
 }

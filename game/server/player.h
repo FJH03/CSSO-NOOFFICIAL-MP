@@ -1216,7 +1216,10 @@ public:
 	virtual bool HasHaptics(){return m_bhasHaptics;}
 	// NVNT sets weather a user should receive haptic device messages.
 	virtual void SetHaptics(bool has) { m_bhasHaptics = has;}
+
+	float				GetInitialSpawnTime() const { return m_flInitialSpawnTime; }
 private:
+	float				m_flInitialSpawnTime;
 	// NVNT member variable holding if this user is using a haptic device.
 	bool m_bhasHaptics;
 

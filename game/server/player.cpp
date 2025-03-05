@@ -654,6 +654,7 @@ CBasePlayer::CBasePlayer( )
 
 	m_flLastUserCommandTime = 0.f;
 	m_flMovementTimeForUserCmdProcessingRemaining = 0.0f;
+	m_flInitialSpawnTime = 0.0f;
 
 	m_flDuckAmount = 0.0f;
 	m_flDuckSpeed = CS_PLAYER_DUCK_SPEED_IDEAL;
@@ -4968,6 +4969,7 @@ ReturnSpot:
 void CBasePlayer::InitialSpawn( void )
 {
 	m_iConnected = PlayerConnected;
+	m_flInitialSpawnTime = gpGlobals->curtime;
 	gamestats->Event_PlayerConnected( this );
 }
 

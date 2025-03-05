@@ -260,8 +260,6 @@ void CModOptionsSubLoadout::OnApplyChanges()
 	m_pLoadoutDeagleCTComboBox->ApplyChanges();
 	m_pLoadoutDeagleTComboBox->ApplyChanges();
 	m_pStatTrak->ApplyChanges();
-	m_pMusicSelection->ApplyChanges();
-
 	ConVarRef snd_music_selection( "snd_music_selection" );
 #if INSTANT_MUSIC_CHANGE
 	if ( Q_strcmp( snd_music_selection.GetString(), szMusicStrings[m_pMusicSelection->GetActiveItem()] ) )

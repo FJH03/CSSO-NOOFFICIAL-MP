@@ -133,6 +133,7 @@ extern IToolFrameworkServer *g_pToolFrameworkServer;
 extern IParticleSystemQuery *g_pParticleSystemQuery;
 
 extern ConVar commentary;
+ConVar pvs_min_player_distance( "pvs_min_player_distance", "1500", FCVAR_NONE, "Min distance to player at which PVS is used. At closer distances, PVS assumes we can see a shadow or something else from the player, so it's safer to just always be \"Visible\"" );
 
 #ifndef NO_STEAM
 // this context is not available on dedicated servers
@@ -2462,12 +2463,19 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 	
 	MDLCACHE_CRITICAL_SECTION();
 	CBasePlayer *pRecipientPlayer = static_cast<CBasePlayer*>( pRecipientEntity );
+
+	// If the player is freshly spawned then give it a small window in
+	// which it sees all entities so that it gets their basic information.
+	const bool bIsFreshlySpawned = pRecipientPlayer->GetInitialSpawnTime()+3.0f > gpGlobals->curtime;
 	const int skyBoxArea = pRecipientPlayer->m_Local.m_skybox3d.area;
 
-#ifndef _X360
+#ifndef _GAMECONSOLE
 	const bool bIsHLTV = pRecipientPlayer->IsHLTV();
+#if defined ( REPLAY_ENABLED )
 	const bool bIsReplay = pRecipientPlayer->IsReplay();
-
+#else
+	const bool bIsReplay = false;
+#endif
 	// m_pTransmitAlways must be set if HLTV client
 	Assert( bIsHLTV == ( pInfo->m_pTransmitAlways != NULL) ||
 		    bIsReplay == ( pInfo->m_pTransmitAlways != NULL) );
@@ -2476,15 +2484,19 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 	for ( int i=0; i < nEdicts; i++ )
 	{
 		int iEdict = pEdictIndices[i];
-
+#ifdef _GAMECONSOLE
+		if ( i < nEdicts-1 )
+		{
+			PREFETCH360(&pBaseEdict[pEdictIndices[i+1]],0);
+		}
+#endif
 		edict_t *pEdict = &pBaseEdict[iEdict];
-		Assert( pEdict == engine->PEntityOfEntIndex( iEdict ) );
 		int nFlags = pEdict->m_fStateFlags & (FL_EDICT_DONTSEND|FL_EDICT_ALWAYS|FL_EDICT_PVSCHECK|FL_EDICT_FULLCHECK);
 
 		// entity needs no transmit
 		if ( nFlags & FL_EDICT_DONTSEND )
 			continue;
-		
+		PREFETCH360(pEdict->GetUnknown(),0);
 		// entity is already marked for sending
 		if ( pInfo->m_pTransmitEdict->Get( iEdict ) )
 			continue;
@@ -2498,7 +2510,7 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 				// mark entity for sending
 				pInfo->m_pTransmitEdict->Set( iEdict );
 	
-#ifndef _X360
+#ifndef _GAMECONSOLE
 				if ( bIsHLTV || bIsReplay )
 				{
 					pInfo->m_pTransmitAlways->Set( iEdict );
@@ -2567,8 +2579,20 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 			continue;
 		}
 
-		bool bInPVS = netProp->IsInPVS( pInfo );
-		if ( bInPVS || sv_force_transmit_ents.GetBool() )
+		CBasePlayer *pPlayer = dynamic_cast< CBasePlayer* >( pEnt );
+
+		bool bInPVS;
+		if ( pPlayer && ( pPlayer->GetAbsOrigin() - pRecipientPlayer->GetAbsOrigin() ).LengthSqr() < Sqr( pvs_min_player_distance.GetFloat() ) )
+			bInPVS = true;
+		else
+			bInPVS = netProp->IsInPVS( pInfo );
+
+		CServerNetworkProperty *check = netProp->GetNetworkParent();
+
+		// If a player has just been spawned, forcibly send it for a brief
+		// window so that everyone gets its basic info.
+		const bool bFreshlySpawnedTargetPlayer = pPlayer != NULL && pPlayer->GetInitialSpawnTime()+3.0f > gpGlobals->curtime;
+		if ( bInPVS || bIsFreshlySpawned || bFreshlySpawnedTargetPlayer || sv_force_transmit_ents.GetBool() )
 		{
 			// only send if entity is in PVS
 			pEnt->SetTransmit( pInfo, false );
@@ -2578,7 +2602,6 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 		// If the entity is marked "check PVS" but it's in hierarchy, walk up the hierarchy looking for the
 		//  for any parent which is also in the PVS.  If none are found, then we don't need to worry about sending ourself
 		CBaseEntity *orig = pEnt;
-		CServerNetworkProperty *check = netProp->GetNetworkParent();
 
 		// BUG BUG:  I think it might be better to build up a list of edict indices which "depend" on other answers and then
 		// resolve them in a second pass.  Not sure what happens if an entity has two parents who both request PVS check?

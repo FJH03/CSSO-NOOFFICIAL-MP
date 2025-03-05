@@ -498,7 +498,6 @@ public:
 	CNetworkVar( float, m_flGroundAccelLinearFracLastTime );
 	CNetworkVar( bool, m_bNeedToChangeGloves );
 
-	bool		m_bDetected;
 
 	EHANDLE	m_hRagdoll;
 

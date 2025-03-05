@@ -813,8 +813,6 @@ public:
     // HPE_END
     //=============================================================================
 
-	float m_flLastRadarUpdateTime;
-
 	// last known navigation area of player - NULL if unknown
 	CNavArea *m_lastNavArea;
 
@@ -897,8 +895,6 @@ public:
 
 	void SwitchTeamsAtRoundReset( void ) { m_switchTeamsOnNextRoundReset = true; }
 	bool WillSwitchTeamsAtRoundReset( void ) { return m_switchTeamsOnNextRoundReset; }
-
-	CNetworkVar( bool, m_bDetected );
 
 	int m_iLoadoutSlotAgentCT;
 	int m_iLoadoutSlotAgentT;
