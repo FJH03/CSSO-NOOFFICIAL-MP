@@ -403,6 +403,12 @@ ConVar mp_ggprogressive_random_weapon_kills_needed(
 	FCVAR_REPLICATED,
 	"If mp_ggprogressive_use_random_weapons is set, this is the number of kills needed with each weapon" );
 
+ConVar mp_ggprogressive_healthshot_killcount(
+	"mp_ggprogressive_healthshot_killcount",
+	"3",
+	FCVAR_REPLICATED,
+	"Grant healthshots in arms race after n kills" );
+
 ConVar mp_ct_default_melee(
 	"mp_ct_default_melee",
 	"weapon_knife",

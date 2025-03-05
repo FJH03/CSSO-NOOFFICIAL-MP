@@ -139,6 +139,7 @@ extern ConVar mp_t_default_secondary;
 extern ConVar mp_t_default_primary;
 extern ConVar mp_t_default_grenades;
 extern ConVar mp_playercashawards;
+extern ConVar mp_ggprogressive_healthshot_killcount;
 
 // [menglish] Added in convars for freeze cam time length
 extern ConVar spec_freeze_time;
@@ -10521,8 +10522,9 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		if ( pAttacker->m_NumEnemiesKilledThisSpawn > pAttacker->m_maxNumEnemiesKillStreak )
 			pAttacker->m_maxNumEnemiesKillStreak = pAttacker->m_NumEnemiesKilledThisSpawn;
 
-		// give a healthshot in DM for every triple kill streak if dont have a healthshot
-		if ( CSGameRules()->IsPlayingDeathmatch() && (pAttacker->m_NumEnemiesKilledThisSpawn % 3 == 0) && !pAttacker->Weapon_OwnsThisType( "weapon_healthshot" ) )
+		// give a healthshot in DM and GG for every triple kill streak if dont have a healthshot
+		if ( ( CSGameRules()->IsPlayingDeathmatch() && (pAttacker->m_NumEnemiesKilledThisSpawn % 3 == 0) && !pAttacker->Weapon_OwnsThisType( "weapon_healthshot" ) ) ||
+			 ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE && (pAttacker->m_NumEnemiesKilledThisSpawn % mp_ggprogressive_healthshot_killcount.GetInt() == 0) && !pAttacker->Weapon_OwnsThisType( "weapon_healthshot" ) ) )
 		{
 			pAttacker->GiveNamedItem( "weapon_healthshot" );
 		}
