@@ -96,7 +96,7 @@ void BuyState::OnEnter( CCSBot *me )
 	else
 	{
 		// check if we are saving money for the next round
-		if (me->m_iAccount < cv_bot_eco_limit.GetFloat())
+		if (me->GetAccountBalance() < cv_bot_eco_limit.GetFloat())
 		{
 			me->PrintIfWatched( "Saving money for next round.\n" );
 			m_doneBuying = true;
@@ -133,9 +133,9 @@ void BuyState::OnEnter( CCSBot *me )
 		// determine if we want a tactical shield
 		if (!me->HasPrimaryWeapon() && TheCSBots()->AllowTacticalShield())
 		{
-			if (me->m_iAccount > 2500)
+			if (me->GetAccountBalance() > 2500)
 			{
-				if (me->m_iAccount < 4000)
+				f (me->GetAccountBalance() < 4000)
 					m_buyShield = (RandomFloat( 0, 100.0f ) < 33.3f) ? true : false;
 				else
 					m_buyShield = (RandomFloat( 0, 100.0f ) < 10.0f) ? true : false;
@@ -172,7 +172,7 @@ void BuyState::OnEnter( CCSBot *me )
 				{
 					m_buyPistol = (RandomFloat( 0, 100 ) < 75.0f);
 				}
-				else if (me->m_iAccount < 1000)
+				else if (me->GetAccountBalance() < 1000)
 				{
 					// if we're low on cash, buy a pistol
 					m_buyPistol = (RandomFloat( 0, 100 ) < 75.0f);

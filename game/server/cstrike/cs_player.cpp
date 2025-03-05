@@ -2883,12 +2883,6 @@ void CCSPlayer::PostThink()
 			Radio( "SpottedLooseBomb",   "#Cstrike_TitlesTXT_Game_afk_bomb_drop" );
 		}
 	}
-
-	if ( CSGameRules()->IsPlayingDeathmatch() )
-	{
-		// make sure that this player has enough money to buy things
-		m_iAccount = mp_maxmoney.GetInt();
-	}
 }
 
 
@@ -3897,10 +3891,7 @@ void CCSPlayer::AddAccount( int amount, bool bTrackChange, bool bItemBought, con
 {
 	m_iAccount += amount;
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [menglish] Description of reason for change
-	//=============================================================================
 
 	if(amount > 0)
 	{
@@ -3911,14 +3902,7 @@ void CCSPlayer::AddAccount( int amount, bool bTrackChange, bool bItemBought, con
 		CCS_GameStats.Event_MoneySpent( this, ABS(amount), pItemName );
 	}
 
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
-
-	if ( m_iAccount < 0 )
-		m_iAccount = 0;
-	else if ( m_iAccount > mp_maxmoney.GetInt() )
-		m_iAccount = mp_maxmoney.GetInt();
+	m_iAccount = clamp( m_iAccount, 0, mp_maxmoney.GetInt() );
 }
 
 void CCSPlayer::MarkAsNotReceivingMoneyNextRound()
@@ -4712,7 +4696,7 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool
 void CCSPlayer::TransferInventory( CCSPlayer* pTargetPlayer )
 {
 	// first, transfer money
-	pTargetPlayer->m_iAccount = m_iAccount;
+	pTargetPlayer->m_iAccount = GetAccountBalance();
 
 	// check is any slot has weapon in it and if so - give it
 	CBaseCombatWeapon* pKnife = Weapon_GetSlot( WEAPON_SLOT_KNIFE ); // TODO: check for taser conflicts
@@ -4982,7 +4966,7 @@ BuyResult_e CCSPlayer::AttemptToBuyVest( void )
 			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_Kevlar" );
 		return BUY_ALREADY_HAVE;
 	}
-	else if ( m_iAccount < iKevlarPrice )
+	else if ( GetAccountBalance() < iKevlarPrice )
 	{
 		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
 			ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
@@ -5045,21 +5029,21 @@ BuyResult_e CCSPlayer::AttemptToBuyAssaultSuit( void )
 			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_Kevlar_Helmet" );
 		return BUY_ALREADY_HAVE;
 	}
-	else if ( fullArmor && !m_bHasHelmet && m_iAccount >= iHelmetPrice )
+	else if ( fullArmor && !m_bHasHelmet && GetAccountBalance() >= iHelmetPrice )
 	{
 		enoughMoney = 1;
 		price = iHelmetPrice;
 		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
 			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_Kevlar_Bought_Helmet" );
 	}
-	else if ( !fullArmor && m_bHasHelmet && m_iAccount >= iKevlarPrice )
+	else if ( !fullArmor && m_bHasHelmet && GetAccountBalance() >= iKevlarPrice )
 	{
 		enoughMoney = 1;
 		price = iKevlarPrice;
 		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
 			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_Helmet_Bought_Kevlar" );
 	}
-	else if ( m_iAccount >= iAssaultSuitPrice )
+	else if ( GetAccountBalance() >= iAssaultSuitPrice )
 	{
 		enoughMoney = 1;
 		price = iAssaultSuitPrice;
@@ -5101,7 +5085,7 @@ BuyResult_e CCSPlayer::AttemptToBuyShield( void )
 			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_One" );
 		return BUY_ALREADY_HAVE;
 	}
-	else if ( m_iAccount < SHIELD_PRICE )
+	else if ( GetAccountBalance() < SHIELD_PRICE )
 	{
 		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
 			ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
@@ -5151,7 +5135,7 @@ BuyResult_e CCSPlayer::AttemptToBuyDefuser( void )
 				ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_One" );
 			return BUY_ALREADY_HAVE;
 		}
-		else if ( m_iAccount < DEFUSEKIT_PRICE )
+		else if ( GetAccountBalance() < DEFUSEKIT_PRICE )
 		{
 			if( !m_bIsInAutoBuy && !m_bIsInRebuy )
 				ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
@@ -5187,7 +5171,7 @@ BuyResult_e CCSPlayer::AttemptToBuyNightVision( void )
 			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_One" );
 		return BUY_ALREADY_HAVE;
 	}
-	else if ( m_iAccount < iNVGPrice )
+	else if ( GetAccountBalance() < iNVGPrice )
 	{
 		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
 			ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
@@ -5222,7 +5206,7 @@ BuyResult_e CCSPlayer::AttemptToBuyTaser( void )
 			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_One" );
 		return BUY_ALREADY_HAVE;
 	}
-	else if ( m_iAccount < TASER_PRICE )
+	else if ( GetAccountBalance() < TASER_PRICE )
 	{
 		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
 			ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
@@ -5265,6 +5249,9 @@ BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item )
 	{
 		m_bMadePurchseThisRound = true;
 		CCS_GameStats.IncrementStat(this, CSSTAT_ITEMS_PURCHASED, 1);
+
+		if ( CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
+			AddAccount( 9999, false, false );
 	}
 	return result;
 }
@@ -5374,7 +5361,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 		bool bPurchase = false;
 
 		// do they have enough money?
-		if ( m_iAccount >= pWeaponInfo->GetWeaponPrice() )
+		if ( GetAccountBalance() >= pWeaponInfo->GetWeaponPrice() )
 		{
 			if ( m_lifeState != LIFE_DEAD )
 			{
@@ -5448,7 +5435,7 @@ BuyResult_e CCSPlayer::BuyGunAmmo( CBaseCombatWeapon *pWeapon, bool bBlinkMoney 
 	}
 
 	// Purchase the ammo if the player has enough money
-	if ( m_iAccount >= GetCSAmmoDef()->GetCost( nAmmo ) )
+	if ( GetAccountBalance() >= GetCSAmmoDef()->GetCost( nAmmo ) )
 	{
 		GiveAmmo( GetCSAmmoDef()->GetBuySize( nAmmo ), nAmmo, true );
 		AddAccount( -GetCSAmmoDef()->GetCost( nAmmo ), true, true, GetCSAmmoDef()->GetAmmoOfIndex( nAmmo )->pName  );
@@ -8070,6 +8057,14 @@ void CCSPlayer::AutoBuy()
 	// as we're not porting cs:cz, these were skipped
 }
 
+int	CCSPlayer::GetAccountBalance( void )
+{
+	if ( CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
+		return 99999;
+
+	return m_iAccount;
+}
+
 void CCSPlayer::ParseAutoBuyString(const char *string, bool &boughtPrimary, bool &boughtSecondary)
 {
 	char command[32];
@@ -9592,7 +9587,7 @@ void CCSPlayer::ChangeTeam( int iTeamNum )
 			//		if they have less than the default, give them the default.
 			//=============================================================================
 			int startMoney = CSGameRules()->GetStartMoney();
-			if (startMoney > m_iAccount)
+			if (startMoney > GetAccountBalance())
 			{
 				m_iAccount = startMoney;
 			} 			
@@ -11287,7 +11282,7 @@ void CCSPlayer::SavePreControlData()
 {
 	m_PreControlData.m_iClass	= GetClass();
 	m_PreControlData.m_iSkin	= m_iSkin;
-	m_PreControlData.m_iAccount	= m_iAccount;
+	m_PreControlData.m_iAccount = GetAccountBalance();
 	m_PreControlData.m_iFrags	= FragCount();
 	m_PreControlData.m_iAssists = AssistsCount();
 	m_PreControlData.m_iDeaths	= DeathCount();

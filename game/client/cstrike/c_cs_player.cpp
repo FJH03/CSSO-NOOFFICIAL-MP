@@ -1718,6 +1718,9 @@ float C_CSPlayer::GetMinFOV() const
 
 int C_CSPlayer::GetAccount() const
 {
+	if ( CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
+		return 99999;
+	
 	return m_iAccount;
 }
 

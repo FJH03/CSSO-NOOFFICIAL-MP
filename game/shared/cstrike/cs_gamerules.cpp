@@ -4300,7 +4300,7 @@ ConVar snd_music_selection(
 
 				if ( pPlayer->GetTeamNumber() == TEAM_CT || pPlayer->GetTeamNumber() == TEAM_TERRORIST )
 				{
-					int amount_to_assign = -pPlayer->m_iAccount + GetStartMoney();
+					int amount_to_assign = -pPlayer->GetAccountBalance() + GetStartMoney();
 
 					pPlayer->AddAccount( amount_to_assign, false );
 				}

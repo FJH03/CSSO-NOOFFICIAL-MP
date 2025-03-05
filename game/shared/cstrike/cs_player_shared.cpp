@@ -190,6 +190,9 @@ Vector CCSPlayer::Weapon_ShootPosition()
 
 bool CCSPlayer::IsInBuyZone()
 {
+	if ( CSGameRules()->IsPlayingDeathmatch() )
+		return m_bImmunity;
+	
 	if ( mp_buy_anywhere.GetInt() == 1 ||
 		mp_buy_anywhere.GetInt() == GetTeamNumber() )
 		return true;
