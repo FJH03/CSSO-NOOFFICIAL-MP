@@ -208,7 +208,7 @@ void CWeaponBaseItem::ItemPostFrame( void )
 		m_UseTimer.Invalidate();
 
 		// remove the ammo
-		pPlayer->RemoveAmmo( 1, m_iPrimaryAmmoType );
+		pPlayer->RemoveAmmo( 1, m_iPrimaryAmmoType, true );
 
 		if ( pPlayer->GetAmmoCount(m_iPrimaryAmmoType) <= 0 )
 		{
