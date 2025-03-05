@@ -2052,7 +2052,8 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 					CRecipientFilter filter;
 					filter.AddRecipient( this );
 					filter.MakeReliable();
-					UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Hint_lost_a_level", pAttackerPlayer->GetPlayerName() );
+					CFmtStr fmtEntName( "#ENTNAME[%d]%s", pAttackerPlayer->entindex(), pAttackerPlayer->GetPlayerName() );
+					UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Hint_lost_a_level", fmtEntName.Access() );
 				}
 			}
 		}
@@ -2415,7 +2416,10 @@ void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &
 										}
 									}
 									filterKnifeLevelNotification.MakeReliable();
-									UTIL_ClientPrintFilter( filterKnifeLevelNotification, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Knife_Level", pCSAttacker->GetPlayerName() );
+									CFmtStr fmtEntName;
+									if ( pCSAttacker )
+										fmtEntName.AppendFormat( "#ENTNAME[%d]%s", pCSAttacker->entindex(), pCSAttacker->GetPlayerName() );
+									UTIL_ClientPrintFilter( filterKnifeLevelNotification, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Knife_Level", fmtEntName.Access() );
 								}
 							}
 						}
@@ -3230,7 +3234,7 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 				CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
 				if ( pPlayer && InSameTeam( pPlayer ) && !IsOtherEnemy( pPlayer->entindex() ) )
 				{
-					ClientPrint( pPlayer, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Game_teammate_attack", pAttacker->GetPlayerName() );
+					ClientPrint( pPlayer, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Game_teammate_attack", CFmtStr( "#ENTNAME[%d]%s", pAttacker->entindex(), pAttacker->GetPlayerName() ) );
 				}
 			}
 		}
@@ -4330,7 +4334,7 @@ void CCSPlayer::PreThink()
 	{
 		if ( m_flLastMovement + CSGameRules()->GetRoundLength()*2 < gpGlobals->curtime )
 		{
-			UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "#Game_idle_kick", GetPlayerName() );
+			UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "#Game_idle_kick", CFmtStr( "#ENTNAME[%d]%s", entindex(), GetPlayerName() ) );
 			engine->ServerCommand( UTIL_VarArgs( "kickid %d\n", GetUserID() ) );
 			m_flLastMovement = gpGlobals->curtime;
 		}
@@ -5847,14 +5851,15 @@ void CCSPlayer::Radio( const char *pszRadioSound, const char *pszRadioText, bool
 
 	if( pszRadioText )
 	{
+		CFmtStr fmtPrintEntName( "#ENTNAME[%d]%s", entindex(), GetPlayerName() );
 		const char *pszLocationText = CSGameRules()->GetChatLocation( true, this );
 		if ( pszLocationText && *pszLocationText )
 		{
-			UTIL_CSRadioMessage( filter, entindex(), HUD_PRINTTALK, "#Game_radio_location", GetPlayerName(), pszLocationText, pszRadioText );
+			UTIL_CSRadioMessage( filter, entindex(), HUD_PRINTTALK, "#Game_radio_location", fmtPrintEntName.Access(), pszLocationText, pszRadioText, (bTriggeredAutomatically ? "auto" : "") );
 		}
 		else
 		{
-			UTIL_CSRadioMessage( filter, entindex(), HUD_PRINTTALK, "#Game_radio", GetPlayerName(), pszRadioText );
+			UTIL_CSRadioMessage( filter, entindex(), HUD_PRINTTALK, "#Game_radio", fmtPrintEntName.Access(), pszRadioText, "", (bTriggeredAutomatically ? "auto" : "") );
 		}
 	}
 
@@ -11155,7 +11160,7 @@ bool CCSPlayer::UpdateTeamLeaderPlaySound( int nTeam )
 					? ToCSPlayer( UTIL_PlayerByUserId( nLeaderUserID ) )
 					: NULL ) )
 				{	// If we cannot resolve the name of the new leader then print no message, but still play the sound
-					ClientPrint( pPlayer, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Stolen_Leader", pNewLeader->GetPlayerName() );
+					ClientPrint( pPlayer, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Stolen_Leader", CFmtStr( "#ENTNAME[%d]%s", pNewLeader->entindex(), pNewLeader->GetPlayerName() ) );
 				}
 
 				CSingleUserRecipientFilter filter( pPlayer );

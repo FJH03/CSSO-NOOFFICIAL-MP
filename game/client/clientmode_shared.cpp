@@ -41,6 +41,12 @@
 #include "xbox/xbox_console.h"
 #endif
 
+#ifdef CSTRIKE_DLL
+#include "cs_shareddefs.h"
+#include "weapon_csbase.h"
+#include "c_cs_playerresource.h"
+#endif
+
 #if defined( REPLAY_ENABLED )
 #include "replay/replaycamera.h"
 #include "replay/ireplaysystem.h"
@@ -962,9 +968,14 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 
 		if ( !IsInCommentaryMode() )
 		{
+#ifdef CSTRIKE_DLL
+			wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+			C_CS_PlayerResource *pCSPR = ( C_CS_PlayerResource* )GameResources();
+			pCSPR->GetDecoratedPlayerName( pPlayer->entindex(), wszPlayerName, sizeof( wszPlayerName ), ( EDecoratedPlayerNameFlag_t) ( k_EDecoratedPlayerNameFlag_DontUseNameOfControllingPlayer ) );
+#else
 			wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
 			g_pVGuiLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
-
+#endif
 			wchar_t wszReason[64];
 			const char *pszReason = event->GetString( "reason" );
 			if ( pszReason && ( pszReason[0] == '#' ) && g_pVGuiLocalize->Find( pszReason ) )

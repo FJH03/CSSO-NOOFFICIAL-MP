@@ -27,12 +27,12 @@
 #include "tier0/memdbgon.h"
 
 static ConVar hud_deathnotice_time( "hud_deathnotice_time", "6", 0 );
+ConVar cl_show_clan_in_death_notice( "cl_show_clan_in_death_notice", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Is set, the clan name will show next to player names in the death notices." );
 
 // Player entries in a death notice
 struct DeathNoticePlayer
 {
-	char		szName[MAX_PLAYER_NAME_LENGTH];
-	char		szClan[MAX_CLAN_TAG_LENGTH];
+	wchar_t		wszName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 	int			iEntIndex;
 	Color		color;
 };
@@ -255,26 +255,14 @@ void CHudDeathNotice::Paint()
 		if ( !icon )
 			continue;
 
-		wchar_t victim[ 256 ];
-		wchar_t killer[ 256 ];
-		wchar_t assister[ 256 ];
-		wchar_t victimclan[ 256 ];
-		wchar_t killerclan[ 256 ];
-		wchar_t assisterclan[ 256 ];
+		const wchar_t *victim = m_DeathNotices[i].Victim.wszName;
+		const wchar_t *killer = m_DeathNotices[i].Killer.wszName;
+		const wchar_t *assister = m_DeathNotices[i].Assister.wszName;
 
-		wchar_t assistplussign[4];
-		g_pVGuiLocalize->ConvertANSIToUnicode( " +", assistplussign, sizeof( assistplussign ) );
-
-		g_pVGuiLocalize->ConvertANSIToUnicode( m_DeathNotices[i].Victim.szName, victim, sizeof( victim ) );
-		g_pVGuiLocalize->ConvertANSIToUnicode( m_DeathNotices[i].Killer.szName, killer, sizeof( killer ) );
-		g_pVGuiLocalize->ConvertANSIToUnicode( m_DeathNotices[i].Assister.szName, assister, sizeof( assister ) );
-		g_pVGuiLocalize->ConvertANSIToUnicode( m_DeathNotices[i].Victim.szClan, victimclan, sizeof( victimclan ) );
-		g_pVGuiLocalize->ConvertANSIToUnicode( m_DeathNotices[i].Killer.szClan, killerclan, sizeof( killerclan ) );
-		g_pVGuiLocalize->ConvertANSIToUnicode( m_DeathNotices[i].Assister.szClan, assisterclan, sizeof( assisterclan ) );
+		wchar_t assistplussign[4] = L" +";
 
 		// Get the local position for this notice
 		int victimNameLen = UTIL_ComputeStringWidth( m_hTextFont, victim );
-		int victimClanLen = UTIL_ComputeStringWidth( m_hTextFont, victimclan );
 		int y = yStart + (m_flLineHeight * i);
 
 		int iconWide;
@@ -297,7 +285,6 @@ void CHudDeathNotice::Paint()
 		{
 			x =	GetWide();
 			x -= victimNameLen;
-			x -= victimClanLen;
 			x -= iconWide;
 
 			if ( m_DeathNotices[i].bBlind )
@@ -319,13 +306,11 @@ void CHudDeathNotice::Paint()
 			{
 				x -= UTIL_ComputeStringWidth( m_hTextFont, assistplussign );
 				x -= UTIL_ComputeStringWidth( m_hTextFont, assister );
-				x -= UTIL_ComputeStringWidth( m_hTextFont, assisterclan );
 			}
 			
 			//if ( !m_DeathNotices[i].bSuicide )
 			{
 				x -= UTIL_ComputeStringWidth( m_hTextFont, killer );
-				x -= UTIL_ComputeStringWidth( m_hTextFont, killerclan );
 			}
 			
 			if (m_DeathNotices[i].bDomination)
@@ -360,13 +345,6 @@ void CHudDeathNotice::Paint()
 				x += iconBlindWide;
 			}
 
-			// Draw killer's clan
-			surface()->DrawSetTextColor( m_DeathNotices[i].Killer.color );
-			surface()->DrawSetTextPos( x, y );
-			surface()->DrawSetTextFont( m_hTextFont );
-			surface()->DrawUnicodeString( killerclan );
-			surface()->DrawGetTextPos( x, y );
-
 			// Draw killer's name
 			surface()->DrawSetTextColor( m_DeathNotices[i].Killer.color );
 			surface()->DrawSetTextPos( x, y );
@@ -383,13 +361,6 @@ void CHudDeathNotice::Paint()
 			surface()->DrawSetTextPos( x, y );
 			surface()->DrawSetTextFont( m_hTextFont );
 			surface()->DrawUnicodeString( assistplussign );
-			surface()->DrawGetTextPos( x, y );
-
-			// Draw assister's clan
-			surface()->DrawSetTextColor( m_DeathNotices[i].Assister.color );
-			surface()->DrawSetTextPos( x, y );
-			surface()->DrawSetTextFont( m_hTextFont );
-			surface()->DrawUnicodeString( assisterclan );
 			surface()->DrawGetTextPos( x, y );
 
 			// Draw assister's name
@@ -428,13 +399,6 @@ void CHudDeathNotice::Paint()
 			m_iconD_headshot->DrawSelf( x, y, iconHeadshotWide, iconHeadshotTall, iconColor );
 			x += iconHeadshotWide;
 		}
-
-		// Draw victims clan
-		surface()->DrawSetTextColor( m_DeathNotices[i].Victim.color );
-		surface()->DrawSetTextPos( x, y );
-		surface()->DrawSetTextFont( m_hTextFont );	//reset the font, draw icon can change it
-		surface()->DrawUnicodeString( victimclan );
-		surface()->DrawGetTextPos( x, y );
 
 		// Draw victims name
 		surface()->DrawSetTextColor( m_DeathNotices[i].Victim.color );
@@ -550,33 +514,40 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 		// Remove the oldest one in the queue, which will always be the first
 		m_DeathNotices.Remove(0);
 	}
-	// if our attacker is the same as our assiter, it means a bot attacked the victim and a player took over that bot
-	if ( iAssister == iKiller )
-		iAssister = 0;
 
 	// Get the names of the players
-	const char *killer_name = iKiller > 0 ? g_PR->GetPlayerName( iKiller ) : NULL;
-	const char *victim_name = iVictim > 0 ? g_PR->GetPlayerName( iVictim ) : NULL;
-	const char *assister_name = iAssister > 0 ? g_PR->GetPlayerName( iAssister ) : NULL;
+	wchar_t szKillerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+	wchar_t szVictimName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+	wchar_t szAssisterName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 
-	if ( !killer_name )
-		killer_name = "";
-	if ( !victim_name )
-		victim_name = "";
-	if ( !assister_name )
-		assister_name = "";
+	szKillerName[0] = L'\0';
+	szVictimName[0] = L'\0';
+	szAssisterName[0] = L'\0';
 
-	// Get the clan tags of the players
-	const char *killer_clan = iKiller > 0 ? cs_PR->GetClanTag( iKiller ) : NULL;
-	const char *victim_clan = iVictim > 0 ? cs_PR->GetClanTag( iVictim ) : NULL;
-	const char *assister_clan = iAssister > 0 ? cs_PR->GetClanTag( iAssister ) : NULL;
+	EDecoratedPlayerNameFlag_t kDontShowClanName = k_EDecoratedPlayerNameFlag_DontShowClanName;
+	if ( cl_show_clan_in_death_notice.GetInt() > 0 )
+		kDontShowClanName = k_EDecoratedPlayerNameFlag_Simple;
 
-	if ( !killer_clan )
-		killer_clan = "";
-	if ( !victim_clan )
-		victim_clan = "";
-	if ( !assister_clan )
-		assister_clan = "";
+	if ( iKiller > 0 )
+	{
+		cs_PR->GetDecoratedPlayerName( iKiller, szKillerName, sizeof( szKillerName ), EDecoratedPlayerNameFlag_t( k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot | kDontShowClanName ) );
+	}
+
+	if ( iVictim > 0 )
+	{
+		cs_PR->GetDecoratedPlayerName( iVictim, szVictimName, sizeof( szVictimName ), EDecoratedPlayerNameFlag_t( k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot | kDontShowClanName ) );
+	}
+
+	if ( iAssister > 0 )
+	{
+		// if our attacker is the same as our assiter, it means a bot attacked the victim and a player took over that bot
+		if ( iAssister == iKiller )
+			iAssister = 0;
+		else
+		{
+			cs_PR->GetDecoratedPlayerName( iAssister, szAssisterName, sizeof( szAssisterName ), EDecoratedPlayerNameFlag_t( k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot | kDontShowClanName ) );
+		}
+	}
 
 	// Make a new death notice
 	DeathNoticeItem deathMsg;
@@ -586,12 +557,9 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	deathMsg.Killer.color = iKiller > 0 ? m_teamColors[g_PR->GetTeam(iKiller)] : COLOR_WHITE;
 	deathMsg.Victim.color = iVictim > 0 ? m_teamColors[g_PR->GetTeam(iVictim)] : COLOR_WHITE;
 	deathMsg.Assister.color = iAssister > 0 ? m_teamColors[g_PR->GetTeam(iAssister)] : COLOR_WHITE;
-	Q_snprintf( deathMsg.Killer.szClan, sizeof( deathMsg.Killer.szClan ), "%s ", killer_clan );
-	Q_snprintf( deathMsg.Victim.szClan, sizeof( deathMsg.Victim.szClan ), "%s ", victim_clan );
-	Q_snprintf( deathMsg.Assister.szClan, sizeof( deathMsg.Assister.szClan ), "%s ", assister_clan );
-	Q_strncpy( deathMsg.Killer.szName, killer_name, MAX_PLAYER_NAME_LENGTH );
-	Q_strncpy( deathMsg.Victim.szName, victim_name, MAX_PLAYER_NAME_LENGTH );
-	Q_strncpy( deathMsg.Assister.szName, assister_name, MAX_PLAYER_NAME_LENGTH );
+	Q_wcsncpy( deathMsg.Killer.wszName, szKillerName, MAX_DECORATED_PLAYER_NAME_LENGTH );
+	Q_wcsncpy( deathMsg.Victim.wszName, szVictimName, MAX_DECORATED_PLAYER_NAME_LENGTH );
+	Q_wcsncpy( deathMsg.Assister.wszName, szAssisterName, MAX_DECORATED_PLAYER_NAME_LENGTH );
 	deathMsg.flDisplayTime = gpGlobals->curtime + hud_deathnotice_time.GetFloat();
 	deathMsg.bSuicide = ( !iKiller || iKiller == iVictim );
 	deathMsg.bHeadshot = headshot;
@@ -622,20 +590,20 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	{
 		if ( !strcmp( fullkilledwith, "d_planted_c4" ) )
 		{
-			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s was a bit too close to the c4.\n", deathMsg.Victim.szName );
+			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s was a bit too close to the c4.\n", deathMsg.Victim.wszName );
 		}
 		else if ( !strcmp( fullkilledwith, "d_worldspawn" ) )
 		{
-			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s died.\n", deathMsg.Victim.szName );
+			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s died.\n", deathMsg.Victim.wszName );
 		}
 		else	//d_world
 		{
-			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s suicided.\n", deathMsg.Victim.szName );
+			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s suicided.\n", deathMsg.Victim.wszName );
 		}
 	}
 	else
 	{
-		Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s killed %s", deathMsg.Killer.szName, deathMsg.Victim.szName );
+		Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s killed %s", deathMsg.Killer.wszName, deathMsg.Victim.wszName );
 
 		if ( fullkilledwith && *fullkilledwith && (*fullkilledwith > 13 ) )
 		{

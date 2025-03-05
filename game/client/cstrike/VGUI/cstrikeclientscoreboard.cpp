@@ -40,6 +40,7 @@ const float kUpdateInterval = 1.0f;				// how often the scoreboard refreshes
 const float kTeamScoreMargin = 0.15f;			// margin as a ratio of avatar height
 const float kTeamScoreLineLeadingRatio = 0.25f;	// padding as a ratio of avatar height
 
+
 // [tj] These ConVars are defined at various places in the global scope. Just declaring them here so we can use them
 extern ConVar mp_maxrounds;
 extern ConVar mp_timelimit;
@@ -742,6 +743,36 @@ void CCSClientScoreBoardDialog::AdjustFontToFit( const char *pString, vgui::Labe
 	}
 	delete [] pWideString;
 }
+void CCSClientScoreBoardDialog::AdjustFontToFit( const wchar_t *pString, vgui::Label *pLabel )
+{
+	if ( !pString || !pLabel )
+		return;
+
+	int len = Q_wcslen( pString );
+	if ( !len )
+		return;
+
+	int stringWidth, stringHeight;
+	g_pMatSystemSurface->GetTextSize( m_listItemFont, pString, stringWidth, stringHeight );
+
+	int labelWidth = pLabel->GetWide();
+	if ( stringWidth <= labelWidth )
+	{
+		pLabel->SetFont( m_listItemFont );
+	}
+	else
+	{
+		g_pMatSystemSurface->GetTextSize( m_listItemFontSmaller, pString, stringWidth, stringHeight );
+		if ( stringWidth <= labelWidth )
+		{
+			pLabel->SetFont( m_listItemFontSmaller );
+		}
+		else
+		{
+			pLabel->SetFont(m_listItemFontSmallest);
+		}
+	}
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: Updates the player list
@@ -839,8 +870,6 @@ void CCSClientScoreBoardDialog::UpdateTeamPlayerDisplay( TeamDisplayInfo& teamDi
 		{
 			int playerIndex = pPlayerScore->playerIndex;
 
-			const char* pUTF8Name = pPlayerScore->szName;
-
 // 			int bufsize;
 // 			if ( g_PR->IsFakePlayer( playerIndex ) )
 // 				bufsize = strlen( oldName ) * 2 + 14 + 1;
@@ -850,97 +879,93 @@ void CCSClientScoreBoardDialog::UpdateTeamPlayerDisplay( TeamDisplayInfo& teamDi
 // 			char *newName = (char *)_alloca( bufsize );
 // 			UTIL_MakeSafeName( oldName, newName, bufsize );
 
-			if ( pUTF8Name != NULL && V_strlen( pUTF8Name ) > 0 )
-			{
-				bool isAlive = cs_PR->IsAlive( playerIndex );
+			bool isAlive = cs_PR->IsAlive( playerIndex );
 #if CS_CONTROLLABLE_BOTS_ENABLED
-				if ( cs_PR->GetControlledByPlayer( playerIndex ) > 0 )
-					isAlive = true;
-				if ( cs_PR->GetControlledPlayer( playerIndex ) > 0 )
-					isAlive = false;
+			if ( cs_PR->GetControlledByPlayer( playerIndex ) > 0 )
+				isAlive = true;
+			if ( cs_PR->GetControlledPlayer( playerIndex ) > 0 )
+				isAlive = false;
 #endif
-				Color fgColor = ( isAlive ? teamDisplay.playerDataColor : m_DeadPlayerDataColor );
-				Color fgClanColor = ( isAlive ? teamDisplay.playerClanColor : m_DeadPlayerClanColor );
+			Color fgColor = ( isAlive ? teamDisplay.playerDataColor : m_DeadPlayerDataColor );
+			Color fgClanColor = ( isAlive ? teamDisplay.playerClanColor : m_DeadPlayerClanColor );
 
-				if ( playerDisplay.pNameLabel != NULL )
-				{
-					AdjustFontToFit( pUTF8Name, playerDisplay.pNameLabel );
+			if ( playerDisplay.pNameLabel != NULL )
+			{
+				AdjustFontToFit( pPlayerScore->wszName, playerDisplay.pNameLabel );
 
-					playerDisplay.pNameLabel->SetVisible( true );
-					playerDisplay.pNameLabel->SetText( pUTF8Name );
-					playerDisplay.pNameLabel->SetBgColor( m_PlayerDataBgColor );
-					playerDisplay.pNameLabel->SetFgColor( fgColor );
-					playerDisplay.pNameLabel->GetPos(xPos, yPos);
-					playerDisplay.pNameLabel->SetPos(xPos, startY);
+				playerDisplay.pNameLabel->SetVisible( true );
+				playerDisplay.pNameLabel->SetText( pPlayerScore->wszName );
+				playerDisplay.pNameLabel->SetBgColor( m_PlayerDataBgColor );
+				playerDisplay.pNameLabel->SetFgColor( fgColor );
+				playerDisplay.pNameLabel->GetPos(xPos, yPos);
+				playerDisplay.pNameLabel->SetPos(xPos, startY);
 
-					int tallMVP = RoundFloatToInt(teamDisplay.scoreAreaLineHeight * kScaleMVP);
-					int yMVP = ( teamDisplay.scoreAreaLineHeight - tallMVP ) / 2;
-					playerDisplay.pMVPImage->SetPos( xPos, startY + yMVP);
-				}
+				int tallMVP = RoundFloatToInt(teamDisplay.scoreAreaLineHeight * kScaleMVP);
+				int yMVP = ( teamDisplay.scoreAreaLineHeight - tallMVP ) / 2;
+				playerDisplay.pMVPImage->SetPos( xPos, startY + yMVP);
+			}
 
-				if ( playerDisplay.pClanLabel != NULL )
-				{
-					const char* pUTF8Clan = pPlayerScore->szClanTag;
-					AdjustFontToFit( pUTF8Clan, playerDisplay.pClanLabel );
+			if ( playerDisplay.pClanLabel != NULL )
+			{
+				const char* pUTF8Clan = pPlayerScore->szClanTag;
+				AdjustFontToFit( pUTF8Clan, playerDisplay.pClanLabel );
 
-					playerDisplay.pClanLabel->SetVisible( true );
-					playerDisplay.pClanLabel->SetText( pUTF8Clan );
-					playerDisplay.pClanLabel->SetBgColor( m_PlayerDataBgColor );
-					playerDisplay.pClanLabel->SetFgColor( fgClanColor );
-					playerDisplay.pClanLabel->GetPos(xPos, yPos);
-					playerDisplay.pClanLabel->SetPos(xPos, startY);
-				}
+				playerDisplay.pClanLabel->SetVisible( true );
+				playerDisplay.pClanLabel->SetText( pUTF8Clan );
+				playerDisplay.pClanLabel->SetBgColor( m_PlayerDataBgColor );
+				playerDisplay.pClanLabel->SetFgColor( fgClanColor );
+				playerDisplay.pClanLabel->GetPos(xPos, yPos);
+				playerDisplay.pClanLabel->SetPos(xPos, startY);
+			}
 
-				char tmpbuf[16];
+			char tmpbuf[16];
 
-				if ( playerDisplay.pScoreLabel != NULL )
-				{
-					Q_snprintf( tmpbuf, sizeof( tmpbuf ), "%d", pPlayerScore->frags);
-					playerDisplay.pScoreLabel->SetVisible( true );
-					playerDisplay.pScoreLabel->SetText( tmpbuf );
-					playerDisplay.pScoreLabel->SetBgColor( m_PlayerDataBgColor );
-					playerDisplay.pScoreLabel->SetFgColor( fgColor );
-					playerDisplay.pScoreLabel->GetPos(xPos, yPos);
-					playerDisplay.pScoreLabel->SetPos(xPos, startY);
-				}
+			if ( playerDisplay.pScoreLabel != NULL )
+			{
+				Q_snprintf( tmpbuf, sizeof( tmpbuf ), "%d", pPlayerScore->frags);
+				playerDisplay.pScoreLabel->SetVisible( true );
+				playerDisplay.pScoreLabel->SetText( tmpbuf );
+				playerDisplay.pScoreLabel->SetBgColor( m_PlayerDataBgColor );
+				playerDisplay.pScoreLabel->SetFgColor( fgColor );
+				playerDisplay.pScoreLabel->GetPos(xPos, yPos);
+				playerDisplay.pScoreLabel->SetPos(xPos, startY);
+			}
 
-				if ( playerDisplay.pAssistsLabel != NULL )
-				{
-					Q_snprintf( tmpbuf, sizeof( tmpbuf ), "%d", pPlayerScore->assists);
-					playerDisplay.pAssistsLabel->SetVisible( true );
-					playerDisplay.pAssistsLabel->SetText( tmpbuf );
-					playerDisplay.pAssistsLabel->SetBgColor( m_PlayerDataBgColor );
-					playerDisplay.pAssistsLabel->SetFgColor( fgColor );
-					playerDisplay.pAssistsLabel->GetPos( xPos, yPos );
-					playerDisplay.pAssistsLabel->SetPos( xPos, startY );
-				}
+			if ( playerDisplay.pAssistsLabel != NULL )
+			{
+				Q_snprintf( tmpbuf, sizeof( tmpbuf ), "%d", pPlayerScore->assists);
+				playerDisplay.pAssistsLabel->SetVisible( true );
+				playerDisplay.pAssistsLabel->SetText( tmpbuf );
+				playerDisplay.pAssistsLabel->SetBgColor( m_PlayerDataBgColor );
+				playerDisplay.pAssistsLabel->SetFgColor( fgColor );
+				playerDisplay.pAssistsLabel->GetPos( xPos, yPos );
+				playerDisplay.pAssistsLabel->SetPos( xPos, startY );
+			}
 
-				if ( playerDisplay.pDeathsLabel != NULL )
-				{
-					Q_snprintf( tmpbuf, sizeof( tmpbuf ), "%d", pPlayerScore->deaths);
-					playerDisplay.pDeathsLabel->SetVisible( true );
-					playerDisplay.pDeathsLabel->SetText( tmpbuf );
-					playerDisplay.pDeathsLabel->SetBgColor( m_PlayerDataBgColor );
-					playerDisplay.pDeathsLabel->SetFgColor( fgColor );
-					playerDisplay.pDeathsLabel->GetPos(xPos, yPos);
-					playerDisplay.pDeathsLabel->SetPos(xPos, startY);
-				}
+			if ( playerDisplay.pDeathsLabel != NULL )
+			{
+				Q_snprintf( tmpbuf, sizeof( tmpbuf ), "%d", pPlayerScore->deaths);
+				playerDisplay.pDeathsLabel->SetVisible( true );
+				playerDisplay.pDeathsLabel->SetText( tmpbuf );
+				playerDisplay.pDeathsLabel->SetBgColor( m_PlayerDataBgColor );
+				playerDisplay.pDeathsLabel->SetFgColor( fgColor );
+				playerDisplay.pDeathsLabel->GetPos(xPos, yPos);
+				playerDisplay.pDeathsLabel->SetPos(xPos, startY);
+			}
 
-				if ( playerDisplay.pPingLabel != NULL )
-				{
-					if ( pPlayerScore->ping >= 0 )
-						Q_snprintf( tmpbuf, sizeof( tmpbuf ), "%d", pPlayerScore->ping);
-					else
-						Q_strcpy( tmpbuf, "BOT");
+			if ( playerDisplay.pPingLabel != NULL )
+			{
+				if ( pPlayerScore->ping >= 0 )
+					Q_snprintf( tmpbuf, sizeof( tmpbuf ), "%d", pPlayerScore->ping);
+				else
+					Q_strcpy( tmpbuf, "BOT");
 
-					playerDisplay.pPingLabel->SetVisible( true );
-					playerDisplay.pPingLabel->SetText( tmpbuf );
-					playerDisplay.pPingLabel->SetBgColor( m_PlayerDataBgColor );
-					playerDisplay.pPingLabel->SetFgColor( fgColor );
-					playerDisplay.pPingLabel->GetPos(xPos, yPos);
-					playerDisplay.pPingLabel->SetPos(xPos, startY);
-
-				}
+				playerDisplay.pPingLabel->SetVisible( true );
+				playerDisplay.pPingLabel->SetText( tmpbuf );
+				playerDisplay.pPingLabel->SetBgColor( m_PlayerDataBgColor );
+				playerDisplay.pPingLabel->SetFgColor( fgColor );
+				playerDisplay.pPingLabel->GetPos(xPos, yPos);
+				playerDisplay.pPingLabel->SetPos(xPos, startY);
 			}
 
 			if ( playerDisplay.pStatusImage != NULL )
@@ -1039,39 +1064,35 @@ void CCSClientScoreBoardDialog::UpdateSpectatorList()
 	{
 		if ( ShouldShowAsSpectator( playerIndex ) )
 		{
-			const char *playerName = g_PR->GetPlayerName( playerIndex );
-			if ( playerName != NULL )
+			wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+			wszPlayerName[0] = L'\0';
+
+			((C_CS_PlayerResource*) g_PR)->GetDecoratedPlayerName( playerIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_DontShowClanName );
+
+			//
+			// Check to see if there is space for the player name and delimiter.
+			//
+
+			bool addDelim = ( nSpectators > 0 );
+
+			int playerNameLen = V_wcslen( wszPlayerName );
+			if ( addDelim )
 			{
-				// Convert the name to wide char.
-				wchar_t playerBuf[MAX_PLAYER_NAME_LENGTH];
-				playerBuf[0] = L'\0';
-				V_UTF8ToUnicode( playerName, playerBuf, sizeof( playerBuf ) );
+				playerNameLen += delimTextLen;
+			}
 
-				//
-				// Check to see if there is space for the player name and delimiter.
-				//
-
-				bool addDelim = ( nSpectators > 0 );
-
-				int playerNameLen = V_wcslen( playerBuf );
+			int currentLen = V_wcslen( listText );
+			int remainingLen = listTextLen - currentLen - playerNameLen - 1;
+			if ( remainingLen >= 0 )
+			{
+				// Append the delimiter.
 				if ( addDelim )
 				{
-					playerNameLen += delimTextLen;
+					V_wcscat_safe( listText, delimText );
 				}
 
-				int currentLen = V_wcslen( listText );
-				int remainingLen = listTextLen - currentLen - playerNameLen - 1;
-				if ( remainingLen >= 0 )
-				{
-					// Append the delimiter.
-					if ( addDelim )
-					{
-						V_wcscat_safe( listText, delimText );
-					}
-
-					// Append the player name.
-					V_wcscat_safe( listText, playerBuf );
-				}
+				// Append the player name.
+				V_wcscat_safe( listText, wszPlayerName );
 			}
 
 			++nSpectators;
@@ -1356,7 +1377,17 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, PlayerScore
 	if ( oldName == NULL )
 		return false;
 
-	playerScoreInfo.szName = g_PR->GetPlayerName( playerIndex );
+    // get CS specific infos
+    C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>( g_PR );
+
+    C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+
+    if ( !cs_PR || !pLocalPlayer )
+	{
+        return false;
+	}
+	
+	cs_PR->GetDecoratedPlayerName( playerIndex, playerScoreInfo.wszName, sizeof( playerScoreInfo.wszName ), k_EDecoratedPlayerNameFlag_DontShowClanName );
 
     playerScoreInfo.playerIndex = playerIndex;
     playerScoreInfo.frags = g_PR->GetPlayerScore( playerIndex );
@@ -1378,16 +1409,6 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, PlayerScore
     {
 		playerScoreInfo.ping = g_PR->GetPing( playerIndex );
     }
-
-    // get CS specific infos
-    C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>( g_PR );
-
-    C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
-
-    if ( !cs_PR || !pLocalPlayer )
-	{
-        return false;
-	}
 
 	// Get the clan tag
 	playerScoreInfo.szClanTag = cs_PR->GetClanTag( playerIndex );
@@ -1589,6 +1610,7 @@ void CCSClientScoreBoardDialog::ShowPanel( bool state )
         gHUD.UnlockRenderGroup( iRenderGroup );
     }
 }
+
 
 // [tj] Disabling joystick input if you are dead.
 void CCSClientScoreBoardDialog::OnThink()

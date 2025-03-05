@@ -16,7 +16,7 @@
 #include "cs_shareddefs.h"
 #include <vgui_controls/Frame.h>
 #include "vgui_avatarimage.h"
-
+#include "c_cs_playerresource.h"
 
 const int cMaxScoreLines = 32;  // This value must be > 2
 
@@ -51,7 +51,7 @@ protected:
 
 	struct PlayerScoreInfo
 	{
-		const char*		szName;
+		wchar_t			wszName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 		const char*		szClanTag;
 		int				playerIndex;
 		int				frags;
@@ -108,6 +108,7 @@ protected:
 	void FireGameEvent( IGameEvent *event );
 
 	void AdjustFontToFit( const char *pString, vgui::Label *pLabel );
+	void AdjustFontToFit( const wchar_t *pString, vgui::Label *pLabel );
 
 	static int PlayerSortFunction( PlayerScoreInfo* const* pPS1, PlayerScoreInfo* const* pPS2 );
 

@@ -59,6 +59,7 @@
 #include "c_plantedc4.h"
 #include "tier1/fmtstr.h"
 #include "cs_client_gamestats.h"
+#include "c_cs_playerresource.h"
 
 // [tj] We need to forward declare this, since the definition is all inside the implementation file 
 class CHudHintDisplay;
@@ -833,7 +834,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_TitlesTXT_Bomb_Planted" ), 1, seconds );
 
 		// show centerprint message
-		internalCenterPrint->Print( wszLocalized );
+		internalCenterPrint->HintPrint( wszLocalized );	
 
 		PlayMusicSelection( filter, CSMUSIC_BOMB );
 
@@ -946,10 +947,10 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
                 pPlayer->OnAchievementAchieved( iAchievement );
             }
 
-            if ( g_PR )
-            {
-                wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
-                g_pVGuiLocalize->ConvertANSIToUnicode( g_PR->GetPlayerName( iPlayerIndex ), wszPlayerName, sizeof( wszPlayerName ) );
+            if ( C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>(g_PR) )
+			{
+				wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+				cs_PR->GetDecoratedPlayerName( iPlayerIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_Simple );
 
                 wchar_t achievementName[1024];
                 const wchar_t* constAchievementName = &achievementName[0];
@@ -965,17 +966,6 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
                     g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalizedString, szLocalized, sizeof( szLocalized ) );
 
                     hudChat->ChatPrintf( iPlayerIndex, CHAT_FILTER_ACHIEVEMENT, "%s", szLocalized );
-
-					/*
-                    if (pPlayer->IsLocalPlayer()) 
-                    {
-                        char achievementDescription[1024];
-                        const char* constAchievementDescription = &achievementDescription[0];
-
-                        constAchievementDescription = pUserStats->GetAchievementDisplayAttribute( pAchievement->GetName(), "desc" );  
-                        hudChat->ChatPrintf( iPlayerIndex, CHAT_FILTER_ACHIEVEMENT, "(%s)", constAchievementDescription );
-                    }
-					*/
                 }
             }
         }

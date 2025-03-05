@@ -25,6 +25,7 @@
 #include "vgui/ILocalize.h"
 #include "multiplay_gamerules.h"
 #include "tier0/icommandline.h"
+#include "c_cs_playerresource.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -157,13 +158,35 @@ wchar_t* ReadLocalizedString( bf_read &msg, OUT_Z_BYTECAP(outSizeInBytes) wchar_
 //-----------------------------------------------------------------------------
 wchar_t* ReadChatTextString( bf_read &msg, OUT_Z_BYTECAP(outSizeInBytes) wchar_t *pOut, int outSizeInBytes )
 {
+	if ( outSizeInBytes <= 0 )
+		return pOut;
+
 	char szString[2048];
 	szString[0] = 0;
 	msg.ReadString( szString, sizeof(szString) );
 
-	g_pVGuiLocalize->ConvertANSIToUnicode( szString, pOut, outSizeInBytes );
+	// Allow localizing player names
+	pOut[0] = 0;
+	if ( const char *pszEntIndex = StringAfterPrefix( szString, "#ENTNAME[" ) )
+	{
+		int iEntIndex = V_atoi( pszEntIndex );
+		if ( C_CS_PlayerResource *pCSPR = ( C_CS_PlayerResource* ) GameResources() )
+		{
+			pCSPR->GetDecoratedPlayerName( iEntIndex, pOut, outSizeInBytes, k_EDecoratedPlayerNameFlag_DontUseNameOfControllingPlayer );
+		}
 
-	StripEndNewlineFromString( pOut );
+		if ( !pOut[0] )
+		{
+			if ( const char *pszCloseBracket = V_strnchr( pszEntIndex, ']', 64 ) )
+				V_strcpy( szString, pszCloseBracket + 1 );
+		}
+	}
+
+	if ( !pOut[0] )
+	{
+		g_pVGuiLocalize->ConvertANSIToUnicode( szString, pOut, outSizeInBytes );
+		StripEndNewlineFromString( pOut );
+	}
 
 	// converts color control characters into control characters for the normal color
 	for ( wchar_t *test = pOut; test && *test; ++test )
@@ -891,31 +914,69 @@ void CBaseHudChat::MsgFunc_SayText2( bf_read &msg )
 //-----------------------------------------------------------------------------
 void CBaseHudChat::MsgFunc_TextMsg( bf_read &msg )
 {
-	char szString[2048];
+	char szString[2048] = {};
 	int msg_dest = msg.ReadByte();
 
-	wchar_t szBuf[5][256];
-	wchar_t outputBuf[256];
+	wchar_t szBuf[5][256] = {};
+	wchar_t outputBuf[256] = {};
 
 	for ( int i=0; i<5; ++i )
 	{
-		msg.ReadString( szString, sizeof(szString) );
-		char *tmpStr = hudtextmessage->LookupString( szString, &msg_dest );
-		const wchar_t *pBuf = g_pVGuiLocalize->Find( tmpStr );
-		if ( pBuf )
+		char szMsgString[2048];
+		msg.ReadString( szMsgString, sizeof( szMsgString ) );
+		// Allow localizing player names
+		if ( const char *pszEntIndex = StringAfterPrefix( szMsgString, "#ENTNAME[" ) )
 		{
-			// Copy pBuf into szBuf[i].
-			int nMaxChars = sizeof( szBuf[i] ) / sizeof( wchar_t );
-			wcsncpy( szBuf[i], pBuf, nMaxChars );
-			szBuf[i][nMaxChars-1] = 0;
+			int iEntIndex = V_atoi( pszEntIndex );
+			wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH] = {};
+			if ( C_CS_PlayerResource *pCSPR = ( C_CS_PlayerResource* ) GameResources() )
+			{
+				pCSPR->GetDecoratedPlayerName( iEntIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_DontUseNameOfControllingPlayer );
+			}
+			if ( wszPlayerName[0] )
+			{
+				szString[0] = 0;
+				V_wcscpy_safe( szBuf[ i ], wszPlayerName );
+			}
+			else if ( const char *pszEndBracket = V_strnchr( pszEntIndex, ']', 64 ) )
+			{
+				V_strcpy_safe( szString, pszEndBracket + 1 );
+			}
+			else
+			{
+				V_strcpy_safe( szString, szMsgString );
+			}
 		}
 		else
 		{
-			if ( i )
+			V_strcpy_safe( szString, szMsgString );
+		}
+
+		if ( szString[0] )
+		{
+			char *tmpStr = hudtextmessage->LookupString( szString, &msg_dest );
+			bool bTranslated = false;
+			if ( tmpStr[ 0 ] == '#' )	// only translate parameters intended as localization tokens
 			{
-				StripEndNewlineFromString( tmpStr );  // these strings are meant for subsitution into the main strings, so cull the automatic end newlines
+				const wchar_t *pBuf = g_pVGuiLocalize->Find( tmpStr );
+				if ( pBuf )
+				{
+					// Copy pBuf into szBuf[i].
+					int nMaxChars = sizeof( szBuf[ i ] ) / sizeof( wchar_t );
+					wcsncpy( szBuf[ i ], pBuf, nMaxChars );
+					szBuf[ i ][ nMaxChars - 1 ] = 0;
+					bTranslated = true;
+				}
 			}
-			g_pVGuiLocalize->ConvertANSIToUnicode( tmpStr, szBuf[i], sizeof(szBuf[i]) );
+
+			if ( !bTranslated )
+			{
+				if ( i )
+				{
+					StripEndNewlineFromString( tmpStr );  // these strings are meant for substitution into the main strings, so cull the automatic end newlines
+				}
+				g_pVGuiLocalize->ConvertANSIToUnicode( tmpStr, szBuf[ i ], sizeof( szBuf[ i ] ) );
+			}
 		}
 	}
 

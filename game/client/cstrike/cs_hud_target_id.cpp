@@ -190,8 +190,7 @@ void CTargetID::Paint()
 		C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
 
 		const char *printFormatString = NULL;
-		wchar_t wszClanTag[ MAX_PLAYER_NAME_LENGTH ];
-		wchar_t wszPlayerName[ MAX_PLAYER_NAME_LENGTH ];
+		wchar_t wszPlayerName[ MAX_DECORATED_PLAYER_NAME_LENGTH ];
 		wchar_t wszHealthText[ 10 ];
 		bool bShowHealth = false;
 		bool bShowPlayerName = false;
@@ -211,21 +210,13 @@ void CTargetID::Paint()
 			{
 				c = GetColorForTargetTeam( pPlayer->GetTeamNumber() );
 
-				bShowPlayerName = true;
- 				g_pVGuiLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
-
 				C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>( g_PR );
 
-				char szClan[MAX_PLAYER_NAME_LENGTH];
-				if ( cs_PR && Q_strlen( cs_PR->GetClanTag( iPlayerEntIndex ) ) > 1 )
+				if ( cs_PR )
 				{
-					Q_snprintf( szClan, sizeof( szClan ), "%s ", cs_PR->GetClanTag( iPlayerEntIndex ) );
+					cs_PR->GetDecoratedPlayerName( iPlayerEntIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot );
+					bShowPlayerName = true;
 				}
-				else
-				{
-					szClan[ 0 ] = 0;
-				}
-				g_pVGuiLocalize->ConvertANSIToUnicode( szClan, wszClanTag, sizeof( wszClanTag ) );
 				
 				if ( !pPlayer->IsOtherEnemy(pLocalPlayer) )
 				{
@@ -319,11 +310,11 @@ void CTargetID::Paint()
 		{
 			if ( bShowPlayerName && bShowHealth )
 			{
-				g_pVGuiLocalize->ConstructString( sIDString, sizeof(sIDString), g_pVGuiLocalize->Find(printFormatString), 3, wszClanTag, wszPlayerName, wszHealthText );
+				g_pVGuiLocalize->ConstructString( sIDString, sizeof(sIDString), g_pVGuiLocalize->Find(printFormatString), 2, wszPlayerName, wszHealthText );
 			}
 			else if ( bShowPlayerName )
 			{
-				g_pVGuiLocalize->ConstructString( sIDString, sizeof(sIDString), g_pVGuiLocalize->Find(printFormatString), 2, wszClanTag, wszPlayerName );
+				g_pVGuiLocalize->ConstructString( sIDString, sizeof(sIDString), g_pVGuiLocalize->Find(printFormatString), 1, wszPlayerName );
 			}
 			else if ( bShowHealth )
 			{

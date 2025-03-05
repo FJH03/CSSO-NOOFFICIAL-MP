@@ -14,6 +14,16 @@
 #include "cs_shareddefs.h"
 #include "c_playerresource.h"
 
+#define MAX_DECORATED_PLAYER_NAME_LENGTH ( ( MAX_NETWORKID_LENGTH * 10 ) + 20 )
+
+enum EDecoratedPlayerNameFlag_t
+{
+	k_EDecoratedPlayerNameFlag_Simple = 0,
+	k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot = ( 1 << 0 ),
+	k_EDecoratedPlayerNameFlag_DontUseNameOfControllingPlayer = ( 1 << 1 ),
+	k_EDecoratedPlayerNameFlag_DontShowClanName = ( 1 << 2 ),
+};
+
 class C_CS_PlayerResource : public C_PlayerResource
 {
 	DECLARE_CLASS( C_CS_PlayerResource, C_PlayerResource );
@@ -47,8 +57,9 @@ public:
 	bool			IsControllingBot( int index );
 	int				GetControlledPlayer( int index );
 	int				GetControlledByPlayer( int index );
-	virtual void	UpdatePlayerName( int slot );
 #endif
+
+	const wchar_t*		GetDecoratedPlayerName( int name, OUT_Z_BYTECAP(bufflen) wchar_t* buffer, int bufflen, EDecoratedPlayerNameFlag_t flags );
 
 protected:
 

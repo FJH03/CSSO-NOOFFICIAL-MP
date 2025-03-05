@@ -9,7 +9,7 @@
 #include "win_panel_round.h"
 #include "vgui_controls/AnimationController.h"
 #include "iclientmode.h"
-#include "c_playerresource.h"
+#include "c_cs_playerresource.h"
 #include <vgui_controls/Label.h>
 #include <vgui/ILocalize.h>
 #include <vgui/ISurface.h>
@@ -190,25 +190,24 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 		if (strlen(funfactToken) != 0)
 		{
 			wchar_t funFactText[256];
-			wchar_t playerText[64];
+			wchar_t playerText[MAX_DECORATED_PLAYER_NAME_LENGTH];
 			wchar_t dataText1[8], dataText2[8], dataText3[8];
 			int param1 = event->GetInt("funfact_data1");
 			int param2 = event->GetInt("funfact_data2");
 			int param3 = event->GetInt("funfact_data3");
 			if ( iFunFactPlayer >= 1 && iFunFactPlayer <= MAX_PLAYERS )
 			{
-				const char* playerName = g_PR->GetPlayerName( iFunFactPlayer );
-				if( playerName && Q_strcmp( playerName, PLAYER_UNCONNECTED_NAME ) != 0 && Q_strcmp( playerName, PLAYER_ERROR_NAME ) != 0 )
+				playerText[0] = L'\0';
+
+				C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>(g_PR);
+				if ( !cs_PR )
+					return;
+
+				cs_PR->GetDecoratedPlayerName( iFunFactPlayer, playerText, sizeof( playerText ), k_EDecoratedPlayerNameFlag_Simple );
+
+				if ( playerText[0] == L'\0' )
 				{
-					V_strtowcs( g_PR->GetPlayerName( iFunFactPlayer ), 64, playerText, sizeof( playerText ) );
-				}
-				else
-				{
-#ifdef WIN32
-					_snwprintf( playerText, ARRAYSIZE( playerText ), L"%s", LocalizeFindSafe( "#winpanel_former_player" ) );
-#else
-					_snwprintf( playerText, ARRAYSIZE( playerText ), L"%S", LocalizeFindSafe( "#winpanel_former_player" ) );
-#endif
+					V_snwprintf( playerText, ARRAYSIZE( playerText ), FMT_WS, g_pVGuiLocalize->Find( "#winpanel_former_player" ) );
 				}
 			}
 			else
@@ -306,6 +305,9 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 
 void WinPanel_Round::SetMVP( C_CSPlayer* pPlayer, CSMvpReason_t reason )
 {
+	if ( !g_PR )
+		return;
+
 	CAvatarImagePanel* pMVP_Avatar = dynamic_cast<CAvatarImagePanel*>(FindChildByName("MVP_Avatar"));
 	
 	if ( pMVP_Avatar )
@@ -313,17 +315,15 @@ void WinPanel_Round::SetMVP( C_CSPlayer* pPlayer, CSMvpReason_t reason )
 		pMVP_Avatar->ClearAvatar();
 	}
 
-	//First set the text to the name of the player
-	//=============================================================================
-	// HPE_BEGIN:
+	
 	// [Forrest] Allow MVP to be turned off for a server
-	//=============================================================================
+
 	bool isThereAnMVP = ( pPlayer != NULL );
 	if ( isThereAnMVP )
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 	{
+		//First set the text to the name of the player
+		wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+		((C_CS_PlayerResource*) g_PR)->GetDecoratedPlayerName( pPlayer->entindex(), wszPlayerName, sizeof( wszPlayerName ), EDecoratedPlayerNameFlag_t( k_EDecoratedPlayerNameFlag_Simple | k_EDecoratedPlayerNameFlag_DontUseNameOfControllingPlayer ) );
 
 		const char* mvpReasonToken = NULL;
 		switch ( reason )
@@ -345,10 +345,8 @@ void WinPanel_Round::SetMVP( C_CSPlayer* pPlayer, CSMvpReason_t reason )
 			break;
 		}
 
-		wchar_t wszBuf[256], wszPlayerName[64];
-		g_pVGuiLocalize->ConvertANSIToUnicode(UTIL_SafeName(pPlayer->GetPlayerName()), wszPlayerName, sizeof(wszPlayerName));
-
-		wchar_t *pReason = (wchar_t *)LocalizeFindSafe( mvpReasonToken );
+		wchar_t wszBuf[256];
+		wchar_t *pReason = g_pVGuiLocalize->Find( mvpReasonToken );
 		if ( !pReason )
 		{
 			pReason = L"%s1";

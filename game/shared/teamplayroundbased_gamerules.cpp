@@ -7,6 +7,7 @@
 #include "cbase.h"
 #include "mp_shareddefs.h"
 #include "teamplayroundbased_gamerules.h"
+#include "fmtstr.h"
 
 #ifdef CLIENT_DLL
 	#include "iclientmode.h"
@@ -2991,7 +2992,7 @@ void CTeamplayRoundBasedRules::BalanceTeams( bool bRequireSwitcheesToBeDead )
 			}
 
 			// tell people that we've switched this player
-			UTIL_ClientPrintAll( HUD_PRINTTALK, "#game_player_was_team_balanced", pPlayer->GetPlayerName() );
+			UTIL_ClientPrintAll( HUD_PRINTTALK, "#game_player_was_team_balanced", CFmtStr( "#ENTNAME[%d]%s", pPlayer->entindex(), pPlayer->GetPlayerName() ) );
 
 			iNumSwitchesRequired--;
 		}

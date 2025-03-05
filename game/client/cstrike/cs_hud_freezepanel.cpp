@@ -262,11 +262,11 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 
 			m_pKillerHealth->SetPercent( (float)iKillerHealth / iMaxHealth );
 
-			char killerName[128];
-			V_snprintf( killerName, sizeof(killerName), "%s", g_PR->GetPlayerName(iKillerIndex) );
-//			V_strupr( killerName );
+			wchar_t wszkillerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+			wszkillerName[0] = '\0';
+			cs_PR->GetDecoratedPlayerName( iKillerIndex, wszkillerName, sizeof( wszkillerName ), k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot );
 
-			m_pBackgroundPanel->SetDialogVariable( "killername", killerName);
+			m_pBackgroundPanel->SetDialogVariable( "killername", wszkillerName );
 
 			int iKillerIndex = pKiller->entindex();
 			player_info_t pi;

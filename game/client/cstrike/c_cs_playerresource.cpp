@@ -9,8 +9,10 @@
 #include <shareddefs.h>
 #include <cs_shareddefs.h>
 #include "hud.h"
+#include "vgui/ILocalize.h"
 #include "gamestringpool.h"
 #include "c_cs_player.h"
+#include "tier3/tier3.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -220,52 +222,163 @@ int C_CS_PlayerResource::GetControlledByPlayer( int index )
 {
 	return m_iControlledByPlayer[index];
 }
+#endif
 
-ConVar cl_add_bot_prefix( "cl_add_bot_prefix", "1", FCVAR_ARCHIVE, "Whether to add a BOT prefix to bot names or not.", true, 0, true, 1 );
-void C_CS_PlayerResource::UpdatePlayerName( int slot )
+static const wchar_t *g_pCharsToBeReplaced = L"\\<>&\'\"$#";
+
+static const wchar_t *g_pReplacementStrings[] = {
+	L"&#92;",
+	L"&lt;",
+	L"&gt;",
+	L"&amp;",
+	L"&apos;",
+	L"&quot;",
+	L"&#36;",
+	L"&#35;"
+};
+
+void MakeStringSafe( const wchar_t* oldName, wchar_t* newName, int destBufferSize )
 {
-	if ( slot < 1 || slot > MAX_PLAYERS )
-	{
-		Error( "UpdatePlayerName with bogus slot %d\n", slot );
-		return;
-	}
+	const wchar_t* pfound;
+	wchar_t* pout = newName;
+	int charsLeft = ( destBufferSize / sizeof(wchar_t) ) - 1;
+	bool bEncounteredIllegalCharacters = false;
 
-	if ( !m_szUnconnectedName )
-	{
-		m_szUnconnectedName = AllocPooledString( PLAYER_UNCONNECTED_NAME );
-	}
-	
-	player_info_t sPlayerInfo;
-	if ( IsConnected( slot ) && engine->GetPlayerInfo( slot, &sPlayerInfo ) )
-	{
-		m_szName[slot] = AllocPooledString( sPlayerInfo.name );
+	// throw a zero at the end just in case
+	newName[charsLeft] = L'\0';
 
-		if ( sPlayerInfo.fakeplayer && cl_add_bot_prefix.GetBool() )
+	for( const wchar_t *p=oldName; *p != 0 && charsLeft > 0; p++ )
+	{
+		// If we are about to write first character and it is a hash then skip it because it is reserved for localization
+		if ( ( pout == newName ) && ( *p == L'#' ) )
 		{
-#if CS_CONTROLLABLE_BOTS_ENABLED
-			int controlledByPlayer = GetControlledByPlayer( slot );
-			if ( controlledByPlayer > 0 )
+			bEncounteredIllegalCharacters = true;
+			continue;
+		}
+
+		// Check the character for replacement sequences
+		pfound = wcschr( g_pCharsToBeReplaced, *p );
+
+		if ( pfound )
+		{
+			int index = pfound - g_pCharsToBeReplaced;
+			int replacementLength = wcslen( g_pReplacementStrings[index] );
+			if ( replacementLength <= charsLeft )
 			{
-				engine->GetPlayerInfo( controlledByPlayer, &sPlayerInfo );
-				char buffer[64];
-				Q_snprintf( buffer, sizeof( buffer ), "BOT (%s)", sPlayerInfo.name );
-				m_szName[slot] = AllocPooledString( buffer );
+				V_wcsncpy( pout, g_pReplacementStrings[index], charsLeft * sizeof( wchar_t ) );
+				charsLeft -= replacementLength;
+				pout += replacementLength;
 			}
 			else
+				break;
+		}
+		else
+		{
+#if 1
+			if ( *p )
+#else
+			if ( iswprint( *p ) || ( *p == L'\t' ) )
 #endif
 			{
-				char buffer[64];
-				Q_snprintf( buffer, sizeof( buffer ), "BOT %s", sPlayerInfo.name );
-				m_szName[slot] = AllocPooledString( buffer );
+				*pout++ = *p;
+				charsLeft--;
 			}
+			else
+			{
+				bEncounteredIllegalCharacters = true;
+			}
+		}
+	}
+
+	// If we didn't write any safe characters, but encountered illegal characters then write at least a question-mark
+	if ( ( pout == newName ) && ( charsLeft > 0 ) && bEncounteredIllegalCharacters )
+	{
+		*pout++ = L'?';
+		charsLeft--;
+	}
+	
+	if ( charsLeft >= 0 ) // 0 is okay because we started charsLeft off as one too small
+		*pout = 0;
+}
+
+ConVar cl_add_bot_prefix( "cl_add_bot_prefix", "1", FCVAR_ARCHIVE, "Whether to add a BOT prefix to bot names or not.", true, 0, true, 1 );
+const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* buffer, int buffsize, EDecoratedPlayerNameFlag_t flags )
+{
+	if ( IsConnected( index ) )
+	{
+		bool addBotToNameIfControllingBot = !!(flags & k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot);
+		bool useNameOfControllingPlayer = !(flags & k_EDecoratedPlayerNameFlag_DontUseNameOfControllingPlayer);
+		bool bShowClanName = !(flags & k_EDecoratedPlayerNameFlag_DontShowClanName);
+
+		int nameIndex = index;
+		int controlledBy = GetControlledByPlayer( index );
+		int nBotControlStringType = 0; // normal name
+
+		if( controlledBy && useNameOfControllingPlayer )
+		{
+			nBotControlStringType = 1;// BOT ( name )
+			nameIndex = controlledBy;
+		}
+		else if ( IsFakePlayer( index ) )
+		{
+			nBotControlStringType = 2; // BOT name
+		}
+		else if ( IsControllingBot( index ) && addBotToNameIfControllingBot )
+		{
+			nBotControlStringType = 1; // BOT ( name )
+		}
+
+		wchar_t wide_name[MAX_PLAYER_NAME_LENGTH];
+		wide_name[0] = L'\0';
+		char nameBuf[MAX_PLAYER_NAME_LENGTH] = {0};
+
+		if ( !cl_add_bot_prefix.GetBool() )
+			nBotControlStringType = 0;
+
+		if ( nBotControlStringType == 2 )
+		{
+			V_snprintf( nameBuf, ARRAYSIZE( nameBuf ) - 1, "%s", GetPlayerName( nameIndex ) );
+		}
+		else
+		{
+			//wchar_t wszClanTag[ MAX_PLAYER_NAME_LENGTH ];
+			char szClan[MAX_PLAYER_NAME_LENGTH];
+			if ( bShowClanName && Q_strlen( GetClanTag( index ) ) > 1 )
+			{
+				const char* optionalSpace = "";
+				if ( GetClanTag( index )[0] == '#' )
+				{
+					optionalSpace = " ";
+				}
+				Q_snprintf( szClan, sizeof( szClan ), "%s%s ", optionalSpace, GetClanTag( index ) );
+			}
+			else
+			{
+				szClan[0] = 0;
+			}
+			//g_pVGuiLocalize->ConvertANSIToUnicode( szClan, wszClanTag, sizeof( wszClanTag ) );
+
+			V_snprintf( nameBuf, ARRAYSIZE( nameBuf ) - 1, "%s%s", szClan, GetPlayerName( nameIndex ) );
+		}
+
+		V_UTF8ToUnicode( nameBuf /*GetPlayerName( nameIndex )*/, wide_name, sizeof( wide_name ) );
+
+		if ( !nBotControlStringType ) // normal name
+		{
+			V_wcsncpy( buffer, wide_name, buffsize );
+		}
+		else
+		{
+			const char* translationID = ( nBotControlStringType == 1 ) ? "#Cstrike_bot_controlled_by" : "#Cstrike_bot_decorated_name";
+			g_pVGuiLocalize->ConstructString( buffer, buffsize, g_pVGuiLocalize->Find( translationID ), 1, wide_name );
 		}
 	}
 	else 
 	{
-		m_szName[slot] = m_szUnconnectedName;
+		*buffer = L'\0';
 	}
+	return buffer;
 }
-#endif
 
 C_CS_PlayerResource * GetCSResources( void )
 {
