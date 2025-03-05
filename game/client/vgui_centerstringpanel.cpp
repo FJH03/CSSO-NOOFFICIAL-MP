@@ -42,7 +42,7 @@ public:
 	// vgui::Panel
 	virtual void		ApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void		OnTick( void );
-
+	virtual void		Paint();
 	// CGameEventListener
 	virtual void		FireGameEvent( IGameEvent * event );
 
@@ -241,16 +241,12 @@ void CNotificationPanel::OnTick( void )
 		SetVisible( bVisibility );
 		if ( bVisibility )
 		{
-			ComputeSize();
 			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "NotificationShow" );
 		}
 	}
 
 	if ( m_bIsDrawing )
 	{
-		// fucking piece of shit called vgui i hope you die!!!
-		if ( m_bIsFirstDraw )
-			ComputeSize();
 
 		if ( m_flCentertimeOff <= gpGlobals->curtime )
 		{
@@ -263,6 +259,17 @@ void CNotificationPanel::OnTick( void )
 
 //-----------------------------------------------------------------------------
 // Purpose: 
+//-----------------------------------------------------------------------------
+void CNotificationPanel::Paint()
+{
+	if ( m_bIsDrawing )
+		ComputeSize();
+
+	BaseClass::Paint();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
 //-----------------------------------------------------------------------------
 void CNotificationPanel::SetAlertVisibility( bool bState )
 {
