@@ -615,7 +615,7 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 
 	// playing it here cuz we dont need it on the server and also to get rid of any latency
 	// play a kill beep sound in DM
-	if ( CSGameRules() && CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && deathMsg.Killer.iEntIndex == GetLocalPlayerIndex() && !deathMsg.bSuicide )
+	if ( CSGameRules() && CSGameRules()->IsPlayingDeathmatch() && deathMsg.Killer.iEntIndex == GetLocalPlayerIndex() && !deathMsg.bSuicide )
 	{
 		CLocalPlayerFilter filter;
 		C_BaseEntity::EmitSound( filter, -1, "Deathmatch.Kill" );

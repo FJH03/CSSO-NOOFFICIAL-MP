@@ -348,6 +348,7 @@ public:
 	void AddHostageRescueTime( void );
 
 	bool IsPlayingClassic( void ) const;
+	bool IsPlayingDeathmatch( void ) const;
 
 	bool IsPlayingAnyCompetitiveStrictRuleset( void ) const;
 

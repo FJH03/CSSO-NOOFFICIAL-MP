@@ -1490,6 +1490,10 @@ ConVar snd_music_selection(
 				engine->ServerCommand( "exec gamemode_deathmatch.cfg\n" );
 				engine->ServerExecute();
 				break;
+			case GameModes::DEATHMATCH_SHORT:
+				engine->ServerCommand( "exec gamemode_deathmatch_short.cfg\n" );
+				engine->ServerExecute();
+				break;
 			case GameModes::FLYING_SCOUTSMAN:
 				engine->ServerCommand( "exec gamemode_flying_scoutsman.cfg\n" );
 				engine->ServerExecute();
@@ -4336,7 +4340,7 @@ ConVar snd_music_selection(
 
 	void CCSGameRules::GiveC4()
 	{
-		if ( IsWarmupPeriod() || GetGamemode() == GameModes::ARMS_RACE || GetGamemode() == GameModes::DEATHMATCH )
+		if ( IsWarmupPeriod() || GetGamemode() == GameModes::ARMS_RACE || IsPlayingDeathmatch() )
 			return;
 
 		enum {
@@ -4945,7 +4949,7 @@ ConVar snd_music_selection(
 
 		// New code to get rid of round draws!!
 
-		if ( GetGamemode() == GameModes::DEATHMATCH )
+		if ( IsPlayingDeathmatch() )
 		{
 			// TODO: make this a shared function so playercount runs the same code
 			CCSPlayer *pWinner = NULL;
@@ -6496,7 +6500,7 @@ ConVar snd_music_selection(
 			// Perform round-related processing at the point when a round winner has been determined
 			RoundWin();
 
-			if ( GetGamemode() == GameModes::DEATHMATCH )
+			if ( IsPlayingDeathmatch() )
 				GoToIntermission();
 		}
 	}
@@ -7660,6 +7664,23 @@ CAmmoDef* GetAmmoDef()
 	return &ammoDef;
 }
 
+bool CCSGameRules::IsPlayingClassic( void ) const
+{
+	if ( m_iCurrentGamemode < GameModes::CLASSIC_GAMEMODES && m_iCurrentGamemode > GameModes::CUSTOM )
+		return true;
+
+	return false;
+}
+
+bool CCSGameRules::IsPlayingDeathmatch( void ) const
+{
+	if ( m_iCurrentGamemode == GameModes::DEATHMATCH ||
+		 m_iCurrentGamemode == GameModes::DEATHMATCH_SHORT )
+		return true;
+
+	return false;
+}
+
 #ifndef CLIENT_DLL
 const char *CCSGameRules::GetChatPrefix( bool bTeamOnly, CBasePlayer *pPlayer )
 {
@@ -8316,16 +8337,6 @@ int CCSGameRules::GetStartMoney( void )
 	
 	return IsWarmupPeriod() ? mp_maxmoney.GetInt() : (GetOvertimePlaying() ? mp_overtime_startmoney.GetInt() : mp_startmoney.GetInt());
 }
-
-bool CCSGameRules::IsPlayingClassic( void ) const
-{
-	if ( m_iCurrentGamemode < GameModes::CLASSIC_GAMEMODES && m_iCurrentGamemode > GameModes::CUSTOM )
-		return true;
-
-	return false;
-}
-
-
 
 // [menglish] Set up anything for all players that changes based on new players spawning mid-game
 //				Find and return fun fact data

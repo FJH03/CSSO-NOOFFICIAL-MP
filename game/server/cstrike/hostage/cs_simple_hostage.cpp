@@ -236,7 +236,7 @@ bool CHostage::KeyValue( const char *szKeyName, const char *szValue )
 //-----------------------------------------------------------------------------------------------------
 void CHostage::Spawn( void )
 {
-	if ( (CSGameRules()->GetGamemode() == GameModes::DEATHMATCH || CSGameRules()->GetGamemode() == GameModes::ARMS_RACE) ||
+	if ( (CSGameRules()->IsPlayingDeathmatch() || CSGameRules()->GetGamemode() == GameModes::ARMS_RACE) ||
 		 (CSGameRules()->IsWarmupPeriod() && !mp_hostages_spawn_same_every_round.GetBool()) )
 		return;
 

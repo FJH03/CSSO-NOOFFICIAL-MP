@@ -1558,6 +1558,15 @@ void CCSPlayer::Spawn()
 	// clear out and carried hostage stuff
 	RemoveCarriedHostage();
 
+	// play a respawn sound if you're in deathmatch 
+	if ( State_Get() == STATE_ACTIVE )
+	{
+		if ( (CSGameRules()->IsPlayingDeathmatch() && GetTeamNumber() >= TEAM_TERRORIST) )
+		{
+			EmitSound( "Player.Respawn" );
+		}
+	}
+
 	if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
 	{
 		m_PlayerAnimStateCSGO->Reset();
@@ -1617,7 +1626,7 @@ void CCSPlayer::GiveDefaultItems()
 		pchTeamKnifeName = KnivesEntitiesStrings[CSLoadout()->GetKnifeForPlayer(this, GetTeamNumber())];
 
 	// don't give default items if the player is in deathmatch- we control weapon giving in DM, the player could get a random weapon
-	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
+	if ( CSGameRules()->IsPlayingDeathmatch() )
 	{
 		CBaseCombatWeapon *knife = Weapon_GetSlot( WEAPON_SLOT_KNIFE );	
 		// if the player doesn't have something in the melee slot, give them a knife
@@ -2897,7 +2906,7 @@ void CCSPlayer::PostThink()
 		}
 	}
 
-	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
+	if ( CSGameRules()->IsPlayingDeathmatch() )
 	{
 		// make sure that this player has enough money to buy things
 		m_iAccount = mp_maxmoney.GetInt();
@@ -5162,7 +5171,7 @@ BuyResult_e CCSPlayer::AttemptToBuyDefuser( void )
 {
 	CCSGameRules *MPRules = CSGameRules();
 
-	if ( MPRules->GetGamemode() == GameModes::DEATHMATCH )
+	if ( MPRules->IsPlayingDeathmatch() )
 		return BUY_NOT_ALLOWED;
 
 	if( ( GetTeamNumber() == TEAM_CT ) && ( MPRules->IsBombDefuseMap() || MPRules->IsHostageRescueMap() ) )
@@ -6425,7 +6434,7 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 	else if ( FStrEq( pcmd, "autobuy" ) )
 	{
 		// hijack autobuy for when money isnt relevant and we want random weapons instead, such as deathmatch.
-		if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
+		if ( CSGameRules()->IsPlayingDeathmatch() )
 		{
 			engine->ClientCommand( edict(), "dm_togglerandomweapons" );
 		}
@@ -10548,7 +10557,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			pAttacker->m_maxNumEnemiesKillStreak = pAttacker->m_NumEnemiesKilledThisSpawn;
 
 		// give a healthshot in DM for every triple kill streak if dont have a healthshot
-		if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && (pAttacker->m_NumEnemiesKilledThisSpawn % 3 == 0) && !pAttacker->Weapon_OwnsThisType( "weapon_healthshot" ) )
+		if ( CSGameRules()->IsPlayingDeathmatch() && (pAttacker->m_NumEnemiesKilledThisSpawn % 3 == 0) && !pAttacker->Weapon_OwnsThisType( "weapon_healthshot" ) )
 		{
 			pAttacker->GiveNamedItem( "weapon_healthshot" );
 		}

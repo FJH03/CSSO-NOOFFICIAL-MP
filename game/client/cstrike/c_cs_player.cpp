@@ -2350,7 +2350,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "round_start", name ) == 0 )
 	{
-		if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
+		if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
 			m_bShouldAutobuyDMWeapons = true;
 	}
 	else if ( Q_strcmp( name, "cs_pre_restart" ) == 0 )
@@ -2411,7 +2411,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 
 			m_flLastSpawnTimeIndex = gpGlobals->curtime;
 
-			if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
+			if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
 				m_bShouldAutobuyDMWeapons = true;
 
 			if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
@@ -2649,7 +2649,7 @@ void C_CSPlayer::ClientThink()
 		}
 	}
 
-	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && IsLocalPlayer() && IsAlive() && GetObserverMode() == OBS_MODE_NONE )
+	if ( CSGameRules()->IsPlayingDeathmatch() && IsLocalPlayer() && IsAlive() && GetObserverMode() == OBS_MODE_NONE )
 	{
 		float flTimeLeft = m_fImmuneToDamageTime - gpGlobals->curtime;
 		if ( m_fImmuneToDamageTimeLast != 0 || flTimeLeft >= 0 )

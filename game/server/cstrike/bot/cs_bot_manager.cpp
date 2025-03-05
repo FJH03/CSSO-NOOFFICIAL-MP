@@ -1344,7 +1344,7 @@ void CCSBotManager::ExtractScenarioData( void )
 	m_zoneCount = 0;
 	m_gameScenario = SCENARIO_DEATHMATCH;
 
-	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
+	if ( CSGameRules()->IsPlayingDeathmatch() )
 		return;
 
 	//
