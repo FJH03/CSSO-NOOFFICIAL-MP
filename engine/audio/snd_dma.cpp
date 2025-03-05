@@ -4359,7 +4359,7 @@ void SND_Spatialize(channel_t *ch)
 	}
 #endif
 
-	if ( IsSoundSourceLocalPlayer( ch->soundsource ) && !toolframework->InToolMode() )
+if ( ch->wavtype == CHAR_RADIO || ( IsSoundSourceLocalPlayer( ch->soundsource ) && !toolframework->InToolMode() ) || ( ch->sfx && ch->sfx->pSource && ch->sfx->pSource->GetType() == CAudioSource::AUDIO_SOURCE_VOICE))
 	{
 		// sounds coming from listener actually come from a short distance directly in front of listener
 		// in tool mode however, the view entity is meaningless, since we're viewing from arbitrary locations in space
@@ -4798,6 +4798,9 @@ void S_SetChannelWavtype( channel_t *target_chan, CSfxTable *pSfx )
 
 	if ( TestSoundChar( pSfx->getname(), CHAR_SPATIALSTEREO ))
 		target_chan->wavtype = CHAR_SPATIALSTEREO;
+
+	if ( TestSoundChar( pSfx->getname(), CHAR_RADIO ) )
+		target_chan->wavtype = CHAR_RADIO;
 }
 
 
