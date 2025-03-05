@@ -10552,9 +10552,6 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && (pAttacker->m_NumEnemiesKilledThisSpawn % 3 == 0) && !pAttacker->Weapon_OwnsThisType( "weapon_healthshot" ) )
 		{
 			pAttacker->GiveNamedItem( "weapon_healthshot" );
-
-			// notify the player
-			ClientPrint( pAttacker, HUD_PRINTTALK, "#Cstrike_WasGivenAHealthshot" );
 		}
 
 		//store a list of kill times for spree tracking
