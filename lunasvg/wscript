@@ -54,17 +54,18 @@ def build(bld):
 	defines = ['RAD_TELEMETRY_DISABLED']
 
 	libs = []
+    if not bld.env.DEST_OS == 'android':
 
-	bld.stlib(
-		source   = source,
-		target   = PROJECT_NAME,
-		name     = PROJECT_NAME,
-		features = 'c cxx',
-		includes = includes,
-		defines  = defines,
-		use      = libs,
-		cxxflags = ['--std=c++17'],
-		subsystem = bld.env.MSVC_SUBSYSTEM,
-		idx      = bld.get_taskgen_count()
-	)
+    	bld.stlib(
+	    	source   = source,
+		    target   = PROJECT_NAME,
+		    name     = PROJECT_NAME,
+		    features = 'c cxx',
+	    	includes = includes,
+	    	defines  = defines,
+	    	use      = libs,
+		    cxxflags = ['--std=c++17'],
+	    	subsystem = bld.env.MSVC_SUBSYSTEM,
+	    	idx      = bld.get_taskgen_count()
+	    )
 
