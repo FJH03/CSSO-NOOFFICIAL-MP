@@ -120,7 +120,6 @@ public:
 		if ( !m_iCost1 )
 			m_iCost1 = m_iCost0;
 
-		SetPriceState();
 		SetMapTypeState();
 
 		SetLabels();
@@ -132,10 +131,17 @@ public:
 
 	int GetDECSUseOnly() { return m_iDECSUseOnly; }
 
+	virtual void Paint()
+ 	{
+ 		// update button colors in real time
+ 		SetPriceState();
+ 
+ 		BaseClass::Paint();
+ 	}
+
 	virtual void PerformLayout()
 	{
 		BaseClass::PerformLayout();
-		SetPriceState();
 		SetMapTypeState();
 
 		SetLabels();
@@ -159,7 +165,6 @@ public:
 		m_bargainColor = Color( 0, 255, 0, 192 );
 		m_defaultColor = pScheme->GetColor( "Label.TextColor", Color( 0, 0, 0, 0 ) );
 
-		SetPriceState();
 		SetMapTypeState();
 
 		SetLabels();
@@ -192,28 +197,22 @@ public:
 		if ( !pPlayer )
 			return;
 
-		if ( m_iPrice && ( m_iPrice > pPlayer->GetAccount() ) )
-			SetFgColor( m_unavailableColor );
-		else if ( m_iPrice && (m_iPrice <= pPlayer->GetAccount()) )
-			SetFgColor( m_avaliableColor );
-		else
-			SetFgColor( m_bIsBargain ? m_bargainColor : m_defaultColor );
-
 		// check if we already own the weapon
 		if ( Q_strncmp( m_command, "buy ", 4 ) == 0 )
 		{
 			const char* weaponClassFromSlot = CSLoadout()->GetWeaponFromSlot( pPlayer, CSLoadout()->GetSlotFromWeapon( pPlayer->GetTeamNumber(), m_command + 4 ) );
-			char weaponClass[64];
-			Q_snprintf( weaponClass, sizeof( weaponClass ), "weapon_%s", weaponClassFromSlot ? weaponClassFromSlot : m_command + 4 );
-			C_WeaponCSBase* pWeapon = dynamic_cast<C_WeaponCSBase*>(pPlayer->Weapon_OwnsThisType( weaponClass ));
-
-			if ( pWeapon )
-			{
-				if ( pWeapon->GetWeaponType() != WEAPONTYPE_GRENADE )
-					SetFgColor( m_alreadyOwnColor );
-				else if ( pWeapon->GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) >= pWeapon->GetReserveAmmoMax( AMMO_POSITION_PRIMARY ) )
-					SetFgColor( m_alreadyOwnColor );
-			}
+			if ( pPlayer->CanAcquire( AliasToWeaponID( weaponClassFromSlot ? weaponClassFromSlot : m_command + 4 ), AcquireMethod::Buy ) != AcquireResult::Allowed )
+ 				SetFgColor( m_alreadyOwnColor );
+ 			else if ( m_iPrice && (m_iPrice > pPlayer->GetAccount()) )
+ 				SetFgColor( m_unavailableColor );
+ 			else if ( m_iPrice && (m_iPrice <= pPlayer->GetAccount()) )
+ 				SetFgColor( m_avaliableColor );
+ 			else
+ 				SetFgColor( m_bIsBargain ? m_bargainColor : m_defaultColor );
+ 		}
+ 		else
+ 		{
+ 			SetFgColor( m_bIsBargain ? m_bargainColor : m_defaultColor );
 		}
 	}
 

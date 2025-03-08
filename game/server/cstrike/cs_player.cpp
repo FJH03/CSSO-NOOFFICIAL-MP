@@ -357,6 +357,8 @@ BEGIN_SEND_TABLE_NOBASE( CCSPlayer, DT_CSLocalPlayerExclusive )
 	SendPropArray3( SENDINFO_ARRAY3( m_bPlayerDominated ), SendPropBool( SENDINFO_ARRAY( m_bPlayerDominated ) ) ),
 	SendPropArray3( SENDINFO_ARRAY3( m_bPlayerDominatingMe ), SendPropBool( SENDINFO_ARRAY( m_bPlayerDominatingMe ) ) ),
 
+	SendPropArray3( SENDINFO_ARRAY3( m_iWeaponPurchasesThisRound ), SendPropInt( SENDINFO_ARRAY( m_iWeaponPurchasesThisRound ), 4, SPROP_UNSIGNED ) ),
+
 END_SEND_TABLE()
 
 
@@ -1531,6 +1533,11 @@ void CCSPlayer::Spawn()
 
 	m_bDuckOverride = false;
 
+	for ( int i = 0; i < m_iWeaponPurchasesThisRound.Count(); ++i )
+ 	{
+ 		m_iWeaponPurchasesThisRound.Set(i, 0);
+ 	}
+
 	// If we're constantly respawning then reset damage stats on spawn. Otherwise this'll happen on roundrespawn after damage is reported.
 	if ( IsAbleToInstantRespawn() )
 	{
@@ -1555,6 +1562,13 @@ void CCSPlayer::Spawn()
 		m_PlayerAnimStateCSGO->Reset();
 		m_PlayerAnimStateCSGO->Update( EyeAngles()[YAW], EyeAngles()[PITCH], true );
 		DoAnimationEvent( PLAYERANIMEVENT_DEPLOY ); // re-deploy default weapon when spawning
+	}
+
+	// if a player spawns with a smoke grenade in competitive, it counts as being "bought" so they can't end up with 2 per player that round
+	if ( CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
+	{
+		if ( GetAmmoCount( GetAmmoDef()->Index( AMMO_TYPE_SMOKEGRENADE ) ) )
+			m_iWeaponPurchasesThisRound.GetForModify(WEAPON_SMOKEGRENADE)++;
 	}
 
 	if ( GetTeamNumber() == TEAM_CT )
@@ -5355,6 +5369,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 			if ( equipResult == BUY_BOUGHT )
 			{
 				BuildRebuyStruct();
+				m_iWeaponPurchasesThisRound.GetForModify(weaponId)++;
 			}
 			return equipResult; // intentional early return here
 		}
@@ -5407,6 +5422,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 	if ( result == BUY_BOUGHT )
 	{
 		BuildRebuyStruct();
+		m_iWeaponPurchasesThisRound.GetForModify(weaponId)++;
 	}
 
 	return result;

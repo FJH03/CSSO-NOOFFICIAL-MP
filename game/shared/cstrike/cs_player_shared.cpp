@@ -1924,18 +1924,25 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 		return AcquireResult::AlreadyOwned;
 	}
 
+	extern ConVar mp_weapons_allow_zeus;
+ 	extern ConVar mp_weapons_allow_typecount;
+ 	// special case for limiting taser to classic casual; data drive this if it becomes more complex
+ 	if ( weaponId == WEAPON_TASER )
+ 	{
+ 		if ( !mp_weapons_allow_zeus.GetBool() )
+ 			return AcquireResult::NotAllowedForPurchase;
+ 		else if ( ( mp_weapons_allow_zeus.GetInt() > 0 ) && ( m_iWeaponPurchasesThisRound[ weaponId ] >= mp_weapons_allow_zeus.GetInt() ) )
+ 			return AcquireResult::AlreadyPurchased;
+ 		else
+ 			return AcquireResult::Allowed;
+ 	}
+
 	// additional constraints for purchasing weapons
 	if ( acquireMethod == AcquireMethod::Buy )
 	{
 		if ( pWeaponInfo->m_iTeam != TEAM_UNASSIGNED && GetTeamNumber() != pWeaponInfo->m_iTeam )
 		{
 			return AcquireResult::NotAllowedByTeam;
-		}
-
-		// special case for flashbangs - no limit
-		if ( weaponId == WEAPON_FLASHBANG )
-		{
-			return AcquireResult::Allowed;
 		}
 
 		// don't allow purchasing multiple grenades of a given type per round (even if the player throws the purchased one)
@@ -1947,12 +1954,21 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 			// for smoke grenade, we are only allow to buy exactly the amount we are allowed to carry, with other weapons, we can purchase one more than what we can carry per round
 			if ( weaponId == WEAPON_SMOKEGRENADE && carryLimitThisGrenade > 0 )
 				carryLimitThisGrenade--;
+
+				if ( m_iWeaponPurchasesThisRound[weaponId] > carryLimitThisGrenade )
+				return AcquireResult::AlreadyPurchased;
 		}
 
 		if ( CSLoadout()->IsKnife(weaponId) )
 		{ 
 			return AcquireResult::NotAllowedForPurchase; 
 		}
+
+		// Validate that each player can buy only so many instances of same weapon type
+		if ( mp_weapons_allow_typecount.GetInt() == 0 )
+			return AcquireResult::NotAllowedForPurchase;
+		else if ( ( mp_weapons_allow_typecount.GetInt() > 0 ) && ( m_iWeaponPurchasesThisRound[weaponId] >= mp_weapons_allow_typecount.GetInt() ) )
+			return AcquireResult::AlreadyPurchased;
 	}
 
 	return AcquireResult::Allowed;

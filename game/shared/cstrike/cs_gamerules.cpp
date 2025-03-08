@@ -606,6 +606,18 @@ ConVar mp_molotovusedelay(
 	true, 0.0,
 	true, 30.0 );
 
+ConVar mp_weapons_allow_zeus(
+	"mp_weapons_allow_zeus",
+	"1",
+	FCVAR_REPLICATED,
+	"Determines how many Zeus purchases a player can make per round (0 to disallow, -1 to have no limit)." );
+
+ConVar mp_weapons_allow_typecount(
+	"mp_weapons_allow_typecount",
+	"5",
+	FCVAR_REPLICATED,
+	"Determines how many purchases of each weapon type allowed per player per round (0 to disallow purchasing, -1 to have no limit)." );
+	
 ConVar mp_default_team_winner_no_objective(
 	"mp_default_team_winner_no_objective",
 	"-1",

@@ -998,7 +998,9 @@ BEGIN_RECV_TABLE_NOBASE( C_CSPlayer, DT_CSLocalPlayerExclusive )
     //=============================================================================
 
     RecvPropArray3( RECVINFO_ARRAY( m_bPlayerDominated ), RecvPropBool( RECVINFO( m_bPlayerDominated[0] ) ) ),
-    RecvPropArray3( RECVINFO_ARRAY( m_bPlayerDominatingMe ), RecvPropBool( RECVINFO( m_bPlayerDominatingMe[0] ) ) )
+    RecvPropArray3( RECVINFO_ARRAY( m_bPlayerDominatingMe ), RecvPropBool( RECVINFO( m_bPlayerDominatingMe[0] ) ) ),
+ 
+ 	RecvPropArray3( RECVINFO_ARRAY( m_iWeaponPurchasesThisRound ), RecvPropInt( RECVINFO( m_iWeaponPurchasesThisRound[0] ) ) ),
 
     //=============================================================================
     // HPE_END

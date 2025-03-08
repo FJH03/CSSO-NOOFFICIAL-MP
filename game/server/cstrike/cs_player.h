@@ -1253,6 +1253,7 @@ public:
 private:
     CNetworkArray( bool, m_bPlayerDominated, MAX_PLAYERS+1 );		// array of state per other player whether player is dominating other players
     CNetworkArray( bool, m_bPlayerDominatingMe, MAX_PLAYERS+1 );	// array of state per other player whether other players are dominating this player
+	CNetworkArray( int, m_iWeaponPurchasesThisRound, MAX_WEAPONS );	// number of times weapons purchased this round; used to limit repurchases
 	CNetworkVar( bool, m_bIsLookingAtWeapon );
 	CNetworkVar( bool, m_bIsHoldingLookAtWeapon );
 
