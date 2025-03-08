@@ -2557,7 +2557,7 @@ ConVar snd_music_selection(
 	float CCSGameRules::FlPlayerFallDamage( CBasePlayer *pPlayer )
 	{
 		float fFallVelocity = pPlayer->m_Local.m_flFallVelocity - CS_PLAYER_MAX_SAFE_FALL_SPEED;
-		float fallDamage = fFallVelocity * CS_DAMAGE_FOR_FALL_SPEED * 1.25;
+		float fallDamage = fFallVelocity * CS_DAMAGE_FOR_FALL_SPEED;
 
 		if ( fallDamage > 0.0f )
 		{
