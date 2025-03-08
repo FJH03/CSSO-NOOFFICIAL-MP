@@ -35,7 +35,6 @@ CCSBuyMenuPlayerImagePanel::CCSBuyMenuPlayerImagePanel( vgui::Panel *pParent, co
 	: BaseClass( pParent, pName )
 {
 	g_BuyMenuPlayerImagePanels.AddToTail( this );
-	m_flModelYaw = 0.0f;
 }
 
 CCSBuyMenuPlayerImagePanel::~CCSBuyMenuPlayerImagePanel()

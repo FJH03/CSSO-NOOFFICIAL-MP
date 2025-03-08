@@ -1068,7 +1068,6 @@ void UpdateImageEntity(
 	const char *szPlayerModel,
 	int x, int y, int width, int height,
 	float viewX, float viewY, float viewZ, float viewFOV,
-	float modelYaw,
 	bool bIsClassSelection )
 {
 	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
@@ -1413,7 +1412,7 @@ void ClientModeCSNormal::PostRenderVGui()
 			w -= 2;
 			h -= 2;
 
-			UpdateImageEntity( NULL, pPanel->m_szModelName, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, 0.0f, true );
+			UpdateImageEntity( NULL, pPanel->m_szModelName, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, true );
 			return;
 		}
 	}
@@ -1429,7 +1428,7 @@ void ClientModeCSNormal::PostRenderVGui()
 			pPanel->GetBounds( x, y, w, h );
 
 
-			UpdateImageEntity( NULL, NULL, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, 0.0f, false );
+			UpdateImageEntity( NULL, NULL, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, false );
 			return;
 		}
 	}
@@ -1445,7 +1444,7 @@ void ClientModeCSNormal::PostRenderVGui()
 			pPanel->GetBounds( x, y, w, h );
 			pPanel->ParentLocalToScreen( x, y ); // this is parented to a sub panel, not directly to the buy menu
 
-			UpdateImageEntity( pPanel->m_szWeaponName, NULL, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, 0.0f, false );
+			UpdateImageEntity( pPanel->m_szWeaponName, NULL, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, false );
 			return;
 		}
 	}

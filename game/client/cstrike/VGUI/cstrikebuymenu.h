@@ -11,9 +11,6 @@
 #pragma once
 #endif
 
-#include <vgui_controls/WizardPanel.h>
-#include "cstrikerotatingplayerpanel.h"
-
 #include <buymenu.h>
 
 //-----------------------------------------------------------------------------
@@ -21,10 +18,10 @@
 // model on top of them.
 //-----------------------------------------------------------------------------
 
-class CCSBuyMenuPlayerImagePanel: public CCSRotatingPlayerImagePanel
+class CCSBuyMenuPlayerImagePanel: public vgui::Panel
 {
 public:
-	typedef CCSRotatingPlayerImagePanel BaseClass;
+	typedef vgui::Panel BaseClass;
 
 	CCSBuyMenuPlayerImagePanel( vgui::Panel *pParent, const char *pName );
 	virtual ~CCSBuyMenuPlayerImagePanel();
