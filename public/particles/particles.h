@@ -1478,7 +1478,9 @@ inline bool CParticleCollection::ReadsControlPoint( int nPoint ) const
 
 inline void CParticleCollection::SetNActiveParticles( int nCount )
 {
-	Assert( nCount <= m_nMaxAllowedParticles );
+	Assert( nCount >= 0 && nCount <= m_nMaxAllowedParticles );
+ 	if ( nCount < 0 )
+ 		nCount = 0;
 	m_nActiveParticles = nCount;
 	m_nPaddedActiveParticles = ( nCount+3 )/4;
 }
