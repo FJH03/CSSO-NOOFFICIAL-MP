@@ -19,6 +19,7 @@ public:
 	DECLARE_CLASS_SIMPLE( CHudC4, vgui::VectorImagePanel );
 
 	CHudC4( const char *name );
+	virtual void Init();
 	virtual bool ShouldDraw();
 	virtual void OnThink();
 
@@ -26,7 +27,8 @@ private:
 	CPanelAnimationVar( Color, m_clrIcon, "IconColor", "White" );
 	CPanelAnimationVar( Color, m_clrBombZone, "BombZoneColor", "White" );
 
-	bool bInBombZone;
+	float m_flNextFlashTime;
+	bool m_bFlash;
 };
 
 
@@ -39,8 +41,12 @@ CHudC4::CHudC4( const char *pName ) :
 	SetParent( g_pClientMode->GetViewport() );
 
 	SetHiddenBits( HIDEHUD_PLAYERDEAD );
+}
 
-	bInBombZone = true;
+void CHudC4::Init()
+{
+	m_flNextFlashTime = 0;
+	m_bFlash = false;
 }
 
 void CHudC4::OnThink()
@@ -49,11 +55,23 @@ void CHudC4::OnThink()
 	if ( !pPlayer )
 		return;
 
-	if ( bInBombZone != pPlayer->m_bInBombZone )
+	if ( pPlayer->m_bInBombZone )
 	{
-		bInBombZone = pPlayer->m_bInBombZone;
-		SetFgColor( bInBombZone ? m_clrBombZone : m_clrIcon );
+		if ( m_flNextFlashTime < gpGlobals->curtime )
+		{
+			m_bFlash = !m_bFlash;
+			m_flNextFlashTime = gpGlobals->curtime + 0.1f;
+		}
 	}
+	else
+	{
+		m_bFlash = false;
+	}
+
+	if ( m_bFlash )
+		SetFgColor( m_clrBombZone );
+	else
+		SetFgColor( m_clrIcon );
 }
 
 bool CHudC4::ShouldDraw()
