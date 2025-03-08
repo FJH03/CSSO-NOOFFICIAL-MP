@@ -120,7 +120,7 @@ int CCSBot::OnTakeDamage( const CTakeDamageInfo &info )
 		
 		bool m_bShouldTalkAboutFF = cv_bot_chatter_friendlyfire_from_bots.GetBool() ? true : !player->IsBot();
 
-		if ( m_bShouldTalkAboutFF && InSameTeam(player) && !IsOtherEnemy( player ) )
+		if ( m_bShouldTalkAboutFF && InSameTeam(player) && !IsOtherEnemy( player ) && info.GetDamage() > 0 )
 			GetChatter()->FriendlyFire();
 	}
 
