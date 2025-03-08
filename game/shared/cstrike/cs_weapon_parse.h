@@ -242,6 +242,7 @@ public:
 	float	m_flRangeModifier;
 	int		m_iBullets;
 	float	m_flCycleTime[2];
+	float	m_flHeadshotMultiplier;
 
 	bool	m_bIsRevolver;
  

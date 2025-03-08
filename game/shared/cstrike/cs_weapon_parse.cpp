@@ -409,6 +409,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_iBullets			= pKeyValuesData->GetInt( "Bullets", 1 );
 	m_flCycleTime[0]	= pKeyValuesData->GetFloat( "CycleTime", 0.15 );
 	m_flCycleTime[1]	= pKeyValuesData->GetFloat( "CycleTimeAlt", m_flCycleTime[0] );
+	m_flHeadshotMultiplier = pKeyValuesData->GetFloat( "HeadshotMultiplier", 4.0f );
 
 	m_bIsRevolver				= pKeyValuesData->GetBool( "IsRevolver" );
  

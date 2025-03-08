@@ -3501,6 +3501,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 	bool hitByBullet = false;
 	bool hitByGrenadeProjectile = false;
 	bool bHeadShot = false;
+	float flHeadshotMultiplier = 4.0f;
 
 	if ( m_bImmunity )
 	{
@@ -3535,6 +3536,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 		{
 			hitByBullet = IsGunWeapon( pCSWeapon->GetWeaponType() );
 			hitByGrenadeProjectile = ((pCSWeapon->GetWeaponType() == WEAPONTYPE_GRENADE) && (info.GetDamageType() & DMG_CLUB) != 0);
+			flHeadshotMultiplier = pCSWeapon->GetCSWpnData().m_flHeadshotMultiplier;
 		}
 
 // [menglish] Calculate the position this player was hit at in the bone space
@@ -3556,7 +3558,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 				bShouldSpark = true;
 			}
 
-			flDamage *= 4;
+			flDamage *= flHeadshotMultiplier;
 
 			if ( !m_bHasHelmet )
 			{
