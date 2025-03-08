@@ -2234,6 +2234,11 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 		}
 	}
 
+	else
+ 	{
+ 		CSGameRules()->CheckWinConditions();
+ 	}
+
 	OutputDamageGiven();
 	OutputDamageTaken();
 	ResetDamageCounters();
