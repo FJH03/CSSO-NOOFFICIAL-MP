@@ -211,7 +211,6 @@ void CTargetID::Paint()
 				c = GetColorForTargetTeam( pPlayer->GetTeamNumber() );
 
 				C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>( g_PR );
-
 				if ( cs_PR )
 				{
 					cs_PR->GetDecoratedPlayerName( iPlayerEntIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot );
@@ -374,7 +373,7 @@ void CTargetID::Paint()
 		if ( pWeapon )
 		{
 			if ( pPlayer->CanAcquire( pWeapon->GetCSWeaponID(), AcquireMethod::PickUp ) == AcquireResult::Allowed ||
-				pPlayer->IsPrimaryOrSecondaryWeapon( pWeapon->GetCSWpnData().m_WeaponType ) )
+				 pPlayer->IsPrimaryOrSecondaryWeapon( pWeapon->GetCSWpnData().m_WeaponType ) )
 			{
 				if ( pPlayer->Weapon_GetSlot( pWeapon->GetSlot() ) )
 				{
@@ -384,17 +383,12 @@ void CTargetID::Paint()
 				}
 				else
 				{
-					sIDString[0] = 0;
+					Q_wcsncpy( sIDString, g_pVGuiLocalize->Find( pWeapon->GetPrintName() ), sizeof( sIDString ) );
 				}
 			}
 			else
 			{
-				if ( pPlayer->Weapon_GetSlot( pWeapon->GetSlot() ) )
-					g_pVGuiLocalize->ConstructString( sIDString, sizeof( sIDString ), g_pVGuiLocalize->Find( "#Cstrike_weaponid_pickup_have" ),
-													  1, g_pVGuiLocalize->Find( pWeapon->GetCSWpnData().szPrintName ) );
-				else
-					g_pVGuiLocalize->ConstructString( sIDString, sizeof( sIDString ), g_pVGuiLocalize->Find( "#Cstrike_weaponid_pickup" ),
-													  1, g_pVGuiLocalize->Find( pWeapon->GetCSWpnData().szPrintName ) );
+				sIDString[0] = 0;
 			}
 		}
 		else
