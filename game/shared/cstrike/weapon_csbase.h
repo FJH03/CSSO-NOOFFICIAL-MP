@@ -154,6 +154,8 @@ public:
 		
 	#endif
 
+	virtual int GetShotgunReloadState( void ) { return 0; } // only shotguns use this for multi-stage reloads
+	
 	virtual bool	Holster( CBaseCombatWeapon *pSwitchingTo );
 	virtual void	AddViewmodelBob( CBaseViewModel *viewmodel, Vector &origin, QAngle &angles );
 	virtual	float	CalcViewmodelBob( void );

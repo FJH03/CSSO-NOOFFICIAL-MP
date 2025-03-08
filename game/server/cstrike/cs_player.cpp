@@ -6276,10 +6276,10 @@ void CCSPlayer::LookAtHeldWeapon( void )
 		return;
 
 	// don't let me inspect a shotgun that's reloading
-	/*if ( pActiveWeapon->GetWeaponType() == WEAPONTYPE_SHOTGUN && pActiveWeapon->GetShotgunReloadState() != 0 )
+	if ( pActiveWeapon->GetWeaponType() == WEAPONTYPE_SHOTGUN && pActiveWeapon->GetShotgunReloadState() != 0 )
 	{
 		return;
-	}*/
+	}
 
 #if IRONSIGHT
 	if ( pActiveWeapon->m_iIronSightMode == IronSight_should_approach_sighted )
