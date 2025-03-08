@@ -1172,10 +1172,10 @@ void UpdateImageEntity(
 				szWeaponModel = "models/weapons/w_eq_armor_helmet.mdl";
 				szWeaponSequence = "t_buymenu_armor_helmet";
 			}
-			else if ( nWeaponID == ITEM_NVG )
+			else if ( nWeaponID == ITEM_NVGS )
  			{
- 				szWeaponModel = "models/weapons/w_eq_nvg.mdl";
- 				szWeaponSequence = "ct_buymenu_nvg";
+ 				szWeaponModel = "models/weapons/w_eq_nvgs.mdl";
+ 				szWeaponSequence = "ct_buymenu_nvgs";
  			}
 			else
 			{

@@ -681,7 +681,7 @@ void CCSPlayer::Precache()
 	PrecacheModel( "models/weapons/w_eq_armor_helmet.mdl" );
 	PrecacheModel( "models/weapons/w_eq_armor.mdl" );
 	PrecacheModel( "models/weapons/w_defuser.mdl" );
-	PrecacheModel( "models/weapons/w_eq_nvg.mdl" );
+	PrecacheModel( "models/weapons/w_eq_nvgs.mdl" );
 
 	// PiMoN: hardcoding this stuff to (hopefully) get rid of some cheaters
 	engine->ForceSimpleMaterial( "materials/vgui/white.vmt" );
@@ -5092,7 +5092,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAd
 		{
 			equipResult = AttemptToBuyDefuser();
 		}
-		else if ( weaponId == ITEM_NVG )
+		else if ( weaponId == ITEM_NVGS )
 		{
 			equipResult = AttemptToBuyNightVision();
 		}
@@ -8073,7 +8073,7 @@ void CCSPlayer::PrioritizeAutoBuyString(char *autobuyString, const char *priorit
 
 void CCSPlayer::AddToRebuy( CSWeaponID weaponId )
 {
-	if ( weaponId == ITEM_NVG )
+	if ( weaponId == ITEM_NVGS )
 	{
 		m_rebuyStruct.SetNightVision( true );
 		return;

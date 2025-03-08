@@ -1944,6 +1944,11 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 		if ( m_bHasDefuser )
 			return AcquireResult::AlreadyOwned;
 	}
+	else if ( weaponId == ITEM_NVGS )
+ 	{
+ 		if ( m_bHasNightVision )
+ 			return AcquireResult::AlreadyOwned;
+ 	}
 	else if ( weaponId == WEAPON_C4 )
 	{
 		// TODO[pmf]: Data drive this from the scripts

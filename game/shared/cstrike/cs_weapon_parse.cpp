@@ -123,7 +123,7 @@ WeaponNameInfo s_weaponNameInfo[] =
 
 	{ ITEM_KEVLAR,				"item_kevlar" },
 	{ ITEM_ASSAULTSUIT,			"item_assaultsuit" },
-	{ ITEM_NVG,					"item_nvg" },
+	{ ITEM_NVGS,					"item_nvgs" },
 	{ ITEM_DEFUSER,				"item_defuser" },
 
 	{ WEAPON_NONE,				"weapon_none" },
