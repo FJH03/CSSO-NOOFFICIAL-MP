@@ -1824,7 +1824,61 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 	pWeaponInfo = GetWeaponInfo( weaponId );
 
 	if ( pWeaponInfo == NULL )
+	{
+		// assume its an item
+
+		if ( weaponId == ITEM_KEVLAR )
+		{
+			if ( mp_free_armor.GetBool() )
+			{
+				if ( acquireMethod == AcquireMethod::Buy )
+					return AcquireResult::NotAllowedForPurchase;
+			}
+
+			if ( ArmorValue() >= 100 )
+			{
+				return AcquireResult::AlreadyOwned;
+			}
+
+			return AcquireResult::Allowed;
+		}
+		else if ( weaponId == ITEM_ASSAULTSUIT )
+		{
+			if ( mp_free_armor.GetBool() )
+			{
+				if ( acquireMethod == AcquireMethod::Buy )
+					return AcquireResult::NotAllowedForPurchase;
+			}
+
+			if ( m_bHasHelmet )
+			{
+				return AcquireResult::AlreadyOwned;
+			}
+
+			return AcquireResult::Allowed;
+		}
+		else if ( weaponId == ITEM_DEFUSER )
+		{
+			if ( CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
+			{
+				if ( acquireMethod == AcquireMethod::Buy )
+					return AcquireResult::NotAllowedForPurchase;
+			}
+
+			if ( m_bHasDefuser )
+				return AcquireResult::AlreadyOwned;
+
+			return AcquireResult::Allowed;
+		}
+		else if ( weaponId == ITEM_NVGS )
+		{
+			if ( m_bHasNightVision )
+				return AcquireResult::AlreadyOwned;
+
+			return AcquireResult::Allowed;
+		}
 		return AcquireResult::InvalidItem;
+	}
 
 	int nType = pWeaponInfo->m_WeaponType;
 
@@ -1907,48 +1961,6 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 			}
 		}
 	}
-	else if ( weaponId == ITEM_KEVLAR )
-	{
-		if ( mp_free_armor.GetBool() )
-		{
-			if ( acquireMethod == AcquireMethod::Buy )
-				return AcquireResult::NotAllowedForPurchase;
-		}
-
-		if ( ArmorValue() >= 100 )
-		{
-			return AcquireResult::AlreadyOwned;
-		}
-	}
-	else if ( weaponId == ITEM_ASSAULTSUIT )
-	{
-		if ( mp_free_armor.GetBool() )
-		{
-			if ( acquireMethod == AcquireMethod::Buy )
-				return AcquireResult::NotAllowedForPurchase;
-		}
-
-		if ( m_bHasHelmet )
-		{
-			return AcquireResult::AlreadyOwned;
-		}
-	}
-	else if ( weaponId == ITEM_DEFUSER )
-	{
-		if ( CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
-		{
-			if ( acquireMethod == AcquireMethod::Buy )
-				return AcquireResult::NotAllowedForPurchase;
-		}
-
-		if ( m_bHasDefuser )
-			return AcquireResult::AlreadyOwned;
-	}
-	else if ( weaponId == ITEM_NVGS )
- 	{
- 		if ( m_bHasNightVision )
- 			return AcquireResult::AlreadyOwned;
- 	}
 	else if ( weaponId == WEAPON_C4 )
 	{
 		// TODO[pmf]: Data drive this from the scripts

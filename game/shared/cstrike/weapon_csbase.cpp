@@ -106,7 +106,7 @@ static const WeaponAliasTranslationInfoStruct s_WeaponAliasTranslationInfo[] =
 	{ "vesthelm", "assaultsuit" },
 	{ "smokegrenade", "sgren" },
 	{ "smokegrenade", "sgren" },
-	{ "nvgs", "nightvision" },
+	{ "nightvision", "nvgs" },
 	
 	{ "", "" } // this needs to be last
 };

@@ -5041,6 +5041,38 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAd
 		{
 			result = AttemptToBuyAmmo( 1 );
 		}*/
+
+		BuyResult_e equipResult = BUY_INVALID_ITEM;
+ 
+ 		if ( weaponId == ITEM_KEVLAR )
+ 		{
+ 			equipResult = AttemptToBuyVest();
+ 		}
+ 		else if ( weaponId == ITEM_ASSAULTSUIT )
+ 		{
+ 			equipResult = AttemptToBuyAssaultSuit();
+ 		}
+ 		else if ( weaponId == ITEM_DEFUSER )
+ 		{
+ 			equipResult = AttemptToBuyDefuser();
+ 		}
+ 		else if ( weaponId == ITEM_NVGS )
+ 		{
+ 			equipResult = AttemptToBuyNightVision();
+ 		}
+ 
+ 		if ( equipResult != BUY_INVALID_ITEM )
+ 		{
+ 			if ( equipResult == BUY_BOUGHT )
+ 			{
+ 				if ( bAddToRebuy )
+ 				{
+ 					AddToRebuy( weaponId );
+ 				}
+ 				m_iWeaponPurchasesThisRound.GetForModify( weaponId )++;
+ 			}
+ 			return equipResult; // intentional early return here
+ 		}
 	}
 	else
 	{
@@ -5076,38 +5108,6 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAd
 		default:
 			// other unhandled reason
 			return BUY_NOT_ALLOWED;
-		}
-
-		BuyResult_e equipResult = BUY_INVALID_ITEM;
-
-		if ( weaponId == ITEM_KEVLAR )
-		{
-			equipResult = AttemptToBuyVest();
-		}
-		else if ( weaponId == ITEM_ASSAULTSUIT )
-		{
-			equipResult = AttemptToBuyAssaultSuit();
-		}
-		else if ( weaponId == ITEM_DEFUSER )
-		{
-			equipResult = AttemptToBuyDefuser();
-		}
-		else if ( weaponId == ITEM_NVGS )
-		{
-			equipResult = AttemptToBuyNightVision();
-		}
-
-		if ( equipResult != BUY_INVALID_ITEM )
-		{
-			if ( equipResult == BUY_BOUGHT )
-			{
-				if ( bAddToRebuy )
-				{
-					AddToRebuy( weaponId );
-				}
-				m_iWeaponPurchasesThisRound.GetForModify(weaponId)++;
-			}
-			return equipResult; // intentional early return here
 		}
 
 		bool bPurchase = false;
