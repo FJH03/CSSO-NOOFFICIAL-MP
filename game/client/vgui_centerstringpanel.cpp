@@ -16,6 +16,7 @@
 #include <vgui_controls/Label.h>
 #include <vgui_controls/Controls.h>
 #include <vgui_controls/VectorImagePanel.h>
+#include <vgui_controls/ImagePanel.h>
 #include <vgui/ISurface.h>
 #include <vgui/IScheme.h>
 #include "hud_macros.h"
@@ -43,6 +44,7 @@ public:
 	virtual void		ApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void		OnTick( void );
 	virtual void		Paint();
+
 	// CGameEventListener
 	virtual void		FireGameEvent( IGameEvent * event );
 
@@ -64,6 +66,7 @@ private:
 	vgui::Label				*m_pAlertLabel;
 	vgui::VectorImagePanel	*m_pAlertIcon;
 	vgui::VectorImagePanel	*m_pInfoIcon;
+	vgui::ImagePanel		*m_pBorderBottom;
 
 	CPanelAnimationVarAliasType( int, alert_icon_margin, "alert_icon_margin", "0", "proportional_width" );
 	CPanelAnimationVarAliasType( int, bottom_margin, "bottom_margin", "0", "proportional_height" );
@@ -114,6 +117,7 @@ CNotificationPanel::CNotificationPanel( vgui::VPANEL parent ) :
 	m_pAlertLabel = new vgui::Label( this, "AlertTitleLabel", "#UI_Alert" );
 	m_pAlertIcon = new vgui::VectorImagePanel( this, "AlertIcon" );
 	m_pInfoIcon = new vgui::VectorImagePanel( this, "InfoIcon" );
+	m_pBorderBottom = new vgui::ImagePanel( this, "BorderBottom" );
 
 	LoadControlSettings( "resource/hud/notificationpanel.res" );
 
@@ -145,7 +149,8 @@ void CNotificationPanel::FireGameEvent( IGameEvent * event )
 void CNotificationPanel::ComputeSize( void )
 {
 	m_pTextLabel->TallToContents();
-	SetTall( m_pTextLabel->GetYPos() + m_pTextLabel->GetTall() + bottom_margin );
+	int tall = m_pTextLabel->GetYPos() + m_pTextLabel->GetTall() + bottom_margin;
+	SetTall( tall );
 
 	m_pAlertLabel->WideToContents();
 	int iAlertIconWide = m_pAlertIcon->GetWide();
@@ -153,6 +158,7 @@ void CNotificationPanel::ComputeSize( void )
 	int iXPos = (GetWide() / 2) - (iTotalWide / 2);
 	m_pAlertIcon->SetPos( iXPos, m_pAlertIcon->GetYPos() );
 	m_pAlertLabel->SetPos( iXPos + iAlertIconWide + alert_icon_margin, m_pAlertLabel->GetYPos() );
+	m_pBorderBottom->SetPos( m_pBorderBottom->GetXPos(), tall - 1 );
 }
 
 void CNotificationPanel::ApplySchemeSettings( vgui::IScheme *pScheme )
@@ -247,7 +253,6 @@ void CNotificationPanel::OnTick( void )
 
 	if ( m_bIsDrawing )
 	{
-
 		if ( m_flCentertimeOff <= gpGlobals->curtime )
 		{
 			m_bIsDrawing = false;
@@ -269,7 +274,7 @@ void CNotificationPanel::Paint()
 }
 
 //-----------------------------------------------------------------------------
-// Purpose:
+// Purpose: 
 //-----------------------------------------------------------------------------
 void CNotificationPanel::SetAlertVisibility( bool bState )
 {
