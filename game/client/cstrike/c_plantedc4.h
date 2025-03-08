@@ -47,9 +47,9 @@ public:
 
 	float m_flC4Blow;
 	float m_flTimerLength;
-	float m_bTenSecWarning;
-	float m_bTriggerWarning;
-	float m_bExplodeWarning;
+	bool m_bTenSecWarning;
+ 	bool m_bTriggerWarning;
+ 	bool m_bExplodeWarning;
 
 	CNetworkVar( float, m_flDefuseLength );
 	CNetworkVar( float, m_flDefuseCountDown );
