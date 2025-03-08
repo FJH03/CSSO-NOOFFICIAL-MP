@@ -342,6 +342,7 @@ public:
 
 	bool IsPlayingClassic( void ) const;
 	bool IsPlayingDeathmatch( void ) const;
+	bool IsPlayingGunGame( void ) const;
 
 	bool IsPlayingAnyCompetitiveStrictRuleset( void ) const;
 
@@ -555,6 +556,8 @@ public:
 	bool PrisonRoundEndCheck();
 	bool BombRoundEndCheck( bool bNeededPlayers );
 	bool HostageRescueRoundEndCheck( bool bNeededPlayers );
+	
+	CCSPlayer* CalculateEndOfRoundMVP();
 
 	// Check to see if the teams exterminated each other. Ends the round and returns true if so.
 	bool TeamExterminationCheck(
@@ -588,6 +591,7 @@ public:
 	// HOSTAGE MAP FUNCTIONS
 	void HostageTouched();
 
+	void ScoreBombExploded( CCSPlayer* pPlayer );
 
 	// Sets up g_pPlayerResource.
 	virtual void CreateStandardEntities();
@@ -651,6 +655,13 @@ public:
 	bool m_bFirstConnected;
 	bool m_bCompleteReset;		// Set to TRUE to have the scores reset next time round restarts
 
+	class ICalculateEndOfRoundMVPHook_t
+ 	{
+ 	public:
+ 		virtual CCSPlayer* CalculateEndOfRoundMVP() = 0;
+ 	};
+ 	ICalculateEndOfRoundMVPHook_t *m_pfnCalculateEndOfRoundMVPHook;
+	
 	short m_iNumCTWins;
 	short m_iNumCTWinsThisPhase;
 	short m_iNumTerroristWins;

@@ -2324,13 +2324,23 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( name, "cs_pre_restart" ) == 0 )
 	{
-		if ( ( this->GetTeamNumber() == TEAM_SPECTATOR ) || ( this->IsLocalPlayer() ) )
+		CLocalPlayerFilter filter;
+ 		if ( CSGameRules()->IsPlayingGunGame() )
 		{
-			CLocalPlayerFilter filter;
-			PlayMusicSelection( filter, CSMUSIC_START );
+			if ( IsLocalPlayer() )
+ 			{
+ 				PlayMusicSelection( filter, CSMUSIC_STARTGG );
+ 			}
 		}
+		else
+ 		{
+ 			if ( GetTeamNumber() == TEAM_SPECTATOR || IsLocalPlayer() )
+ 			{
+ 				PlayMusicSelection( filter, CSMUSIC_START );
+ 			}
 
-		SetCurrentMusic( CSMUSIC_START );
+			SetCurrentMusic( CSMUSIC_START );
+		}
 	}
 	else if ( (Q_strcmp( "bot_takeover", name ) == 0 || Q_strcmp( "spec_target_updated", name ) == 0) && GetUserID() == EventUserID )
 	{
@@ -2417,14 +2427,23 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "gg_killed_enemy", name ) == 0 )
 	{
-		if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+		if ( CSGameRules()->IsPlayingGunGame() )
 		{
 			if ( pLocalPlayer && pLocalPlayer->GetUserID() == event->GetInt( "attackerid" ) )
 			{
-				// Play level-up gun game sound because it's a better kill sound than the default one.
-				C_RecipientFilter filter;
-				filter.AddRecipient( this );
-				C_BaseEntity::EmitSound( filter, entindex(), "GunGameWeapon.ImpendingLevelUp" );
+				if ( event->GetInt( "bonus" ) != 0 )
+ 				{
+ 					C_RecipientFilter filter;
+ 					filter.AddRecipient( this );
+ 					C_BaseEntity::EmitSound( filter, entindex(), "UI.DeathMatchBonusKill" );
+ 				}
+ 				else if ( CSGameRules()->IsPlayingDeathmatch() || CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+ 				{
+ 					// Play level-up gun game sound because it's a better kill sound than the default one.
+ 					C_RecipientFilter filter;
+ 					filter.AddRecipient( this );
+ 					C_BaseEntity::EmitSound( filter, entindex(), "GunGameWeapon.ImpendingLevelUp" );
+ 				}
 			}
 		}
 	}
@@ -4764,12 +4783,18 @@ bool C_CSPlayer::HasPlayerAsFriend(C_CSPlayer* player)
 // [menglish] Returns whether this player is dominating or is being dominated by the specified player
 bool C_CSPlayer::IsPlayerDominated( int iPlayerIndex )
 {
-	return m_bPlayerDominated.Get( iPlayerIndex );
+	if ( CSGameRules()->IsPlayingGunGame() )
+ 		return m_bPlayerDominated.Get( iPlayerIndex );
+ 
+ 	return false;
 }
 
 bool C_CSPlayer::IsPlayerDominatingMe( int iPlayerIndex )
 {
-	return m_bPlayerDominatingMe.Get( iPlayerIndex );
+	if ( CSGameRules()->IsPlayingGunGame() )
+ 		return m_bPlayerDominatingMe.Get( iPlayerIndex );
+ 
+ 	return false;
 }
 
 

@@ -1599,17 +1599,15 @@ void CCSGameStats::TrackKillStats( CCSPlayer *pAttacker, CCSPlayer *pVictim )
 //-----------------------------------------------------------------------------
 void CCSGameStats::CalcDominationAndRevenge( CCSPlayer *pAttacker, CCSPlayer *pVictim, int *piDeathFlags )
 {
-	//=============================================================================
-	// HPE_BEGIN:
 	// [Forrest] Allow nemesis/revenge to be turned off for a server
-	//=============================================================================
 	if ( sv_nonemesis.GetBool() )
 	{
 		return;
 	}
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
+
+	// if we aren't playing gungame, we dont do domination or revenge
+	if ( !CSGameRules()->IsPlayingGunGame() )
+		return;
 
 	//If there is no attacker, there is no domination or revenge
 	if( !pAttacker || !pVictim )

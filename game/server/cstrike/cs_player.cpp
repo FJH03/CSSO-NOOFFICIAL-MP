@@ -863,8 +863,6 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "UI.ArmsRace.Demoted" );
 	PrecacheScriptSound( "UI.ArmsRace.LevelUp" );
 
-	PrecacheScriptSound( "Deathmatch.Kill" );
-
 	// CS Bot sounds
 	PrecacheScriptSound( "Bot.StuckSound" );
 	PrecacheScriptSound( "Bot.StuckStart" );
@@ -1434,11 +1432,12 @@ void CCSPlayer::Spawn()
 	*/
 	m_bTeamChanged	= false;
 	m_iOldTeam = TEAM_UNASSIGNED;
-
 	m_bHasMovedSinceSpawn = false;
-
 	m_iRadioMessages = 60;
 	m_flRadioTime = gpGlobals->curtime;
+	m_iNumGunGameKillsWithCurrentWeapon = 0;
+ 	m_iNumRoundTKs = 0;
+ 	m_switchTeamsOnNextRoundReset = false;
 
 	if ( m_hRagdoll )
 	{
@@ -1533,6 +1532,7 @@ void CCSPlayer::Spawn()
 	// If we're constantly respawning then reset damage stats on spawn. Otherwise this'll happen on roundrespawn after damage is reported.
 	if ( IsAbleToInstantRespawn() )
 	{
+		m_iNumRoundTKs = 0;
 		ResetDamageCounters();
 		RemoveSelfFromOthersDamageCounters();
 	}
@@ -2218,14 +2218,7 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	State_Transition( STATE_DEATH_ANIM );	// Transition into the dying state.
 	BaseClass::Event_Killed( subinfo );
 
-	// [pfreese] If this kill ended the round, award the MVP to someone on the
-	// winning team.
-	// TODO - move this code somewhere else more MVP related
-	bool roundWasAlreadyWon = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
-	bool roundIsWonNow = CSGameRules()->CheckWinConditions();
-
-	if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE ||
-		 CSGameRules()->IsPlayingDeathmatch() )
+	if ( CSGameRules()->IsPlayingGunGame() )
 	{
 		RecordRebuyStructLastRound();
 
@@ -2238,39 +2231,6 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 //				int nEntity2 = pAttackerPlayer ? pAttackerPlayer->entindex() : this->entindex();
 //				CSGameRules()->StartSlomoDeathCam( this->entindex(), nEntity2 );
 			}
-		}
-	}
-
-	if ( !roundWasAlreadyWon && roundIsWonNow )
-	{
-		CCSPlayer* pMVP = NULL;
-		int maxKills = 0;
-		int maxDamage = 0;
-
-		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-		{
-			CCSPlayer* pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
-			if ( pPlayer )
-			{
-				// only consider players on the winning team
-				if ( pPlayer->GetTeamNumber() != CSGameRules()->m_iRoundWinStatus )
-					continue;
-
-				int nKills = CCS_GameStats.FindPlayerStats( pPlayer ).statsCurrentRound[CSSTAT_KILLS];
-				int nDamage = CCS_GameStats.FindPlayerStats( pPlayer ).statsCurrentRound[CSSTAT_DAMAGE];
-
-				if ( nKills > maxKills || ( nKills == maxKills && nDamage > maxDamage ) )
-				{
-					pMVP = pPlayer;
-					maxKills = nKills;
-					maxDamage = nDamage;
-				}
-			}
-		}
-
-		if ( pMVP )
-		{
-			pMVP->IncrementNumMVPs( CSMVP_ELIMINATION );
 		}
 	}
 
@@ -2316,7 +2276,7 @@ void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &
 	else // on a different team from the attacker
 	{
 		// Killed an enemy
-		if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE && pCSVictim && pCSAttacker )
+		if ( CSGameRules()->IsPlayingGunGame() && pCSVictim && pCSAttacker )
 		{
 			if ( !IsControllingBot() )
 			{
@@ -2381,6 +2341,8 @@ void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &
 						{
 							// Reset kill count with respect to new weapon
 							m_iNumGunGameKillsWithCurrentWeapon = 0;
+
+							m_iNumRoundTKs = 0;
 
 							CSingleUserRecipientFilter filter( this );
 							//bUpgradedWeapon = true;
@@ -3727,12 +3689,16 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 }
 
 
-void CCSPlayer::Reset()
+void CCSPlayer::Reset( bool resetScore )
 {
-	ResetFragCount();
-	ResetDeathCount();
-	ResetAssistsCount();
-	m_longestLife = -1.0f;
+	if ( resetScore )
+ 	{
+ 		ResetFragCount();
+ 		ResetDeathCount();
+ 		ResetAssistsCount();
+ 		m_longestLife = -1.0f;
+ 	}
+
 	m_iAccount = 0;
 	AddAccount( -mp_startmoney.GetInt(), false );
 
@@ -4067,9 +4033,9 @@ void CCSPlayer::ObserverRoundRespawn()
 
 void CCSPlayer::RoundRespawn()
 {
-	if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+	if ( CSGameRules()->IsPlayingGunGame() )
 	{
-		Reset();
+		Reset( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE );
 
 		// Reinitialize some gun-game progressive variables
 
@@ -4093,6 +4059,8 @@ void CCSPlayer::RoundRespawn()
 		m_nButtons = 0;
 		SetNextThink( TICK_NEVER_THINK );
 	}
+
+	m_iNumRoundTKs = 0;
 
 	m_receivesMoneyNextRound = true; // reset this variable so they can receive their cash next round.
 
@@ -8518,7 +8486,7 @@ CBaseEntity *CCSPlayer::FindUseEntity()
 
 	entity = GetUsableHighPriorityEntity();
 
-	if ( entity== NULL )
+	if ( entity == NULL && !CSGameRules()->IsPlayingGunGame() )
 	{
 		Vector aimDir;
 		AngleVectors( EyeAngles(), &aimDir );
@@ -8528,14 +8496,12 @@ CBaseEntity *CCSPlayer::FindUseEntity()
 
 		if ( result.DidHitNonWorldEntity() && result.m_pEnt->IsBaseCombatWeapon() )
 		{
-
-				CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase * >( result.m_pEnt );
-				CSWeaponType nType = pWeapon->GetWeaponType();
-				if ( IsPrimaryOrSecondaryWeapon( nType ) )
-				{
-					entity = pWeapon;
-				}
-
+			CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase * >( result.m_pEnt );
+ 			CSWeaponType nType = pWeapon->GetWeaponType();
+ 			if ( IsPrimaryOrSecondaryWeapon( nType ) )
+ 			{
+ 				entity = pWeapon;
+ 			}
 		}
 	}
 
@@ -10582,12 +10548,18 @@ void CCSPlayer::SetPlayerDominatingMe( CCSPlayer *pPlayer, bool bDominated )
 //-----------------------------------------------------------------------------
 bool CCSPlayer::IsPlayerDominated( int iPlayerIndex )
 {
-	return m_bPlayerDominated.Get( iPlayerIndex );
+	if ( CSGameRules()->IsPlayingGunGame() )
+ 		return m_bPlayerDominated.Get( iPlayerIndex );
+ 
+ 	return false;
 }
 
 bool CCSPlayer::IsPlayerDominatingMe( int iPlayerIndex )
 {
-	return m_bPlayerDominatingMe.Get( iPlayerIndex );
+	if ( CSGameRules()->IsPlayingGunGame() )
+ 		return m_bPlayerDominatingMe.Get( iPlayerIndex );
+ 
+ 	return false;
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -10814,6 +10786,21 @@ int CCSPlayer::GetNumEnemiesDamaged()
 	}
 	return numberOfEnemiesDamaged;
 }
+
+int CCSPlayer::GetTotalActualHealthRemovedFromEnemies()
+ {
+ 	int totalDamage = 0;
+ 	FOR_EACH_LL( m_DamageList, i )
+ 	{
+ 		if ( m_DamageList[i]->IsDamageRecordValidPlayerToPlayer() &&
+ 			 m_DamageList[i]->GetPlayerDamagerPtr() == this &&
+ 			 IsOtherEnemy( m_DamageList[i]->GetPlayerRecipientPtr() ) )
+ 		{
+ 			totalDamage += m_DamageList[i]->GetActualHealthRemoved();
+ 		}
+ 	}
+ 	return totalDamage;
+ }
 
 bool CCSPlayer::ShouldCollide( int collisionGroup, int contentsMask ) const
 {
@@ -11335,6 +11322,11 @@ void CCSPlayer::IncrementFragCount( int nCount )
 		return;
 	}
 #endif
+
+	if ( nCount == -1 )
+	{
+		++m_iNumRoundTKs;
+	}
 
 	m_iFrags += nCount;
 	pl.frags = m_iFrags;

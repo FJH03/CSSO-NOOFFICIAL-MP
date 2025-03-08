@@ -430,13 +430,6 @@ END_PREDICTION_DATA()
 				// give the bomber credit for planting the bomb
 				CCSPlayer* pBombOwner = ToCSPlayer( GetOwnerEntity() );
 
-				//				NOTE[pmf]: removed by design decision
-				// 				if ( pBombOwner )
-				// 				{
-				// 					if (CSGameRules()->m_iRoundWinStatus == WINNER_NONE)
-				// 						pBombOwner->IncrementFragCount( 3 );
-				// 				}
-
 				CSGameRules()->m_bBombDropped = false;
 
 				trace_t tr;
@@ -583,13 +576,57 @@ END_PREDICTION_DATA()
 				// [menglish] Give the bomb defuser an mvp if they ended the round		 
 				bool roundWasAlreadyWon = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
 
-				if(CSGameRules()->CheckWinConditions() && !roundWasAlreadyWon)
+				// Setup MVP granting class in case round wasn't already won
+				class CPlantedC4DefusedMVP : public CCSGameRules::ICalculateEndOfRoundMVPHook_t
 				{
-					m_pBombDefuser->IncrementNumMVPs( CSMVP_BOMBDEFUSE );
-				}
+					public:
+ 					virtual CCSPlayer* CalculateEndOfRoundMVP() OVERRIDE
+ 					{
+ 						if( m_pBombDefuser->HasControlledBotThisRound() )
+ 						{ 
+ 							// [dkorus] if we controlled a bot this round, use standard MVP conditions
+ 							return CSGameRules()->CalculateEndOfRoundMVP();
+ 						}
+ 
+ 						bool bTerroristsAlive = false;
+ 						for ( int i = 1; i <= MAX_PLAYERS; i++ )
+ 						{
+ 							CCSPlayer* pCheckPlayer = (CCSPlayer*)UTIL_PlayerByIndex( i );
+ 							if ( !pCheckPlayer )
+ 								continue;
+ 							if ( pCheckPlayer->GetTeamNumber() != TEAM_TERRORIST )
+ 								continue;
+ 							if ( pCheckPlayer->IsAlive() )
+ 							{
+ 								bTerroristsAlive = true;
+ 								break;
+ 							}
+ 						}
+ 
+ 						if ( bTerroristsAlive || ( m_pBombDefuser->GetNumRoundKills() && !m_pBombDefuser->m_iNumRoundTKs ) )
+ 						{
+ 							m_pBombDefuser->IncrementNumMVPs( CSMVP_BOMBDEFUSE );
+ 							return m_pBombDefuser;
+ 						}
+ 
+ 						if ( CCSPlayer *pDefaultMvp = CSGameRules()->CalculateEndOfRoundMVP() )
+ 							return pDefaultMvp;
+ 
+ 						m_pBombDefuser->IncrementNumMVPs( CSMVP_BOMBDEFUSE );
+ 						return m_pBombDefuser;
+ 					}
+ 					CHandle<CCSPlayer> m_pBombDefuser;
+ 				} mvpHook;
+ 				mvpHook.m_pBombDefuser = m_pBombDefuser;
+ 				if ( !roundWasAlreadyWon )
+ 					CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = &mvpHook;
 
-				// give the defuser credit for defusing the bomb
-				m_pBombDefuser->IncrementFragCount( 3 );
+				// [menglish] Give the bomb defuser an mvp if they ended the round
+				CSGameRules()->CheckWinConditions();
+ 
+				// Reset the MVP hook
+				if ( !roundWasAlreadyWon )
+					CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = NULL;
 
 				CSGameRules()->m_bBombDropped = false;
 				CSGameRules()->m_bBombPlanted = false;
@@ -634,45 +671,71 @@ END_PREDICTION_DATA()
 		CSGameRules()->m_bTargetBombed = true;
 		m_bBombTicking = false;
 		m_bBombDefused = false;
-		//=============================================================================
 		// HPE_BEGIN:
 		// [tj] Saving off this value so we can see if the detonation is what caused the round to end.
-		//=============================================================================
 		bool roundWasAlreadyWon = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
-		//=============================================================================
-		// HPE_END
-		//=============================================================================		
+		
+		// MVP hook to award the MVP to person who planted the bomb
+		class CPlantedC4ExplodedMVP : public CCSGameRules::ICalculateEndOfRoundMVPHook_t
+		{
+		public:
+			virtual CCSPlayer* CalculateEndOfRoundMVP() OVERRIDE
+			{
+				// All alive Terrorists also get credit for bomb exploding,
+				// this intentionally may include the original planter.
+				// This way if bomb planter survives until explosion he will
+				// get 2 pts and all other alive teammates will get 1 pt
+				// If bomb planter doesn't survive then he gets 1 pt and all
+				// teammates who remained alive defending the bomb get 1 pt
+				for ( int i = 1; i <= MAX_PLAYERS; i++ )
+				{
+					CCSPlayer* pCheckPlayer = (CCSPlayer*)UTIL_PlayerByIndex( i );
+					if ( !pCheckPlayer )
+						continue;
+					if ( pCheckPlayer->GetTeamNumber() != TEAM_TERRORIST )
+						continue;
+					if ( pCheckPlayer->IsAlive() )
+						CSGameRules()->ScoreBombExploded( pCheckPlayer );
+				}
 
-		bool bWin = CSGameRules()->CheckWinConditions();
+				if ( !pBombOwner )
+				return CSGameRules()->CalculateEndOfRoundMVP();
 
-        //=============================================================================
-        // HPE_BEGIN
-        //=============================================================================		
+			// Person who planted the bomb gets credit for the explosion
+			CSGameRules()->ScoreBombExploded( pBombOwner );
 
-        // [dwenger] Server-side processing for winning round by planting a bomb
-        if (bWin)
-        {
-            CCSPlayer *pBombOwner = ToCSPlayer( GetOwnerEntity() );
-            if ( pBombOwner )
-            {
-                pBombOwner->AwardAchievement(CSWinBombPlant);
-
-                //[tj]more specific achievement for planting the bomb after recovering it.
-                if (m_bPlantedAfterPickup)
-                {
-                    pBombOwner->AwardAchievement(CSWinBombPlantAfterRecovery);
-                }
-				// [menglish] awarding mvp to bomb planter
-				if (!roundWasAlreadyWon)
+			if( pBombOwner->HasControlledBotThisRound() )
+			{ 
+				// [dkorus] if we controlled a bot this round, use standard MVP conditions
+				return CSGameRules()->CalculateEndOfRoundMVP();
+			}
+			else 
 				{
 					pBombOwner->IncrementNumMVPs( CSMVP_BOMBPLANT );
+					return pBombOwner;
 				}
             }
-        }
+			CCSPlayer *pBombOwner;
+		} mvpHook;
+		mvpHook.pBombOwner = ToCSPlayer( GetOwnerEntity() );
 
-        //=============================================================================
-        // HPE_END
-        //=============================================================================
+        if ( !roundWasAlreadyWon )
+ 			CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = &mvpHook;
+ 
+ 		bool bWin = CSGameRules()->CheckWinConditions();
+ 		if ( bWin && mvpHook.pBombOwner )
+ 		{
+ 			mvpHook.pBombOwner->AwardAchievement( CSWinBombPlant );
+ 
+ 			//[tj]more specific achievement for planting the bomb after recovering it.
+ 			if ( m_bPlantedAfterPickup )
+ 			{
+ 				mvpHook.pBombOwner->AwardAchievement( CSWinBombPlantAfterRecovery );
+ 			}
+ 		}
+ 
+ 		if ( !roundWasAlreadyWon )
+ 			CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = NULL;
 
 		// Do the Damage
 		float flBombRadius = 500;

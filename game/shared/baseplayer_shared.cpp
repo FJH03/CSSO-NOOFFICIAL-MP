@@ -39,6 +39,7 @@
 	#include "env_zoom.h"
 	#ifdef CSTRIKE_DLL
  		#include "cs_player.h"
+		#include "cs_gamerules.h"
  	#endif
 
 	extern int TrainSpeed(int iSpeed, int iMax);
@@ -1626,7 +1627,7 @@ void CBasePlayer::PlayerUse ( void )
 				}
 			}
 		}
-		else if ( pPlayer && bOpenBuyWithUse && pPlayer->IsInBuyZone() && pPlayer->CanPlayerBuy( false ) )
+		else if ( pPlayer && bOpenBuyWithUse && pPlayer->IsInBuyZone() && pPlayer->CanPlayerBuy( false ) && !CSGameRules()->IsPlayingGunGame() )
 		{
 			bool bItemIsNullOrWeapon = true;
 

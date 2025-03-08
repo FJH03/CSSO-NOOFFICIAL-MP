@@ -236,8 +236,8 @@ bool CHostage::KeyValue( const char *szKeyName, const char *szValue )
 //-----------------------------------------------------------------------------------------------------
 void CHostage::Spawn( void )
 {
-	if ( (CSGameRules()->IsPlayingDeathmatch() || CSGameRules()->GetGamemode() == GameModes::ARMS_RACE) ||
-		 (CSGameRules()->IsWarmupPeriod() && !mp_hostages_spawn_same_every_round.GetBool()) )
+	// No hostages in deathmatch
+	if ( CSGameRules()->IsPlayingGunGame() || ( CSGameRules()->IsWarmupPeriod() && !mp_hostages_spawn_same_every_round.GetBool() ) )
 		return;
 
 	// remove hostage spawns that exceeded MAX_HOSTAGES and weren't added to g_Hostages
@@ -660,6 +660,29 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 			announceTimer.Start( 2.0f );
 		}
 
+		// MVP hook
+		class CSimpleHostageRescueMVP : public CCSGameRules::ICalculateEndOfRoundMVPHook_t
+		{
+		public:
+			virtual CCSPlayer* CalculateEndOfRoundMVP() OVERRIDE
+			{
+				if( player->HasControlledBotThisRound() )
+				{ // [dkorus] if we controlled a bot this round, use standard MVP conditions
+					return CSGameRules()->CalculateEndOfRoundMVP();
+				}
+				else
+				{	// We got kills and rescued hostages, we deserve the MVP
+					player->IncrementNumMVPs( CSMVP_HOSTAGERESCUE );
+					return player;
+				}
+			}
+			CCSPlayer *player;
+		} mvpHook;
+		mvpHook.player = player;
+
+		if ( !roundWasAlreadyOver && player )
+			CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = &mvpHook;
+
 		//
 		// Check match win conditions and if round is now won award achievements
 		//
@@ -700,10 +723,8 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
             }
 		}
 
-		if ( player && !roundWasAlreadyOver )
-		{
-			player->IncrementNumMVPs( CSMVP_HOSTAGERESCUE );
-		}
+		if ( !roundWasAlreadyOver && player )
+ 			CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = NULL;
 
 		if ( player )
 		{

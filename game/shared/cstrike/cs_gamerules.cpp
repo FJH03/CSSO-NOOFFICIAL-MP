@@ -1262,6 +1262,7 @@ ConVar snd_music_selection(
 		m_bTCantBuy = false;
 		m_bCTCantBuy = false;
 		m_bMapHasBuyZone = false;
+		m_pfnCalculateEndOfRoundMVPHook = NULL;
 
 		m_iLoserBonus = 0;
 
@@ -3059,6 +3060,82 @@ ConVar snd_music_selection(
 		return false;
 	}
 
+	// [dkorus] note, this is the standard "end of round mvp" for the case where a more specific MVP condition has not been met
+     //			examples of more specific conditions:  Planting the bomb, defusing the bomb, rescuing the hostages, escaping as the VIP, etc
+     CCSPlayer * CCSGameRules::CalculateEndOfRoundMVP()
+     {
+         CCSPlayer* pMVP = NULL;
+         int maxKills = 0;
+         int maxDamage = 0;
+         CSMvpReason_t mvpReason = CSMVP_ELIMINATION;
+ 
+         if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+         {
+             // Handle winner of gun game progressive
+             for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+             {
+                 CCSPlayer* pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+                 if ( pPlayer )
+                 {
+                     if ( pPlayer->MadeFinalGunGameProgressiveKill() )
+                     {
+                         pMVP = pPlayer;
+                         mvpReason = CSMVP_GUNGAMEWINNER;
+                         break;
+                     }
+                 }
+             }
+         }
+ 		else
+         {
+ 			int nBestScore = 0;
+             // Handle non-gun game progressive mvp
+             for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+             {
+                 CCSPlayer* pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+                 if ( pPlayer )
+                 {
+ 					if ( pPlayer->HasBeenControlledThisRound() )
+ 						continue;
+ 
+ 					if ( CSGameRules()->IsPlayingDeathmatch() )
+ 					{
+ 						int nScore = pPlayer->GetFrags();
+ 						int nEntindex = pPlayer->entindex();
+ 						if ( nScore > nBestScore || (nScore == nBestScore && nEntindex < maxKills) )
+ 						{
+ 							pMVP = pPlayer;
+ 							maxKills = nEntindex;
+ 							nBestScore = nScore;
+ 							mvpReason = CSMVP_GUNGAMEWINNER;
+ 						}
+ 					}
+ 					else
+ 					{
+ 						// only consider players on the winning team
+ 						if ( CSGameRules()->m_iRoundWinStatus != WINNER_DRAW && pPlayer->GetTeamNumber() != CSGameRules()->m_iRoundWinStatus )
+ 							continue;
+ 
+ 						int nKills = pPlayer->GetNumRoundKills(); // - pPlayer->m_iNumRoundTKs; - for most eliminations count only enemies killed
+ 						int nDamage = pPlayer->GetTotalActualHealthRemovedFromEnemies();
+ 						if ( nKills > maxKills || ( nKills == maxKills && nDamage > maxDamage ) )
+ 						{
+ 							pMVP = pPlayer;
+ 							maxKills = nKills;
+ 							maxDamage = nDamage;
+ 						}
+ 					}
+                 }
+             }
+         }
+ 
+         if ( pMVP )
+         {
+             pMVP->IncrementNumMVPs( mvpReason );
+         }
+ 
+ 		return pMVP;
+     }
 
 	bool CCSGameRules::TeamExterminationCheck(
 		int NumAliveTerrorist,

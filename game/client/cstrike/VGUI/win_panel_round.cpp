@@ -123,8 +123,11 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 	{
 	}		
 	else if ( Q_strcmp( "round_start", pEventName ) == 0 )
-	{		
-		Hide();		
+	{
+		// Reset MVP info when round starts
+		SetMVP( NULL, CSMVP_UNDEFINED );
+
+		Hide();
 	}
 	else if( Q_strcmp( "cs_win_panel_match", pEventName ) == 0 )
 	{	
@@ -294,11 +297,6 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 			break;
 		}
 
-		//[tj]	We set the icon to the generic one right before we show it.
-		//		The expected result is that we replace it immediately with
-		//		the round MVP. if there is none, we just use the generic.
-		SetMVP( NULL, CSMVP_UNDEFINED );
-
 		Show();
 	}
 }
@@ -339,6 +337,9 @@ void WinPanel_Round::SetMVP( C_CSPlayer* pPlayer, CSMvpReason_t reason )
 			break;
 		case CSMVP_HOSTAGERESCUE:
 			mvpReasonToken = "winpanel_mvp_award_rescue";
+			break;
+		case CSMVP_GUNGAMEWINNER:
+			mvpReasonToken = "winpanel_mvp_award_gungame";
 			break;
 		default:
 			mvpReasonToken = "winpanel_mvp_award";

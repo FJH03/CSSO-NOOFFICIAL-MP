@@ -435,7 +435,7 @@ public:
 	void RemoveAllItems( bool removeSuit );	//overridden to remove the defuser
 
 	// Reset account, get rid of weapons, etc..
-	void Reset();
+	void Reset( bool resetScore );
 
 	void RoundRespawn( void );
 	void ObserverRoundRespawn( void );
@@ -704,6 +704,7 @@ public:
 	CNetworkVar( bool, m_bMadeFinalGunGameProgressiveKill );
 	CNetworkVar( int, m_iGunGameProgressiveWeaponIndex );	// index of current gun game weapon
 	CNetworkVar( int, m_iNumGunGameKillsWithCurrentWeapon );
+	int m_iNumRoundTKs;	// number of teammate kills a player has in a single round
 	CNetworkVar( bool, m_bHasMovedSinceSpawn );		// Whether player has moved from spawn position
 
 	bool m_isCurrentGunGameLeader;
@@ -719,6 +720,8 @@ public:
 
 	int GetPlayerGunGameWeaponIndex( void ) { return m_iGunGameProgressiveWeaponIndex; }
 	int GetNumGunGameKillsWithCurrentWeapon( void ) { return m_iNumGunGameKillsWithCurrentWeapon; }
+
+	int GetNumRoundKills( void ) { return m_NumEnemiesKilledThisRound; }
 
 	//--------------------------------------------------------------------------------------------------------
 	void OnHealthshotUsed( void ) { EmitSound( "Healthshot.Success" ); }
@@ -1086,6 +1089,7 @@ public:
 	void DecrementProgressiveWeaponFromSuicide( void );
 	int GetNumEnemyDamagers();
 	int GetNumEnemiesDamaged();
+	int GetTotalActualHealthRemovedFromEnemies();
 	CBaseEntity* GetNearestSurfaceBelow(float maxTrace);
 
     // Returns the % of the enemies this player killed in the round
