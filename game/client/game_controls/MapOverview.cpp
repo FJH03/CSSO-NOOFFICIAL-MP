@@ -113,9 +113,7 @@ CMapOverview::CMapOverview( const char *pElementName ) : BaseClass( NULL, pEleme
 	Reset();
 	
 	Q_memset( m_Players, 0, sizeof(m_Players) );
-
-	InitTeamColorsAndIcons();
-
+	
 	g_pMapOverview = this;  // for cvars access etc
 	m_bShowRadar = true;
 }

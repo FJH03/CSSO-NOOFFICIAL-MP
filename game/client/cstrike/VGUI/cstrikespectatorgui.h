@@ -260,7 +260,6 @@ private:
 	int		m_TeamIconsSelf[MAP_ICON_COUNT];
 	int		m_TeamIconsDead[MAP_ICON_COUNT];
 	int		m_TeamIconsOffscreen[MAP_ICON_COUNT];
-	int		m_TeamIconsDeadOffscreen[MAP_ICON_COUNT];
 
 	int		m_bombIconPlanted;
 	int		m_bombIconDropped;

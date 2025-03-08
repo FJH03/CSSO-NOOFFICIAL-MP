@@ -411,15 +411,10 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 	Q_memset( m_TeamIconsSelf, 0, sizeof(m_TeamIconsSelf) );
 	Q_memset( m_TeamIconsDead, 0, sizeof(m_TeamIconsDead) );
 	Q_memset( m_TeamIconsOffscreen, 0, sizeof(m_TeamIconsOffscreen) );
-	Q_memset( m_TeamIconsDeadOffscreen, 0, sizeof(m_TeamIconsDeadOffscreen) );
 
 	m_bombIconPlanted = -1;
 	m_bombIconDropped = -1;
 	m_bombIconCarried = -1;
-	m_bombRingPlanted = -1;
-	m_bombRingDropped = -1;
-	m_bombRingCarried = -1;
-	m_bombRingCarriedOffscreen = -1;
 	m_radioFlash = -1;
 	m_radioFlashOffscreen = -1;
 	m_radarTint = -1;
@@ -440,7 +435,6 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 	m_TeamIconsSelf[MAP_ICON_T] = AddIconTexture( "sprites/player_red_self" );
 	m_TeamIconsDead[MAP_ICON_T] = AddIconTexture( "sprites/player_red_dead" );
 	m_TeamIconsOffscreen[MAP_ICON_T] = AddIconTexture( "sprites/player_red_offscreen" );
-	m_TeamIconsDeadOffscreen[MAP_ICON_T] = AddIconTexture( "sprites/player_red_dead_offscreen" );
 
 	// setup team blue
 	m_TeamColors[MAP_ICON_CT] = COLOR_BLUE;
@@ -448,7 +442,6 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 	m_TeamIconsSelf[MAP_ICON_CT] = AddIconTexture( "sprites/player_blue_self" );
 	m_TeamIconsDead[MAP_ICON_CT] = AddIconTexture( "sprites/player_blue_dead" );
 	m_TeamIconsOffscreen[MAP_ICON_CT] = AddIconTexture( "sprites/player_blue_offscreen" );
-	m_TeamIconsDeadOffscreen[MAP_ICON_CT] = AddIconTexture( "sprites/player_blue_dead_offscreen" );
 
 	// setup team other
 	m_TeamColors[MAP_ICON_HOSTAGE] = COLOR_GREY;
@@ -456,16 +449,10 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 	m_TeamIconsSelf[MAP_ICON_HOSTAGE] = -1;
 	m_TeamIconsDead[MAP_ICON_HOSTAGE] = AddIconTexture( "sprites/player_hostage_dead" );
 	m_TeamIconsOffscreen[MAP_ICON_HOSTAGE] = AddIconTexture( "sprites/player_hostage_offscreen" );
-	m_TeamIconsDeadOffscreen[MAP_ICON_HOSTAGE] = AddIconTexture( "sprites/player_hostage_dead_offscreen" );
 
 	m_bombIconPlanted = AddIconTexture( "sprites/bomb_planted" );
 	m_bombIconDropped = AddIconTexture( "sprites/bomb_dropped" );
 	m_bombIconCarried = AddIconTexture( "sprites/bomb_carried" );
-
-	m_bombRingPlanted = AddIconTexture( "sprites/bomb_planted_ring" );
-	m_bombRingDropped = AddIconTexture( "sprites/bomb_dropped_ring" );
-	m_bombRingCarried = AddIconTexture( "sprites/bomb_carried_ring" );
-	m_bombRingCarriedOffscreen = AddIconTexture( "sprites/bomb_carried_ring_offscreen" );
 
 	m_hostageFollowing = AddIconTexture( "sprites/hostage_following" );
 	m_hostageFollowingOffscreen = AddIconTexture( "sprites/hostage_following_offscreen" );
@@ -998,7 +985,6 @@ void CCSMapOverview::UpdateBomb()
 		{
 			m_bomb.position = pC4->GetAbsOrigin();
 			m_bomb.state = CSMapBomb_t::BOMB_PLANTED;
-			m_bomb.ringTravelTime = 3.0f;
 			smallestRadius = m_flIconSize;
 			biggestRadius = m_flIconSize * 15.0f;
 		}
@@ -1047,27 +1033,11 @@ void CCSMapOverview::UpdateBomb()
 				}
 
 				m_bomb.state = CSMapBomb_t::BOMB_CARRIED;
-				m_bomb.ringTravelTime = 0;
 				smallestRadius = m_flIconSize * 1.2f;
 				biggestRadius = m_flIconSize * 1.2f;
 				break;
 			}
 		}
-	}
-
-	int alpha = GetMasterAlpha();
-
-	if( m_bomb.currentRingRadius == m_bomb.maxRingRadius  ||  m_bomb.ringTravelTime == 0 )
-	{
-		m_bomb.currentRingRadius = smallestRadius;
-		m_bomb.maxRingRadius = biggestRadius;
-		m_bomb.currentRingAlpha = alpha;
-	}
-	else
-	{
-		m_bomb.currentRingRadius += (m_bomb.maxRingRadius - m_flIconSize) * gpGlobals->frametime / m_bomb.ringTravelTime;
-		m_bomb.currentRingRadius = MIN( m_bomb.currentRingRadius, m_bomb.maxRingRadius );
-		m_bomb.currentRingAlpha = (alpha - 55) * ((m_bomb.maxRingRadius - m_bomb.currentRingRadius) / (m_bomb.maxRingRadius - m_flIconSize)) + 55;
 	}
 }
 
@@ -1384,36 +1354,26 @@ void CCSMapOverview::DrawBomb()
 	// else if you aren't CT you can always see it
 
 	int bombIcon;
-	int bombRing;
-	int bombRingOffscreen;
 	switch(m_bomb.state) 
 	{
 		case CSMapBomb_t::BOMB_DROPPED:
 		{
 			bombIcon = m_bombIconDropped;
-			bombRing = m_bombRingDropped;
-			bombRingOffscreen = m_bombRingDropped;
 			break;
 		}
 		case CSMapBomb_t::BOMB_CARRIED:
 		{
 			bombIcon = m_bombIconCarried;
-			bombRing = m_bombRingCarried;
-			bombRingOffscreen = m_bombRingCarriedOffscreen;
 			break;
 		}
 		case CSMapBomb_t::BOMB_PLANTED:
 		{
 			bombIcon = m_bombIconPlanted;
-			bombRing = m_bombRingPlanted;
-			bombRingOffscreen = m_bombRingPlanted;
 			break;
 		}
 		case CSMapBomb_t::BOMB_GONE:
 		{
 			bombIcon = m_bombIconPlanted;
-			bombRing = m_bombRingPlanted;
-			bombRingOffscreen = m_bombRingPlanted;
 			break;
 		}
 	default:
@@ -1425,8 +1385,6 @@ void CCSMapOverview::DrawBomb()
 	if( m_bomb.timeGone != -1  &&  m_bomb.timeFade <= gpGlobals->curtime )
 		alpha *= 1 - ( (float)(gpGlobals->curtime - m_bomb.timeFade) / (float)(m_bomb.timeGone - m_bomb.timeFade) );
 
-	if( m_bomb.state != CSMapBomb_t::BOMB_GONE )
-		DrawIconCS(bombRing, bombRingOffscreen, m_bomb.position, m_bomb.currentRingRadius, 0, m_bomb.currentRingAlpha);
 	DrawIconCS(bombIcon, bombIcon, m_bomb.position, m_flIconSize, 0, alpha);
 }
 
@@ -1668,7 +1626,7 @@ void CCSMapOverview::DrawMapPlayers()
 
 			if( doingLocalPlayer )
 			{
-				sizeForPlayer *= 4.0f; // The self icon is really big since it has a camera view cone attached.
+				sizeForPlayer *= 16.0f; // The self icon is really big since it has a camera view cone attached.
 				angleForPlayer = player->angle[YAW];// And, the self icon now rotates, natch.
 			}
 
@@ -2017,11 +1975,6 @@ void CCSMapOverview::ResetRound()
 	m_bomb.timeFirstSeen = -1;
 	m_bomb.timeFade = -1;
 	m_bomb.timeGone = -1;
-
-	m_bomb.currentRingRadius = -1;
-	m_bomb.currentRingAlpha = -1;
-	m_bomb.maxRingRadius = -1;
-	m_bomb.ringTravelTime = -1;
 
 	m_goalIconsLoaded = false;
 }
