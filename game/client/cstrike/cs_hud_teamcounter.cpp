@@ -17,6 +17,8 @@
 #include <vgui_controls/EditablePanel.h>
 #include <vgui_controls/Label.h>
 #include <vgui_controls/ImagePanel.h>
+#include <vgui_controls/VectorImagePanel.h>
+#include "c_plantedc4.h"
 
 using namespace vgui;
 
@@ -36,15 +38,16 @@ public:
 	virtual void OnThink();
 
 private:
-	Label	*m_pCTWinCounterLabel;
-	Label	*m_pCTAliveCounterLabel;
-	Label	*m_pCTAliveTextLabel;
-	Label	*m_pTWinCounterLabel;
-	Label	*m_pTAliveCounterLabel;
-	Label	*m_pTAliveTextLabel;
-	Label	*m_pRoundTimerLabel;
-	ImagePanel	*m_pCTSkullImage;
-	ImagePanel	*m_pTSkullImage;
+	Label				*m_pCTWinCounterLabel;
+	Label				*m_pCTAliveCounterLabel;
+	Label				*m_pCTAliveTextLabel;
+	Label				*m_pTWinCounterLabel;
+	Label				*m_pTAliveCounterLabel;
+	Label				*m_pTAliveTextLabel;
+	Label				*m_pRoundTimerLabel;
+	VectorImagePanel	*m_pBombIcon;
+	ImagePanel			*m_pCTSkullImage;
+	ImagePanel			*m_pTSkullImage;
 
 	int m_iRoundTime;
 
@@ -69,6 +72,7 @@ CHudTeamCounter::CHudTeamCounter( const char *pElementName ): CHudElement( pElem
 	m_pTAliveCounterLabel = new Label( this, "TAliveCounterLabel", "0" );
 	m_pTAliveTextLabel = new Label( this, "TAliveTextLabel", "#Cstrike_PlayerCount_Alive" );
 	m_pRoundTimerLabel = new Label( this, "RoundTimerLabel", "0:00" );
+	m_pBombIcon = new VectorImagePanel( this, "BombIcon" );
 	m_pCTSkullImage = new ImagePanel( this, "CTSkullImage" );
 	m_pTSkullImage = new ImagePanel( this, "TSkullImage" );
 
@@ -106,6 +110,8 @@ bool CHudTeamCounter::ShouldDraw()
 	return true;
 }
 
+#define WEAPON_SELECTION_FADE_TIME_SEC 0.1
+#define WEAPON_SELECTION_FADE_SPEED 100.0 / WEAPON_SELECTION_FADE_TIME_SEC
 void CHudTeamCounter::OnThink()
 {
 	if ( m_bIsAtTheBottom != hud_playercount_pos.GetBool() )
@@ -173,32 +179,50 @@ void CHudTeamCounter::OnThink()
 	if ( !pRules )
 		return;
 
-	if ( m_iRoundTime < (int) ceil( pRules->GetRoundRemainingTime() ) )
-		g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "RoundTimerReset" );
-
-	m_iRoundTime = (int) ceil( pRules->GetRoundRemainingTime() );
-
-	if ( pRules->IsWarmupPeriod() && !pRules->IsWarmupPeriodPaused() )
+	bool bBombPlanted = (g_PlantedC4s.Count() > 0);
+	if ( bBombPlanted )
 	{
-		m_iRoundTime = (int) ceil( pRules->GetWarmupRemainingTime() );
+		C_PlantedC4 *pC4 = g_PlantedC4s[0];
+
+		int alpha = 255;
+		if ( gpGlobals->curtime + 0.1f >= pC4->m_flNextGlow )
+			alpha = 128;
+
+		m_pBombIcon->SetAlpha( alpha );
+		m_pBombIcon->SetVisible( !pC4->m_bExplodeWarning );
 	}
-	if ( pRules->IsFreezePeriod() )
+	else
+		m_pBombIcon->SetVisible( false );
+
+	if ( bBombPlanted || pRules->IsTimeOutActive() )
+		m_pRoundTimerLabel->SetText( L" " );
+	else
 	{
+		if ( m_iRoundTime < (int) ceil( pRules->GetRoundRemainingTime() ) )
+			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "RoundTimerReset" );
+
+		m_iRoundTime = (int) ceil( pRules->GetRoundRemainingTime() );
+
+		if ( pRules->IsWarmupPeriod() && !pRules->IsWarmupPeriodPaused() )
+		{
+			m_iRoundTime = (int) ceil( pRules->GetWarmupRemainingTime() );
+		}
+		if ( pRules->IsFreezePeriod() )
 		{
 			// in freeze period countdown to round start time
 			m_iRoundTime = (int) ceil( pRules->GetRoundStartTime() - gpGlobals->curtime );
 		}
+
+		if ( m_iRoundTime < 0 )
+			m_iRoundTime = 0;
+
+		if ( m_iRoundTime <= 10 )
+			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "RoundTimerLow" );
+
+		int iMinutes = m_iRoundTime / 60;
+		int iSeconds = m_iRoundTime % 60;
+
+		V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d : %.2d", iMinutes, iSeconds );
+		m_pRoundTimerLabel->SetText( unicode );
 	}
-
-	if ( m_iRoundTime < 0 )
-		m_iRoundTime = 0;
-
-	if ( m_iRoundTime <= 10 )
-		g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "RoundTimerLow" );
-
-	int iMinutes = m_iRoundTime / 60;
-	int iSeconds = m_iRoundTime % 60;
-
-	V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d : %.2d", iMinutes, iSeconds );
-	m_pRoundTimerLabel->SetText( unicode );
 }
