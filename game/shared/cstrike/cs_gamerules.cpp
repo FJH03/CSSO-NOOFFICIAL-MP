@@ -7615,6 +7615,12 @@ bool CCSGameRules::IsPlayingDeathmatch( void ) const
 	return false;
 }
 
+bool CCSGameRules::IsPlayingGunGame( void ) const
+{
+	return (m_iCurrentGamemode == GameModes::ARMS_RACE ||
+			 IsPlayingDeathmatch());
+}
+
 #ifndef CLIENT_DLL
 const char *CCSGameRules::GetChatPrefix( bool bTeamOnly, CBasePlayer *pPlayer )
 {
