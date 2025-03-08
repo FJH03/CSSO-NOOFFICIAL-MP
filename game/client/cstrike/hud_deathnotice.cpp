@@ -269,7 +269,7 @@ void CHudDeathNotice::Paint()
 		const wchar_t *killer = m_DeathNotices[i].Killer.wszName;
 		const wchar_t *assister = m_DeathNotices[i].Assister.wszName;
 
-		static wchar_t assistplussign[2] = L"+";
+		static wchar_t assistplussign[4] = L" + ";
 
 		// Get the local position for this notice
 		int victimNameLen = UTIL_ComputeStringWidth( m_hTextFont, victim );
