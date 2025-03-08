@@ -115,8 +115,15 @@ void CHudScenarioHostageIcon::FireGameEvent( IGameEvent * event )
 void CHudScenarioHostageIcon::OnThink()
 {
 	if ( g_Hostages.Count() < 1 )
+	{
+		m_pHostageIcon1->SetVisible( false );
+		m_pHostageIcon2->SetVisible( false );
+		m_pHostageIcon3->SetVisible( false );
+		m_pHostageIcon4->SetVisible( false );
+		m_pRescueZoneIcon->SetVisible( false );
 		return;
-
+	}
+	
 	C_CSPlayer *pPlayer = GetHudPlayer();
 	if ( !pPlayer )
 		return;
