@@ -66,6 +66,13 @@ enum CSWeaponMode
 	WeaponMode_MAX
 };
 
+enum
+ {
+ 	Silencer_None = 0,
+ 	Silencer_Removable,
+ 	Silencer_Permanent
+ };
+
 // structure to encapsulate state of head bob
 struct BobState_t
 {
@@ -158,6 +165,8 @@ public:
 	bool			IsPistol() const;
 
 	virtual bool IsFullAuto() const;
+	virtual int		GetZoomFOV( int nZoomLevel ) const;
+ 	virtual float	GetZoomTime( int nZoomLevel ) const;
 
 	CCSPlayer* GetPlayerOwner() const;
 
@@ -165,6 +174,7 @@ public:
 
 	// Get CS-specific weapon data.
 	CCSWeaponInfo const	&GetCSWpnData() const;
+	virtual int GetCSZoomLevel() { return 0; }
 
 	virtual int GetKillAward() const { return GetCSWpnData().GetKillAward(); }
 
@@ -183,16 +193,21 @@ public:
 	}
 	
 	const char		*GetTracerType( void ) { return GetCSWpnData().m_szTracerEffect; }
+
+	// return true if this weapon has a silencer equipped
+	virtual bool IsSilenced( void ) const				{ return m_bSilencerOn; }
+	virtual void SetSilencer( bool state );
+	// return true is this weapon is capable of being silenced
+	virtual int HasSilencer( void ) const
+	{ 
+		return GetCSWpnData().m_iHasSilencer;
+	}
 	
 #ifdef CLIENT_DLL
 	//virtual int GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
 	//virtual const char* GetMuzzleFlashEffectName( bool bThirdPerson );
 	//virtual int GetEjectBrassAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
 #endif
-
-	// return true if this weapon has a silencer equipped
-	virtual bool IsSilenced( void ) const				{ return false; }
-	virtual void SetSilencer( bool silencer ) {}
 	
 	virtual void SetWeaponModelIndex( const char *pName );
 	virtual void OnPickedUp( CBaseCombatCharacter *pNewOwner );
@@ -202,8 +217,8 @@ public:
 
 	float GetRecoveryTime( void );
 
+	virtual bool	HasZoom() { return false; }
 	void			CallSecondaryAttack();
-	void			CallWeaponIronsight();
 
 public:
 	#if defined( CLIENT_DLL )
@@ -215,7 +230,6 @@ public:
 		virtual void	OnDataChanged( DataUpdateType_t type );
 
 		virtual int		GetMuzzleAttachment( void );
-		virtual bool	HideViewModelWhenZoomed( void ) { return true; }
 
 		float			m_flCrosshairDistance;
 		int				m_iAmmoLastCheck;
@@ -254,9 +268,8 @@ public:
 	virtual void	ItemBusyFrame();
 	virtual const char		*GetViewModel( int viewmodelindex = 0 ) const;
 	virtual bool	WeaponHasBurst() const { return false; }
-	virtual bool	IsInBurstMode() { return false; }
-
-	virtual bool IsRevolver() const { return GetCSWeaponID() == WEAPON_REVOLVER; }
+	virtual bool	IsInBurstMode() { return m_bBurstMode; }
+ 	virtual bool	IsRevolver() const { return false; }
 
 	void			ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer );
 	bool			ItemPostFrame_ProcessZoomAction( CCSPlayer *pPlayer );
@@ -265,9 +278,6 @@ public:
 	void			ItemPostFrame_ProcessIdleNoAction( CCSPlayer *pPlayer );
 
 	void			ItemPostFrame_RevolverResetHaulback();
-
-
-	bool	m_bDelayFire;			// This variable is used to delay the time between subsequent button pressing.
 
 	// [pfreese] new accuracy model
 	CNetworkVar( CSWeaponMode, m_weaponMode);
@@ -279,6 +289,7 @@ public:
 
 	CNetworkVar( float, m_fAccuracyPenalty );
 	CNetworkVar( float, m_flRecoilIndex );
+	CNetworkVar( bool, m_bBurstMode );
 
 	CNetworkVar( float, m_flPostponeFireReadyTime );
 	void ResetPostponeFireReadyTime( void ) { m_flPostponeFireReadyTime = FLT_MAX; }
@@ -291,6 +302,7 @@ public:
 	virtual bool IsReloadVisuallyComplete() { return m_bReloadVisuallyComplete; }
 	CNetworkVar( bool, m_bReloadVisuallyComplete );
 
+	CNetworkVar( bool, m_bSilencerOn );
 	CNetworkVar( float, m_flDoneSwitchingSilencer );	// soonest time switching the silencer will be complete
 	bool IsSwitchingSilencer( void ) { return (m_flDoneSwitchingSilencer >= gpGlobals->curtime); }
 

@@ -2228,19 +2228,13 @@ ConVar snd_music_selection(
 			{
 				CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* >( pScorer->GetActiveWeapon() );
 
-				if ( pWeapon )
+				if ( pWeapon && pWeapon->HasSilencer() == Silencer_Removable && !pWeapon->IsSilenced() )
 				{
-					bool m_bHasSilencer = ( pWeapon->GetWeaponID() == WEAPON_M4A1 ||
-											pWeapon->GetWeaponID() == WEAPON_USP );
-
-					if ( m_bHasSilencer && !pWeapon->IsSilenced() )
+					if ( V_strEndsWith( killer_weapon_name, "silencer" ) )
 					{
-						if ( V_strEndsWith( killer_weapon_name, "silencer" ) )
-						{
-							char szTempWeaponNameWithOFFsuffix[64];
-							V_snprintf( szTempWeaponNameWithOFFsuffix, sizeof( szTempWeaponNameWithOFFsuffix ), "%s_off", killer_weapon_name );
-							event->SetString( "weapon", szTempWeaponNameWithOFFsuffix );
-						}
+						char szTempWeaponNameWithOFFsuffix[64];
+ 						V_snprintf( szTempWeaponNameWithOFFsuffix, sizeof( szTempWeaponNameWithOFFsuffix ), "%s_off", killer_weapon_name );
+ 						event->SetString( "weapon", szTempWeaponNameWithOFFsuffix );
 					}
 				}
 			}

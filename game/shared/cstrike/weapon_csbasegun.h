@@ -40,19 +40,37 @@ public:
 	virtual bool Reload();
 	virtual void WeaponIdle();
 	virtual bool Holster( CBaseCombatWeapon *pSwitchingTo );
-
-	virtual bool IsRevolver() const { return GetCSWeaponID() == WEAPON_REVOLVER; }
+	virtual void Drop( const Vector &vecVelocity );
 
 	// Derived classes call this to fire a bullet.
 	bool CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode );
 
+	void BurstFireRemaining( void );
+
 	// Usually plays the shot sound. Guns with silencers can play different sounds.
 	virtual void DoFireEffects();
-	virtual void ItemBusyFrame( void );
 	virtual void ItemPostFrame();
+	virtual void ItemBusyFrame( void );
 
-protected: 
-	float m_zoomFullyActiveTime;
+	virtual int GetCSZoomLevel() { return m_zoomLevel; }
+
+	CNetworkVar( int, m_zoomLevel );
+
+	virtual bool HasZoom( void );
+	virtual bool IsZoomed( void ) const;
+
+	virtual bool WeaponHasBurst( void ) const { return GetCSWpnData().m_bHasBurst; }
+	virtual bool IsInBurstMode() const;
+
+	virtual bool IsFullAuto() const;
+
+	virtual bool IsRevolver() const { return GetCSWpnData().m_bIsRevolver; }
+	virtual bool DoesUnzoomAfterShot( void ) const { return GetCSWpnData().m_bDoesUnzoomAfterShot; }
+
+	CNetworkVar( int, m_iBurstShotsRemaining );
+	float	m_fNextBurstShot;			// time to shoot the next bullet in burst fire mode
+
+	virtual Activity GetDeployActivity( void );
 
 private:
 

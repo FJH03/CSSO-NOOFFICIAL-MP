@@ -936,7 +936,7 @@ void CCSPlayer::PlayerRunCommand( CUserCmd *ucmd, IMoveHelper *moveHelper )
 			if ( (ucmd->buttons & IN_ATTACK2) != 0 && (ucmd->buttons & (IN_ATTACK | IN_RELOAD)) == 0 )
 			{
 				CWeaponCSBase *pWeapon = GetActiveCSWeapon();
-				if ( pWeapon && pWeapon->GetWeaponType() == WEAPONTYPE_SNIPER_RIFLE )
+				if ( pWeapon && pWeapon->HasZoom() )
 				{
 					// Force the animation back to idle since changing zoom has no specific animation
 					CBaseViewModel *pViewModel = GetViewModel();
@@ -4367,7 +4367,10 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos )
 			pCSWeapon->SetModel( pCSWeapon->GetWorldDroppedModel() );
 
 			// set silencer bodygroup
-			pCSWeapon->SetBodygroup( pCSWeapon->FindBodygroupByName( "silencer" ), pCSWeapon->IsSilenced() ? 0 : 1 );
+			if ( pCSWeapon->HasSilencer() == Silencer_Removable )
+ 			{
+ 				pCSWeapon->SetBodygroup( pCSWeapon->FindBodygroupByName( "silencer" ), pCSWeapon->IsSilenced() ? 0 : 1 );
+ 			}
 
 			//Find out the index of the ammo type
 			int iAmmoIndex = pCSWeapon->GetPrimaryAmmoType();
@@ -6269,7 +6272,7 @@ void CCSPlayer::LookAtHeldWeapon( void )
 		return;
 
 	// Can't taunt while zoomed, reloading, or switching silencer
-	if ( pActiveWeapon->IsWeaponZoomed() || pActiveWeapon->m_bInReload || pActiveWeapon->IsSwitchingSilencer() )
+	if ( pActiveWeapon->IsZoomed() || pActiveWeapon->m_bInReload || pActiveWeapon->IsSwitchingSilencer() )
 		return;
 
 	// don't let me inspect a shotgun that's reloading
@@ -6290,6 +6293,12 @@ void CCSPlayer::LookAtHeldWeapon( void )
 
 		if ( nSequence == ACT_INVALID )
 			nSequence = pViewModel->LookupSequence( "lookat01" );
+
+		// make sure the silencer bodygroup is correct
+		if ( GetActiveCSWeapon() && GetActiveCSWeapon()->HasSilencer() == Silencer_Removable )
+		{
+			pViewModel->SetBodygroup( pViewModel->FindBodygroupByName( "silencer" ), GetActiveCSWeapon()->IsSilenced() ? 0 : 1 );
+		}
 
 		if ( nSequence != ACTIVITY_NOT_AVAILABLE )
 		{

@@ -159,7 +159,7 @@ CDecoyProjectile* CDecoyProjectile::Create(
 		CWeaponCSBase *pWeapon = static_cast<CWeaponCSBase *>( pPrimaryWeapon );
 		if ( pWeapon )
 		{
-			pGrenade->m_decoyWeaponSoundType = ( pWeapon->IsSilenced() && pWeapon->GetWeaponID() != WEAPON_MP5SD ) ? SPECIAL1 : SINGLE;
+			pGrenade->m_decoyWeaponSoundType = ( pWeapon->HasSilencer() && pWeapon->IsSilenced() ) ? SPECIAL1 : SINGLE;
 		}
 		else
 		{

@@ -30,7 +30,8 @@ void FX_FireBullets(
 	int iSeed,
 	float fInaccuracy,
 	float fSpread,
-	float flSoundTime = 0.0f
+	float flSoundTime,
+ 	WeaponSound_t sound_type/* = SINGLE*/
 	);
 
 // This runs on both the client and the server.

@@ -243,6 +243,22 @@ public:
 	int		m_iBullets;
 	float	m_flCycleTime[2];
 
+	bool	m_bIsRevolver;
+ 
+ 	bool	m_bDoesUnzoomAfterShot;
+ 	int		m_iZoomLevels;
+ 	int		m_iZoomFOV[2];
+ 	float	m_flZoomTime[3];
+ 	char	m_szZoomINSound[MAX_WEAPON_STRING];
+ 	char	m_szZoomOUTSound[MAX_WEAPON_STRING];
+ 	bool	m_bHideViewmodelWhenZoomed;
+ 
+ 	bool	m_bHasBurst;
+ 	float	m_flCycleTimeInBurst;
+ 	float	m_flTimeBetweenBurstShots;
+ 
+ 	int		m_iHasSilencer;
+
 	// variables for new accuracy model
 	float m_fSpread[2];
 	float m_fInaccuracyCrouch[2];

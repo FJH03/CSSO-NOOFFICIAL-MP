@@ -7,16 +7,8 @@
 #include "cbase.h"
 #include "weapon_csbasegun.h"
 
-
 #if defined( CLIENT_DLL )
-
 	#define CWeaponP90 C_WeaponP90
-	#include "c_cs_player.h"
-
-#else
-
-	#include "cs_player.h"
-
 #endif
 
 
@@ -27,12 +19,9 @@ public:
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CWeaponP90();
-
-	virtual void PrimaryAttack();
+	CWeaponP90() {}
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_P90; }
-
 
 private:
 	CWeaponP90( const CWeaponP90 & );
@@ -48,19 +37,3 @@ END_PREDICTION_DATA()
 
 LINK_ENTITY_TO_CLASS( weapon_p90, CWeaponP90 );
 PRECACHE_WEAPON_REGISTER( weapon_p90 );
-
-
-
-CWeaponP90::CWeaponP90()
-{
-}
-
-void CWeaponP90::PrimaryAttack()
-{
-	CCSPlayer *pPlayer = GetPlayerOwner();
-	if ( !pPlayer )
-		return;
-	
-	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], Primary_Mode ) )
-		return;
-}

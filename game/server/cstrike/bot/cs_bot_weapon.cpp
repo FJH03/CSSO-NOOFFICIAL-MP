@@ -407,7 +407,7 @@ bool CCSBot::DoesActiveWeaponHaveSilencer( void ) const
 	if (weapon == NULL)
 		return false;
 
-	if (weapon->IsA( WEAPON_M4A1 ) || weapon->IsA( WEAPON_USP ))
+	if (weapon->HasSilencer() == Silencer_Removable)
 		return true;
 
 	return false;

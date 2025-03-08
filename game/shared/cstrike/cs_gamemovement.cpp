@@ -1255,7 +1255,7 @@ void CCSGameMovement::Accelerate( Vector& wishdir, float wishspeed, float accel 
 	flGoalSpeed = fAccelerationScale;
 	if ( sv_accelerate_use_weapon_speed.GetBool( ) && csWeapon )
 	{
-		bIsSlowSniperScoped =	(player->GetFOV() < player->GetDefaultFOV()
+		bIsSlowSniperScoped = (csWeapon->GetCSZoomLevel() > 0 && csWeapon->GetCSWpnData().m_iZoomLevels > 1 
 								&& (csWeapon->GetMaxSpeed( ) * CS_PLAYER_SPEED_WALK_MODIFIER) < 110.0);
 
 		flGoalSpeed *= MIN( 1.0f, ( csWeapon->GetMaxSpeed( ) / flMaxSpeed ) );

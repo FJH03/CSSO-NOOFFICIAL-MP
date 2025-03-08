@@ -237,12 +237,14 @@ SendPropFloat( SENDINFO( m_fAccuracyPenalty ), 0, SPROP_CHANGES_OFTEN ),
 SendPropFloat( SENDINFO( m_fLastShotTime ) ),
 SendPropFloat( SENDINFO( m_flRecoilIndex ) ),
 SendPropBool( SENDINFO( m_bReloadVisuallyComplete ) ),
-SendPropTime( SENDINFO( m_flDoneSwitchingSilencer ) ),
 // world weapon models have no aminations
 SendPropExclude( "DT_AnimTimeMustBeFirst", "m_flAnimTime" ),
 SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
 SendPropEHandle( SENDINFO( m_hPrevOwner ) ),
+SendPropBool( SENDINFO( m_bBurstMode ) ),
 //	SendPropExclude( "DT_LocalActiveWeaponData", "m_flTimeWeaponIdle" ),
+SendPropBool( SENDINFO( m_bSilencerOn ) ),
+SendPropTime( SENDINFO( m_flDoneSwitchingSilencer ) ),
 SendPropTime( SENDINFO( m_flPostponeFireReadyTime ) ),
 #if IRONSIGHT
 SendPropInt( SENDINFO( m_iIronSightMode ), 2, SPROP_UNSIGNED ),
@@ -253,7 +255,9 @@ RecvPropFloat( RECVINFO( m_fAccuracyPenalty ) ),
 RecvPropFloat( RECVINFO( m_fLastShotTime ) ),
 RecvPropFloat( RECVINFO( m_flRecoilIndex ) ),
 RecvPropEHandle( RECVINFO( m_hPrevOwner ) ),
+RecvPropBool( RECVINFO( m_bBurstMode ) ),
 RecvPropBool( RECVINFO( m_bReloadVisuallyComplete ) ),
+RecvPropBool( RECVINFO( m_bSilencerOn ) ),
 RecvPropTime( RECVINFO( m_flDoneSwitchingSilencer ) ),
 RecvPropTime( RECVINFO( m_flPostponeFireReadyTime ) ),
 #if IRONSIGHT
@@ -267,7 +271,6 @@ BEGIN_PREDICTION_DATA( CWeaponCSBase )
 	DEFINE_PRED_FIELD( m_flTimeWeaponIdle, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
 	DEFINE_PRED_FIELD( m_flNextPrimaryAttack, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
 	DEFINE_PRED_FIELD( m_flNextSecondaryAttack, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
-	DEFINE_PRED_FIELD( m_bDelayFire, FIELD_BOOLEAN, 0 ),
 	DEFINE_PRED_FIELD( m_weaponMode, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD_TOL( m_fAccuracyPenalty, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.00005f ),
 	DEFINE_PRED_FIELD( m_fLastShotTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
@@ -374,7 +377,6 @@ void DrawCrosshairRect( int r, int g, int b, int a, int x0, int y0, int x1, int 
 CWeaponCSBase::CWeaponCSBase()
 {
 	SetPredictionEligible( true );
-	m_bDelayFire = true;
 	m_nextOwnerTouchTime = 0.0f;
 	m_nextPrevOwnerTouchTime = 0.0;
 	m_hPrevOwner = NULL;
@@ -394,11 +396,13 @@ CWeaponCSBase::CWeaponCSBase()
 
 	m_fLastShotTime = 0.0f;
 	m_weaponMode = Primary_Mode;
+	m_bBurstMode = false;
 
 	ResetPostponeFireReadyTime();
 
 	m_bReloadVisuallyComplete = false;
 
+	m_bSilencerOn = false;
 	m_flDoneSwitchingSilencer = 0.0f;
 
 	m_flRecoilIndex = 0.0f;
@@ -787,87 +791,12 @@ bool CWeaponCSBase::ItemPostFrame_ProcessZoomAction( CCSPlayer *pPlayer )
 	if ( IsRevolver() )	// Revolver treats zoom as secondary fire
 		return ItemPostFrame_ProcessSecondaryAttack( pPlayer );
 
-	if ( IsKindOf( WEAPONTYPE_SNIPER_RIFLE ) || IsKindOf( WEAPONTYPE_KNIFE ) )
+	if ( HasZoom() || IsKindOf( WEAPONTYPE_KNIFE ) )
 	{
 		CallSecondaryAttack();
 	}
 
 	return true;
-}
-
-void CWeaponCSBase::CallWeaponIronsight()
-{
-	CCSPlayer *pPlayer = GetPlayerOwner();
-	if ( !pPlayer )
-		return;
-
-#if IRONSIGHT
-	if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
-	{
-		CIronSightController* pIronSightController = pPlayer->GetActiveCSWeapon()->GetIronSightController();
-		if ( pIronSightController )
-		{
-			pPlayer->GetActiveCSWeapon()->UpdateIronSightController();
-			pPlayer->SetFOV( pPlayer, pIronSightController->GetIronSightIdealFOV(), pIronSightController->GetIronSightPullUpDuration() );
-			pIronSightController->SetState( IronSight_should_approach_sighted );
-
-			//stop looking at weapon when going into ironsights
-#ifndef CLIENT_DLL
-			pPlayer->StopLookingAtWeapon();
-
-			//force idle animation
-			CBaseViewModel* pViewModel = pPlayer->GetViewModel();
-			if ( pViewModel )
-			{
-				int nSequence = pViewModel->LookupSequence( "idle" );
-				if ( nSequence != ACTIVITY_NOT_AVAILABLE )
-				{
-					pViewModel->ForceCycle( 0 );
-					pViewModel->ResetSequence( nSequence );
-				}
-			}
-#endif
-			m_weaponMode = Secondary_Mode;
-			WeaponSound( SPECIAL3 ); // Zoom in sound
-		}
-	}
-	else
-	{
-		CIronSightController* pIronSightController = pPlayer->GetActiveCSWeapon()->GetIronSightController();
-		if ( pIronSightController )
-		{
-			pPlayer->GetActiveCSWeapon()->UpdateIronSightController();
-			int iFOV = pPlayer->GetDefaultFOV();
-			pPlayer->SetFOV( pPlayer, iFOV, pIronSightController->GetIronSightPutDownDuration() );
-			pIronSightController->SetState( IronSight_should_approach_unsighted );
-			SendWeaponAnim( ACT_VM_FIDGET );
-			m_weaponMode = Primary_Mode;
-			if ( GetPlayerOwner() )
-			{
-				WeaponSound( SPECIAL2 ); // Zoom out sound
-			}
-		}
-	}
-#else
-
-	if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
-	{
-		pPlayer->SetFOV( pPlayer, 45, 0.10f );
-		m_weaponMode = Secondary_Mode;
-	}
-	else if ( pPlayer->GetFOV() == 45 )
-	{
-		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.06f );
-		m_weaponMode = Primary_Mode;
-	}
-	else 
-	{
-		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV() );
-		m_weaponMode = Primary_Mode;
-	}
-#endif
-
-	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3;
 }
 
 bool CWeaponCSBase::ItemPostFrame_ProcessSecondaryAttack( CCSPlayer *pPlayer )
@@ -939,14 +868,7 @@ bool CWeaponCSBase::ItemPostFrame_ProcessSecondaryAttack( CCSPlayer *pPlayer )
 	}
 #endif
 
-	if ( GetCSWpnData().m_bIronsightCapable )
-	{
-		CallWeaponIronsight();
-	}
-	else
-	{
-		CallSecondaryAttack();
-	}
+	CallSecondaryAttack();
 
 #ifndef CLIENT_DLL
 	pPlayer->ClearImmunity();
@@ -1176,6 +1098,14 @@ void CWeaponCSBase::Precache( void )
 
 	PrecacheScriptSound( "Default.ClipEmpty_Pistol" );
 	PrecacheScriptSound( "Default.ClipEmpty_Rifle" );
+	if ( GetCSWpnData().m_szZoomINSound && GetCSWpnData().m_szZoomINSound[0] )
+ 	{
+ 		PrecacheScriptSound( GetCSWpnData().m_szZoomINSound );
+ 	}
+ 	if ( GetCSWpnData().m_szZoomOUTSound && GetCSWpnData().m_szZoomOUTSound[0] )
+ 	{
+ 		PrecacheScriptSound( GetCSWpnData().m_szZoomOUTSound );
+ 	}
 
 	PrecacheScriptSound( "Default.Zoom" );
 	PrecacheScriptSound( "Weapon.AutoSemiAutoSwitch" );
@@ -1327,6 +1257,7 @@ bool CWeaponCSBase::Deploy()
 	{
 		pPlayer->m_iShotsFired = 0;
 		pPlayer->m_bResumeZoom = false;
+		pPlayer->m_bIsScoped = false;
 		pPlayer->m_iLastZoom = 0;
 		pPlayer->SetFOV( pPlayer, 0 );
 	}
@@ -1950,7 +1881,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 
 	/*const char* CWeaponCSBase::GetMuzzleFlashEffectName( bool bThirdPerson )
 	{
-		if ( m_weaponMode == Secondary_Mode )
+		if ( HasSilencer() && IsSilenced() )
 		{
 			return bThirdPerson ? GetCSWpnData().m_szMuzzleFlash3rdPersonAlt : GetCSWpnData().m_szMuzzleFlash1stPersonAlt;
 		}
@@ -1983,7 +1914,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 			if ( !pPlayer )
 				return true;
 
-			if ( pPlayer && pPlayer->GetFOV() != pPlayer->GetDefaultFOV() && pPlayer->m_bIsScoped )
+			if ( pPlayer && pPlayer->GetFOV() != pPlayer->GetDefaultFOV() && pPlayer->m_bIsScoped && GetCSWpnData().m_bHideViewmodelWhenZoomed )
 				return true;
 
 			// hide particle effects when we're interpolating between observer targets
@@ -2022,7 +1953,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 		/*else if ( event == AE_CLIENT_EJECT_BRASS )
 		{
 			C_CSPlayer *pPlayer = ToCSPlayer( GetOwner() );
-			if( pPlayer && pPlayer->GetFOV() != pPlayer->GetDefaultFOV() && pPlayer->m_bIsScoped )
+			if( pPlayer && pPlayer->GetFOV() != pPlayer->GetDefaultFOV() && pPlayer->m_bIsScoped && GetCSWpnData().m_bHideViewmodelWhenZoomed )
 				return true;
 
 			Vector origin;
@@ -2409,6 +2340,16 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 					SetBodygroup( FindBodygroupByName( "silencer" ), 1 );
 				}
 			}
+			else if ( nEvent == AE_CL_ATTACH_SILENCER_COMPLETE )
+ 			{
+ 				m_bSilencerOn = true;
+ 				m_weaponMode = Secondary_Mode;
+ 			}
+ 			else if ( nEvent == AE_CL_DETACH_SILENCER_COMPLETE )
+ 			{
+ 				m_bSilencerOn = false;
+ 				m_weaponMode = Primary_Mode;
+ 			}
 			else if ( nEvent == AE_CL_EJECT_MAG )
 			{
 				SetBodygroup( FindBodygroupByName( "magazine" ), 1 );
@@ -2542,6 +2483,9 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
         // [tj] initialize donor of this weapon
         m_donor = NULL;
         m_donated = false;
+
+		m_bSilencerOn = HasSilencer() ? true : false;
+ 		m_weaponMode = HasSilencer() ? Secondary_Mode : Primary_Mode;
 
 		m_weaponMode = Primary_Mode;
 
@@ -3291,3 +3235,42 @@ void CWeaponCSBase::UpdateIronSightController()
 		m_IronSightController->Init(this);
 }
 #endif
+
+int CWeaponCSBase::GetZoomFOV( int nZoomLevel ) const
+ {
+ 	if ( nZoomLevel < 1 || nZoomLevel > 2 )
+ 		return 0;
+ 
+ 	return GetCSWpnData().m_iZoomFOV[nZoomLevel-1];
+ }
+ 
+ float CWeaponCSBase::GetZoomTime( int nZoomLevel ) const
+ {
+ 	if ( nZoomLevel < 0 || nZoomLevel > 2 )
+ 		return 0;
+ 
+ 	return GetCSWpnData().m_flZoomTime[nZoomLevel];
+ }
+ 
+ void CWeaponCSBase::SetSilencer( bool state )
+ {
+ 	m_bSilencerOn = state;
+ 	m_weaponMode = state ? Secondary_Mode : Primary_Mode;
+ 
+ 	if ( CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() ) )
+ 	{
+ 		if ( CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex ) )
+ 			vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), state ? 0 : 1 );
+ 	}
+ 
+ 	//world model
+ 	CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
+ 	if ( pWorldModel )
+ 	{
+ 		pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "silencer" ), state ? 0 : 1 );
+ 	}
+ 	else
+ 	{
+ 		SetBodygroup( FindBodygroupByName( "silencer" ), state ? 0 : 1 );
+ 	}
+ }

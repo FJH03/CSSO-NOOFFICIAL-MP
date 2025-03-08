@@ -8,59 +8,32 @@
 #include "weapon_csbasegun.h"
 
 #if defined( CLIENT_DLL )
-
-	#define CAK47 C_AK47
-	#include "c_cs_player.h"
-
-#else
-
-	#include "cs_player.h"
-
+	#define CWeaponAK47 C_WeaponAK47
 #endif
 
 
-class CAK47 : public CWeaponCSBaseGun
+class CWeaponAK47 : public CWeaponCSBaseGun
 {
 public:
-	DECLARE_CLASS( CAK47, CWeaponCSBaseGun );
+	DECLARE_CLASS( CWeaponAK47, CWeaponCSBaseGun );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CAK47();
-
-	virtual void PrimaryAttack();
+	CWeaponAK47() {}
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_AK47; }
 
 private:
-	CAK47( const CAK47 & );
+	CWeaponAK47( const CWeaponAK47 & );
 };
 
-IMPLEMENT_NETWORKCLASS_ALIASED( AK47, DT_WeaponAK47 )
+IMPLEMENT_NETWORKCLASS_ALIASED( WeaponAK47, DT_WeaponAK47 )
 
-BEGIN_NETWORK_TABLE( CAK47, DT_WeaponAK47 )
+BEGIN_NETWORK_TABLE( CWeaponAK47, DT_WeaponAK47 )
 END_NETWORK_TABLE()
 
-BEGIN_PREDICTION_DATA( CAK47 )
+BEGIN_PREDICTION_DATA( CWeaponAK47 )
 END_PREDICTION_DATA()
 
-LINK_ENTITY_TO_CLASS( weapon_ak47, CAK47 );
+LINK_ENTITY_TO_CLASS( weapon_ak47, CWeaponAK47 );
 PRECACHE_WEAPON_REGISTER( weapon_ak47 );
-
-// ---------------------------------------------------------------------------- //
-// CAK47 implementation.
-// ---------------------------------------------------------------------------- //
-
-CAK47::CAK47()
-{
-}
-
-void CAK47::PrimaryAttack()
-{
-	CCSPlayer *pPlayer = GetPlayerOwner();
-	if ( !pPlayer )
-		return;
-
-	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], Primary_Mode ) )
-		return;
-}

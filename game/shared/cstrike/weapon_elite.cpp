@@ -5,50 +5,33 @@
 //=============================================================================//
 
 #include "cbase.h"
-#include "weapon_csbase.h"
-#include "fx_cs_shared.h"
+#include "weapon_csbasegun.h"
 
 
 #if defined( CLIENT_DLL )
-
 	#define CWeaponElite C_WeaponElite
-	#include "c_cs_player.h"
-	#include "c_te_effect_dispatch.h"
-
-#else
-
-	#include "cs_player.h"
-
 #endif
 
 
-class CWeaponElite : public CWeaponCSBase
+class CWeaponElite : public CWeaponCSBaseGun
 {
 public:
-	DECLARE_CLASS( CWeaponElite, CWeaponCSBase );
+	DECLARE_CLASS( CWeaponElite, CWeaponCSBaseGun );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 	
-	CWeaponElite();
+	CWeaponElite() {}
 
-	virtual void Spawn();
 	virtual void Precache();
 
 	virtual void PrimaryAttack();
-	virtual bool Deploy();
-
-	virtual bool Reload();
-
-	// We overload this so we can translate left/right fire activities
-	virtual bool SendWeaponAnim( int iActivity );
 
 	virtual void WeaponIdle();
 	
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_ELITE; }
 
 #ifdef CLIENT_DLL
-	virtual int		GetMuzzleAttachment( void );
-	virtual bool OnFireEvent( C_BaseViewModel *pViewModel, const Vector& origin, const QAngle& angles, int event, const char *options );
+	virtual int GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson );
 #endif
 
 protected:
@@ -57,7 +40,6 @@ protected:
 private:
 	
 	CWeaponElite( const CWeaponElite & );
-	float		m_flLastFire;
 };
 
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponElite, DT_WeaponElite )
@@ -65,25 +47,11 @@ IMPLEMENT_NETWORKCLASS_ALIASED( WeaponElite, DT_WeaponElite )
 BEGIN_NETWORK_TABLE( CWeaponElite, DT_WeaponElite )
 END_NETWORK_TABLE()
 
-#if defined CLIENT_DLL
 BEGIN_PREDICTION_DATA( CWeaponElite )
-	DEFINE_FIELD( m_flLastFire, FIELD_FLOAT ),
 END_PREDICTION_DATA()
-#endif
 
 LINK_ENTITY_TO_CLASS( weapon_elite, CWeaponElite );
 PRECACHE_WEAPON_REGISTER( weapon_elite );
-
-CWeaponElite::CWeaponElite()
-{
-	m_flLastFire = gpGlobals->curtime;
-}
-
-
-void CWeaponElite::Spawn( )
-{
-	BaseClass::Spawn();
-}
 
 
 void CWeaponElite::Precache()
@@ -95,11 +63,6 @@ void CWeaponElite::Precache()
 	PrecacheModel( "models/weapons/w_pist_elite_single.mdl" );
 }
 
-bool CWeaponElite::Deploy( )
-{
-	return BaseClass::Deploy();
-}
-
 
 bool CWeaponElite::FiringLeft() const
 {
@@ -109,103 +72,8 @@ bool CWeaponElite::FiringLeft() const
 
 void CWeaponElite::PrimaryAttack()
 {
-	CCSPlayer *pPlayer = GetPlayerOwner();
-	if ( !pPlayer )
-		return;
-
-	m_flLastFire = gpGlobals->curtime;
-
-	if (m_iClip1 <= 0)
-	{
-		if ( m_bFireOnEmpty )
-		{
-			PlayEmptySound();
-			m_flNextPrimaryAttack = gpGlobals->curtime + 0.1f;
-			m_bFireOnEmpty = false;
-		}
-
-		return;
-	}
-
-	pPlayer->m_iShotsFired++;
-
-	m_iClip1--;
-
-	pPlayer->DoMuzzleFlash();
-	
-	// player "shoot" animation
-	pPlayer->SetAnimation( PLAYER_ATTACK1 );
-
-	FX_FireBullets(
-		pPlayer->entindex(),
-		pPlayer->Weapon_ShootPosition(),
-		pPlayer->GetFinalAimAngle(),
-		GetWeaponID(),
-		FiringLeft() ? Secondary_Mode : Primary_Mode,
-		CBaseEntity::GetPredictionRandomSeed() & 255,
-		GetInaccuracy(),
-		GetSpread());
-		
-	m_flNextPrimaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime[m_weaponMode];
-	
-	if (!m_iClip1 && pPlayer->GetAmmoCount( m_iPrimaryAmmoType ) <= 0)
-	{
-		// HEV suit - indicate out of ammo condition
-		pPlayer->SetSuitUpdate("!HEV_AMO0", false, 0);
-	}
-
-	SetWeaponIdleTime( gpGlobals->curtime + 2.5 );
-
-	if ( FiringLeft() )
-	{
-		if ( m_iClip1 > 0 )
-			SendWeaponAnim( ACT_VM_SECONDARYATTACK );
-		else
-			SendWeaponAnim( ACT_VM_DRYFIRE );
-	}
-	else
-	{
-		if ( m_iClip1 > 1 )
-			SendWeaponAnim( ACT_VM_PRIMARYATTACK );
-		else
-			SendWeaponAnim( ACT_VM_DRYFIRE_LEFT );
-	}
-
-	// update accuracy
-	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[Primary_Mode];
-
-	// table driven recoil
-	Recoil( m_weaponMode );
-
-	m_flRecoilIndex += 1.0f;
-}
-
-
-bool CWeaponElite::Reload()
-{
-	return DefaultPistolReload();
-}
-
-bool CWeaponElite::SendWeaponAnim( int iActivity )
-{
-	if ( iActivity == ACT_VM_PRIMARYATTACK )
-	{
-		if ( FiringLeft() )
-		{
-			if ( m_iClip1 > 2 )
-				iActivity = ACT_VM_PRIMARYATTACK;
-			else
-				iActivity = ACT_VM_DRYFIRE_LEFT;
-		}
-		else
-		{
-			if ( m_iClip1 > 2 )
-				iActivity = ACT_VM_SECONDARYATTACK;
-			else
-				iActivity = ACT_VM_DRYFIRE;
-		}
-	}
-	return BaseClass::SendWeaponAnim( iActivity );
+	m_weaponMode = FiringLeft() ? Primary_Mode : Secondary_Mode;
+	CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], m_weaponMode );
 }
 
 void CWeaponElite::WeaponIdle()
@@ -213,50 +81,39 @@ void CWeaponElite::WeaponIdle()
 	if (m_flTimeWeaponIdle > gpGlobals->curtime)
 		return;
 
-/*
-	// switching to the idle with the slide back on the right pistol causes animation pops transitioning
-	// from/to the depot/holster animations. The pop transition to the reload is less noticeable, so 
-	// we'll live with that one
+	// only idle if the slid isn't back
+	if ( m_iClip1 < 2 )
+		return;
 
-	if ( m_iClip1 == 1 )
-	{
-		SendWeaponAnim( ACT_VM_IDLE_EMPTY_LEFT );
-	}
-*/
+//	NB. If we show one or more empty guns when idling, we'll get visual pops when holstering or drawing weapons
+// 	if ( m_iClip1 == 1 )
+// 		SendWeaponAnim( ACT_VM_IDLE_EMPTY_LEFT );
 
-	// only idle if either slide isn't back
-	if ( m_iClip1 >= 2 )
-	{
-			SendWeaponAnim( ACT_VM_IDLE );
-	}
+	SendWeaponAnim( ACT_VM_IDLE );
+	SetWeaponIdleTime( gpGlobals->curtime + GetCSWpnData().m_flIdleInterval );
 }
 
 #ifdef CLIENT_DLL
 
- bool CWeaponElite::OnFireEvent( C_BaseViewModel *pViewModel, const Vector& origin, const QAngle& angles, int event, const char *options )
+int CWeaponElite::GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson )
+{
+	if ( !pAnimating )
+		return -1;
+
+	if ( isThirdPerson )
 	{
-		if( event == 5001 )
-		{
-			C_CSPlayer *pPlayer = ToCSPlayer( GetOwner() );
-			if( pPlayer && pPlayer->GetFOV() < pPlayer->GetDefaultFOV() && HideViewModelWhenZoomed() )
-				return true;
-			
-			CEffectData data;
-			data.m_fFlags = 0;
-			data.m_hEntity = pViewModel->GetRefEHandle();
-			data.m_nAttachmentIndex = FiringLeft() ? 1 : 2; // toggle muzzle flash
-			data.m_flScale = GetCSWpnData().m_flMuzzleScale;
-		
-			DispatchEffect( "CS_MuzzleFlash", data );
-
-			return true;
-		}
-
-		return BaseClass::OnFireEvent( pViewModel, origin, angles, event, options );
+		if ( FiringLeft() )
+			return pAnimating->LookupAttachment( "muzzle_flash2" );
+		else
+			return pAnimating->LookupAttachment( "muzzle_flash" );
 	}
-
-	int CWeaponElite::GetMuzzleAttachment( void )
+	else
 	{
-		return LookupAttachment( FiringLeft() ? "muzzle_flash_l" : "muzzle_flash_r" );	
+		if ( FiringLeft() )
+			return pAnimating->LookupAttachment( "1" );
+		else
+			return pAnimating->LookupAttachment( "2" );
 	}
+}
+
 #endif

@@ -155,7 +155,7 @@ void CHudScope::Paint( void )
 	Assert( m_iScopeDustTexture );
 
 	const float kScopeMinFOV = 25.0f; // Clamp scope FOV to this value to prevent blur from getting too big when double-scoped
-	float flTargetFOVForZoom = MAX( pPlayer->GetFOV(), kScopeMinFOV );
+	float flTargetFOVForZoom = MAX( pWeapon->GetZoomFOV( pWeapon->GetCSZoomLevel() ), kScopeMinFOV );
 	if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() && pPlayer->m_bIsScoped == false )
 	{
 		m_fAnimInset = 2;

@@ -357,7 +357,7 @@ public:
 	virtual void			FireEvent( const Vector& origin, const QAngle& angles, int event, const char *options );
 #endif
 
-	virtual bool			IsWeaponZoomed() { return false; }		// Is this weapon in its 'zoomed in' mode?
+	virtual bool			IsZoomed() { return false; }		// Is this weapon in its 'zoomed in' mode?
 
 	// Reloading
 	virtual	void			CheckReload( void );

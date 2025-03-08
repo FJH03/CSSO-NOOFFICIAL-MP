@@ -45,7 +45,9 @@ void C_TEFireBullets::PostDataUpdate( DataUpdateType_t updateType )
 		m_iMode,
 		m_iSeed,
 		m_fInaccuracy,
-		m_fSpread
+		m_fSpread,
+ 		0,
+ 		SINGLE
 		);
 }
 

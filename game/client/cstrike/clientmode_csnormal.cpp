@@ -1450,7 +1450,7 @@ bool ClientModeCSNormal::ShouldDrawViewModel( void )
 	{
 		CWeaponCSBase *pWpn = pPlayer->GetActiveCSWeapon();
 
-		if( pWpn && pWpn->HideViewModelWhenZoomed() )
+		if( pWpn && pWpn->GetCSWpnData().m_bHideViewmodelWhenZoomed )
 		{
 			return false;
 		}

@@ -114,7 +114,8 @@ void FX_FireBullets(
 	int iSeed,
 	float fInaccuracy,
 	float fSpread,
-	float flSoundTime
+	float flSoundTime,
+ 	WeaponSound_t sound_type
 	)
 {
 	bool bDoEffects = true;
@@ -211,13 +212,6 @@ void FX_FireBullets(
 	float	flPenetration = pWeaponInfo->m_iPenetration;
 	float	flRangeModifier = pWeaponInfo->m_flRangeModifier;
 	int		iAmmoType = pWeaponInfo->iAmmoType;
-
-	WeaponSound_t sound_type = SINGLE;
-
-	// CS HACK, tweak some weapon values based on primary/secondary mode
-
-	if ( (iWeaponID == WEAPON_M4A1 || iWeaponID == WEAPON_USP) && iMode == Secondary_Mode )
-		sound_type = SPECIAL1;
 
 	CWeaponCSBase* pWeapon = pPlayer ? pPlayer->GetActiveCSWeapon() : NULL;
 	if ( bDoEffects )
