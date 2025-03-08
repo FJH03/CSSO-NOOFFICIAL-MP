@@ -35,8 +35,8 @@ public:
 	void SetRepeatsCount( int repeats ) { m_nRepeatsCount = repeats; }
 	void DestroyTexture();
 	void SetRenderSize( int wide, int tall );
-	void SetMirrorX( bool state ) { m_bMirrorX = state; }
-	void SetMirrorY( bool state ) { m_bMirrorY = state; }
+	void SetMirrorX( bool state );
+ 	void SetMirrorY( bool state );
 
 private:
 	int m_nTextureId;
@@ -45,6 +45,7 @@ private:
 	int m_nRepeatsCount; // how many times we need to render it over and over?
 	bool m_bMirrorX;
 	bool m_bMirrorY;
+	float texCoords[4]; // s0, t0, s1, t1
 };
 
 }
