@@ -26,6 +26,9 @@ public:
 
 	virtual void PrimaryAttack();
 
+	// We overload this so we can translate left/right fire activities
+	virtual bool SendWeaponAnim( int iActivity );
+
 	virtual void WeaponIdle();
 	
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_ELITE; }
@@ -76,6 +79,28 @@ void CWeaponElite::PrimaryAttack()
 	CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], m_weaponMode );
 }
 
+bool CWeaponElite::SendWeaponAnim( int iActivity )
+ {
+ 	if ( iActivity == ACT_VM_PRIMARYATTACK )
+ 	{
+ 		if ( FiringLeft() )
+ 		{
+ 			if ( m_iClip1 > 2 )
+ 				iActivity = ACT_VM_PRIMARYATTACK;
+ 			else
+ 				iActivity = ACT_VM_DRYFIRE_LEFT;
+ 		}
+ 		else
+ 		{
+ 			if ( m_iClip1 > 2 )
+ 				iActivity = ACT_VM_SECONDARYATTACK;
+ 			else
+ 				iActivity = ACT_VM_DRYFIRE;
+ 		}
+ 	}
+ 	return BaseClass::SendWeaponAnim( iActivity );
+ }
+ 
 void CWeaponElite::WeaponIdle()
 {
 	if (m_flTimeWeaponIdle > gpGlobals->curtime)
