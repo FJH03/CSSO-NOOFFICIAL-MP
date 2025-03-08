@@ -12,6 +12,7 @@
 #endif
 
 #include "vgui_controls/Panel.h"
+#include "vgui_controls/EditablePanel.h"
 #include "vgui_controls/PHandle.h"
 #include "vgui_controls/MenuItem.h"
 #include "vgui_controls/MessageDialog.h"
@@ -155,9 +156,9 @@ public:
 // Purpose: This is the panel at the top of the panel hierarchy for GameUI
 //			It handles all the menus, background images, and loading dialogs
 //-----------------------------------------------------------------------------
-class CBasePanel : public vgui::Panel
+class CBasePanel : public vgui::EditablePanel
 {
-	DECLARE_CLASS_SIMPLE( CBasePanel, vgui::Panel );
+	DECLARE_CLASS_SIMPLE( CBasePanel, vgui::EditablePanel );
 
 public:
 	CBasePanel();

@@ -754,7 +754,7 @@ static CBackgroundMenuButton* CreateMenuButton( CBasePanel *parent, const char *
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
-CBasePanel::CBasePanel() : Panel(NULL, "BaseGameUIPanel")
+CBasePanel::CBasePanel() : EditablePanel(NULL, "BaseGameUIPanel")
 {
 	if( NeedProportional() )
 		SetProportional( true );
