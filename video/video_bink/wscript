@@ -39,16 +39,17 @@ def build(bld):
 
 	install_path = bld.env.LIBDIR
 
-	bld.shlib(
-		source   = source,
-		target   = PROJECT_NAME,
-		name     = PROJECT_NAME,
-		features = 'c cxx',
-		includes = includes,
-		defines  = defines,
-		use      = libs,
-		install_path = install_path,
-		subsystem = bld.env.MSVC_SUBSYSTEM,
-		idx      = bld.get_taskgen_count()
-	)
+	if not bld.env.DEST_OS == 'android':
+		bld.shlib(
+			source   = source,
+			target   = PROJECT_NAME,
+			name     = PROJECT_NAME,
+			features = 'c cxx',
+			includes = includes,
+			defines  = defines,
+			use      = libs,
+			install_path = install_path,
+			subsystem = bld.env.MSVC_SUBSYSTEM,
+			idx      = bld.get_taskgen_count()
+		)
 

@@ -168,7 +168,7 @@ void CHudAmmo::OnThink()
 		return;
 	}
 
-	C_BaseCombatWeapon *pWeapon = pPlayer->GetActiveWeapon();
+	C_WeaponCSBase *pWeapon = pPlayer->GetActiveCSWeapon();
 	if ( !pWeapon )
 	{
 		m_pActiveWeapon = NULL;
@@ -219,13 +219,14 @@ void CHudAmmo::OnThink()
 		m_pPrimaryReserveAmmoLabel->SetText( unicode );
 
 		m_pBulletIcon->SetRepeatsCount( Clamp( m_iAmmoCount, 0, 5 ) );
-		
+
 		if ( m_bBurstMode != m_pActiveWeapon->IsInBurstMode() )
 		{
 			m_bBurstMode = m_pActiveWeapon->IsInBurstMode();
 			m_pBurstIcon->SetTexture( m_bBurstMode ? "materials/vgui/hud/svg/bullet_burst.svg" : "materials/vgui/hud/svg/bullet_burst_outline.svg" );
 		}
 	}
+
 	// don't do it every frame, only do it when needed
 	if ( m_bIsExhaustible && (m_iStyle == 0) )
 	{
