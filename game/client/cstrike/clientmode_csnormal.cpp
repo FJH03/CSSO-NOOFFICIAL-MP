@@ -1404,13 +1404,7 @@ void ClientModeCSNormal::PostRenderVGui()
 			// Ok, we have a visible class image panel.
 			int x, y, w, h;
 			pPanel->GetBounds( x, y, w, h );
-			pPanel->LocalToScreen( x, y );
-
-			// Allow for the border.
-			x += 1;
-			y += 1;
-			w -= 2;
-			h -= 2;
+			pPanel->ParentLocalToScreen( x, y ); // this is parented to a sub panel, not directly to the buy menu
 
 			UpdateImageEntity( NULL, pPanel->m_szModelName, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, true );
 			return;
