@@ -96,6 +96,7 @@ private:
 	CPanelAnimationVar( Color, m_clrBg, "BackgroundColor", "Black" );
 	CPanelAnimationVar( Color, m_clrVictimBg, "VictimBackgroundColor", "Black" );
 	CPanelAnimationVar( Color, m_clrBorder, "BorderColor", "White" );
+	CPanelAnimationVar( int, m_iMaxDeathNotices, "MaxDeathNotices", "4" );
 
 	// Texture for skull symbol
 	CHudTexture		*m_iconD_skull; 
@@ -524,6 +525,14 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	else
 	{
 		fullkilledwith[0] = 0;
+	}
+	
+	// Do we have too many death messages in the queue?
+	if ( m_DeathNotices.Count() > 0 &&
+	m_DeathNotices.Count() >= m_iMaxDeathNotices )
+	{
+		// Remove the oldest one in the queue, which will always be the first
+		m_DeathNotices.Remove(0);
 	}
 
 	// Get the names of the players
