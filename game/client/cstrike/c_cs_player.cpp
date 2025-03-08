@@ -1147,7 +1147,6 @@ C_CSPlayer::C_CSPlayer() :
 	ListenForGameEvent( "cs_pre_restart" );
 	ListenForGameEvent( "player_death" );
 	ListenForGameEvent( "player_spawn" );
-	ListenForGameEvent( "player_update_viewmodel" );
 
 	ListenForGameEvent( "ggprogressive_player_levelup" );
 	ListenForGameEvent( "gg_killed_enemy" );
@@ -1210,6 +1209,16 @@ C_CSPlayer::~C_CSPlayer()
 		m_PlayerAnimState->Release();
 	if ( m_PlayerAnimStateCSGO )
 		m_PlayerAnimStateCSGO->Release();
+
+	for ( int i = 0; i < MAX_VIEWMODELS; ++i )
+ 	{
+ 		C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>(GetViewModel( i ));
+ 		if ( pViewModel )
+ 		{
+ 			pViewModel->RemoveViewmodelArmModels();
+ 			pViewModel->RemoveViewmodelStatTrak();
+ 		}
+ 	}
 }
 
 
@@ -2393,25 +2402,13 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
 				m_bShouldAutobuyDMWeapons = true;
 
+			RemoveGlovesModel();
+			m_pViewmodelArmConfig = NULL;
+
 			if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
 			{
 				m_PlayerAnimStateCSGO->Reset();
 			}
-		}
-
-		C_CSPlayer* csPlayer = ToCSPlayer( UTIL_PlayerByUserId( EventUserID ) );
-		if ( csPlayer )
-		{
-			csPlayer->RemoveGlovesModel();
-			csPlayer->m_pViewmodelArmConfig = NULL;
-		}
-
-	}
-	else if ( Q_strcmp( "player_update_viewmodel", name ) == 0 )
-	{
-		if ( pLocalPlayer && pLocalPlayer->GetUserID() == EventUserID )
-		{
-			m_pViewmodelArmConfig = NULL;
 		}
 	}
 	else if ( Q_strcmp( "ggprogressive_player_levelup", name ) == 0 )

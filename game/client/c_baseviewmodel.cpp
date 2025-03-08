@@ -637,19 +637,6 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 		return;
 	}
 
-	CStudioHdr *pHdr = pPlayer->GetModelPtr();
-#if 0
-	if ( pHdr )
-	{
-		// PiMoN: help me
-		// p.s. I bet this thing will fucking destroy everyone's performance
-		// BUT I HAVE NO OTHER CHOICE BECAUSE FUCK THOSE ASSHOLES AT VALVE
-		// WHY IS A FUCKING player_spawn EVENT NOT BEING RECEIVED BY CLIENT
-		if ( pPlayer->m_pViewmodelArmConfig != GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() ) )
-			pPlayer->m_pViewmodelArmConfig = NULL;
-	}
-#endif
-
 	int weaponID = pCSWeapon->GetCSWeaponID();
 
 	// Note: only arms race (gun game) knives change their bodygroup to indicate their team.
@@ -662,8 +649,8 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	if ( pPlayer->m_pViewmodelArmConfig == NULL )
 	{
 		RemoveViewmodelArmModels();
-		RemoveViewmodelStatTrak();
-		
+
+		CStudioHdr *pHdr = pPlayer->GetModelPtr();
 		if ( pHdr )
 		{
 			pPlayer->m_pViewmodelArmConfig = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() );
@@ -674,7 +661,7 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 		RemoveViewmodelArmModels();
 	
 	// add gloves and sleeves
-	if ( m_vecViewmodelArmModels.Count() == 0 )
+	if ( pPlayer->m_pViewmodelArmConfig != NULL && m_vecViewmodelArmModels.Count() == 0 )
 	{
 		if ( CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
 		{
