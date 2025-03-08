@@ -989,12 +989,6 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		if(	!CSGameRules()->m_bBombPlanted )
 		{
 			PlayMusicSelection( filter, CSMUSIC_ROUNDTEN );
-			for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-			{
-				CCSPlayer* pPlayer = ToCSPlayer(UTIL_PlayerByIndex(i));
-				if( !pPlayer )
-					continue;
-			}	
 		}
 	}
 	else if ( V_strcmp( "cs_round_start_beep", eventname ) == 0 )
