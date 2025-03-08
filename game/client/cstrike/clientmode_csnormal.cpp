@@ -1239,7 +1239,7 @@ void UpdateImageEntity(
 	C_BaseAnimating *pWeaponModel = g_WeaponModel.Get();
 
 	// Does the entity even exist yet?
-	if ( recreatePlayer || ShouldRecreateImageEntity( pWeaponModel, szWeaponModel ) )
+	if ( szWeaponModel && (recreatePlayer || ShouldRecreateImageEntity( pWeaponModel, szWeaponModel )) )
 	{
 		if ( pWeaponModel )
 			pWeaponModel->Remove();
@@ -1259,7 +1259,11 @@ void UpdateImageEntity(
 	{
 		// so the weapon model is gone when playing a nowep sequence
 		if ( pWeaponModel )
+		{
 			pWeaponModel->Remove();
+			pWeaponModel = NULL;
+			g_WeaponModel.Set( NULL );
+		}
 	}
 
 	C_BaseAnimating *pGlovesModel = g_GlovesModel.Get();
@@ -1292,6 +1296,8 @@ void UpdateImageEntity(
 		if ( pGlovesModel )
 		{
 			pGlovesModel->Remove();
+			pGlovesModel = NULL;
+ 			g_GlovesModel.Set( NULL );
 		}
 	}
 
@@ -1364,7 +1370,7 @@ void UpdateImageEntity(
 	{
 		pWeaponModel->DrawModel( STUDIO_RENDER );
 	}
-	if ( bCreateGloves && pGlovesModel )
+	if ( pGlovesModel )
 	{
 		pGlovesModel->DrawModel( STUDIO_RENDER );
 	}

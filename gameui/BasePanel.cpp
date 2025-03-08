@@ -379,7 +379,7 @@ public:
 
 	virtual int AddMenuItem(const char *itemName, const char *itemText, const char *command, Panel *target, KeyValues *userData = NULL)
 	{
-		MenuItem *item = new CGameMenuItem(this, itemName);
+		CGameMenuItem *item = new CGameMenuItem(this, itemName);
 		item->AddActionSignalTarget(target);
 		item->SetCommand(command);
 		item->SetText(itemText);
