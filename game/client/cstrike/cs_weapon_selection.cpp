@@ -435,7 +435,7 @@ C_BaseCombatWeapon *CHudWeaponSelection::FindNextWeaponInWeaponSelection(int iCu
 				 ( selectionMode == WEAPON_SELECTION_NO_GRENADE_AND_BOMB && ( isGrenade || isBomb || isMelee ) ) ||	 
 				 ( selectionMode == WEAPON_SELECTION_GRENADE && !isGrenade ) ||
 				 ( selectionMode == WEAPON_SELECTION_MELEE && !isMelee ) ||
-				 ( selectionMode == WEAPON_SELECTION_ITEMSLOT && !isBomb && !isStackable ) )
+				 ( selectionMode == WEAPON_SELECTION_ITEMSLOT && !isStackable ) )
 				continue;
 		}
 
@@ -594,7 +594,7 @@ void CHudWeaponSelection::UserCmd_Slot4( void )
 // Switch to breach charges
 void CHudWeaponSelection::UserCmd_Slot5( void )
 {
-	CycleToNextWeapon( WEAPON_SELECTION_ITEMSLOT );
+	SelectSpecificWeapon( WEAPON_C4 );
 }
 
 // Switch to hegrenade
@@ -644,7 +644,7 @@ void CHudWeaponSelection::UserCmd_Slot11( void )
 // Switch to healthshot
 void CHudWeaponSelection::UserCmd_Slot12( void )
 {
-	SelectSpecificWeapon( WEAPON_HEALTHSHOT );
+	CycleToNextWeapon( WEAPON_SELECTION_ITEMSLOT );
 }
 
 
