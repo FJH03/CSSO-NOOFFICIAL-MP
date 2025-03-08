@@ -55,7 +55,6 @@ void CCSBot::OnWeaponFire( IGameEvent *event )
 		case WEAPON_DECOY:
 		case WEAPON_INCGRENADE:
 		case WEAPON_MOLOTOV:
-		case WEAPON_SHIELDGUN:
 		case WEAPON_C4:
 			return;
 

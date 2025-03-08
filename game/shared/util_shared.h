@@ -74,6 +74,8 @@ QAngle	SharedRandomAngle( const char *sharedname, float minVal, float maxVal, in
 bool PassServerEntityFilter( const IHandleEntity *pTouch, const IHandleEntity *pPass );
 bool StandardFilterRules( IHandleEntity *pHandleEntity, int fContentsMask );
 
+// "weapon_"
+bool IsWeaponClassname( const char *pszClassName );
 
 //-----------------------------------------------------------------------------
 // Converts an IHandleEntity to an CBaseEntity

@@ -1555,16 +1555,6 @@ const char* CCSPlayerAnimState::GetWeaponSuffix()
 
 	const char *pSuffix = pWeapon->GetCSWpnData().m_szAnimExtension;
 
-#ifdef CS_SHIELD_ENABLED
-	if ( m_pOuter->HasShield() == true )
-	{
-		if ( m_pOuter->IsShieldDrawn() == true )
-			pSuffix = "shield";
-		else 
-			pSuffix = "shield_undeployed";
-	}
-#endif
-
 	return pSuffix;
 }
 

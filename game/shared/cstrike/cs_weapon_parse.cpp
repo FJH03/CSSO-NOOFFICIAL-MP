@@ -11,7 +11,6 @@
 #include "weapon_csbase.h"
 #include "icvar.h"
 #include "cs_gamerules.h"
-#include "cs_blackmarket.h"
 
 
 //--------------------------------------------------------------------------------------------------------
@@ -80,8 +79,6 @@ WeaponNameInfo s_weaponNameInfo[] =
 	{ WEAPON_DEAGLE,			"weapon_deagle" },
 	{ WEAPON_SG556,				"weapon_sg556" },
 	{ WEAPON_AK47,				"weapon_ak47" },
-
-	//knife massive
 	{ WEAPON_KNIFE,				"weapon_knife" },
 	{ WEAPON_KNIFE_T,			"weapon_knife_t" },
 	{ WEAPON_KNIFE_GG,			"weapon_knifegg" },
@@ -124,11 +121,10 @@ WeaponNameInfo s_weaponNameInfo[] =
 
 	{ WEAPON_HEALTHSHOT,		"weapon_healthshot" },
 
-	// not sure any of these are needed
-	{ WEAPON_SHIELDGUN,			"weapon_shieldgun" },
-	{ WEAPON_KEVLAR,			"weapon_kevlar" },
-	{ WEAPON_ASSAULTSUIT,		"weapon_assaultsuit" },
-	{ WEAPON_NVG,				"weapon_nvg" },
+	{ ITEM_KEVLAR,				"item_kevlar" },
+	{ ITEM_ASSAULTSUIT,			"item_assaultsuit" },
+	{ ITEM_NVG,					"item_nvg" },
+	{ ITEM_DEFUSER,				"item_defuser" },
 
 	{ WEAPON_NONE,				"weapon_none" },
 };
@@ -136,62 +132,10 @@ WeaponNameInfo s_weaponNameInfo[] =
 
 
 //--------------------------------------------------------------------------------------------------------------
-
-
-CCSWeaponInfo g_EquipmentInfo[MAX_EQUIPMENT];
-
-void PrepareEquipmentInfo( void )
-{
-	memset( g_EquipmentInfo, 0, ARRAYSIZE( g_EquipmentInfo ) );
-
-	g_EquipmentInfo[2].SetWeaponPrice( CSGameRules()->GetBlackMarketPriceForWeapon( WEAPON_KEVLAR ) );
-	g_EquipmentInfo[2].SetDefaultPrice( KEVLAR_PRICE );
-	g_EquipmentInfo[2].SetPreviousPrice( CSGameRules()->GetBlackMarketPreviousPriceForWeapon( WEAPON_KEVLAR ) );
-	g_EquipmentInfo[2].m_iTeam = TEAM_UNASSIGNED;
-	Q_strcpy( g_EquipmentInfo[2].szClassName, "weapon_vest" );
-
-#ifdef CLIENT_DLL
-	g_EquipmentInfo[2].iconActive = new CHudTexture;
-	g_EquipmentInfo[2].iconActive->cCharacterInFont = 't';
-#endif
-
-	g_EquipmentInfo[1].SetWeaponPrice( CSGameRules()->GetBlackMarketPriceForWeapon( WEAPON_ASSAULTSUIT ) );
-	g_EquipmentInfo[1].SetDefaultPrice( ASSAULTSUIT_PRICE );
-	g_EquipmentInfo[1].SetPreviousPrice( CSGameRules()->GetBlackMarketPreviousPriceForWeapon( WEAPON_ASSAULTSUIT ) );
-	g_EquipmentInfo[1].m_iTeam = TEAM_UNASSIGNED;
-	Q_strcpy( g_EquipmentInfo[1].szClassName, "weapon_vesthelm" );
-
-#ifdef CLIENT_DLL
-	g_EquipmentInfo[1].iconActive = new CHudTexture;
-	g_EquipmentInfo[1].iconActive->cCharacterInFont = 'u';
-#endif
-
-	g_EquipmentInfo[0].SetWeaponPrice( CSGameRules()->GetBlackMarketPriceForWeapon( WEAPON_NVG ) );
-	g_EquipmentInfo[0].SetPreviousPrice( CSGameRules()->GetBlackMarketPreviousPriceForWeapon( WEAPON_NVG ) );
-	g_EquipmentInfo[0].SetDefaultPrice( NVG_PRICE );
-	g_EquipmentInfo[0].m_iTeam = TEAM_UNASSIGNED;
-	Q_strcpy( g_EquipmentInfo[0].szClassName, "weapon_nvgs" );
-
-#ifdef CLIENT_DLL
-	g_EquipmentInfo[0].iconActive = new CHudTexture;
-	g_EquipmentInfo[0].iconActive->cCharacterInFont = 's';
-#endif
-
-}
-
-//--------------------------------------------------------------------------------------------------------------
 CCSWeaponInfo * GetWeaponInfo( CSWeaponID weaponID )
 {
 	if ( weaponID == WEAPON_NONE )
 		return NULL;
-
-	if ( weaponID >= WEAPON_KEVLAR )
-	{
-		int iIndex = (WEAPON_MAX - weaponID) - 1;
-
-		return &g_EquipmentInfo[iIndex];
-
-	}
 
 	const char *weaponName = WeaponIdAsString(weaponID);
 	WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( weaponName );
@@ -282,6 +226,56 @@ CSWeaponID WeaponIdFromString( const char *szWeaponName )
 	return WEAPON_NONE;
 }
 
+//--------------------------------------------------------------------------------------------------------
+//
+// Given a weapon ID, return its alias
+//
+const char *WeaponIDToAlias( int id )
+{
+	for ( int i = 0; i < ARRAYSIZE( s_weaponNameInfo ); ++i )
+	{
+		if ( s_weaponNameInfo[i].id == id )
+			return ( strchr( s_weaponNameInfo[i].name, '_' ) + 1 );
+	}
+
+	return NULL;
+}
+
+//--------------------------------------------------------------------------------------------------------
+//
+// Given an alias, return the associated weapon ID
+//
+CSWeaponID AliasToWeaponID( const char *szAlias )
+{
+	if ( !szAlias )
+		return WEAPON_NONE;
+
+	for ( int i = 0; i < ARRAYSIZE( s_weaponNameInfo ); ++i )
+	{
+		Assert( strchr( s_weaponNameInfo[i].name, '_' ) );
+		if ( Q_stricmp( ( strchr( s_weaponNameInfo[i].name, '_' ) + 1 ), szAlias ) == 0 )
+			return s_weaponNameInfo[i].id;
+	}
+
+	return WEAPON_NONE;
+}
+
+//--------------------------------------------------------------------------------------------------------
+//
+// Returns the display name for a weapon, based on it's weaponID
+//
+const char *WeaponIDToDisplayName( CSWeaponID weaponID )
+{
+	WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( WeaponIDToAlias( weaponID ) );
+	if ( hWpnInfo != GetInvalidWeaponInfoHandle() )
+	{
+		CCSWeaponInfo *pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
+		if ( pWeaponInfo )
+			return pWeaponInfo->szPrintName;
+	}
+
+	return NULL;
+}
 
 //--------------------------------------------------------------------------------------------------------
 void ParseVector( KeyValues *keyValues, const char *keyName, Vector& vec )
@@ -352,16 +346,6 @@ int	CCSWeaponInfo::GetWeaponPrice( void ) const
 	return m_iWeaponPrice;
 }
 
-int	CCSWeaponInfo::GetDefaultPrice( void )
-{
-	return m_iDefaultPrice;
-}
-
-int	CCSWeaponInfo::GetPrevousPrice( void )
-{
-	return m_iPreviousPrice;
-}
-
 
 void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 {
@@ -372,26 +356,16 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 
 	m_iKillAward = pKeyValuesData->GetInt( "KillAward", 300 );
 
-	m_iDefaultPrice = m_iWeaponPrice = pKeyValuesData->GetInt( "WeaponPrice", -1 );
+	m_iWeaponPrice = pKeyValuesData->GetInt( "WeaponPrice", -1 );
 	if ( m_iWeaponPrice == -1 )
 	{
 		// This weapon should have the price in its script.
 		Assert( false );
 	}
-
-	if ( CSGameRules()->IsBlackMarket() )
-	{
-		CSWeaponID iWeaponID = AliasToWeaponID( GetTranslatedWeaponAlias ( szWeaponName ) );
-
-		m_iDefaultPrice = m_iWeaponPrice;
-		m_iPreviousPrice = CSGameRules()->GetBlackMarketPreviousPriceForWeapon( iWeaponID );
-		m_iWeaponPrice = CSGameRules()->GetBlackMarketPriceForWeapon( iWeaponID );
-	}
 		
 	m_flArmorRatio				= pKeyValuesData->GetFloat( "WeaponArmorRatio", 1 );
 	m_iCrosshairMinDistance		= pKeyValuesData->GetInt( "CrosshairMinDistance", 4 );
 	m_iCrosshairDeltaDistance	= pKeyValuesData->GetInt( "CrosshairDeltaDistance", 3 );
-	m_bCanUseWithShield			= !!pKeyValuesData->GetInt( "CanEquipWithShield", false );
 	m_flAddonScale				= pKeyValuesData->GetFloat( "AddonScale", 1 );
 	m_flMuzzleScale				= pKeyValuesData->GetFloat( "MuzzleFlashScale", 1 );
 
@@ -491,7 +465,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_iTracerFrequency[0] = pKeyValuesData->GetInt( "TracerFrequency", 0 );
 	m_iTracerFrequency[1] = pKeyValuesData->GetInt( "TracerFrequencyAlt", m_iTracerFrequency[0] );
 	Q_strncpy( m_szTracerEffect, pKeyValuesData->GetString( "TracerEffect" ), sizeof( m_szTracerEffect ) );
-	
+
 	// heat variables
 	m_flHeatPerShot = pKeyValuesData->GetFloat( "HeatPerShot", 0.0f );
 	Q_strncpy( m_szHeatEffect, pKeyValuesData->GetString( "HeatEffect" ), sizeof( m_szHeatEffect ) );
@@ -542,8 +516,6 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 
 	
 	Q_strncpy( m_WrongTeamMsg, pKeyValuesData->GetString( "WrongTeamMsg" ), sizeof( m_WrongTeamMsg ) );
-
-	Q_strncpy( m_szShieldViewModel, pKeyValuesData->GetString( "shieldviewmodel" ), sizeof( m_szShieldViewModel ) );
 	
 	Q_strncpy( m_szAnimExtension, pKeyValuesData->GetString( "PlayerAnimationExtension", "m4" ), sizeof( m_szAnimExtension ) );
 	
@@ -575,7 +547,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	// Read the class menu animation.
 	Q_strncpy( m_szClassMenuAnim, pKeyValuesData->GetString( "ClassMenuAnim" ), sizeof( m_szClassMenuAnim ) );
 	Q_strncpy( m_szClassMenuAnimT, pKeyValuesData->GetString( "ClassMenuAnimT", m_szClassMenuAnim ), sizeof( m_szClassMenuAnimT ) );
-	
+
 #ifndef CLIENT_DLL
 	// Enforce consistency for the weapon here, since that way we don't need to save off the model bounds
 	// for all time.

@@ -761,9 +761,6 @@ CON_COMMAND_F( bot_knives_only, "Restricts the bots to only using knives", FCVAR
 	cv_bot_allow_machine_guns.SetValue( 0 );
 	cv_bot_allow_grenades.SetValue( 0 );
 	cv_bot_allow_snipers.SetValue( 0 );
-#ifdef CS_SHIELD_ENABLED
-	cv_bot_allow_shield.SetValue( 0 );
-#endif // CS_SHIELD_ENABLED
 }
 
 
@@ -780,9 +777,6 @@ CON_COMMAND_F( bot_pistols_only, "Restricts the bots to only using pistols", FCV
 	cv_bot_allow_machine_guns.SetValue( 0 );
 	cv_bot_allow_grenades.SetValue( 0 );
 	cv_bot_allow_snipers.SetValue( 0 );
-#ifdef CS_SHIELD_ENABLED
-	cv_bot_allow_shield.SetValue( 0 );
-#endif // CS_SHIELD_ENABLED
 }
 
 
@@ -799,9 +793,6 @@ CON_COMMAND_F( bot_snipers_only, "Restricts the bots to only using sniper rifles
 	cv_bot_allow_machine_guns.SetValue( 0 );
 	cv_bot_allow_grenades.SetValue( 0 );
 	cv_bot_allow_snipers.SetValue( 1 );
-#ifdef CS_SHIELD_ENABLED
-	cv_bot_allow_shield.SetValue( 0 );
-#endif // CS_SHIELD_ENABLED
 }
 
 
@@ -818,9 +809,6 @@ CON_COMMAND_F( bot_all_weapons, "Allows the bots to use all weapons", FCVAR_GAME
 	cv_bot_allow_machine_guns.SetValue( 1 );
 	cv_bot_allow_grenades.SetValue( 1 );
 	cv_bot_allow_snipers.SetValue( 1 );
-#ifdef CS_SHIELD_ENABLED
-	cv_bot_allow_shield.SetValue( 1 );
-#endif // CS_SHIELD_ENABLED
 }
 
 
@@ -1635,9 +1623,6 @@ void CCSBotManager::OnServerShutdown( IGameEvent *event )
 			"bot_prefix",
 			"bot_join_team",
 			"bot_defer_to_human",
-#ifdef CS_SHIELD_ENABLED
-			"bot_allow_shield",
-#endif // CS_SHIELD_ENABLED
 			"bot_join_after_player",
 			"bot_allow_rogues",
 			"bot_allow_pistols",

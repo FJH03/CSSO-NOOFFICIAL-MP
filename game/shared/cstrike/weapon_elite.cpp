@@ -132,8 +132,6 @@ void CWeaponElite::PrimaryAttack()
 	m_iClip1--;
 
 	pPlayer->DoMuzzleFlash();
-
-	//SetPlayerShieldAnim();
 	
 	// player "shoot" animation
 	pPlayer->SetAnimation( PLAYER_ATTACK1 );
@@ -180,8 +178,6 @@ void CWeaponElite::PrimaryAttack()
 	Recoil( m_weaponMode );
 
 	m_flRecoilIndex += 1.0f;
-	
-	//ResetPlayerShieldAnim();
 }
 
 

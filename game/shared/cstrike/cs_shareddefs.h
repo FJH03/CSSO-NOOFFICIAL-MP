@@ -61,7 +61,6 @@
 extern const float CS_PLAYER_SPEED_RUN;
 extern const float CS_PLAYER_SPEED_VIP;
 //extern const float CS_PLAYER_SPEED_WALK;
-extern const float CS_PLAYER_SPEED_SHIELD;
 extern const float CS_PLAYER_SPEED_STOPPED;
 extern const float CS_PLAYER_SPEED_HAS_HOSTAGE;
 extern const float CS_PLAYER_SPEED_OBSERVER;

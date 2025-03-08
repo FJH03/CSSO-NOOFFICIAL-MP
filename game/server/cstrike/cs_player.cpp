@@ -427,10 +427,6 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropBool( SENDINFO( m_bImmunity ) ),
 	SendPropInt( SENDINFO( m_iLastZoom ), 8, SPROP_UNSIGNED ),
 
-#ifdef CS_SHIELD_ENABLED
-	SendPropBool( SENDINFO( m_bHasShield ) ),
-	SendPropBool( SENDINFO( m_bShieldDrawn ) ),
-#endif
 	SendPropBool( SENDINFO( m_bHasHelmet ) ),
 	SendPropFloat	(SENDINFO(m_flFlashDuration), 0, SPROP_NOSCALE ),
 	SendPropFloat( SENDINFO(m_flFlashMaxAlpha), 0, SPROP_NOSCALE ),
@@ -844,10 +840,6 @@ void CCSPlayer::Precache()
 		if ( !engine->IsModelPrecached( GetGlovesInfo( i )->szWorldModel ) )
 			PrecacheModel( GetGlovesInfo( i )->szWorldModel );
 	}
-
-#ifdef CS_SHIELD_ENABLED
-	PrecacheModel( SHIELD_VIEW_MODEL );
-#endif
 
 	PrecacheScriptSound( "Player.DeathHeadShot" );
 	PrecacheScriptSound( "Player.Death" );
@@ -1534,9 +1526,9 @@ void CCSPlayer::Spawn()
 	m_bDuckOverride = false;
 
 	for ( int i = 0; i < m_iWeaponPurchasesThisRound.Count(); ++i )
- 	{
- 		m_iWeaponPurchasesThisRound.Set(i, 0);
- 	}
+	{
+		m_iWeaponPurchasesThisRound.Set(i, 0);
+	}
 
 	// If we're constantly respawning then reset damage stats on spawn. Otherwise this'll happen on roundrespawn after damage is reported.
 	if ( IsAbleToInstantRespawn() )
@@ -1923,7 +1915,7 @@ int CCSPlayer::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 			event->SetInt("attacker", 0 ); // hurt by "world"
 		}
 
-		if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
+		if ( IsWeaponClassname( weaponName ) )
 		{
 			weaponName += 7;
 		}
@@ -2069,7 +2061,7 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 		}
 
 		HandleOutOfAmmoKnifeKills( pAttackerPlayer, pAttackerWeapon );
-	
+
 		// here we figure out if the attacker saved another person
 		Vector forward;
 		AngleVectors( EyeAngles(), &forward, NULL, NULL);
@@ -2232,14 +2224,19 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	bool roundWasAlreadyWon = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
 	bool roundIsWonNow = CSGameRules()->CheckWinConditions();
 
-	if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+	if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE ||
+		 CSGameRules()->IsPlayingDeathmatch() )
 	{
+		RecordRebuyStructLastRound();
+
 		if ( pAttacker != this || !IsAbleToInstantRespawn() )
 		{
 			// Re-evaluate end-of-gun-game when a player is killed
-			if ( roundIsWonNow )
+			if ( CSGameRules()->CheckWinConditions() )
 			{
 				m_bMadeFinalGunGameProgressiveKill = false;
+//				int nEntity2 = pAttackerPlayer ? pAttackerPlayer->entindex() : this->entindex();
+//				CSGameRules()->StartSlomoDeathCam( this->entindex(), nEntity2 );
 			}
 		}
 	}
@@ -2580,25 +2577,6 @@ void CCSPlayer::VPhysicsShadowUpdate( IPhysicsObject *pPhysics )
 	BaseClass::VPhysicsShadowUpdate( pPhysics );
 }
 
-bool CCSPlayer::HasShield() const
-{
-#ifdef CS_SHIELD_ENABLED
-	return m_bHasShield;
-#else
-	return false;
-#endif
-}
-
-
-bool CCSPlayer::IsShieldDrawn() const
-{
-#ifdef CS_SHIELD_ENABLED
-	return m_bShieldDrawn;
-#else
-	return false;
-#endif
-}
-
 
 void CCSPlayer::CheatImpulseCommands( int iImpulse )
 {
@@ -2892,7 +2870,7 @@ void CCSPlayer::PostThink()
 		if ( pC4 )
 		{
 			SetBombDroppedTime( gpGlobals->curtime );
-			CSWeaponDrop( pC4, false, false );
+			CSWeaponDrop( pC4 );
 			
 			//odd that the AFK player 'says' they have dropped the bomb... but it's better than nothing
 			Radio( "SpottedLooseBomb",   "#Cstrike_TitlesTXT_Game_afk_bomb_drop" );
@@ -3521,31 +3499,6 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 }
 
 
-//MIKETODO: this probably should let the shield model catch the trace attacks.
-bool CCSPlayer::IsHittingShield( const Vector &vecDirection, trace_t *ptr )
-{
-	if ( HasShield() == false )
-		 return false;
-
-	if ( IsShieldDrawn() == false )
-		 return false;
-
-	float		flDot;
-	Vector		vForward;
-	Vector2D	vec2LOS = vecDirection.AsVector2D();
-	AngleVectors( GetLocalAngles(), &vForward );
-
-	Vector2DNormalize( vForward.AsVector2D() );
-	Vector2DNormalize( vec2LOS );
-
-	flDot = DotProduct2D ( vec2LOS , vForward.AsVector2D() );
-
-	if ( flDot < -0.87f )
-		 return true;
-
-	return false;
-}
-
 void CCSPlayer::ClearImmunity( void )
 {
 	// Fired a shot so no longer immune
@@ -3559,7 +3512,6 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 {
 	bool bShouldBleed = true;
 	bool bShouldSpark = false;
-	bool bHitShield = IsHittingShield( vecDir, ptr );
 
 	CBasePlayer *pAttacker = (CBasePlayer*)ToBasePlayer( info.GetAttacker() );
 
@@ -3591,12 +3543,6 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 	if ( m_bImmunity )
 	{
 		bShouldBleed = false;
-	}
-	else if ( bHitShield )
-	{
-		flDamage = 0;
-		bShouldBleed = false;
-		bShouldSpark = true;
 	}
 	else if( info.GetDamageType() & DMG_SHOCK )
 	{
@@ -3745,7 +3691,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 		DispatchEffect( "csblood", data );
 	}
-	if ( ( ptr->hitgroup == HITGROUP_HEAD || bHitShield ) && bShouldSpark ) // they hit a helmet
+	if ( ( ptr->hitgroup == HITGROUP_HEAD ) && bShouldSpark ) // they hit a helmet
 	{
 		// show metal spark effect
 		//g_pEffects->Sparks( ptr->endpos, 1, 1, &ptr->plane.normal );
@@ -3755,34 +3701,29 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 		DispatchParticleEffect( "impact_helmet_headshot", ptr->endpos, angle );
 	}
 
-	if ( !bHitShield )
+	CTakeDamageInfo subInfo = info;
+	subInfo.SetDamage( flDamage );
+
+	float impulseMultiplier = 1.0f;
+
+	if ( hitByBullet )
 	{
-		CTakeDamageInfo subInfo = info;
-
-		subInfo.SetDamage( flDamage );
-
-		float impulseMultiplier = 1.0f;
-
-		if ( hitByBullet )
+		impulseMultiplier = phys_playerscale.GetFloat();
+		if ( bHeadShot )
 		{
-			impulseMultiplier = phys_playerscale.GetFloat();
-			if ( bHeadShot )
-			{
-				subInfo.AddDamageType( DMG_HEADSHOT );
-				impulseMultiplier *= phys_headshotscale.GetFloat();
-			}
+			subInfo.AddDamageType( DMG_HEADSHOT );
+			impulseMultiplier *= phys_headshotscale.GetFloat();
 		}
-
-		if ( hitByGrenadeProjectile )
-		{
-			impulseMultiplier = 0.0f;
-		}
-
-
-		subInfo.SetDamageForce( info.GetDamageForce() * impulseMultiplier );
-
-		AddMultiDamage( subInfo, this );
 	}
+
+	if ( hitByGrenadeProjectile )
+	{
+		impulseMultiplier = 0.0f;
+	}
+
+	subInfo.SetDamageForce( info.GetDamageForce() * impulseMultiplier );
+
+	AddMultiDamage( subInfo, this );
 }
 
 
@@ -3797,8 +3738,6 @@ void CCSPlayer::Reset()
 
 	//remove any weapons they bought before the round started
 	RemoveAllItems( true );
-
-	//RemoveShield();
 
 	AddAccount( CSGameRules()->GetStartMoney(), true );
 }
@@ -3907,7 +3846,7 @@ void CCSPlayer::AddAccount( int amount, bool bTrackChange, bool bItemBought, con
 	m_iAccount += amount;
 
 	// [menglish] Description of reason for change
-
+	//=============================================================================
 	if(amount > 0)
 	{
 		CCS_GameStats.Event_MoneyEarned( this, amount );
@@ -3916,7 +3855,7 @@ void CCSPlayer::AddAccount( int amount, bool bTrackChange, bool bItemBought, con
 	{
 		CCS_GameStats.Event_MoneySpent( this, ABS(amount), pItemName );
 	}
-
+	
 	m_iAccount = clamp( m_iAccount, 0, mp_maxmoney.GetInt() );
 }
 
@@ -4084,55 +4023,11 @@ void CCSPlayer::Deafen( float flDistance )
 	}
 }
 
-void CCSPlayer::GiveShield( void )
-{
-#ifdef CS_SHIELD_ENABLED
-	m_bHasShield = true;
-	m_bShieldDrawn = false;
-
-	if ( HasSecondaryWeapon() )
-	{
-		CBaseCombatWeapon *pWeapon = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
-		pWeapon->SetModel( pWeapon->GetViewModel() );
-		pWeapon->Deploy();
-	}
-
-	CBaseViewModel *pVM = GetViewModel( 1 );
-
-	if ( pVM )
-	{
-		ShowViewModel( true );
-		pVM->RemoveEffects( EF_NODRAW );
-		pVM->SetWeaponModel( SHIELD_VIEW_MODEL, GetActiveWeapon() );
-		pVM->SendViewModelMatchingSequence( 1 );
-	}
-#endif
-}
-
-void CCSPlayer::RemoveShield( void )
-{
-#ifdef CS_SHIELD_ENABLED
-	m_bHasShield = false;
-
-	CBaseViewModel *pVM = GetViewModel( 1 );
-
-	if ( pVM )
-	{
-		pVM->AddEffects( EF_NODRAW );
-	}
-#endif
-}
-
 void CCSPlayer::RemoveAllItems( bool removeSuit )
 {
 	if( HasDefuser() )
 	{
 		RemoveDefuser();
-	}
-
-	if ( HasShield() )
-	{
-		RemoveShield();
 	}
 
 	m_bHasNightVision = false;
@@ -4429,35 +4324,7 @@ bool CCSPlayer::IsVIP() const
 	return m_isVIP;
 }
 
-void CCSPlayer::DropShield( void )
-{
-#ifdef CS_SHIELD_ENABLED
-	//Drop an item_defuser
-	Vector vForward, vRight;
-	AngleVectors( GetAbsAngles(), &vForward, &vRight, NULL );
-
-	RemoveShield();
-
-	CBaseAnimating *pShield = (CBaseAnimating *)CBaseEntity::Create( "item_shield", WorldSpaceCenter(), GetLocalAngles() );
-	pShield->ApplyAbsVelocityImpulse( vForward * 200 + vRight * random->RandomFloat( -50, 50 ) );
-
-	CBaseCombatWeapon *pActive = GetActiveWeapon();
-
-	if ( pActive )
-	{
-		pActive->Deploy();
-	}
-#endif
-}
-
-void CCSPlayer::SetShieldDrawnState( bool bState )
-{
-#ifdef CS_SHIELD_ENABLED
-	m_bShieldDrawn = bState;
-#endif
-}
-
-bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool bThrowForward )
+bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bThrowForward )
 {
 	Vector vTossPos = WorldSpaceCenter();
 	if (bThrowForward)
@@ -4466,10 +4333,10 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 		AngleVectors(EyeAngles(), &vForward, NULL, NULL);
 		vTossPos = vTossPos + vForward * 100;
 	}
-	return CSWeaponDrop( pWeapon, vTossPos, bDropShield );
+	return CSWeaponDrop( pWeapon, vTossPos );
 }
 
-bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool bDropShield )
+bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos )
 {
 	bool bSuccess = false;
 
@@ -4484,12 +4351,6 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool
 			UTIL_Remove( pWeapon );
 
 		UpdateAddonBits();
-		return true;
-	}
-
-	if ( HasShield() && bDropShield == true )
-	{
-		DropShield();
 		return true;
 	}
 
@@ -4827,7 +4688,7 @@ bool CCSPlayer::DropRifle( bool fromDeath )
 	CBaseCombatWeapon *pWeapon = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
 	if ( pWeapon )
 	{
-		bSuccess = CSWeaponDrop( pWeapon, false );
+		bSuccess = CSWeaponDrop( pWeapon );
 	}
 
 	//=============================================================================
@@ -4853,7 +4714,7 @@ bool CCSPlayer::DropPistol( bool fromDeath )
 	CBaseCombatWeapon *pWeapon = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
 	if ( pWeapon )
 	{
-		bSuccess = CSWeaponDrop( pWeapon, false );
+		bSuccess = CSWeaponDrop( pWeapon );
 		m_bUsingDefaultPistol = false;
 	}
 	//=============================================================================
@@ -4962,18 +4823,28 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 	return true;
 }
 
+bool CCSPlayer::BAttemptToBuyCheckSufficientBalance( int nCostOfPurchaseToCheck, bool bClientPrint )
+{
+	// TODO: add m_iAccountMoneyEarnedForNextRound sometime
+	if ( GetAccountBalance() /*- m_iAccountMoneyEarnedForNextRound*/ < nCostOfPurchaseToCheck )
+	{
+		if ( !m_bIsInAutoBuy && !m_bIsInRebuy )
+		{
+			if ( /*( m_iAccountMoneyEarnedForNextRound <= 0 ) ||*/ ( GetAccountBalance() < nCostOfPurchaseToCheck ) )	// simply not enough money
+				ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
+			/*else // money has been earned that is only useful next round, inform the user about that case separately
+				ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money_NextRound", CFmtStr( "%d", m_iAccountMoneyEarnedForNextRound ) );*/
+		}
+		return false;
+	}
+	else
+		return true;
+}
+
 
 BuyResult_e CCSPlayer::AttemptToBuyVest( void )
 {
-	if ( CSGameRules()->IsArmorFree() )
-		return BUY_NOT_ALLOWED;
-
-	int iKevlarPrice = KEVLAR_PRICE;
-
-	if ( CSGameRules()->IsBlackMarket() )
-	{
-		iKevlarPrice = CSGameRules()->GetBlackMarketPriceForWeapon( WEAPON_KEVLAR );
-	}
+	int iKevlarPrice = ITEM_PRICE_KEVLAR;
 
 	if ( ArmorValue() >= 100 )
 	{
@@ -4981,15 +4852,13 @@ BuyResult_e CCSPlayer::AttemptToBuyVest( void )
 			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_Kevlar" );
 		return BUY_ALREADY_HAVE;
 	}
-	else if ( GetAccountBalance() < iKevlarPrice )
+	else if ( !BAttemptToBuyCheckSufficientBalance( iKevlarPrice ) )
 	{
-		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
-			ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
 		return BUY_CANT_AFFORD;
 	}
 	else
 	{
-		if ( m_bHasHelmet )
+		if ( m_bHasHelmet ) 
 		{
 			if( !m_bIsInAutoBuy && !m_bIsInRebuy )
 				ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_Helmet_Bought_Kevlar" );
@@ -5006,9 +4875,9 @@ BuyResult_e CCSPlayer::AttemptToBuyVest( void )
 
 		EmitSound( "Player.PickupWeapon" );
 
-		GiveNamedItem( "item_kevlar" );
-		AddAccount( -iKevlarPrice, true, true, "item_kevlar" );
-		BlackMarketAddWeapon( "item_kevlar", this );
+		const char* szKevlarName = "item_kevlar";
+		GiveNamedItem( szKevlarName );
+		AddAccount( -iKevlarPrice, true, true, szKevlarName );
 		return BUY_BOUGHT;
 	}
 }
@@ -5016,133 +4885,60 @@ BuyResult_e CCSPlayer::AttemptToBuyVest( void )
 
 BuyResult_e CCSPlayer::AttemptToBuyAssaultSuit( void )
 {
-	if ( CSGameRules()->IsArmorFree() )
-		return BUY_NOT_ALLOWED;
-
-	// WARNING: This price logic also exists in C_CSPlayer::GetCurrentAssaultSuitPrice
-	// and must be kept in sync if changes are made.
-
-	int fullArmor = ArmorValue() >= 100 ? 1 : 0;
-
-	int price = 0, enoughMoney = 0;
-
-	int iHelmetPrice = HELMET_PRICE;
-	int iKevlarPrice = KEVLAR_PRICE;
-	int iAssaultSuitPrice = ASSAULTSUIT_PRICE;
-
-	if ( CSGameRules()->IsBlackMarket() )
-	{
-		iKevlarPrice = CSGameRules()->GetBlackMarketPriceForWeapon( WEAPON_KEVLAR );
-		iAssaultSuitPrice = CSGameRules()->GetBlackMarketPriceForWeapon( WEAPON_ASSAULTSUIT );
-
-		iHelmetPrice = iAssaultSuitPrice - iKevlarPrice;
-	}
-
-	if ( fullArmor && m_bHasHelmet )
-	{
-		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
-			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_Kevlar_Helmet" );
-		return BUY_ALREADY_HAVE;
-	}
-	else if ( fullArmor && !m_bHasHelmet && GetAccountBalance() >= iHelmetPrice )
-	{
-		enoughMoney = 1;
-		price = iHelmetPrice;
-		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
-			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_Kevlar_Bought_Helmet" );
-	}
-	else if ( !fullArmor && m_bHasHelmet && GetAccountBalance() >= iKevlarPrice )
-	{
-		enoughMoney = 1;
-		price = iKevlarPrice;
-		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
-			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_Helmet_Bought_Kevlar" );
-	}
-	else if ( GetAccountBalance() >= iAssaultSuitPrice )
-	{
-		enoughMoney = 1;
-		price = iAssaultSuitPrice;
-	}
+	int iPrice = GetWeaponPrice( ITEM_ASSAULTSUIT );
 
 	// process the result
-	if ( !enoughMoney )
-	{
-		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
-			ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
+	if ( !BAttemptToBuyCheckSufficientBalance( iPrice ) )
+	{			
 		return BUY_CANT_AFFORD;
 	}
-	else
-	{
-		IGameEvent * event = gameeventmanager->CreateEvent( "item_pickup" );
-		if( event )
+
+	bool bHasFullArmor = ArmorValue() >= 100;
+
+	// special messaging
+	if( !m_bIsInAutoBuy && !m_bIsInRebuy )
+	{	
+		if ( bHasFullArmor && m_bHasHelmet )
 		{
-			event->SetInt( "userid", GetUserID() );
-			event->SetString( "item", "vesthelm" );
-			event->SetBool( "silent", false );
-			gameeventmanager->FireEvent( event );
+			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_Kevlar_Helmet" );
 		}
-
-		EmitSound( "Player.PickupWeapon" );
-
-		GiveNamedItem( "item_assaultsuit" );
-		AddAccount( -price, true, true, "item_assaultsuit" );
-		BlackMarketAddWeapon( "item_assaultsuit", this );
-		return BUY_BOUGHT;
+		else if ( bHasFullArmor && !m_bHasHelmet )
+		{
+			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_Kevlar_Bought_Helmet" );
+		}
+		else if ( !bHasFullArmor && m_bHasHelmet )
+		{
+			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_Helmet_Bought_Kevlar" );
+			iPrice = ITEM_PRICE_KEVLAR;
+		}
 	}
-}
-
-BuyResult_e CCSPlayer::AttemptToBuyShield( void )
-{
-#ifdef CS_SHIELD_ENABLED
-	if ( HasShield() )		// prevent this guy from buying more than 1 Defuse Kit
+	if ( /*bHasFullArmor && */m_bHasHelmet )
 	{
-		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
-			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_One" );
 		return BUY_ALREADY_HAVE;
 	}
-	else if ( GetAccountBalance() < SHIELD_PRICE )
+
+	IGameEvent * event = gameeventmanager->CreateEvent( "item_pickup" );
+	if( event )
 	{
-		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
-			ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
-		return BUY_CANT_AFFORD;
+		event->SetInt( "userid", GetUserID() );
+		event->SetString( "item", "vesthelm" );
+		event->SetBool( "silent", false );
+		gameeventmanager->FireEvent( event );
 	}
-	else
-	{
-		if ( HasSecondaryWeapon() )
-		{
-			CBaseCombatWeapon *pWeapon = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
-			CWeaponCSBase *pCSWeapon = dynamic_cast< CWeaponCSBase* >( pWeapon );
 
-			if ( pCSWeapon && pCSWeapon->GetCSWpnData().m_bCanUseWithShield == false )
-				 return;
-		}
+	EmitSound( "Player.PickupWeapon" );
 
-		if ( HasPrimaryWeapon() )
-			 DropRifle();
-
-		GiveShield();
-
-		CPASAttenuationFilter filter( this, "Player.PickupWeapon" );
-		EmitSound( filter, entindex(), "Player.PickupWeapon" );
-
-		m_bAnythingBought = true;
-		AddAccount( -SHIELD_PRICE, true, true, "item_shield" );
-		return BUY_BOUGHT;
-	}
-#else
-	ClientPrint( this, HUD_PRINTCENTER, "Tactical shield disabled" );
-	return BUY_NOT_ALLOWED;
-#endif
+	const char* szAssaultSuitName = "item_assaultsuit";
+	GiveNamedItem( szAssaultSuitName );
+	AddAccount( -iPrice, true, true, szAssaultSuitName );
+	return BUY_BOUGHT;
 }
 
 BuyResult_e CCSPlayer::AttemptToBuyDefuser( void )
 {
 	CCSGameRules *MPRules = CSGameRules();
 
-	if ( MPRules->IsPlayingDeathmatch() )
-		return BUY_NOT_ALLOWED;
-
-	if( ( GetTeamNumber() == TEAM_CT ) && ( MPRules->IsBombDefuseMap() || MPRules->IsHostageRescueMap() ) )
+	if( ( GetTeamNumber() == TEAM_CT ) && MPRules->IsBombDefuseMap() || MPRules->IsHostageRescueMap() )
 	{
 		if ( HasDefuser() )		// prevent this guy from buying more than 1 Defuse Kit
 		{
@@ -5150,20 +4946,22 @@ BuyResult_e CCSPlayer::AttemptToBuyDefuser( void )
 				ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_One" );
 			return BUY_ALREADY_HAVE;
 		}
-		else if ( GetAccountBalance() < DEFUSEKIT_PRICE )
+		else if ( !BAttemptToBuyCheckSufficientBalance( ITEM_PRICE_DEFUSEKIT )  )
 		{
-			if( !m_bIsInAutoBuy && !m_bIsInRebuy )
-				ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			return BUY_CANT_AFFORD;
 		}
 		else
 		{
-			GiveDefuser();
+			GiveDefuser(); 
 
-			CPASAttenuationFilter filter( this, "Player.PickupWeapon" );
-			EmitSound( filter, entindex(), "Player.PickupWeapon" );
+//			CBroadcastRecipientFilter filter;
+// 			EmitSound( filter, entindex(), "Player.PickupWeapon" );
 
-			AddAccount( -DEFUSEKIT_PRICE, true, true, "item_defuser" );
+			if ( CSGameRules()->IsHostageRescueMap() )
+				AddAccount( -ITEM_PRICE_DEFUSEKIT, true, true, "item_cutters" );
+			else
+				AddAccount( -ITEM_PRICE_DEFUSEKIT, true, true, "item_defuser" );
+
 			return BUY_BOUGHT;
 		}
 	}
@@ -5173,12 +4971,7 @@ BuyResult_e CCSPlayer::AttemptToBuyDefuser( void )
 
 BuyResult_e CCSPlayer::AttemptToBuyNightVision( void )
 {
-	int iNVGPrice = NVG_PRICE;
-
-	if ( CSGameRules()->IsBlackMarket() )
-	{
-		iNVGPrice = CSGameRules()->GetBlackMarketPriceForWeapon( WEAPON_NVG );
-	}
+	int iNVGPrice = ITEM_PRICE_NVG;
 
 	if ( m_bHasNightVision == TRUE )
 	{
@@ -5186,14 +4979,19 @@ BuyResult_e CCSPlayer::AttemptToBuyNightVision( void )
 			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_One" );
 		return BUY_ALREADY_HAVE;
 	}
-	else if ( GetAccountBalance() < iNVGPrice )
+	else if ( !BAttemptToBuyCheckSufficientBalance( iNVGPrice ) )
 	{
-		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
-			ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
 		return BUY_CANT_AFFORD;
 	}
 	else
 	{
+//			CBroadcastRecipientFilter filter;
+// 		EmitSound( filter, entindex(), "Player.PickupWeapon" );
+
+		m_bHasNightVision = true;
+
+		AddAccount( -iNVGPrice, true, true, "weapon_nvg" );
+
 		IGameEvent * event = gameeventmanager->CreateEvent( "item_pickup" );
 		if( event )
 		{
@@ -5205,44 +5003,11 @@ BuyResult_e CCSPlayer::AttemptToBuyNightVision( void )
 
 		EmitSound( "Player.PickupWeapon" );
 
-		GiveNamedItem( "item_nvgs" );
-		AddAccount( -iNVGPrice, true, true );
-		BlackMarketAddWeapon( "nightvision", this );
-
-		return BUY_BOUGHT;
-	}
-}
-
-BuyResult_e CCSPlayer::AttemptToBuyTaser( void )
-{
-	if ( Weapon_OwnsThisType( "weapon_taser" ) )
-	{
-		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
-			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_One" );
-		return BUY_ALREADY_HAVE;
-	}
-	else if ( GetAccountBalance() < TASER_PRICE )
-	{
-		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
-			ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
-		return BUY_CANT_AFFORD;
-	}
-	else
-	{
-		IGameEvent * event = gameeventmanager->CreateEvent( "item_pickup" );
-		if( event )
+		if ( !(m_iDisplayHistoryBits & DHF_NIGHTVISION ) )
 		{
-			event->SetInt( "userid", GetUserID() );
-			event->SetString( "item", "nvgs" );
-			event->SetBool( "silent", false );
-			gameeventmanager->FireEvent( event );
+			HintMessage( "#Hint_use_nightvision", false );
+			m_iDisplayHistoryBits |= DHF_NIGHTVISION;
 		}
-
-		EmitSound( "Player.PickupWeapon" );
-
-		GiveNamedItem( "weapon_taser" );
-		AddAccount( -TASER_PRICE, true, true );
-
 		return BUY_BOUGHT;
 	}
 }
@@ -5253,13 +5018,15 @@ BuyResult_e CCSPlayer::AttemptToBuyTaser( void )
 
 //[tj]  This is essentially a shim so I can easily check the return
 //      value without adding new code to all the return points.
-BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item )
+BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item, bool bAddToRebuy/* = true */ )
 {
+	bAddToRebuy = (bAddToRebuy && !m_bIsInRebuy); // Only addtorebuy if bAddToRebuy is default and we're not in rebuy.
+
 	const char* loadoutItem = CSLoadout()->GetWeaponFromSlot( this, CSLoadout()->GetSlotFromWeapon( GetTeamNumber(), item ) );
 	if ( loadoutItem != NULL )
 		item = loadoutItem;
 
-	BuyResult_e result = HandleCommand_Buy_Internal(item);
+	BuyResult_e result = HandleCommand_Buy_Internal(item, bAddToRebuy);
 	if (result == BUY_BOUGHT)
 	{
 		m_bMadePurchseThisRound = true;
@@ -5271,7 +5038,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item )
 	return result;
 }
 
-BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName ) 
+BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAddToRebuy/* = true */ )
 {
 	BuyResult_e result = CanPlayerBuy( false ) ? BUY_PLAYER_CANT_BUY : BUY_INVALID_ITEM; // set some defaults
 
@@ -5300,14 +5067,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 		else if ( Q_stricmp( wpnName, "secammo" ) == 0 )
 		{
 			result = AttemptToBuyAmmo( 1 );
-		}
-		else*/ if ( Q_stristr( wpnName, "defuser" ) )
-		{
-			if ( CanPlayerBuy( true ) )
-			{
-				result = AttemptToBuyDefuser();
-			}
-		}
+		}*/
 	}
 	else
 	{
@@ -5347,19 +5107,19 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 
 		BuyResult_e equipResult = BUY_INVALID_ITEM;
 
-		if ( Q_stristr( wpnName, "kevlar" ) )
+		if ( weaponId == ITEM_KEVLAR )
 		{
 			equipResult = AttemptToBuyVest();
 		}
-		else if ( Q_stristr( wpnName, "assaultsuit" ) )
+		else if ( weaponId == ITEM_ASSAULTSUIT )
 		{
 			equipResult = AttemptToBuyAssaultSuit();
 		}
-		else if ( Q_stristr( wpnName, "shield" ) )
+		else if ( weaponId == ITEM_DEFUSER )
 		{
-			equipResult = AttemptToBuyShield();
+			equipResult = AttemptToBuyDefuser();
 		}
-		else if ( Q_stristr( wpnName, "nightvision" ) )
+		else if ( weaponId == ITEM_NVG )
 		{
 			equipResult = AttemptToBuyNightVision();
 		}
@@ -5368,7 +5128,10 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 		{
 			if ( equipResult == BUY_BOUGHT )
 			{
-				BuildRebuyStruct();
+				if ( bAddToRebuy )
+				{
+					AddToRebuy( weaponId );
+				}
 				m_iWeaponPurchasesThisRound.GetForModify(weaponId)++;
 			}
 			return equipResult; // intentional early return here
@@ -5377,7 +5140,11 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 		bool bPurchase = false;
 
 		// do they have enough money?
-		if ( GetAccountBalance() >= pWeaponInfo->GetWeaponPrice() )
+		if ( !BAttemptToBuyCheckSufficientBalance( pWeaponInfo->GetWeaponPrice() ) )
+		{
+			return BUY_CANT_AFFORD;
+		}
+		else // essentially means: ( GetAccountBalance() >= pWeaponInfo->GetWeaponPrice( pItem ) )
 		{
 			if ( m_lifeState != LIFE_DEAD )
 			{
@@ -5393,18 +5160,6 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 
 			bPurchase = true;
 		}
-		else
-		{
-			return BUY_CANT_AFFORD;
-		}
-
-		if ( HasShield() )
-		{
-			if ( pWeaponInfo->m_bCanUseWithShield == false )
-			{
-				return BUY_NOT_ALLOWED;
-			}
-		}
 
 		if ( bPurchase )
 		{
@@ -5415,13 +5170,15 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 
 			GiveNamedItem( pWeaponInfo->szClassName );
 			AddAccount( -pWeaponInfo->GetWeaponPrice(), true, true, pWeaponInfo->szClassName );
-			BlackMarketAddWeapon( wpnName, this );
 		}
 	}
 
 	if ( result == BUY_BOUGHT )
 	{
-		BuildRebuyStruct();
+		if ( bAddToRebuy )
+		{
+			AddToRebuy( weaponId );
+		}
 		m_iWeaponPurchasesThisRound.GetForModify(weaponId)++;
 	}
 
@@ -5491,10 +5248,6 @@ BuyResult_e CCSPlayer::BuyAmmo( int nSlot, bool bBlinkMoney )
 	if ( !pSlot )
 		return BUY_INVALID_ITEM;
 
-	//MIKETODO: shield.
-	//if ( player->HasShield() && player->m_rgpPlayerItems[2] )
-	//	 pItem = player->m_rgpPlayerItems[2];
-
 	return BuyGunAmmo( pSlot, bBlinkMoney );
 }
 
@@ -5520,16 +5273,7 @@ BuyResult_e CCSPlayer::AttemptToBuyAmmo( int iAmmoType )
 
 BuyResult_e CCSPlayer::AttemptToBuyAmmoSingle( int iAmmoType )
 {
-	Assert( iAmmoType == 0 || iAmmoType == 1 );
-
-	BuyResult_e result = BuyAmmo( iAmmoType, true );
-
-	if ( result == BUY_BOUGHT )
-	{
-		BuildRebuyStruct();
-	}
-
-	return result;
+	return BuyAmmo( iAmmoType, true );
 }
 
 const char *RadioEventName[ RADIO_NUM_EVENTS+1 ] =
@@ -6412,8 +6156,13 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 		}
 		else
 		{
-			AutoBuy();
+			AutoBuy( ( args.ArgC() > 1 ) ? args.Arg( 1 ) : "" );
 		}
+		return true;
+	}
+	else if ( FStrEq( pcmd, "rebuy" ) )
+	{
+		Rebuy( (args.ArgC() > 1) ? args.Arg( 1 ) : "" );
 		return true;
 	}
 //	else if ( FStrEq( pcmd, "buyammo1" ) )
@@ -7730,7 +7479,7 @@ void CCSPlayer::Weapon_Equip( CBaseCombatWeapon *pWeapon )
 			CBaseCombatWeapon *pDropWeapon = Weapon_GetSlot( pCSWeapon->GetSlot() );
 			if ( pDropWeapon )
 			{
-				CSWeaponDrop( pDropWeapon, false, true );
+				CSWeaponDrop( pDropWeapon, true );
 			}
 		}
 		else if ( pCSWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_GRENADE || pCSWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_STACKABLEITEM )
@@ -7826,9 +7575,6 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 	return false;
 	}
 	*/
-
-	if ( HasShield() && pWeapon->GetCSWpnData().m_bCanUseWithShield == false )
-		return false;
 
 	bool bPickupTaser = ( pWeapon->IsA( WEAPON_TASER ) );
 	if ( bPickupTaser )
@@ -7926,7 +7672,7 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 		if ( event )
 		{
 			const char *weaponName = pWeapon->GetClassname();
-			if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
+			if ( IsWeaponClassname( weaponName ) )
 			{
 				weaponName += 7;
 			}
@@ -8047,7 +7793,7 @@ void CCSPlayer::EmitPrivateSound( const char *soundName )
 //==============================================
 //AutoBuy - do the work of deciding what to buy
 //==============================================
-void CCSPlayer::AutoBuy()
+void CCSPlayer::AutoBuy( const char *autobuyString )
 {
 	if ( !IsInBuyZone() )
 	{
@@ -8055,7 +7801,6 @@ void CCSPlayer::AutoBuy()
 		return;
 	}
 
-	const char *autobuyString = engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "cl_autobuy" );
 	if ( !autobuyString || !*autobuyString )
 	{
 		EmitPrivateSound( "BuyPreset.AlreadyBought" );
@@ -8197,11 +7942,6 @@ void CCSPlayer::PostAutoBuyCommandProcessing(const AutoBuyInfoStruct *commandInf
 	if ((pPrimary != NULL) && (stricmp(pPrimary->GetClassname(), classname) == 0))
 	{
 		// I just bought the gun I was trying to buy.
-		boughtPrimary = true;
-	}
-	else if ((pPrimary == NULL) && ((commandInfo->m_class & AUTOBUYCLASS_SHIELD) == AUTOBUYCLASS_SHIELD) && HasShield())
-	{
-		// the shield is a primary weapon even though it isn't a "real" weapon.
 		boughtPrimary = true;
 	}
 	else if ((pSecondary != NULL) && (stricmp(pSecondary->GetClassname(), classname) == 0))
@@ -8346,145 +8086,93 @@ void CCSPlayer::PrioritizeAutoBuyString(char *autobuyString, const char *priorit
 	Q_snprintf(autobuyString, sizeof(autobuyString), "%s", newString);
 }
 
-
 //==============================================================
 // ReBuy
 // system for attempting to buy the weapons you had last round
 //==============================================================
-static void Rebuy( void )
-{
-	CCSPlayer *player = ToCSPlayer( UTIL_GetCommandClient() );
 
-	if ( player )
-		player->Rebuy();
-}
-static ConCommand rebuy( "rebuy", Rebuy, "Attempt to repurchase items with the order listed in cl_rebuy" );
 
-void CCSPlayer::BuildRebuyStruct()
+void CCSPlayer::AddToRebuy( CSWeaponID weaponId )
 {
-	if (m_bIsInRebuy)
+	if ( weaponId == ITEM_NVG )
 	{
-		// if we are in the middle of a rebuy, we don't want to update the buy struct.
+		m_rebuyStruct.SetNightVision( true );
 		return;
 	}
 
-	CBaseCombatWeapon *primary = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
-	CBaseCombatWeapon *secondary = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
-
-	// do the primary weapon/ammo stuff.
-	if (primary == NULL)
+	if ( weaponId == ITEM_KEVLAR )
 	{
-		// count a shieldgun as a primary.
-		if (HasShield())
-		{
-			//m_rebuyStruct.m_primaryWeapon = WEAPON_SHIELDGUN;
-			Q_strncpy( m_rebuyStruct.m_szPrimaryWeapon, "shield", sizeof(m_rebuyStruct.m_szPrimaryWeapon) );
-			m_rebuyStruct.m_primaryAmmo = 0; // shields don't have ammo.
-		}
-		else
-		{
-
-			m_rebuyStruct.m_szPrimaryWeapon[0] = 0;	// if we don't have a shield and we don't have a primary weapon, we got nuthin.
-			m_rebuyStruct.m_primaryAmmo = 0;		// can't have ammo if we don't have a gun right?
-		}
-	}
-	else
-	{
-		//strip off the "weapon_"
-
-		const char *wpnName = primary->GetClassname();
-
-		Q_strncpy( m_rebuyStruct.m_szPrimaryWeapon, wpnName + 7, sizeof(m_rebuyStruct.m_szPrimaryWeapon) );
-
-		if( primary->GetPrimaryAmmoType() != -1 )
-		{
-			m_rebuyStruct.m_primaryAmmo = GetAmmoCount( primary->GetPrimaryAmmoType() );
-		}
+		m_rebuyStruct.SetArmor( 1 );
+		return;
 	}
 
-	// do the secondary weapon/ammo stuff.
-	if (secondary == NULL)
+	if ( weaponId == ITEM_ASSAULTSUIT )
 	{
-		m_rebuyStruct.m_szSecondaryWeapon[0] = 0;
-		m_rebuyStruct.m_secondaryAmmo = 0; // can't have ammo if we don't have a gun right?
-	}
-	else if ( !m_bUsingDefaultPistol ) // no need to add default pistol to rebuy struct
-	{
-		const char *wpnName = secondary->GetClassname();
-
-		Q_strncpy( m_rebuyStruct.m_szSecondaryWeapon, wpnName + 7, sizeof(m_rebuyStruct.m_szSecondaryWeapon) );
-
-		if( secondary->GetPrimaryAmmoType() != -1 )
-		{
-			m_rebuyStruct.m_secondaryAmmo = GetAmmoCount( secondary->GetPrimaryAmmoType() );
-		}
+		m_rebuyStruct.SetArmor( 2 );
+		return;
 	}
 
-	CBaseCombatWeapon *pGrenade;
-
-	//MATTTODO: right now you can't buy more than one grenade. make it so you can
-	//buy more and query the number you have.
-	// HE Grenade
-	pGrenade = Weapon_OwnsThisType( "weapon_hegrenade" );
-	if ( pGrenade && pGrenade->GetPrimaryAmmoType() != -1 )
+	if ( weaponId == ITEM_DEFUSER )
 	{
-		m_rebuyStruct.m_heGrenade = GetAmmoCount(pGrenade->GetPrimaryAmmoType());
+		m_rebuyStruct.SetDefuser( true );
+		return;
 	}
-	else
-		m_rebuyStruct.m_heGrenade = 0;
 
+	const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
 
-	// flashbang
-	pGrenade = Weapon_OwnsThisType( "weapon_flashbang" );
-	if ( pGrenade && pGrenade->GetPrimaryAmmoType() != -1 )
+	// TODO: Add special handling for equipment without info data?
+	if ( pWeaponInfo == NULL )
+		return;
+
+	switch ( pWeaponInfo->iSlot )
 	{
-		m_rebuyStruct.m_flashbang = GetAmmoCount(pGrenade->GetPrimaryAmmoType());
+	case WEAPON_SLOT_RIFLE:
+		m_rebuyStruct.SetPrimary( weaponId );
+		break;
+
+	case WEAPON_SLOT_PISTOL:
+		m_rebuyStruct.SetSecondary( weaponId );
+		break;
+
+	case WEAPON_SLOT_KNIFE:
+		m_rebuyStruct.SetTertiary( weaponId );
+		break;
+
+	case WEAPON_SLOT_GRENADES:
+		AddToGrenadeRebuy( weaponId );
+		break;
+
+	case WEAPON_SLOT_C4:
+		break;
+		
+	default:
+		Error( "Unhandled weapon slot (%i) in AddToRebuy\n", pWeaponInfo->iSlot );
+		break;
 	}
-	else
-		m_rebuyStruct.m_flashbang = 0;
-
-	// smokegrenade
-	pGrenade = Weapon_OwnsThisType( "weapon_smokegrenade" );
-	if ( pGrenade /*&& pGrenade->GetPrimaryAmmoType() != -1*/ )
-	{
-		m_rebuyStruct.m_smokeGrenade = 1; //GetAmmoCount(pGrenade->GetPrimaryAmmoType());
-	}
-	else
-		m_rebuyStruct.m_smokeGrenade = 0;
-
-	// decoy
-	pGrenade = Weapon_OwnsThisType( "weapon_decoy" );
-	if ( pGrenade /*&& pGrenade->GetPrimaryAmmoType() != -1*/ )
-	{
-		m_rebuyStruct.m_decoy = 1; //GetAmmoCount(pGrenade->GetPrimaryAmmoType());
-	}
-	else
-		m_rebuyStruct.m_decoy = 0;
-
-	// incgrenade
-						pGrenade = Weapon_OwnsThisType( "weapon_incgrenade" );
-	CBaseCombatWeapon*	pMolotov = Weapon_OwnsThisType( "weapon_molotov" );
-	if ( pGrenade || pMolotov )
-	{
-		m_rebuyStruct.m_molotov = 1; //GetAmmoCount(pGrenade->GetPrimaryAmmoType());
-	}
-	else
-		m_rebuyStruct.m_molotov = 0;
-
-	// defuser
-	m_rebuyStruct.m_defuser = HasDefuser();
-
-	// taser
-	m_rebuyStruct.m_taser = (Weapon_OwnsThisType( "weapon_taser" )) ? true : false;
-
-	// night vision
-	m_rebuyStruct.m_nightVision = m_bHasNightVision.Get();	//cast to avoid strange compiler warning
-
-	// check for armor.
-	m_rebuyStruct.m_armor = ( m_bHasHelmet ? 2 : ( ArmorValue() > 0 ? 1 : 0 ) );
 }
 
-void CCSPlayer::Rebuy( void )
+void CCSPlayer::AddToGrenadeRebuy( CSWeaponID weaponId )
+{
+	int iQueueSize = MIN( ammo_grenade_limit_total.GetInt(), m_rebuyStruct.numGrenades() );
+
+	// see if it's already in the list
+	for ( int i = 0; i < iQueueSize; ++i )
+	{
+		if ( m_rebuyStruct.GetGrenade( i ) == weaponId )
+			return;
+	}
+
+	// shift the list down
+	for ( int i = m_rebuyStruct.numGrenades() - 1; i > 0; --i )
+	{
+		m_rebuyStruct.SetGrenade( i, m_rebuyStruct.GetGrenade( i - 1 ) );
+	}
+
+	// add it to the front
+	m_rebuyStruct.SetGrenade( 0, weaponId );
+}
+
+void CCSPlayer::Rebuy( const char *rebuyString )
 {
 	if ( !IsInBuyZone() )
 	{
@@ -8492,7 +8180,6 @@ void CCSPlayer::Rebuy( void )
 		return;
 	}
 
-	const char *rebuyString = engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "cl_rebuy" );
 	if ( !rebuyString || !*rebuyString )
 	{
 		EmitPrivateSound( "BuyPreset.AlreadyBought" );
@@ -8505,61 +8192,39 @@ void CCSPlayer::Rebuy( void )
 	char token[256];
 	rebuyString = engine->ParseFile( rebuyString, token, sizeof( token ) );
 
-	while (rebuyString != NULL)
+	while (rebuyString != NULL )
 	{
 		BuyResult_e result = BUY_ALREADY_HAVE;
 
-		if (!Q_strncmp(token, "PrimaryWeapon", 14))
+		if ( Q_strcasecmp( token, "PrimaryWeapon" ) == 0 )
 		{
 			result = RebuyPrimaryWeapon();
-		}/*
-		else if (!Q_strncmp(token, "PrimaryAmmo", 12))
-		{
-			result = RebuyPrimaryAmmo();
-		}*/
-		else if (!Q_strncmp(token, "SecondaryWeapon", 16))
+		}
+		else if ( Q_strcasecmp(token, "SecondaryWeapon" ) == 0 )
 		{
 			result = RebuySecondaryWeapon();
-		}/*
-		else if (!Q_strncmp(token, "SecondaryAmmo", 14))
-		{
-			result = RebuySecondaryAmmo();
-		}*/
+		}
 		else if ( Q_strcasecmp(token, "Taser" ) == 0 )		// TODO[pmf]: handle this better
 		{
 			result = RebuyTaser();
 		}
-		else if (!Q_strncmp(token, "HEGrenade", 10))
+		else if ( Q_strcasecmp(token, "Armor" ) == 0 )
 		{
-			result = RebuyHEGrenade();
+			result = RebuyArmor();
 		}
-		else if (!Q_strncmp(token, "Flashbang", 10))
-		{
-			result = RebuyFlashbang();
-		}
-		else if (!Q_strncmp(token, "SmokeGrenade", 13))
-		{
-			result = RebuySmokeGrenade();
-		}
-		else if (!Q_strncmp(token, "Decoy", 6))
-		{
-			result = RebuyDecoy();
-		}
-		else if (!Q_strncmp(token, "Molotov", 7))
-		{
-			result = RebuyMolotov();
-		}
-		else if (!Q_strncmp(token, "Defuser", 8))
+		else if ( Q_strcasecmp(token, "Defuser" ) == 0 )
 		{
 			result = RebuyDefuser();
 		}
-		else if (!Q_strncmp(token, "NightVision", 12))
+		else if ( Q_strcasecmp(token, "NightVision" ) == 0 )
 		{
 			result = RebuyNightVision();
 		}
-		else if (!Q_strncmp(token, "Armor", 6))
+		else
 		{
-			result = RebuyArmor();
+			CSWeaponID weaponId = AliasToWeaponID( token );
+			if ( weaponId != WEAPON_NONE )
+				result = RebuyGrenade( weaponId );
 		}
 
 		overallResult = CombineBuyResults( overallResult, result );
@@ -8571,9 +8236,9 @@ void CCSPlayer::Rebuy( void )
 
 	// after we're done buying, the user is done with their equipment purchasing experience.
 	// so we are effectively out of the buy zone.
-//	if (TheTutor != NULL)
+//	if (TheTutor != NULL )
 //	{
-//		TheTutor->OnEvent(EVENT_PLAYER_LEFT_BUY_ZONE);
+//		TheTutor->OnEvent(EVENT_PLAYER_LEFT_BUY_ZONE );
 //	}
 
 	m_bAutoReload = true;
@@ -8586,43 +8251,41 @@ void CCSPlayer::Rebuy( void )
 	{
 		EmitPrivateSound( "BuyPreset.AlreadyBought" );
 	}
-	else if ( overallResult == BUY_BOUGHT )
-	{
-		g_iReBuyPurchases++;
-	}
 }
 
 BuyResult_e CCSPlayer::RebuyPrimaryWeapon()
 {
 	CBaseCombatWeapon *primary = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
-	if (primary != NULL)
-	{
+	if (primary != NULL )
 		return BUY_ALREADY_HAVE;	// don't drop primary weapons via rebuy - if the player picked up a different weapon, he wants to keep it.
+
+	CSWeaponID nID = m_rebuyStructLastRound.GetPrimary();
+	if ( nID != WEAPON_NONE )
+	{
+		return HandleCommand_Buy( WeaponIDToAlias( nID ) );
 	}
 
-	if( strlen( m_rebuyStruct.m_szPrimaryWeapon ) > 0 )
-		return HandleCommand_Buy(m_rebuyStruct.m_szPrimaryWeapon);
-
-	return BUY_ALREADY_HAVE;
+	return BUY_INVALID_ITEM;
 }
 
 BuyResult_e CCSPlayer::RebuySecondaryWeapon()
 {
 	CBaseCombatWeapon *pistol = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
-	if (pistol != NULL && !m_bUsingDefaultPistol)
-	{
+	if (pistol != NULL && !m_bUsingDefaultPistol )
 		return BUY_ALREADY_HAVE;	// don't drop pistols via rebuy if we've bought one other than the default pistol
+
+	CSWeaponID nID = m_rebuyStructLastRound.GetSecondary();
+	if ( nID != WEAPON_NONE )
+	{
+		return HandleCommand_Buy( WeaponIDToAlias( nID ) );
 	}
 
-	if( strlen( m_rebuyStruct.m_szSecondaryWeapon ) > 0 )
-		return HandleCommand_Buy(m_rebuyStruct.m_szSecondaryWeapon);
-
-	return BUY_ALREADY_HAVE;
+	return BUY_INVALID_ITEM;
 }
 
 BuyResult_e CCSPlayer::RebuyTaser()
 {
-	if ( m_rebuyStruct.m_taser )
+	if ( m_rebuyStructLastRound.GetTertiary() == WEAPON_TASER )
 		return HandleCommand_Buy( "taser" );
 
 	return BUY_INVALID_ITEM;
@@ -8678,173 +8341,51 @@ BuyResult_e CCSPlayer::RebuySecondaryAmmo()
 	return BUY_ALREADY_HAVE;
 }
 */
-BuyResult_e CCSPlayer::RebuyHEGrenade()
+
+BuyResult_e CCSPlayer::RebuyGrenade( CSWeaponID weaponId )
 {
-	CBaseCombatWeapon *pGrenade = Weapon_OwnsThisType( "weapon_hegrenade" );
+	int iQueueSize = MIN( ammo_grenade_limit_total.GetInt(), m_rebuyStructLastRound.numGrenades() );
 
-	int numGrenades = 0;
-
-	if( pGrenade )
+	// is it in the rebuy list
+	for ( int i = 0; i < iQueueSize; ++i )
 	{
-		int nAmmo = pGrenade->GetPrimaryAmmoType();
-		if ( nAmmo == -1 )
-		{
-			return BUY_ALREADY_HAVE;
+		if ( m_rebuyStructLastRound.GetGrenade( i ) == weaponId )
+		{			
+			return HandleCommand_Buy( WeaponIDToAlias( weaponId ) );
 		}
-
-		numGrenades = GetAmmoCount( nAmmo );
 	}
-
-	BuyResult_e overallResult = BUY_ALREADY_HAVE;
-	int numToBuy = MAX( 0, m_rebuyStruct.m_heGrenade - numGrenades );
-	for (int i = 0; i < numToBuy; ++i)
-	{
-		BuyResult_e result = HandleCommand_Buy("hegrenade");
-		overallResult = CombineBuyResults( overallResult, result );
-	}
-
-	return overallResult;
-}
-
-BuyResult_e CCSPlayer::RebuyFlashbang()
-{
-	CBaseCombatWeapon *pGrenade = Weapon_OwnsThisType( "weapon_flashbang" );
-
-	int numGrenades = 0;
-
-	if( pGrenade )
-	{
-		int nAmmo = pGrenade->GetPrimaryAmmoType();
-		if ( nAmmo == -1 )
-		{
-			return BUY_ALREADY_HAVE;
-		}
-		numGrenades = GetAmmoCount( nAmmo );
-
-	}
-
-	BuyResult_e overallResult = BUY_ALREADY_HAVE;
-	int numToBuy = MAX( 0, m_rebuyStruct.m_flashbang - numGrenades );
-	for (int i = 0; i < numToBuy; ++i)
-	{
-		BuyResult_e result = HandleCommand_Buy("flashbang");
-		overallResult = CombineBuyResults( overallResult, result );
-	}
-
-	return overallResult;
-}
-
-BuyResult_e CCSPlayer::RebuySmokeGrenade()
-{
-	CBaseCombatWeapon *pGrenade = Weapon_OwnsThisType( "weapon_smokegrenade" );
-
-	int numGrenades = 0;
-
-	if( pGrenade )
-	{
-		int nAmmo = pGrenade->GetPrimaryAmmoType();
-		if ( nAmmo == -1 )
-		{
-			return BUY_ALREADY_HAVE;
-		}
-
-		numGrenades = GetAmmoCount( nAmmo );
-	}
-
-	BuyResult_e overallResult = BUY_ALREADY_HAVE;
-	int numToBuy = MAX( 0, m_rebuyStruct.m_smokeGrenade - numGrenades );
-	for (int i = 0; i < numToBuy; ++i)
-	{
-		BuyResult_e result = HandleCommand_Buy("smokegrenade");
-		overallResult = CombineBuyResults( overallResult, result );
-	}
-
-	return overallResult;
-}
-
-BuyResult_e CCSPlayer::RebuyDecoy()
-{
-	CBaseCombatWeapon *pGrenade = Weapon_OwnsThisType( "weapon_decoy" );
-
-	int numGrenades = 0;
-
-	if( pGrenade )
-	{
-		int nAmmo = pGrenade->GetPrimaryAmmoType();
-		if ( nAmmo == -1 )
-		{
-			return BUY_ALREADY_HAVE;
-		}
-
-		numGrenades = GetAmmoCount( nAmmo );
-	}
-
-	BuyResult_e overallResult = BUY_ALREADY_HAVE;
-	int numToBuy = MAX( 0, m_rebuyStruct.m_decoy - numGrenades );
-	for (int i = 0; i < numToBuy; ++i)
-	{
-		BuyResult_e result = HandleCommand_Buy("decoy");
-		overallResult = CombineBuyResults( overallResult, result );
-	}
-
-	return overallResult;
-}
-
-BuyResult_e CCSPlayer::RebuyMolotov()
-{
-	CBaseCombatWeapon *pIncGrenade = Weapon_OwnsThisType( "weapon_incgrenade" );
-	CBaseCombatWeapon *pMolotov = Weapon_OwnsThisType( "weapon_molotov" );
-
-	int numGrenades = 0;
-
-	if ( pIncGrenade || pMolotov )
-	{
-		int nAmmoInc = pIncGrenade ? pIncGrenade->GetPrimaryAmmoType() : 0;
-		int nAmmoMol = pMolotov ? pMolotov->GetPrimaryAmmoType() : 0;
-		if ( nAmmoInc == -1 && nAmmoMol == -1 )
-		{
-			return BUY_ALREADY_HAVE;
-		}
-
-		numGrenades = GetAmmoCount( nAmmoInc + nAmmoMol ); // PiMoN: is it really working?
-	}
-
-	BuyResult_e overallResult = BUY_ALREADY_HAVE;
-	int numToBuy = MAX( 0, m_rebuyStruct.m_molotov - numGrenades );
-	for (int i = 0; i < numToBuy; ++i)
-	{
-		BuyResult_e result = HandleCommand_Buy( GetTeamNumber() == TEAM_CT ? "incgrenade" : "molotov" );
-		overallResult = CombineBuyResults( overallResult, result );
-	}
-
-	return overallResult;
+	return BUY_INVALID_ITEM;
 }
 
 BuyResult_e CCSPlayer::RebuyDefuser()
 {
-	//If we don't have a defuser, and we want one, buy it!
-	if( !HasDefuser() && m_rebuyStruct.m_defuser )
+	if ( m_rebuyStructLastRound.GetDefuser() )
 	{
-		return HandleCommand_Buy("defuser");
+		if ( HasDefuser() )
+			return BUY_ALREADY_HAVE;
+		else
+			return HandleCommand_Buy( "defuser" );
 	}
 
-	return BUY_ALREADY_HAVE;
+	return BUY_INVALID_ITEM;
 }
 
 BuyResult_e CCSPlayer::RebuyNightVision()
 {
-	//if we don't have night vision and we want one, buy it!
-	if( !m_bHasNightVision && m_rebuyStruct.m_nightVision )
+	if ( m_rebuyStructLastRound.GetNightVision() )
 	{
-		return HandleCommand_Buy("nvgs");
+		if ( m_bHasNightVision )
+			return BUY_ALREADY_HAVE;
+		else
+			return HandleCommand_Buy( "nvgs" );
 	}
 
-	return BUY_ALREADY_HAVE;
+	return BUY_INVALID_ITEM;
 }
 
 BuyResult_e CCSPlayer::RebuyArmor()
 {
-	if (m_rebuyStruct.m_armor > 0 )
+	if (m_rebuyStructLastRound.GetArmor() > 0 )
 	{
 		int armor = 0;
 
@@ -8853,18 +8394,17 @@ BuyResult_e CCSPlayer::RebuyArmor()
 		else if( ArmorValue() > 0 )
 			armor = 1;
 
-		if( armor < m_rebuyStruct.m_armor )
+		if( armor < m_rebuyStructLastRound.GetArmor() )
 		{
-			if (m_rebuyStruct.m_armor == 1)
+			if (m_rebuyStructLastRound.GetArmor() == 1 )
 			{
-				return HandleCommand_Buy("vest");
+				return HandleCommand_Buy("vest" );
 			}
 			else
 			{
-				return HandleCommand_Buy("vesthelm");
+				return HandleCommand_Buy("vesthelm" );
 			}
 		}
-
 	}
 
 	return BUY_ALREADY_HAVE;
@@ -9052,11 +8592,6 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pszName, int iSubType )
 	if ( !pszName || !pszName[0] )
 		return  NULL;
 
-#ifndef CS_SHIELD_ENABLED
-	if ( !Q_stricmp( pszName, "weapon_shield" ) )
-		return NULL;
-#endif
-
 	pent = CreateEntityByName(pszName);
 	if ( pent == NULL )
 	{
@@ -9167,7 +8702,7 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 			// if that was the last item, delete this one
 			if ( pItem->GetCurrentItems() <= 0 )
 			{
-				CSWeaponDrop( pItem, true, true );
+				CSWeaponDrop( pItem, true );
 				UTIL_Remove( pItem );
 				UpdateAddonBits();
 			}
@@ -9175,8 +8710,8 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 			return false;
 		}
 */
-        CSWeaponType type = pCSWeapon->GetWeaponType();
-        if ( mp_death_drop_gun.GetInt() == 0 && !pCSWeapon->IsA( WEAPON_C4 ) && type != WEAPONTYPE_GRENADE )
+		CSWeaponType type = pCSWeapon->GetWeaponType();
+		if ( mp_death_drop_gun.GetInt() == 0 && !pCSWeapon->IsA( WEAPON_C4 ) && type != WEAPONTYPE_GRENADE )
 			return true;
 		
 		// [dwenger] Determine value of dropped item.
@@ -9199,20 +8734,6 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 			return true;
 		}
 
-		if ( type == WEAPONTYPE_GRENADE )
-		{
-			if ( mp_drop_grenade_enable.GetBool() )
-			{
-				CBaseCSGrenade* pGrenade = dynamic_cast< CBaseCSGrenade* >(pCSWeapon);
-				if ( pGrenade )
-				{
-					pGrenade->DropPlayerGrenade();
-					ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
-				}
-				return true;
-			}
-		}
-
 		switch ( type )
 		{
 		// Only certail weapons can be dropped when drop is initiated by player
@@ -9229,7 +8750,7 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 				pCSWeapon->SetDonated(true );
 				pCSWeapon->SetDonor(this );
 			}
-			CSWeaponDrop( pCSWeapon, true, true );
+			CSWeaponDrop( pCSWeapon, true );
 
 			if ( IsAlive() && !bSwapping )
 				ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
@@ -9238,15 +8759,16 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 
 		default:
 		{
-			// let dedicated servers optionally allow droppable knives
-			if ( (type == WEAPONTYPE_KNIFE && mp_drop_knife_enable.GetBool( )) || pCSWeapon->GetCSWeaponID() == WEAPON_TASER )
+			// let dedicated servers optionally allow droppable knives and grenades
+			if ( (type == WEAPONTYPE_KNIFE && mp_drop_knife_enable.GetBool( )) || pCSWeapon->GetCSWeaponID() == WEAPON_TASER ||
+				 (type == WEAPONTYPE_GRENADE && mp_drop_grenade_enable.GetBool( )) )
 			{
 				if ( CSGameRules( )->GetCanDonateWeapon( ) && !pCSWeapon->GetDonated( ) )
 				{
 					pCSWeapon->SetDonated( true );
 					pCSWeapon->SetDonor( this );
 				}
-				CSWeaponDrop( pCSWeapon, true, true );
+				CSWeaponDrop( pCSWeapon, true );
 
 				if ( IsAlive( ) && !bSwapping )
 					ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName( ) );
@@ -9318,7 +8840,7 @@ void CCSPlayer::DestroyWeapons( bool bDropC4 /* = true */ )
 	{
 		// Drop the C4
 		SetBombDroppedTime( gpGlobals->curtime );
-		CSWeaponDrop( pC4, false, true );
+		CSWeaponDrop( pC4, true );
 	}
 }
 
@@ -9345,7 +8867,7 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 	if ( pC4 )
 	{
 		SetBombDroppedTime( gpGlobals->curtime );
-		CSWeaponDrop( pC4, false, true );
+		CSWeaponDrop( pC4, true );
 		if( fromDeath )
 		{
 			if( friendlyFire )
@@ -9379,11 +8901,6 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 		{
 			m_hDroppedEquipment[DROPPED_DEFUSE] = static_cast<CBaseEntity *>(pDefuser);
 		}
-	}
-
-	if( HasShield() )
-	{
-		DropShield();
 	}
 
 	if ( mp_death_drop_gun.GetInt() != 0 )
@@ -9447,7 +8964,7 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 		if ( mp_death_drop_grenade.GetInt() == 2 && !bGrenadeDropped )
 		{
 			// drop currently active grenade
-			bGrenadeDropped = CSWeaponDrop(pGrenade, false );
+			bGrenadeDropped = CSWeaponDrop( pGrenade );
 		}
 	}
 
@@ -9458,7 +8975,7 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 			CBaseCSGrenade *pCurGrenade = dynamic_cast< CBaseCSGrenade * >( GetWeapon( i ) );
 			if ( pCurGrenade && pCurGrenade->HasAmmo() && !pCurGrenade->m_bHasEmittedProjectile )
 			{
-				bGrenadeDropped = CSWeaponDrop( pCurGrenade, false );
+				bGrenadeDropped = CSWeaponDrop( pCurGrenade );
 			}
 		}
 	}
@@ -9492,7 +9009,7 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 			pGrenade = dynamic_cast< CBaseCSGrenade* >( Weapon_OwnsThisType( GrenadePriorities[i] ) );
 			if ( pGrenade && pGrenade->HasAmmo() && !pGrenade->m_bHasEmittedProjectile )
 			{
-				bGrenadeDropped = CSWeaponDrop( pGrenade, false );
+				bGrenadeDropped = CSWeaponDrop( pGrenade );
 			}
 		}
 	}
@@ -10290,6 +9807,17 @@ void CCSPlayer::HandleEndOfRound()
 	}
 
 	AllowImmediateDecalPainting();
+
+	RecordRebuyStructLastRound();
+}
+
+void CCSPlayer::RecordRebuyStructLastRound( void )
+{
+	if ( !m_rebuyStruct.isEmpty() )
+	{
+		m_rebuyStructLastRound = m_rebuyStruct;
+		m_rebuyStruct.Clear();
+	}
 }
 
 void CCSPlayer::SetKilledTime( float time )

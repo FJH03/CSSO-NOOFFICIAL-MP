@@ -11,7 +11,6 @@
 #include "cs_client_gamestats.h" 
 #include "filesystem.h"
 #include "cs_weapon_parse.h"
-#include "buy_presets/buy_presets.h"
 #include "../vgui_controls/ScrollBar.h"
 #include "stat_card.h"
 
@@ -158,7 +157,7 @@ void CBaseStatsPage::OnSizeChanged(int newWide, int newTall)
 	}
 }
 
-const wchar_t* CBaseStatsPage::TranslateWeaponKillIDToAlias( int statKillID )
+const char *CBaseStatsPage::TranslateWeaponKillIDToAlias( int statKillID )
 {
 	CSWeaponID weaponIDIndex = WEAPON_MAX;
 	for ( int i = 0; WeaponName_StatId_Table[i].killStatId != CSSTAT_UNDEFINED; ++i )

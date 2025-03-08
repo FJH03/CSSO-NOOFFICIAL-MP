@@ -136,9 +136,6 @@ CCreateMultiplayerGameBotPage::CCreateMultiplayerGameBotPage( vgui::Panel *paren
 	m_allowMachineGuns = new CCvarToggleCheckButton( this, "BotAllowMachineGunsCheck", "", "bot_allow_machine_guns" );
 	m_allowGrenades = new CCvarToggleCheckButton( this, "BotAllowGrenadesCheck", "", "bot_allow_grenades" );
 	m_allowSnipers = new CCvarToggleCheckButton( this, "BotAllowSnipersCheck", "", "bot_allow_snipers" );
-#ifdef CS_SHIELD_ENABLED
-	m_allowShields = new CCvarToggleCheckButton( this, "BotAllowShieldCheck", "", "bot_allow_shield" );
-#endif // CS_SHIELD_ENABLED
 
 	m_joinAfterPlayer = new CCvarToggleCheckButton( this, "BotJoinAfterPlayerCheck", "", "bot_join_after_player" );
 
@@ -183,9 +180,6 @@ CCreateMultiplayerGameBotPage::CCreateMultiplayerGameBotPage( vgui::Panel *paren
 	m_allowRifles->SetSelected( botKeys->GetInt( "bot_allow_rifles", 1 ) );
 	m_allowSnipers->SetSelected( botKeys->GetInt( "bot_allow_snipers", 1 ) );
 	m_allowGrenades->SetSelected( botKeys->GetInt( "bot_allow_grenades", 1 ) );
-#ifdef CS_SHIELD_ENABLED
-	m_allowShields->SetSelected( botKeys->GetInt( "bot_allow_shield", 1 ) );
-#endif // CS_SHIELD_ENABLED
 	m_deferToHuman->SetSelected( botKeys->GetInt( "bot_defer_to_human_goals", 1 ) );
 	m_deferToHumanItems->SetSelected( botKeys->GetInt( "bot_defer_to_human_items", 1 ) );
 
@@ -248,9 +242,6 @@ void CCreateMultiplayerGameBotPage::OnApplyChanges()
 	UpdateValue( m_pSavedData, "bot_allow_rifles", m_allowRifles->IsSelected() );
 	UpdateValue( m_pSavedData, "bot_allow_snipers", m_allowSnipers->IsSelected() );
 	UpdateValue( m_pSavedData, "bot_allow_grenades", m_allowGrenades->IsSelected() );
-#ifdef CS_SHIELD_ENABLED
-	UpdateValue( m_pSavedData, "bot_allow_shield", m_allowShields->IsSelected() );
-#endif // CS_SHIELD_ENABLED
 	UpdateValue( m_pSavedData, "bot_defer_to_human_goals", m_deferToHuman->IsSelected() );
 	UpdateValue( m_pSavedData, "bot_defer_to_human_items", m_deferToHumanItems->IsSelected() );
 	

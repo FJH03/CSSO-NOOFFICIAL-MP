@@ -11,7 +11,8 @@
 #pragma once
 #endif
 
-#include <vgui_controls/Panel.h>
+#include <vgui_controls/WizardPanel.h>
+#include "cstrikerotatingplayerpanel.h"
 
 #include <buymenu.h>
 
@@ -20,16 +21,14 @@
 // model on top of them.
 //-----------------------------------------------------------------------------
 
-class CCSBuyMenuPlayerImagePanel: public Panel
+class CCSBuyMenuPlayerImagePanel: public CCSRotatingPlayerImagePanel
 {
 public:
-
-	typedef vgui::Panel BaseClass;
+	typedef CCSRotatingPlayerImagePanel BaseClass;
 
 	CCSBuyMenuPlayerImagePanel( vgui::Panel *pParent, const char *pName );
 	virtual ~CCSBuyMenuPlayerImagePanel();
 	virtual void ApplySettings( KeyValues *inResourceData );
-
 
 public:
 	float m_flViewXPos;
@@ -40,9 +39,6 @@ public:
 
 extern CUtlVector<CCSBuyMenuPlayerImagePanel*> g_BuyMenuPlayerImagePanels;
 
-class BuyPresetEditPanel;
-class BuyPresetButton;
-
 namespace vgui
 {
 	class Panel;
@@ -50,17 +46,11 @@ namespace vgui
 	class Label;
 }
 
-enum
-{
-	NUM_BUY_PRESET_BUTTONS = 4,
-};
-
 class CCSBuyMenuImagePanel: public vgui::Panel
 {
 	typedef vgui::Panel BaseClass;
 
 public:
-
 	CCSBuyMenuImagePanel( vgui::Panel *pParent, const char *pName );
 	virtual ~CCSBuyMenuImagePanel();
 	virtual void ApplySettings( KeyValues *inResourceData );
@@ -87,21 +77,11 @@ private:
 public:
 	CCSBaseBuyMenu(IViewPort *pViewPort, const char *subPanelName);
 
-	virtual void ShowPanel( bool bShow );
-	virtual void Paint( void );
 	virtual void SetVisible( bool state );
 
-	//void HandleBlackMarket( void );
-
 private:
-	void UpdateBuyPresets( bool showDefaultPanel = false );	///< Update the Buy Preset buttons and their info panels on the main buy menu
-	vgui::Panel *m_pMainBackground;
-	BuyPresetButton *m_pBuyPresetButtons[NUM_BUY_PRESET_BUTTONS];
-	//BuyPresetEditPanel *m_pLoadout;
-	vgui::Label *m_pMoney;
 	int m_lastMoney;
 
-	//vgui::EditablePanel *m_pBlackMarket;
 	HFont m_hUnderlineFont;
 
 	// Background panel -------------------------------------------------------

@@ -148,7 +148,6 @@ public:
 	void ItemPostFrame();
 	virtual void PrimaryAttack();
 	virtual void WeaponIdle();
-	virtual void UpdateShieldState( void );
 	virtual float GetMaxSpeed() const;
 
 // 	virtual float GetSpread() const;

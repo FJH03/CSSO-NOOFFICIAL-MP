@@ -47,8 +47,6 @@ protected:
 
 	virtual void PerformLayout();
 	virtual void OnSizeChanged(int newWide, int newTall);	// called after the size of a panel has been changed
-	
-	void HandleBlackMarket( void );
 
 	bool m_backgroundLayoutFinished;
 

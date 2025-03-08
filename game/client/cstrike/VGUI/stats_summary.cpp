@@ -26,7 +26,6 @@
 
 #include "weapon_csbase.h"
 #include "cs_weapon_parse.h"
-#include "buy_presets/buy_presets.h"
 #include "win_panel_round.h"
 #include "cs_client_gamestats.h"
 #include "achievements_cs.h"
@@ -604,7 +603,7 @@ void CStatsSummary::UpdateLastMatchFavoriteWeaponStats()
 			m_pImagePanelLastMapFavWeapon->SetImage(m_pImageList->GetImage(m_StatImageMap[idx]));
 		}
 
-		const wchar_t* tempName = WeaponIDToDisplayName(favoriteWeaponStat.weaponId);
+		const char *tempName = WeaponIDToDisplayName(favoriteWeaponStat.weaponId);
 		if (tempName)
 		{
 			SetDialogVariable("lastmatchfavweaponname", tempName);

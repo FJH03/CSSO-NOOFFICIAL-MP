@@ -210,9 +210,6 @@ void CKnife::WeaponIdle()
 	if ( !pPlayer )
 		return;
 
-	if ( pPlayer->IsShieldDrawn() )
-		 return;
-
 	SetWeaponIdleTime( gpGlobals->curtime + 20 );
 
 	// only idle if the slid isn't back
@@ -284,12 +281,6 @@ bool CKnife::SwingOrStab( CSWeaponMode weaponMode )
 	{
 		fPrimDelay = bDidHit ? 0.5f : 0.4f;
 		fSecDelay = bDidHit ? 0.5f : 0.5f;
-	}
-
-	if ( pPlayer->HasShield() )
-	{
-		fPrimDelay += 0.7f; // 0.7 seconds slower if we carry a shield
-		fSecDelay += 0.7f;
 	}
 
 	m_flNextPrimaryAttack = gpGlobals->curtime + fPrimDelay;

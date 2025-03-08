@@ -311,7 +311,8 @@ public:
 	
 	AcquireResult::Type CanAcquire( CSWeaponID weaponId, AcquireMethod::Type acquireMethod );
 	int					GetCarryLimit( CSWeaponID weaponId );
-
+	int					GetWeaponPrice( CSWeaponID weaponId ) const;
+ 
 	bool IsOtherEnemy( CCSPlayer *pPlayer );
 	bool IsOtherEnemy( int nEntIndex );
 
@@ -510,16 +511,6 @@ public:
 
 	virtual ShadowType_t		ShadowCastType();
 
-#ifdef CS_SHIELD_ENABLED
-	bool HasShield( void ) { return m_bHasShield; }
-	bool IsShieldDrawn( void ) { return m_bShieldDrawn;	}
-	void SetShieldDrawnState( bool bState ) { m_bShieldDrawn = bState; }
-#else
-	bool HasShield( void ) { return false; }
-	bool IsShieldDrawn( void ) { return false; }
-	void SetShieldDrawnState( bool bState ) {}
-#endif
-
 	float m_flNightVisionAlpha;
 
 	float m_flFlashAlpha;
@@ -599,11 +590,6 @@ private:
     bool    m_bPlayingFreezeCamSound;
 
 	bool	m_bShouldAutobuyDMWeapons;
-
-#ifdef CS_SHIELD_ENABLED
-	bool	m_bHasShield;
-	bool	m_bShieldDrawn;
-#endif
 
 	Vector m_vecRagdollVelocity;
 

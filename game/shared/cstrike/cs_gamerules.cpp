@@ -47,7 +47,6 @@
 	#include "gameweaponmanager.h"
 
 	#include "cs_gamestats.h"
-	#include "cs_urlretrieveprices.h"
 	#include "networkstringtable_gamedll.h"
 	#include "player_resource.h"
 	#include "cs_player_resource.h"
@@ -66,20 +65,13 @@
 #endif
 
 
-#include "cs_blackmarket.h"
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
 
 #ifndef CLIENT_DLL
 
-
-#define CS_GAME_STATS_UPDATE 79200 //22 hours
-#define CS_GAME_STATS_UPDATE_PERIOD 7200 // 2 hours
-
 #define ROUND_END_WARNING_TIME 10.0f
-
-extern IUploadGameStats *gamestatsuploader;
 
 #if defined( REPLAY_ENABLED )
 extern IReplaySystem *g_pReplay;
@@ -200,7 +192,6 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropBool( RECVINFO( m_bLogoMap ) ),
 		RecvPropInt( RECVINFO( m_iNumGunGameProgressiveWeaponsCT ) ),
 		RecvPropInt( RECVINFO( m_iNumGunGameProgressiveWeaponsT ) ),
-		RecvPropBool( RECVINFO( m_bBlackMarket ) ),
 		RecvPropBool( RECVINFO( m_bBombDropped ) ),
 		RecvPropBool( RECVINFO( m_bBombPlanted ) ),
 		RecvPropInt( RECVINFO( m_iRoundWinStatus ) ),
@@ -225,7 +216,6 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropBool( SENDINFO( m_bLogoMap ) ),
 		SendPropInt( SENDINFO( m_iNumGunGameProgressiveWeaponsCT ) ),
 		SendPropInt( SENDINFO( m_iNumGunGameProgressiveWeaponsT ) ),
-		SendPropBool( SENDINFO( m_bBlackMarket ) ),
 		SendPropBool( SENDINFO( m_bBombDropped ) ),
 		SendPropBool( SENDINFO( m_bBombPlanted ) ),
 		SendPropInt( SENDINFO( m_iRoundWinStatus ) ),
@@ -278,6 +268,7 @@ ConVar ammo_buckshot_max( "ammo_buckshot_max", "32", FCVAR_REPLICATED );
 ConVar ammo_45acp_max( "ammo_45acp_max", "100", FCVAR_REPLICATED );
 ConVar ammo_357sig_max( "ammo_357sig_max", "52", FCVAR_REPLICATED );
 ConVar ammo_57mm_max( "ammo_57mm_max", "100", FCVAR_REPLICATED );
+
 ConVar ammo_grenade_limit_default( "ammo_grenade_limit_default", "1", FCVAR_REPLICATED );
 ConVar ammo_grenade_limit_flashbang( "ammo_grenade_limit_flashbang", "1", FCVAR_REPLICATED );
 ConVar ammo_grenade_limit_total( "ammo_grenade_limit_total", "3", FCVAR_REPLICATED );
@@ -617,7 +608,7 @@ ConVar mp_weapons_allow_typecount(
 	"5",
 	FCVAR_REPLICATED,
 	"Determines how many purchases of each weapon type allowed per player per round (0 to disallow purchasing, -1 to have no limit)." );
-	
+
 ConVar mp_default_team_winner_no_objective(
 	"mp_default_team_winner_no_objective",
 	"-1",
@@ -901,7 +892,7 @@ ConVar snd_music_selection(
 
 	ConVar mp_use_official_map_factions(
 		"mp_use_official_map_factions",
-		"1",
+		"0",
 		FCVAR_REPLICATED | FCVAR_NOTIFY,
 		"Determines wheter to use official factions for the current map or make faction selections free for everyone.\n 0 - Disable\n 1 - Enable for everyone\n 2 - Enable for bots only" );
 
@@ -1338,10 +1329,6 @@ ConVar snd_music_selection(
 
 		m_iMaxGunGameProgressiveWeaponIndex = 0;
 
-		m_pPrices = NULL;
-		m_bBlackMarket = false;
-		m_bDontUploadStats = false;
-
 		// Create the team managers
 		for ( int i = 0; i < ARRAYSIZE( sTeamNames ); i++ )
 		{
@@ -1358,18 +1345,6 @@ ConVar snd_music_selection(
 			engine->ServerCommand( UTIL_VarArgs( "exec \"%s.cfg\" */maps\n", STRING(gpGlobals->mapname) ) );
 			engine->ServerExecute();
 		}
-
-#ifndef CLIENT_DLL
-		// stats
-
-		if ( g_flGameStatsUpdateTime == 0.0f )
-		{
-			memset( g_iWeaponPurchases, 0, sizeof( g_iWeaponPurchases) );
-			memset( g_iTerroristVictories, 0, sizeof( g_iTerroristVictories) );
-			memset( g_iCounterTVictories, 0, sizeof( g_iTerroristVictories) );
-			g_flGameStatsUpdateTime = CS_GAME_STATS_UPDATE; //Next update is between 22 and 24 hours.
-		}
-#endif
 
 		m_iMapFactionCT = -1;
 		m_iMapFactionT = -1;
@@ -1575,22 +1550,6 @@ ConVar snd_music_selection(
 		{
 			Warning( "Failed to load .kv file for map %s\n", STRING( gpGlobals->mapname ) );
 		}
-	}
-
-	void CCSGameRules::AddPricesToTable( weeklyprice_t prices )
-	{
-		int iIndex = m_StringTableBlackMarket->FindStringIndex( "blackmarket_prices" );
-
-		if ( iIndex == INVALID_STRING_INDEX )
-		{
-			m_StringTableBlackMarket->AddString( CBaseEntity::IsServer(), "blackmarket_prices", sizeof( weeklyprice_t), &prices );
-		}
-		else
-		{
-			m_StringTableBlackMarket->SetStringUserData( iIndex, sizeof( weeklyprice_t), &prices );
-		}
-
-		SetBlackMarketPrices( false );
 	}
 
 	//-----------------------------------------------------------------------------
@@ -2218,7 +2177,7 @@ ConVar snd_music_selection(
 		}
 
 		// strip the NPC_* or weapon_* from the inflictor's classname
-		if ( strncmp( killer_weapon_name, "weapon_", 7 ) == 0 )
+		if ( IsWeaponClassname( killer_weapon_name ) )
 		{
 			killer_weapon_name += 7;
 		}
@@ -2549,28 +2508,6 @@ ConVar snd_music_selection(
 
 		// Figure out from the entities in the map what kind of map this is (bomb run, prison escape, etc).
 		CheckMapConditions();
-	}
-	
-	INetworkStringTable *g_StringTableBlackMarket = NULL;
-
-	void CCSGameRules::CreateCustomNetworkStringTables( void )
-	{
-		m_StringTableBlackMarket = g_StringTableBlackMarket;
-
-		if ( 0 )//mp_dynamicpricing.GetBool() )
-		{
-			m_bBlackMarket = BlackMarket_DownloadPrices();
-
-			if ( m_bBlackMarket == false )
-			{
-				Msg( "ERROR: mp_dynamicpricing set to 1 but couldn't download the price list!\n" );
-			}
-		}
-		else
-		{
-			m_bBlackMarket = false;
-			SetBlackMarketPrices( true );
-		}
 	}
 
 	float CCSGameRules::FlPlayerFallDamage( CBasePlayer *pPlayer )
@@ -3882,10 +3819,10 @@ ConVar snd_music_selection(
 				pPlayer->AddSolidFlags( FSOLID_NOT_SOLID );
 			}
 		}
-        
+
 		// Respawn entities (glass, doors, etc..)
 		CleanUpMap();
-
+		
 		// Reduce hostage count to desired number
 
 		int iHostageCount = mp_hostages_max.GetInt();
@@ -4081,8 +4018,8 @@ ConVar snd_music_selection(
 			fmtHostagePositions.AppendFormat( "\n" );
 			ConMsg( "%s", fmtHostagePositions.Access() );
 		}
-
-		//=============================================================================
+        
+        //=============================================================================
         // HPE_BEGIN:
         // [tj] Keep track of number of players per side and if they have the same uniform
         //=============================================================================
@@ -4301,8 +4238,6 @@ ConVar snd_music_selection(
 
 			gameeventmanager->FireEvent( event );
 		}
-	
-		UploadGameStats();
 
 		if ( bClearAccountsAfterHalftime && IsPlayingClassic() && HasHalfTime() )
 		{
@@ -5844,7 +5779,7 @@ ConVar snd_music_selection(
 			m_bCompleteReset = true;
 			mp_restartgame.SetValue( 0 );
 		}
-	}
+    }
 
 	//////// PAUSE
 	void cc_PauseMatch( const CCommand& args )
@@ -6818,13 +6753,14 @@ ConVar snd_music_selection(
 		while ( pCur )
 		{
 			CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase* >(pCur);
+
 			// Weapons with owners don't want to be removed..
 			if ( pWeapon )
 			{
-                // [dwenger] Handle round restart processing for the weapon.
+				// [dwenger] Handle round restart processing for the weapon.
 				pWeapon->OnRoundRestart();
 
-                if ( pWeapon->ShouldRemoveOnRoundRestart() )
+				if ( pWeapon->ShouldRemoveOnRoundRestart() )
 				{
 					UTIL_Remove( pCur );
 				}
@@ -6834,7 +6770,7 @@ ConVar snd_music_selection(
 			{
 				UTIL_Remove( pCur );
 			}
-			
+
 			pCur = gEntList.NextEnt( pCur );
 		}
 		
@@ -7071,94 +7007,6 @@ bool DataHasChanged( void )
 	}
 
 	return false;
-}
-
-void CCSGameRules::UploadGameStats( void )
-{
-	g_flGameStatsUpdateTime -= gpGlobals->curtime;
-
-	if ( g_flGameStatsUpdateTime > 0 )
-		return;
-
-	if ( IsBlackMarket() == false )
-		return;
-
-	if ( m_bDontUploadStats == true )
-		return;
-
-	if ( DataHasChanged() == true )
-	{
-		cs_gamestats_t stats;
-		memset( &stats, 0, sizeof(stats) );
-
-		// Header
-		stats.header.iVersion = CS_STATS_BLOB_VERSION;
-		Q_strncpy( stats.header.szGameName, "cstrike", sizeof(stats.header.szGameName) );
-		Q_strncpy( stats.header.szMapName, STRING( gpGlobals->mapname ), sizeof( stats.header.szMapName ) );
-
-		ConVar *hostip = cvar->FindVar( "hostip" );
-		if ( hostip )
-		{
-			int ip = hostip->GetInt();
-			stats.header.ipAddr[0] = ip >> 24;
-			stats.header.ipAddr[1] = ( ip >> 16 ) & MY_UCHAR_MAX;
-			stats.header.ipAddr[2] = ( ip >> 8 ) & MY_UCHAR_MAX;
-			stats.header.ipAddr[3] = ( ip ) & MY_UCHAR_MAX;
-		}			
-
-		ConVar *hostport = cvar->FindVar( "hostip" );
-		if ( hostport )
-		{
-			stats.header.port = hostport->GetInt();
-		}			
-
-		stats.header.serverid = 0;
-
-		stats.iMinutesPlayed = clamp( (short)( gpGlobals->curtime / 60 ), 0, MY_USHRT_MAX ); 
-
-		memcpy( stats.iTerroristVictories, g_iTerroristVictories, sizeof( g_iTerroristVictories) );
-		memcpy( stats.iCounterTVictories, g_iCounterTVictories, sizeof( g_iCounterTVictories) );
-		memcpy( stats.iBlackMarketPurchases, g_iWeaponPurchases, sizeof( g_iWeaponPurchases) );
-
-		stats.iAutoBuyPurchases = g_iAutoBuyPurchases;
-		stats.iReBuyPurchases = g_iReBuyPurchases;
-
-		stats.iAutoBuyM4A1Purchases = g_iAutoBuyM4A1Purchases;
-		stats.iAutoBuyAK47Purchases = g_iAutoBuyAK47Purchases;
-		stats.iAutoBuyFamasPurchases = g_iAutoBuyFamasPurchases;
-		stats.iAutoBuyGalilPurchases = g_iAutoBuyGalilPurchases;
-		stats.iAutoBuyVestHelmPurchases = g_iAutoBuyVestHelmPurchases;
-		stats.iAutoBuyVestPurchases = g_iAutoBuyVestPurchases;
-
-		const void *pvBlobData = ( const void * )( &stats );
-		unsigned int uBlobSize = sizeof( stats );
-
-		if ( gamestatsuploader )
-		{
-			gamestatsuploader->UploadGameStats( 
-				STRING( gpGlobals->mapname ),
-				CS_STATS_BLOB_VERSION,
-				uBlobSize,
-				pvBlobData );
-		}
-
-
-		memset( g_iWeaponPurchases, 0, sizeof( g_iWeaponPurchases) );
-		memset( g_iTerroristVictories, 0, sizeof( g_iTerroristVictories) );
-		memset( g_iCounterTVictories, 0, sizeof( g_iTerroristVictories) );
-
-		g_iAutoBuyPurchases = 0;
-		g_iReBuyPurchases = 0;
-
-		g_iAutoBuyM4A1Purchases = 0;
-		g_iAutoBuyAK47Purchases = 0;
-		g_iAutoBuyFamasPurchases = 0;
-		g_iAutoBuyGalilPurchases = 0;
-		g_iAutoBuyVestHelmPurchases = 0;
-		g_iAutoBuyVestPurchases = 0;
-	}
-
-	g_flGameStatsUpdateTime = CS_GAME_STATS_UPDATE; //Next update is between 22 and 24 hours.
 }
 #endif	// CLIENT_DLL
 
@@ -7654,7 +7502,7 @@ CAmmoDef* GetAmmoDef()
 		ammoDef.AddAmmoType( BULLET_PLAYER_45ACP,		DMG_BULLET, TRACER_LINE, 0, 0, "ammo_45acp_max",	2100 * BULLET_IMPULSE_EXAGGERATION, 0, 6, 10 );
 		ammoDef.AddAmmoType( BULLET_PLAYER_357SIG,		DMG_BULLET, TRACER_LINE, 0, 0, "ammo_357sig_max",	2000 * BULLET_IMPULSE_EXAGGERATION, 0, 4, 8 );
 		ammoDef.AddAmmoType( BULLET_PLAYER_57MM,		DMG_BULLET, TRACER_LINE, 0, 0, "ammo_57mm_max",		2000 * BULLET_IMPULSE_EXAGGERATION, 0, 4, 8 );
-		ammoDef.AddAmmoType( AMMO_TYPE_HEGRENADE,		DMG_BLAST,	TRACER_LINE, 0, 0, "ammo_grenade_limit_default", 0, 0, 0 );
+        ammoDef.AddAmmoType( AMMO_TYPE_HEGRENADE,		DMG_BLAST,	TRACER_LINE, 0, 0, "ammo_grenade_limit_default", 0, 0, 0 );
         ammoDef.AddAmmoType( AMMO_TYPE_FLASHBANG,		0,			TRACER_LINE, 0,	0, "ammo_grenade_limit_flashbang", 0, 0, 0 );
         ammoDef.AddAmmoType( AMMO_TYPE_SMOKEGRENADE,	0,			TRACER_LINE, 0, 0, "ammo_grenade_limit_default", 0, 0, 0 );
         ammoDef.AddAmmoType( AMMO_TYPE_MOLOTOV,			DMG_BURN,	TRACER_NONE, 0, 0, "ammo_grenade_limit_default", 0, 0, 0 );
@@ -8068,11 +7916,6 @@ CON_COMMAND_F( map_setbombradius, "Sets the bomb radius for the map.", FCVAR_CHE
 	map_showbombradius( args );
 }
 
-void CreateBlackMarketString( void )
-{
-	g_StringTableBlackMarket = networkstringtable->CreateStringTable( "BlackMarketTable" , 1 );
-}
-
 int CCSGameRules::TeamCashAwardValue( int reason )
 {
 	switch ( reason )
@@ -8344,14 +8187,11 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 }
 
 int CCSGameRules::GetStartMoney( void )
-{
-	if ( IsBlackMarket() )
-	{
-		return atoi( mp_startmoney.GetDefault() );
-	}
-	
+{	
 	return IsWarmupPeriod() ? mp_maxmoney.GetInt() : (GetOvertimePlaying() ? mp_overtime_startmoney.GetInt() : mp_startmoney.GetInt());
 }
+
+
 
 // [menglish] Set up anything for all players that changes based on new players spawning mid-game
 //				Find and return fun fact data
@@ -8595,81 +8435,6 @@ void CCSGameRules::GetTaggedConVarList( KeyValues *pCvarTagList )
 #endif
 
 
-int CCSGameRules::GetBlackMarketPriceForWeapon( int iWeaponID )
-{
-	if ( m_pPrices == NULL )
-	{
-		GetBlackMarketPriceList();
-	}
-
-	if ( m_pPrices )
-		return m_pPrices->iCurrentPrice[iWeaponID];
-	else
-		return 0;
-}
-
-int CCSGameRules::GetBlackMarketPreviousPriceForWeapon( int iWeaponID )
-{
-	if ( m_pPrices == NULL )
-	{
-		GetBlackMarketPriceList();
-	}
-
-	if ( m_pPrices )
-		return m_pPrices->iPreviousPrice[iWeaponID];
-	else
-		return 0;
-}
-
-const weeklyprice_t *CCSGameRules::GetBlackMarketPriceList( void )
-{
-	if ( m_StringTableBlackMarket == NULL )
-	{
-		m_StringTableBlackMarket = networkstringtable->FindTable( CS_GAMERULES_BLACKMARKET_TABLE_NAME);
-	}
-
-	if ( m_pPrices == NULL )
-	{
-		int iSize = 0;
-		INetworkStringTable *pTable = m_StringTableBlackMarket;
-		if ( pTable && pTable->GetNumStrings() > 0 )
-		{
-			m_pPrices = (const weeklyprice_t *)pTable->GetStringUserData( 0, &iSize );
-		}
-	}
-
-	if ( m_pPrices )
-	{
-		PrepareEquipmentInfo();
-	}
-	
-	return m_pPrices;
-}
-
-void CCSGameRules::SetBlackMarketPrices( bool bSetDefaults )
-{
-	for ( int i = 1; i < WEAPON_MAX; i++ )
-	{
-		if ( i == WEAPON_SHIELDGUN )
-			continue;
-
-		CCSWeaponInfo *info = GetWeaponInfo( (CSWeaponID)i );
-
-		if ( info == NULL )
-			continue;
-
-		if ( bSetDefaults == false )
-		{
-			info->SetWeaponPrice( GetBlackMarketPriceForWeapon( i ) );
-			info->SetPreviousPrice( GetBlackMarketPreviousPriceForWeapon( i ) );
-		}
-		else
-		{
-			info->SetWeaponPrice( info->GetDefaultPrice() );
-		}
-	}
-}
-
 float CCSGameRules::CheckTotalSmokedLength( float flSmokeRadiusSq, Vector vecGrenadePos, Vector from, Vector to )
 {
 	Vector sightDir = to - from;
@@ -8738,29 +8503,7 @@ int CCSGameRules::GetNumWinsToClinch() const
 
 CCSGameRules::CCSGameRules()
 {
-	CSGameRules()->m_StringTableBlackMarket = NULL;
-	m_pPrices = NULL;
-	m_bBlackMarket = false;
 }
-
-void TestTable( void )
-{
-	CSGameRules()->m_StringTableBlackMarket = networkstringtable->FindTable( CS_GAMERULES_BLACKMARKET_TABLE_NAME);
-
-	if ( CSGameRules()->m_StringTableBlackMarket == NULL )
-		return;
-
-	int iIndex = CSGameRules()->m_StringTableBlackMarket->FindStringIndex( "blackmarket_prices" );
-	int iSize = 0;
-
-	const weeklyprice_t *pPrices = NULL;
-	
-	pPrices = (const weeklyprice_t *)(CSGameRules()->m_StringTableBlackMarket)->GetStringUserData( iIndex, &iSize );
-}
-
-#ifdef DEBUG
-ConCommand cs_testtable( "cs_testtable", TestTable );
-#endif
 
 // music selection
 #ifdef CLIENT_DLL

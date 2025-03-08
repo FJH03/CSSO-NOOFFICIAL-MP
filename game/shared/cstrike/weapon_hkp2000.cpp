@@ -109,7 +109,6 @@ void CWeaponHKP2000::PrimaryAttack()
 	m_iClip1--;
 	
 	 pPlayer->DoMuzzleFlash();
-	//SetPlayerShieldAnim();
 
 	SendWeaponAnim( ACT_VM_PRIMARYATTACK );
 
@@ -136,8 +135,6 @@ void CWeaponHKP2000::PrimaryAttack()
 	}
 
 	SetWeaponIdleTime( gpGlobals->curtime + 2 );
-
-	//ResetPlayerShieldAnim();
 
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[Primary_Mode];

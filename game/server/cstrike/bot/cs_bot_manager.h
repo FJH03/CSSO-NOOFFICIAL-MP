@@ -280,11 +280,6 @@ public:
 	bool AllowMachineGuns( void ) const				{ return cv_bot_allow_machine_guns.GetBool(); }
 	bool AllowGrenades( void ) const				{ return cv_bot_allow_grenades.GetBool(); }
 	bool AllowSnipers( void ) const					{ return cv_bot_allow_snipers.GetBool(); }
-#ifdef CS_SHIELD_ENABLED
-	bool AllowTacticalShield( void ) const			{ return cv_bot_allow_shield.GetBool(); }
-#else
-	bool AllowTacticalShield( void ) const			{ return false; }
-#endif // CS_SHIELD_ENABLED
 
 	bool AllowFriendlyFireDamage( void ) const		{ return friendlyfire.GetBool(); }
 

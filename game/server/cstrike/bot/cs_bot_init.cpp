@@ -66,9 +66,6 @@ ConVar cv_bot_allow_rifles( "bot_allow_rifles", "1", FCVAR_REPLICATED, "If nonze
 ConVar cv_bot_allow_machine_guns( "bot_allow_machine_guns", "1", FCVAR_REPLICATED, "If nonzero, bots may use the machine gun." );
 ConVar cv_bot_allow_grenades( "bot_allow_grenades", "1", FCVAR_REPLICATED, "If nonzero, bots may use grenades." );
 ConVar cv_bot_allow_snipers( "bot_allow_snipers", "1", FCVAR_REPLICATED, "If nonzero, bots may use sniper rifles." );
-#ifdef CS_SHIELD_ENABLED
-ConVar cv_bot_allow_shield( "bot_allow_shield", "1", FCVAR_REPLICATED );
-#endif // CS_SHIELD_ENABLED
 ConVar cv_bot_join_team( "bot_join_team", "any", FCVAR_REPLICATED, "Determines the team bots will join into. Allowed values: 'any', 'T', or 'CT'." );
 ConVar cv_bot_join_after_player( "bot_join_after_player", "1", FCVAR_REPLICATED, "If nonzero, bots wait until a player joins before entering the game." );
 ConVar cv_bot_auto_vacate( "bot_auto_vacate", "1", FCVAR_REPLICATED, "If nonzero, bots will automatically leave to make room for human players." );
@@ -364,7 +361,6 @@ void CCSBot::ResetValues( void )
 	{
 		m_enemyQueue[i].player = NULL;
 		m_enemyQueue[i].isReloading = false;
-		m_enemyQueue[i].isProtectedByShield = false;
 	}
 
 	m_burnedByFlamesTimer.Invalidate();

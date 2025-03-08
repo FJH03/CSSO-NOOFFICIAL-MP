@@ -11,12 +11,12 @@
 #pragma once
 #endif
 
-#include "cs_blackmarket.h"
 #include "gamestats.h"
 #include "cs_gamestats_shared.h"
 #include "GameEventListener.h"
 #include "steamworks_gamestats.h"
 #include "weapon_csbase.h"
+#include "cs_player.h"
 
 // forward declares
 class CBreakableProp;
@@ -45,7 +45,6 @@ typedef struct
 
 	short	iTerroristVictories[CS_NUM_LEVELS];
 	short	iCounterTVictories[CS_NUM_LEVELS];
-	short	iBlackMarketPurchases[WEAPON_MAX];
 
 	short	iAutoBuyPurchases;
 	short	iReBuyPurchases;
@@ -62,7 +61,6 @@ extern short	g_iWeaponPurchases[WEAPON_MAX];
 extern float	g_flGameStatsUpdateTime;
 extern short	g_iTerroristVictories[CS_NUM_LEVELS];
 extern short	g_iCounterTVictories[CS_NUM_LEVELS];
-extern short	g_iWeaponPurchases[WEAPON_MAX];
 
 extern short	g_iAutoBuyPurchases;
 extern short	g_iReBuyPurchases;

@@ -47,8 +47,7 @@ void CCSBot::FireWeaponAtEnemy( void )
 		GetTimeSinceAcquiredCurrentEnemy() >= GetProfile()->GetAttackDelay() &&
 		!IsSurprised())
 	{
-		if (!(IsRecognizedEnemyProtectedByShield() && IsPlayerFacingMe( enemy )) &&	// don't shoot at enemies behind shields
-			!IsReloading() && 
+		if (!IsReloading() && 
 			!IsActiveWeaponClipEmpty() && 
 			//gpGlobals->curtime > m_reacquireTimestamp &&
 			IsEnemyVisible())
@@ -1323,8 +1322,8 @@ void CCSBot::SilencerCheck( void )
 		if ( weapon->m_flNextSecondaryAttack >= gpGlobals->curtime )
 			return;
 
-		// equip silencer if we want to and we don't have a shield.
-		if ( isSilencerOn != (GetProfile()->PrefersSilencer() || GetProfile()->GetSkill() > 0.7f) && !HasShield() )
+		// equip silencer if we want to.
+		if ( isSilencerOn != (GetProfile()->PrefersSilencer() || GetProfile()->GetSkill() > 0.7f) )
 		{
 			PrintIfWatched( "%s silencer!\n", (isSilencerOn) ? "Unequipping" : "Equipping" );
 			weapon->SecondaryAttack();

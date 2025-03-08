@@ -44,9 +44,6 @@ private:
 	CCvarToggleCheckButton *m_allowMachineGuns;
 	CCvarToggleCheckButton *m_allowRifles;
 	CCvarToggleCheckButton *m_allowGrenades;
-#ifdef CS_SHIELD_ENABLED
-	CCvarToggleCheckButton *m_allowShields;
-#endif // CS_SHIELD_ENABLED
 	CCvarToggleCheckButton *m_allowSnipers;
 
 	CCvarToggleCheckButton *m_deferToHuman;

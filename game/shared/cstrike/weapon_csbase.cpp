@@ -44,7 +44,6 @@
 // CS-PRO TEST CHANGE: instant movement inaccuracy, curve exponent x^0.25
 #define MOVEMENT_ACCURACY_DECAYED	0
 #define MOVEMENT_CURVE01_EXPONENT   0.25
-#define VIEWPUNCH_COMPENSATE_MAGIC_SCALAR 0.65 // cl_flinch_scale.GetFloat()
 
 extern WeaponRecoilData g_WeaponRecoilData;
 
@@ -113,98 +112,6 @@ static const WeaponAliasTranslationInfoStruct s_WeaponAliasTranslationInfo[] =
 };
 
 
-struct WeaponAliasInfo
-{
-	CSWeaponID id;
-	const char* alias;
-};
-
-WeaponAliasInfo s_weaponAliasInfo[] =
-{
-	{ WEAPON_P250,				"p250" },
-	{ WEAPON_GLOCK,				"glock" },
-	{ WEAPON_SSG08,				"ssg08" },
-	{ WEAPON_XM1014,			"xm1014" },
-	{ WEAPON_MAC10,				"mac10" },
-	{ WEAPON_AUG,				"aug" },
-	{ WEAPON_ELITE,				"elite" },
-	{ WEAPON_FIVESEVEN,			"fiveseven" },
-	{ WEAPON_UMP45,				"ump45" },
-	{ WEAPON_SCAR20,			"scar20" },
-	{ WEAPON_GALILAR,			"galilar" },
-	{ WEAPON_FAMAS,				"famas" },
-	{ WEAPON_USP,				"usp_silencer" },
-	{ WEAPON_AWP,				"awp" },
-	{ WEAPON_MP5SD,				"mp5sd" },
-	{ WEAPON_M249,				"m249" },
-	{ WEAPON_NOVA,				"nova" },
-	{ WEAPON_M4A1,				"m4a1_silencer" },
-	{ WEAPON_MP9,				"mp9" },
-	{ WEAPON_G3SG1,				"g3sg1" },
-	{ WEAPON_DEAGLE,			"deagle" },
-	{ WEAPON_SG556,				"sg556" },
-	{ WEAPON_AK47,				"ak47" },
-	{ WEAPON_P90,				"p90" },
-
-	{ WEAPON_HKP2000,			"hkp2000" },
-	{ WEAPON_TEC9,				"tec9" },
-	{ WEAPON_M4A4,				"m4a4" },
-	{ WEAPON_REVOLVER,			"revolver" },
-	{ WEAPON_CZ75A,				"cz75a" },
-	{ WEAPON_MAG7,				"mag7" },
-	{ WEAPON_SAWEDOFF,			"sawedoff" },
-	{ WEAPON_NEGEV,				"negev" },
-	{ WEAPON_MP7,				"mp7" },
-	{ WEAPON_BIZON,				"bizon" },
-	{ WEAPON_TASER,				"taser" },
-
-	{ WEAPON_KNIFE,				"knife" },
-	{ WEAPON_KNIFE_T,			"knife_t" },
-	{ WEAPON_KNIFE_GG,			"knifegg" },
-	{ WEAPON_KNIFE_CSS,			"knife_css" },
-	{ WEAPON_KNIFE_KARAMBIT,	"knife_karambit" },
-	{ WEAPON_KNIFE_FLIP,		"knife_flip" },
-	{ WEAPON_KNIFE_BAYONET,		"knife_bayonet" },
-	{ WEAPON_KNIFE_M9_BAYONET,	"knife_m9_bayonet" },
-	{ WEAPON_KNIFE_BUTTERFLY,	"knife_butterfly" },
-	{ WEAPON_KNIFE_GUT,			"knife_gut" },
-	{ WEAPON_KNIFE_TACTICAL,	"knife_tactical" },
-	{ WEAPON_KNIFE_FALCHION,	"knife_falchion" },
-	{ WEAPON_KNIFE_SURVIVAL_BOWIE,"knife_survival_bowie" },
-	{ WEAPON_KNIFE_CANIS,		"knife_canis" },
-	{ WEAPON_KNIFE_CORD,		"knife_cord" },
-	{ WEAPON_KNIFE_GYPSY,		"knife_gypsy_jackknife" },
-	{ WEAPON_KNIFE_OUTDOOR,		"knife_outdoor" },
-	{ WEAPON_KNIFE_SKELETON,	"knife_skeleton" },
-	{ WEAPON_KNIFE_STILETTO,	"knife_stiletto" },
-	{ WEAPON_KNIFE_URSUS,		"knife_ursus" },
-	{ WEAPON_KNIFE_WIDOWMAKER,	"knife_widowmaker" },
-	{ WEAPON_KNIFE_PUSH,		"knife_push" },
-	{ WEAPON_C4,				"c4" },
-
-	{ WEAPON_HEALTHSHOT,		"healthshot" },
-
-	{ WEAPON_FLASHBANG,			"flashbang" },
-	{ WEAPON_SMOKEGRENADE,		"smokegrenade" },
-	{ WEAPON_SMOKEGRENADE,		"sgren" },
-	{ WEAPON_HEGRENADE,			"hegrenade" },
-	{ WEAPON_HEGRENADE,			"hegren" },
-	{ WEAPON_DECOY,				"decoy" },
-	{ WEAPON_MOLOTOV,			"molotov" },
-	{ WEAPON_INCGRENADE,		"incgrenade" },
-
-	// not sure any of these are needed
-	{ WEAPON_SHIELDGUN,			"shield" },
-	{ WEAPON_SHIELDGUN,			"shieldgun" },
-	{ WEAPON_KEVLAR,			"kevlar" },
-	{ WEAPON_ASSAULTSUIT,		"assaultsuit" },
-	{ WEAPON_NVG,				"nightvision" },
-	{ WEAPON_NVG,				"nvg" },
-
-	{ WEAPON_NONE,				"none" },
-};
-
-
 bool IsAmmoType( int iAmmoType, const char *pAmmoName )
 {
 	return GetAmmoDef()->Index( pAmmoName ) == iAmmoType;
@@ -246,39 +153,6 @@ const char * GetWeaponAliasFromTranslated(const char *translatedAlias)
 	}
 
 	return translatedAlias;
-}
-
-//--------------------------------------------------------------------------------------------------------
-//
-// Given an alias, return the associated weapon ID
-//
-CSWeaponID AliasToWeaponID( const char *szAlias )
-{
-	if ( szAlias )
-	{
-		for ( int i=0; i < ARRAYSIZE(s_weaponAliasInfo); ++i)
-		{
-			if ( Q_stricmp( s_weaponAliasInfo[i].alias, szAlias ) == 0 )
-				return s_weaponAliasInfo[i].id;
-		}
-	}
-
-	return WEAPON_NONE;
-}
-
-//--------------------------------------------------------------------------------------------------------
-//
-// Given a weapon ID, return its alias
-//
-const char *WeaponIDToAlias( int id )
-{
-	for ( int i=0; i < ARRAYSIZE(s_weaponAliasInfo); ++i)
-	{
-		if ( s_weaponAliasInfo[i].id == id )
-			return s_weaponAliasInfo[i].alias;
-	}
-
-	return NULL;
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -348,6 +222,7 @@ bool IsGunWeapon( CSWeaponType weaponType )
 		return false;
 	}
 }
+
 
 // ----------------------------------------------------------------------------- //
 // CWeaponCSBase tables.
@@ -549,6 +424,7 @@ void CWeaponCSBase::ResetGunHeat()
 #endif
 }
 
+
 #ifndef CLIENT_DLL
 bool CWeaponCSBase::KeyValue( const char *szKeyName, const char *szValue )
 {
@@ -644,51 +520,12 @@ bool CWeaponCSBase::IsAPriorOwner(CCSPlayer* pPlayer)
 void CWeaponCSBase::SecondaryAttack( void )
 {
 #ifndef CLIENT_DLL
-	CCSPlayer *pPlayer = GetPlayerOwner();
-
-	if ( !pPlayer )
-		return;
-
-	if ( pPlayer->HasShield() == false )
-		 BaseClass::SecondaryAttack();
-	else
-	{
-		pPlayer->SetShieldDrawnState( !pPlayer->IsShieldDrawn() );
-
-		if ( pPlayer->IsShieldDrawn() )
-			 SendWeaponAnim( ACT_SHIELD_UP );
-		else
-			 SendWeaponAnim( ACT_SHIELD_DOWN );
-
-		m_flNextSecondaryAttack = gpGlobals->curtime + 0.4;
-		m_flNextPrimaryAttack = gpGlobals->curtime + 0.4;
-	}
+	BaseClass::SecondaryAttack();
 #endif
 }
 
 bool CWeaponCSBase::SendWeaponAnim( int iActivity )
 {
-#ifdef CS_SHIELD_ENABLED
-	CCSPlayer *pPlayer = GetPlayerOwner();
-
-	if ( pPlayer && pPlayer->HasShield() )
-	{
-		CBaseViewModel *vm = pPlayer->GetViewModel( 1 );
-
-		if ( vm == NULL )
-			return false;
-
-		vm->SetWeaponModel( SHIELD_VIEW_MODEL, this );
-
-		int	idealSequence = vm->SelectWeightedSequence( (Activity)iActivity );
-
-		if ( idealSequence >= 0 )
-		{
-			vm->SendViewModelMatchingSequence( idealSequence );
-		}
-	}
-#endif
-
 #ifndef CLIENT_DLL
 	// firing or reloading should interrupt weapon inspection
 	if ( iActivity == ACT_VM_PRIMARYATTACK || iActivity == ACT_VM_RELOAD || iActivity == ACT_SECONDARY_VM_RELOAD || iActivity == ACT_VM_ATTACH_SILENCER || iActivity == ACT_VM_DETACH_SILENCER )
@@ -719,6 +556,7 @@ void CWeaponCSBase::SendViewModelAnim( int nSequence )
 			// Don't switch from taunt to idle
 			return;
 		}
+
 #ifdef CLIENT_DLL
 		if ( !bIsLookingAt )
 		{
@@ -744,10 +582,7 @@ void CWeaponCSBase::CallSecondaryAttack()
 		m_bFireOnEmpty = TRUE;
 	}
 
-	if ( pPlayer->HasShield() )
-		CWeaponCSBase::SecondaryAttack();
-	else
-		SecondaryAttack();
+	SecondaryAttack();
 
 	m_fLastShotTime = gpGlobals->curtime;
 }
@@ -817,6 +652,7 @@ void CWeaponCSBase::UpdateGunHeat( float heat, int iAttachmentIndex )
 #endif
 }
 
+
 void CWeaponCSBase::ItemPostFrame()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
@@ -825,8 +661,6 @@ void CWeaponCSBase::ItemPostFrame()
 		return;
 
 	UpdateAccuracyPenalty();
-
-	UpdateShieldState();
 
 	if ( ( m_bInReload ) && ( pPlayer->m_flNextAttack <= gpGlobals->curtime ))
 	{
@@ -880,9 +714,6 @@ void CWeaponCSBase::ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer )
 	if ( pPlayer->State_Get() != STATE_ACTIVE )
 		return;
 
-	if ( pPlayer->IsShieldDrawn() )
-		return;
-
 	// don't repeat fire if this is not a full auto weapon or it's clip is empty
 	if ( pPlayer->m_iShotsFired > 0 && (!IsFullAuto() || m_iClip1 == 0) )
 		return;
@@ -895,7 +726,7 @@ void CWeaponCSBase::ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer )
 		if ( event )
 		{
 			const char *weaponName = STRING( m_iClassname );
-			if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
+			if ( IsWeaponClassname( weaponName ) )
 			{
 				weaponName += 7;
 			}
@@ -1095,7 +926,7 @@ bool CWeaponCSBase::ItemPostFrame_ProcessSecondaryAttack( CCSPlayer *pPlayer )
 		if ( event )
 		{
 			const char *weaponName = STRING( m_iClassname );
-			if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
+			if ( IsWeaponClassname( weaponName ) )
 			{
 				weaponName += 7;
 			}
@@ -1128,25 +959,19 @@ void CWeaponCSBase::ItemPostFrame_ProcessReloadAction( CCSPlayer *pPlayer )
 {
 	// reload when reload is pressed, or if no buttons are down and weapon is empty.
 
-	//MIKETODO: add code for shields...
-	//if ( !FBitSet( m_iWeaponState, WPNSTATE_SHIELD_DRAWN ) )
-
 	ItemPostFrame_RevolverResetHaulback();
 
-	if ( !pPlayer->IsShieldDrawn() )
+	if ( Reload() )
 	{
-		if ( Reload() )
-		{
 #ifndef CLIENT_DLL
-			// allow the bots to react to the reload
-			IGameEvent * event = gameeventmanager->CreateEvent( "weapon_reload" );
-			if ( event )
-			{
-				event->SetInt( "userid", pPlayer->GetUserID() );
-				gameeventmanager->FireEvent( event );
-			}
-#endif
+		// allow the bots to react to the reload
+		IGameEvent * event = gameeventmanager->CreateEvent( "weapon_reload" );
+		if ( event )
+		{
+			event->SetInt( "userid", pPlayer->GetUserID() );
+			gameeventmanager->FireEvent( event );
 		}
+#endif
 	}
 }
 
@@ -1317,25 +1142,13 @@ const char *CWeaponCSBase::GetViewModel( int /*viewmodelindex = 0 -- this is ign
 	if ( pOwner == NULL )
 		 return BaseClass::GetViewModel();
 
-	if ( pOwner->HasShield() && GetCSWpnData().m_bCanUseWithShield )
-		return GetCSWpnData().m_szShieldViewModel;
-	else
-		return GetWpnData().szViewModel;
-
-	return BaseClass::GetViewModel();
+	return GetWpnData().szViewModel;
 
 }
 
 void CWeaponCSBase::Precache( void )
 {
 	BaseClass::Precache();
-
-#ifdef CS_SHIELD_ENABLED
-	if ( GetCSWpnData().m_bCanUseWithShield )
-	{
-		 PrecacheModel( GetCSWpnData().m_szShieldViewModel );
-	}
-#endif
 
 	if ( GetCSWpnData().m_szMagModel[0] != 0 )
 		PrecacheModel( GetCSWpnData().m_szMagModel );
@@ -1401,7 +1214,6 @@ Activity CWeaponCSBase::GetDeployActivity( void )
 	return ACT_VM_DRAW;
 }
 
-
 bool CWeaponCSBase::DefaultDeploy( char *szViewModel, char *szWeaponModel, int iActivity, char *szAnimExt )
 {
 	// Msg( "deploy %s at %f\n", GetClassname(), gpGlobals->curtime );
@@ -1421,12 +1233,8 @@ bool CWeaponCSBase::DefaultDeploy( char *szViewModel, char *szWeaponModel, int i
 	m_flNextSecondaryAttack	= gpGlobals->curtime;
 
 	SetWeaponVisible( true );
-	pOwner->SetShieldDrawnState( false );
 
-	if ( pOwner->HasShield() == true )
-		 SetWeaponModelIndex( SHIELD_WORLD_MODEL);
-	else
-		 SetWeaponModelIndex( szWeaponModel );
+	SetWeaponModelIndex( szWeaponModel );
 
 #if IRONSIGHT
 	m_iIronSightMode = IronSight_viewmodel_is_deploying;
@@ -1447,29 +1255,6 @@ bool CWeaponCSBase::DefaultDeploy( char *szViewModel, char *szWeaponModel, int i
 	return true;
 }
 
-void CWeaponCSBase::UpdateShieldState( void )
-{
-	//empty by default.
-	CCSPlayer *pOwner = GetPlayerOwner();
-
-	if ( pOwner == NULL )
-		 return;
-
-	//ADRIANTODO
-	//Make the hitbox set switches here!!!
-	if ( pOwner->HasShield() == false )
-	{
-
-		pOwner->SetShieldDrawnState( false );
-		//pOwner->SetHitBoxSet( 0 );
-		return;
-	}
-	else
-	{
-		//pOwner->SetHitBoxSet( 1 );
-	}
-}
-
 void CWeaponCSBase::SetWeaponModelIndex( const char *pName )
 {
  	 m_iWorldModelIndex = modelinfo->GetModelIndex( pName );
@@ -1488,9 +1273,6 @@ bool CWeaponCSBase::CanDeploy( void )
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return false;
-
-	if ( pPlayer->HasShield() && GetCSWpnData().m_bCanUseWithShield == false )
-		 return false;
 
 	return BaseClass::CanDeploy();
 }
@@ -1515,7 +1297,6 @@ bool CWeaponCSBase::Holster( CBaseCombatWeapon *pSwitchingTo )
 		return false;
 
 	pPlayer->SetFOV( pPlayer, 0 ); // reset the default FOV.
-	pPlayer->SetShieldDrawnState( false );
 
 	ResetGunHeat();
 
@@ -1535,15 +1316,12 @@ bool CWeaponCSBase::Deploy()
 	m_iAlpha =  80;
 	if ( pPlayer )
 	{
-		pPlayer->m_bIsScoped = false;
 		pPlayer->m_iLastZoom = 0;
 		pPlayer->m_bIsScoped = false;
 		pPlayer->SetFOV( pPlayer, 0 );
 	}
 #else
-
 	m_flDecreaseShotsFired = gpGlobals->curtime;
-
 
 	if ( pPlayer )
 	{
@@ -1741,13 +1519,12 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 		return;
 	}
 
-	BaseClass::DefaultTouch(pOther);
+	BaseClass::DefaultTouch( pOther );
 }
 
 #if defined( CLIENT_DLL )
 ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.75", 0, "" );
-ConVar cl_crosshair_recoil( "cl_crosshair_recoil", "0", FCVAR_CHEAT, "Recoil/aimpunch will move the user's crosshair to show the effect", true, 0, true, 1 );
-extern ConVar view_recoil_tracking;
+
 	//-----------------------------------------------------------------------------
 	// Purpose: Draw the weapon's crosshair
 	//-----------------------------------------------------------------------------
@@ -1790,8 +1567,6 @@ extern ConVar view_recoil_tracking;
 			default:	r = 50;		g = 250;	b = 50;		break;
 		}
 
-
-
 		// if user is using nightvision, make the crosshair red.
 		if ( pPlayer->m_bNightVisionOn )
 		{
@@ -1827,8 +1602,6 @@ extern ConVar view_recoil_tracking;
 #endif
 
 
-		if ( pPlayer->HasShield() && pPlayer->IsShieldDrawn() == true )
-			return;
 		if ( GetWeaponType() == WEAPONTYPE_SNIPER_RIFLE )
 			return;
 		float fHalfFov = DEG2RAD( pPlayer->GetFOV() ) * 0.5f;
@@ -1963,7 +1736,7 @@ extern ConVar view_recoil_tracking;
 		int iCenterY = ScreenHeight() / 2;
 #endif
 
-		float flAngleToScreenPixel = VIEWPUNCH_COMPENSATE_MAGIC_SCALAR * 2 * (ScreenHeight() / (2.0f * tanf( DEG2RAD( pPlayer->GetFOV() ) / 2.0f )));
+		float flAngleToScreenPixel = 0;
 
 #ifdef CLIENT_DLL
 		// subtract a ratio of cam driver motion from crosshair according to cl_cam_driver_compensation_scale
@@ -1987,14 +1760,22 @@ extern ConVar view_recoil_tracking;
 		}
 #endif
 
-		if ( cl_crosshair_recoil.GetBool() ){
-			QAngle viewPunch = pPlayer->GetAimPunchAngle();
-			
-			if ( viewPunch.x != 0 || viewPunch.y != 0 ){
-				iCenterY += flAngleToScreenPixel * sinf( DEG2RAD( viewPunch.x ) ) * (1.0f - view_recoil_tracking.GetFloat());
-				iCenterX -= flAngleToScreenPixel * sinf( DEG2RAD( viewPunch.y ) ) * (1.0f - view_recoil_tracking.GetFloat());
-			}
+		/*
+		// Optionally subtract out viewangle since it doesn't affect shooting.
+		if ( cl_flinch_compensate_crosshair.GetBool() )
+		{
+		QAngle viewPunch = pPlayer->GetViewPunchAngle();
+
+		if ( viewPunch.x != 0 || viewPunch.y != 0 )
+		{
+		if ( flAngleToScreenPixel == 0 )
+		flAngleToScreenPixel = VIEWPUNCH_COMPENSATE_MAGIC_SCALAR * 2 * ( ScreenHeight() / ( 2.0f * tanf(DEG2RAD( pPlayer->GetFOV() ) / 2.0f) ) );
+
+		iCenterY -= flAngleToScreenPixel * sinf( DEG2RAD( viewPunch.x ) );
+		iCenterX += flAngleToScreenPixel * sinf( DEG2RAD( viewPunch.y ) );
 		}
+		}
+		*/
 
 		float flAlphaSplitInner = cl_crosshair_dynamic_splitalpha_innermod.GetFloat();
 		float flAlphaSplitOuter = cl_crosshair_dynamic_splitalpha_outermod.GetFloat();
@@ -2100,7 +1881,8 @@ extern ConVar view_recoil_tracking;
 			DrawCrosshairRect( r, g, b, alpha, iOuterLeft, iCenterY + iGap, iInnerLeft, iOuterBottom, bAdditive );
 			DrawCrosshairRect( r, g, b, alpha, iInnerRight, iOuterTop, iOuterRight, iCenterY - iGap, bAdditive );
 			DrawCrosshairRect( r, g, b, alpha, iInnerRight, iCenterY + iGap, iOuterRight, iOuterBottom, bAdditive );
-		}	
+		}
+
 	}
 
 	void CWeaponCSBase::OnDataChanged( DataUpdateType_t type )
@@ -2168,7 +1950,7 @@ extern ConVar view_recoil_tracking;
 
 	/*const char* CWeaponCSBase::GetMuzzleFlashEffectName( bool bThirdPerson )
 	{
-		if ( IsSilenced() )
+		if ( m_weaponMode == Secondary_Mode )
 		{
 			return bThirdPerson ? GetCSWpnData().m_szMuzzleFlash3rdPersonAlt : GetCSWpnData().m_szMuzzleFlash1stPersonAlt;
 		}
@@ -2755,7 +2537,7 @@ extern ConVar view_recoil_tracking;
 		m_nextOwnerTouchTime = 0.0f;
 		m_nextPrevOwnerTouchTime = 0.0f;
 
-        m_hPrevOwner = NULL;
+		m_hPrevOwner = NULL;
 
         // [tj] initialize donor of this weapon
         m_donor = NULL;

@@ -63,6 +63,7 @@ extern ConVar mp_respawn_on_death_t;
 extern ConVar mp_buy_allow_grenades;
 extern ConVar mp_buy_anywhere;
 extern ConVar mp_buy_during_immunity;
+extern ConVar mp_free_armor;
 
 #define	CS_MASK_SHOOT (MASK_SOLID|CONTENTS_DEBRIS)
 #define MAX_PENETRATION_DISTANCE 90 // this is 7.5 feet
@@ -269,14 +270,7 @@ float CCSPlayer::GetPlayerMaxSpeed()
 
 		if ( pWeapon )
 		{
-			if ( HasShield() && IsShieldDrawn() )
-			{
-				speed = MIN(speed, CS_PLAYER_SPEED_SHIELD);
-			}
-			else
-			{
-				speed = MIN(speed, pWeapon->GetMaxSpeed());
-			}
+			speed = MIN(speed, pWeapon->GetMaxSpeed());
 		}
 	}
 
@@ -782,7 +776,7 @@ static bool TraceToExit( Vector start, Vector dir, Vector &end, trace_t &trEnter
 
 		if ( nStartContents == 0 )
 			nStartContents = UTIL_PointContents( end );
-
+		
 		int nCurrentContents = UTIL_PointContents( end );
 
 		if ( (nCurrentContents & CS_MASK_SHOOT) == 0 || ((nCurrentContents & CONTENTS_HITBOX) && nStartContents != nCurrentContents) )
@@ -1716,7 +1710,7 @@ void CCSPlayer::OnLand( float fVelocity )
 		// the client plays it's own sound
 		filter.RemoveRecipient( this );
 #endif
-
+		
 			EmitSound(filter, entindex(), "Default.Land");
 
 			if (!m_pSurfaceData)
@@ -1740,7 +1734,7 @@ void CCSPlayer::OnLand( float fVelocity )
 			{
 				Q_snprintf(szStep, sizeof(szStep), "ct_%s", pRawSoundName);
 			}
-
+					
 			EmitSound(filter, entindex(), szStep);			
 	}
 }
@@ -1913,6 +1907,43 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 			}
 		}
 	}
+	else if ( weaponId == ITEM_KEVLAR )
+	{
+		if ( mp_free_armor.GetBool() )
+		{
+			if ( acquireMethod == AcquireMethod::Buy )
+				return AcquireResult::NotAllowedForPurchase;
+		}
+
+		if ( ArmorValue() >= 100 )
+		{
+			return AcquireResult::AlreadyOwned;
+		}
+	}
+	else if ( weaponId == ITEM_ASSAULTSUIT )
+	{
+		if ( mp_free_armor.GetBool() )
+		{
+			if ( acquireMethod == AcquireMethod::Buy )
+				return AcquireResult::NotAllowedForPurchase;
+		}
+
+		if ( m_bHasHelmet )
+		{
+			return AcquireResult::AlreadyOwned;
+		}
+	}
+	else if ( weaponId == ITEM_DEFUSER )
+	{
+		if ( CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
+		{
+			if ( acquireMethod == AcquireMethod::Buy )
+				return AcquireResult::NotAllowedForPurchase;
+		}
+
+		if ( m_bHasDefuser )
+			return AcquireResult::AlreadyOwned;
+	}
 	else if ( weaponId == WEAPON_C4 )
 	{
 		// TODO[pmf]: Data drive this from the scripts
@@ -1925,17 +1956,17 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 	}
 
 	extern ConVar mp_weapons_allow_zeus;
- 	extern ConVar mp_weapons_allow_typecount;
- 	// special case for limiting taser to classic casual; data drive this if it becomes more complex
- 	if ( weaponId == WEAPON_TASER )
- 	{
- 		if ( !mp_weapons_allow_zeus.GetBool() )
- 			return AcquireResult::NotAllowedForPurchase;
- 		else if ( ( mp_weapons_allow_zeus.GetInt() > 0 ) && ( m_iWeaponPurchasesThisRound[ weaponId ] >= mp_weapons_allow_zeus.GetInt() ) )
- 			return AcquireResult::AlreadyPurchased;
- 		else
- 			return AcquireResult::Allowed;
- 	}
+	extern ConVar mp_weapons_allow_typecount;
+	// special case for limiting taser to classic casual; data drive this if it becomes more complex
+	if ( weaponId == WEAPON_TASER )
+	{
+		if ( !mp_weapons_allow_zeus.GetBool() )
+			return AcquireResult::NotAllowedForPurchase;
+		else if ( ( mp_weapons_allow_zeus.GetInt() > 0 ) && ( m_iWeaponPurchasesThisRound[ weaponId ] >= mp_weapons_allow_zeus.GetInt() ) )
+			return AcquireResult::AlreadyPurchased;
+		else
+			return AcquireResult::Allowed;
+	}
 
 	// additional constraints for purchasing weapons
 	if ( acquireMethod == AcquireMethod::Buy )
@@ -1955,7 +1986,7 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 			if ( weaponId == WEAPON_SMOKEGRENADE && carryLimitThisGrenade > 0 )
 				carryLimitThisGrenade--;
 
-				if ( m_iWeaponPurchasesThisRound[weaponId] > carryLimitThisGrenade )
+			if ( m_iWeaponPurchasesThisRound[weaponId] > carryLimitThisGrenade )
 				return AcquireResult::AlreadyPurchased;
 		}
 
@@ -1972,6 +2003,50 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 	}
 
 	return AcquireResult::Allowed;
+}
+
+//************************************
+// Determine the current cash cost of a weapon for this particular player
+// Parameter: CSWeaponID weaponId
+//************************************
+int CCSPlayer::GetWeaponPrice( CSWeaponID weaponId ) const
+{
+	Assert( weaponId != WEAPON_NONE );
+
+	if (  weaponId == WEAPON_NONE )
+		return -1;
+		
+	bool bHasFullArmor = (ArmorValue() >= 100);
+
+	// special case handling for reduced cost of Kevlar + helmet
+	if ( weaponId == ITEM_ASSAULTSUIT )
+	{
+		int iCost = ITEM_PRICE_ASSAULTSUIT;
+		if ( bHasFullArmor && !m_bHasHelmet )
+			iCost -= ITEM_PRICE_KEVLAR;
+		//else if ( m_bHasHelmet )
+		//	iCost = ITEM_PRICE_KEVLAR;
+
+		return iCost;
+	}
+
+	// special case handling for reduced cost of Kevlar
+	if ( weaponId == ITEM_KEVLAR )
+	{
+		int iCost = ITEM_PRICE_KEVLAR;
+
+		return iCost;
+	}
+
+//	if ( weaponId == ITEM_EXOSUIT )
+//	{
+//		int iCost = ITEM_PRICE_EXOSUIT;
+//
+//		return iCost;
+//	}
+
+	const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
+	return ( pWeaponInfo ) ? pWeaponInfo->GetWeaponPrice() : 0;
 }
 
 bool CCSPlayer::HasWeaponOfType( int nWeaponID ) const
@@ -2159,5 +2234,4 @@ surfacedata_t * CCSPlayer::GetFootstepSurface( const Vector &origin, const char 
 }
 
 #endif
-
 

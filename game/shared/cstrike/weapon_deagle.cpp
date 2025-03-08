@@ -132,8 +132,6 @@ void CDEagle::PrimaryAttack()
 		SendWeaponAnim( ACT_VM_PRIMARYATTACK );
 	else
 		SendWeaponAnim( ACT_VM_DRYFIRE );
-
-	//SetPlayerShieldAnim();
 	
 	// player "shoot" animation
 	pPlayer->SetAnimation( PLAYER_ATTACK1 );
@@ -168,8 +166,6 @@ void CDEagle::PrimaryAttack()
 	Recoil( m_weaponMode );
 
 	m_flRecoilIndex += 1.0f;
-
-	//ResetPlayerShieldAnim();
 }
 
 
@@ -189,8 +185,5 @@ void CDEagle::WeaponIdle()
 	{
 		SendWeaponAnim( ACT_VM_IDLE );
 	}
-
-	//if ( FBitSet(m_iWeaponState, WPNSTATE_SHIELD_DRAWN) )
-	//	 SendWeaponAnim( SHIELDGUN_DRAWN_IDLE, UseDecrement() ? 1:0 );
 }
 

@@ -49,7 +49,7 @@ protected:
 
 	void UpdateGroupPanels();
 	CBaseStatGroupPanel* AddGroup( const wchar_t* name, const char* title_tag, const wchar_t* def = NULL );
-	const wchar_t* TranslateWeaponKillIDToAlias( int statKillID );
+	const char *TranslateWeaponKillIDToAlias( int statKillID );
 	const wchar_t* LocalizeTagOrUseDefault( const char* tag, const wchar_t* def = NULL );
 	
 	virtual void RepopulateStats() = 0;	

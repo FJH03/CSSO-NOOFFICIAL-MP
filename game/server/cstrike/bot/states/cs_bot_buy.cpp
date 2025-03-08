@@ -113,7 +113,6 @@ void BuyState::OnEnter( CCSBot *me )
 	me->EquipBestWeapon( MUST_EQUIP );
 
 	m_buyDefuseKit = false;
-	m_buyShield = false;
 
 	if (me->GetTeamNumber() == TEAM_CT)
 	{
@@ -127,18 +126,6 @@ void BuyState::OnEnter( CCSBot *me )
 				{
 					m_buyDefuseKit = true;
 				}
-			}
-		}
-
-		// determine if we want a tactical shield
-		if (!me->HasPrimaryWeapon() && TheCSBots()->AllowTacticalShield())
-		{
-			if (me->GetAccountBalance() > 2500)
-			{
-				if (me->GetAccountBalance() < 4000)
-					m_buyShield = (RandomFloat( 0, 100.0f ) < 33.3f) ? true : false;
-				else
-					m_buyShield = (RandomFloat( 0, 100.0f ) < 10.0f) ? true : false;
 			}
 		}
 	}
@@ -167,7 +154,6 @@ void BuyState::OnEnter( CCSBot *me )
 					TheCSBots()->AllowSubMachineGuns() == false &&
 					TheCSBots()->AllowRifles() == false &&
 					TheCSBots()->AllowMachineGuns() == false &&
-					TheCSBots()->AllowTacticalShield() == false &&
 					TheCSBots()->AllowSnipers() == false)
 				{
 					m_buyPistol = (RandomFloat( 0, 100 ) < 75.0f);
@@ -348,8 +334,7 @@ void BuyState::OnUpdate( CCSBot *me )
 	const char *cheatWeaponString = bot_loadout.GetString();
 	if ( cheatWeaponString && *cheatWeaponString )
 	{
-		CUtlVector<char*, CUtlMemory<char*> > loadout;
-		Q_SplitString( cheatWeaponString, " ", loadout );
+		CSplitString loadout( cheatWeaponString, " " );
 		for ( int i=0; i<loadout.Count(); ++i )
 		{
 			const char *item = loadout[i];
@@ -434,56 +419,41 @@ void BuyState::OnUpdate( CCSBot *me )
 				return;
 			}
 
-			if (me->HasShield() && weaponPreference == WEAPON_SHIELDGUN)
-			{
-				// done with buying preferred weapon
-				m_prefIndex = 9999;
-				return;
-			}
-
 			const char *buyAlias = NULL;
 
-			if (weaponPreference == WEAPON_SHIELDGUN)
+			buyAlias = WeaponIDToAlias( weaponPreference );
+			WeaponType type = GetWeaponType( buyAlias );
+			switch( type )
 			{
-				if (TheCSBots()->AllowTacticalShield())
-					buyAlias = "shield";
-			}
-			else
-			{
-				buyAlias = WeaponIDToAlias( weaponPreference );
-				WeaponType type = GetWeaponType( buyAlias );
-				switch( type )
-				{
-					case PISTOL:
-						if (!TheCSBots()->AllowPistols())
-							buyAlias = NULL;
-						break;
+				case PISTOL:
+					if (!TheCSBots()->AllowPistols())
+						buyAlias = NULL;
+					break;
 
-					case SHOTGUN:
-						if (!TheCSBots()->AllowShotguns())
-							buyAlias = NULL;
-						break;
+				case SHOTGUN:
+					if (!TheCSBots()->AllowShotguns())
+						buyAlias = NULL;
+					break;
 
-					case SUB_MACHINE_GUN:
-						if (!TheCSBots()->AllowSubMachineGuns())
-							buyAlias = NULL;
-						break;
+				case SUB_MACHINE_GUN:
+					if (!TheCSBots()->AllowSubMachineGuns())
+						buyAlias = NULL;
+					break;
 
-					case RIFLE:
-						if (!TheCSBots()->AllowRifles())
-							buyAlias = NULL;
-						break;
+				case RIFLE:
+					if (!TheCSBots()->AllowRifles())
+						buyAlias = NULL;
+					break;
 
-					case MACHINE_GUN:
-						if (!TheCSBots()->AllowMachineGuns())
-							buyAlias = NULL;
-						break;
+				case MACHINE_GUN:
+					if (!TheCSBots()->AllowMachineGuns())
+						buyAlias = NULL;
+					break;
 
-					case SNIPER_RIFLE:
-						if (!TheCSBots()->AllowSnipers())
-							buyAlias = NULL;
-						break;
-				}
+				case SNIPER_RIFLE:
+					if (!TheCSBots()->AllowSnipers())
+						buyAlias = NULL;
+					break;
 			}
 
 			if (buyAlias)
@@ -504,83 +474,71 @@ void BuyState::OnUpdate( CCSBot *me )
 		// if we have no preferred primary weapon (or everything we want is disallowed), buy at random
 		if (!me->HasPrimaryWeapon() && (isPreferredAllDisallowed || !me->GetProfile()->HasPrimaryPreference()))
 		{
-			if (m_buyShield)
-			{
-				// buy a shield
-				CCommand args;
-				args.Tokenize( "buy shield" );
-				me->ClientCommand( args );
+			// build list of allowable weapons to buy
+			BuyInfo *masterPrimary = (me->GetTeamNumber() == TEAM_TERRORIST) ? primaryWeaponBuyInfoT : primaryWeaponBuyInfoCT;
+			BuyInfo *stockPrimary[ PRIMARY_WEAPON_BUY_COUNT ];
+			int stockPrimaryCount = 0;
 
-				me->PrintIfWatched( "Tried to buy a shield.\n" );
+			// dont choose sniper rifles as often
+			const float sniperRifleChance = 50.0f;
+			bool wantSniper = (RandomFloat( 0, 100 ) < sniperRifleChance) ? true : false;
+
+			if ( bot_randombuy.GetBool() )
+			{
+				wantSniper = true;
 			}
-			else 
+
+			for( int i=0; i<PRIMARY_WEAPON_BUY_COUNT; ++i )
 			{
-				// build list of allowable weapons to buy
-				BuyInfo *masterPrimary = (me->GetTeamNumber() == TEAM_TERRORIST) ? primaryWeaponBuyInfoT : primaryWeaponBuyInfoCT;
-				BuyInfo *stockPrimary[ PRIMARY_WEAPON_BUY_COUNT ];
-				int stockPrimaryCount = 0;
-
-				// dont choose sniper rifles as often
-				const float sniperRifleChance = 50.0f;
-				bool wantSniper = (RandomFloat( 0, 100 ) < sniperRifleChance) ? true : false;
-
-				if ( bot_randombuy.GetBool() )
+				if ((masterPrimary[i].type == SHOTGUN && TheCSBots()->AllowShotguns()) ||
+					(masterPrimary[i].type == SUB_MACHINE_GUN && TheCSBots()->AllowSubMachineGuns()) ||
+					(masterPrimary[i].type == RIFLE && TheCSBots()->AllowRifles()) ||
+					(masterPrimary[i].type == SNIPER_RIFLE && TheCSBots()->AllowSnipers() && wantSniper) ||
+					(masterPrimary[i].type == MACHINE_GUN && TheCSBots()->AllowMachineGuns()))
 				{
-					wantSniper = true;
+					stockPrimary[ stockPrimaryCount++ ] = &masterPrimary[i];
 				}
-
-				for( int i=0; i<PRIMARY_WEAPON_BUY_COUNT; ++i )
-				{
-					if ((masterPrimary[i].type == SHOTGUN && TheCSBots()->AllowShotguns()) ||
-						(masterPrimary[i].type == SUB_MACHINE_GUN && TheCSBots()->AllowSubMachineGuns()) ||
-						(masterPrimary[i].type == RIFLE && TheCSBots()->AllowRifles()) ||
-						(masterPrimary[i].type == SNIPER_RIFLE && TheCSBots()->AllowSnipers() && wantSniper) ||
-						(masterPrimary[i].type == MACHINE_GUN && TheCSBots()->AllowMachineGuns()))
-					{
-						stockPrimary[ stockPrimaryCount++ ] = &masterPrimary[i];
-					}
-				}
+			}
  
-				if (stockPrimaryCount)
+			if (stockPrimaryCount)
+			{
+				// buy primary weapon if we don't have one
+				int which;
+
+				// on hard difficulty levels, bots try to buy preferred weapons on the first pass
+				if (m_retries == 0 && TheCSBots()->GetDifficultyLevel() >= BOT_HARD && bot_randombuy.GetBool() == false )
 				{
-					// buy primary weapon if we don't have one
-					int which;
+					// count up available preferred weapons
+					int prefCount = 0;
+					for( which=0; which<stockPrimaryCount; ++which )
+						if (stockPrimary[which]->preferred)
+							++prefCount;
 
-					// on hard difficulty levels, bots try to buy preferred weapons on the first pass
-					if (m_retries == 0 && TheCSBots()->GetDifficultyLevel() >= BOT_HARD && bot_randombuy.GetBool() == false )
+					if (prefCount)
 					{
-						// count up available preferred weapons
-						int prefCount = 0;
+						int whichPref = RandomInt( 0, prefCount-1 );
 						for( which=0; which<stockPrimaryCount; ++which )
-							if (stockPrimary[which]->preferred)
-								++prefCount;
-
-						if (prefCount)
-						{
-							int whichPref = RandomInt( 0, prefCount-1 );
-							for( which=0; which<stockPrimaryCount; ++which )
-								if (stockPrimary[which]->preferred && whichPref-- == 0)
-									break;
-						}
-						else
-						{
-							// no preferred weapons available, just pick randomly
-							which = RandomInt( 0, stockPrimaryCount-1 );
-						}
+							if (stockPrimary[which]->preferred && whichPref-- == 0)
+								break;
 					}
 					else
 					{
+						// no preferred weapons available, just pick randomly
 						which = RandomInt( 0, stockPrimaryCount-1 );
 					}
-
-					Q_snprintf( cmdBuffer, 256, "buy %s\n", stockPrimary[ which ]->buyAlias );
-
-					CCommand args;
-					args.Tokenize( cmdBuffer );
-					me->ClientCommand( args );
-
-					me->PrintIfWatched( "Tried to buy %s.\n", stockPrimary[ which ]->buyAlias );
 				}
+				else
+				{
+					which = RandomInt( 0, stockPrimaryCount-1 );
+				}
+
+				Q_snprintf( cmdBuffer, 256, "buy %s\n", stockPrimary[ which ]->buyAlias );
+
+				CCommand args;
+				args.Tokenize( cmdBuffer );
+				me->ClientCommand( args );
+
+				me->PrintIfWatched( "Tried to buy %s.\n", stockPrimary[ which ]->buyAlias );
 			}
 		}
 
@@ -636,12 +594,10 @@ void BuyState::OnUpdate( CCSBot *me )
 			if (m_buyGrenade && !me->HasGrenade())
 			{
 				float rnd = RandomFloat( 0, 100 );
-				
+
 				if (UTIL_IsTeamAllBots( me->GetTeamNumber() ))
 				{
 					// only allow Flashbangs if everyone on the team is a bot (dont want to blind our friendly humans)
-					float rnd = RandomFloat( 0, 100 );
-
 					if (rnd < 10)
 					{
 						args.Tokenize( "buy smokegrenade" );
@@ -673,7 +629,7 @@ void BuyState::OnUpdate( CCSBot *me )
 				}
 				else
 				{
-					if (RandomFloat( 0, 100 ) < 10)
+					if (rnd < 10)
 					{
 						args.Tokenize( "buy smokegrenade" );	// smoke grenade
 						me->ClientCommand( args );
@@ -716,4 +672,3 @@ void BuyState::OnExit( CCSBot *me )
 	me->ResetStuckMonitor();
 	me->EquipBestWeapon();
 }
-

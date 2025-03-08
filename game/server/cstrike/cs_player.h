@@ -19,6 +19,8 @@
 #include "cs_player_shared.h"
 #include "csgo_playeranimstate.h"
 
+
+
 class CWeaponCSBase;
 class CMenu;
 class CHintMessageQueue;
@@ -87,7 +89,6 @@ public:
 	char *GetPlayerDamagerName( void ) { return m_szPlayerDamagerName; }
 	char *GetPlayerRecipientName( void ) { return m_szPlayerRecipientName; }
 
-	char *GetPlayerName( void ) { return m_szPlayerName; }
 	int GetDamage( void ) { return m_iDamage; }
 	int GetActualHealthRemoved( void ) { return m_iActualHealthRemoved; }
 	int GetNumHits( void ) { return m_iNumHits; }
@@ -101,8 +102,7 @@ private:
 
 	char m_szPlayerDamagerName[MAX_PLAYER_NAME_LENGTH];
 	char m_szPlayerRecipientName[MAX_PLAYER_NAME_LENGTH];
-
-	char m_szPlayerName[MAX_PLAYER_NAME_LENGTH];
+	
 	int m_iDamage;		//how much damage was delivered
 	int m_iActualHealthRemoved;		//how much damage was actually applied
 	int m_iNumHits;		//how many hits
@@ -304,7 +304,7 @@ public:
 	virtual CBaseEntity *FindUseEntity( void );
 	virtual bool		IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredCaps );
 	
-	virtual void		CreateViewModel( int viewmodelindex = 0 );
+	virtual void		CreateViewModel( int viewmodelindex = WEAPON_VIEWMODEL );
 	virtual void		ShowViewPortPanel( const char * name, bool bShow = true, KeyValues *data = NULL );
 
 	void HandleOutOfAmmoKnifeKills( CCSPlayer* pAttackerPlayer, CWeaponCSBase* pAttackerWeapon );
@@ -315,17 +315,18 @@ public:
 	virtual void		SetupVisibility( CBaseEntity *pViewEntity, unsigned char *pvs, int pvssize );
 
 	virtual	bool		ShouldCollide( int collisionGroup, int contentsMask ) const;
-
+	
 	// from CBasePlayer
 	virtual bool		IsValidObserverTarget(CBaseEntity * target);
 	virtual CBaseEntity* FindNextObserverTarget( bool bReverse );
 
 	virtual int 		GetNextObserverSearchStartPoint( bool bReverse );
+
 	virtual bool UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence ) OVERRIDE;
 // In shared code.
 public:
 
-	// ICSPlayerAnimState overrides.
+	// IPlayerAnimState overrides.
 	virtual CWeaponCSBase* CSAnim_GetActiveWeapon();
 	virtual bool CSAnim_CanMove();
 
@@ -420,16 +421,10 @@ public:
 	virtual bool IsHoldingLookAtWeapon( void ) const { return m_bIsHoldingLookAtWeapon; }
 	virtual void StopLookingAtWeapon( void ) { m_bIsLookingAtWeapon = false; m_bIsHoldingLookAtWeapon = false; }
 	void ModifyTauntDuration( float flTimingChange ) { m_flLookWeaponEndTime -= flTimingChange; }
-	
+
 	CBaseEntity *GetUsableHighPriorityEntity( void );
 	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity, CConfigurationForHighPriorityUseEntity_t &cfg );
 	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity );
-
-	bool HasShield() const;
-	bool IsShieldDrawn() const;
-	void GiveShield( void );
-	void RemoveShield( void );
-	bool IsProtectedByShield( void ) const;		// returns true if player has a shield and is currently hidden behind it
 
 	bool HasPrimaryWeapon( void );
 	bool HasSecondaryWeapon( void );
@@ -439,7 +434,7 @@ public:
 	void GiveDefaultItems();
 	void RemoveAllItems( bool removeSuit );	//overridden to remove the defuser
 
-	// Reset account, get rid of shield, etc..
+	// Reset account, get rid of weapons, etc..
 	void Reset();
 
 	void RoundRespawn( void );
@@ -475,34 +470,28 @@ public:
 	virtual bool ShouldPickupItemSilently( CBaseCombatCharacter *pNewOwner );
 
 	void DropC4();	// Get rid of the C4 bomb.
-
+	
 	CNetworkHandle( CBaseEntity, m_hCarriedHostage );	// networked entity handle
 	void GiveCarriedHostage( EHANDLE hHostage );
 	void RefreshCarriedHostage( bool bForceCreate );
 	void RemoveCarriedHostage();
 	CNetworkHandle( CBaseEntity, m_hCarriedHostageProp );	// networked entity handle
 	EHANDLE	m_hHostageViewModel;
-
-
 	
 	bool HasDefuser();		// Is this player carrying a bomb defuser?
 	void GiveDefuser(bool bPickedUp = false);		// give the player a defuser
 	void RemoveDefuser();	// remove defuser from the player and remove the model attachment
 
-   
     // [dwenger] Added for fun-fact support
-
     bool PickedUpDefuser() { return m_bPickedUpDefuser; }
     void SetDefusedWithPickedUpKit(bool bDefusedWithPickedUpKit) { m_bDefusedWithPickedUpKit = bDefusedWithPickedUpKit; }
-    bool GetDefusedWithPickedUpKit() { return m_bDefusedWithPickedUpKit; }
+	bool GetDefusedWithPickedUpKit() { return m_bDefusedWithPickedUpKit; }
 	bool AttemptedToDefuseBomb() { return m_bAttemptedDefusal; }
 
 	void SetDefusedBombWithThisTimeRemaining( float flTimeRemaining ) { m_flDefusedBombWithThisTimeRemaining = flTimeRemaining; }
 	float GetDefusedBombWithThisTimeRemaining() { return m_flDefusedBombWithThisTimeRemaining; }
 
-	
 	// [sbodenbender] Need a different test for player blindness for the achievements
-	
 	bool IsBlindForAchievement();	// more stringent than IsBlind; more accurately represents when the player can see again
 
 	bool IsBlind( void ) const;		// return true if this player is blind (from a flashbang)
@@ -531,7 +520,7 @@ public:
 	void EmitPrivateSound( const char *soundName );		///< emit given sound that only we can hear
 
 	bool Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex /*= 0*/ );
-	
+
 	CWeaponCSBase* GetActiveCSWeapon() const;
 
 	int GetNumTriggerPulls() { return m_triggerPulls; }
@@ -549,13 +538,13 @@ public:
 	bool HandleCommand_JoinClass( int iClass );
 	bool HandleCommand_JoinTeam( int iTeam );
 
-	BuyResult_e HandleCommand_Buy( const char *item );
-
-    BuyResult_e HandleCommand_Buy_Internal( const char * item );
+	BuyResult_e HandleCommand_Buy( const char *item, bool bAddToRebuy = true );
+	BuyResult_e HandleCommand_Buy_Internal( const char *item, bool bAddToRebuy = true );
 
 	AcquireResult::Type CanAcquire( CSWeaponID weaponId, AcquireMethod::Type acquireMethod );
 	int					GetCarryLimit( CSWeaponID weaponId );
-	
+	int	GetWeaponPrice( CSWeaponID weaponId ) const;
+
 	void HandleMenu_Radio1( int slot );
 	void HandleMenu_Radio2( int slot );
 	void HandleMenu_Radio3( int slot );
@@ -609,7 +598,7 @@ public:
 
 	// Called whenever this player fires a shot.
 	void NoteWeaponFired();
-    virtual bool WantsLagCompensationOnEntity( const CBaseEntity *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const;
+	virtual bool WantsLagCompensationOnEntity( const CBaseEntity *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const;
 
 // ------------------------------------------------------------------------------------------------ //
 // Player state management.
@@ -679,7 +668,7 @@ public:
 
 	int GetNumConcurrentDominations( void );
 	void GiveWeaponFromID( int nWeaponID );
-
+	
 	void				SelectDeathPose( const CTakeDamageInfo &info );
 
 	bool				MadeFinalGunGameProgressiveKill( void ) { return m_bMadeFinalGunGameProgressiveKill; }
@@ -688,7 +677,7 @@ private:
 	int	m_iDeathPose;
 	int	m_iDeathFrame;
 	float m_flDeathYaw;
-	
+
 	bool m_switchTeamsOnNextRoundReset;
 
 // [menglish] Freeze cam function and variable declarations	 
@@ -703,20 +692,19 @@ protected:
 
 public:
 
+	CNetworkVar( bool, m_bIsScoped );
 	CNetworkVar( bool, m_bIsWalking );
 	// Predicted variables.
-	CNetworkVar( bool, m_bIsScoped );
 	CNetworkVar( bool, m_bResumeZoom );
 	CNetworkVar( int , m_iLastZoom ); // after firing a shot, set the FOV to 90, and after showing the animation, bring the FOV back to last zoom level.
 	CNetworkVar( bool, m_bIsDefusing );			// tracks whether this player is currently defusing a bomb
 	CNetworkVar( bool, m_bIsGrabbingHostage );			// tracks whether this player is currently grabbing a hostage
-	CNetworkVar( bool, m_bDuckOverride );
 	CNetworkVar( float, m_fImmuneToDamageTime );	// When gun game spawn damage immunity will expire
 	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune
 	CNetworkVar( bool, m_bMadeFinalGunGameProgressiveKill );
 	CNetworkVar( int, m_iGunGameProgressiveWeaponIndex );	// index of current gun game weapon
 	CNetworkVar( int, m_iNumGunGameKillsWithCurrentWeapon );
-	CNetworkVar( bool, m_bHasMovedSinceSpawn ); // Whether player has moved from spawn position
+	CNetworkVar( bool, m_bHasMovedSinceSpawn );		// Whether player has moved from spawn position
 
 	bool m_isCurrentGunGameLeader;
 	bool m_isCurrentGunGameTeamLeader;
@@ -724,12 +712,7 @@ public:
 	bool m_bIsFemale;
 
 	float m_fNextMolotovDamageSoundTime;
-
-	//=============================================================================
-	// HPE_BEGIN:
 	// [menglish] Adding two variables, keeping track of damage to the player
-	//=============================================================================
-	 
 	int m_LastHitBox;			// the last body hitbox that took damage
 	Vector m_vLastHitLocationObjectSpace; //position where last hit occured in space of the bone associated with the hitbox
 	EHANDLE		m_hDroppedEquipment[DROPPED_COUNT];
@@ -747,8 +730,10 @@ public:
 	virtual void CommitSuicide( bool bExplode = false, bool bForce = false );
 	virtual void CommitSuicide( const Vector &vecForce, bool bExplode = false, bool bForce = false );
 
-    void WieldingKnifeAndKilledByGun( bool bState ) { m_bWieldingKnifeAndKilledByGun = bState; }
-    bool WasWieldingKnifeAndKilledByGun() { return m_bWieldingKnifeAndKilledByGun; }
+	void WieldingKnifeAndKilledByGun( bool bState ) { m_bWieldingKnifeAndKilledByGun = bState; }
+	bool WasWieldingKnifeAndKilledByGun() { return m_bWieldingKnifeAndKilledByGun; }
+
+	void RecordRebuyStructLastRound();
 
 	void HandleEndOfRound();
 	bool WasKilledThisRound() { return m_wasKilledThisRound; }
@@ -756,20 +741,16 @@ public:
 	int GetCurNumRoundsSurvived() { return m_numRoundsSurvived; }
 
     // [dwenger] adding tracking for weapon used fun fact
-    void PlayerUsedFirearm( CBaseCombatWeapon* pBaseWeapon );
+	void PlayerUsedFirearm( CBaseCombatWeapon* pBaseWeapon );
 	void PlayerEmptiedAmmoForFirearm( CBaseCombatWeapon* pBaseWeapon );
 	void AddBurnDamageDelt( int entityIndex );
 	int GetNumPlayersDamagedWithFire();
 
-    int GetNumFirearmsUsed() { return m_WeaponTypesUsed.Count(); }
+	int GetNumFirearmsUsed() { return m_WeaponTypesUsed.Count(); }
 	int GetNumFirearmsRanOutOfAmmo() { return m_WeaponTypesRunningOutOfAmmo.Count(); }
 	bool DidPlayerEmptyAmmoForWeapon( CBaseCombatWeapon* pBaseWeapon );
 
 	void ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
-
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 	CNetworkVar( bool, m_bHasHelmet );				// Does the player have helmet armor
 	bool m_bEscaped;			// Has this terrorist escaped yet?
@@ -801,17 +782,6 @@ public:
 	CNetworkVar( bool, m_bHasNightVision );		    // Does this player have night vision?
 	CNetworkVar( bool, m_bNightVisionOn );		    // Is the NightVision turned on ?
 
-    //=============================================================================
-    // HPE_BEGIN:
-    // [dwenger] Added for fun-fact support
-    //=============================================================================
-
-    //CNetworkVar( bool, m_bPickedUpDefuser );        // Did player pick up the defuser kit as opposed to buying it?
-    //CNetworkVar( bool, m_bDefusedWithPickedUpKit);  // Did player defuse the bomb with a picked-up defuse kit?
-
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
 
 	// last known navigation area of player - NULL if unknown
 	CNavArea *m_lastNavArea;
@@ -831,7 +801,6 @@ public:
 	// See if we need to prevent player from being able to diffuse bomb.
 	CNetworkVar( bool, m_bInNoDefuseArea );
 	CNetworkVar( bool, m_bKilledByTaser );
-
 	int m_iBombSiteIndex;
 
 	CNetworkVar( int, m_iMoveState );		// Is the player trying to run?  Used for state transitioning after a player lands from a jump etc.
@@ -852,6 +821,7 @@ public:
 	CNetworkVar( float, m_flStamina );
 	CNetworkVar( int, m_iDirection );	// The current lateral kicking direction; 1 = right,  0 = left
 	CNetworkVar( int, m_iShotsFired );	// number of shots fired recently
+	CNetworkVar( bool, m_bDuckOverride );	// number of shots fired recently
 
 	// Make sure to register changes for armor.
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_ArmorValue );
@@ -860,9 +830,6 @@ public:
 	CNetworkVar( float, m_flGroundAccelLinearFracLastTime );
 
 	int	m_iHostagesKilled;
-
-	void SetShieldDrawnState( bool bState );
-	void DropShield( void );
 	
 	char m_szNewName [MAX_PLAYER_NAME_LENGTH]; // not empty if player requested a namechange
 	char m_szClanTag[MAX_CLAN_TAG_LENGTH];
@@ -875,7 +842,7 @@ public:
 	CNetworkVar( float, m_flProgressBarStartTime );
 	CNetworkVar( int, m_iProgressBarDuration );
 	CNetworkVar( int, m_iThrowGrenadeCounter );	// used to trigger grenade throw animations.
-
+	
 	CNetworkVar( float, m_flLowerBodyYawTarget );
 	CNetworkVar( bool, m_bStrafing );
 	
@@ -896,22 +863,14 @@ public:
 	void SwitchTeamsAtRoundReset( void ) { m_switchTeamsOnNextRoundReset = true; }
 	bool WillSwitchTeamsAtRoundReset( void ) { return m_switchTeamsOnNextRoundReset; }
 
+	CNetworkVar( bool, m_bDetected );
+
 	int m_iLoadoutSlotAgentCT;
 	int m_iLoadoutSlotAgentT;
 	CNetworkVar( int, m_iLoadoutSlotKnifeWeaponCT );
 	CNetworkVar( int, m_iLoadoutSlotKnifeWeaponT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesT );
-	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield = true, bool bThrow = false );
-	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool bDropShield = true );
-	
-	bool HandleDropWeapon( CBaseCombatWeapon *pWeapon = NULL, bool bSwapping = false );
-
-	void DestroyWeapon( CBaseCombatWeapon *pWeapon );
-	void DestroyWeapons( bool bDropC4 = true );
-
-	bool IsPlayerSpawning( void ) { return m_bIsSpawning; }
-	void SetPlayerSpawning( bool bIsSpawning ) { m_bIsSpawning = bIsSpawning; }
 
 private:
 	CountdownTimer m_ladderSurpressionTimer;
@@ -921,8 +880,6 @@ private:
 protected:
 
 	void CreateRagdollEntity();
-
-	bool IsHittingShield( const Vector &vecDirection, trace_t *ptr );
 
 	void PhysObjectSleep();
 	void PhysObjectWake();
@@ -941,6 +898,16 @@ public:
 	void SetPickedUpWeaponThisRound( bool pickedUp ) { m_bPickedUpWeapon = pickedUp; }
 	bool GetPickedUpWeaponThisRound( void ) { return m_bPickedUpWeapon; }
 
+	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bThrow = false );
+	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos );
+
+	bool HandleDropWeapon( CBaseCombatWeapon *pWeapon = NULL, bool bSwapping = false );
+
+	void DestroyWeapon( CBaseCombatWeapon *pWeapon );
+	void DestroyWeapons( bool bDropC4 = true );
+
+	bool IsPlayerSpawning( void ) { return m_bIsSpawning; }
+	void SetPlayerSpawning( bool bIsSpawning ) { m_bIsSpawning = bIsSpawning; }
 
 protected:
 	void TransferInventory( CCSPlayer* pTargetPlayer );
@@ -962,14 +929,13 @@ protected:
 
 	virtual int SpawnArmorValue( void ) const { return ArmorValue(); }
 
+	bool BAttemptToBuyCheckSufficientBalance( int nCostOfPurchaseToCheck, bool bClientPrint = true );
 	BuyResult_e AttemptToBuyAmmo( int iAmmoType );
 	BuyResult_e AttemptToBuyAmmoSingle( int iAmmoType );
 	BuyResult_e AttemptToBuyVest( void );
 	BuyResult_e AttemptToBuyAssaultSuit( void );
 	BuyResult_e AttemptToBuyDefuser( void );
 	BuyResult_e AttemptToBuyNightVision( void );
-	BuyResult_e AttemptToBuyTaser( void );
-	BuyResult_e AttemptToBuyShield( void );
 	
 	BuyResult_e BuyAmmo( int nSlot, bool bBlinkMoney );
 	BuyResult_e BuyGunAmmo( CBaseCombatWeapon *pWeapon, bool bBlinkMoney );
@@ -991,14 +957,14 @@ private:
 	int							m_lastDamageArmor;		// Last damage given to our armor
 
     // [dwenger] Added for fun-fact support
-    
 	bool						m_bPickedUpWeapon;
     bool                        m_bPickedUpDefuser;         // Did player pick up the defuser kit as opposed to buying it?
-    bool						m_bAttemptedDefusal;
-	bool                        m_bDefusedWithPickedUpKit;  // Did player defuse the bomb with a picked-up defuse kit?
+    bool                        m_bDefusedWithPickedUpKit;  // Did player defuse the bomb with a picked-up defuse kit?
+	bool						m_bAttemptedDefusal;
 	int							m_nPreferredGrenadeDrop;
 
 	float						m_flDefusedBombWithThisTimeRemaining;
+
 
 	// Last usercmd we shot a bullet on.
 	int m_iLastWeaponFireUsercmd;
@@ -1006,18 +972,18 @@ private:
 	// Copyed from EyeAngles() so we can send it to the client.
 	CNetworkVectorXYZ( m_angEyeAngles );
 
+	bool m_bVCollisionInitted;
+
 	Vector m_storedSpawnPosition;
 	QAngle m_storedSpawnAngle;
 	bool m_bIsSpawning;
-
-	bool m_bVCollisionInitted;
 
 public:
 	CNetworkVar( float, m_flThirdpersonRecoil );
 
 // AutoBuy functions.
 public:
-	void			AutoBuy(); // this should take into account what the player can afford and should buy the best equipment for them.
+	void			AutoBuy( const char *autobuyString ); // this should take into account what the player can afford and should buy the best equipment for them.
 
 	bool			IsInAutoBuy( void ) { return m_bIsInAutoBuy; }
 	bool			IsInReBuy( void ) { return m_bIsInRebuy; }
@@ -1037,34 +1003,27 @@ private:
 //ReBuy functions
 
 public:
-	void			Rebuy();
+	void			Rebuy( const char *rebuyString );
 private:
-	void			BuildRebuyStruct();
+	void			AddToRebuy( CSWeaponID weaponId );
+	void			AddToGrenadeRebuy( CSWeaponID weaponId );
 
 	BuyResult_e	RebuyPrimaryWeapon();
 	//BuyResult_e	RebuyPrimaryAmmo();
 	BuyResult_e	RebuySecondaryWeapon();
 	//BuyResult_e	RebuySecondaryAmmo();
 	BuyResult_e	RebuyTaser();
-	BuyResult_e	RebuyHEGrenade();
-	BuyResult_e	RebuyFlashbang();
-	BuyResult_e	RebuySmokeGrenade();
-	BuyResult_e	RebuyDecoy();
-	BuyResult_e	RebuyMolotov();
+	BuyResult_e	RebuyGrenade( CSWeaponID weaponId );
 	BuyResult_e	RebuyDefuser();
 	BuyResult_e	RebuyNightVision();
 	BuyResult_e	RebuyArmor();
 
 	bool			m_bIsInRebuy;
 	RebuyStruct		m_rebuyStruct;
+	RebuyStruct		m_rebuyStructLastRound;
 	bool			m_bUsingDefaultPistol;
 
 	bool			m_bIsBeingGivenItem;
-
-#ifdef CS_SHIELD_ENABLED
-	CNetworkVar( bool, m_bHasShield );
-	CNetworkVar( bool, m_bShieldDrawn );
-#endif
 	
 	// This is a combination of the ADDON_ flags in cs_shareddefs.h.
 	CNetworkVar( int, m_iAddonBits );
@@ -1172,7 +1131,7 @@ public:
     bool IsRescuing() { return m_bIsRescuing; }
     void SetInjuredAHostage(bool in_bInjured) { m_bInjuredAHostage = in_bInjured; }
     bool InjuredAHostage() { return m_bInjuredAHostage; }
-   	float GetBombPickuptime() { return m_bombPickupTime; }
+	float GetBombPickuptime() { return m_bombPickupTime; }
 	float GetBombPlacedTime() { return m_bombPlacedTime; }
 	float GetBombDroppedTime() { return m_bombDroppedTime; }
 	void SetBombPickupTime( float time ) { m_bombPickupTime = time; }
@@ -1198,7 +1157,7 @@ public:
 
     bool                        m_bMadeFootstepNoise;
 
-    float                       m_bombPickupTime;
+	float                       m_bombPickupTime;
 	float						m_bombPlacedTime;
 	float						m_bombDroppedTime;
 	float						m_killedTime;
@@ -1232,17 +1191,13 @@ public:
 
 	bool	WasNotKilledNaturally() { return m_wasNotKilledNaturally; }
 
-	//=============================================================================
-	// [menglish] MVP functions
-	//=============================================================================
-	 
+	// [menglish] MVP functions	 
 	void	SetNumMVPs( int iNumMVP );
 	void	IncrementNumMVPs( CSMvpReason_t mvpReason );
 	int		GetNumMVPs();
+
+	int		GetFrags() const { return m_iFrags; }
 	 
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
     void    RemoveNemesisRelationships();
 	void	SetDeathFlags( int iDeathFlags ) { m_iDeathFlags = iDeathFlags; }
 	int		GetDeathFlags() { return m_iDeathFlags; }
@@ -1253,7 +1208,9 @@ public:
 private:
     CNetworkArray( bool, m_bPlayerDominated, MAX_PLAYERS+1 );		// array of state per other player whether player is dominating other players
     CNetworkArray( bool, m_bPlayerDominatingMe, MAX_PLAYERS+1 );	// array of state per other player whether other players are dominating this player
+
 	CNetworkArray( int, m_iWeaponPurchasesThisRound, MAX_WEAPONS );	// number of times weapons purchased this round; used to limit repurchases
+
 	CNetworkVar( bool, m_bIsLookingAtWeapon );
 	CNetworkVar( bool, m_bIsHoldingLookAtWeapon );
 
@@ -1263,7 +1220,7 @@ private:
 	int m_iMVPs;
 
     // [dwenger] adding tracking for fun fact
-    bool m_bWieldingKnifeAndKilledByGun;
+	bool m_bWieldingKnifeAndKilledByGun;
 	int m_botsControlled;
 	int m_iFootsteps;
 	int m_iMediumHealthKills;
@@ -1273,7 +1230,7 @@ private:
 	int	 m_numRoundsSurvived;
 
     // [dwenger] adding tracking for which weapons this player has used in a round
-    CUtlVector<CSWeaponID> m_WeaponTypesUsed;
+	CUtlVector<CSWeaponID> m_WeaponTypesUsed;
 	CUtlVector<CSWeaponID> m_WeaponTypesRunningOutOfAmmo;
 	CUtlVector<int>		   m_BurnDamageDeltVec;
 
@@ -1342,8 +1299,9 @@ private:
 	bool UpdateLayerWeaponDispatch( CAnimationLayer *pLayer, int iSequence );
 public:
 	virtual float	GetLayerSequenceCycleRate( CAnimationLayer *pLayer, int iSequence );
-	
+
 #endif // #if CS_CONTROLLABLE_BOTS_ENABLED
+
 };
 
 
@@ -1367,11 +1325,6 @@ inline bool CCSPlayer::IsReloading( void ) const
 		return false;
 
 	return gun->m_bInReload;
-}
-
-inline bool CCSPlayer::IsProtectedByShield( void ) const
-{ 
-	return HasShield() && IsShieldDrawn();
 }
 
 inline bool CCSPlayer::IsBlind( void ) const

@@ -168,8 +168,6 @@ void CWeaponGlock::PrimaryAttack()
 
 	pPlayer->DoMuzzleFlash();
 
-	//SetPlayerShieldAnim();
-
 	// player "shoot" animation
 	pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
@@ -208,8 +206,6 @@ void CWeaponGlock::PrimaryAttack()
 
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[m_weaponMode];
-
-	//ResetPlayerShieldAnim();
 
 	// table driven recoil
 	Recoil( m_weaponMode );
@@ -304,20 +300,9 @@ void CWeaponGlock::WeaponIdle()
 	if (m_flTimeWeaponIdle > gpGlobals->curtime)
 		return;
 
-	if ( pPlayer->HasShield() )
+	// only idle if the slid isn't back
+	if (m_iClip1 != 0)
 	{
-		SetWeaponIdleTime( gpGlobals->curtime + 20 );
-				
-		//MIKETODO: shields
-		//if ( FBitSet(m_iWeaponState, WPNSTATE_SHIELD_DRAWN) )
-		//	 SendWeaponAnim( GLOCK18_SHIELD_IDLE, UseDecrement() ? 1:0 );
-	}
-	else
-	{
-		// only idle if the slid isn't back
-		if (m_iClip1 != 0)
-		{
-			SendWeaponAnim( ACT_VM_IDLE );
-		}
+		SendWeaponAnim( ACT_VM_IDLE );
 	}
 }

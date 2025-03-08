@@ -194,7 +194,7 @@ void CHudTeamCounter::OnThink()
 	else
 		m_pBombIcon->SetVisible( false );
 
-	if ( bBombPlanted || pRules->IsTimeOutActive() )
+	if ( bBombPlanted )
 		m_pRoundTimerLabel->SetText( L" " );
 	else
 	{

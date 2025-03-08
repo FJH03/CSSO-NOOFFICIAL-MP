@@ -110,7 +110,7 @@ inline float FractionUnDucked( int msecs )
 
 #define MAX_WEAPON_SLOTS		12	// hud item selection slots
 #define MAX_WEAPON_POSITIONS	6	// max number of items within a slot
-#define MAX_WEAPONS				64	// Max number of weapons available
+#define MAX_WEAPONS				128	// Max number of weapons available
 
 #define MAX_ITEMS				5	// hard coded item types
 

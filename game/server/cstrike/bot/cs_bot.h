@@ -124,8 +124,6 @@ protected:
 	bool m_haveSeenEnemy;										///< false if we haven't yet seen the enemy since we started this attack (told by a friend, etc)
 	bool m_isEnemyHidden;										///< true we if we have lost line-of-sight to our enemy
 	float m_reacquireTimestamp;									///< time when we can fire again, after losing enemy behind cover
-	float m_shieldToggleTimestamp;								///< time to toggle shield deploy state
-	bool m_shieldForceOpen;										///< if true, open up and shoot even if in danger
 
 	float m_pinnedDownTimestamp;								///< time when we'll consider ourselves "pinned down" by the enemy
 
@@ -182,7 +180,6 @@ private:
 	bool m_doneBuying;
 	bool m_buyDefuseKit;
 	bool m_buyGrenade;
-	bool m_buyShield;
 	bool m_buyPistol;
 };
 
@@ -695,7 +692,6 @@ public:
 	void UpdateReactionQueue( void );							///< update our reaction time queue
 	CCSPlayer *GetRecognizedEnemy( void );						///< return the most dangerous threat we are "conscious" of
 	bool IsRecognizedEnemyReloading( void );					///< return true if the enemy we are "conscious" of is reloading
-	bool IsRecognizedEnemyProtectedByShield( void );			///< return true if the enemy we are "conscious" of is hiding behind a shield
 	float GetRangeToNearestRecognizedEnemy( void );				///< return distance to closest enemy we are "conscious" of
 
 	CCSPlayer *GetAttacker( void ) const;						///< return last enemy that hurt us
@@ -1277,7 +1273,6 @@ private:
 		// NOTE: player position & orientation is not currently stored separately
 		CHandle<CCSPlayer> player;
 		bool isReloading;
-		bool isProtectedByShield;
 	}
 	m_enemyQueue[ MAX_ENEMY_QUEUE ];								///< round-robin queue for simulating reaction times
 	byte m_enemyQueueIndex;

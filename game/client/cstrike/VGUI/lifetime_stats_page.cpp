@@ -181,7 +181,7 @@ int CLifetimeStatsPage::AddFavoriteWeaponStat(const StatsCollection_t& personalL
 	KeyValues *pKeyValues = new KeyValues( "data" );
 	pKeyValues->SetWString( "name", LocalizeTagOrUseDefault( "Stats_FavoriteWeapon", L"Favorite Weapon" ) );
 
-	pKeyValues->SetWString( "playerValue", TranslateWeaponKillIDToAlias(statPlayerBestWeapon.iStatId) );
+	pKeyValues->SetString( "playerValue", TranslateWeaponKillIDToAlias(statPlayerBestWeapon.iStatId) );
 
 	int newItem = m_statsList->AddItem(0, pKeyValues);
 	pKeyValues->deleteThis();

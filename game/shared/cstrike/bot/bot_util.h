@@ -37,7 +37,6 @@ extern ConVar cv_bot_allow_rifles;
 extern ConVar cv_bot_allow_machine_guns;
 extern ConVar cv_bot_allow_grenades;
 extern ConVar cv_bot_allow_snipers;
-extern ConVar cv_bot_allow_shield;
 extern ConVar cv_bot_join_team;
 extern ConVar cv_bot_join_after_player;
 extern ConVar cv_bot_auto_vacate;

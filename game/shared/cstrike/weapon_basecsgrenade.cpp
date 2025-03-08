@@ -335,7 +335,7 @@ void CBaseCSGrenade::ItemPostFrame()
 		if( event )
 		{
 			const char *weaponName = STRING( m_iClassname );
-			if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
+			if ( IsWeaponClassname( weaponName ) )
 			{
 				weaponName += 7;
 			}

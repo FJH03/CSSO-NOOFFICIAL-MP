@@ -52,7 +52,6 @@ $Project "Server (CStrike)"
 			$File	"$SRCDIR\game\shared\cstrike\cs_ammodef.h"
 			$File	"cstrike\cs_autobuy.cpp"
 			$File	"cstrike\cs_autobuy.h"
-			$File	"$SRCDIR\game\shared\cstrike\cs_blackmarket.cpp"
 			$File	"cstrike\cs_client.cpp"
 			$File	"cstrike\cs_client.h"
 			$File	"cstrike\cs_eventlog.cpp"
@@ -128,17 +127,6 @@ $Project "Server (CStrike)"
 			$File	"cstrike\te_shotgun_shot.h"
 			$File	"cstrike\holiday_gift.cpp"
 			$File	"cstrike\holiday_gift.h"
-			
-			$File	"$SRCDIR\game\shared\cstrike\cs_urlretrieveprices.cpp"
-			{
-				$Configuration
-				{
-					$Compiler
-					{
-						$Create/UsePrecompiledHeader	"Not Using Precompiled Headers"
-					}
-				}
-			}
 
 			$File	"$SRCDIR\game\shared\cstrike\cs_urlretrieveprices.h"
 			

@@ -28,12 +28,6 @@
 	#include "funfactmgr_cs.h"
 #endif
 
-#include "cs_urlretrieveprices.h"
-
-//extern ConVar mp_dynamicpricing;
-
-#define CS_GAMERULES_BLACKMARKET_TABLE_NAME "BlackMarketTable"
-
 #define	WINNER_NONE		0
 #define WINNER_DRAW		1
 #define WINNER_TER		TEAM_TERRORIST
@@ -342,7 +336,6 @@ public:
 	// Get the view vectors for this mod.
 	virtual const CViewVectors* GetViewVectors() const;
 
-	void UploadGameStats( void );
 	int  GetStartMoney( void );
 
 	void AddHostageRescueTime( void );
@@ -361,7 +354,6 @@ private:
 
 	CNetworkVar( bool, m_bFreezePeriod );	 // TRUE at beginning of round, set to FALSE when the period expires
 	CNetworkVar( bool, m_bWarmupPeriod );	 // 
-	CNetworkVar( float, m_fWarmupPeriodEnd ); // OBSOLETE. LEFT IN FOR DEMO COMPATIBILITY.
 	CNetworkVar( float, m_fWarmupPeriodStart );
 	CNetworkVar( bool, m_bMatchWaitingForResume ); // When mp_pause_match is called, this state becomes true and will prevent the next freezetime from ending.
 	CNetworkVar( int, m_iRoundTime );		 // (From mp_roundtime) - How many seconds long this round is.
@@ -379,12 +371,9 @@ private:
 	CNetworkArray( int, m_GGProgressiveWeaponOrderT, 60 );	// T gun game weapon order and # kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
 	CNetworkArray( int, m_GGProgressiveWeaponKillUpgradeOrderCT, 60 );	// CT gun game number of kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
 	CNetworkArray( int, m_GGProgressiveWeaponKillUpgradeOrderT, 60 );	// T gun game number of kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
-	CNetworkVar( bool, m_bBlackMarket );
 	
 	int		m_iMapFactionCT;
 	int		m_iMapFactionT;
-
-	bool		m_bDontUploadStats;
 	
 	GamePhase m_gamePhase;
 
@@ -396,7 +385,6 @@ public:
 	CNetworkVar( bool, m_bBombPlanted );
 	CNetworkVar( int, m_iRoundWinStatus );
 
-	bool IsBlackMarket( void ) { return m_bBlackMarket; }
 	int GetNumHostagesRemaining( void ) { return m_iHostagesRemaining; }
 
 	virtual CBaseCombatWeapon *GetNextBestWeapon( CBaseCombatCharacter *pPlayer, CBaseCombatWeapon *pCurrentWeapon );
@@ -799,13 +787,6 @@ private:
 
 	float			m_flLastThinkTime;
 
-public:
-
-
-
-	void AddPricesToTable( weeklyprice_t prices );
-	virtual void CreateCustomNetworkStringTables( void );
-
 #endif
 
 
@@ -815,20 +796,9 @@ public:
 #endif
 
 public:
-	const weeklyprice_t *GetBlackMarketPriceList( void );
-
-	int GetBlackMarketPriceForWeapon( int iWeaponID );
-	int GetBlackMarketPreviousPriceForWeapon( int iWeaponID );
-
-	void SetBlackMarketPrices( bool bSetDefaults );
-
 	bool IsSwitchingTeamsAtRoundReset( void ) { return m_bSwitchingTeamsAtRoundReset; }
 
 	float CheckTotalSmokedLength( float flRadius, Vector vecGrenadePos, Vector from, Vector to );
-
-	// Black market
-	INetworkStringTable *m_StringTableBlackMarket;
-	const weeklyprice_t *m_pPrices;
 
 protected:
 	bool m_bHasTriggeredRoundStartMusic;

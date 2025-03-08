@@ -145,7 +145,7 @@ void CWeaponCSBaseGun::SecondaryAttack()
 			if ( event )
 			{
 				const char *weaponName = STRING( m_iClassname );
-				if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
+				if ( IsWeaponClassname( weaponName ) )
 				{
 					weaponName += 7;
 				}
@@ -302,7 +302,6 @@ bool CWeaponCSBaseGun::Reload()
 	pPlayer->m_iShotsFired = 0;
 	m_bDelayFire = false;
 
-	pPlayer->SetShieldDrawnState( false );
 	return true;
 }
 

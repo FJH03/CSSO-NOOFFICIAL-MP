@@ -90,7 +90,7 @@ void CItem_Healthshot::DropHealthshot( void )
 	int iAmount = pPlayer->GetAmmoCount( GetPrimaryAmmoType() );
 	if ( iAmount <= 1 )
 	{
-		pPlayer->CSWeaponDrop( this, false, true );
+		pPlayer->CSWeaponDrop( this, true );
 		return;
 	}
 	else	

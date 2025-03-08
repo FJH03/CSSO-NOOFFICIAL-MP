@@ -1595,13 +1595,11 @@ void CCSBot::UpdateReactionQueue( void )
 	{
 		m_enemyQueue[ now ].player = threat;
 		m_enemyQueue[ now ].isReloading = threat->IsReloading();
-		m_enemyQueue[ now ].isProtectedByShield = threat->IsProtectedByShield();
 	}
 	else
 	{
 		m_enemyQueue[ now ].player = NULL;
 		m_enemyQueue[ now ].isReloading = false;
-		m_enemyQueue[ now ].isProtectedByShield = false;
 	}
 
 	// queue is round-robin
@@ -1652,18 +1650,6 @@ bool CCSBot::IsRecognizedEnemyReloading( void )
 		return false;
 
 	return m_enemyQueue[ m_enemyQueueAttendIndex ].isReloading;
-}
-
-//--------------------------------------------------------------------------------------------------------------
-/**
- * Return true if the enemy we are "conscious" of is hiding behind a shield
- */
-bool CCSBot::IsRecognizedEnemyProtectedByShield( void )
-{
-	if (m_enemyQueueAttendIndex >= m_enemyQueueCount)
-		return false;
-
-	return m_enemyQueue[ m_enemyQueueAttendIndex ].isProtectedByShield;
 }
 
 //--------------------------------------------------------------------------------------------------------------

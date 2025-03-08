@@ -108,7 +108,6 @@ void CWeaponP250::PrimaryAttack( void )
 	m_iClip1--;
 	
 	 pPlayer->DoMuzzleFlash();
-	//SetPlayerShieldAnim();
 
 	SendWeaponAnim( ACT_VM_PRIMARYATTACK );
 
@@ -135,8 +134,6 @@ void CWeaponP250::PrimaryAttack( void )
 	}
 
 	SetWeaponIdleTime( gpGlobals->curtime + 2 );
-
-	//ResetPlayerShieldAnim();
 
 	// table driven recoil
 	Recoil( m_weaponMode );

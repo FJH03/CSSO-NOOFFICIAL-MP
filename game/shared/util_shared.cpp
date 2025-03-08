@@ -279,6 +279,11 @@ bool StandardFilterRules( IHandleEntity *pHandleEntity, int fContentsMask )
 	return true;
 }
 
+bool IsWeaponClassname( const char *pszClassName )
+ {
+ 	// Look at the name of the class to determine if this is a weapon.
+ 	return ( !Q_strnicmp( "weapon_", pszClassName, 7 ) );
+ }
 
 //-----------------------------------------------------------------------------
 // Simple trace filter

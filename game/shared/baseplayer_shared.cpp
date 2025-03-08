@@ -25,6 +25,9 @@
 	#define CRecipientFilter C_RecipientFilter
 	#include "sourcevr/isourcevirtualreality.h"
 	#include "weapon_selection.h"
+	#ifdef CSTRIKE_DLL
+ 		#include "c_cs_player.h"
+ 	#endif
 
 #else
 
@@ -34,6 +37,9 @@
 	#include "doors.h"
 	#include "ai_basenpc.h"
 	#include "env_zoom.h"
+	#ifdef CSTRIKE_DLL
+ 		#include "cs_player.h"
+ 	#endif
 
 	extern int TrainSpeed(int iSpeed, int iMax);
 	
@@ -1697,7 +1703,7 @@ void CBasePlayer::PlayerUse ( void )
 					if ( pC4 )
 					{
 						pBot->SetBombDroppedTime( gpGlobals->curtime );
-						pBot->CSWeaponDrop( pC4, WorldSpaceCenter(), false );
+						pBot->CSWeaponDrop( pC4, WorldSpaceCenter() );
 						pBot->Radio( "Radio.YouTakeThePoint", "#Cstrike_TitlesTXT_Game_afk_bomb_drop" );
 					}
 				}

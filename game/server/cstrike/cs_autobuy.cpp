@@ -57,7 +57,6 @@ AutoBuyInfoStruct g_autoBuyInfo[] =
 	{ (AutoBuyClassType)(AUTOBUYCLASS_GRENADE), "decoy", "weapon_decoy" }, // decoy
 	{ (AutoBuyClassType)(AUTOBUYCLASS_NIGHTVISION), "nvgs", "nvgs" }, // nvgs
 	{ (AutoBuyClassType)(AUTOBUYCLASS_DEFUSER), "defuser", "defuser" }, // defuser
-	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_SHIELD), "shield", "shield" }, // shield
 
 	{ (AutoBuyClassType)0, "", "" } // last one, must be at end.
 };

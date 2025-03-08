@@ -15,7 +15,6 @@
 #endif
 
 #include "ammodef.h"
-#include "cs_blackmarket.h"
 
 class ConVar;
 

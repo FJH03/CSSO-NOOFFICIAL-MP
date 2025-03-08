@@ -1424,30 +1424,6 @@ void CC4::WeaponIdle()
 	}
 }
 
-void CC4::UpdateShieldState( void )
-{
-	//ADRIANTODO
-	CCSPlayer *pPlayer = GetPlayerOwner();
-	if ( !pPlayer )
-		return;
-	
-	if ( pPlayer->HasShield() )
-	{
-		pPlayer->SetShieldDrawnState( false );
-
-		CBaseViewModel *pVM = pPlayer->GetViewModel( 1 );
-
-		if ( pVM )
-		{
-			pVM->AddEffects( EF_NODRAW );
-		}
-			//pPlayer->SetHitBoxSet( 3 );
-	}
-	else
-		BaseClass::UpdateShieldState();
-}
-
-
 int m_iBeepFrames[NUM_BEEPS] = { 20, 29, 37, 44, 50, 59, 65 };
 int iNumArmingAnimFrames = 83;
 

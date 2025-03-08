@@ -320,11 +320,6 @@ void HideState::OnUpdate( CCSBot *me )
 			me->PrintIfWatched( "Firing at anticipated enemy coming around the corner!\n" );
 		}
 */
-
-		// if we have a shield, hide behind it
-		if (me->HasShield() && !me->IsProtectedByShield())
-			me->SecondaryAttack();
-
 		// while sitting at our hiding spot, if we are being attacked but can't see our attacker, move somewhere else
 		const float hurtRecentlyTime = 1.0f;
 		if (!me->IsEnemyVisible() && me->GetTimeSinceAttacked() < hurtRecentlyTime)
@@ -542,8 +537,4 @@ void HideState::OnExit( CCSBot *me )
 	me->ResetStuckMonitor();
 	//me->ClearLookAt();
 	me->ClearApproachPoints();
-
-	// if we have a shield, put it away
-	if (me->HasShield() && me->IsProtectedByShield())
-		me->SecondaryAttack();
 }

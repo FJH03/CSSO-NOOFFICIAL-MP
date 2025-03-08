@@ -93,10 +93,6 @@ enum CSWeaponID
 	WEAPON_MOLOTOV,
 	WEAPON_INCGRENADE,
 
-	WEAPON_HEALTHSHOT,
-
-	//knifes massive
-
 	WEAPON_KNIFE,
 	WEAPON_KNIFE_T,
 	WEAPON_KNIFE_GG,
@@ -122,16 +118,24 @@ enum CSWeaponID
 
 	WEAPON_KNIFE_LAST = WEAPON_KNIFE_PUSH,
 
-	WEAPON_SHIELDGUN,	// BOTPORT: Is this still needed?
+	ITEM_KEVLAR,
+	ITEM_ASSAULTSUIT,
+	ITEM_NVG,
+	ITEM_DEFUSER,
 
-	WEAPON_KEVLAR,
-	WEAPON_ASSAULTSUIT,
-	WEAPON_NVG,
+	WEAPON_HEALTHSHOT,
 
 	WEAPON_MAX,		// number of weapons weapon index
 };
 
-#define MAX_EQUIPMENT (WEAPON_MAX - WEAPON_KEVLAR)
+enum
+{
+	ITEM_PRICE_KEVLAR = 650,
+	ITEM_PRICE_HELMET = 350,
+	ITEM_PRICE_ASSAULTSUIT = ITEM_PRICE_KEVLAR + ITEM_PRICE_HELMET,
+	ITEM_PRICE_DEFUSEKIT = 400,
+	ITEM_PRICE_NVG = 1250,
+};
 
 void PrepareEquipmentInfo( void );
 
@@ -166,19 +170,16 @@ private:
 };
 
 //--------------------------------------------------------------------------------------------------------
+// Utility conversion functions 
+//--------------------------------------------------------------------------------------------------------
 const char * WeaponClassAsString( CSWeaponType weaponType );
-
-//--------------------------------------------------------------------------------------------------------
 CSWeaponType WeaponClassFromString( const char* weaponType );
-
-//--------------------------------------------------------------------------------------------------------
 CSWeaponType WeaponClassFromWeaponID( CSWeaponID weaponID );
-
-//--------------------------------------------------------------------------------------------------------
-const char * WeaponIdAsString( CSWeaponID weaponID );
-
-//--------------------------------------------------------------------------------------------------------
+const char* WeaponIdAsString( CSWeaponID weaponID );
 CSWeaponID WeaponIdFromString( const char *szWeaponName );
+const char *WeaponIDToAlias( int id );
+CSWeaponID AliasToWeaponID( const char *szAlias );
+const char *WeaponIDToDisplayName( CSWeaponID weaponID );
 
 
 //--------------------------------------------------------------------------------------------------------
@@ -209,15 +210,12 @@ public:
 	int	  m_iCrosshairMinDistance;
 	int	  m_iCrosshairDeltaDistance;
 	
-	bool  m_bCanUseWithShield;
-	
 	char m_WrongTeamMsg[32];	// Reference to a string describing the error if someone tries to buy
 								// this weapon but they're on the wrong team to have it.
 								// Zero-length if no specific message for this weapon.
 
 	char m_szAnimExtension[16];
 	char m_szUIAnimExtension[16];
-	char m_szShieldViewModel[64];
 
 	char m_szAddonModel[MAX_WEAPON_STRING];		// If this is set, it is used as the addon model. Otherwise, szWorldModel is used.
 	char m_szMagModel[MAX_WEAPON_STRING];		// Magazine model for dropping magazines
@@ -230,13 +228,13 @@ public:
 	char m_szClassMenuAnimT[MAX_WEAPON_STRING];
 
 	float m_flAddonScale;
-	
+
 	// grenade throw parameters
 	float	m_fThrowVelocity;
 	
 	int	  m_iMuzzleFlashStyle;
 	float m_flMuzzleScale;
-
+	
 	// Parameters for FX_FireBullets:
 	float	m_iPenetration;
 	int		m_iDamage;
@@ -304,17 +302,11 @@ public:
    
 	int		GetKillAward( void ) const;
 	int		GetWeaponPrice( void ) const;
-	int		GetDefaultPrice( void );
-	int		GetPrevousPrice( void );
 	void	SetWeaponPrice( int iPrice ) { m_iWeaponPrice = iPrice; }
-	void	SetDefaultPrice( int iPrice ) { m_iDefaultPrice = iPrice; }
-	void	SetPreviousPrice( int iPrice ) { m_iPreviousPrice = iPrice; }
     
 private:
 
 	int m_iWeaponPrice;
-	int m_iDefaultPrice;
-	int m_iPreviousPrice;
 
 	int m_iKillAward;
 
