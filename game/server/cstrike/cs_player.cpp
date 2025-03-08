@@ -680,8 +680,8 @@ void CCSPlayer::Precache()
 	// PiMoN: temporary? solution for UI models
 	PrecacheModel( "models/weapons/w_eq_armor_helmet.mdl" );
 	PrecacheModel( "models/weapons/w_eq_armor.mdl" );
-	PrecacheModel( "models/weapons/w_eq_taser.mdl" );
 	PrecacheModel( "models/weapons/w_defuser.mdl" );
+	PrecacheModel( "models/weapons/w_eq_nvg.mdl" );
 
 	// PiMoN: hardcoding this stuff to (hopefully) get rid of some cheaters
 	engine->ForceSimpleMaterial( "materials/vgui/white.vmt" );

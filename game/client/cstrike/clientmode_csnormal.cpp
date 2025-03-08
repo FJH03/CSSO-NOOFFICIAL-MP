@@ -1172,6 +1172,11 @@ void UpdateImageEntity(
 				szWeaponModel = "models/weapons/w_eq_armor_helmet.mdl";
 				szWeaponSequence = "t_buymenu_armor_helmet";
 			}
+			else if ( nWeaponID == ITEM_NVG )
+ 			{
+ 				szWeaponModel = "models/weapons/w_eq_nvg.mdl";
+ 				szWeaponSequence = "ct_buymenu_nvg";
+ 			}
 			else
 			{
 				Warning( "UpdateBuyMenuImageEntity: Unable to get weapon info for %s.\n", szWeaponClassname );
