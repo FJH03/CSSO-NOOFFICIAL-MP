@@ -16,29 +16,37 @@ def configure(conf):
 
 def build(bld):
 	source = [
-    "plutovg-blend.c",
-    "plutovg-canvas.c",
-    "plutovg-font.c",
-    "plutovg-matrix.c",
-    "plutovg-paint.c",
-    "plutovg-path.c",
-    "plutovg-rasterize.c",
-    "plutovg-surface.c",
-    "plutovg-ft-math.c",
-    "plutovg-ft-raster.c",
-    "plutovg-ft-stroker.c",
-    "lunasvg.cpp",
-    "graphics.cpp",
-    "svgelement.cpp",
-    "svggeometryelement.cpp",
-    "svglayoutstate.cpp",
-    "svgpaintelement.cpp",
-    "svgparser.cpp",
-    "svgproperty.cpp",
-    "svgrenderstate.cpp",
-    "svgtextelement.cpp"
+'plutovg.c',
+'plutovg-paint.c',
+'plutovg-geometry.c',
+'plutovg-blend.c',
+'plutovg-rle.c',
+'plutovg-dash.c',
+'plutovg-ft-raster.c',
+'plutovg-ft-stroker.c',
+'plutovg-ft-math.c',
+'lunasvg.cpp',
+'element.cpp',
+'property.cpp',
+'parser.cpp',
+'layoutcontext.cpp',
+'canvas.cpp',
+'clippathelement.cpp',
+'defselement.cpp',
+'gelement.cpp',
+'geometryelement.cpp',
+'graphicselement.cpp',
+'maskelement.cpp',
+'markerelement.cpp',
+'paintelement.cpp',
+'stopelement.cpp',
+'styledelement.cpp',
+'styleelement.cpp',
+'svgelement.cpp',
+'symbolelement.cpp',
+'useelement.cpp',
 	]
-
+	
 	if bld.env.DEST_OS == 'win32':
 		source += [
 		]
@@ -54,18 +62,16 @@ def build(bld):
 	defines = ['RAD_TELEMETRY_DISABLED']
 
 	libs = []
-	if not bld.env.DEST_OS == 'android':
-
-    		bld.stlib(
-	    		source   = source,
-			target   = PROJECT_NAME,
-			name     = PROJECT_NAME,
-			features = 'c cxx',
-	    		includes = includes,
-	    		defines  = defines,
-	    		use      = libs,
-		    	cxxflags = ['--std=c++17'],
-	    		subsystem = bld.env.MSVC_SUBSYSTEM,
-	    		idx      = bld.get_taskgen_count()
-	    	)
+	
+	bld.stlib(
+		source   = source,
+		target   = PROJECT_NAME,
+		name     = PROJECT_NAME,
+		features = 'c cxx',
+		includes = includes,
+		defines  = defines,
+		use      = libs,
+		subsystem = bld.env.MSVC_SUBSYSTEM,
+		idx      = bld.get_taskgen_count()
+	)
 

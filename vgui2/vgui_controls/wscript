@@ -45,6 +45,7 @@ def build(bld):
 		'HTML.cpp',
 		'Image.cpp',
 		'ImageList.cpp',
+		'SVGImage.cpp',
 		'ImagePanel.cpp',
 		'InputDialog.cpp',
 		'KeyBindingHelpDialog.cpp',
