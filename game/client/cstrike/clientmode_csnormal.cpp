@@ -1328,8 +1328,11 @@ void UpdateImageEntity(
 
 	CMatRenderContextPtr pRenderContext( materials );
 
-	// PiMoN: bind a cubemap for swag
-	pRenderContext->BindLocalCubemap( g_CubemapTexture );
+	if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 95 )
+ 	{
+ 		// PiMoN: bind a cubemap for swag
+ 		pRenderContext->BindLocalCubemap( g_CubemapTexture );
+ 	}
 
 	pRenderContext->SetLightingOrigin( vec3_origin );
 	pRenderContext->SetAmbientLight( 0.4, 0.4, 0.4 );
