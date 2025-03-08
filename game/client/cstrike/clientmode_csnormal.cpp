@@ -984,7 +984,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
-	if ( V_strcmp( "round_time_warning", eventname ) == 0 )
+	else if ( V_strcmp( "round_time_warning", eventname ) == 0 )
 	{
 		if(	!CSGameRules()->m_bBombPlanted )
 		{
