@@ -6491,6 +6491,80 @@ void Panel::DrawBox(int x, int y, int wide, int tall, Color color, float normali
 	//=============================================================================
 }
 
+void Panel::DrawOutlinedBox(int x, int y, int wide, int tall, Color color, float normalizedAlpha, int borderSize)
+ {
+ 	if ( m_nBgTextureId1 == -1 ||
+ 		 m_nBgTextureId2 == -1 ||
+ 		 m_nBgTextureId3 == -1 ||
+ 		 m_nBgTextureId4 == -1 )
+ 	{
+ 		return;
+ 	}
+ 
+ 	color[3] *= normalizedAlpha;
+ 
+ 	// work out our bounds
+ 	int cornerWide, cornerTall;
+ 	GetCornerTextureSize( cornerWide, cornerTall );
+ 
+ 	// draw the background in the areas not occupied by the corners
+ 	surface()->DrawSetColor(color);
+ 	surface()->DrawFilledRect( x + cornerWide, y, x + wide - cornerWide, y + borderSize );
+ 	surface()->DrawFilledRect( x, y + cornerTall, x + borderSize, y + tall - cornerTall );
+ 	surface()->DrawFilledRect( x + wide - borderSize, y + cornerTall, x + wide, y + tall - cornerTall );
+ 	surface()->DrawFilledRect( x + cornerWide, y + tall - borderSize, x + wide - cornerWide, y + tall );
+ 
+ 	// draw the corners
+ 
+ 	// [tj] We now check each individual corner and decide whether to draw it straight or rounded
+ 
+ 	//TOP-LEFT
+ 	if ( ShouldDrawTopLeftCornerRounded() )
+ 	{
+ 		surface()->DrawSetTexture( m_nBgTextureId1 );
+ 		surface()->DrawTexturedRect( x, y, x + cornerWide, y + cornerTall );
+ 	}
+ 	else
+ 	{
+ 		surface()->DrawFilledRect( x, y, x + cornerWide, y + cornerTall );
+ 	}
+ 
+ 
+ 	//TOP-RIGHT
+ 	if ( ShouldDrawTopRightCornerRounded() )
+ 	{
+ 		surface()->DrawSetTexture( m_nBgTextureId2 );
+ 		surface()->DrawTexturedRect( x + wide - cornerWide, y, x + wide, y + cornerTall );
+ 	}
+ 	else
+ 	{
+ 		surface()->DrawFilledRect( x + wide - cornerWide, y, x + wide, y + cornerTall );
+ 	}
+ 
+ 	//BOTTOM-LEFT
+ 	if ( ShouldDrawBottomLeftCornerRounded() )
+ 	{
+ 		surface()->DrawSetTexture( m_nBgTextureId4 );
+ 		surface()->DrawTexturedRect( x + 0, y + tall - cornerTall, x + cornerWide, y + tall );
+ 	}
+ 	else
+ 	{
+ 		surface()->DrawFilledRect( x + 0, y + tall - cornerTall, x + cornerWide, y + tall );
+ 	}
+ 
+ 
+ 	//BOTTOM-RIGHT
+ 	if ( ShouldDrawBottomRightCornerRounded() )
+ 	{
+ 		surface()->DrawSetTexture( m_nBgTextureId3 );
+ 		surface()->DrawTexturedRect( x + wide - cornerWide, y + tall - cornerTall, x + wide, y + tall );
+ 	}
+ 	else
+ 	{
+ 		surface()->DrawFilledRect( x + wide - cornerWide, y + tall - cornerTall, x + wide, y + tall );
+ 	}
+ }
+ 
 void Panel::DrawBoxFade(int x, int y, int wide, int tall, Color color, float normalizedAlpha, unsigned int alpha0, unsigned int alpha1, bool bHorizontal, bool hollow /*=false*/ )
 {
 	if ( m_nBgTextureId1 == -1 ||

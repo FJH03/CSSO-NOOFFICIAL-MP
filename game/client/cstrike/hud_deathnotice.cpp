@@ -335,11 +335,11 @@ void CHudDeathNotice::Paint()
 		int bkgTall = m_iLineHeight;
 
 		// Draw background first
-		if ( bKillerIsLocalPlayer && !m_DeathNotices[i].bSuicide && m_iBorderSize > 0 )
-			DrawBox( bkgX, bkgY, bkgWide, bkgTall, m_clrBorder, 1.0f );
-		DrawBox( bkgX + m_iBorderSize, bkgY + m_iBorderSize,
-				 bkgWide - (m_iBorderSize*2), bkgTall - (m_iBorderSize*2),
+		DrawBox( bkgX, bkgY,
+			bkgWide, bkgTall,
 				 bVictimIsLocalPlayer ? m_clrVictimBg : m_clrBg, 1.0f );
+		if ( bKillerIsLocalPlayer && !m_DeathNotices[i].bSuicide && m_iBorderSize > 0 )
+				 DrawOutlinedBox( bkgX, bkgY, bkgWide, bkgTall, m_clrBorder, 1.0f, m_iBorderSize );
 
 		y += m_iBackgroundHeightMargin;
 		x -= m_iBackgroundWidthMargin;
