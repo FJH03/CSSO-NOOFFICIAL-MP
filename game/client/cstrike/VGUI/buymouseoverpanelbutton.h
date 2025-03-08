@@ -201,7 +201,9 @@ public:
 		if ( Q_strncmp( m_command, "buy ", 4 ) == 0 )
 		{
 			const char* weaponClassFromSlot = CSLoadout()->GetWeaponFromSlot( pPlayer, CSLoadout()->GetSlotFromWeapon( pPlayer->GetTeamNumber(), m_command + 4 ) );
-			if ( pPlayer->CanAcquire( AliasToWeaponID( weaponClassFromSlot ? weaponClassFromSlot : m_command + 4 ), AcquireMethod::Buy ) != AcquireResult::Allowed )
+			CSWeaponID weaponID = AliasToWeaponID( weaponClassFromSlot ? weaponClassFromSlot : m_command + 4 );
+ 
+ 			if ( weaponID != WEAPON_NONE && pPlayer->CanAcquire( weaponID, AcquireMethod::Buy ) != AcquireResult::Allowed )
  				SetFgColor( m_alreadyOwnColor );
  			else if ( m_iPrice && (m_iPrice > pPlayer->GetAccount()) )
  				SetFgColor( m_unavailableColor );
