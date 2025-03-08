@@ -370,6 +370,8 @@ void FileWeaponInfo_t::Parse( KeyValues *pKeyValuesData, const char *szWeaponNam
 	V_StripExtension( szWorldModel, szWorldDroppedModel, sizeof( szWorldDroppedModel ) );
 	V_strcat_safe( szWorldDroppedModel, "_dropped.mdl" );
 
+	Q_strncpy( szWorldDroppedModel, pKeyValuesData->GetString( "droppedmodel", szWorldDroppedModel ), MAX_WEAPON_STRING );
+
 	Q_strncpy( szAnimationPrefix, pKeyValuesData->GetString( "anim_prefix" ), MAX_WEAPON_PREFIX );
 	iSlot = pKeyValuesData->GetInt( "bucket", 0 );
 	iPosition = pKeyValuesData->GetInt( "bucket_position", 0 );
