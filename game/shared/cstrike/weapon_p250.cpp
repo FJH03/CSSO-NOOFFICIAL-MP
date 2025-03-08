@@ -44,6 +44,6 @@ LINK_ENTITY_TO_CLASS( weapon_p228, CWeaponP250 ); // for backwards compatibility
 
 void CWeaponP250::Spawn()
 {
-	SetClassname( "weapon_mp9" ); // for backwards compatibility
+	SetClassname( "weapon_p250" ); // for backwards compatibility
 	BaseClass::Spawn();
 }
