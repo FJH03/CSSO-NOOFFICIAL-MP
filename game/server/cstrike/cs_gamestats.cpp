@@ -1151,7 +1151,7 @@ void CCSGameStats::Event_PlayerDamage( CBasePlayer *pBasePlayer, const CTakeDama
 			return;
 
 		// Now update the damage this weapon has done
-		CSWeaponID weaponId = AliasToWeaponID( GetTranslatedWeaponAlias( pWeaponName ) );
+		CSWeaponID weaponId = AliasToWeaponID( pWeaponName );
 		for (int i = 0; WeaponName_StatId_Table[i].shotStatId != CSSTAT_UNDEFINED; ++i)
 		{
 			if ( weaponId == WeaponName_StatId_Table[i].weaponId )

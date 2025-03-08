@@ -74,85 +74,9 @@ void TE_DynamicLight( IRecipientFilter& filter, float delay,
 	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC, bool bNoStaticPropIllum = false );
 #endif
 
-struct WeaponAliasTranslationInfoStruct
-{
-	const char* alias;
-	const char* translatedAlias;
-};
-
-static const WeaponAliasTranslationInfoStruct s_WeaponAliasTranslationInfo[] =
-{
-	{ "cv47", "ak47" },
-	{ "defender", "galil" },
-	{ "krieg552", "sg552" },
-	{ "magnum", "awp" },
-	{ "d3au1", "g3sg1" },
-	{ "clarion", "famas" },
-	{ "bullpup", "aug" },
-	{ "krieg550", "sg550" },
-	{ "9x19mm", "glock" },
-	{ "km45", "usp" },
-	{ "228compact", "p228" },
-	{ "nighthawk", "deagle" },
-	{ "elites", "elite" },
-	{ "fn57", "fiveseven" },
-	{ "12gauge", "m3" },
-	{ "autoshotgun", "xm1014" },
-	{ "mp", "tmp" },
-	{ "smg", "mp5navy" },
-	{ "mp5", "mp5navy" },
-	{ "c90", "p90" },
-	{ "vest", "kevlar" },
-	{ "vesthelm", "assaultsuit" },
-	{ "smokegrenade", "sgren" },
-	{ "smokegrenade", "sgren" },
-	{ "nightvision", "nvgs" },
-	
-	{ "", "" } // this needs to be last
-};
-
-
 bool IsAmmoType( int iAmmoType, const char *pAmmoName )
 {
 	return GetAmmoDef()->Index( pAmmoName ) == iAmmoType;
-}
-
-//--------------------------------------------------------------------------------------------------------
-//
-// Given an alias, return the translated alias.
-//
-const char * GetTranslatedWeaponAlias( const char *szAlias )
-{
-	for ( int i = 0; i < ARRAYSIZE(s_WeaponAliasTranslationInfo); ++i )
-	{
-		if ( Q_stricmp(s_WeaponAliasTranslationInfo[i].alias, szAlias) == 0 )
-		{
-			return s_WeaponAliasTranslationInfo[i].translatedAlias;
-		}
-	}
-
-	return szAlias;
-}
-
-//--------------------------------------------------------------------------------------------------------
-//
-// Given a translated alias, return the alias.
-//
-const char * GetWeaponAliasFromTranslated(const char *translatedAlias)
-{
-	int i = 0;
-	const WeaponAliasTranslationInfoStruct *info = &(s_WeaponAliasTranslationInfo[i]);
-
-	while (info->alias[0] != 0)
-	{
-		if (Q_stricmp(translatedAlias, info->translatedAlias) == 0)
-		{
-			return info->alias;
-		}
-		info = &(s_WeaponAliasTranslationInfo[++i]);
-	}
-
-	return translatedAlias;
 }
 
 //--------------------------------------------------------------------------------------------------------

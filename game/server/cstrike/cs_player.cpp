@@ -5020,9 +5020,6 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAd
 {
 	BuyResult_e result = CanPlayerBuy( false ) ? BUY_PLAYER_CANT_BUY : BUY_INVALID_ITEM; // set some defaults
 
-	// translate the new weapon names to the old ones that are actually being used.
-	wpnName = GetTranslatedWeaponAlias( wpnName );
-
 	CSWeaponID weaponId = AliasToWeaponID( wpnName );
 	const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
 

@@ -23,8 +23,6 @@
 	#define CWeaponCSBase C_WeaponCSBase
 #endif
 
-extern const char *GetTranslatedWeaponAlias( const char *alias);
-extern const char * GetWeaponAliasFromTranslated(const char *translatedAlias);
 extern bool	IsPrimaryWeapon( CSWeaponID id );
 extern bool IsSecondaryWeapon( CSWeaponID  id );
 extern int GetShellForAmmoType( const char *ammoname );

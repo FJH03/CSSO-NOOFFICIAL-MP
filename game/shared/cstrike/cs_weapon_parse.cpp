@@ -183,10 +183,9 @@ CSWeaponType WeaponClassFromString( const char* weaponType )
 CSWeaponType WeaponClassFromWeaponID( CSWeaponID weaponID )
 {
 	const char *weaponStr = WeaponIDToAlias( weaponID );
-	const char *translatedAlias = GetTranslatedWeaponAlias( weaponStr );
 
 	char wpnName[128];
-	Q_snprintf( wpnName, sizeof( wpnName ), "weapon_%s", translatedAlias );
+	Q_snprintf( wpnName, sizeof( wpnName ), "weapon_%s", weaponStr );
 	WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( wpnName );
 	if ( hWpnInfo != GetInvalidWeaponInfoHandle() )
 	{

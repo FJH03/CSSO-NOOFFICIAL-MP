@@ -323,10 +323,8 @@ void UTIL_ConstructBotNetName( char *name, int nameLength, const BotProfile *pro
 	{
 		weaponStr = profile->GetWeaponPreferenceAsString( 0 );
 
-		const char *translatedAlias = GetTranslatedWeaponAlias( weaponStr );
-
 		char wpnName[128];
-		Q_snprintf( wpnName, sizeof( wpnName ), "weapon_%s", translatedAlias );
+		Q_snprintf( wpnName, sizeof( wpnName ), "weapon_%s", weaponStr );
 		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( wpnName );
 		if ( hWpnInfo != GetInvalidWeaponInfoHandle() )
 		{

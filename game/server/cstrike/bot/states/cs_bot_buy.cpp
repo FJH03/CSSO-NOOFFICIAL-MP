@@ -25,10 +25,8 @@ ConVar bot_randombuy( "bot_randombuy", "0", FCVAR_CHEAT, "should bots ignore the
  */
 void CCSBot::GiveWeapon( const char *weaponAlias )
 {
-	const char *translatedAlias = GetTranslatedWeaponAlias( weaponAlias );
-
 	char wpnName[128];
-	Q_snprintf( wpnName, sizeof( wpnName ), "weapon_%s", translatedAlias );
+	Q_snprintf( wpnName, sizeof( wpnName ), "weapon_%s", weaponAlias );
 	WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( wpnName );
 	if ( hWpnInfo == GetInvalidWeaponInfoHandle() )
 	{
