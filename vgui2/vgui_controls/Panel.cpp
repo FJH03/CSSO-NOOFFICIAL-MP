@@ -712,6 +712,10 @@ void Panel::Init( int x, int y, int wide, int tall )
 	m_nBgTextureId2 = -1;
 	m_nBgTextureId3 = -1;
 	m_nBgTextureId4 = -1;
+	m_nOutlineBgTextureId1 = -1;
+ 	m_nOutlineBgTextureId2 = -1;
+ 	m_nOutlineBgTextureId3 = -1;
+ 	m_nOutlineBgTextureId4 = -1;
 #if defined( VGUI_USEDRAGDROP )
 	m_pDragDrop = new DragDrop_t;
 
@@ -6406,10 +6410,10 @@ void Panel::GetCornerTextureSize( int& w, int& h )
 //-----------------------------------------------------------------------------
 void Panel::DrawBox(int x, int y, int wide, int tall, Color color, float normalizedAlpha, bool hollow /*=false*/ )
 {
-	if ( m_nBgTextureId1 == -1 ||
-		 m_nBgTextureId2 == -1 ||
-		 m_nBgTextureId3 == -1 ||
-		 m_nBgTextureId4 == -1 )
+	if ( m_nOutlineBgTextureId1 == -1 ||
+ 		 m_nOutlineBgTextureId2 == -1 ||
+ 		 m_nOutlineBgTextureId3 == -1 ||
+ 		 m_nOutlineBgTextureId4 == -1 )
 	{
 		return;
 	}
@@ -6521,7 +6525,7 @@ void Panel::DrawOutlinedBox(int x, int y, int wide, int tall, Color color, float
  	//TOP-LEFT
  	if ( ShouldDrawTopLeftCornerRounded() )
  	{
- 		surface()->DrawSetTexture( m_nBgTextureId1 );
+ 		surface()->DrawSetTexture( m_nOutlineBgTextureId1 );
  		surface()->DrawTexturedRect( x, y, x + cornerWide, y + cornerTall );
  	}
  	else
@@ -6533,7 +6537,7 @@ void Panel::DrawOutlinedBox(int x, int y, int wide, int tall, Color color, float
  	//TOP-RIGHT
  	if ( ShouldDrawTopRightCornerRounded() )
  	{
- 		surface()->DrawSetTexture( m_nBgTextureId2 );
+ 		surface()->DrawSetTexture( m_nOutlineBgTextureId2 );
  		surface()->DrawTexturedRect( x + wide - cornerWide, y, x + wide, y + cornerTall );
  	}
  	else
@@ -6544,7 +6548,7 @@ void Panel::DrawOutlinedBox(int x, int y, int wide, int tall, Color color, float
  	//BOTTOM-LEFT
  	if ( ShouldDrawBottomLeftCornerRounded() )
  	{
- 		surface()->DrawSetTexture( m_nBgTextureId4 );
+ 		surface()->DrawSetTexture( m_nOutlineBgTextureId4 );
  		surface()->DrawTexturedRect( x + 0, y + tall - cornerTall, x + cornerWide, y + tall );
  	}
  	else
@@ -6556,7 +6560,7 @@ void Panel::DrawOutlinedBox(int x, int y, int wide, int tall, Color color, float
  	//BOTTOM-RIGHT
  	if ( ShouldDrawBottomRightCornerRounded() )
  	{
- 		surface()->DrawSetTexture( m_nBgTextureId3 );
+ 		surface()->DrawSetTexture( m_nOutlineBgTextureId3 );
  		surface()->DrawTexturedRect( x + wide - cornerWide, y + tall - cornerTall, x + wide, y + tall );
  	}
  	else
@@ -6564,7 +6568,7 @@ void Panel::DrawOutlinedBox(int x, int y, int wide, int tall, Color color, float
  		surface()->DrawFilledRect( x + wide - cornerWide, y + tall - cornerTall, x + wide, y + tall );
  	}
  }
- 
+
 void Panel::DrawBoxFade(int x, int y, int wide, int tall, Color color, float normalizedAlpha, unsigned int alpha0, unsigned int alpha1, bool bHorizontal, bool hollow /*=false*/ )
 {
 	if ( m_nBgTextureId1 == -1 ||

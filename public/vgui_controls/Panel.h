@@ -950,6 +950,10 @@ private:
 	CPanelAnimationVarAliasType( int, m_nBgTextureId2, "Texture2", "vgui/hud/800corner2", "textureid" );
 	CPanelAnimationVarAliasType( int, m_nBgTextureId3, "Texture3", "vgui/hud/800corner3", "textureid" );
 	CPanelAnimationVarAliasType( int, m_nBgTextureId4, "Texture4", "vgui/hud/800corner4", "textureid" );
+	CPanelAnimationVarAliasType( int, m_nOutlineBgTextureId1, "OutlineTexture1", "vgui/hud/800corner1", "textureid" );
+ 	CPanelAnimationVarAliasType( int, m_nOutlineBgTextureId2, "OutlineTexture2", "vgui/hud/800corner2", "textureid" );
+ 	CPanelAnimationVarAliasType( int, m_nOutlineBgTextureId3, "OutlineTexture3", "vgui/hud/800corner3", "textureid" );
+ 	CPanelAnimationVarAliasType( int, m_nOutlineBgTextureId4, "OutlineTexture4", "vgui/hud/800corner4", "textureid" );
 
 	//=============================================================================
 	// HPE_BEGIN:
