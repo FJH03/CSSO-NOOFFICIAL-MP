@@ -119,11 +119,11 @@ void CFPSPanel::ComputeSize( void )
 	int wide, tall;
 	vgui::ipanel()->GetSize(GetVParent(), wide, tall );
 
-	int x = wide - FPS_PANEL_WIDTH;
+	int x = 0;
 	int y = 0;
 	if ( IsX360() )
 	{
-		x -= XBOX_MINBORDERSAFE * wide;
+		x += XBOX_MINBORDERSAFE * wide;
 		y += XBOX_MINBORDERSAFE * tall;
 	}
 	SetPos( x, y );
@@ -134,7 +134,7 @@ void CFPSPanel::ApplySchemeSettings(vgui::IScheme *pScheme)
 {
 	BaseClass::ApplySchemeSettings(pScheme);
 
-	m_hFont = pScheme->GetFont( "DefaultFixedOutline" );
+	m_hFont = pScheme->GetFont( "MenuLarge" );
 	Assert( m_hFont );
 
 	ComputeSize();
