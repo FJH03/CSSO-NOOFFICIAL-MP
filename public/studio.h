@@ -411,8 +411,8 @@ private:
 #define BONE_SCREEN_ALIGN_SPHERE	0x08	// bone aligns to the screen, not constrained in motion.
 #define BONE_SCREEN_ALIGN_CYLINDER	0x10	// bone aligns to the screen, constrained by it's own axis.
 
-#define BONE_USED_MASK				0x0007FF00
-#define BONE_USED_BY_ANYTHING		0x0007FF00
+#define BONE_USED_MASK				0x000FFF00
+#define BONE_USED_BY_ANYTHING		0x000FFF00
 #define BONE_USED_BY_HITBOX			0x00000100	// bone (or child) is used by a hit box
 #define BONE_USED_BY_ATTACHMENT		0x00000200	// bone (or child) is used by an attachment point
 #define BONE_USED_BY_VERTEX_MASK	0x0003FC00
