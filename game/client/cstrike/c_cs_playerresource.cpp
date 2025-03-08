@@ -9,7 +9,9 @@
 #include <shareddefs.h>
 #include <cs_shareddefs.h>
 #include "hud.h"
+#include <vgui_controls/Controls.h>
 #include "vgui/ILocalize.h"
+#include <vgui/IScheme.h>
 #include "gamestringpool.h"
 #include "c_cs_player.h"
 #include "tier3/tier3.h"
@@ -53,8 +55,10 @@ END_RECV_TABLE()
 //-----------------------------------------------------------------------------
 C_CS_PlayerResource::C_CS_PlayerResource()
 {
-	m_Colors[TEAM_TERRORIST] = COLOR_RED;
-	m_Colors[TEAM_CT] = COLOR_BLUE;
+	vgui::IScheme *pClientScheme = vgui::scheme()->GetIScheme( vgui::scheme()->GetScheme( "ClientScheme" ) );
+ 
+ 	m_Colors[TEAM_TERRORIST] = pClientScheme->GetColor( "TeamTDark", COLOR_BLUE );
+ 	m_Colors[TEAM_CT] = pClientScheme->GetColor( "TeamCTDark", COLOR_RED );
 	memset( m_iMVPs, 0, sizeof( m_iMVPs ) );
 	memset( m_bHasDefuser, 0, sizeof( m_bHasDefuser ) );
 }

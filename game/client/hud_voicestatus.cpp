@@ -15,74 +15,52 @@
 #include "c_playerresource.h"
 #include "voice_common.h"
 #include "vgui_avatarimage.h"
+#include <vgui_controls/VectorImagePanel.h>
 
 ConVar *sv_alltalk = NULL;
 
 //=============================================================================
 // Icon for the local player using voice
 //=============================================================================
-class CHudVoiceSelfStatus : public CHudElement, public vgui::Panel
+class CHudVoiceDisabledPanel : public CHudElement, public vgui::EditablePanel
 {
 public:
-	DECLARE_CLASS_SIMPLE( CHudVoiceSelfStatus, vgui::Panel );
+	DECLARE_CLASS_SIMPLE( CHudVoiceDisabledPanel, vgui::EditablePanel );
 
-	CHudVoiceSelfStatus( const char *name );
-
-	virtual bool ShouldDraw();	
-	virtual void Paint();
-	virtual void VidInit();
-	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
+	CHudVoiceDisabledPanel( const char *name );
+	virtual void OnThink();
+	virtual bool ShouldDraw();
 
 private:
-	CHudTexture *m_pVoiceIcon;
+	vgui::VectorImagePanel	*m_pIcon;
+	vgui::Label				*m_pLabel;
 
-	Color	m_clrIcon;
+	CPanelAnimationVarAliasType( int, margin_right, "margin_right", "0", "proportional_width" );
 };
 
+DECLARE_HUDELEMENT( CHudVoiceDisabledPanel );
 
-DECLARE_HUDELEMENT( CHudVoiceSelfStatus );
-
-
-CHudVoiceSelfStatus::CHudVoiceSelfStatus( const char *pName ) :
-	vgui::Panel( NULL, "HudVoiceSelfStatus" ), CHudElement( pName )
+CHudVoiceDisabledPanel::CHudVoiceDisabledPanel( const char *pName ):
+	vgui::EditablePanel( NULL, "HudVoiceDisabledPanel" ), CHudElement( pName )
 {
 	SetParent( g_pClientMode->GetViewport() );
 
-	m_pVoiceIcon = NULL;
+	m_pIcon = new vgui::VectorImagePanel( this, "MutedIcon" );
+	m_pLabel = new vgui::Label( this, "MutedLabel", "#Cstrike_Voice_Disabled" );
 
-	SetHiddenBits( 0 );
-
-	m_clrIcon = Color(255,255,255,255);
+	LoadControlSettings( "resource/hud/voicedisabled.res" );
 }
 
-void CHudVoiceSelfStatus::ApplySchemeSettings(vgui::IScheme *pScheme)
+void CHudVoiceDisabledPanel::OnThink()
 {
-	BaseClass::ApplySchemeSettings( pScheme );
-
-#ifdef HL2MP
-	SetBgColor( Color( 0, 0, 0, 0 ) );
-#endif
+	m_pLabel->WideToContents();
+	SetWide( m_pLabel->GetXPos() + m_pLabel->GetWide() + margin_right );
 }
 
-void CHudVoiceSelfStatus::VidInit( void )
+bool CHudVoiceDisabledPanel::ShouldDraw()
 {
-	m_pVoiceIcon = gHUD.GetIcon( "voice_self" );
-}
-
-bool CHudVoiceSelfStatus::ShouldDraw()
-{
-	return GetClientVoiceMgr()->IsLocalPlayerSpeaking();
-}
-
-void CHudVoiceSelfStatus::Paint()
-{
-   if( !m_pVoiceIcon )
-		return;
-	
-	int x, y, w, h;
-	GetBounds( x, y, w, h );
-
-	m_pVoiceIcon->DrawSelf( 0, 0, w, h, m_clrIcon );
+	static ConVarRef voice_enable( "voice_enable" );
+	return !voice_enable.GetBool() && CHudElement::ShouldDraw();
 }
 
 
@@ -125,32 +103,32 @@ private:
 	CUtlLinkedList< ActiveSpeaker > m_SpeakingList;
 	// CUtlLinkedList< CAvatarImagePanel* > m_SpeakingListAvatar;
 
-	CPanelAnimationVar( vgui::HFont, m_NameFont, "Default", "Default" );
+	CPanelAnimationVar( vgui::HFont, m_NameFont, "item_font", "Default" );
 
-	CPanelAnimationVarAliasType( float, item_tall, "item_tall", "16", "proportional_float" );
-	CPanelAnimationVarAliasType( float, item_wide, "item_wide", "160", "proportional_float" );
-	CPanelAnimationVarAliasType( float, item_spacing, "item_spacing", "2", "proportional_float" );
+	CPanelAnimationVarAliasType( int, item_tall, "item_tall", "16", "proportional_height" );
+	CPanelAnimationVarAliasType( int, item_wide, "item_wide", "160", "proportional_width" );
+	CPanelAnimationVarAliasType( int, item_spacing, "item_spacing", "2", "proportional_ypos" );
 
 	CPanelAnimationVarAliasType( bool, show_avatar, "show_avatar", "0", "bool" );
 	CPanelAnimationVarAliasType( bool, show_friend, "show_friend", "1", "bool" );
-	CPanelAnimationVarAliasType( float, avatar_ypos, "avatar_ypos", "0", "proportional_float" );
-	CPanelAnimationVarAliasType( float, avatar_xpos, "avatar_xpos", "16", "proportional_float" );
-	CPanelAnimationVarAliasType( float, avatar_tall, "avatar_tall", "16", "proportional_float" );
-	CPanelAnimationVarAliasType( float, avatar_wide, "avatar_wide", "16", "proportional_float" );
+	CPanelAnimationVarAliasType( int, avatar_ypos, "avatar_ypos", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, avatar_xpos, "avatar_xpos", "16", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, avatar_tall, "avatar_tall", "16", "proportional_height" );
+	CPanelAnimationVarAliasType( int, avatar_wide, "avatar_wide", "16", "proportional_width" );
 
 	CPanelAnimationVarAliasType( bool, show_voice_icon, "show_voice_icon", "1", "bool" );
-	CPanelAnimationVarAliasType( float, voice_icon_ypos, "icon_ypos", "0", "proportional_float" );
-	CPanelAnimationVarAliasType( float, voice_icon_xpos, "icon_xpos", "24", "proportional_float" );
-	CPanelAnimationVarAliasType( float, voice_icon_tall, "icon_tall", "16", "proportional_float" );
-	CPanelAnimationVarAliasType( float, voice_icon_wide, "icon_wide", "16", "proportional_float" );
+	CPanelAnimationVarAliasType( int, voice_icon_ypos, "icon_ypos", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, voice_icon_xpos, "icon_xpos", "24", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, voice_icon_tall, "icon_tall", "16", "proportional_height" );
+	CPanelAnimationVarAliasType( int, voice_icon_wide, "icon_wide", "16", "proportional_width" );
 
 	CPanelAnimationVarAliasType( bool, show_dead_icon, "show_dead_icon", "1", "bool" );
-	CPanelAnimationVarAliasType( float, dead_icon_ypos, "dead_ypos", "0", "proportional_float" );
-	CPanelAnimationVarAliasType( float, dead_icon_xpos, "dead_xpos", "0", "proportional_float" );
-	CPanelAnimationVarAliasType( float, dead_icon_tall, "dead_tall", "16", "proportional_float" );
-	CPanelAnimationVarAliasType( float, dead_icon_wide, "dead_wide", "16", "proportional_float" );
+	CPanelAnimationVarAliasType( int, dead_icon_ypos, "dead_ypos", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, dead_icon_xpos, "dead_xpos", "0", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, dead_icon_tall, "dead_tall", "16", "proportional_height" );
+	CPanelAnimationVarAliasType( int, dead_icon_wide, "dead_wide", "16", "proportional_width" );
 
-	CPanelAnimationVarAliasType( float, text_xpos, "text_xpos", "40", "proportional_float" );
+	CPanelAnimationVarAliasType( int, text_xpos, "text_xpos", "40", "proportional_xpos" );
 
 	CPanelAnimationVarAliasType( float, fade_in_time, "fade_in_time", "0.0", "float" );
 	CPanelAnimationVarAliasType( float, fade_out_time, "fade_out_time", "0.0", "float" );
@@ -205,10 +183,21 @@ void CHudVoiceStatus::VidInit( void )
 
 void CHudVoiceStatus::OnThink( void )
 {
-	for ( int iPlayerIndex=1; iPlayerIndex<=gpGlobals->maxClients; iPlayerIndex++ )
+	for ( int iPlayerIndex=0; iPlayerIndex<=gpGlobals->maxClients; iPlayerIndex++ )
 	{
 		int activeSpeakerIndex = FindActiveSpeaker(iPlayerIndex);
-		bool bSpeaking = GetClientVoiceMgr()->IsPlayerSpeaking(iPlayerIndex);
+
+		// hackerman
+		bool bSpeaking;
+		bool bLocalPlayer = false;
+		CBasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
+		if ( pPlayer )
+			bLocalPlayer = pPlayer->IsLocalPlayer();
+
+		if ( bLocalPlayer )
+			bSpeaking = GetClientVoiceMgr()->IsLocalPlayerSpeaking();
+		else
+			bSpeaking = GetClientVoiceMgr()->IsPlayerSpeaking(iPlayerIndex);
 
 		if (activeSpeakerIndex != m_SpeakingList.InvalidIndex() )
 		{
@@ -261,7 +250,10 @@ void CHudVoiceStatus::OnThink( void )
 				// HPE_END
 				//=============================================================================
 
-				m_SpeakingList.AddToTail(activeSpeaker);
+				if ( bLocalPlayer )
+					m_SpeakingList.AddToHead(activeSpeaker);
+				else
+					m_SpeakingList.AddToTail(activeSpeaker);
 			}
 			//=============================================================================
 			// HPE_END
@@ -357,8 +349,6 @@ void CHudVoiceStatus::Paint()
 
 		Color c = g_PR->GetTeamColor( g_PR ? g_PR->GetTeam(playerId) : TEAM_UNASSIGNED );
 
-		c[3] = 128;
-
 		const char *pName = g_PR ? g_PR->GetPlayerName(playerId) : "unknown";
 		wchar_t szconverted[ 64 ];
 
@@ -396,9 +386,21 @@ void CHudVoiceStatus::Paint()
 			g_pVGuiLocalize->ConvertANSIToUnicode( pName, szconverted, sizeof(szconverted)  );
 		}
 
-		// Draw the item background
-		surface()->DrawSetColor( c );
-		surface()->DrawFilledRect( 0, ypos, item_wide, ypos + item_tall );
+		//=============================================================================
+		// HPE_BEGIN:
+		// [pfreese] Draw the avatar for the given player
+		//=============================================================================
+
+		// Draw the players icon
+		if (show_avatar && m_SpeakingList[i].pAvatar)
+		{
+			m_SpeakingList[i].pAvatar->SetPos( avatar_xpos, ypos + avatar_ypos );
+			m_SpeakingList[i].pAvatar->Paint();
+		}
+
+		//=============================================================================
+		// HPE_END
+		//=============================================================================
 
 		if ( show_dead_icon && bIsAlive == false && m_iDeadImageID != -1 )
 		{
@@ -421,28 +423,12 @@ void CHudVoiceStatus::Paint()
 			surface()->DrawTexturedPolygon( 4, vert );
 		}
 
-		//=============================================================================
-		// HPE_BEGIN:
-		// [pfreese] Draw the avatar for the given player
-		//=============================================================================
-
-		// Draw the players icon
-		if (show_avatar && m_SpeakingList[i].pAvatar)
-		{
-			m_SpeakingList[i].pAvatar->SetPos( avatar_xpos, ypos + avatar_ypos );
-			m_SpeakingList[i].pAvatar->Paint();
-		}
-
-		//=============================================================================
-		// HPE_END
-		//=============================================================================
-
 		// Draw the voice icon
 		if (show_voice_icon)
 			m_pVoiceIcon->DrawSelf( voice_icon_xpos, ypos + voice_icon_ypos, voice_icon_wide, voice_icon_tall, m_clrIcon );
 
 		// Draw the player's name
-		surface()->DrawSetTextColor(COLOR_WHITE);
+		surface()->DrawSetTextColor( c );
 		surface()->DrawSetTextPos( text_xpos, ypos + ( item_tall / 2 ) - ( iFontHeight / 2 ) );
 
 		int iTextSpace = item_wide - text_xpos;
