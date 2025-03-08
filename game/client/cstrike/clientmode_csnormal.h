@@ -35,8 +35,6 @@ public:
 
 	virtual float	GetViewModelFOV( void );
 
-	int				GetDeathMessageStartHeight( void );
-
 	virtual void	FireGameEvent( IGameEvent *event );
 	virtual void	PostRenderVGui();
 

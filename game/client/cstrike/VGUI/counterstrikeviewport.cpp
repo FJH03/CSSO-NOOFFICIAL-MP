@@ -283,18 +283,6 @@ void CounterStrikeViewport::CreateDefaultPanels( void )
 
 }
 
-int CounterStrikeViewport::GetDeathMessageStartHeight( void )
-{
-	int x = YRES(2);
-
-	if ( g_pSpectatorGUI && g_pSpectatorGUI->IsVisible() )
-	{
-		x += g_pSpectatorGUI->GetTopBarHeight();
-	}
-
-	return x;
-}
-
 /*
 ==========================
 HUD_ChatInputPosition

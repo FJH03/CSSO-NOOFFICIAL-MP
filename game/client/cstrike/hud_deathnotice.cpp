@@ -21,7 +21,7 @@
 #include "clientmode_csnormal.h"
 #include "c_cs_player.h"
 #include "c_cs_playerresource.h"
-#include "cs_gamerules.h"
+
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -80,16 +80,22 @@ protected:
 
 private:
 
-	CPanelAnimationVarAliasType( float, m_flLineHeight, "LineHeight", "15", "proportional_float" );
-
-	CPanelAnimationVar( float, m_flMaxDeathNotices, "MaxDeathNotices", "4" );
-
-	CPanelAnimationVar( bool, m_bRightJustify, "RightJustify", "1" );
+	CPanelAnimationVarAliasType( int, m_iLineHeight, "LineHeight", "15", "proportional_height" );
+	CPanelAnimationVarAliasType( int, m_iHeightMargin, "HeightMargin", "0", "proportional_height" );
+	CPanelAnimationVarAliasType( int, m_iBackgroundHeightMargin, "BackgroundHeightMargin", "0", "proportional_height" );
+	CPanelAnimationVarAliasType( int, m_iBackgroundWidthMargin, "BackgroundWidthMargin", "0", "proportional_width" );
+	CPanelAnimationVarAliasType( int, m_iRightMargin, "RightMargin", "0", "proportional_width" );
+	CPanelAnimationVarAliasType( int, m_iTopMargin, "TopMargin", "0", "proportional_height" );
+	CPanelAnimationVarAliasType( int, m_iBorderSize, "BorderSize", "0", "proportional_height" );
 
 	CPanelAnimationVar( vgui::HFont, m_hTextFont, "TextFont", "HudNumbersTimer" );
 
 	CPanelAnimationVar( Color, m_clrCTText, "CTTextColor", "CTTextColor" );
 	CPanelAnimationVar( Color, m_clrTerroristText, "TerroristTextColor", "TerroristTextColor" );
+	CPanelAnimationVar( Color, m_clrIcons, "IconColor", "White" );
+	CPanelAnimationVar( Color, m_clrBg, "BackgroundColor", "Black" );
+	CPanelAnimationVar( Color, m_clrVictimBg, "VictimBackgroundColor", "Black" );
+	CPanelAnimationVar( Color, m_clrBorder, "BorderColor", "White" );
 
 	// Texture for skull symbol
 	CHudTexture		*m_iconD_skull; 
@@ -211,7 +217,7 @@ void CHudDeathNotice::Paint()
 	if ( !m_iconD_headshot || !m_iconD_skull || !m_iconD_dominated || !m_iconD_revenge || !m_iconD_noscope || !m_iconD_blind || !m_iconD_penetrated || !m_iconD_thrusmoke )
 		return;
 
-	int yStart = GetClientModeCSNormal()->GetDeathMessageStartHeight();
+	int yStart = m_iTopMargin;
 
 	surface()->DrawSetTextFont( m_hTextFont );
 	surface()->DrawSetTextColor( m_clrCTText );
@@ -254,16 +260,20 @@ void CHudDeathNotice::Paint()
 		CHudTexture *icon = m_DeathNotices[i].iconDeath;
 		if ( !icon )
 			continue;
+		
+		int iLocalPlayerIndex = GetLocalPlayerIndex();
+		bool bVictimIsLocalPlayer = (m_DeathNotices[i].Victim.iEntIndex == iLocalPlayerIndex);
+		bool bKillerIsLocalPlayer = (m_DeathNotices[i].Killer.iEntIndex == iLocalPlayerIndex);
 
 		const wchar_t *victim = m_DeathNotices[i].Victim.wszName;
 		const wchar_t *killer = m_DeathNotices[i].Killer.wszName;
 		const wchar_t *assister = m_DeathNotices[i].Assister.wszName;
 
-		wchar_t assistplussign[4] = L" +";
+		static wchar_t assistplussign[2] = L"+";
 
 		// Get the local position for this notice
 		int victimNameLen = UTIL_ComputeStringWidth( m_hTextFont, victim );
-		int y = yStart + (m_flLineHeight * i);
+		int y = yStart + ((m_iHeightMargin + m_iLineHeight) * i);
 
 		int iconWide;
 		int iconTall;
@@ -280,59 +290,68 @@ void CHudDeathNotice::Paint()
 			iconTall = (int)( scale * (float)icon->Height() );
 		}
 
-		int x = 0;
-		if ( m_bRightJustify )
+		int x = GetWide() - m_iRightMargin;
+		x -= victimNameLen;
+		x -= iconWide;
+
+		if ( m_DeathNotices[i].bBlind )
+			x -= iconBlindWide;
+
+		if ( m_DeathNotices[i].bNoScope )
+			x -= iconNoScopeWide;
+
+		if ( m_DeathNotices[i].bPenetrated )
+			x -= iconPenetrateWide;
+
+		if ( m_DeathNotices[i].bThruSmoke )
+			x -= iconThruSmokeWide;
+
+		if ( m_DeathNotices[i].bHeadshot )
+			x -= iconHeadshotWide;
+
+		if ( m_DeathNotices[i].bAssisted )
 		{
-			x =	GetWide();
-			x -= victimNameLen;
-			x -= iconWide;
-
-			if ( m_DeathNotices[i].bBlind )
-				x -= iconBlindWide;
-
-			if ( m_DeathNotices[i].bNoScope )
-				x -= iconNoScopeWide;
-
-			if ( m_DeathNotices[i].bPenetrated )
-				x -= iconPenetrateWide;
-
-			if ( m_DeathNotices[i].bThruSmoke )
-				x -= iconThruSmokeWide;
-
-			if ( m_DeathNotices[i].bHeadshot )
-				x -= iconHeadshotWide;
-
-			if ( m_DeathNotices[i].bAssisted )
-			{
-				x -= UTIL_ComputeStringWidth( m_hTextFont, assistplussign );
-				x -= UTIL_ComputeStringWidth( m_hTextFont, assister );
-			}
+			x -= UTIL_ComputeStringWidth( m_hTextFont, assistplussign );
+			x -= UTIL_ComputeStringWidth( m_hTextFont, assister );
+		}
 			
-			//if ( !m_DeathNotices[i].bSuicide )
-			{
-				x -= UTIL_ComputeStringWidth( m_hTextFont, killer );
-			}
+		//if ( !m_DeathNotices[i].bSuicide )
+		{
+			x -= UTIL_ComputeStringWidth( m_hTextFont, killer );
+		}
 			
-			if (m_DeathNotices[i].bDomination)
-			{				
-				x -= iconDominationWide;
-			}
-			if (m_DeathNotices[i].bRevenge)
-			{				
-				x -= iconRevengeWide;
-			}
+		if (m_DeathNotices[i].bDomination)
+		{				
+			x -= iconDominationWide;
+		}
+		if (m_DeathNotices[i].bRevenge)
+		{				
+			x -= iconRevengeWide;
 		}
 
-		Color iconColor( 255, 80, 0, 255 );
+		int bkgX = x - m_iBackgroundWidthMargin - m_iBackgroundWidthMargin;
+		int bkgY = y;
+		int bkgWide = GetWide() - m_iRightMargin - bkgX;
+		int bkgTall = m_iLineHeight;
+
+		// Draw background first
+		if ( bKillerIsLocalPlayer && !m_DeathNotices[i].bSuicide && m_iBorderSize > 0 )
+			DrawBox( bkgX, bkgY, bkgWide, bkgTall, m_clrBorder, 1.0f );
+		DrawBox( bkgX + m_iBorderSize, bkgY + m_iBorderSize,
+				 bkgWide - (m_iBorderSize*2), bkgTall - (m_iBorderSize*2),
+				 bVictimIsLocalPlayer ? m_clrVictimBg : m_clrBg, 1.0f );
+
+		y += m_iBackgroundHeightMargin;
+		x -= m_iBackgroundWidthMargin;
 
 		if (m_DeathNotices[i].bDomination)
 		{
-			m_iconD_dominated->DrawSelf( x, y, iconDominationWide, iconDominationTall, iconColor );
+			m_iconD_dominated->DrawSelf( x, y, iconDominationWide, iconDominationTall, m_clrIcons );
 			x += iconDominationWide;
 		}
 		if (m_DeathNotices[i].bRevenge)
 		{
-			m_iconD_revenge->DrawSelf( x, y, iconRevengeWide, iconRevengeTall, iconColor );
+			m_iconD_revenge->DrawSelf( x, y, iconRevengeWide, iconRevengeTall, m_clrIcons );
 			x += iconRevengeWide;
 		}
 		
@@ -341,7 +360,7 @@ void CHudDeathNotice::Paint()
 		{
 			if ( m_DeathNotices[i].bBlind )
 			{
-				m_iconD_blind->DrawSelf( x, y, iconBlindWide, iconBlindTall, iconColor );
+				m_iconD_blind->DrawSelf( x, y, iconBlindWide, iconBlindTall, m_clrIcons );
 				x += iconBlindWide;
 			}
 
@@ -356,7 +375,7 @@ void CHudDeathNotice::Paint()
 		if ( m_DeathNotices[i].bAssisted )
 		{
 			// Draw the plus sign in between killer and assister name
-			surface()->DrawSetTextColor( Color( 255, 128, 0, 255 ) );
+			surface()->DrawSetTextColor( m_clrIcons );
 			//surface()->DrawSetTextColor( iconColor );
 			surface()->DrawSetTextPos( x, y );
 			surface()->DrawSetTextFont( m_hTextFont );
@@ -373,30 +392,30 @@ void CHudDeathNotice::Paint()
 
 		// Draw death weapon
 		//If we're using a font char, this will ignore iconTall and iconWide
-		icon->DrawSelf( x, y, iconWide, iconTall, iconColor );
+		icon->DrawSelf( x, y, iconWide, iconTall, m_clrIcons );
 		x += iconWide;
 
 		if( m_DeathNotices[i].bNoScope )
 		{
-			m_iconD_noscope->DrawSelf( x, y, iconNoScopeWide, iconNoScopeTall, iconColor );
+			m_iconD_noscope->DrawSelf( x, y, iconNoScopeWide, iconNoScopeTall, m_clrIcons );
 			x += iconNoScopeWide;
 		}
 
 		if( m_DeathNotices[i].bThruSmoke )
 		{
-			m_iconD_thrusmoke->DrawSelf( x, y, iconThruSmokeWide, iconThruSmokeTall, iconColor );
+			m_iconD_thrusmoke->DrawSelf( x, y, iconThruSmokeWide, iconThruSmokeTall, m_clrIcons );
 			x += iconThruSmokeWide;
 		}
 
 		if( m_DeathNotices[i].bPenetrated )
 		{
-			m_iconD_penetrated->DrawSelf( x, y, iconPenetrateWide, iconPenetrateTall, iconColor );
+			m_iconD_penetrated->DrawSelf( x, y, iconPenetrateWide, iconPenetrateTall, m_clrIcons );
 			x += iconPenetrateWide;
 		}
 
 		if( m_DeathNotices[i].bHeadshot )
 		{
-			m_iconD_headshot->DrawSelf( x, y, iconHeadshotWide, iconHeadshotTall, iconColor );
+			m_iconD_headshot->DrawSelf( x, y, iconHeadshotWide, iconHeadshotTall, m_clrIcons );
 			x += iconHeadshotWide;
 		}
 
@@ -505,14 +524,6 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	else
 	{
 		fullkilledwith[0] = 0;
-	}
-
-	// Do we have too many death messages in the queue?
-	if ( m_DeathNotices.Count() > 0 &&
-		m_DeathNotices.Count() >= (int)m_flMaxDeathNotices )
-	{
-		// Remove the oldest one in the queue, which will always be the first
-		m_DeathNotices.Remove(0);
 	}
 
 	// Get the names of the players

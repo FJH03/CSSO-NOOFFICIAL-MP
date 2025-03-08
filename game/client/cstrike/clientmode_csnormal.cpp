@@ -661,11 +661,6 @@ float ClientModeCSNormal::GetViewModelFOV( void )
 	return v_viewmodel_fov.GetFloat();
 }
 
-int ClientModeCSNormal::GetDeathMessageStartHeight( void )
-{
-	return m_pViewport->GetDeathMessageStartHeight();
-}
-
 void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 {
 	CBaseHudChat *pHudChat = (CBaseHudChat *)GET_HUDELEMENT( CHudChat );

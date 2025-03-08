@@ -44,8 +44,6 @@ public:
 
 	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void Start( IGameUIFuncs *pGameUIFuncs, IGameEventManager2 * pGameEventManager );
-		
-	int GetDeathMessageStartHeight( void );
 
 	virtual void ShowBackGround(bool bShow) 
 	{

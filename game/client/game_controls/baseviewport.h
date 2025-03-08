@@ -66,8 +66,6 @@ public:
 #endif
 	}
 
-	virtual int GetDeathMessageStartHeight( void );	
-
 	// virtual void ChatInputPosition( int *x, int *y );
 
 	// Check if any panel other than the scoreboard is visible
