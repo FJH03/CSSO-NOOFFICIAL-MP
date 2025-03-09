@@ -1730,6 +1730,7 @@ void CBasePanel::ApplySchemeSettings(IScheme *pScheme)
 		m_pGameMenuButtons[i]->SetDefaultColor(buttonColor[i], Color(0, 0, 0, 0));
 		m_pGameMenuButtons[i]->SetArmedColor(buttonColor[i], Color(0, 0, 0, 0));
 		m_pGameMenuButtons[i]->SetDepressedColor(buttonColor[i], Color(0, 0, 0, 0));
+		m_pGameMenuButtons[i]->SetAlpha(GetMenuAlpha()); // PiMoN: alpha gets reset to 0 each CBackgroundMenuButton::ApplySchemeSettings
 	}
 
 	// work out current focus - find the topmost panel

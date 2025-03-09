@@ -150,7 +150,7 @@ void CCSHudWeaponSelection::AddWeapon( C_BaseCombatWeapon *pWeapon, bool bSelect
 	m_weaponPanels[nWepSlot][nWepPos].pSVGPanel->SetRenderSize( weapon_icon_wide, weapon_icon_tall );
 	m_weaponPanels[nWepSlot][nWepPos].pSVGPanel->SetTexture( UTIL_VarArgs( "materials/vgui/weapons/svg/%s.svg", pCSWeapon->GetClassname() + 7 ) );
 	
-	if ( pCSWeapon->HasStatTrak() )
+	if ( pCSWeapon->HasStatTrak() && pCSWeapon->GetCSWpnData().m_szStatTrakModel && pCSWeapon->GetCSWpnData().m_szStatTrakModel[0] )
  	{
  		wchar_t wszLocalized[256];
  		g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_StatTrak" ), 1, g_pVGuiLocalize->Find( pCSWeapon->GetPrintName() ) );
