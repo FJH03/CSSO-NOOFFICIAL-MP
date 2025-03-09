@@ -2153,7 +2153,7 @@ ConVar snd_music_selection(
 					{
 						killer_weapon_name = pScorer->GetActiveWeapon()->GetClassname(); //GetDeathNoticeName();
 
-						if ( pCSScorer->GetActiveCSWeapon()->IsKindOf( WEAPONTYPE_SNIPER_RIFLE ) && pCSScorer->GetFOV() == pCSScorer->GetDefaultFOV() )
+						if ( pCSScorer->GetActiveCSWeapon()->IsKindOf( WEAPONTYPE_SNIPER_RIFLE ) && !pCSScorer->m_bIsScoped )
 						{
 							// assuming that we are no-scoped with a sniper rifle - draw a noscope icon
 							bNoScope = true;
