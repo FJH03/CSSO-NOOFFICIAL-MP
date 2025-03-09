@@ -892,7 +892,7 @@ bool Parser::parseColorComponent(const char*& ptr, const char* end, int& compone
         value *= 2.55;
 
     value = clamp(value, 0.0, 255.0);
-    component = static_cast<int>(std::round(value));
+    component = static_cast<int>(value + 0.5);
     return true;
 }
 
