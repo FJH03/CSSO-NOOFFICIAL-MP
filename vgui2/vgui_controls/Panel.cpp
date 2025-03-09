@@ -756,6 +756,7 @@ void Panel::Init( int x, int y, int wide, int tall )
 
 	m_iBaseResolutionOverride[0] = BASE_WIDTH;
 	m_iBaseResolutionOverride[1] = BASE_HEIGHT;
+	m_bScaleCornerTextures = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -4323,6 +4324,7 @@ void Panel::ApplySettings(KeyValues *inResourceData)
 	// Initialize base resolution overrides before computing anything
 	m_iBaseResolutionOverride[0] = inResourceData->GetInt( "base_resolution_wide", BASE_WIDTH );
 	m_iBaseResolutionOverride[1] = inResourceData->GetInt( "base_resolution_tall", BASE_HEIGHT );
+	m_bScaleCornerTextures = inResourceData->GetBool( "scale_corner_textures" );
 
 	// First restore to default values
 	if ( _flags.IsFlagSet( NEEDS_DEFAULT_SETTINGS_APPLIED ) )
@@ -6403,6 +6405,16 @@ void Panel::GetCornerTextureSize( int& w, int& h )
 		return;
 	}
 	surface()->DrawGetTextureSize(m_nBgTextureId1, w, h);
+
+	if ( m_bScaleCornerTextures )
+ 	{
+ 		// PiMoN: hack so that corner textures (mainly deathnotice ones) appear correct on lower resolution
+ 		int screenWide, screenTall;
+ 		surface()->GetScreenSize( screenWide, screenTall );
+ 		float multiplier = (float)screenTall / (float)m_iBaseResolutionOverride[1];
+ 		w = RoundFloatToInt( w *= multiplier );
+ 		h = RoundFloatToInt( h *= multiplier );
+ 	}
 }
 
 //-----------------------------------------------------------------------------
@@ -8963,11 +8975,17 @@ int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize
 	if (pszInput)
 	{
 		bool bIgnoreProportions = false;
+		bool bByWidth = false;
 		if (pszInput[0] == 'i' || pszInput[0] == 'I')
 		{
 			bIgnoreProportions = true;
 			pszInput++;
 		}
+		else if (pszInput[0] == 'w' || pszInput[0] == 'W')
+ 		{
+ 			bByWidth = true;
+ 			pszInput++;
+ 		}
 
 		if ( pszInput[0] == 'f' || pszInput[0] == 'F' )
 		{
@@ -9007,7 +9025,7 @@ int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize
 		if ( !(nFlags & nFlagFull) && !bIgnoreProportions && pPanel->IsProportional() )
 		{
 			int nOldPos = nNewPos;
-			nNewPos = scheme()->GetProportionalScaledValueEx( pPanel->GetScheme(), nNewPos );
+			nNewPos = scheme()->GetProportionalScaledValueEx( pPanel->GetScheme(), nNewPos, bByWidth );
 			flProportion = (float)nNewPos / (float)nOldPos;
 		}
 

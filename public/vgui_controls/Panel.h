@@ -757,6 +757,7 @@ public:
 	};
 
 	int m_iBaseResolutionOverride[2];
+	bool m_bScaleCornerTextures;
 
 protected:
 	//this will return m_NavDown and will not look for the next visible panel
