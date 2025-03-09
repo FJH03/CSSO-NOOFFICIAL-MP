@@ -551,6 +551,7 @@ void CCSHudWeaponSelection::UpdateIconColors()
 			if ( m_weaponPanels[nSlot][nPos].bInitialized )
 			{
 				m_weaponPanels[nSlot][nPos].pSVGPanel->SetFgColor( bSelected ? m_clrSelected : m_clrNotSelected );
+				m_weaponPanels[nSlot][nPos].pNameLabel->SetFgColor( m_clrSelected );
 				if ( m_weaponPanels[nSlot][nPos].bShowCountNumber )
 				{
 					Color clrCountNotSelected( m_clrSelected.r()*0.5f, m_clrSelected.g()*0.5f, m_clrSelected.b()*0.5f, m_clrSelected.a() );
