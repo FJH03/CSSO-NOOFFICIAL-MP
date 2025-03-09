@@ -705,11 +705,11 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 }
 
 //--------------------------------------------------------------------------------------------------------
-C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *pszArmsModel, int nSkintoneIndex, bool bHideBareArms )
+void C_BaseViewModel::AddViewmodelArmModel( const char *pszArmsModel, int nSkintoneIndex, bool bHideBareArms )
 {
 	// Only create the view model attachment if we have a valid arm model
 	if ( pszArmsModel == NULL || pszArmsModel[0] == '\0' || modelinfo->GetModelIndex( pszArmsModel ) == -1 )
-		return NULL;
+		return;
 
 	C_ViewmodelAttachmentModel *pEnt = new class C_ViewmodelAttachmentModel;
 	if ( pEnt && pEnt->InitializeAsClientEntity( pszArmsModel, RENDER_GROUP_VIEW_MODEL_OPAQUE ) )
@@ -732,10 +732,7 @@ C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *p
 		pEnt->SetUseParentLightingOrigin( true );
 
 		RemoveEffects( EF_NODRAW );
-		return pEnt;
-	}	
-
-	return NULL;
+	}
 }
 
 void C_BaseViewModel::AddViewmodelStatTrak( CWeaponCSBase *pWeapon, int holderIndex )

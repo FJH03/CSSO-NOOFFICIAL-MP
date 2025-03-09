@@ -666,11 +666,6 @@ void CViewRender::SetUpViews()
 
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 
-	// You in-view weapon aim.
-	bool bCalcViewModelView = false;
-	Vector ViewModelOrigin;
-	QAngle ViewModelAngles;
-
 	if ( engine->IsHLTV() )
 	{
 		HLTVCamera()->CalcView( viewEye.origin, viewEye.angles, viewEye.fov );
@@ -699,13 +694,12 @@ void CViewRender::SetUpViews()
 				{
 					VectorCopy( ve->GetAbsOrigin(), viewEye.origin );
 					VectorCopy( ve->GetAbsAngles(), viewEye.angles );
+
+					vieweffects->ApplyShake( viewEye.origin, viewEye.angles, 1.0 );
 				}
 			}
 
-			// There is a viewmodel.
-			bCalcViewModelView = true;
-			ViewModelOrigin = viewEye.origin;
-			ViewModelAngles = viewEye.angles;
+			pPlayer->CalcViewModelView( viewEye.origin, viewEye.angles );
 		}
 		else
 		{
@@ -765,7 +759,7 @@ void CViewRender::SetUpViews()
 		}
 
 		HeadtrackMovementMode_t hmmOverrideMode = g_pClientMode->ShouldOverrideHeadtrackControl();
-		g_ClientVirtualReality.OverrideView( &m_View, &ViewModelOrigin, &ViewModelAngles, hmmOverrideMode );
+		g_ClientVirtualReality.OverrideView( &m_View, &viewEye.origin, &viewEye.angles, hmmOverrideMode );
 
 		// left and right stereo views should default to being the same as the mono/middle view
 		m_ViewLeft = m_View;
@@ -782,12 +776,6 @@ void CViewRender::SetUpViews()
 		m_ViewRight = m_View;
 		m_ViewLeft.m_eStereoEye = STEREO_EYE_LEFT;
 		m_ViewRight.m_eStereoEye = STEREO_EYE_RIGHT;
-	}
-
-	if ( bCalcViewModelView )
-	{
-		Assert ( pPlayer != NULL );
-		pPlayer->CalcViewModelView ( ViewModelOrigin, ViewModelAngles );
 	}
 
 	// Disable spatial partition access
