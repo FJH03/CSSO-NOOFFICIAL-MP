@@ -4193,7 +4193,7 @@ void CCSPlayer::CheckTKPunishment( void )
 	{
 		m_bJustKilledTeammate = false;
 		m_bPunishedForTK = true;
-		CommitSuicide();
+		CommitSuicide( false, true );
 	}
 }
 
@@ -6581,7 +6581,7 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 		{
 			m_fNextSuicideTime = gpGlobals->curtime;	// allow the suicide to work
 
-			CommitSuicide();
+			CommitSuicide( false, true );
 
 			// add 1 to frags to balance out the 1 subtracted for killing yourself
 			IncrementFragCount( 1 );
@@ -6683,7 +6683,7 @@ bool CCSPlayer::HandleCommand_JoinClass( int iClass )
 		// Kill player if switching classes while alive.
 		// This mimics goldsrc CS 1.6, and prevents a player from hiding, and switching classes to
 		// make the opposing team think there are more enemies than there really are.
-		CommitSuicide();
+		CommitSuicide( false, true );
 	}
 
 	if ( !HasAgentSet( GetTeamNumber() ) )
@@ -9286,7 +9286,7 @@ void CCSPlayer::ChangeTeam( int iTeamNum )
 		else if ( iOldTeam != TEAM_UNASSIGNED  && !IsDead() )
 		{
 			// Kill player if switching teams while alive
-			CommitSuicide();
+			CommitSuicide( false, true );
 		}
 
 		// Put up the class selection menu.
