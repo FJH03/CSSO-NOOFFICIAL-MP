@@ -268,7 +268,32 @@ BEGIN_DATADESC( CFilterName )
 
 END_DATADESC()
 
-
+// ###################################################################
+ //	> FilterModel
+ // ###################################################################
+ class CFilterModel : public CBaseFilter
+ {
+ 	DECLARE_CLASS( CFilterModel, CBaseFilter );
+ 	DECLARE_DATADESC();
+ 
+ public:
+ 	string_t m_iFilterModel;
+ 
+ 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity )
+ 	{
+ 		return ( FStrEq( STRING( m_iFilterModel ), STRING( pEntity->GetModelName() ) ) );
+ 
+ 	}
+ };
+ 
+ LINK_ENTITY_TO_CLASS( filter_activator_model, CFilterModel );
+ 
+ BEGIN_DATADESC( CFilterModel )
+ 
+ 	// Keyfields
+ 	DEFINE_KEYFIELD( m_iFilterModel,	FIELD_STRING,	"model" ),
+ 
+ END_DATADESC()
 
 // ###################################################################
 //	> FilterClass
