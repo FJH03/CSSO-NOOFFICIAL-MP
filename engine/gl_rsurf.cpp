@@ -937,6 +937,9 @@ void Shader_DrawChainsStatic( const CMSurfaceSortList &sortList, int nSortGroup,
 		int meshTotal = meshList.Count();
 		VPROF_INCREMENT_COUNTER( "vertex format changes", meshTotal );
 
+		if ( !meshTotal )
+ 			break;
+
 		// HACKHACK: Crappy little bubble sort
 		// UNDONE: Make the traversal happen so that they are already sorted when you get here.
 		// NOTE: Profiled in a fairly complex map.  This is not even costing 0.01ms / frame!
