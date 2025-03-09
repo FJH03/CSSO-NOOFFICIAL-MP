@@ -32,7 +32,6 @@ public:
 	virtual bool AllowConCommandsWhileAlive() = 0;
 	virtual bool IsVisible() = 0;
 	virtual void GetBounds(int &x, int &y, int &wide, int &tall) = 0;
-	virtual float GetFullZoom( void ) = 0;
 	virtual float GetMapScale( void ) = 0;
 	virtual void ShowRadar( bool value ) = 0;
 };
@@ -137,7 +136,6 @@ public:
 
 	virtual float GetZoom( void );
 	virtual int GetMode( void );
-	virtual float GetFullZoom( void ){ return m_fFullZoom; }
 	virtual float GetMapScale( void ){ return m_fMapScale; }
 	virtual void ShowRadar( bool value ) { m_bShowRadar = value; }
 
@@ -252,7 +250,6 @@ protected:
 
 	int		m_nFollowEntity;// entity number to follow, 0 = off
 	CPanelAnimationVar( float, m_fZoom, "zoom", "1.0" );	// current zoom n = overview panel shows 1/n^2 of whole map'
-	float	m_fFullZoom;	// best zoom factor for full map view (1.0 is map is a square) 
 	Vector2D m_ViewOrigin;	// map coordinates that are in the center of the pverview panel
 	Vector2D m_MapCenter;	// map coordinates that are in the center of the pverview panel
 

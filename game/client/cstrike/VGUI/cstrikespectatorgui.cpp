@@ -1388,7 +1388,7 @@ void CCSMapOverview::DrawBomb()
 	DrawIconCS(bombIcon, bombIcon, m_bomb.position, m_flIconSize, 0, alpha);
 }
 
-#define ICON_SCALE_FACTOR 0.25
+#define ICON_SCALE_FACTOR 0.35f
 bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector pos, float scale, float angle, int alpha, bool allowRotation, const char *text, Color *textColor, float status, Color *statusColor )
 {
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
@@ -2420,7 +2420,7 @@ Vector2D CCSMapOverview::PanelToMap( const Vector2D &panelPos )
 	int pwidth, pheight; 
 	GetSize(pwidth, pheight);
 	float viewAngle = GetViewAngle();
-	float fScale = (m_fZoom * m_fFullZoom) / OVERVIEW_MAP_SIZE;
+	float fScale = m_fZoom / OVERVIEW_MAP_SIZE;
 
 	Vector offset;
 	offset.x = (panelPos.x - (pwidth * 0.5f)) / pheight;

@@ -770,7 +770,7 @@ Vector2D CMapOverview::MapToPanel( const Vector2D &mappos )
 	VectorYawRotate( offset, viewAngle, offset );
 
 	// find the actual zoom from the animationvar m_fZoom and the map zoom scale
-	float fScale = (m_fZoom * m_fFullZoom) / OVERVIEW_MAP_SIZE;
+	float fScale = m_fZoom / OVERVIEW_MAP_SIZE;
 
 	offset.x *= fScale;
 	offset.y *= fScale;
@@ -812,7 +812,6 @@ void CMapOverview::SetMap(const char * levelname)
 		m_MapOrigin.y = 0;
 		m_fMapScale = 1;
 		m_bRotateMap = false;
-		m_fFullZoom = 1;
 		return;
 	}
 
@@ -838,7 +837,6 @@ void CMapOverview::SetMap(const char * levelname)
 	m_MapOrigin.y	= m_MapKeyValues->GetInt("pos_y");
 	m_fMapScale		= m_MapKeyValues->GetFloat("scale", 1.0f);
 	m_bRotateMap	= m_MapKeyValues->GetInt("rotate")!=0;
-	m_fFullZoom		= m_MapKeyValues->GetFloat("zoom", 1.0f );
 }
 
 void CMapOverview::ResetRound()
@@ -1017,7 +1015,7 @@ void CMapOverview::SetCenter(const Vector2D &mappos)
 	m_ViewOrigin = mappos;
 	m_MapCenter = mappos;
 
-	float fTwiceZoom = m_fZoom * m_fFullZoom * 2;
+	float fTwiceZoom = m_fZoom * 2;
 
 	width = height = OVERVIEW_MAP_SIZE / (fTwiceZoom);
 
