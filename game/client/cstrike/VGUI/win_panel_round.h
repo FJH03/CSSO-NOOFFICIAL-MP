@@ -49,6 +49,7 @@ private:
 	ImagePanel* m_pMainBackground;
 	ImagePanel* m_pTeamIcon;
 	CAvatarImagePanel* m_pMVPAvatar;
+	ImagePanel* m_pMVPAvatarBkg;
 
 	Color m_clrCT;
 	Color m_clrT;

@@ -39,6 +39,7 @@ WinPanel_Round::WinPanel_Round( const char *pElementName ): CHudElement( pElemen
 	ListenForGameEvent( "cs_win_panel_match" );
 	ListenForGameEvent( "round_mvp" );
 
+	m_pMVPAvatarBkg = new ImagePanel( this, "MVP_AvatarBkg" );
 	m_pMVPAvatar = new CAvatarImagePanel( this, "MVP_Avatar" );
 	m_pMVPAvatar->SetDefaultAvatar( scheme()->GetImage( CSTRIKE_DEFAULT_AVATAR, true ) );
 	m_pMVPAvatar->SetShouldDrawFriendIcon( false );
@@ -284,7 +285,7 @@ void WinPanel_Round::SetMVP( C_CSPlayer* pPlayer, CSMvpReason_t reason )
 			{
 				int x1, y1, x2, y2;
 				m_pMVPText->ComputeAlignment( x1, y1, x2, y2 );
-				m_pMVPAvatar->SetPos( x1 - m_pMVPAvatar->GetWide() - mvp_avatar_margin, m_pMVPAvatar->GetYPos() );
+				m_pMVPAvatarBkg->SetPos( x1 - m_pMVPAvatarBkg->GetWide() - mvp_avatar_margin, m_pMVPAvatarBkg->GetYPos() );
 				m_pMVPAvatar->SetDefaultAvatar( GetDefaultAvatarImage( pPlayer ) );
 				m_pMVPAvatar->SetPlayer( pPlayer, k_EAvatarSize64x64 );
 			}
@@ -300,6 +301,7 @@ void WinPanel_Round::SetMVP( C_CSPlayer* pPlayer, CSMvpReason_t reason )
 	if ( m_pMVPAvatar )
 	{
 		m_pMVPAvatar->SetVisible( isThereAnMVP );
+		m_pMVPAvatarBkg->SetVisible( isThereAnMVP );
 	}
 }
 
