@@ -2776,28 +2776,15 @@ void C_CSPlayer::ClientThink()
 
 		if ( m_iObserverMode == OBS_MODE_FREEZECAM )
 		{
-			//=============================================================================
-			// HPE_BEGIN:
 			// [Forrest] Added sv_disablefreezecam check
-			//=============================================================================
 			static ConVarRef sv_disablefreezecam( "sv_disablefreezecam" );
 			if ( !m_bPlayingFreezeCamSound && !cl_disablefreezecam.GetBool() && !sv_disablefreezecam.GetBool() )
-				//=============================================================================
-				// HPE_END
-				//=============================================================================
 			{
 				// Play sound
 				m_bPlayingFreezeCamSound = true;
 
 				CLocalPlayerFilter filter;
-				EmitSound_t ep;
-				ep.m_nChannel = CHAN_VOICE;
-				ep.m_pSoundName =  "UI/freeze_cam.wav";
-				ep.m_flVolume = VOL_NORM;
-				ep.m_SoundLevel = SNDLVL_NORM;
-				ep.m_bEmitCloseCaption = false;
-
-				EmitSound( filter, GetSoundSourceIndex(), ep );
+				EmitSound( filter, GetSoundSourceIndex(), "Player.FreezeCam" );
 			}
 		}
 		else
