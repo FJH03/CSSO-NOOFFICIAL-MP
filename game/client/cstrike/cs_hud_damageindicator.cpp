@@ -97,7 +97,7 @@ void CHudDamageIndicator::Reset( void )
 
 	m_flFadeCompleteTime = 0.0;
 
-	m_clrIndicator.SetColor( 250, 0, 0, 255 );
+	m_clrIndicator.SetColor( 255, 255, 255, 255 );
 }
 
 void CHudDamageIndicator::Init( void )
@@ -122,7 +122,7 @@ bool CHudDamageIndicator::ShouldDraw( void )
 
 void CHudDamageIndicator::DrawDamageIndicatorFront( float flFade )
 {
-	if ( m_flAttackFront > 0.4 )
+	if ( m_flAttackFront > 0.0 )
 	{
 		if ( !icon_up )
 		{
@@ -134,9 +134,11 @@ void CHudDamageIndicator::DrawDamageIndicatorFront( float flFade )
 			return;
 		}
 
-		int	x = ( ScreenWidth() / 2 ) - icon_up->Width() / 2;
-		int	y = ( ScreenHeight() / 2 ) - icon_up->Height() * 3;
-		icon_up->DrawSelf( x, y, m_clrIndicator );
+		int	x = (ScreenWidth() / 2) - icon_up->Width() / 2;
+		int	y = (ScreenHeight() / 2) - (icon_up->Height() / 2) - (icon_up->Height() * 2);
+		Color clr = m_clrIndicator;
+		clr[3] *= m_flAttackFront;
+		icon_up->DrawSelf( x, y, clr );
 
 		m_flAttackFront = MAX( 0.0, m_flAttackFront - flFade );
 	}
@@ -148,7 +150,7 @@ void CHudDamageIndicator::DrawDamageIndicatorFront( float flFade )
 
 void CHudDamageIndicator::DrawDamageIndicatorRear( float flFade )
 {
-	if ( m_flAttackRear > 0.4 )
+	if ( m_flAttackRear > 0.0 )
 	{
 		if ( !icon_down )
 		{
@@ -160,9 +162,11 @@ void CHudDamageIndicator::DrawDamageIndicatorRear( float flFade )
 			return;
 		}
 
-		int	x = ( ScreenWidth() / 2 ) - icon_down->Width() / 2;
-		int	y = ( ScreenHeight() / 2 ) + icon_down->Height() * 2;
-		icon_down->DrawSelf( x, y, m_clrIndicator );
+		int	x = (ScreenWidth() / 2) - icon_down->Width() / 2;
+		int	y = (ScreenHeight() / 2) + (icon_down->Height() / 2) + icon_down->Height();
+		Color clr = m_clrIndicator;
+		clr[3] *= m_flAttackRear;
+		icon_down->DrawSelf( x, y, clr );
 
 		m_flAttackRear = MAX( 0.0, m_flAttackRear - flFade );
 	}
@@ -175,7 +179,7 @@ void CHudDamageIndicator::DrawDamageIndicatorRear( float flFade )
 
 void CHudDamageIndicator::DrawDamageIndicatorLeft( float flFade )
 {
-	if ( m_flAttackLeft > 0.4 )
+	if ( m_flAttackLeft > 0.0 )
 	{
 		if ( !icon_left )
 		{
@@ -187,9 +191,11 @@ void CHudDamageIndicator::DrawDamageIndicatorLeft( float flFade )
 			return;
 		}
 
-		int	x = ( ScreenWidth() / 2 ) - icon_left->Width() * 3;
-		int	y = ( ScreenHeight() / 2 ) - icon_left->Height() / 2;
-		icon_left->DrawSelf( x, y, m_clrIndicator );
+		int	x = (ScreenWidth() / 2) - (icon_left->Width() / 2) - (icon_left->Width() * 2);
+		int	y = (ScreenHeight() / 2) - icon_left->Height() / 2;
+		Color clr = m_clrIndicator;
+		clr[3] *= m_flAttackLeft;
+		icon_left->DrawSelf( x, y, clr );
 
 		m_flAttackLeft = MAX( 0.0, m_flAttackLeft - flFade );
 	}
@@ -202,7 +208,7 @@ void CHudDamageIndicator::DrawDamageIndicatorLeft( float flFade )
 
 void CHudDamageIndicator::DrawDamageIndicatorRight( float flFade )
 {
-	if ( m_flAttackRight > 0.4 )
+	if ( m_flAttackRight > 0.0 )
 	{
 		if ( !icon_right )
 		{
@@ -214,9 +220,11 @@ void CHudDamageIndicator::DrawDamageIndicatorRight( float flFade )
 			return;
 		}
 
-		int	x = ( ScreenWidth() / 2 ) + icon_right->Width() * 2;
-		int	y = ( ScreenHeight() / 2 ) - icon_right->Height() / 2;
-		icon_right->DrawSelf( x, y, m_clrIndicator );
+		int	x = (ScreenWidth() / 2) + (icon_right->Width() / 2) + icon_right->Width();
+		int	y = (ScreenHeight() / 2) - icon_right->Height() / 2;
+		Color clr = m_clrIndicator;
+		clr[3] *= m_flAttackRight;
+		icon_right->DrawSelf( x, y, clr );
 
 		m_flAttackRight = MAX( 0.0, m_flAttackRight - flFade );
 	}
@@ -234,8 +242,8 @@ void CHudDamageIndicator::Paint()
 {
 	if( m_flFadeCompleteTime > gpGlobals->curtime )
 	{
-		float flFade = gpGlobals->frametime * 2;
-		// draw damage indicators	
+		float flFade = gpGlobals->frametime * 1.5f;
+		// draw damage indicators
 		DrawDamageIndicatorFront( flFade );
 		DrawDamageIndicatorRear( flFade );
 		DrawDamageIndicatorLeft( flFade );
@@ -263,15 +271,9 @@ void CHudDamageIndicator::MsgFunc_Damage( bf_read &msg )
 		m_flFadeCompleteTime = gpGlobals->curtime + 1.0;
 		CalcDamageDirection( vecFrom );
 	}
-//=============================================================================
-// HPE_BEGIN:
 // [menglish] Added reads for the added location based parameters to this message
-//=============================================================================	 
 	msg.ReadLong();
-	msg.ReadBitVec3Coord( vecFrom );	 
-//=============================================================================
-// HPE_END
-//=============================================================================
+	msg.ReadBitVec3Coord( vecFrom );
 }
 
 void CHudDamageIndicator::CalcDamageDirection( const Vector &vecFrom )
