@@ -224,6 +224,8 @@ public:
 	virtual int					GetVisionFilterFlags( bool bWeaponsCheck = false ) { return 0x00; }
 	bool						HasVisionFilterFlags( int nFlags, bool bWeaponsCheck = false ) { return ( GetVisionFilterFlags( bWeaponsCheck ) & nFlags ) == nFlags; }
 	virtual void				CalculateVisionUsingCurrentFlags( void ) {}
+
+	virtual int					GetLastKillerIndex() { return 0; }
 	
 	// Specific queries about this player.
 	bool						InFirstPersonView();
@@ -385,6 +387,8 @@ public:
 
 	virtual	IMaterial *GetHeadLabelMaterial( void );
 
+	void SetLastKillerDamageAndFreezeframe( int nLastKillerDamageTaken, int nLastKillerHitsTaken, int nLastKillerDamageGiven, int nLastKillerHitsGiven );
+
 	// Fog
 	fogparams_t				*GetFogParams( void ) { return &m_CurrentFog; }
 	void					FogControllerChanged( bool bSnap );
@@ -441,6 +445,13 @@ public:
 	EHANDLE					m_hZoomOwner;		// This is a pointer to the entity currently controlling the player's zoom
 												// Only this entity can change the zoom state once it has ownership
 
+	
+	bool m_bCanShowFreezeFrameNow;
+ 	int m_nLastKillerDamageTaken;
+ 	int m_nLastKillerHitsTaken;
+ 	int m_nLastKillerDamageGiven;
+ 	int m_nLastKillerHitsGiven;
+	
 	// For weapon prediction
 	bool			m_fOnTarget;		//Is the crosshair on a target?
 	

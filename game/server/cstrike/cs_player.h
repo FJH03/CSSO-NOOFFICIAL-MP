@@ -575,6 +575,9 @@ public:
 	void NoteWeaponFired();
 	virtual bool WantsLagCompensationOnEntity( const CBaseEntity *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const;
 
+	void SetLastKillerIndex( int nLastKillerIndex ) { m_nLastKillerIndex = nLastKillerIndex; }
+	int GetLastKillerIndex( void ) { return m_nLastKillerIndex; }
+
 // ------------------------------------------------------------------------------------------------ //
 // Player state management.
 // ------------------------------------------------------------------------------------------------ //
@@ -617,6 +620,10 @@ private:
 	void State_Leave_OBSERVER_MODE();
 	void State_PreThink_OBSERVER_MODE();
 
+	void State_Enter_RESPAWN();
+	void State_PreThink_RESPAWN();
+	void TryRespawn();
+
 	void State_Enter_DEATH_WAIT_FOR_KEY();
 	void State_PreThink_DEATH_WAIT_FOR_KEY();
 
@@ -657,6 +664,8 @@ private:
 
 // [menglish] Freeze cam function and variable declarations	 
 	bool m_bAbortFreezeCam;
+
+	bool m_bRespawning;
 
 protected:
 	void AttemptToExitFreezeCam( void );
@@ -755,13 +764,12 @@ public:
 	void SetClanTag( const char *pTag );
 	const char *GetClanTag( void ) const;
 	void SetClanName( const char *pName );
- 	const char *GetClanName( void ) const;
+	const char *GetClanName( void ) const;
 
 
 	CNetworkVar( bool, m_bHasDefuser );			    // Does this player have a defuser kit?
 	CNetworkVar( bool, m_bHasNightVision );		    // Does this player have night vision?
 	CNetworkVar( bool, m_bNightVisionOn );		    // Is the NightVision turned on ?
-
 
 	// last known navigation area of player - NULL if unknown
 	CNavArea *m_lastNavArea;
@@ -809,10 +817,10 @@ public:
 	float m_flFlinchStack; // we add to this stack everytime we take damage that would "tag" us - decays constantly
 	CNetworkVar( float, m_flVelocityModifier );
 	void SetFlinchVelocityModifier( float fVelocityModifier )
- 	{
- 		// this function only allows more flinch (smaller values) to be applied, not less
- 		m_flVelocityModifier = Min(m_flVelocityModifier.Get(), fVelocityModifier);
- 	}
+	{
+		// this function only allows more flinch (smaller values) to be applied, not less
+		m_flVelocityModifier = Min(m_flVelocityModifier.Get(), fVelocityModifier);
+	}
 	CNetworkVar( float, m_flGroundAccelLinearFracLastTime );
 
 	int	m_iHostagesKilled;
@@ -849,8 +857,6 @@ public:
 
 	void SwitchTeamsAtRoundReset( void ) { m_switchTeamsOnNextRoundReset = true; }
 	bool WillSwitchTeamsAtRoundReset( void ) { return m_switchTeamsOnNextRoundReset; }
-
-	CNetworkVar( bool, m_bDetected );
 
 	int m_iLoadoutSlotAgentCT;
 	int m_iLoadoutSlotAgentT;
@@ -1025,6 +1031,8 @@ private:
 public:
 	void BuyRandom();
 
+	CNetworkVar( int, m_nLastKillerIndex );
+
 	static void	StartNewBulletGroup();	// global function
 
 	void RecordDamage( CCSPlayer* damageDealer, CCSPlayer* damageTaker, int iDamageDealt, int iActualHealthRemoved );
@@ -1035,6 +1043,8 @@ public:
 
 	void OutputDamageTaken( void );
 	void OutputDamageGiven( void );
+
+	void SendLastKillerDamageToClient( CCSPlayer *pLastKiller );
 
 	void StockPlayerAmmo( CBaseCombatWeapon *pNewWeapon = NULL );
 
@@ -1360,6 +1370,7 @@ inline const char *CCSPlayer::GetClanTag( void ) const
 
 inline const char *CCSPlayer::GetClanName( void ) const
 {
- 	return m_szClanName;
+	return m_szClanName;
 }
+
 #endif	//CS_PLAYER_H

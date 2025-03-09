@@ -59,20 +59,14 @@ void RegisterUserMessages()
 	// NVNT register haptic user messages
 	RegisterHapticMessages();
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [menglish] Registering PlayerStatsUpdate for Stats implementation
 	// [dwenger] AchievementEvent: Necessary for server-side achievement awarding
-    // [tj]      Added support for absolute current match statistics updates   
-	//=============================================================================
-	 
+
+	// [tj]      Added support for absolute current match statistics updates	
 	usermessages->Register( "PlayerStatsUpdate_DEPRECATED", -1 ); // Protocol changed, this message replaced below
     usermessages->Register( "AchievementEvent", -1 );
 	usermessages->Register( "MatchEndConditions", -1 ); //The end conditions for the match.  long frag limit, long max rounds, long rounds needed won, and long time
     usermessages->Register( "MatchStatsUpdate", -1 ); 
 	usermessages->Register( "PlayerStatsUpdate", -1 ); //Processes stats update
-
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
+	usermessages->Register( "SendLastKillerDamageToClient", -1 );
 }

@@ -1147,10 +1147,10 @@ void UpdateImageEntity(
 				szWeaponClassname = UTIL_VarArgs( "weapon_%s", szLoadoutWeapon );
 		}
 
-		CSWeaponID nWeaponID = WeaponIdFromString( szWeaponClassname );
 		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( szWeaponClassname );
 		if ( hWpnInfo == GetInvalidWeaponInfoHandle() )
 		{
+			CSWeaponID nWeaponID = WeaponIdFromString( szWeaponClassname );
 			if ( nWeaponID == ITEM_DEFUSER )
 			{
 				szWeaponModel = "models/weapons/w_defuser.mdl";

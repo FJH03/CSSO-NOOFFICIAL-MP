@@ -20,14 +20,12 @@
 #include "vgui_avatarimage.h"
 #include "hud.h"
 #include "hudelement.h"
-#include "cs_hud_playerhealth.h"
 
 #include "cs_shareddefs.h"
 
 using namespace vgui;
 
-class HorizontalGauge;
-class BorderedPanel;
+class CHudHealthArmorProgress;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -50,7 +48,6 @@ public:
 
 	virtual void SetActive( bool bActive );
 
-	void InitLayout();
 	void Show();
 	void Hide();
 
@@ -59,12 +56,20 @@ public:
 protected:
 
 private:
-	BorderedPanel*			m_pBackgroundPanel;
-	HorizontalGauge*		m_pKillerHealth;
-	CAvatarImagePanel*		m_pAvatar;
-	ImagePanel*				m_pDominationIcon;
+	CAvatarImagePanel*			m_pAvatar;
+	CHudHealthArmorProgress*	m_pKillerHealth;
+	ImagePanel*					m_pDominationIcon;
+	ImagePanel*					m_pDamageTakenBackground;
+	ImagePanel*					m_pDamageGivenBackground;
+	Label*						m_pDamageTakenLabel;
+	Label*						m_pDamageGivenLabel;
+	Label*						m_pScreenshotLabel;
 
 	bool					m_bShouldBeVisible;
+
+	CPanelAnimationVarAliasType( int, screenshot_label_ypos, "screenshot_label_ypos", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, screenshot_label_ypos_damage_taken, "screenshot_label_ypos_damage_taken", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, screenshot_label_ypos_damage_given, "screenshot_label_ypos_damage_given", "0", "proportional_ypos" );
 };
 
 #endif //CS_HUD_FREEZEPANEL_H

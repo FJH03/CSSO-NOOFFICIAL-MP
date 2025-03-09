@@ -46,7 +46,7 @@ WinPanel_Round::WinPanel_Round( const char *pElementName ): CHudElement( pElemen
 	m_pWinLabel = new Label( this, "WinLabel", L" " );
 	m_pFunFactLabel = new Label( this, "FunFactLabel", L" " );
 	m_pMVPText = new Label( this, "MVP_Text", L"MVP_TEXT" );
-	m_pMainBackground = new ImagePanel( this, "MainBackground" );
+	m_pMainBackground = new ImagePanel( this, "WinPanelBackground" );
 	m_pTeamIcon = new ImagePanel( this, "TeamLogo" );
 
 	LoadControlSettings( "Resource/UI/Win_Round.res" );

@@ -48,6 +48,7 @@
 #include "steam/steam_api.h"
 #include "sourcevr/isourcevirtualreality.h"
 #include "client_virtualreality.h"
+#include "usermessages.h"
 
 #if defined USES_ECON_ITEMS
 #include "econ_wearable.h"
@@ -110,6 +111,7 @@ ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.3", FCVAR_CHEAT | FC
 ConVar	spec_freeze_traveltime_long( "spec_freeze_traveltime_long", "0.45", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam when they are far away.", true, 0.01, false, 0 );
 ConVar	spec_freeze_distance_min( "spec_freeze_distance_min", "60", FCVAR_CHEAT, "Minimum random distance from the target to stop when framing them in observer freeze cam." );
 ConVar	spec_freeze_distance_max( "spec_freeze_distance_max", "80", FCVAR_CHEAT, "Maximum random distance from the target to stop when framing them in observer freeze cam." );
+ConVar	spec_freeze_deathanim_time( "spec_freeze_deathanim_time", "0.8", FCVAR_REPLICATED, "The time that the death cam will spend watching the player's ragdoll before going into the freeze death cam." );
 ConVar	spec_freeze_target_fov_long( "spec_freeze_target_fov_long", "90", FCVAR_CHEAT | FCVAR_REPLICATED, "The target FOV that the deathcam should use when the cam zoom far away on the target." );
 ConVar	spec_freeze_target_fov( "spec_freeze_target_fov", "42", FCVAR_CHEAT | FCVAR_REPLICATED, "The target FOV that the deathcam should use." );
 #else
@@ -467,6 +469,12 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 
 	m_ignoreLadderJumpTime = 0.0f;
 
+	m_bCanShowFreezeFrameNow = false;
+ 	m_nLastKillerDamageTaken = 0;
+ 	m_nLastKillerHitsTaken = 0;
+ 	m_nLastKillerDamageGiven = 0;
+ 	m_nLastKillerHitsGiven = 0;
+
 	m_nForceVisionFilterFlags = 0;
 
 	ListenForGameEvent( "base_player_teleported" );
@@ -492,12 +500,27 @@ C_BasePlayer::~C_BasePlayer()
 	delete m_pFlashlight;
 }
 
+void MsgFunc_SendLastKillerDamageToClient( bf_read &msg )
+{
+ 	int nNumHitsGiven = msg.ReadShort();
+ 	int nDamageGiven = msg.ReadShort();
+ 	int nNumHitsTaken = msg.ReadShort();
+ 	int nDamageTaken = msg.ReadShort();
+ 
+ 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+ 	if ( pPlayer )
+ 	{
+ 		pPlayer->SetLastKillerDamageAndFreezeframe( nDamageTaken, nNumHitsTaken, nDamageGiven, nNumHitsGiven );
+ 	}
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void C_BasePlayer::Spawn( void )
 {
+	usermessages->HookMessage( "SendLastKillerDamageToClient", ::MsgFunc_SendLastKillerDamageToClient );
+
 	// Clear all flags except for FL_FULLEDICT
 	ClearFlags();
 	AddFlag( FL_CLIENT );
@@ -950,7 +973,7 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 		}
 		SetLocalAngles( angles );
 
-		if ( !m_bWasFreezeFraming && GetObserverMode() == OBS_MODE_FREEZECAM )
+		if ( m_bCanShowFreezeFrameNow && !m_bWasFreezeFraming && GetObserverMode() == OBS_MODE_FREEZECAM )
 		{
 			m_vecFreezeFrameStart = MainViewOrigin();
 			m_flFreezeFrameStartTime = gpGlobals->curtime;
@@ -975,13 +998,19 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 			IGameEvent *pEvent = gameeventmanager->CreateEvent( "show_freezepanel" );
 			if ( pEvent )
 			{
-				pEvent->SetInt( "killer", target ? target->entindex() : 0 );
+				pEvent->SetInt( "killer", target ? target->entindex() : GetLastKillerIndex() );
+				pEvent->SetInt( "hits_taken", m_nLastKillerHitsTaken );
+				pEvent->SetInt( "damage_taken", m_nLastKillerDamageTaken );
+				pEvent->SetInt( "hits_given", m_nLastKillerHitsGiven );
+				pEvent->SetInt( "damage_given", m_nLastKillerDamageGiven );
 				gameeventmanager->FireEventClientSide( pEvent );
 			}
 
 			// Force the sound mixer to the freezecam mixer
 			ConVar *pVar = (ConVar *)cvar->FindVar( "snd_soundmixer" );
 			pVar->SetValue( "FreezeCam_Only" );
+
+			m_bCanShowFreezeFrameNow = false;
 		}
 		else if ( m_bWasFreezeFraming && GetObserverMode() != OBS_MODE_FREEZECAM )
 		{
@@ -2830,6 +2859,16 @@ bool IsInFreezeCam( void )
 		return true;
 
 	return false;
+}
+
+void C_BasePlayer::SetLastKillerDamageAndFreezeframe( int nLastKillerDamageTaken, int nLastKillerHitsTaken, int nLastKillerDamageGiven, int nLastKillerHitsGiven )
+{
+ 	m_nLastKillerDamageTaken = nLastKillerDamageTaken;
+ 	m_nLastKillerHitsTaken = nLastKillerHitsTaken;
+ 	m_nLastKillerDamageGiven = nLastKillerDamageGiven;
+ 	m_nLastKillerHitsGiven = nLastKillerHitsGiven;
+ 
+ 	m_bCanShowFreezeFrameNow = true;
 }
 
 //-----------------------------------------------------------------------------

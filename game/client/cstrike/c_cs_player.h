@@ -513,6 +513,8 @@ public:
 
 	virtual ShadowType_t		ShadowCastType();
 
+	virtual int GetLastKillerIndex( void ) { return m_nLastKillerIndex; }
+
 	float m_flNightVisionAlpha;
 
 	float m_flFlashAlpha;
@@ -592,6 +594,8 @@ private:
 	bool	m_bShouldAutobuyDMWeapons;
 
 	Vector m_vecRagdollVelocity;
+
+	int m_nLastKillerIndex;
 
 	CInterpolatedVar< QAngle >	m_iv_angEyeAngles;
 

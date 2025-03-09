@@ -69,10 +69,4 @@ ConVar mp_buy_during_immunity(
 	"When set, players can buy when immune, ignoring buytime. 0 = default. 1 = both teams. 2 = Terrorists. 3 = Counter-Terrorists."
 	);
 
-ConVar mp_fadetoblack( 
-	"mp_fadetoblack", 
-	"0", 
-	FCVAR_REPLICATED | FCVAR_NOTIFY, 
-	"fade a player's screen to black when he dies" );
-
 ConVar sv_hudhint_sound( "sv_hudhint_sound", "1", FCVAR_REPLICATED );

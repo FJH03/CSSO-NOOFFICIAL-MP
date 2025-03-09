@@ -149,6 +149,7 @@ extern ConVar mp_ggprogressive_healthshot_killcount;
 extern ConVar spec_freeze_time;
 extern ConVar spec_freeze_time_lock;
 extern ConVar spec_freeze_traveltime;
+extern ConVar spec_freeze_deathanim_time;
 
 extern ConVar ammo_hegrenade_max;
 extern ConVar ammo_flashbang_max;
@@ -172,6 +173,8 @@ extern ConVar ff_damage_reduction_other;
 
 ConVar phys_playerscale( "phys_playerscale", "10.0", FCVAR_REPLICATED, "This multiplies the bullet impact impuse on players for more dramatic results when players are shot." );
 ConVar phys_headshotscale( "phys_headshotscale", "1.3", FCVAR_REPLICATED, "Modifier for the headshot impulse hits on players" );
+
+ConVar sv_damage_print_enable( "sv_damage_print_enable", "1", FCVAR_REPLICATED, "Turn this off to disable the player's damage feed in the console after getting killed." );
 
 ConVar sv_spawn_afk_bomb_drop_time( "sv_spawn_afk_bomb_drop_time", "15", FCVAR_REPLICATED, "Players that have never moved since they spawned will drop the bomb after this amount of time." );
 
@@ -447,6 +450,8 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_iControlledBotEntIndex ) ),
 #endif
 
+	SendPropInt( SENDINFO( m_nLastKillerIndex ), 8, SPROP_UNSIGNED ),
+
 	SendPropBool( SENDINFO( m_bIsLookingAtWeapon ) ),
 	SendPropBool( SENDINFO( m_bIsHoldingLookAtWeapon ) ),
 
@@ -547,6 +552,8 @@ CCSPlayer::CCSPlayer()
 	m_bIsBeingGivenItem = false;
 	m_isVIP = false;
 
+	m_nLastKillerIndex = 0;
+
 	m_bJustKilledTeammate = false;
 	m_bPunishedForTK = false;
 	m_iTeamKills = 0;
@@ -624,6 +631,7 @@ CCSPlayer::CCSPlayer()
 	m_wasNotKilledNaturally = false;
 
 	m_iGunGameProgressiveWeaponIndex = 0;
+	m_bRespawning = false;
 	m_bMadeFinalGunGameProgressiveKill = false;
 	m_LastDamageType = 0;
 	m_fImmuneToDamageTime = 0.0f;
@@ -2255,6 +2263,8 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	{
 		CSGameRules()->CheckWinConditions();
 	}
+
+	SendLastKillerDamageToClient( pAttackerPlayer );
 
 	OutputDamageGiven();
 	OutputDamageTaken();
@@ -6579,13 +6589,6 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 		m_iClass = (int)CS_CLASS_NONE;
 		m_iSkin = 0;
 
-		// do we have fadetoblack on? (need to fade their screen back in)
-		if ( mp_fadetoblack.GetBool() )
-		{
-			color32_s clr = { 0,0,0,255 };
-			UTIL_ScreenFade( this, clr, 0, 0, FFADE_IN | FFADE_PURGE );
-		}
-
 		return true;
 	}
 
@@ -7086,6 +7089,7 @@ CCSPlayerStateInfo* CCSPlayer::State_LookupInfo( CSPlayerState state )
 		{ STATE_DEATH_ANIM,		"STATE_DEATH_ANIM",		&CCSPlayer::State_Enter_DEATH_ANIM,	NULL, &CCSPlayer::State_PreThink_DEATH_ANIM },
 		{ STATE_DEATH_WAIT_FOR_KEY,	"STATE_DEATH_WAIT_FOR_KEY",	&CCSPlayer::State_Enter_DEATH_WAIT_FOR_KEY,	NULL, &CCSPlayer::State_PreThink_DEATH_WAIT_FOR_KEY },
 		{ STATE_OBSERVER_MODE,	"STATE_OBSERVER_MODE",	&CCSPlayer::State_Enter_OBSERVER_MODE,	NULL, &CCSPlayer::State_PreThink_OBSERVER_MODE },
+		{ STATE_RESPAWN,		"STATE_RESPAWN",		&CCSPlayer::State_Enter_RESPAWN, NULL, &CCSPlayer::State_PreThink_RESPAWN },
 		{ STATE_DORMANT,		"STATE_DORMANT",		NULL, NULL, NULL }
 	};
 
@@ -7191,10 +7195,11 @@ void CCSPlayer::State_Enter_DEATH_ANIM()
 	StartObserverMode( OBS_MODE_DEATHCAM );	// go to observer mode
 	RemoveEffects( EF_NODRAW );	// still draw player body
 
-	if ( mp_fadetoblack.GetBool() )
+	if ( mp_forcecamera.GetInt() == OBS_ALLOW_NONE )
 	{
 		color32_s clr = {0,0,0,255};
-		UTIL_ScreenFade( this, clr, 3, 3, FFADE_OUT | FFADE_STAYOUT );
+		UTIL_ScreenFade( this, clr, 0.3f, 3, FFADE_OUT | FFADE_STAYOUT );
+
 		//Don't perform any freezecam stuff if we are fading to black
 		State_Transition( STATE_DEATH_WAIT_FOR_KEY );
 	}
@@ -7208,12 +7213,15 @@ void CCSPlayer::State_Enter_DEATH_ANIM()
  
 void CCSPlayer::State_PreThink_DEATH_ANIM()
 {
-	// If the anim is done playing, go to the next state (waiting for a keypress to
-	// either respawn the guy or put him into observer mode).
+	if ( IsAlive() )
+		return;
+
+	// If the anim is done playing, go to the next state (waiting for a keypress to 
+	// either respawn the guy or put him into observer mode ).
 	if ( GetFlags() & FL_ONGROUND )
 	{
 		float flForward = GetAbsVelocity().Length() - 20;
-		if (flForward <= 0)
+		if (flForward <= 0 )
 		{
 			SetAbsVelocity( vec3_origin );
 		}
@@ -7226,28 +7234,43 @@ void CCSPlayer::State_PreThink_DEATH_ANIM()
 		}
 	}
 
-	float fDeathEnd = m_flDeathTime + CS_DEATH_ANIMATION_TIME;
+	float flDeathDelayDefault = spec_freeze_deathanim_time.GetFloat();
+	//float flDeathDelayDefault = CS_DEATH_ANIMATION_TIME;
+
+	CBaseEntity* pKiller = GetObserverTarget();
+
+	// there is a bug here where if you are spectating another player and they die, you won't see the death anim because the deathanim delay is so show
+	// we need to find a way to differentiate from the local player and a player that you are spectating.  this doesn't work below
+	//if ( GetObserverMode() == OBS_MODE_DEATHCAM && pKiller && pKiller != this )
+	//	flDeathDelayDefault = CS_DEATH_ANIMATION_TIME;
+
+	float fDeathEnd = m_flDeathTime + flDeathDelayDefault;
 	float fFreezeEnd = fDeathEnd + spec_freeze_traveltime.GetFloat() + spec_freeze_time.GetFloat();
 	float fFreezeLock = fDeathEnd + spec_freeze_time_lock.GetFloat();
+
+	bool bShouldRespawnNow = IsAbleToInstantRespawn();
 
 	// transition to Freezecam mode once the death animation is complete
 	if ( gpGlobals->curtime >= fDeathEnd )
 	{
-		if ( GetObserverTarget() && GetObserverTarget() != this &&
-			!m_bAbortFreezeCam && gpGlobals->curtime < fFreezeEnd && GetObserverMode() != OBS_MODE_FREEZECAM)
+		if ( !m_bAbortFreezeCam && gpGlobals->curtime < fFreezeEnd && ( GetObserverMode() != OBS_MODE_FREEZECAM ) )
 		{
-			StartObserverMode( OBS_MODE_FREEZECAM );
+			CPlantedC4* pPlantedC4 = pKiller ? dynamic_cast< CPlantedC4* >( pKiller ) : NULL;
+			
+			if ( pPlantedC4 == NULL )
+			{
+				// before we can replay, we need to freezecam for a little while (1-2 seconds) to let the player see the killer and output the stats
+				StartObserverMode( OBS_MODE_FREEZECAM );
+			}
 		}
-		else if(GetObserverMode() == OBS_MODE_FREEZECAM)
+		else if(GetObserverMode() == OBS_MODE_FREEZECAM )
 		{
 			if ( m_bAbortFreezeCam && ( mp_forcecamera.GetInt() != OBS_ALLOW_NONE || CSGameRules()->IsWarmupPeriod() ) )
 			{
-				if ( IsAbleToInstantRespawn() )
+				if ( bShouldRespawnNow )
 				{
-					State_Transition( STATE_ACTIVE );
-					respawn( this, false );
-					m_nButtons = 0;
-					SetNextThink( TICK_NEVER_THINK );
+					// Respawn in gun game progressive
+					State_Transition( STATE_RESPAWN );
 				}
 				else
 				{
@@ -7259,15 +7282,13 @@ void CCSPlayer::State_PreThink_DEATH_ANIM()
 
 	// Don't transfer to observer state until the freeze cam is done
 	// Players in competitive mode may bypass this mode with a key press
-	if ( (gpGlobals->curtime > fFreezeEnd) ||
-		 (gpGlobals->curtime > fFreezeLock && (m_nButtons & ~IN_SCORE) && mp_deathcam_skippable.GetBool()) )
+	if ( ( gpGlobals->curtime > fFreezeEnd ) ||
+	     ( gpGlobals->curtime > fFreezeLock && ( m_nButtons & ~IN_SCORE ) && mp_deathcam_skippable.GetBool() )  )
 	{
-		if ( IsAbleToInstantRespawn() )
+		if ( bShouldRespawnNow )
 		{
-			State_Transition( STATE_ACTIVE );
-			respawn( this, false );
-			m_nButtons = 0;
-			SetNextThink( TICK_NEVER_THINK );
+			// Transition to respawn in gun game progressive
+			State_Transition( STATE_RESPAWN );
 		}
 		else
 		{
@@ -7275,10 +7296,6 @@ void CCSPlayer::State_PreThink_DEATH_ANIM()
 		}
 	}
 }
- 
-//=============================================================================
-// HPE_END
-//=============================================================================
 
 
 void CCSPlayer::State_Enter_DEATH_WAIT_FOR_KEY()
@@ -7302,38 +7319,36 @@ void CCSPlayer::State_PreThink_DEATH_WAIT_FOR_KEY()
 {
 	// once we're done animating our death and we're on the ground, we want to set movetype to None so our dead body won't do collisions and stuff anymore
 	// this prevents a bug where the dead body would go to a player's head if he walked over it while the dead player was clicking their button to respawn
-	if ( GetMoveType() != MOVETYPE_NONE && (GetFlags() & FL_ONGROUND) )
+	if ( GetMoveType() != MOVETYPE_NONE && (GetFlags() & FL_ONGROUND ) )
 		SetMoveType( MOVETYPE_NONE );
-
-	// if the player has been dead for one second longer than allowed by forcerespawn,
-	// forcerespawn isn't on. Send the player off to an intermission camera until they
+	
+	// if the player has been dead for one second longer than allowed by forcerespawn, 
+	// forcerespawn isn't on. Send the player off to an intermission camera until they 
 	// choose to respawn.
 
-	bool fAnyButtonDown = (m_nButtons & ~IN_SCORE) != 0;
-	if ( mp_fadetoblack.GetBool() )
+	bool fAnyButtonDown = (m_nButtons & ~IN_SCORE ) != 0;
+	if ( mp_forcecamera.GetInt() == OBS_ALLOW_NONE )
 		fAnyButtonDown = false;
 
 	// after a certain amount of time switch to observer mode even if they don't press a key.
-	if (gpGlobals->curtime >= (m_flDeathTime + DEATH_ANIMATION_TIME + 3.0))
+	else if (gpGlobals->curtime >= (m_flDeathTime + DEATH_ANIMATION_TIME + 3.0 ) )
 	{
 		fAnyButtonDown = true;
 	}
 
 	if ( fAnyButtonDown )
 	{
-		if ( IsAbleToInstantRespawn() )
+		// if we use repsawn waves, its time to respawn and we are ABLE to respawn, then do so
+		// otherwise, just check to see if we are able to respawn
+		bool bShouldRespawnNow = IsAbleToInstantRespawn();
+
+		if ( bShouldRespawnNow )
 		{
-			State_Transition( STATE_ACTIVE );
-			respawn( this, false );
-			m_nButtons = 0;
-			SetNextThink( TICK_NEVER_THINK );
+			// Early out transition to respawn when playing death animation
+			State_Transition( STATE_RESPAWN );
 		}
 		else
 		{
-			if ( GetObserverTarget() )
-			{
-				StartReplayMode( 8, 8, GetObserverTarget()->entindex() );
-			}
 
 			State_Transition( STATE_OBSERVER_MODE );
 		}
@@ -7342,8 +7357,8 @@ void CCSPlayer::State_PreThink_DEATH_WAIT_FOR_KEY()
 
 void CCSPlayer::State_Enter_OBSERVER_MODE()
 {
-	// do we have fadetoblack on? (need to fade their screen back in)
-	if ( mp_fadetoblack.GetBool() && mp_forcecamera.GetInt() != OBS_ALLOW_NONE)
+	// do we have fadetoblack on? (need to fade their screen back in )
+	if ( mp_forcecamera.GetInt() == OBS_ALLOW_NONE )
 	{
 		color32_s clr = { 0,0,0,255 };
 		UTIL_ScreenFade( this, clr, 0, 0, FFADE_IN | FFADE_PURGE );
@@ -7352,7 +7367,7 @@ void CCSPlayer::State_Enter_OBSERVER_MODE()
 	int observerMode = m_iObserverLastMode;
 	if ( IsNetClient() )
 	{
-		const char *pIdealMode = engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "cl_spec_mode" );
+		const char *pIdealMode = engine->GetClientConVarValue( entindex(), "cl_spec_mode" );
 		if ( pIdealMode )
 		{
 			int nIdealMode = atoi( pIdealMode );
@@ -7405,6 +7420,29 @@ void CCSPlayer::State_PreThink_OBSERVER_MODE()
 		}
 	}
 #endif
+}
+
+void CCSPlayer::State_Enter_RESPAWN()
+{
+	TryRespawn();
+}
+
+void CCSPlayer::TryRespawn()
+{
+	if ( !m_bRespawning )
+	{
+		// Perform the respawn of the player in gun game progressive
+		m_bRespawning = true;
+		State_Transition( STATE_ACTIVE );
+		respawn( this, false );
+		m_nButtons = 0;
+		SetNextThink( TICK_NEVER_THINK );
+	}
+}
+
+void CCSPlayer::State_PreThink_RESPAWN()
+{
+	TryRespawn();
 }
 
 
@@ -7464,6 +7502,8 @@ void CCSPlayer::State_Enter_ACTIVE()
 	RemoveSolidFlags( FSOLID_NOT_SOLID );
 	m_Local.m_iHideHUD = 0;
 	PhysObjectWake();
+
+	m_bRespawning = false;
 }
 
 
@@ -9477,6 +9517,9 @@ void CCSPlayer::RemoveSelfFromOthersDamageCounters()
 //=======================================================
 void CCSPlayer::OutputDamageTaken( void )
 {
+	if ( sv_damage_print_enable.GetBool() == false )
+		return;
+
 	bool bPrintHeader = true;
 	CDamageRecord *pRecord;
 	char buf[64];
@@ -9512,20 +9555,8 @@ void CCSPlayer::OutputDamageTaken( void )
 //=======================================================
 void CCSPlayer::OutputDamageGiven( void )
 {
-	int nDamageGivenThisRound = 0;
-	//CDamageRecord *pDamageList = pAttacker->GetDamageGivenList();
-	FOR_EACH_LL( m_DamageList, i )
-	{
-		if ( m_DamageList[i]->GetPlayerDamagerPtr() && 
-			m_DamageList[i]->GetPlayerDamagerPtr() == this &&
-			m_DamageList[i]->GetPlayerRecipientPtr() &&
-			m_DamageList[i]->GetPlayerRecipientPtr() != this &&
-			IsOtherSameTeam( m_DamageList[i]->GetPlayerRecipientPtr()->GetTeamNumber() ) &&
-			!IsOtherEnemy( m_DamageList[i]->GetPlayerRecipientPtr() ) )
-		{	
-			nDamageGivenThisRound += m_DamageList[i]->GetActualHealthRemoved();
-		}		
-	}
+	if ( sv_damage_print_enable.GetBool() == false )
+		return;
 
 	bool bPrintHeader = true;
 	CDamageRecord *pRecord;
@@ -9556,6 +9587,47 @@ void CCSPlayer::OutputDamageGiven( void )
 			ClientPrint( this, msg_dest, "Damage Given to \"%s1\" - %s2\n", pRecord->GetPlayerRecipientName(), buf );
 		}		
 	}
+}
+
+void CCSPlayer::SendLastKillerDamageToClient( CCSPlayer *pLastKiller )
+{
+	int nNumHitsGiven = 0;
+	int nDamageGiven = 0;
+
+	int nNumHitsTaken = 0;
+	int nDamageTaken = 0;
+	if ( sv_damage_print_enable.GetBool() )
+	{
+		FOR_EACH_LL( m_DamageList, i )
+		{
+			if( m_DamageList[i]->IsDamageRecordValidPlayerToPlayer() )
+			{
+				if ( m_DamageList[i]->IsDamageRecordStillValidForDamagerAndRecipient( this, pLastKiller ) )
+				{
+					nDamageGiven = m_DamageList[i]->GetDamage();
+					nNumHitsGiven = m_DamageList[i]->GetNumHits();
+				}
+				if ( m_DamageList[i]->IsDamageRecordStillValidForDamagerAndRecipient( pLastKiller, this ) )
+				{
+					nDamageTaken = m_DamageList[i]->GetDamage();
+					nNumHitsTaken = m_DamageList[i]->GetNumHits();
+				}
+			}
+		}
+	}
+
+	// Send a user message to the local player with the hits/damage data
+	//-----------------------------------------------------------------
+	CSingleUserRecipientFilter filter( this );
+	filter.MakeReliable();
+
+	UserMessageBegin( filter, "SendLastKillerDamageToClient" );
+		WRITE_SHORT( nNumHitsGiven );
+		WRITE_SHORT( nDamageGiven );
+		WRITE_SHORT( nNumHitsTaken );
+		WRITE_SHORT( nDamageTaken );
+	MessageEnd();
+	//-----------------------------------------------------------------
 }
 
 void CCSPlayer::CreateViewModel( int index /*=0*/ )
@@ -9596,6 +9668,10 @@ int CCSPlayer::GetNextObserverSearchStartPoint( bool bReverse )
 			if ( CCSBot *pBot = FindNearestControllableBot( true ) )
 			{
 				return pBot->entindex();
+			}
+			else if ( m_nLastKillerIndex > 0 )
+			{
+				return m_nLastKillerIndex;
 			}
 		}
 	}
@@ -10660,7 +10736,7 @@ void CCSPlayer::OnStartedDefuse()
 //-----------------------------------------------------------------------------
 void CCSPlayer::AttemptToExitFreezeCam( void )
 {
-	float fEndFreezeTravel = m_flDeathTime + CS_DEATH_ANIMATION_TIME + spec_freeze_traveltime.GetFloat();
+	float fEndFreezeTravel = m_flDeathTime + spec_freeze_deathanim_time.GetFloat() + spec_freeze_traveltime.GetFloat();
 	if ( gpGlobals->curtime < fEndFreezeTravel )
 		return;
 

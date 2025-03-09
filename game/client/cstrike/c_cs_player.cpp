@@ -83,6 +83,7 @@ extern ConVar	spec_freeze_distance_min;
 extern ConVar	spec_freeze_distance_max;
 extern ConVar	spec_freeze_target_fov;
 extern ConVar	spec_freeze_target_fov_long;
+extern ConVar	spec_freeze_deathanim_time;
 
 ConVar spec_freeze_cinematiclight_r( "spec_freeze_cinematiclight_r", "1.5", FCVAR_CHEAT );
 ConVar spec_freeze_cinematiclight_g( "spec_freeze_cinematiclight_g", "1.2", FCVAR_CHEAT );
@@ -1062,6 +1063,9 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropBool( RECVINFO( m_bCanControlObservedBot ) ),
 	RecvPropInt( RECVINFO( m_iControlledBotEntIndex ) ),
 #endif
+
+	RecvPropInt( RECVINFO( m_nLastKillerIndex ) ),
+
 	RecvPropBool( RECVINFO( m_bIsLookingAtWeapon ) ),
 	RecvPropBool( RECVINFO( m_bIsHoldingLookAtWeapon ) ),
 
@@ -2386,6 +2390,11 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			m_iOldIDEntIndex = 0;
 			m_holdTargetIDTimer.Reset();
 			m_iTargetedWeaponEntIndex = 0;
+
+			m_nLastKillerDamageTaken = 0;
+ 			m_nLastKillerHitsTaken = 0;
+ 			m_nLastKillerDamageGiven = 0;
+ 			m_nLastKillerHitsGiven = 0;
 
 			UpdateAddonModels( true );
 
@@ -5101,7 +5110,7 @@ float C_CSPlayer::GetDeathCamInterpolationTime()
 	if ( cl_disablefreezecam.GetBool() || sv_disablefreezecam.GetBool() || !GetObserverTarget() )
 		return spec_freeze_time.GetFloat();
 	else
-		return CS_DEATH_ANIMATION_TIME;
+		return spec_freeze_deathanim_time.GetFloat();
 
 }
 
@@ -5117,7 +5126,7 @@ void C_CSPlayer::CalcDeathCamView( Vector& eyeOrigin, QAngle& eyeAngles, float& 
 	}
 
 	// NOTE: CS_DEATH_ANIMATION_TIME differs from base class implementation
-	float interpolation = ( gpGlobals->curtime - m_flDeathTime ) / CS_DEATH_ANIMATION_TIME;
+	float interpolation = ( gpGlobals->curtime - m_flDeathTime ) / spec_freeze_deathanim_time.GetFloat();
 
 	interpolation = clamp( interpolation, 0.0f, 1.0f );
 

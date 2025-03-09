@@ -13,6 +13,7 @@
 #include "c_cs_player.h"
 #include "c_cs_playerresource.h"
 #include <vgui_controls/Label.h>
+#include <vgui_controls/ProgressBar.h>
 #include <vgui/ILocalize.h>
 #include <vgui/ISurface.h>
 #include "VGUI/bordered_panel.h"
@@ -30,12 +31,6 @@
 #include "tier0/memdbgon.h"
 
 DECLARE_HUDELEMENT_DEPTH( CCSFreezePanel, 1 );
-// DECLARE_HUD_MESSAGE( CCSFreezePanel, Damage );
-// DECLARE_HUD_MESSAGE( CCSFreezePanel, DroppedEquipment );
-
-#define CALLOUT_WIDE		(XRES(100))
-#define CALLOUT_TALL		(XRES(50))
-
 
 ConVar cl_disablefreezecam(
 	"cl_disablefreezecam",
@@ -44,73 +39,17 @@ ConVar cl_disablefreezecam(
 	"Turn on/off freezecam on client"
 	);
 
+extern Color LerpColors( Color cStart, Color cEnd, float flPercent );
 
-Color LerpColors( Color cStart, Color cEnd, float flPercent )
+
+class CHudHealthArmorProgress: public ContinuousProgressBar
 {
-	float r = (float)((float)(cStart.r()) + (float)(cEnd.r() - cStart.r()) * flPercent);
-	float g = (float)((float)(cStart.g()) + (float)(cEnd.g() - cStart.g()) * flPercent);
-	float b = (float)((float)(cStart.b()) + (float)(cEnd.b() - cStart.b()) * flPercent);
-	float a = (float)((float)(cStart.a()) + (float)(cEnd.a() - cStart.a()) * flPercent);
-	return Color( r, g, b, a );
-}
+	DECLARE_CLASS_SIMPLE( CHudHealthArmorProgress, ContinuousProgressBar );
 
-
-//-----------------------------------------------------------------------------
-// Purpose:  Clips the health image to the appropriate percentage
-//-----------------------------------------------------------------------------
-class HorizontalGauge : public vgui::Panel
-{
 public:
-	DECLARE_CLASS_SIMPLE( HorizontalGauge, vgui::Panel );
-
-	HorizontalGauge( Panel *parent, const char *name ) : 
-		vgui::Panel( parent, name ), 
-		m_fPercent(0.0f)
-	{
-	}
-
-/*
-	void ApplySettings(KeyValues *inResourceData)
-	{
-		BaseClass::ApplySettings(inResourceData);
-
-		Color color0 = inResourceData->GetColor( "color0");
-		Color color1 = inResourceData->GetColor( "color1");
-	}
-*/
-
-	void PaintBackground()
-	{
-		int wide, tall;
-		GetSize(wide, tall);
-
-		surface()->DrawSetColor( Color(0, 0, 0, 128) );
-		surface()->DrawFilledRect(0, 0, wide, tall);
-
-		// do the border explicitly here
-		surface()->DrawSetColor( Color(0,0,0,255));
-		surface()->DrawOutlinedRect(0, 0, wide, tall);
-	}
-
-	virtual void Paint()
-	{
-		int wide, tall;
-		GetSize(wide, tall);
-
-		Color lowHealth(192, 32, 32, 255);
-		Color highHealth(32, 255, 32, 255);
-
-		surface()->DrawSetColor( LerpColors(lowHealth, highHealth, m_fPercent) );
-		surface()->DrawFilledRect(1, 1, (int)((wide - 1) * m_fPercent), tall - 1);
-	}
-		
-	void SetPercent( float fPercent ) { m_fPercent = fPercent; }
-
-private:
-	float m_fPercent;
+	CHudHealthArmorProgress( Panel *parent, const char *panelName );
+	virtual void Paint();
 };
-
-DECLARE_BUILD_FACTORY( HorizontalGauge );
 
 
 //-----------------------------------------------------------------------------
@@ -118,17 +57,24 @@ DECLARE_BUILD_FACTORY( HorizontalGauge );
 //-----------------------------------------------------------------------------
 CCSFreezePanel::CCSFreezePanel( const char *pElementName ) :
 	EditablePanel( NULL, "FreezePanel" ), 
-	CHudElement( pElementName ),
-	m_pBackgroundPanel(NULL),
-	m_pKillerHealth(NULL),
-	m_pAvatar(NULL),
-	m_pDominationIcon(NULL)
+	CHudElement( pElementName )
 {
-	SetSize( 10, 10 ); // Quiet "parent not sized yet" spew
 	SetParent(g_pClientMode->GetViewport());
 	m_bShouldBeVisible = false;
-	SetScheme( "ClientScheme" );
 	RegisterForRenderGroup( "hide_for_scoreboard" );
+
+	m_pAvatar = new CAvatarImagePanel( this, "AvatarImage" );
+	m_pKillerHealth = new CHudHealthArmorProgress( this, "KillerHealth" );
+	m_pDominationIcon = new ImagePanel( this, "DominationIcon" );
+	m_pDamageTakenBackground = new ImagePanel( this, "DamageTakenBackground" );
+	m_pDamageGivenBackground = new ImagePanel( this, "DamageGivenBackground" );
+	m_pDamageTakenLabel = new Label( this, "DamageTakenLabel", L" " );
+	m_pDamageGivenLabel = new Label( this, "DamageGivenLabel", L" " );
+	m_pScreenshotLabel = new Label( this, "ScreenshotLabel", L"ScreenshotLabel" );
+
+	m_pAvatar->SetDefaultAvatar( scheme()->GetImage( CSTRIKE_DEFAULT_AVATAR, true ) );
+	m_pAvatar->SetShouldScaleImage( true );
+	m_pAvatar->SetShouldDrawFriendIcon( false );
 }
 
 //-----------------------------------------------------------------------------
@@ -154,22 +100,7 @@ void CCSFreezePanel::Init()
 
 	Hide();
 
-	InitLayout();
-
-}
-
-void CCSFreezePanel::InitLayout()
-{
 	LoadControlSettings( "resource/UI/FreezePanel_Basic.res" );
-
-	m_pBackgroundPanel = dynamic_cast<BorderedPanel*>( FindChildByName("FreezePanelBG"));
-	m_pAvatar = dynamic_cast<CAvatarImagePanel*>( m_pBackgroundPanel->FindChildByName("AvatarImage"));
-	m_pKillerHealth	= dynamic_cast<HorizontalGauge*>( m_pBackgroundPanel->FindChildByName("KillerHealth"));
-	m_pDominationIcon = dynamic_cast<ImagePanel*>( m_pBackgroundPanel->FindChildByName("DominationIcon"));
-
-	m_pAvatar->SetDefaultAvatar(scheme()->GetImage( CSTRIKE_DEFAULT_AVATAR, true ));
-	m_pAvatar->SetShouldScaleImage(true);
-	m_pAvatar->SetShouldDrawFriendIcon(false);
 }
 
 //-----------------------------------------------------------------------------
@@ -192,43 +123,121 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 		// see if the local player died
 		int iPlayerIndexVictim = engine->GetPlayerForUserID( event->GetInt( "userid" ) );
 		int iPlayerIndexKiller = engine->GetPlayerForUserID( event->GetInt( "attacker" ) );
+		const char *szWeapon = event->GetString( "weapon" );
 		C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
-		CCSPlayer* pKiller =  ToCSPlayer(ClientEntityList().GetBaseEntity(iPlayerIndexKiller));
+		C_CSPlayer* pKiller = ToCSPlayer( ClientEntityList().GetBaseEntity( iPlayerIndexKiller ) );
 
 		if ( pLocalPlayer && iPlayerIndexVictim == pLocalPlayer->entindex() )
 		{
 			// the local player is dead, see if this is a new nemesis or a revenge
 			if ( event->GetInt( "dominated" ) > 0)
 			{
-				m_pDominationIcon->SetImage("../hud/freeze_nemesis");
-				m_pDominationIcon->SetVisible(true);
+				m_pDominationIcon->SetImage( "hud/freeze_nemesis" );
+				m_pDominationIcon->SetVisible( true );
 
-				m_pBackgroundPanel->SetDialogVariable( "InfoLabel1", g_pVGuiLocalize->Find("#FreezePanel_NewNemesis1"));
-				m_pBackgroundPanel->SetDialogVariable( "InfoLabel2", g_pVGuiLocalize->Find("#FreezePanel_NewNemesis2"));
+				SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find("#FreezePanel_NewNemesis"));
 			}
 			// was the killer your pre-existing nemesis?
-			else if ( pKiller != NULL && pKiller->IsPlayerDominated(iPlayerIndexVictim) )
+			else if ( pKiller && pKiller->IsPlayerDominated( iPlayerIndexVictim ) )
 			{
-				m_pDominationIcon->SetImage("../hud/freeze_nemesis");
-				m_pDominationIcon->SetVisible(true);
+				m_pDominationIcon->SetImage( "hud/freeze_nemesis" );
+				m_pDominationIcon->SetVisible( true );
 
-				m_pBackgroundPanel->SetDialogVariable( "InfoLabel1", g_pVGuiLocalize->Find("#FreezePanel_OldNemesis1"));
-				m_pBackgroundPanel->SetDialogVariable( "InfoLabel2", g_pVGuiLocalize->Find("#FreezePanel_OldNemesis2"));
+				SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find("#FreezePanel_OldNemesis"));
 			}
 			else if ( event->GetInt( "revenge" ) > 0 )
 			{
-				m_pDominationIcon->SetImage("../hud/freeze_revenge");
-				m_pDominationIcon->SetVisible(true);
+				m_pDominationIcon->SetImage( "hud/freeze_revenge" );
+				m_pDominationIcon->SetVisible( true );
 
-				m_pBackgroundPanel->SetDialogVariable( "InfoLabel1", g_pVGuiLocalize->Find("#FreezePanel_Revenge1"));
-				m_pBackgroundPanel->SetDialogVariable( "InfoLabel2", g_pVGuiLocalize->Find("#FreezePanel_Revenge2"));
+				SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find("#FreezePanel_Revenge"));
 			}
-			else
+			else if ( pKiller == pLocalPlayer || pKiller == NULL )
 			{
-  				m_pDominationIcon->SetVisible(false);
-				m_pBackgroundPanel->SetDialogVariable( "InfoLabel1", g_pVGuiLocalize->Find("#FreezePanel_Killer1"));
-				m_pBackgroundPanel->SetDialogVariable( "InfoLabel2", g_pVGuiLocalize->Find("#FreezePanel_Killer2"));
+				m_pDominationIcon->SetVisible( false );
+
+				// is it a grenade suicide?
+				// only he and decoy is included because you cant suicide from other grenades (no shit)
+				if ( StringHasPrefixCaseSensitive( szWeapon, "hegrenade" ) ||
+					 StringHasPrefixCaseSensitive( szWeapon, "decoy" ) )
+				{
+					SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find( "#FreezePanel_KilledByOwnGrenade" ) );
+				}
+				else if ( szWeapon && szWeapon[0] && !V_strcmp( szWeapon, "inferno" ) )
+				{
+					SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find( "#FreezePanel_KilledByFire" ) );
+				}
+				else
+				{
+					SetDialogVariable( "InfoLabel", g_pVGuiLocalize->Find( "#FreezePanel_KilledSelf" ) );
+				}
 			}
+			else if ( szWeapon && szWeapon[0] )
+			{
+				m_pDominationIcon->SetVisible( false );
+				if ( pKiller )
+				{
+					const char *pszLocString = "#FreezePanel_Killer_Weapon";
+					wchar_t wszLocalizedString[256];
+
+					CSWeaponID nWeaponID = AliasToWeaponID( szWeapon );
+					WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( WeaponIdAsString( nWeaponID ) );
+					if ( hWpnInfo == GetInvalidWeaponInfoHandle() )
+					{
+						if ( StringHasPrefixCaseSensitive( szWeapon, "hegrenade" ) )
+						{
+							g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pVGuiLocalize->Find( pszLocString ), 1, g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_HE_Grenade" ) );
+						}
+						else if ( StringHasPrefixCaseSensitive( szWeapon, "flashbang" ) )
+						{
+							g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pVGuiLocalize->Find( pszLocString ), 1, g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_Flashbang" ) );
+						}
+						else if ( StringHasPrefixCaseSensitive( szWeapon, "decoy" ) )
+						{
+							g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pVGuiLocalize->Find( pszLocString ), 1, g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_Decoy" ) );
+						}
+						else if ( StringHasPrefixCaseSensitive( szWeapon, "smokegrenade" ) )
+						{
+							g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pVGuiLocalize->Find( pszLocString ), 1, g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_Smoke_Grenade" ) );
+						}
+						else if ( StringHasPrefixCaseSensitive( szWeapon, "incgrenade" ) )
+						{
+							g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pVGuiLocalize->Find( pszLocString ), 1, g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_IncGrenade" ) );
+						}
+						else if ( StringHasPrefixCaseSensitive( szWeapon, "molotov" ) )
+						{
+							g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pVGuiLocalize->Find( pszLocString ), 1, g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_Molotov" ) );
+						}
+						else if ( !V_strcmp( szWeapon, "inferno" ) )
+						{
+							V_swprintf_safe( wszLocalizedString, L"" FMT_WS, g_pVGuiLocalize->Find( "#FreezePanel_KilledByFire" ) );
+							SetDialogVariable( "InfoLabel", wszLocalizedString );
+						}
+						else
+						{
+							return;
+						}
+					}
+					else
+					{
+						CCSWeaponInfo *pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
+						if ( !pWeaponInfo )
+							return;
+
+						if ( nWeaponID == WEAPON_ELITE )
+							pszLocString = "#FreezePanel_Killer_Weapon_Plural";
+
+						g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pVGuiLocalize->Find( pszLocString ), 1, g_pVGuiLocalize->Find( pWeaponInfo->szPrintName ) );
+					}
+					SetDialogVariable( "InfoLabel", wszLocalizedString );
+				}
+			}
+
+			wchar_t wzBind[16] = L"";
+			wchar_t navBarText[256] = L"";
+			UTIL_ReplaceKeyBindings( L"%jpeg%", 0, wzBind, sizeof( wzBind ) );
+			g_pVGuiLocalize->ConstructString( navBarText, sizeof( navBarText ), g_pVGuiLocalize->Find( "#FreezePanel_ScreenShot" ), 1, wzBind );
+			m_pScreenshotLabel->SetText( navBarText );
 		}
 	}
 	else if ( Q_strcmp( "hide_freezepanel", pEventName ) == 0 )
@@ -260,13 +269,76 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 				iKillerHealth = 0;
 			}
 
-			m_pKillerHealth->SetPercent( (float)iKillerHealth / iMaxHealth );
+			m_pKillerHealth->SetProgress( clamp( (float) iKillerHealth / (float) iMaxHealth, 0.0f, 1.0f ) );
 
 			wchar_t wszkillerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 			wszkillerName[0] = '\0';
 			cs_PR->GetDecoratedPlayerName( iKillerIndex, wszkillerName, sizeof( wszkillerName ), k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot );
 
-			m_pBackgroundPanel->SetDialogVariable( "killername", wszkillerName );
+			int nHitsTaken = 0;
+			int nDamTaken = 0;
+			int nHitsGiven = 0;
+			int nDamGiven = 0;
+
+			static ConVarRef sv_damage_print_enable( "sv_damage_print_enable" );
+
+			if ( sv_damage_print_enable.GetBool() )
+			{
+				nHitsTaken = event->GetInt( "hits_taken" );
+				nDamTaken = event->GetInt( "damage_taken" );
+				nHitsGiven = event->GetInt( "hits_given" );
+				nDamGiven = event->GetInt( "damage_given" );
+			}
+
+			wchar_t wszLocalizedDamageString[256];
+			wchar_t wszDamage[8];
+			wchar_t wszHits[8];
+			if ( nDamTaken )
+			{
+				V_snwprintf( wszDamage, sizeof( wszDamage ), L"%d", nDamTaken );
+				V_snwprintf( wszHits, sizeof( wszHits ), L"%d", nHitsTaken );
+				g_pVGuiLocalize->ConstructString( wszLocalizedDamageString, sizeof( wszLocalizedDamageString ),
+												  g_pVGuiLocalize->Find( nHitsTaken > 1 ? "#FreezePanel_DamageTaken_Multi" : "#FreezePanel_DamageTaken" ), 3,
+												  wszDamage, wszHits, wszkillerName );
+
+				m_pDamageTakenLabel->SetText( wszLocalizedDamageString );
+				m_pScreenshotLabel->SetPos( m_pScreenshotLabel->GetXPos(), screenshot_label_ypos_damage_taken );
+
+				m_pDamageTakenLabel->SetVisible( true );
+				m_pDamageTakenBackground->SetVisible( true );
+			}
+			else
+			{
+				m_pDamageTakenLabel->SetVisible( false );
+				m_pDamageTakenBackground->SetVisible( false );
+			}
+
+			if ( nDamGiven )
+			{
+				V_snwprintf( wszDamage, sizeof( wszDamage ), L"%d", nDamGiven );
+				V_snwprintf( wszHits, sizeof( wszHits ), L"%d", nHitsGiven );
+				g_pVGuiLocalize->ConstructString( wszLocalizedDamageString, sizeof( wszLocalizedDamageString ),
+												  g_pVGuiLocalize->Find( nHitsGiven > 1 ? "#FreezePanel_DamageGiven_Multi" : "#FreezePanel_DamageGiven" ), 3,
+												  wszDamage, wszHits, wszkillerName );
+
+				m_pDamageGivenLabel->SetText( wszLocalizedDamageString );
+				m_pScreenshotLabel->SetPos( m_pScreenshotLabel->GetXPos(), screenshot_label_ypos_damage_given );
+
+				m_pDamageGivenLabel->SetVisible( true );
+				m_pDamageGivenBackground->SetVisible( true );
+			}
+			else
+			{
+				m_pDamageGivenLabel->SetVisible( false );
+				m_pDamageGivenBackground->SetVisible( false );
+			}
+
+			if ( !nDamGiven && !nDamTaken )
+			{
+				m_pScreenshotLabel->SetPos( m_pScreenshotLabel->GetXPos(), screenshot_label_ypos );
+			}
+
+			SetDialogVariable( "killername", wszkillerName );
 
 			int iKillerIndex = pKiller->entindex();
 			player_info_t pi;
@@ -287,22 +359,16 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 //-----------------------------------------------------------------------------
 bool CCSFreezePanel::ShouldDraw( void )
 {
-	//=============================================================================
-	// HPE_BEGIN:
 	// [Forrest] Added sv_disablefreezecam check
-	//=============================================================================
 	static ConVarRef sv_disablefreezecam( "sv_disablefreezecam" );
 	return ( m_bShouldBeVisible && !cl_disablefreezecam.GetBool() && !sv_disablefreezecam.GetBool() && CHudElement::ShouldDraw() );
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 }
 
 void CCSFreezePanel::OnScreenSizeChanged( int nOldWide, int nOldTall )
 {
 	BaseClass::OnScreenSizeChanged(nOldWide, nOldTall);
 
-	InitLayout();
+	LoadControlSettings( "resource/UI/FreezePanel_Basic.res" );
 }
 
 void CCSFreezePanel::SetActive( bool bActive )
@@ -326,7 +392,7 @@ void CCSFreezePanel::SetActive( bool bActive )
 		g_pVGuiLocalize->ConvertANSIToUnicode( szKey, wKey, sizeof( wKey ) );
 		g_pVGuiLocalize->ConstructString( wLabel, sizeof( wLabel ), g_pVGuiLocalize->Find("#FreezePanel_SaveReplay" ), 1, wKey );
 
-		m_pBackgroundPanel->SetDialogVariable( "savereplay", wLabel );
+		SetDialogVariable( "savereplay", wLabel );
 	}
 }
 

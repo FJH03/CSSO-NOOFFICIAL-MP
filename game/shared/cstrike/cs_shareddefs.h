@@ -194,28 +194,16 @@ extern const char *KnivesEntitiesStrings[MAX_KNIVES];
 
 #define MAX_CLAN_TAG_LENGTH		16	// max for new tags is actually 12, this allows some backward compat.
 
-//=============================================================================
-// HPE_BEGIN:
 // [menglish] CS specific death animation time now that freeze cam is implemented
 //			in order to linger on the players body less 
-// [tj] The number of times you must kill a given player to be dominating them
-// [menglish] Flags to use upon player death
-//=============================================================================
-
-// [menglish] CS specific death animation time now that freeze cam is implemented
-//			in order to linger on the players body less 
-#define CS_DEATH_ANIMATION_TIME			0.8
  
 // [tj] The number of times you must kill a given player to be dominating them
 // Should always be more than 1
 #define CS_KILLS_FOR_DOMINATION         4
 
+// [menglish] Flags to use upon player death 
 #define CS_DEATH_DOMINATION				0x0001	// killer is dominating victim
 #define CS_DEATH_REVENGE				0x0002	// killer got revenge on victim
-//=============================================================================
-// HPE_END
-//=============================================================================
-
 
 //--------------
 // CSPort Specific damage flags
@@ -352,6 +340,8 @@ enum CSPlayerState
 	STATE_DEATH_ANIM,			// Playing death anim, waiting for that to finish.
 	STATE_DEATH_WAIT_FOR_KEY,	// Done playing death anim. Waiting for keypress to go into observer mode.
 	STATE_OBSERVER_MODE,		// Noclipping around, watching players, etc.
+
+	STATE_RESPAWN,				// Respawning the player
 	STATE_DORMANT,				// No thinking, client updates, etc
 	NUM_PLAYER_STATES
 };

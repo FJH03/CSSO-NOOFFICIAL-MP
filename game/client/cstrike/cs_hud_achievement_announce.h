@@ -21,7 +21,6 @@
 #include "vgui_avatarimage.h"
 #include "hud.h"
 #include "hudelement.h"
-#include "cs_hud_playerhealth.h"
 
 #include "cs_shareddefs.h"
 

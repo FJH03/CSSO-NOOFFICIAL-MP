@@ -375,7 +375,7 @@ void CHudHealthArmor::OnThink()
 
 		m_iHealth = iRealHealth;
 
-		V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", m_iHealth );
+		V_snwprintf( unicode, sizeof( unicode ), L"%d", m_iHealth );
 		m_pHealthLabel->SetText( unicode );
 		m_pHealthProgress->SetProgress( clamp( (float)m_iHealth / (float)iMaxHealth, 0.0f, 1.0f ) );
 
@@ -385,7 +385,7 @@ void CHudHealthArmor::OnThink()
 	{
 		m_iArmor = iRealArmor;
 
-		V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", m_iArmor );
+		V_snwprintf( unicode, sizeof( unicode ), L"%d", m_iArmor );
 		m_pArmorLabel->SetText( unicode );
 		m_pSimpleArmorLabel->SetText( unicode );
 		m_pArmorProgress->SetProgress( clamp( (float)m_iArmor / (float)iMaxArmor, 0.0f, 1.0f ) );

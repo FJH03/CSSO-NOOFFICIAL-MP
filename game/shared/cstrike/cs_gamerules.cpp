@@ -72,6 +72,7 @@
 #ifndef CLIENT_DLL
 
 #define ROUND_END_WARNING_TIME 10.0f
+static const float MAX_TIME_TO_WAIT_BEFORE_ENTERING = 5.0f;
 
 #if defined( REPLAY_ENABLED )
 extern IReplaySystem *g_pReplay;
@@ -180,15 +181,15 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropBool( RECVINFO( m_bFreezePeriod ) ),
 		RecvPropBool( RECVINFO( m_bMatchWaitingForResume ) ),
         RecvPropBool( RECVINFO( m_bWarmupPeriod ) ),
-        RecvPropFloat( RECVINFO( m_fWarmupPeriodStart ) ),
+        RecvPropFloat( RECVINFO( m_fWarmupPeriodStart ) ),	
 		RecvPropInt( RECVINFO( m_iNumCTWins ) ),
- 		RecvPropInt( RECVINFO( m_iNumTerroristWins ) ),
+		RecvPropInt( RECVINFO( m_iNumTerroristWins ) ),
 
 		RecvPropInt( RECVINFO( m_iRoundTime ) ),
 		RecvPropInt( RECVINFO( m_nOvertimePlaying ) ),
 		RecvPropFloat( RECVINFO( m_fRoundStartTime ) ),
 		RecvPropBool( RECVINFO( m_bGameRestart ) ),
- 		RecvPropFloat( RECVINFO( m_flRestartRoundTime ) ),
+		RecvPropFloat( RECVINFO( m_flRestartRoundTime ) ),
 		RecvPropFloat( RECVINFO( m_flGameStartTime ) ),
 		RecvPropInt( RECVINFO( m_iHostagesRemaining ) ),
 		RecvPropBool( RECVINFO( m_bAnyHostageReached ) ),
@@ -209,15 +210,22 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropBool( SENDINFO( m_bFreezePeriod ) ),
 		SendPropBool( SENDINFO( m_bMatchWaitingForResume ) ),
         SendPropBool( SENDINFO( m_bWarmupPeriod ) ),
-        SendPropFloat( SENDINFO( m_fWarmupPeriodStart ) ),
+        SendPropFloat( SENDINFO( m_fWarmupPeriodStart ) ),	
+
+		SendPropBool( SENDINFO( m_bTerroristTimeOutActive ) ),
+		SendPropBool( SENDINFO( m_bCTTimeOutActive ) ),
+		SendPropFloat( SENDINFO( m_flTerroristTimeOutRemaining ) ),
+		SendPropFloat( SENDINFO( m_flCTTimeOutRemaining ) ),
+		SendPropInt( SENDINFO( m_nTerroristTimeOuts ) ),
+		SendPropInt( SENDINFO( m_nCTTimeOuts ) ),
 		SendPropInt( SENDINFO( m_iNumCTWins ) ),
- 		SendPropInt( SENDINFO( m_iNumTerroristWins ) ),
+		SendPropInt( SENDINFO( m_iNumTerroristWins ) ),
 
 		SendPropInt( SENDINFO( m_iRoundTime ), 16 ),
 		SendPropInt( SENDINFO( m_nOvertimePlaying ), 16 ),
 		SendPropFloat( SENDINFO( m_fRoundStartTime ), 32, SPROP_NOSCALE ),
 		SendPropFloat( SENDINFO( m_flRestartRoundTime ) ),
- 		SendPropBool( SENDINFO( m_bGameRestart ) ),
+		SendPropBool( SENDINFO( m_bGameRestart ) ),
 		SendPropFloat( SENDINFO( m_flGameStartTime ), 32, SPROP_NOSCALE ),
 		SendPropInt( SENDINFO( m_iHostagesRemaining ), 4 ),
 		SendPropBool( SENDINFO( m_bAnyHostageReached ) ),
@@ -1690,10 +1698,10 @@ ConVar snd_music_selection(
 				{
 					pPlayer->SetClanTag( pKeyValues->GetString( "tag", "" ) );
 					const char *szClanName = pKeyValues->GetString( "name", "" );
- 					pPlayer->SetClanName( szClanName );
- 
- 					UpdateTeamClanNames( TEAM_TERRORIST );
- 					UpdateTeamClanNames( TEAM_CT );
+					pPlayer->SetClanName( szClanName );
+
+					UpdateTeamClanNames( TEAM_TERRORIST );
+					UpdateTeamClanNames( TEAM_CT );
 
 					UTIL_LogPrintf("\"%s<%i><%s><%s>\" triggered \"clantag\" (value \"%s\")\n", 
 						pPlayer->GetPlayerName(),
@@ -1709,42 +1717,42 @@ ConVar snd_music_selection(
 	}
 
 	void CCSGameRules::UpdateTeamClanNames( int nTeam )
- 	{
- 		Assert( ( nTeam == TEAM_CT ) || ( nTeam == TEAM_TERRORIST ) );
- 
- 		CTeam *pTeam = GetGlobalTeam( nTeam );
- 		//pTeam->SetName( GetDefaultTeamName(nTeam) );
- 
- 		bool bTeamsAreSwitched = AreTeamsPlayingSwitchedSides();
- 
- 		const char *(pTeamNames[ 2 ]) = { mp_teamname_2.GetString(), mp_teamname_1.GetString() };
- 
- 		int nTeamIndex = ( nTeam - TEAM_TERRORIST ); //  nTeamIndex == 0 if Terrorist, 1 if CT
- 
- 		const char *pClanName = "";		
- 
- 		// Set the team names to the convars depending on what half phase it is.
- 		if ( !bTeamsAreSwitched )
- 			pClanName = pTeamNames[ nTeamIndex ];
- 		else
- 			pClanName = pTeamNames[ 1 - nTeamIndex ];
- 
- 		// The teamname convar was empty so differ to the team's clan name, if it exists.
- 		if ( StringIsEmpty( pClanName ) && IsClanTeam( pTeam ) )
- 		{
- 			for ( int iPlayer = 0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
- 			{
- 				CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
- 				if ( pPlayer && !pPlayer->IsBot() )
- 				{
- 					pClanName = pPlayer->GetClanName();
- 					break;
- 				}
- 			}	
- 		}
- 
- 		pTeam->SetClanName( pClanName );
- 	}
+	{
+		Assert( ( nTeam == TEAM_CT ) || ( nTeam == TEAM_TERRORIST ) );
+
+		CTeam *pTeam = GetGlobalTeam( nTeam );
+		//pTeam->SetName( GetDefaultTeamName(nTeam) );
+
+		bool bTeamsAreSwitched = AreTeamsPlayingSwitchedSides();
+
+		const char *(pTeamNames[ 2 ]) = { mp_teamname_2.GetString(), mp_teamname_1.GetString() };
+
+		int nTeamIndex = ( nTeam - TEAM_TERRORIST ); //  nTeamIndex == 0 if Terrorist, 1 if CT
+
+		const char *pClanName = "";		
+
+		// Set the team names to the convars depending on what half phase it is.
+		if ( !bTeamsAreSwitched )
+			pClanName = pTeamNames[ nTeamIndex ];
+		else
+			pClanName = pTeamNames[ 1 - nTeamIndex ];
+
+		// The teamname convar was empty so differ to the team's clan name, if it exists.
+		if ( StringIsEmpty( pClanName ) && IsClanTeam( pTeam ) )
+		{
+			for ( int iPlayer = 0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
+			{
+				CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
+				if ( pPlayer && !pPlayer->IsBot() )
+				{
+					pClanName = pPlayer->GetClanName();
+					break;
+				}
+			}	
+		}
+
+		pTeam->SetClanName( pClanName );
+	}
 
 	//-----------------------------------------------------------------------------
 	// Purpose: Player has just spawned. Equip them.
@@ -2388,6 +2396,8 @@ ConVar snd_music_selection(
 		}
 		pCSVictim->SetDeathFlags( iDeathFlags );
 
+		pCSVictim->SetLastKillerIndex( pCSScorer ? pCSScorer->entindex() : 0 );
+
 		// If we're killed by the C4, we do a subset of BaseClass::PlayerKilled()
 		// Specifically, we shouldn't lose any points, to match goldsrc
 		if ( Q_strcmp(pKiller->GetClassname(), "planted_c4" ) == 0 )
@@ -2620,13 +2630,12 @@ ConVar snd_music_selection(
 		BaseClass::ClientDisconnected( pClient );
 
         // [tj] Clear domination data when a player disconnects
-         
         CCSPlayer *pPlayer = ToCSPlayer( GetContainingEntity( pClient ) );
         if ( pPlayer )
         {
             pPlayer->RemoveNemesisRelationships();
-        }
- 
+		}
+
 		UpdateTeamClanNames( TEAM_TERRORIST );
 		UpdateTeamClanNames( TEAM_CT );        
 
@@ -4385,19 +4394,19 @@ ConVar snd_music_selection(
 			gameeventmanager->FireEvent( event );
 		}
 
-		if ( IsWarmupPeriod() )
-		{
-			IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_warmup" );
-			if ( event )
-				gameeventmanager->FireEvent( event );
-		}
+        if ( IsWarmupPeriod() )
+        {
+            IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_warmup" );
+            if ( event )
+                gameeventmanager->FireEvent( event );
+        }
 
 		// [pfreese] I commented out this call to CreateWeaponManager, as the 
- 		// CGameWeaponManager object doesn't appear to be actually used by the CSS
- 		// code, and in any case, the weapon manager does not support wildcards in 
- 		// entity names (as seemingly indicated) below. When the manager fails to 
- 		// create its factory, it removes itself in any case.
- 		// CreateWeaponManager( "weapon_*", gpGlobals->maxClients * 2 );
+		// CGameWeaponManager object doesn't appear to be actually used by the CSS
+		// code, and in any case, the weapon manager does not support wildcards in 
+		// entity names (as seemingly indicated) below. When the manager fails to 
+		// create its factory, it removes itself in any case.
+		// CreateWeaponManager( "weapon_*", gpGlobals->maxClients * 2 );
 
 		if ( bClearAccountsAfterHalftime && IsPlayingClassic() && HasHalfTime() )
 		{
@@ -4430,25 +4439,25 @@ ConVar snd_music_selection(
 		if ( IsLastRoundBeforeHalfTime() )
 		{
 			IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_last_round_half" );
- 			if ( event )
- 				gameeventmanager->FireEvent( event );
- 		}
- 		else if ( IsLastRoundOfMatch() )
- 		{
- 			// don't send the final round event if one of the teams just won the round by clinching
- 			int iNumWinsToClinch = GetNumWinsToClinch();
- 			if ( m_iNumCTWins != iNumWinsToClinch && m_iNumTerroristWins != iNumWinsToClinch )
- 			{
- 				IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_final" );
- 				if ( event )
- 					gameeventmanager->FireEvent( event );
- 			}
- 		}
- 		else if ( IsMatchPoint() )
- 		{
- 			IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_match_point" );
- 			if ( event )
- 				gameeventmanager->FireEvent( event );
+			if ( event )
+				gameeventmanager->FireEvent( event );
+		}
+		else if ( IsLastRoundOfMatch() )
+		{
+			// don't send the final round event if one of the teams just won the round by clinching
+			int iNumWinsToClinch = GetNumWinsToClinch();
+			if ( m_iNumCTWins != iNumWinsToClinch && m_iNumTerroristWins != iNumWinsToClinch )
+			{
+				IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_final" );
+				if ( event )
+					gameeventmanager->FireEvent( event );
+			}
+		}
+		else if ( IsMatchPoint() )
+		{
+			IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_match_point" );
+			if ( event )
+				gameeventmanager->FireEvent( event );
 		}
 	}
 
@@ -4610,6 +4619,7 @@ ConVar snd_music_selection(
 			if ( bhalftime )
 			{
 				SetPhase( GAMEPHASE_HALFTIME );
+				m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
 				m_flRestartRoundTime = gpGlobals->curtime + mp_halftime_duration.GetFloat();
 				SwitchTeamsAtRoundReset();
 				FreezePlayers();
@@ -4657,7 +4667,6 @@ ConVar snd_music_selection(
 			if ( bEndMatch )
 			{
 				m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
-
 				GoToIntermission();
 
 				if ( bTeamHasClinchedVictory && GetTotalRoundsPlayed() < numRoundToEndMatch )
@@ -5024,11 +5033,11 @@ ConVar snd_music_selection(
 		}
 
 		if ( GetTotalRoundsPlayed() == 0 && !IsWarmupPeriod() )
- 		{
- 			IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_match_start" );
- 			if ( event )
- 				gameeventmanager->FireEvent( event );
- 		}
+		{
+			IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_match_start" );
+			if ( event )
+				gameeventmanager->FireEvent( event );
+		}
 
 		// Update the timers for all clients and play a sound
 		bool bCTPlayed = false;
@@ -6345,61 +6354,72 @@ ConVar snd_music_selection(
 	//=========================================================
 	bool CCSGameRules::FPlayerCanRespawn( CBasePlayer *pBasePlayer )
 	{
-		CCSPlayer *pPlayer = ToCSPlayer( pBasePlayer );
-		if ( !pPlayer )
-			Error( "FPlayerCanRespawn: pPlayer=0" );
+        CCSPlayer *pPlayer = ToCSPlayer( pBasePlayer );
+        if ( !pPlayer )
+            Error( "FPlayerCanRespawn: pPlayer=0" );
 
-		// Player cannot respawn twice in a round
+		int nTeamNum = pPlayer->GetTeamNumber();
+
+        // Player cannot respawn twice in a round
 		if ( !pPlayer->IsAbleToInstantRespawn() && !IsWarmupPeriod() )
+        {
+            if ( pPlayer->m_iNumSpawns > 0 && m_bFirstConnected )
+                return false;
+        }
+
+        // If they're dead after the map has ended, and it's about to start the next round,
+        // wait for the round restart to respawn them.
+        if ( ( m_flRestartRoundTime - gpGlobals->curtime ) > MAX_TIME_TO_WAIT_BEFORE_ENTERING )
+            return false;
+
+        // Only valid team members can spawn
+        if ( nTeamNum != TEAM_CT && nTeamNum != TEAM_TERRORIST )
+            return false;
+
+        // Only players with a valid class can spawn
+        if ( pPlayer->GetClass() == CS_CLASS_NONE )
+            return false;
+
+        //if ( !IsPlayingGunGameProgressive() && !IsPlayingGunGameDeathmatch() && !IsWarmupPeriod() )
+        if ( !pPlayer->IsAbleToInstantRespawn() && !IsWarmupPeriod() )
 		{
-			if ( pPlayer->m_iNumSpawns > 0 && m_bFirstConnected )
-				return false;
-		}
+            // Player cannot respawn until next round if more than 20 seconds in
 
-		// If they're dead after the map has ended, and it's about to start the next round,
-		// wait for the round restart to respawn them.
-		if ( gpGlobals->curtime < m_flRestartRoundTime )
-			return false;
+            // Tabulate the number of players on each team.
+            m_iNumCT = GetGlobalTeam( TEAM_CT )->GetNumPlayers();
+            m_iNumTerrorist = GetGlobalTeam( TEAM_TERRORIST )->GetNumPlayers();
 
-		// Only valid team members can spawn
-		if ( pPlayer->GetTeamNumber() != TEAM_CT && pPlayer->GetTeamNumber() != TEAM_TERRORIST )
-			return false;
+            if ( m_iNumTerrorist > 0 && m_iNumCT > 0 )
+            {
+                // gurjeets - Between rounds m_fRoundStartTime gets set to cur_time + freeze_time ie
+                // sometime in the future. Thus, when we get here, players are still within the 
+                // round restart time
+                // First time into a game, however, m_fRoundStartTime is 0. On this code path,
+                // the code that sets this properly only kicks in *after* players are spawned
+                // This results in the msg "player_spawned" not getting sent. 
+                // Hence, added the check for m_fRoundStartTime being 0
+                if ( (m_fRoundStartTime != 0) && 
+                    (gpGlobals->curtime > m_fRoundStartTime) )
+                {
+                    //If this player just connected and fadetoblack is on, then maybe
+                    //the server admin doesn't want him peeking around.
+                    color32_s clr = {0,0,0,255};
+                    if ( mp_forcecamera.GetInt() == OBS_ALLOW_NONE )
+                    {
+                        UTIL_ScreenFade( pPlayer, clr, 3, 3, FFADE_OUT | FFADE_STAYOUT );
+                    }
 
-		// Only players with a valid class can spawn
-		if ( pPlayer->GetClass() == CS_CLASS_NONE )
-			return false;
+                    return false;
+                }
+            }
+        }
 
-		if ( !pPlayer->IsAbleToInstantRespawn() && !IsWarmupPeriod() )
-		{
-			// Player cannot respawn until next round if more than 20 seconds in
+        // Player cannot respawn while in the Choose Appearance menu
+        //if ( pPlayer->m_iMenu == Menu_ChooseAppearance )
+        //	return false;
 
-			// Tabulate the number of players on each team.
-			m_iNumCT = GetGlobalTeam( TEAM_CT )->GetNumPlayers();
-			m_iNumTerrorist = GetGlobalTeam( TEAM_TERRORIST )->GetNumPlayers();
-
-			if ( m_iNumTerrorist > 0 && m_iNumCT > 0 )
-			{
-				if ( gpGlobals->curtime > (m_fRoundStartTime + 20) )
-				{
-					//If this player just connected and fadetoblack is on, then maybe
-					//the server admin doesn't want him peeking around.
-					color32_s clr = { 0, 0, 0, 255 };
-					if ( mp_fadetoblack.GetBool() )
-					{
-						UTIL_ScreenFade( pPlayer, clr, 3, 3, FFADE_OUT | FFADE_STAYOUT );
-					}
-
-					return false;
-				}
-			}
-		}
-
-		// Player cannot respawn while in the Choose Appearance menu
-		//if ( pPlayer->m_iMenu == Menu_ChooseAppearance )
-		//	return false;
-
-		return true;
-	}
+        return true;
+    }
 
 	void CCSGameRules::TerminateRound(float tmDelay, int iReason )
 	{
@@ -6600,7 +6620,7 @@ ConVar snd_music_selection(
 		if ( GetMapRemainingTime() == 0.0f  )
 		{
 			UTIL_LogPrintf("World triggered \"Intermission_Time_Limit\"\n");
-			m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
+            m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
 			GoToIntermission();
 		}
 
@@ -6621,30 +6641,31 @@ ConVar snd_music_selection(
 	// Helper to determine if all players on a team are playing for the same clan
 	bool CCSGameRules::IsClanTeam( CTeam *pTeam )
 	{
-		uint32 iTeamClan = 0;
- 		bool bTeamInitialized = false;
- 
+        uint32 iTeamClan = 0;
+		bool bTeamInitialized = false;
+
         for ( int iPlayer = 0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
         {
             CBasePlayer *pPlayer = pTeam->GetPlayer( iPlayer );
             if ( !pPlayer )
-                 return false;
+                return false;
 
 			if ( pPlayer->IsBot() )
- 				continue;
- 
-             const char *pClanID = engine->GetClientConVarValue( pPlayer->entindex(), "cl_clanid" );
-             uint32 iPlayerClan = atoi( pClanID );
- 
- 			// Initialize the team clan
- 			if ( !bTeamInitialized )
+				continue;
+
+            const char *pClanID = engine->GetClientConVarValue( pPlayer->entindex(), "cl_clanid" );
+            uint32 iPlayerClan = atoi( pClanID );
+
+			// Initialize the team clan
+			if ( !bTeamInitialized )
 			{
 				iTeamClan = iPlayerClan;
 				bTeamInitialized = true;
 			}
-			if ( iPlayerClan != iTeamClan || iPlayerClan == 0 )
- 				return false;
- 
+
+            if ( iPlayerClan != iTeamClan || iPlayerClan == 0 )
+				return false;
+
         }
         return iTeamClan != 0;
     }
@@ -7916,7 +7937,7 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 	{
 		pCSPlayer->m_bNeedToChangeGloves = true;
 	}
-	
+
 	pCSPlayer->m_bLoadoutStatTrak = !!atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_stattrak" ) );
 }
 
@@ -8673,28 +8694,28 @@ int CCSGameRules::GetNumWinsToClinch() const
 
 bool CCSGameRules::IsLastRoundOfMatch() const
 {
- 	bool bLastRound = mp_maxrounds.GetInt() > 0 ? ( GetTotalRoundsPlayed() == ( mp_maxrounds.GetInt()-1 + GetOvertimePlaying()*mp_overtime_maxrounds.GetInt() ) ) : false;
- 	return bLastRound;
+	bool bLastRound = mp_maxrounds.GetInt() > 0 ? ( GetTotalRoundsPlayed() == ( mp_maxrounds.GetInt()-1 + GetOvertimePlaying()*mp_overtime_maxrounds.GetInt() ) ) : false;
+	return bLastRound;
 }
- 
+
 bool CCSGameRules::IsMatchPoint() const
 {
- 	int iNumWinsToClinch = GetNumWinsToClinch();
- 	bool bMatchPoint = false;
+	int iNumWinsToClinch = GetNumWinsToClinch();
+	bool bMatchPoint = false;
 #ifdef CLIENT_DLL
- 	if ( GetGamePhase() != GAMEPHASE_PLAYING_FIRST_HALF )
- 	{
- 		C_Team *pTerrorists = GetGlobalTeam( TEAM_TERRORIST );
- 		C_Team *pCTs = GetGlobalTeam( TEAM_CT );
- 		bMatchPoint = ( pCTs && ( pCTs->Get_Score() == iNumWinsToClinch-1 ) ) || ( pTerrorists && ( pTerrorists->Get_Score() == iNumWinsToClinch-1 ) );
- 	}
+	if ( GetGamePhase() != GAMEPHASE_PLAYING_FIRST_HALF )
+	{
+		C_Team *pTerrorists = GetGlobalTeam( TEAM_TERRORIST );
+		C_Team *pCTs = GetGlobalTeam( TEAM_CT );
+		bMatchPoint = ( pCTs && ( pCTs->Get_Score() == iNumWinsToClinch-1 ) ) || ( pTerrorists && ( pTerrorists->Get_Score() == iNumWinsToClinch-1 ) );
+	}
 #else
- 	if ( GetPhase() != GAMEPHASE_PLAYING_FIRST_HALF )
- 	{
- 		bMatchPoint = ( m_iNumCTWins == iNumWinsToClinch-1 || m_iNumTerroristWins == iNumWinsToClinch-1);
- 	}
+	if ( GetPhase() != GAMEPHASE_PLAYING_FIRST_HALF )
+	{
+		bMatchPoint = ( m_iNumCTWins == iNumWinsToClinch-1 || m_iNumTerroristWins == iNumWinsToClinch-1);
+	}
 #endif
- 	return bMatchPoint;
+	return bMatchPoint;
 }
 
 // AreTeamsPlayingSwitchedSides() -- will return true when match is in second half, or in the half of overtime period where teams are switched.
@@ -8707,52 +8728,52 @@ bool CCSGameRules::IsMatchPoint() const
 // in scenario outlined above.
 bool CCSGameRules::AreTeamsPlayingSwitchedSides() const
 {
- 	if ( !GetOvertimePlaying() )
- 	{
- 		switch ( GetPhase() )
- 		{
- 		case GAMEPHASE_PLAYING_SECOND_HALF:
- 			return true;
- 		case GAMEPHASE_MATCH_ENDED:
- 			return HasHalfTime() && ( GetTotalRoundsPlayed() > ( mp_maxrounds.GetInt() / 2 ) );
- 		default:
- 			return false;
- 		}
- 	}
- 	else
- 	{
- 		switch ( GetPhase() )
- 		{
- 		case GAMEPHASE_PLAYING_SECOND_HALF:
- 			// Playing 2nd half of 2nd half of every even OT, e.g. second OT, will result in switched teams
- 			return ( GetOvertimePlaying() % 2 ) ? false : true;
- 		case GAMEPHASE_MATCH_ENDED:
- 			{
- 				bool bEndedInSecondHalfOfOvertime = HasHalfTime() &&
- 					( GetTotalRoundsPlayed() > mp_maxrounds.GetInt() + ( 2*GetOvertimePlaying() - 1 ) * ( mp_overtime_maxrounds.GetInt() / 2 ) );
- 				if ( GetOvertimePlaying() % 2 )
- 					bEndedInSecondHalfOfOvertime = !bEndedInSecondHalfOfOvertime;
- 				return bEndedInSecondHalfOfOvertime;
- 			}
- 		case GAMEPHASE_HALFTIME:
- 			{
- 				// halftime can also be at the end of regulation or at the end of both OT halves, in this case the overtime number has
- 				// already been incremented into the next overtime
- 				bool bSecondHalfOfOvertime = HasHalfTime() &&
- 					( GetTotalRoundsPlayed() <= ( mp_maxrounds.GetInt() + ( GetOvertimePlaying() - 1 )*mp_overtime_maxrounds.GetInt() ) );
- 				int nOvertimeInWhichHalftimeIsActuallyReached = GetOvertimePlaying();
- 				if ( bSecondHalfOfOvertime )
- 					-- nOvertimeInWhichHalftimeIsActuallyReached;	// this is the case when we already advanced the OT index and wait in intermission
- 				if ( nOvertimeInWhichHalftimeIsActuallyReached % 2 )
- 					bSecondHalfOfOvertime = !bSecondHalfOfOvertime;
- 				return bSecondHalfOfOvertime;
- 			}
- 			break;
- 		default:
- 			// Playing 1st half, opposite of GAMEPHASE_PLAYING_SECOND_HALF state coded above
- 			return ( GetOvertimePlaying() % 2 ) ? true : false;
- 		}
- 	}
+	if ( !GetOvertimePlaying() )
+	{
+		switch ( GetPhase() )
+		{
+		case GAMEPHASE_PLAYING_SECOND_HALF:
+			return true;
+		case GAMEPHASE_MATCH_ENDED:
+			return HasHalfTime() && ( GetTotalRoundsPlayed() > ( mp_maxrounds.GetInt() / 2 ) );
+		default:
+			return false;
+		}
+	}
+	else
+	{
+		switch ( GetPhase() )
+		{
+		case GAMEPHASE_PLAYING_SECOND_HALF:
+			// Playing 2nd half of 2nd half of every even OT, e.g. second OT, will result in switched teams
+			return ( GetOvertimePlaying() % 2 ) ? false : true;
+		case GAMEPHASE_MATCH_ENDED:
+			{
+				bool bEndedInSecondHalfOfOvertime = HasHalfTime() &&
+					( GetTotalRoundsPlayed() > mp_maxrounds.GetInt() + ( 2*GetOvertimePlaying() - 1 ) * ( mp_overtime_maxrounds.GetInt() / 2 ) );
+				if ( GetOvertimePlaying() % 2 )
+					bEndedInSecondHalfOfOvertime = !bEndedInSecondHalfOfOvertime;
+				return bEndedInSecondHalfOfOvertime;
+			}
+		case GAMEPHASE_HALFTIME:
+			{
+				// halftime can also be at the end of regulation or at the end of both OT halves, in this case the overtime number has
+				// already been incremented into the next overtime
+				bool bSecondHalfOfOvertime = HasHalfTime() &&
+					( GetTotalRoundsPlayed() <= ( mp_maxrounds.GetInt() + ( GetOvertimePlaying() - 1 )*mp_overtime_maxrounds.GetInt() ) );
+				int nOvertimeInWhichHalftimeIsActuallyReached = GetOvertimePlaying();
+				if ( bSecondHalfOfOvertime )
+					-- nOvertimeInWhichHalftimeIsActuallyReached;	// this is the case when we already advanced the OT index and wait in intermission
+				if ( nOvertimeInWhichHalftimeIsActuallyReached % 2 )
+					bSecondHalfOfOvertime = !bSecondHalfOfOvertime;
+				return bSecondHalfOfOvertime;
+			}
+			break;
+		default:
+			// Playing 1st half, opposite of GAMEPHASE_PLAYING_SECOND_HALF state coded above
+			return ( GetOvertimePlaying() % 2 ) ? true : false;
+		}
+	}
 }
 
 #else
