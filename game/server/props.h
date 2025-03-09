@@ -288,6 +288,7 @@ public:
 
 	// Input handlers
 	void InputSetAnimation( inputdata_t &inputdata );
+	void InputSetAnimationNoReset( inputdata_t &inputdata );
 	void InputSetDefaultAnimation( inputdata_t &inputdata );
 	void InputTurnOn( inputdata_t &inputdata );
 	void InputTurnOff( inputdata_t &inputdata );
