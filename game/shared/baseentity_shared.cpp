@@ -1441,6 +1441,7 @@ void CBaseEntity::InvalidatePhysicsRecursive( int nChangeFlags )
 		nDirtyFlags |= EFL_DIRTY_ABSVELOCITY;
 	}
 
+	bool bSurroundDirty = false;
 	if ( nChangeFlags & POSITION_CHANGED )
 	{
 		nDirtyFlags |= EFL_DIRTY_ABSTRANSFORM;
@@ -1450,7 +1451,10 @@ void CBaseEntity::InvalidatePhysicsRecursive( int nChangeFlags )
 #endif
 
 		// NOTE: This will also mark shadow projection + client leaf dirty
-		CollisionProp()->MarkPartitionHandleDirty();
+		if ( entindex() != 0 )
+		{
+			CollisionProp()->MarkPartitionHandleDirty();
+		}
 	}
 
 	// NOTE: This has to be done after velocity + position are changed
@@ -1463,14 +1467,7 @@ void CBaseEntity::InvalidatePhysicsRecursive( int nChangeFlags )
 			// NOTE: This will handle the KD-tree, surrounding bounds, PVS
 			// render-to-texture shadow, shadow projection, and client leaf dirty
 			CollisionProp()->MarkSurroundingBoundsDirty();
-		}
-		else
-		{
-#ifdef CLIENT_DLL
-			MarkRenderHandleDirty();
-			g_pClientShadowMgr->AddToDirtyShadowList( this );
-			g_pClientShadowMgr->MarkRenderToTextureShadowDirty( GetShadowHandle() );
-#endif
+			bSurroundDirty = true;
 		}
 
 		// This is going to be used for all children: children
@@ -1478,14 +1475,46 @@ void CBaseEntity::InvalidatePhysicsRecursive( int nChangeFlags )
 		nChangeFlags |= POSITION_CHANGED | VELOCITY_CHANGED;
 	}
 
+	if ( nChangeFlags & SEQUENCE_CHANGED )
+	{
+		if ( !bSurroundDirty )
+		{
+			if ( CollisionProp()->DoesSequenceChangeInvalidateSurroundingBox() )
+			{
+				// NOTE: This will handle the KD-tree, surrounding bounds, PVS
+				// render-to-texture shadow, shadow projection, and client leaf dirty
+				CollisionProp()->MarkSurroundingBoundsDirty();
+				bSurroundDirty = true;
+			}
+		}
+
+		// Children sequences do not change as a result of parent sequence changes
+		nChangeFlags &= ~SEQUENCE_CHANGED;
+	}
+
+#ifdef CLIENT_DLL
+	if ( !bSurroundDirty && (nChangeFlags & (POSITION_CHANGED|ANGLES_CHANGED|BOUNDS_CHANGED)) )
+	{
+		if ( entindex() != 0 )
+		{
+			MarkRenderHandleDirty();
+			g_pClientShadowMgr->AddToDirtyShadowList( this );
+			g_pClientShadowMgr->MarkRenderToTextureShadowDirty( GetShadowHandle() );
+		}
+	}
+#endif
+
 	AddEFlags( nDirtyFlags );
 
 	// Set flags for children
 	bool bOnlyDueToAttachment = false;
-	if ( nChangeFlags & ANIMATION_CHANGED )
+	if ( nChangeFlags & ( ANIMATION_CHANGED | BOUNDS_CHANGED ) )
 	{
 #ifdef CLIENT_DLL
-		g_pClientShadowMgr->MarkRenderToTextureShadowDirty( GetShadowHandle() );
+		if ( ( nChangeFlags & BOUNDS_CHANGED ) == 0 )
+		{
+			g_pClientShadowMgr->MarkRenderToTextureShadowDirty( GetShadowHandle() );
+		}
 #endif
 
 		// Only set this flag if the only thing that changed us was the animation.
@@ -1515,25 +1544,13 @@ void CBaseEntity::InvalidatePhysicsRecursive( int nChangeFlags )
 		pChild->InvalidatePhysicsRecursive( nChangeFlags );
 	}
 
-	//
-	// This code should really be in here, or the bone cache should not be in world space.
-	// Since the bone transforms are in world space, if we move or rotate the entity, its
-	// bones should be marked invalid.
-	//
-	// As it is, we're near ship, and don't have time to setup a good A/B test of how much
-	// overhead this fix would add. We've also only got one known case where the lack of
-	// this fix is screwing us, and I just fixed it, so I'm leaving this commented out for now.
-	//
-	// Hopefully, we'll put the bone cache in entity space and remove the need for this fix.
-	//
-	//#ifdef CLIENT_DLL
-	//	if ( nChangeFlags & (POSITION_CHANGED | ANGLES_CHANGED | ANIMATION_CHANGED) )
-	//	{
-	//		C_BaseAnimating *pAnim = GetBaseAnimating();
-	//		if ( pAnim )
-	//			pAnim->InvalidateBoneCache();		
-	//	}
-	//#endif
+	// Clear out cached bones
+	if ( nChangeFlags & (POSITION_CHANGED | ANGLES_CHANGED | ANIMATION_CHANGED) )
+	{
+		CBaseAnimating *pAnim = GetBaseAnimating();
+		if ( pAnim )
+			pAnim->InvalidateBoneCache();
+	}
 }
 
 
@@ -2425,9 +2442,14 @@ void CBaseEntity::ApplyLocalVelocityImpulse( const Vector &inVecImpulse )
 
 		if ( GetMoveType() == MOVETYPE_VPHYSICS )
 		{
-			Vector worldVel;
-			VPhysicsGetObject()->LocalToWorld( &worldVel, vecImpulse );
-			VPhysicsGetObject()->AddVelocity( &worldVel, NULL );
+			IPhysicsObject *ppPhysObjs[ VPHYSICS_MAX_OBJECT_LIST_COUNT ];
+			int nNumPhysObjs = VPhysicsGetObjectList( ppPhysObjs, VPHYSICS_MAX_OBJECT_LIST_COUNT );
+			for ( int i = 0; i < nNumPhysObjs; i++ )
+			{
+				Vector worldVel;
+				ppPhysObjs[ i ]->LocalToWorld( &worldVel, vecImpulse );
+				ppPhysObjs[ i ]->AddVelocity(  &worldVel, NULL );
+			}
 		}
 		else
 		{
@@ -2460,7 +2482,12 @@ void CBaseEntity::ApplyAbsVelocityImpulse( const Vector &inVecImpulse )
 
 		if ( GetMoveType() == MOVETYPE_VPHYSICS )
 		{
-			VPhysicsGetObject()->AddVelocity( &vecImpulse, NULL );
+			IPhysicsObject *ppPhysObjs[ VPHYSICS_MAX_OBJECT_LIST_COUNT ];
+			int nNumPhysObjs = VPhysicsGetObjectList( ppPhysObjs, VPHYSICS_MAX_OBJECT_LIST_COUNT );
+			for ( int i = 0; i < nNumPhysObjs; i++ )
+			{
+				ppPhysObjs[ i ]->AddVelocity( &vecImpulse, NULL );
+			}
 		}
 		else
 		{
@@ -2486,7 +2513,12 @@ void CBaseEntity::ApplyLocalAngularVelocityImpulse( const AngularImpulse &angImp
 
 		if ( GetMoveType() == MOVETYPE_VPHYSICS )
 		{
-			VPhysicsGetObject()->AddVelocity( NULL, &angImpulse );
+			IPhysicsObject *ppPhysObjs[ VPHYSICS_MAX_OBJECT_LIST_COUNT ];
+			int nNumPhysObjs = VPhysicsGetObjectList( ppPhysObjs, VPHYSICS_MAX_OBJECT_LIST_COUNT );
+			for ( int i = 0; i < nNumPhysObjs; i++ )
+			{
+				ppPhysObjs[ i ]->AddVelocity( NULL, &angImpulse );
+			}
 		}
 		else
 		{

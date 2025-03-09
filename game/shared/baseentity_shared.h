@@ -44,18 +44,6 @@ extern ConVar hl2_episodic;
 // Maximum number of vphysics objects per entity
 #define VPHYSICS_MAX_OBJECT_LIST_COUNT	1024
 
-//-----------------------------------------------------------------------------
-// For invalidate physics recursive
-//-----------------------------------------------------------------------------
-enum InvalidatePhysicsBits_t
-{
-	POSITION_CHANGED	= 0x1,
-	ANGLES_CHANGED		= 0x2,
-	VELOCITY_CHANGED	= 0x4,
-	ANIMATION_CHANGED	= 0x8,
-};
-
-
 #if defined( CLIENT_DLL )
 #include "c_baseentity.h"
 #include "c_baseanimating.h"

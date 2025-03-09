@@ -46,6 +46,7 @@ enum SurroundingBoundsType_t
 	USE_GAME_CODE,
 	USE_ROTATION_EXPANDED_BOUNDS,
 	USE_COLLISION_BOUNDS_NEVER_VPHYSICS,
+	USE_ROTATION_EXPANDED_SEQUENCE_BOUNDS,
 
 	SURROUNDING_TYPE_BIT_COUNT = 3
 };
@@ -115,6 +116,7 @@ public:
 	// Sets the method by which the surrounding collision bounds is set
 	// You must pass in values for mins + maxs if you select the USE_SPECIFIED_BOUNDS type. 
 	void			SetSurroundingBoundsType( SurroundingBoundsType_t type, const Vector *pMins = NULL, const Vector *pMaxs = NULL );
+	SurroundingBoundsType_t GetSurroundingBoundsType() const;
 
 	// Sets the solid type (which type of collision representation)
 	void			SetSolid( SolidType_t val );
@@ -200,6 +202,9 @@ public:
 	// Does VPhysicsUpdate make us need to recompute the surrounding box?
 	bool			DoesVPhysicsInvalidateSurroundingBox( ) const;
 
+	// Does a sequence change make us need to recompute the surrounding box?
+	bool			DoesSequenceChangeInvalidateSurroundingBox( ) const;
+
 	// Marks the entity has having a dirty surrounding box
 	void			MarkSurroundingBoundsDirty();
 
@@ -217,6 +222,12 @@ private:
 	bool ComputeHitboxSurroundingBox( Vector *pVecWorldMins, Vector *pVecWorldMaxs );
 	bool ComputeEntitySpaceHitboxSurroundingBox( Vector *pVecWorldMins, Vector *pVecWorldMaxs );
 
+	// Computes the surrounding collision bounds based on the current sequence box
+	void ComputeOBBBounds( Vector *pVecWorldMins, Vector *pVecWorldMaxs );
+
+	// Computes the surrounding collision bounds from the current sequence box
+	void ComputeRotationExpandedSequenceBounds( Vector *pVecWorldMins, Vector *pVecWorldMaxs );
+
 	// Computes the surrounding collision bounds based on whatever algorithm we want...
 	void ComputeCollisionSurroundingBox( bool bUseVPhysics, Vector *pVecWorldMins, Vector *pVecWorldMaxs );
 
@@ -231,6 +242,7 @@ private:
 
 	// Updates the spatial partition
 	void UpdateServerPartitionMask( );
+	inline const Vector&	GetCollisionOrigin_Inline() const;
 
 	// Outer
 	CBaseEntity *GetOuter();
@@ -311,6 +323,10 @@ inline unsigned short CCollisionProperty::GetPartitionHandle() const
 	return m_Partition;
 }
 
+inline SurroundingBoundsType_t CCollisionProperty::GetSurroundingBoundsType() const
+{
+	return (SurroundingBoundsType_t)m_nSurroundType.Get();
+}
 
 //-----------------------------------------------------------------------------
 // Methods related to size
@@ -472,6 +488,15 @@ inline const Vector & CCollisionProperty::CollisionSpaceMaxs( void ) const
 //-----------------------------------------------------------------------------
 // Does a rotation make us need to recompute the surrounding box?
 //-----------------------------------------------------------------------------
+inline bool CCollisionProperty::DoesSequenceChangeInvalidateSurroundingBox( ) const
+{
+	return ( m_nSurroundType == USE_ROTATION_EXPANDED_SEQUENCE_BOUNDS );
+}
+
+
+//-----------------------------------------------------------------------------
+// Does a rotation make us need to recompute the surrounding box?
+//-----------------------------------------------------------------------------
 inline bool CCollisionProperty::DoesRotationInvalidateSurroundingBox( ) const
 {
 	if ( IsSolidFlagSet(FSOLID_ROOT_PARENT_ALIGNED) )
@@ -491,6 +516,7 @@ inline bool CCollisionProperty::DoesRotationInvalidateSurroundingBox( ) const
 
 	case USE_ROTATION_EXPANDED_BOUNDS:
 	case USE_SPECIFIED_BOUNDS:
+	case USE_ROTATION_EXPANDED_SEQUENCE_BOUNDS:
 		return false;
 
 	default:

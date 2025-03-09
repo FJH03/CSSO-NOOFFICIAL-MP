@@ -76,6 +76,7 @@ struct RagdollInfo_t
 	Quaternion	m_rgBoneQuaternion[MAXSTUDIOBONES];
 };
 
+
 class CAttachmentData
 {
 public:
@@ -206,7 +207,7 @@ public:
 	inline float SetPoseParameter( int iParameter, float flValue ) { return SetPoseParameter( GetModelPtr(), iParameter, flValue ); }
 
 	float	GetPoseParameter( int iParameter );
-	
+
 	bool	GetPoseParameterRange( int iPoseParameter, float &minValue, float &maxValue );
 
 	int		LookupBone( const char *szName );
@@ -306,7 +307,7 @@ public:
 	virtual void					Clear( void );
 	void							ClearRagdoll();
 	void							CreateUnragdollInfo( C_BaseAnimating *pRagdoll );
-	bool							ForceSetupBonesAtTime( matrix3x4_t *pBonesOut, float flTime );
+	void							ForceSetupBonesAtTime( matrix3x4_t *pBonesOut, float flTime );
 	virtual void					GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt );
 
 	// For shadows rendering the correct body + sequence...
@@ -344,6 +345,7 @@ public:
 	Activity						GetSequenceActivity( int iSequence );
 	KeyValues						*GetSequenceKeyValues( int iSequence );
 	virtual void					StudioFrameAdvance(); // advance animation frame to some time in the future
+	void							ExtractBbox( int nSequence, Vector &mins, Vector &maxs );
 
 	// Clientside animation
 	virtual float					FrameAdvance( float flInterval = 0.0f );
@@ -508,7 +510,7 @@ public:
 
 	// Object bodygroup
 	int								m_nBody;
-	
+
 	// Hitbox set to use (default 0)
 	int								m_nHitboxSet;
 
@@ -616,6 +618,8 @@ protected:
 	float							m_flCycle;
 	CInterpolatedVar< float >		m_iv_flCycle;
 	float							m_flOldCycle;
+	float							m_prevClientCycle;
+	float							m_prevClientAnimTime;
 	bool							m_bNoModelParticles;
 
 private:

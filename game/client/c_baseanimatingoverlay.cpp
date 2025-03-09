@@ -20,6 +20,88 @@
 
 extern ConVar r_sequence_debug;
 
+void C_AnimationLayer::SetOwner( C_BaseAnimatingOverlay *pOverlay )
+{
+	m_pOwner = pOverlay;
+}
+
+C_BaseAnimatingOverlay *C_AnimationLayer::GetOwner() const
+{
+	return m_pOwner;
+}
+
+void C_AnimationLayer::Reset()
+{
+	if ( m_pOwner )
+	{
+		int nFlags = 0;
+		if ( m_nSequence != 0 || m_flWeight != 0.0f )
+		{
+			nFlags |= BOUNDS_CHANGED;
+		}
+		if ( m_flCycle != 0.0f )
+		{
+			nFlags |= ANIMATION_CHANGED;
+		}
+		if ( nFlags )
+		{
+			m_pOwner->InvalidatePhysicsRecursive( nFlags );
+		}
+	}
+
+	m_nSequence = 0;
+	m_flPrevCycle = 0;
+	m_flWeight = 0;
+	m_flWeightDeltaRate = 0;
+	m_flPlaybackRate = 0;
+	m_flCycle = 0;
+	m_flLayerAnimtime = 0;
+	m_flLayerFadeOuttime = 0;
+}
+
+void C_AnimationLayer::SetSequence( int nSequence )
+{
+	if ( m_pOwner && m_nSequence != nSequence )
+	{
+		m_pOwner->InvalidatePhysicsRecursive( BOUNDS_CHANGED );
+	}
+	m_nSequence = nSequence;
+}
+
+void C_AnimationLayer::SetCycle( float flCycle )
+{
+	if ( m_pOwner && m_flCycle != flCycle )
+	{
+		m_pOwner->InvalidatePhysicsRecursive( ANIMATION_CHANGED );
+	}
+	m_flCycle = flCycle;
+}
+
+void C_AnimationLayer::SetOrder( int order )
+{
+	if ( m_pOwner && ( m_nOrder != order ) )
+	{
+		if ( m_nOrder == C_BaseAnimatingOverlay::MAX_OVERLAYS || order == C_BaseAnimatingOverlay::MAX_OVERLAYS )
+		{
+			m_pOwner->InvalidatePhysicsRecursive( BOUNDS_CHANGED );
+		}
+	}
+	m_nOrder = order;
+}
+
+
+void C_AnimationLayer::SetWeight( float flWeight )
+{
+	if ( m_pOwner && m_flWeight != flWeight )
+	{
+		if ( m_flWeight == 0.0f || flWeight == 0.0f )
+		{
+			m_pOwner->InvalidatePhysicsRecursive( BOUNDS_CHANGED );
+		}
+	}
+	m_flWeight = flWeight;
+}
+
 C_BaseAnimatingOverlay::C_BaseAnimatingOverlay()
 {
 	// FIXME: where does this initialization go now?
@@ -37,7 +119,7 @@ C_BaseAnimatingOverlay::C_BaseAnimatingOverlay()
 
 void RecvProxy_SequenceChanged( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
-	CAnimationLayer *pLayer = (CAnimationLayer *)pStruct;
+	C_AnimationLayer *pLayer = (C_AnimationLayer *)pStruct;
 
 	if ( pLayer->GetOwner() )
 		pLayer->GetOwner()->NotifyOnLayerChangeSequence( pLayer, pData->m_Value.m_Int );
@@ -47,7 +129,7 @@ void RecvProxy_SequenceChanged( const CRecvProxyData *pData, void *pStruct, void
 
 void RecvProxy_WeightChanged( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
-	CAnimationLayer *pLayer = (CAnimationLayer *)pStruct;
+	C_AnimationLayer *pLayer = (C_AnimationLayer *)pStruct;
 
 	if ( pLayer->GetOwner() )
 		pLayer->GetOwner()->NotifyOnLayerChangeWeight( pLayer, pData->m_Value.m_Float );
@@ -57,13 +139,13 @@ void RecvProxy_WeightChanged( const CRecvProxyData *pData, void *pStruct, void *
 
 void RecvProxy_WeightDeltaRateChanged( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
-	CAnimationLayer *pLayer = (CAnimationLayer *)pStruct;
+	C_AnimationLayer *pLayer = (C_AnimationLayer *)pStruct;
 	pLayer->SetWeightDeltaRate( pData->m_Value.m_Float );
 }
 
 void RecvProxy_CycleChanged( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
-	CAnimationLayer *pLayer = (CAnimationLayer *)pStruct;
+	C_AnimationLayer *pLayer = (C_AnimationLayer *)pStruct;
 
 	if ( pLayer->GetOwner() )
 		pLayer->GetOwner()->NotifyOnLayerChangeCycle( pLayer, pData->m_Value.m_Float );
@@ -73,17 +155,17 @@ void RecvProxy_CycleChanged( const CRecvProxyData *pData, void *pStruct, void *p
 
 void RecvProxy_PlaybackRateChanged( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
-	CAnimationLayer *pLayer = (CAnimationLayer *)pStruct;
+	C_AnimationLayer *pLayer = (C_AnimationLayer *)pStruct;
 	pLayer->SetPlaybackRate( pData->m_Value.m_Float );
 }
 
 void RecvProxy_OrderChanged( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
-	CAnimationLayer *pLayer = (CAnimationLayer *)pStruct;
+	C_AnimationLayer *pLayer = (C_AnimationLayer *)pStruct;
 	pLayer->SetOrder( pData->m_Value.m_Int );
 }
 
-BEGIN_RECV_TABLE_NOBASE(CAnimationLayer, DT_Animationlayer)
+BEGIN_RECV_TABLE_NOBASE(C_AnimationLayer, DT_Animationlayer)
 	RecvPropInt(	RECVINFO_NAME(m_nSequence, m_nSequence), 0, RecvProxy_SequenceChanged ),
 	RecvPropFloat(	RECVINFO_NAME(m_flCycle, m_flCycle), 0, RecvProxy_CycleChanged ),
 	RecvPropFloat(	RECVINFO_NAME(m_flPlaybackRate, m_flPlaybackRate), 0, RecvProxy_PlaybackRateChanged ),
@@ -115,8 +197,8 @@ const char *s_m_iv_AnimOverlayNames[C_BaseAnimatingOverlay::MAX_OVERLAYS] =
 void ResizeAnimationLayerCallback( void *pStruct, int offsetToUtlVector, int len )
 {
 	C_BaseAnimatingOverlay *pEnt = (C_BaseAnimatingOverlay*)pStruct;
-	CUtlVector < CAnimationLayer > *pVec = &pEnt->m_AnimOverlay;
-	CUtlVector< CInterpolatedVar< CAnimationLayer > > *pVecIV = &pEnt->m_iv_AnimOverlay;
+	CUtlVector < C_AnimationLayer > *pVec = &pEnt->m_AnimOverlay;
+	CUtlVector< CInterpolatedVar< C_AnimationLayer > > *pVecIV = &pEnt->m_iv_AnimOverlay;
 	
 	Assert( (char*)pVec - (char*)pEnt == offsetToUtlVector );
 	Assert( pVec->Count() == pVecIV->Count() || pVecIV->Count() == 0 );
@@ -131,7 +213,7 @@ void ResizeAnimationLayerCallback( void *pStruct, int offsetToUtlVector, int len
 			pEnt->RemoveVar( &pVec->Element( i ) );
 		}
 
-		pEnt->InvalidatePhysicsRecursive( ANIMATION_CHANGED );
+		pEnt->InvalidatePhysicsRecursive( BOUNDS_CHANGED );
 
 		// adjust vector sizes
 		if ( diff > 0 )
@@ -241,6 +323,7 @@ void C_BaseAnimatingOverlay::SetNumAnimOverlays( int num )
 	else if ( m_AnimOverlay.Count() > num )
 	{
 		m_AnimOverlay.RemoveMultiple( num, m_AnimOverlay.Count() - num );
+		InvalidatePhysicsRecursive( BOUNDS_CHANGED );
 	}
 }
 
@@ -281,7 +364,14 @@ void C_BaseAnimatingOverlay::GetRenderBounds( Vector& theMins, Vector& theMaxs )
 	}
 }
 
+bool C_BaseAnimatingOverlay::Interpolate( float flCurrentTime )
+{
+	bool bOk = BaseClass::Interpolate( flCurrentTime );
 
+	CheckForLayerPhysicsInvalidate();
+
+	return bOk;
+}
 
 void C_BaseAnimatingOverlay::CheckForLayerChanges( CStudioHdr *hdr, float currentTime )
 {
@@ -384,7 +474,7 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, Vector pos
 
 	for (i = 0; i < m_AnimOverlay.Count(); i++)
 	{
-		CAnimationLayer *pLayer = GetAnimOverlay( i );
+		C_AnimationLayer *pLayer = GetAnimOverlay( i );
 		if ( pLayer )
 		{
 			layer[i] = clamp( pLayer->GetOrder(), 0, MAX_OVERLAYS - 1 );
@@ -469,13 +559,13 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, Vector pos
 
 				// fake up previous cycle values.
 				float t0;
-				CAnimationLayer *pHead = m_iv_AnimOverlay[i].GetHistoryValue( iHead, t0 );
+				C_AnimationLayer *pHead = m_iv_AnimOverlay[i].GetHistoryValue( iHead, t0 );
 				// reset previous
 				float t1;
-				CAnimationLayer *pPrev1 = m_iv_AnimOverlay[i].GetHistoryValue( iPrev1, t1 );
+				C_AnimationLayer *pPrev1 = m_iv_AnimOverlay[i].GetHistoryValue( iPrev1, t1 );
 				// reset previous previous
 				float t2;
-				CAnimationLayer *pPrev2 = m_iv_AnimOverlay[i].GetHistoryValue( iPrev2, t2 );
+				C_AnimationLayer *pPrev2 = m_iv_AnimOverlay[i].GetHistoryValue( iPrev2, t2 );
 
 				if ( pHead && pPrev1 && pPrev2 )
 				{
@@ -499,7 +589,7 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, Vector pos
 // Purpose: Check to see if the sequence or weapon changed, if so find a matching sequence or clear the dispatch
 //-----------------------------------------------------------------------------
 
-bool C_BaseAnimatingOverlay::UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence )
+bool C_BaseAnimatingOverlay::UpdateDispatchLayer( C_AnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence )
 {
 	if ( !pWeaponStudioHdr || !pLayer )
 	{
@@ -557,7 +647,7 @@ void C_BaseAnimatingOverlay::AccumulateInterleavedDispatchedLayers( C_BaseAnimat
 		int nSequences = boneSetup.GetStudioHdr()->GetNumSeq();
 		for ( int nLayerIdx = 0; nLayerIdx < GetNumAnimOverlays(); nLayerIdx++ )
 		{
-			CAnimationLayer *pLayer = GetAnimOverlay(nLayerIdx);
+			C_AnimationLayer *pLayer = GetAnimOverlay(nLayerIdx);
 
 			if ( pLayer->GetSequence() <= 1 || pLayer->GetSequence() >= nSequences || pLayer->GetWeight() <= 0 )
 				continue;
@@ -613,7 +703,7 @@ void C_BaseAnimatingOverlay::AccumulateInterleavedDispatchedLayers( C_BaseAnimat
 		int nSequences = boneSetup.GetStudioHdr()->GetNumSeq();
 		for ( int nLayerIdx = 0; nLayerIdx < GetNumAnimOverlays(); nLayerIdx++ )
 		{
-			CAnimationLayer *pLayer = GetAnimOverlay(nLayerIdx);
+			C_AnimationLayer *pLayer = GetAnimOverlay(nLayerIdx);
 
 			if ( pLayer->GetSequence() < 0 || pLayer->GetSequence() >= nSequences || pLayer->GetWeight() <= 0 )
 				continue;
@@ -657,7 +747,7 @@ void C_BaseAnimatingOverlay::AccumulateDispatchedLayers( C_BaseAnimatingOverlay 
 	// FIXME: how to interleave?
 	for ( int i=0; i < GetNumAnimOverlays(); i++ )
 	{
-		CAnimationLayer *pLayer = GetAnimOverlay( i );
+		C_AnimationLayer *pLayer = GetAnimOverlay( i );
 		if ( pLayer->GetOrder() >= MAX_OVERLAYS || pLayer->GetSequence() <= 1 || pLayer->GetWeight() <= 0.0f )
 			continue;
 
@@ -813,11 +903,38 @@ CStudioHdr *C_BaseAnimatingOverlay::OnNewModel()
 	CStudioHdr *hdr = BaseClass::OnNewModel();
 
 	// Clear out animation layers
-	for ( int i=0; i < m_AnimOverlay.Count(); i++ )
-	{
-		m_AnimOverlay[i].Reset();
-		m_AnimOverlay[i].m_nOrder = MAX_OVERLAYS;
-	}
+	//for ( int i=0; i < m_AnimOverlay.Count(); i++ )
+	//{
+	//	m_AnimOverlay[i].Reset();
+	//	m_AnimOverlay[i].m_nOrder = MAX_OVERLAYS;
+	//}
 
 	return hdr;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void C_BaseAnimatingOverlay::CheckForLayerPhysicsInvalidate( void )
+{
+	// When the layers interpolate they may change the animation or bbox so we 
+	//  have them accumulate the changes and call InvalidatePhysicsRecursive if any
+	//  changes are needed.
+	int nInvalidatePhysicsChangeBits = 0;
+
+	int nLayerCount = m_AnimOverlay.Count();
+	for ( int i = 0; i < nLayerCount; ++i )
+	{
+		int nChangeBits = m_AnimOverlay[ i ].m_nInvalidatePhysicsBits;
+		if ( nChangeBits )
+		{
+			nInvalidatePhysicsChangeBits |= nChangeBits;
+			continue;
+		}
+	}
+
+	if ( nInvalidatePhysicsChangeBits )
+	{
+		InvalidatePhysicsRecursive( nInvalidatePhysicsChangeBits );
+	}
 }

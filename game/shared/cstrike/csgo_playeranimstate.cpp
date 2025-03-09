@@ -962,7 +962,7 @@ void CCSGOPlayerAnimState::SetUpFlashedReaction( void )
 	if ( GetLayerWeight( nLayer ) > 0 )
 	{
 		CAnimationLayer *pLayer = m_pPlayer->GetAnimOverlay( nLayer, USE_ANIMLAYER_RAW_INDEX );
-		if ( pLayer && pLayer->m_flWeightDeltaRate < 0 )
+		if ( pLayer && pLayer->GetWeightDeltaRate() < 0 )
 			IncrementLayerWeight( nLayer );
 	}
 
@@ -1915,7 +1915,7 @@ void CCSGOPlayerAnimState::SetLayerWeightRate( animstate_layer_t nLayerIndex, fl
 	if ( !pLayer )
 		return;
 	float flNewRate = ( pLayer->GetWeight() - flPrevious ) / m_flLastUpdateIncrement;
-	pLayer->m_flWeightDeltaRate = flNewRate;
+	pLayer->SetWeightDeltaRate( flNewRate );
 }
 
 void CCSGOPlayerAnimState::UpdateAnimLayer( animstate_layer_t nLayerIndex, int nSequence, float flPlaybackRate, float flWeight, float flCycle )

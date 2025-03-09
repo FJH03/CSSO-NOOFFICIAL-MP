@@ -17,6 +17,7 @@
 #include "c_baseentity.h"
 #include "c_baseanimating.h"
 #include "recvproxy.h"
+#include "engine/ivdebugoverlay.h"
 
 #else
 
@@ -50,22 +51,20 @@ public:
 	virtual void OnPostQuery( SpatialPartitionListMask_t listMask );
 
 	void AddEntity( CBaseEntity *pEntity );
-
+	
 	~CDirtySpatialPartitionEntityList();
 	void LockPartitionForRead()
 	{
-		int nThreadId = g_nThreadID;
-		if (  m_nReadLockCount[nThreadId] == 0 )
+		if ( m_readLockCount == 0 )
 		{
 			m_partitionMutex.LockForRead();
 		}
-		m_nReadLockCount[nThreadId]++;
+		m_readLockCount++;
 	}
 	void UnlockPartitionForRead()
 	{
-		int nThreadId = g_nThreadID;
-		m_nReadLockCount[nThreadId]--;
-		if ( m_nReadLockCount[nThreadId] == 0 )
+		m_readLockCount--;
+		if ( m_readLockCount == 0 )
 		{
 			m_partitionMutex.UnlockRead();
 		}
@@ -73,12 +72,10 @@ public:
 
 
 private:
-	int m_nReadLockCount[MAX_THREADS_SUPPORTED];
-
 	CTSListWithFreeList<CBaseHandle> m_DirtyEntities;
 	CThreadSpinRWLock	 m_partitionMutex;
 	uint32			 m_partitionWriteId;
-	CTHREADLOCALINT	 m_readLockCount;
+	CThreadLocalInt<>	 m_readLockCount;
 };
 
 
@@ -110,7 +107,7 @@ void UpdateDirtySpatialPartitionEntities()
 CDirtySpatialPartitionEntityList::CDirtySpatialPartitionEntityList( char const *name ) : CAutoGameSystem( name )
 {
 	m_DirtyEntities.Purge();
-	memset( m_nReadLockCount, 0, sizeof( m_nReadLockCount ) );
+	m_readLockCount = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -126,13 +123,13 @@ CDirtySpatialPartitionEntityList::~CDirtySpatialPartitionEntityList()
 //-----------------------------------------------------------------------------
 bool CDirtySpatialPartitionEntityList::Init()
 {
-	partition->InstallQueryCallback( this );
+	::partition->InstallQueryCallback( this );
 	return true;
 }
 
 void CDirtySpatialPartitionEntityList::Shutdown()
 {
-	partition->RemoveQueryCallback( this );
+	::partition->RemoveQueryCallback( this );
 }
 
 
@@ -168,9 +165,7 @@ void CDirtySpatialPartitionEntityList::OnPreQuery( SpatialPartitionListMask_t li
 	if ( !( listMask & validMask ) )
 		return;
 
-	int nThreadID = g_nThreadID;
-
-	if ( m_partitionWriteId != 0 && m_partitionWriteId == nThreadID + 1 )
+	if ( m_partitionWriteId != 0 && m_partitionWriteId == ThreadGetCurrentId() )
 		return;
 
 #ifdef CLIENT_DLL
@@ -186,11 +181,11 @@ void CDirtySpatialPartitionEntityList::OnPreQuery( SpatialPartitionListMask_t li
 	// or became dirty due to some other thread or callback. Updating them may cause corruption further up the
 	// stack (e.g. partition iterator).  Ignoring the state change should be safe since it happened after the 
 	// trace was requested or was unable to be resolved in a previous attempt (still dirty).
-	if ( m_DirtyEntities.Count() && !m_nReadLockCount[nThreadID] )
+	if ( m_DirtyEntities.Count() && !m_readLockCount )
 	{
 		CUtlVector< CBaseHandle > vecStillDirty;
 		m_partitionMutex.LockForWrite();
-		m_partitionWriteId = nThreadID + 1;
+		m_partitionWriteId = ThreadGetCurrentId();
 		CTSListWithFreeList<CBaseHandle>::Node_t *pCurrent, *pNext;
 		while ( ( pCurrent = m_DirtyEntities.Detach() ) != NULL )
 		{
@@ -415,6 +410,11 @@ CCollisionProperty::~CCollisionProperty()
 	DestroyPartitionHandle();
 }
 
+inline const Vector&	CCollisionProperty::GetCollisionOrigin_Inline() const 
+{ 
+	return GetOuter()->GetAbsOrigin(); 
+}
+
 
 //-----------------------------------------------------------------------------
 // Initialization
@@ -627,7 +627,7 @@ void CCollisionProperty::SetSolidFlags( int flags )
 //-----------------------------------------------------------------------------
 const Vector& CCollisionProperty::GetCollisionOrigin() const
 {
-	return m_pOuter->GetAbsOrigin();
+	return GetCollisionOrigin_Inline();
 }
 
 const QAngle& CCollisionProperty::GetCollisionAngles() const
@@ -654,7 +654,7 @@ const matrix3x4_t& CCollisionProperty::CollisionToWorldTransform() const
 	}
 
 	SetIdentityMatrix( matResult );
-	MatrixSetColumn( GetCollisionOrigin(), 3, matResult );
+	MatrixSetColumn( GetCollisionOrigin_Inline(), 3, matResult );
 	return matResult;
 }
 
@@ -879,8 +879,8 @@ void CCollisionProperty::CollisionAABBToWorldAABB( const Vector &entityMins,
 {
 	if ( !IsBoundsDefinedInEntitySpace() || (GetCollisionAngles() == vec3_angle) )
 	{
-		VectorAdd( entityMins, GetCollisionOrigin(), *pWorldMins );
-		VectorAdd( entityMaxs, GetCollisionOrigin(), *pWorldMaxs );
+		VectorAdd( entityMins, GetCollisionOrigin_Inline(), *pWorldMins );
+		VectorAdd( entityMaxs, GetCollisionOrigin_Inline(), *pWorldMaxs );
 	}
 	else
 	{
@@ -951,7 +951,7 @@ float CCollisionProperty::ComputeSupportMap( const Vector &vecDirection ) const
 	Vector vecCollisionDir;
 	WorldDirectionToCollisionSpace( vecDirection, &vecCollisionDir );
 
-	float flResult = DotProduct( GetCollisionOrigin(), vecDirection );
+	float flResult = DotProduct( GetCollisionOrigin_Inline(), vecDirection );
 	flResult += (( vecCollisionDir.x >= 0.0f ) ? m_vecMaxs.Get().x : m_vecMins.Get().x) * vecCollisionDir.x;
 	flResult += (( vecCollisionDir.y >= 0.0f ) ? m_vecMaxs.Get().y : m_vecMins.Get().y) * vecCollisionDir.y;
 	flResult += (( vecCollisionDir.z >= 0.0f ) ? m_vecMaxs.Get().z : m_vecMins.Get().z) * vecCollisionDir.z;
@@ -972,22 +972,22 @@ void CCollisionProperty::ComputeVPhysicsSurroundingBox( Vector *pVecWorldMins, V
 		if ( pPhysicsObject->GetCollide() )
 		{
 			physcollision->CollideGetAABB( pVecWorldMins, pVecWorldMaxs, 
-				pPhysicsObject->GetCollide(), GetCollisionOrigin(), GetCollisionAngles() );
+				pPhysicsObject->GetCollide(), GetCollisionOrigin_Inline(), GetCollisionAngles() );
 			bSetBounds = true;
 		}
 		else if ( pPhysicsObject->GetSphereRadius( ) )
 		{
 			float flRadius = pPhysicsObject->GetSphereRadius( );
 			Vector vecExtents( flRadius, flRadius, flRadius );
-			VectorSubtract( GetCollisionOrigin(), vecExtents, *pVecWorldMins );
-			VectorAdd( GetCollisionOrigin(), vecExtents, *pVecWorldMaxs );
+			VectorSubtract( GetCollisionOrigin_Inline(), vecExtents, *pVecWorldMins );
+			VectorAdd( GetCollisionOrigin_Inline(), vecExtents, *pVecWorldMaxs );
 			bSetBounds = true;
 		}
 	}
 
 	if ( !bSetBounds )
 	{
-		*pVecWorldMins = GetCollisionOrigin();
+		*pVecWorldMins = GetCollisionOrigin_Inline();
 		*pVecWorldMaxs = *pVecWorldMins;
 	}
 
@@ -1014,6 +1014,58 @@ bool CCollisionProperty::ComputeHitboxSurroundingBox( Vector *pVecWorldMins, Vec
 	}
 
 	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Computes the surrounding collision bounds based on the current sequence box
+//-----------------------------------------------------------------------------
+void CCollisionProperty::ComputeOBBBounds( Vector *pVecWorldMins, Vector *pVecWorldMaxs )
+{
+	bool bUseVPhysics = false;
+	if ( ( GetSolid() == SOLID_VPHYSICS ) && ( GetOuter()->GetMoveType() == MOVETYPE_VPHYSICS ) )
+	{
+		// UNDONE: This may not be necessary any more.
+		IPhysicsObject *pPhysics = GetOuter()->VPhysicsGetObject();
+		bUseVPhysics = pPhysics && pPhysics->IsAsleep();
+	}
+	ComputeCollisionSurroundingBox( bUseVPhysics, pVecWorldMins, pVecWorldMaxs );
+}
+
+//-----------------------------------------------------------------------------
+// Computes the surrounding collision bounds from the current sequence box
+//-----------------------------------------------------------------------------
+void CCollisionProperty::ComputeRotationExpandedSequenceBounds( Vector *pVecWorldMins, Vector *pVecWorldMaxs )
+{
+	CBaseAnimating *pAnim = GetOuter()->GetBaseAnimating();
+	if ( !pAnim )
+	{
+		ComputeOBBBounds( pVecWorldMins, pVecWorldMaxs );
+		return;
+	}
+
+	Vector mins, maxs;
+	pAnim->ExtractBbox( pAnim->GetSequence(), mins, maxs );
+
+	float flRadius = MAX( MAX( FloatMakePositive( mins.x ), FloatMakePositive( maxs.x ) ),
+					      MAX( FloatMakePositive( mins.y ), FloatMakePositive( maxs.y ) ) );
+	mins.x = mins.y = -flRadius;
+	maxs.x = maxs.y = flRadius;
+
+	// Add bloat to account for gesture sequences
+	Vector vecBloat( 6, 6, 0 );
+	mins -= vecBloat;
+	maxs += vecBloat;
+	ASSERT_COORD( m_vecSurroundingMins );
+	ASSERT_COORD( m_vecSurroundingMaxs );
+	// NOTE: This is necessary because the server doesn't know how to blend
+	// animations together. Therefore, we have to just pick a box that can
+	// surround all of our potential sequences. This should be something we
+	// should be able to compute @ tool time instead, however.
+	VectorMin( mins, m_vecSurroundingMins, mins );
+	VectorMax( maxs, m_vecSurroundingMaxs, maxs );
+
+	VectorAdd( mins, GetCollisionOrigin_Inline(), *pVecWorldMins );
+	VectorAdd( maxs, GetCollisionOrigin_Inline(), *pVecWorldMaxs );
 }
 
 //-----------------------------------------------------------------------------
@@ -1071,7 +1123,7 @@ void CCollisionProperty::ComputeCollisionSurroundingBox( bool bUseVPhysics, Vect
 	// a point bounds for SOLID_NONE...
 //	if ( GetSolid() == SOLID_NONE )
 //	{
-//		*pVecWorldMins = GetCollisionOrigin();
+//		*pVecWorldMins = GetCollisionOrigin_Inline();
 //		*pVecWorldMaxs = *pVecWorldMins;
 //		return;
 //	}
@@ -1091,13 +1143,17 @@ void CCollisionProperty::ComputeCollisionSurroundingBox( bool bUseVPhysics, Vect
 //-----------------------------------------------------------------------------
 // Computes the surrounding collision bounds based on whatever algorithm we want...
 //-----------------------------------------------------------------------------
+#ifdef CLIENT_DLL
+static ConVar cl_show_bounds_errors( "cl_show_bounds_errors", "0" );
+#endif
+
 void CCollisionProperty::ComputeSurroundingBox( Vector *pVecWorldMins, Vector *pVecWorldMaxs )
 {
 	if (( GetSolid() == SOLID_CUSTOM ) && (m_nSurroundType != USE_GAME_CODE ))
 	{
 		// NOTE: This can only happen in transition periods, say during network
 		// reception on the client. We expect USE_GAME_CODE to be used with SOLID_CUSTOM
-		*pVecWorldMins = GetCollisionOrigin();
+		*pVecWorldMins = GetCollisionOrigin_Inline();
 		*pVecWorldMaxs = *pVecWorldMins;
 		return;
 	}
@@ -1105,22 +1161,17 @@ void CCollisionProperty::ComputeSurroundingBox( Vector *pVecWorldMins, Vector *p
 	switch( m_nSurroundType )
 	{
 	case USE_OBB_COLLISION_BOUNDS:
-		{
-			Assert( GetSolid() != SOLID_CUSTOM );
-			bool bUseVPhysics = false;
-			if ( ( GetSolid() == SOLID_VPHYSICS ) && ( GetOuter()->GetMoveType() == MOVETYPE_VPHYSICS ) )
-			{
-				// UNDONE: This may not be necessary any more.
-				IPhysicsObject *pPhysics = GetOuter()->VPhysicsGetObject();
-				bUseVPhysics = pPhysics && pPhysics->IsAsleep();
-			}
-			ComputeCollisionSurroundingBox( bUseVPhysics, pVecWorldMins, pVecWorldMaxs );
-		}
+		Assert( GetSolid() != SOLID_CUSTOM );
+		ComputeOBBBounds( pVecWorldMins, pVecWorldMaxs );
 		break;
 
 	case USE_BEST_COLLISION_BOUNDS:
 		Assert( GetSolid() != SOLID_CUSTOM );
 		ComputeCollisionSurroundingBox( (GetSolid() == SOLID_VPHYSICS), pVecWorldMins, pVecWorldMaxs );
+		break;
+
+	case USE_ROTATION_EXPANDED_SEQUENCE_BOUNDS:
+		ComputeRotationExpandedSequenceBounds( pVecWorldMins, pVecWorldMaxs );
 		break;
 
 	case USE_COLLISION_BOUNDS_NEVER_VPHYSICS:
@@ -1137,8 +1188,8 @@ void CCollisionProperty::ComputeSurroundingBox( Vector *pVecWorldMins, Vector *p
 		break;
 
 	case USE_SPECIFIED_BOUNDS:
-		VectorAdd( GetCollisionOrigin(), m_vecSpecifiedSurroundingMins, *pVecWorldMins );
-		VectorAdd( GetCollisionOrigin(), m_vecSpecifiedSurroundingMaxs, *pVecWorldMaxs );
+		VectorAdd( GetCollisionOrigin_Inline(), m_vecSpecifiedSurroundingMins, *pVecWorldMins );
+		VectorAdd( GetCollisionOrigin_Inline(), m_vecSpecifiedSurroundingMaxs, *pVecWorldMaxs );
 		break;
 
 	case USE_GAME_CODE:
@@ -1149,25 +1200,56 @@ void CCollisionProperty::ComputeSurroundingBox( Vector *pVecWorldMins, Vector *p
 		return;
 	}
 
-#ifdef DEBUG
-	/*
-	// For debugging purposes, make sure the bounds actually does surround the thing.
-	// Otherwise the optimization we were using isn't really all that great, is it?
-	Vector vecTestMins, vecTestMaxs;
-	ComputeCollisionSurroundingBox( (GetSolid() == SOLID_VPHYSICS), &vecTestMins, &vecTestMaxs );
+//#ifdef DEBUG
+#ifdef CLIENT_DLL
+	if ( cl_show_bounds_errors.GetBool() && ( m_nSurroundType == USE_ROTATION_EXPANDED_SEQUENCE_BOUNDS ) )
+	{ 
+		// For debugging purposes, make sure the bounds actually does surround the thing.
+		// Otherwise the optimization we were using isn't really all that great, is it?
+		Vector vecTestMins, vecTestMaxs;
+		if ( GetOuter()->GetBaseAnimating() )
+		{
+			GetOuter()->GetBaseAnimating()->InvalidateBoneCache();
+		}
+		ComputeHitboxSurroundingBox( &vecTestMins, &vecTestMaxs );
+		
+		Assert( vecTestMins.x >= pVecWorldMins->x && vecTestMins.y >= pVecWorldMins->y && vecTestMins.z >= pVecWorldMins->z );
+		Assert( vecTestMaxs.x <= pVecWorldMaxs->x && vecTestMaxs.y <= pVecWorldMaxs->y && vecTestMaxs.z <= pVecWorldMaxs->z );
 
-	// Now that we have the basics, let's expand for hitboxes if appropriate
-	Vector vecWorldHitboxMins, vecWorldHitboxMaxs;
-	if ( ComputeHitboxSurroundingBox( &vecWorldHitboxMins, &vecWorldHitboxMaxs ) )
-	{
-		VectorMin( vecWorldHitboxMaxs, vecTestMins, vecTestMins );
-		VectorMax( vecWorldHitboxMaxs, vecTestMaxs, vecTestMaxs );
+		if ( vecTestMins.x < pVecWorldMins->x || vecTestMins.y < pVecWorldMins->y || vecTestMins.z < pVecWorldMins->z ||
+			 vecTestMaxs.x > pVecWorldMaxs->x || vecTestMaxs.y > pVecWorldMaxs->y || vecTestMaxs.z > pVecWorldMaxs->z )
+		{
+			const char *pSeqName = "<unknown seq>";
+			C_BaseAnimating *pAnim = GetOuter()->GetBaseAnimating();
+			if ( pAnim )
+			{
+				int nSequence = pAnim->GetSequence();
+				pSeqName = pAnim->GetSequenceName( nSequence );
+			}
+
+			Warning( "*** Bounds problem, index %d Eng %s, Seqeuence %s ", GetOuter()->entindex(), GetOuter()->GetClassname(), pSeqName );
+			Vector vecDelta = *pVecWorldMins - vecTestMins;
+			Vector vecDelta2 = vecTestMaxs - *pVecWorldMaxs;
+			if ( vecDelta.x > 0.0f || vecDelta2.x > 0.0f || vecDelta.y > 0.0f || vecDelta2.y > 0.0f )
+			{
+				Msg( "Outside X/Y by %.2f ", MAX( MAX( vecDelta.x, vecDelta2.x ), MAX( vecDelta.y, vecDelta2.y ) ) );
+			}
+			if ( vecDelta.z > 0.0f || vecDelta2.z > 0.0f )
+			{
+				Msg( "Outside Z by (below) %.2f, (above) %.2f ", MAX( vecDelta.z, 0.0f ), MAX( vecDelta2.z, 0.0f ) );
+			}
+			Msg( "\n" );
+
+			char pTemp[MAX_PATH];
+			Q_snprintf( pTemp, sizeof(pTemp), "%s [seq: %s]", GetOuter()->GetClassname(), pSeqName ); 
+
+			debugoverlay->AddBoxOverlay( vec3_origin, vecTestMins, vecTestMaxs, vec3_angle, 255, 0, 0, 0, 2 );
+			debugoverlay->AddBoxOverlay( vec3_origin, *pVecWorldMins, *pVecWorldMaxs, vec3_angle, 0, 0, 255, 0, 2 );
+			debugoverlay->AddTextOverlay( ( vecTestMins + vecTestMaxs ) * 0.5f, 2, "%s", pTemp );
+		}
 	}
-
-	Assert( vecTestMins.x >= pVecWorldMins->x && vecTestMins.y >= pVecWorldMins->y && vecTestMins.z >= pVecWorldMins->z );
-	Assert( vecTestMaxs.x <= pVecWorldMaxs->x && vecTestMaxs.y <= pVecWorldMaxs->y && vecTestMaxs.z <= pVecWorldMaxs->z );
-	*/
 #endif
+//#endif
 }
 
 
@@ -1255,6 +1337,7 @@ bool CCollisionProperty::DoesVPhysicsInvalidateSurroundingBox( ) const
 	case USE_HITBOXES:
 	case USE_ROTATION_EXPANDED_BOUNDS:
 	case USE_SPECIFIED_BOUNDS:
+	case USE_ROTATION_EXPANDED_SEQUENCE_BOUNDS:
 		return false;
 
 	default:
@@ -1269,7 +1352,7 @@ bool CCollisionProperty::DoesVPhysicsInvalidateSurroundingBox( ) const
 //-----------------------------------------------------------------------------
 void CCollisionProperty::WorldSpaceSurroundingBounds( Vector *pVecMins, Vector *pVecMaxs )
 {
-	const Vector &vecAbsOrigin = GetCollisionOrigin();
+	const Vector &vecAbsOrigin = GetCollisionOrigin_Inline();
 	if ( GetOuter()->IsEFlagSet( EFL_DIRTY_SURROUNDING_COLLISION_BOUNDS ))
 	{
 		GetOuter()->RemoveEFlags( EFL_DIRTY_SURROUNDING_COLLISION_BOUNDS );
@@ -1295,14 +1378,14 @@ void CCollisionProperty::CreatePartitionHandle()
 {
 	// Put the entity into the spatial partition.
 	Assert( m_Partition == PARTITION_INVALID_HANDLE );
-	m_Partition = partition->CreateHandle( GetEntityHandle() );
+	m_Partition = ::partition->CreateHandle( GetEntityHandle() );
 }
 
 void CCollisionProperty::DestroyPartitionHandle()
 {
 	if ( m_Partition != PARTITION_INVALID_HANDLE )
 	{
-		partition->DestroyHandle( m_Partition );
+		::partition->DestroyHandle( m_Partition );
 		m_Partition = PARTITION_INVALID_HANDLE;
 	}
 }
@@ -1320,7 +1403,7 @@ void CCollisionProperty::UpdateServerPartitionMask( )
 
 	// Remove it from whatever lists it may be in at the moment
 	// We'll re-add it below if we need to.
-	partition->Remove( handle );
+	::partition->Remove( handle );
 
 	// Don't bother with deleted things
 	if ( !m_pOuter->edict() )
@@ -1334,7 +1417,7 @@ void CCollisionProperty::UpdateServerPartitionMask( )
 	bool bIsSolid = IsSolid() || IsSolidFlagSet(FSOLID_TRIGGER);
 	if ( bIsSolid || m_pOuter->IsEFlagSet(EFL_USE_PARTITION_WHEN_NOT_SOLID) )
 	{
-		partition->Insert( PARTITION_ENGINE_NON_STATIC_EDICTS, handle );
+		::partition->Insert( PARTITION_ENGINE_NON_STATIC_EDICTS, handle );
 	}
 
 	if ( !bIsSolid )
@@ -1352,7 +1435,7 @@ void CCollisionProperty::UpdateServerPartitionMask( )
 		mask |=	PARTITION_ENGINE_TRIGGER_EDICTS;
 	}
 	Assert( mask != 0 );
-	partition->Insert( mask, handle );
+	::partition->Insert( mask, handle );
 #endif
 }
 
@@ -1415,14 +1498,13 @@ void CCollisionProperty::UpdatePartition( )
 				WorldSpaceSurroundingBounds( &vecSurroundMins, &vecSurroundMaxs );
 				vecSurroundMins -= Vector( 1, 1, 1 );
 				vecSurroundMaxs += Vector( 1, 1, 1 );
-				partition->ElementMoved( GetPartitionHandle(), vecSurroundMins,  vecSurroundMaxs );
+				::partition->ElementMoved( GetPartitionHandle(), vecSurroundMins,  vecSurroundMaxs );
 			}
 			else
 			{
-				partition->ElementMoved( GetPartitionHandle(), GetCollisionOrigin(),  GetCollisionOrigin() );
+				::partition->ElementMoved( GetPartitionHandle(), GetCollisionOrigin_Inline(), GetCollisionOrigin_Inline() );
 			}
 		}
 	}
 }
-
 

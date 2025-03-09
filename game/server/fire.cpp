@@ -1012,7 +1012,7 @@ void CFire::Update( float simTime )
 		{
 			bool bDoDamage;
 
-			if ( FIRE_SPREAD_DAMAGE_MULTIPLIER != 1.0 && !pOther->IsPlayer() ) // if set to 1.0, optimizer will remove this code
+			if ( FIRE_SPREAD_DAMAGE_MULTIPLIER != 1.0 || ( pOther->CollisionProp()->GetSurroundingBoundsType() == USE_ROTATION_EXPANDED_SEQUENCE_BOUNDS ) )
 			{
 				Vector otherMins, otherMaxs;
 				pOther->CollisionProp()->WorldSpaceAABB( &otherMins, &otherMaxs );

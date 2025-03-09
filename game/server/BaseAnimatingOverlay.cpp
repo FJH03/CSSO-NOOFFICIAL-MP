@@ -446,7 +446,7 @@ void CBaseAnimatingOverlay::DispatchAnimEvents ( CBaseAnimating *eventHandler )
 
 	for ( int i = 0; i < m_AnimOverlay.Count(); i++ )
 	{
-		if (m_AnimOverlay[ i ].IsActive())
+		if (m_AnimOverlay[ i ].IsActive() && !m_AnimOverlay[ i ].NoEvents() )
 		{
 			m_AnimOverlay[ i ].DispatchAnimEvents( eventHandler, this );
 		}
@@ -1115,6 +1115,25 @@ void CBaseAnimatingOverlay::SetLayerCycle( int iLayer, float flCycle, float flPr
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+void CBaseAnimatingOverlay::SetLayerCycle( int iLayer, float flCycle, float flPrevCycle, float flLastEventCheck )
+{
+	if (!IsValidLayer( iLayer ))
+		return;
+
+	if (!m_AnimOverlay[iLayer].m_bLooping)
+	{
+		flCycle = clamp( flCycle, 0.0f, 1.0f );
+		flPrevCycle = clamp( flPrevCycle, 0.0f, 1.0f );
+	}
+	m_AnimOverlay[iLayer].m_flCycle = flCycle;
+	m_AnimOverlay[iLayer].m_flPrevCycle = flPrevCycle;
+	m_AnimOverlay[iLayer].m_flLastEventCheck = flLastEventCheck;
+	m_AnimOverlay[iLayer].MarkActive( );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
 float CBaseAnimatingOverlay::GetLayerCycle( int iLayer )
 {
 	if (!IsValidLayer( iLayer ))
@@ -1230,6 +1249,24 @@ void CBaseAnimatingOverlay::SetLayerNoRestore( int iLayer, bool bNoRestore )
 	else
 	{
 		m_AnimOverlay[iLayer].m_fFlags &= ~ANIM_LAYER_DONTRESTORE;
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBaseAnimatingOverlay::SetLayerNoEvents( int iLayer, bool bNoEvents )
+{
+	if (!IsValidLayer( iLayer ))
+		return;
+
+	if (bNoEvents)
+	{
+		m_AnimOverlay[iLayer].m_fFlags |= ANIM_LAYER_NOEVENTS;
+	}
+	else
+	{
+		m_AnimOverlay[iLayer].m_fFlags &= ~ANIM_LAYER_NOEVENTS;
 	}
 }
 

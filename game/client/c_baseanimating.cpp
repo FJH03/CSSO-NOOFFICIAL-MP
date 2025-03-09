@@ -744,6 +744,8 @@ C_BaseAnimating::C_BaseAnimating() :
 	m_hStudioHdr = MDLHANDLE_INVALID;
 
 	m_bReceivedSequence = false;
+	m_prevClientCycle = 0;
+	m_prevClientAnimTime = 0;
 
 	m_boneIndexAttached = -1;
 	m_flOldModelScale = 0.0f;
@@ -1892,17 +1894,17 @@ void C_BaseAnimating::MaintainSequenceTransitions( IBoneSetup &boneSetup, float 
 		C_AnimationLayer *blend = &m_SequenceTransitioner.m_animationQueue[i];
 
 		float dt = (gpGlobals->curtime - blend->m_flLayerAnimtime);
-		flCycle = blend->m_flCycle + dt * blend->m_flPlaybackRate * GetSequenceCycleRate( boneSetup.GetStudioHdr(), blend->m_nSequence );
-		flCycle = ClampCycle( flCycle, IsSequenceLooping( boneSetup.GetStudioHdr(), blend->m_nSequence ) );
+		flCycle = blend->GetCycle() + dt * blend->GetPlaybackRate() * GetSequenceCycleRate( boneSetup.GetStudioHdr(), blend->GetSequence() );
+		flCycle = ClampCycle( flCycle, IsSequenceLooping( boneSetup.GetStudioHdr(), blend->GetSequence() ) );
 
 #if 1 // _DEBUG
 		if (r_sequence_debug.GetInt() == entindex())
 		{
-			DevMsgRT( "%8.4f : %30s : %5.3f : %4.2f  +\n", gpGlobals->curtime, boneSetup.GetStudioHdr()->pSeqdesc( blend->m_nSequence ).pszLabel(), flCycle, (float)blend->m_flWeight );
+			DevMsgRT( "%8.4f : %30s : %5.3f : %4.2f  +\n", gpGlobals->curtime, boneSetup.GetStudioHdr()->pSeqdesc( blend->GetSequence() ).pszLabel(), flCycle, (float)blend->GetWeight() );
 		}
 #endif
 
-		boneSetup.AccumulatePose( pos, q, blend->m_nSequence, flCycle, blend->m_flWeight, gpGlobals->curtime, m_pIk );
+		boneSetup.AccumulatePose( pos, q, blend->GetSequence(), flCycle, blend->GetWeight(), gpGlobals->curtime, m_pIk );
 	}
 }
 
@@ -4566,7 +4568,7 @@ void C_BaseAnimating::RagdollMoved( void )
 	SetCollisionBounds( mins, maxs );
 
 	// If the ragdoll moves, its render-to-texture shadow is dirty
-	InvalidatePhysicsRecursive( ANIMATION_CHANGED ); 
+	InvalidatePhysicsRecursive( BOUNDS_CHANGED );
 }
 
 
@@ -4676,7 +4678,16 @@ void C_BaseAnimating::PostDataUpdate( DataUpdateType_t updateType )
 	bool bScaleChanged = ( m_flOldModelScale != GetModelScale() );
 	if ( bAnimationChanged || bSequenceChanged || bScaleChanged )
 	{
-		InvalidatePhysicsRecursive( ANIMATION_CHANGED );
+		int nFlags = bAnimationChanged ? ANIMATION_CHANGED : 0;
+		if ( bSequenceChanged )
+		{
+			nFlags |= BOUNDS_CHANGED | SEQUENCE_CHANGED;
+		}
+		if ( bScaleChanged )
+		{
+			nFlags |= BOUNDS_CHANGED;
+		}
+		InvalidatePhysicsRecursive( nFlags );
 
 		if ( IsViewModel() )
 		{
@@ -4719,7 +4730,7 @@ void C_BaseAnimating::OnPreDataChanged( DataUpdateType_t updateType )
 	m_bLastClientSideFrameReset = m_bClientSideFrameReset;
 }
 
-bool C_BaseAnimating::ForceSetupBonesAtTime( matrix3x4_t *pBonesOut, float flTime )
+void C_BaseAnimating::ForceSetupBonesAtTime( matrix3x4_t *pBonesOut, float flTime )
 {
 	// blow the cached prev bones
 	InvalidateBoneCache();
@@ -4727,8 +4738,26 @@ bool C_BaseAnimating::ForceSetupBonesAtTime( matrix3x4_t *pBonesOut, float flTim
 	// reset root position to flTime
 	Interpolate( flTime );
 
-	// Setup bone state at the given time
-	return SetupBones( pBonesOut, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, flTime );
+	if ( m_bClientSideAnimation )
+	{
+		float saveCycle = GetCycle();
+		float oldCycle = m_prevClientCycle;
+		if ( oldCycle > saveCycle )
+		{
+			oldCycle -= 1.0f;
+		}
+		float cycleInterp = RemapVal( flTime, m_prevClientAnimTime, m_flAnimTime, oldCycle, saveCycle );
+		cycleInterp = clamp( cycleInterp, 0.0f, 1.0f );
+		SetCycle( cycleInterp );
+		// Setup bone state at the given time
+		SetupBones( pBonesOut, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, flTime );
+		SetCycle( saveCycle );
+	}
+	else
+	{
+		// Setup bone state at the given time
+		SetupBones( pBonesOut, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, flTime );
+	}
 }
 
 void C_BaseAnimating::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt )
@@ -4957,7 +4986,7 @@ void C_BaseAnimating::OnDataChanged( DataUpdateType_t updateType )
 	// If there's a significant change, make sure the shadow updates
 	if ( modelchanged || (GetSequence() != m_nPrevSequence))
 	{
-		InvalidatePhysicsRecursive( ANIMATION_CHANGED ); 
+		InvalidatePhysicsRecursive( BOUNDS_CHANGED | SEQUENCE_CHANGED );
 		m_nPrevSequence = GetSequence();
 	}
 
@@ -5246,8 +5275,8 @@ void C_BaseAnimating::SetSequence( int nSequence )
 		}
 		*/
 
-		m_nSequence = nSequence; 
-		InvalidatePhysicsRecursive( ANIMATION_CHANGED );
+		m_nSequence = nSequence;
+		InvalidatePhysicsRecursive( BOUNDS_CHANGED | SEQUENCE_CHANGED );
 		if ( m_bClientSideAnimation )
 		{
 			ClientSideAnimationChanged();
@@ -5273,6 +5302,17 @@ void C_BaseAnimating::SetSequence( int nSequence )
 	}
 }
 
+//-----------------------------------------------------------------------------
+// Extracts the bounding box
+//-----------------------------------------------------------------------------
+void C_BaseAnimating::ExtractBbox( int nSequence, Vector &mins, Vector &maxs )
+{
+	CStudioHdr *pStudioHdr = GetModelPtr();
+	Assert( pStudioHdr );
+
+	::ExtractBbox( pStudioHdr, nSequence, mins, maxs );
+}
+
 
 //=========================================================
 // StudioFrameAdvance - advance the animation frame up some interval (default 0.1) into the future
@@ -5286,11 +5326,7 @@ void C_BaseAnimating::StudioFrameAdvance()
 	if ( !hdr )
 		return;
 
-#ifdef DEBUG
-	bool watch = dbganimmodel.GetString()[0] && V_stristr( hdr->pszName(), dbganimmodel.GetString() );
-#else
-	bool watch = false; // Q_strstr( hdr->name, "rifle" ) ? true : false;
-#endif
+	bool watch = false; //Q_strstr( hdr->name(), "grip" ) ? true : false;
 
 	//if (!anim.prevanimtime)
 	//{
@@ -5309,7 +5345,7 @@ void C_BaseAnimating::StudioFrameAdvance()
 	UpdateModelScale();
 
 	//anim.prevanimtime = m_flAnimTime;
-	float cycleAdvance = flInterval * GetSequenceCycleRate( hdr, GetSequence() ) * m_flPlaybackRate;
+	float cycleAdvance = flInterval * GetSequenceCycleRate( hdr, GetSequence() ) * GetPlaybackRate();
 	float flNewCycle = GetCycle() + cycleAdvance;
 	m_flAnimTime = gpGlobals->curtime;
 
@@ -5334,7 +5370,7 @@ void C_BaseAnimating::StudioFrameAdvance()
 
 	SetCycle( flNewCycle );
 
-	m_flGroundSpeed = GetSequenceGroundSpeed( hdr, GetSequence() ) * GetModelScale();
+	m_flGroundSpeed = GetSequenceGroundSpeed( hdr, GetSequence() );
 
 #if 0
 	// I didn't have a test case for this, but it seems like the right thing to do.  Check multi-player!
@@ -5412,8 +5448,8 @@ void C_BaseAnimating::GetBlendedLinearVelocity( Vector *pVec )
 	{
 		C_AnimationLayer *blend = &m_SequenceTransitioner.m_animationQueue[i];
 	
-		GetSequenceLinearMotion( blend->m_nSequence, &vecDist );
-		flDuration = SequenceDuration( blend->m_nSequence );
+		GetSequenceLinearMotion( blend->GetSequence(), &vecDist );
+		flDuration = SequenceDuration( blend->GetSequence() );
 
 		VectorScale( vecDist, 1.0 / flDuration, tmp );
 
@@ -5433,11 +5469,7 @@ float C_BaseAnimating::FrameAdvance( float flInterval )
 	if ( !hdr )
 		return 0.0f;
 
-#ifdef DEBUG
-	bool bWatch = dbganimmodel.GetString()[0] && V_stristr( hdr->pszName(), dbganimmodel.GetString() );
-#else
 	bool bWatch = false; // Q_strstr( hdr->name, "medkit_large" ) ? true : false;
-#endif
 
 	float curtime = gpGlobals->curtime;
 
@@ -5456,7 +5488,10 @@ float C_BaseAnimating::FrameAdvance( float flInterval )
 	}
 
 	float cyclerate = GetSequenceCycleRate( hdr, GetSequence() );
-	float addcycle = flInterval * cyclerate * m_flPlaybackRate;
+	float addcycle = flInterval * cyclerate * GetPlaybackRate();
+
+	m_prevClientCycle = GetCycle();
+	m_prevClientAnimTime = m_flAnimTime;
 
 	if( GetServerIntendedCycle() != -1.0f )
 	{
@@ -5510,6 +5545,9 @@ float C_BaseAnimating::FrameAdvance( float flInterval )
 	}
 
 	SetCycle( flNewCycle );
+	InvalidatePhysicsRecursive( ANIMATION_CHANGED );
+
+	m_flGroundSpeed = GetSequenceGroundSpeed( hdr, GetSequence() );
 
 	if ( m_bSequenceFinished && !m_onEndGoto.IsEmpty() )
 	{
@@ -5760,7 +5798,7 @@ static Vector	hullcolor[9] =
 	Vector( 1.0, 0.5, 1.0 ),
 	Vector( 0.5, 1.0, 1.0 ),
 	Vector( 0.5, 0.75, 1.0 ),
- 	Vector( 1.0, 0.75, 0.5 )
+	Vector( 1.0, 0.75, 0.5 )
 };
 
 //-----------------------------------------------------------------------------
@@ -6166,6 +6204,7 @@ void C_BaseAnimating::SetModelScale( float scale, float change_duration /*= 0.0f
 	else
 	{
 		m_flModelScale = scale;
+		InvalidatePhysicsRecursive( BOUNDS_CHANGED );
 		RefreshCollisionBounds();
 		
 		if ( HasDataObjectType( MODELSCALE ) )
