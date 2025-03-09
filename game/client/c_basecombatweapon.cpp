@@ -122,7 +122,7 @@ int C_BaseCombatWeapon::GetWorldModelIndex( void )
 //-----------------------------------------------------------------------------
 void C_BaseCombatWeapon::OnDataChanged( DataUpdateType_t updateType )
 {
-	BaseClass::OnDataChanged(updateType);
+	BaseClass::OnDataChanged( updateType );
 
 	// let the world model know we're updating, in case it wants to as well
 	CBaseWeaponWorldModel *pWeaponWorldModel = GetWeaponWorldModel();
@@ -193,10 +193,10 @@ ShadowType_t C_BaseCombatWeapon::ShadowCastType()
 	if (!IsBeingCarried())
 		return SHADOWS_RENDER_TO_TEXTURE;
 
-		if (IsCarriedByLocalPlayer())
+	if (IsCarriedByLocalPlayer())
 		return SHADOWS_NONE;
 
-		return (m_iState != WEAPON_IS_CARRIED_BY_PLAYER) ? SHADOWS_RENDER_TO_TEXTURE : SHADOWS_NONE;
+	return (m_iState != WEAPON_IS_CARRIED_BY_PLAYER) ? SHADOWS_RENDER_TO_TEXTURE : SHADOWS_NONE;
 }
 
 //-----------------------------------------------------------------------------
@@ -462,13 +462,11 @@ int C_BaseCombatWeapon::DrawModel( int flags )
 
 	// check if local player chases owner of this weapon in first person
 	C_BasePlayer *localplayer = C_BasePlayer::GetLocalPlayer();
-
 	if ( localplayer && localplayer->IsObserver() && GetOwner() )
 	{
 		// don't draw weapon if chasing this guy as spectator
 		// we don't check that in ShouldDraw() since this may change
 		// without notification 
-		
 		if ( localplayer->GetObserverMode() == OBS_MODE_IN_EYE &&
 			localplayer->GetObserverTarget() == GetOwner() &&
 			localplayer->GetObserverInterpState() != C_BasePlayer::OBSERVER_INTERP_TRAVELING ) 

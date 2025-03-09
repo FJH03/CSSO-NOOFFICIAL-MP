@@ -274,6 +274,7 @@ public:
 	void InvalidateBoneCache();
 	void InvalidateBoneCacheIfOlderThan( float deltaTime );
 	virtual int DrawDebugTextOverlays( void );
+	virtual bool IsViewModel() const { return false; }
 	
 	// See note in code re: bandwidth usage!!!
 	void				DrawServerHitboxes( float duration = 0.0f, bool monocolor = false );
@@ -398,7 +399,7 @@ private:
 	float				m_flDissolveStartTime;
 
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_bClientSideRagdoll );
-	
+
 	// was pev->frame
 	CNetworkVar( float, m_flCycle );
 	CNetworkVar( int, m_nSequence );	
