@@ -88,6 +88,7 @@ CCSSpectatorGUI::CCSSpectatorGUI(IViewPort *pViewPort) : CSpectatorGUI(pViewPort
 	m_pPlayerPanelBkg = NULL;
 	m_pPlayerPanelAvatar = NULL;
 	m_pPlayerPanelAvatarBkg = NULL;
+	m_pPlayerPanelBorderUpper = NULL;
 
 	m_nLastTime = -1;
 	m_nLastSpecMode = -1;
@@ -113,6 +114,7 @@ void CCSSpectatorGUI::ApplySchemeSettings(vgui::IScheme *pScheme)
 	m_pPlayerPanelBkg = dynamic_cast<ImagePanel*>(FindChildByName( "PlayerPanelBkg" ));
 	m_pPlayerPanelAvatar = dynamic_cast<CAvatarImagePanel*>(FindChildByName( "PlayerPanelAvatar" ));
 	m_pPlayerPanelAvatarBkg = dynamic_cast<ImagePanel*>(FindChildByName( "PlayerPanelAvatarBkg" ));
+	m_pPlayerPanelBorderUpper = dynamic_cast<ImagePanel*>(FindChildByName( "PlayerPanelBorderUpper" ));
 
 	m_pPlayerPanelAvatar->SetDefaultAvatar( scheme()->GetImage( CSTRIKE_DEFAULT_AVATAR, true ) );
 	m_pPlayerPanelAvatar->SetShouldScaleImage( true );
@@ -280,6 +282,7 @@ void CCSSpectatorGUI::Update()
 
 				m_pPlayerPanelBkg->SetVisible( true );
 				m_pPlayerPanelTeam->SetVisible( true );
+				m_pPlayerPanelBorderUpper->SetVisible( true );
 				m_pPlayerPanelTeam->SetDrawColor( m_nLastSpecTarget->GetTeamNumber() == TEAM_CT ? m_pCTStripColor : m_pTStripColor );
 			}
 		}
@@ -290,6 +293,7 @@ void CCSSpectatorGUI::Update()
 			m_pPlayerPanelTeam->SetVisible( false );
 			m_pPlayerPanelAvatar->SetVisible( false );
 			m_pPlayerPanelAvatarBkg->SetVisible( false );
+			m_pPlayerPanelBorderUpper->SetVisible( false );
 		}
 	}
 
