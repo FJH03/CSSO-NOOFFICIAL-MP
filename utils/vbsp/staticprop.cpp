@@ -488,8 +488,7 @@ static void ComputeStaticPropLeaves( CPhysCollide* pCollide, Vector const& origi
 
 	// Find all leaves that intersect with the bounds
 	int tempNodeList[1024];
-	ComputeConvexHullLeaves_R( 0, 0, tempNodeList, mins, maxs,
-		origin, angles, pCollide, leafList );
+	ComputeConvexHullLeaves_R( 0, 0, tempNodeList, mins, maxs, origin, angles, pCollide, bSkipTrace, leafList );
 }
 
 
