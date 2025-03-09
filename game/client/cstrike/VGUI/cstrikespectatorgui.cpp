@@ -117,9 +117,6 @@ void CCSSpectatorGUI::ApplySchemeSettings(vgui::IScheme *pScheme)
 	m_pPlayerPanelAvatar->SetDefaultAvatar( scheme()->GetImage( CSTRIKE_DEFAULT_AVATAR, true ) );
 	m_pPlayerPanelAvatar->SetShouldScaleImage( true );
 	m_pPlayerPanelAvatar->SetShouldDrawFriendIcon( false );
-
-	m_pCTColor = pScheme->GetColor( "TeamCTSpectator", COLOR_WHITE );
-	m_pTColor = pScheme->GetColor( "TeamTSpectator", COLOR_WHITE );
 }
 
 //-----------------------------------------------------------------------------
@@ -283,7 +280,7 @@ void CCSSpectatorGUI::Update()
 
 				m_pPlayerPanelBkg->SetVisible( true );
 				m_pPlayerPanelTeam->SetVisible( true );
-				m_pPlayerPanelTeam->SetDrawColor( m_nLastSpecTarget->GetTeamNumber() == TEAM_CT ? m_pCTColor : m_pTColor );
+				m_pPlayerPanelTeam->SetDrawColor( m_nLastSpecTarget->GetTeamNumber() == TEAM_CT ? m_pCTStripColor : m_pTStripColor );
 			}
 		}
 		else

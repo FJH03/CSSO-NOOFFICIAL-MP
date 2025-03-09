@@ -75,8 +75,8 @@ protected:
 	vgui::ImagePanel *m_pPlayerPanelAvatarBkg;
 	CAvatarImagePanel *m_pPlayerPanelAvatar;
 
-	Color		m_pCTColor;
-	Color		m_pTColor;
+	CPanelAnimationVar( Color, m_pCTStripColor, "CTStripColor", "White" );
+ 	CPanelAnimationVar( Color, m_pTStripColor, "TStripColor", "White" );
 };
 
 //////////////////////////////////////////////////////////////////////////
