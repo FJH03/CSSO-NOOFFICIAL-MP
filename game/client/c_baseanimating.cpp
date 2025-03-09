@@ -2558,7 +2558,7 @@ CMouthInfo *C_BaseAnimating::GetMouth( void )
 ConVar cl_warn_thread_contested_bone_setup("cl_warn_thread_contested_bone_setup", "0" );
 #endif
 
-ConVar cl_threaded_bone_setup("cl_threaded_bone_setup", "1", 0,
+ConVar cl_threaded_bone_setup("cl_threaded_bone_setup", "0", 0,
                               "Enable parallel processing of C_BaseAnimating::SetupBones()" );
 
 //-----------------------------------------------------------------------------
