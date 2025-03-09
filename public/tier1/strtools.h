@@ -195,6 +195,7 @@ template< bool CASE_SENSITIVE > inline bool _V_strEndsWithInner( const char *pSt
 inline bool V_strEndsWith(  const char *pStr, const char *pSuffix ) { return _V_strEndsWithInner<TRUE>(  pStr, pSuffix ); }
 inline bool V_striEndsWith( const char *pStr, const char *pSuffix ) { return _V_strEndsWithInner<FALSE>( pStr, pSuffix ); }
 
+#define StringIsEmpty( pchString ) ( pchString[ 0 ] == '\0' )
 
 // Normalizes a float string in place.  
 // (removes leading zeros, trailing zeros after the decimal point, and the decimal point itself where possible)

@@ -125,10 +125,11 @@ ConCommand askconnect_accept( "askconnect_accept", askconnect_accept_f, "Accept 
 #ifndef SWDS
 extern IVEngineClient *engineClient;
 // ---------------------------------------------------------------------------------------- //
-static void SendClanTag( const char *pTag )
+static void SendClanTag( const char *pTag, const char *pName )
 {
 	KeyValues *kv = new KeyValues( "ClanTagChanged" );
 	kv->SetString( "tag", pTag );
+	kv->SetString( "name", pName );
 	engineClient->ServerCmdKeyValues( kv );
 }
 #endif
@@ -143,7 +144,7 @@ void CL_ClanIdChanged( IConVar *pConVar, const char *pOldString, float flOldValu
 	if ( newId == 0 )
 	{
 		// Default value, equates to no tag
-		SendClanTag( "" );
+		SendClanTag( "", "" );
 		return;
 	}
 
@@ -160,7 +161,10 @@ void CL_ClanIdChanged( IConVar *pConVar, const char *pOldString, float flOldValu
 			{
 				// valid clan, accept the change
 				CSteamID clanIDNew( newId, Steam3Client().SteamUtils()->GetConnectedUniverse(), k_EAccountTypeClan );
-				SendClanTag( pFriends->GetClanTag( clanIDNew ) );
+				const char *szClanTag = pFriends->GetClanTag( clanID );
+ 				const char *szClanName = pFriends->GetClanName( clanID );
+ 
+ 				SendClanTag( szClanTag, szClanName );
 				return;
 			}
 		}

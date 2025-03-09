@@ -426,6 +426,8 @@ public:
 	// Called when game rules are destroyed by CWorld
 	virtual void LevelShutdown( void );
 
+	void UpdateTeamClanNames( int nTeam );
+
 	virtual bool ClientCommand( CBaseEntity *pEdict, const CCommand &args );
 	virtual void PlayerSpawn( CBasePlayer *pPlayer );
 			void ShowSpawnPoints();
@@ -636,6 +638,8 @@ public:
 	virtual void	SetAllowWeaponSwitch( bool allow );
 	virtual bool	GetAllowWeaponSwitch( void );
 
+	bool			IsClanTeam( CTeam *pTeam );
+
 	// VARIABLES FOR ALL TYPES OF MAPS
 	bool m_bLevelInitialized;
 	//int m_iRoundWinStatus;		// 1 == CT's won last round, 2 == Terrorists did, 3 == Draw, no winner
@@ -769,6 +773,16 @@ public:
 	bool IsLastRoundOfMatch() const;
  	bool IsMatchPoint() const;
 
+	// AreTeamsPlayingSwitchedSides() -- will return true when match is in second half, or in the half of overtime period where teams are switched.
+ 	// Overtime logic is as follows: TeamA plays CTs as first half of regulation, then Ts as second half of regulation,
+ 	//				then if tied in regulation continues to play Ts as first half of 1st overtime, then switches to CTs for second half of 1st overtime,
+ 	//				then if still tied after 1st OT they continue to play CTs as first half of 2nd overtime, then switch to Ts for second half of 2nd overtime,
+ 	//				then if still tied after 2nd OT they continue to play Ts as first half of 3rd overtime, then switch to CTs for second half of 3rd overtime,
+ 	//				and so on until the match determines a winner.
+ 	// So AreTeamsPlayingSwitchedSides will return true when TeamA is playing T-side and will return false when TeamA plays CT-side as they started match on CT
+ 	// in scenario outlined above.
+ 	bool AreTeamsPlayingSwitchedSides() const;
+
 public:
 	CBaseEntity* GetNextSpawnpoint( int teamNumber );
 
@@ -798,6 +812,8 @@ private:
 	bool			m_bAllowWeaponSwitch;
 
 	bool			m_bRoundTimeWarningTriggered;
+
+	float			m_fNextUpdateTeamClanNamesTime;
 
 	float			m_flLastThinkTime;
 

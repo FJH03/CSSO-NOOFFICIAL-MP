@@ -38,6 +38,7 @@ IMPLEMENT_CLIENTCLASS_DT_NOBASE(C_Team, DT_Team, CTeam)
 	RecvPropInt( RECVINFO(m_iScore)),
 	RecvPropInt( RECVINFO(m_iRoundsWon) ),
 	RecvPropString( RECVINFO(m_szTeamname)),
+	RecvPropString( RECVINFO(m_szClanTeamname)),
 
 	RecvPropInt( RECVINFO( m_nGGLeaderEntIndex_CT ) ),
 	RecvPropInt( RECVINFO( m_nGGLeaderEntIndex_T ) ),
@@ -53,6 +54,7 @@ END_RECV_TABLE()
 
 BEGIN_PREDICTION_DATA( C_Team )
 	DEFINE_PRED_ARRAY( m_szTeamname, FIELD_CHARACTER, MAX_TEAM_NAME_LENGTH, FTYPEDESC_PRIVATE ),
+	DEFINE_PRED_ARRAY( m_szClanTeamname, FIELD_CHARACTER, MAX_TEAM_NAME_LENGTH, FTYPEDESC_PRIVATE ),
 	DEFINE_PRED_FIELD( m_iScore, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
 	DEFINE_PRED_FIELD( m_iRoundsWon, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
 	DEFINE_PRED_FIELD( m_iDeaths, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
@@ -75,6 +77,7 @@ C_Team::C_Team()
 	m_iScore = 0;
 	m_iRoundsWon = 0;
 	memset( m_szTeamname, 0, sizeof(m_szTeamname) );
+	memset( m_szClanTeamname, 0, sizeof(m_szClanTeamname) );
 
 	m_iDeaths = 0;
 	m_iPing = 0;
@@ -127,6 +130,14 @@ int C_Team::GetTeamNumber() const
 char *C_Team::Get_Name( void )
 {
 	return m_szTeamname;
+}
+
+//=================================================================================================
+// Purpose: 
+//-----------------------------------------------------------------------------
+char *C_Team::Get_ClanName( void )
+{
+ 	return m_szClanTeamname;
 }
 
 //-----------------------------------------------------------------------------

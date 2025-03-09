@@ -107,9 +107,6 @@ CSpectatorGUI::CSpectatorGUI(IViewPort *pViewPort) : EditablePanel( NULL, PANEL_
 	SetMouseInputEnabled( false );
 	SetKeyBoardInputEnabled( false );
 
-	m_pTopBar = new Panel( this, "topbar" );
- 	m_pBottomBarBlank = new Panel( this, "bottombarblank" );
-
 	// m_pBannerImage = new ImagePanel( m_pTopBar, NULL );
 	m_pPlayerLabel = new Label( this, "playerlabel", "" );
 	m_pPlayerLabel->SetVisible( false );
@@ -160,13 +157,8 @@ void CSpectatorGUI::ApplySchemeSettings(IScheme *pScheme)
 		pConditions->deleteThis();
 	}
 
-	m_pBottomBarBlank->SetVisible( true );
-	m_pTopBar->SetVisible( true );
-
 	BaseClass::ApplySchemeSettings( pScheme );
 	SetBgColor(Color( 0,0,0,0 ) ); // make the background transparent
-	m_pTopBar->SetBgColor(GetBlackBarColor());
-	m_pBottomBarBlank->SetBgColor(GetBlackBarColor());
 	// m_pBottomBar->SetBgColor(Color( 0,0,0,0 ));
 	SetPaintBorderEnabled(false);
 
@@ -182,15 +174,11 @@ void CSpectatorGUI::ApplySchemeSettings(IScheme *pScheme)
 //-----------------------------------------------------------------------------
 void CSpectatorGUI::PerformLayout()
 {
-	int w,h,x,y;
+	int w,h;
 	GetHudSize(w, h);
 	
 	// fill the screen
 	SetBounds(0,0,w,h);
-
-	// stretch the bottom bar across the screen
-	m_pBottomBarBlank->GetPos(x,y);
-	m_pBottomBarBlank->SetSize( w, h - y );
 }
 
 //-----------------------------------------------------------------------------
@@ -286,44 +274,12 @@ bool CSpectatorGUI::ShouldShowPlayerLabel( int specmode )
 void CSpectatorGUI::Update()
 {
 	int wide, tall;
-	int bx, by, bwide, btall;
 
 	GetHudSize(wide, tall);
-	m_pTopBar->GetBounds( bx, by, bwide, btall );
 
 	IGameResources *gr = GameResources();
 	int specmode = GetSpectatorMode();
 	int playernum = GetSpectatorTarget();
-
-	IViewPortPanel *overview = gViewPortInterface->FindPanelByName( PANEL_OVERVIEW );
-
-	if ( overview && overview->IsVisible() )
-	{
-		int mx, my, mwide, mtall;
-
-		VPANEL p = overview->GetVPanel();
-		vgui::ipanel()->GetPos( p, mx, my );
-		vgui::ipanel()->GetSize( p, mwide, mtall );
-				
-		if ( my < btall )
-		{
-			// reduce to bar 
-			m_pTopBar->SetSize( wide - (mx + mwide), btall );
-			m_pTopBar->SetPos( (mx + mwide), 0 );
-		}
-		else
-		{
-			// full top bar
-			m_pTopBar->SetSize( wide , btall );
-			m_pTopBar->SetPos( 0, 0 );
-		}
-	}
-	else
-	{
-		// full top bar
-		m_pTopBar->SetSize( wide , btall ); // change width, keep height
-		m_pTopBar->SetPos( 0, 0 );
-	}
 
 	m_pPlayerLabel->SetVisible( ShouldShowPlayerLabel(specmode) );
 

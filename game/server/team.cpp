@@ -42,6 +42,7 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE(CTeam, DT_Team)
 	SendPropInt( SENDINFO(m_iScore), 0 ),
 	SendPropInt( SENDINFO(m_iRoundsWon), 8 ),
 	SendPropString( SENDINFO( m_szTeamname ) ),
+	SendPropString( SENDINFO( m_szClanTeamname ) ),
 
 	SendPropInt( SENDINFO( m_nGGLeaderEntIndex_CT ), 0 ),
 	SendPropInt( SENDINFO( m_nGGLeaderEntIndex_T ), 0 ),
@@ -85,6 +86,7 @@ int CTeam::m_nStaticGGLeader_T = -1;
 CTeam::CTeam( void )
 {
 	memset( m_szTeamname.GetForModify(), 0, sizeof(m_szTeamname) );
+	memset( m_szClanTeamname.GetForModify(), 0, sizeof(m_szClanTeamname) );
 	ResetTeamLeaders();
 }
 
@@ -262,6 +264,21 @@ const char *CTeam::GetName( void )
 	return m_szTeamname;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Set the team's name
+//-----------------------------------------------------------------------------
+void CTeam::SetClanName( const char *pName )
+{
+ 	Q_strncpy( m_szClanTeamname.GetForModify(), pName, MAX_TEAM_NAME_LENGTH );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Get the team's name
+//-----------------------------------------------------------------------------
+const char *CTeam::GetClanName( void )
+{
+ 	return m_szClanTeamname;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: Update the player's client data

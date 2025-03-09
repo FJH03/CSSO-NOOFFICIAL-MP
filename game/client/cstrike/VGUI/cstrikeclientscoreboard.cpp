@@ -633,7 +633,7 @@ void CCSClientScoreBoardDialog::UpdateTeamInfo()
     // update the team sections in the scoreboard
     for ( int teamIndex = TEAM_TERRORIST; teamIndex <= TEAM_CT; teamIndex++ )
     {
-        wchar_t *teamName = NULL;
+		wchar_t teamName[512];
         C_CSTeam *team = GetGlobalCSTeam( teamIndex );
         if ( team )
         {
@@ -645,14 +645,14 @@ void CCSClientScoreBoardDialog::UpdateTeamInfo()
             switch ( teamIndex )
             {
             case TEAM_TERRORIST:
-                teamName = g_pVGuiLocalize->Find( "#Cstrike_Team_T" );
+				g_pVGuiLocalize->ConstructString( teamName, sizeof( teamName ), g_pVGuiLocalize->Find( "#Cstrike_Team_T" ), nullptr );
                 pDialogVarTeamName = "t_teamname";
 				pDialogVarAliveCount = "t_alivecount";
 				pDialogVarTeamScore = "t_totalteamscore";
 				pDialogVarTeamScoreThisPhase = "t_phaseteamscore";
                 break;
-            case TEAM_CT:
-                teamName = g_pVGuiLocalize->Find( "#Cstrike_Team_CT" );
+			case TEAM_CT:
+				g_pVGuiLocalize->ConstructString( teamName, sizeof( teamName ), g_pVGuiLocalize->Find( "#Cstrike_Team_CT" ), nullptr );
                 pDialogVarTeamName = "ct_teamname";
 				pDialogVarAliveCount = "ct_alivecount";
 				pDialogVarTeamScore = "ct_totalteamscore";
@@ -663,13 +663,10 @@ void CCSClientScoreBoardDialog::UpdateTeamInfo()
                 break;
             }
 
-			// Set the team name if it hasn't been set.
-            wchar_t name[64];
-            if ( !teamName && team && team->Get_Name() != NULL )
-            {
-                g_pVGuiLocalize->ConvertANSIToUnicode( team->Get_Name(), name, sizeof( name ) );
-                teamName = name;
-            }
+			if ( !StringIsEmpty( team->Get_ClanName() ) )
+			{
+				g_pVGuiLocalize->ConstructString( teamName, sizeof( teamName ), team->Get_ClanName(), nullptr );
+			}
 
 			// Count the players on the team.
             int numPlayers = 0;

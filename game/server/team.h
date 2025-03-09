@@ -44,6 +44,8 @@ public:
 	virtual const char *GetName( void );
 	virtual void		UpdateClientData( CBasePlayer *pPlayer );
 	virtual bool		ShouldTransmitToPlayer( CBasePlayer* pRecipient, CBaseEntity* pEntity );
+	virtual void		SetClanName( const char *pName );
+ 	virtual const char *GetClanName( void );
 
 	//-----------------------------------------------------------------------------
 	// Spawnpoints
@@ -96,6 +98,7 @@ public:
 
 	// Data
 	CNetworkString( m_szTeamname, MAX_TEAM_NAME_LENGTH );
+	CNetworkString( m_szClanTeamname, MAX_TEAM_NAME_LENGTH );
 	CNetworkVar( int, m_iScore );
 	CNetworkVar( int, m_iRoundsWon );
 	int		m_iDeaths;

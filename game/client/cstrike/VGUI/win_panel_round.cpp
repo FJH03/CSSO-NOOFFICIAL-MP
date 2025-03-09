@@ -16,6 +16,7 @@
 #include <vgui/ISystem.h>
 #include "fmtstr.h"
 #include "cs_gamestats_shared.h"
+#include "c_team.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -25,16 +26,6 @@ ConVar cl_round_win_fade_time( "cl_round_win_fade_time", "1.5", FCVAR_CLIENTDLL 
 DECLARE_HUDELEMENT_DEPTH( WinPanel_Round, 1 );	// 1 is foreground
 extern const wchar_t *LocalizeFindSafe( const char *pTokenName );
 
-
-// helper function for converting wstrings to upper-case inline
-// NB: this returns a pointer to a static buffer
-wchar_t* UpperCaseWideString( const wchar_t* wszSource )
-{
-	static wchar_t wszBuffer[256];
-	V_wcsncpy(wszBuffer, wszSource, sizeof(wszBuffer));
-	V_wcsupr(wszBuffer);
-	return wszBuffer;
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
@@ -64,7 +55,7 @@ WinPanel_Round::~WinPanel_Round()
 //-----------------------------------------------------------------------------
 void WinPanel_Round::Reset()
 {
-	Hide();	
+	Hide();
 }
 
 void WinPanel_Round::Init()
@@ -259,13 +250,15 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 
 		if ( wszEventMessage != NULL )
 		{
-			SetDialogVariable("WIN_DESCRIPTION", UpperCaseWideString(wszEventMessage));
+			SetDialogVariable("WIN_DESCRIPTION", wszEventMessage);
 		}
 		else
 		{
 			SetDialogVariable("WIN_DESCRIPTION", "");
 		}
 
+		wchar_t wszName[512];
+		int iTeamID = TEAM_UNASSIGNED;
 		Label* pWinLabel = dynamic_cast<Label*>(FindChildByName("WinLabel"));
 		switch(iEndEvent)
 		{
@@ -275,8 +268,9 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 		case Terrorists_Win:
 		case Hostages_Not_Rescued:            
 		case VIP_Not_Escaped:
-			pWinLabel->SetText(UpperCaseWideString(LocalizeFindSafe("#winpanel_t_win")));
+			g_pVGuiLocalize->ConstructString( wszName, sizeof( wszName ), g_pVGuiLocalize->Find( "#winpanel_t_win" ), nullptr );
 			pWinLabel->SetFgColor(Color(184,0,0,255));
+			iTeamID = TEAM_TERRORIST;
 			break;
 
 		case VIP_Escaped:
@@ -287,15 +281,26 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 		case All_Hostages_Rescued:
 		case Target_Saved:
 		case Terrorists_Not_Escaped:
-			pWinLabel->SetText(UpperCaseWideString(LocalizeFindSafe("#winpanel_ct_win")));
+			g_pVGuiLocalize->ConstructString( wszName, sizeof( wszName ), g_pVGuiLocalize->Find( "#winpanel_ct_win" ), nullptr );
 			pWinLabel->SetFgColor(Color(71,152,237,255));
+			iTeamID = TEAM_CT;
 			break;
 
 		case Round_Draw:
-			pWinLabel->SetText(UpperCaseWideString(LocalizeFindSafe("#winpanel_draw")));
+			g_pVGuiLocalize->ConstructString( wszName, sizeof( wszName ), g_pVGuiLocalize->Find( "#winpanel_draw" ), nullptr );
 			pWinLabel->SetFgColor(Color(204,204,204,255));
 			break;
 		}
+
+		C_Team *pTeam = GetGlobalTeam( iTeamID );
+		if ( pTeam && !StringIsEmpty( pTeam->Get_ClanName() ) )
+		{
+			wchar_t wszTemp[MAX_TEAM_NAME_LENGTH];
+			g_pVGuiLocalize->ConvertANSIToUnicode( pTeam->Get_ClanName(), wszTemp, sizeof( wszTemp ) );
+			g_pVGuiLocalize->ConstructString( wszName, sizeof( wszName ), g_pVGuiLocalize->Find( "#winpanel_team_win_team" ), 1, wszTemp );
+		}
+
+		pWinLabel->SetText( wszName );
 
 		Show();
 	}
@@ -313,16 +318,14 @@ void WinPanel_Round::SetMVP( C_CSPlayer* pPlayer, CSMvpReason_t reason )
 		pMVP_Avatar->ClearAvatar();
 	}
 
-	
 	// [Forrest] Allow MVP to be turned off for a server
-
 	bool isThereAnMVP = ( pPlayer != NULL );
 	if ( isThereAnMVP )
 	{
 		//First set the text to the name of the player
 		wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 		((C_CS_PlayerResource*) g_PR)->GetDecoratedPlayerName( pPlayer->entindex(), wszPlayerName, sizeof( wszPlayerName ), EDecoratedPlayerNameFlag_t( k_EDecoratedPlayerNameFlag_Simple | k_EDecoratedPlayerNameFlag_DontUseNameOfControllingPlayer ) );
-
+		
 		const char* mvpReasonToken = NULL;
 		switch ( reason )
 		{

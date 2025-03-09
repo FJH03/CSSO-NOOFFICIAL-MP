@@ -550,6 +550,7 @@ CCSPlayer::CCSPlayer()
 
 	m_szNewName[0] = 0;
 	m_szClanTag[0] = 0;
+	m_szClanName[0] = 0;
 
 	for ( int i=0; i<NAME_CHANGE_HISTORY_SIZE; i++ )
 	{
@@ -1821,6 +1822,15 @@ void CCSPlayer::SetClanTag( const char *pTag )
 		Q_strncpy( m_szClanTag, pTag, sizeof( m_szClanTag ) );
 	}
 }
+
+void CCSPlayer::SetClanName( const char *pName )
+{
+	if ( pName )
+	{
+		Q_strncpy( m_szClanName, pName, sizeof( m_szClanName ) );
+	}
+}
+
 void CCSPlayer::CreateRagdollEntity()
 {
 	// If we already have a ragdoll, don't make another one.

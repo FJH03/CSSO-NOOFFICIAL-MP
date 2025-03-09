@@ -753,6 +753,8 @@ public:
 
 	void SetClanTag( const char *pTag );
 	const char *GetClanTag( void ) const;
+	void SetClanName( const char *pName );
+ 	const char *GetClanName( void ) const;
 
 
 	CNetworkVar( bool, m_bHasDefuser );			    // Does this player have a defuser kit?
@@ -810,6 +812,7 @@ public:
 	
 	char m_szNewName [MAX_PLAYER_NAME_LENGTH]; // not empty if player requested a namechange
 	char m_szClanTag[MAX_CLAN_TAG_LENGTH];
+	char m_szClanName[MAX_TEAM_NAME_LENGTH];
 
 	Vector m_vecTotalBulletForce;	//Accumulator for bullet force in a single frame
 	
@@ -1348,4 +1351,8 @@ inline const char *CCSPlayer::GetClanTag( void ) const
 	return m_szClanTag;
 }
 
+inline const char *CCSPlayer::GetClanName( void ) const
+{
+ 	return m_szClanName;
+}
 #endif	//CS_PLAYER_H
