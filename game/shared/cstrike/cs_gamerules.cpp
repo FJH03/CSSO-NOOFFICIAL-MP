@@ -180,10 +180,15 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropBool( RECVINFO( m_bFreezePeriod ) ),
 		RecvPropBool( RECVINFO( m_bMatchWaitingForResume ) ),
         RecvPropBool( RECVINFO( m_bWarmupPeriod ) ),
-        RecvPropFloat( RECVINFO( m_fWarmupPeriodStart ) ),	
+        RecvPropFloat( RECVINFO( m_fWarmupPeriodStart ) ),
+		RecvPropInt( RECVINFO( m_iNumCTWins ) ),
+ 		RecvPropInt( RECVINFO( m_iNumTerroristWins ) ),
+
 		RecvPropInt( RECVINFO( m_iRoundTime ) ),
 		RecvPropInt( RECVINFO( m_nOvertimePlaying ) ),
 		RecvPropFloat( RECVINFO( m_fRoundStartTime ) ),
+		RecvPropBool( RECVINFO( m_bGameRestart ) ),
+ 		RecvPropFloat( RECVINFO( m_flRestartRoundTime ) ),
 		RecvPropFloat( RECVINFO( m_flGameStartTime ) ),
 		RecvPropInt( RECVINFO( m_iHostagesRemaining ) ),
 		RecvPropBool( RECVINFO( m_bAnyHostageReached ) ),
@@ -204,10 +209,15 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropBool( SENDINFO( m_bFreezePeriod ) ),
 		SendPropBool( SENDINFO( m_bMatchWaitingForResume ) ),
         SendPropBool( SENDINFO( m_bWarmupPeriod ) ),
-        SendPropFloat( SENDINFO( m_fWarmupPeriodStart ) ),	
+        SendPropFloat( SENDINFO( m_fWarmupPeriodStart ) ),
+		SendPropInt( SENDINFO( m_iNumCTWins ) ),
+ 		SendPropInt( SENDINFO( m_iNumTerroristWins ) ),
+
 		SendPropInt( SENDINFO( m_iRoundTime ), 16 ),
 		SendPropInt( SENDINFO( m_nOvertimePlaying ), 16 ),
 		SendPropFloat( SENDINFO( m_fRoundStartTime ), 32, SPROP_NOSCALE ),
+		SendPropFloat( SENDINFO( m_flRestartRoundTime ) ),
+ 		SendPropBool( SENDINFO( m_bGameRestart ) ),
 		SendPropFloat( SENDINFO( m_flGameStartTime ), 32, SPROP_NOSCALE ),
 		SendPropInt( SENDINFO( m_iHostagesRemaining ), 4 ),
 		SendPropBool( SENDINFO( m_bAnyHostageReached ) ),
@@ -449,6 +459,12 @@ ConVar mp_t_default_grenades(
 	FCVAR_REPLICATED,
 	"The default grenades that the Ts will spawn with.  To give multiple grenades, separate each weapon class with a space like this: 'weapon_molotov weapon_hegrenade'" );
 
+ConVar mp_win_panel_display_time(
+	"mp_win_panel_display_time",
+	"3",
+	FCVAR_REPLICATED,
+	"The amount of time to show the win panel between matches / halfs" );
+
 ConVar mp_death_drop_gun(
 	"mp_death_drop_gun",
 	"1",
@@ -586,6 +602,12 @@ ConVar mp_overtime_halftime_pausetimer(
 	"0",
 	FCVAR_REPLICATED,
 	"If set to 1 will set mp_halftime_pausetimer to 1 before every half of overtime. Set mp_halftime_pausetimer to 0 to resume the timer." );
+
+ConVar mp_overtime_maxrounds(
+	"mp_overtime_maxrounds",
+	"6",
+	FCVAR_REPLICATED,
+	"When overtime is enabled play additional rounds to determine winner" );
 
 ConVar sv_allowminmodels(
 	"sv_allowminmodels",
@@ -806,12 +828,6 @@ ConVar snd_music_selection(
 		"0",
 		FCVAR_REPLICATED,
 		"If a match ends in a tie, use overtime rules to determine winner" );
-
-	ConVar mp_overtime_maxrounds(
-		"mp_overtime_maxrounds",
-		"6",
-		FCVAR_REPLICATED,
-		"When overtime is enabled play additional rounds to determine winner" );
 
 	ConVar mp_overtime_startmoney(
 		"mp_overtime_startmoney",
@@ -1234,7 +1250,7 @@ ConVar snd_music_selection(
 		m_bFreezePeriod = true;
 		m_bMatchWaitingForResume = false;
 		m_iNumTerrorist = m_iNumCT = 0;	// number of players per team
-		m_flRestartRoundTime = 0.1f; // restart first round as soon as possible
+		m_flRestartRoundTime = 0.0f; // restart first round as soon as possible
 		m_iNumSpawnableTerrorist = m_iNumSpawnableCT = 0;
 		m_bFirstConnected = false;
 		m_bCompleteReset = false;
@@ -1321,6 +1337,7 @@ ConVar snd_music_selection(
 
 		m_flNextHostageAnnouncement = gpGlobals->curtime;	// asap.
 
+		m_phaseChangeAnnouncementTime = 0.0f;
 		m_fNextUpdateTeamClanNamesTime = 0.0f;
 
 		m_bHasTriggeredRoundStartMusic = false;
@@ -1328,6 +1345,8 @@ ConVar snd_music_selection(
 		m_iCurrentGamemode = 0;
 
 		ReadMultiplayCvars();
+
+		m_bGameRestart = false;
 
 		m_bSwitchingTeamsAtRoundReset = false;
 
@@ -3028,6 +3047,8 @@ ConVar snd_music_selection(
 
 					SetPhase( GAMEPHASE_MATCH_ENDED );
 
+					m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
+
 					GoToIntermission();
 
 					TerminateRound( mp_ggprogressive_round_restart_delay.GetFloat(), (pTeam->GetTeamNumber() == TEAM_CT) ? CTs_Win : Terrorists_Win );
@@ -3615,7 +3636,7 @@ ConVar snd_music_selection(
 		}
 		else if ( GetPhase() == GAMEPHASE_HALFTIME )
 		{
-			if ( GetOvertimePlaying() && ( GetRoundsPlayed() <= ( mp_maxrounds.GetInt() + ( GetOvertimePlaying() - 1 )*mp_overtime_maxrounds.GetInt() ) ) )
+			if ( GetOvertimePlaying() && ( GetTotalRoundsPlayed() <= ( mp_maxrounds.GetInt() + ( GetOvertimePlaying() - 1 )*mp_overtime_maxrounds.GetInt() ) ) )
 			{
 				// This is the overtime halftime at the end of a tied regulation time or at the end of a previous overtime that
 				// failed to determine the winner, we will not be switching teams at this time and we proceed into first half
@@ -3630,17 +3651,6 @@ ConVar snd_music_selection(
 				m_iNumTerroristWins = temp;
 				UpdateTeamScores();
 				SetPhase( GAMEPHASE_PLAYING_SECOND_HALF );
-			}
-
-			// hide scoreboard
-			for ( int i = 1; i <= MAX_PLAYERS; i++ )
-			{
-				CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
-
-				if ( !pPlayer )
-					continue;
-
-				pPlayer->ShowViewPortPanel( PANEL_SCOREBOARD, false );
 			}
 
 			// Ensure everyone is given only the starting money
@@ -3707,6 +3717,7 @@ ConVar snd_music_selection(
 		}
 
 		m_bFreezePeriod = true;
+		m_bGameRestart = false;
 
 		ReadMultiplayCvars();
 
@@ -4350,6 +4361,13 @@ ConVar snd_music_selection(
 			gameeventmanager->FireEvent( event );
 		}
 
+		if ( IsWarmupPeriod() )
+		{
+			IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_warmup" );
+			if ( event )
+				gameeventmanager->FireEvent( event );
+		}
+
 		// [pfreese] I commented out this call to CreateWeaponManager, as the 
  		// CGameWeaponManager object doesn't appear to be actually used by the CSS
  		// code, and in any case, the weapon manager does not support wildcards in 
@@ -4496,6 +4514,17 @@ ConVar snd_music_selection(
 			}
 		}
 
+		//Check if it is time to make the phase change announcement
+		if ( m_phaseChangeAnnouncementTime > 0 && gpGlobals->curtime > m_phaseChangeAnnouncementTime )
+		{
+			IGameEvent * event = gameeventmanager->CreateEvent( "announce_phase_end" );
+			if ( event )
+			{
+				gameeventmanager->FireEvent( event );
+			}
+			m_phaseChangeAnnouncementTime = 0.0f;
+		}
+
 		for ( int i = 0; i < GetNumberOfTeams(); i++ )
 		{
 			GetGlobalTeam( i )->Think();
@@ -4540,7 +4569,7 @@ ConVar snd_music_selection(
 			bool bhalftime = false;
 			if ( numRoundsBeforeHalftime > 0 )
 			{
-				if ( GetRoundsPlayed() >= numRoundsBeforeHalftime )
+				if ( GetTotalRoundsPlayed() >= numRoundsBeforeHalftime )
 				{
 					bhalftime = true;
 				}
@@ -4560,17 +4589,6 @@ ConVar snd_music_selection(
 				m_flRestartRoundTime = gpGlobals->curtime + mp_halftime_duration.GetFloat();
 				SwitchTeamsAtRoundReset();
 				FreezePlayers();
-
-				// show scoreboard
-				for ( int i = 1; i <= MAX_PLAYERS; i++ )
-				{
-					CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
-
-					if ( !pPlayer )
-						continue;
-
-					pPlayer->ShowViewPortPanel( PANEL_SCOREBOARD );
-				}
 			}
 		}
 
@@ -4589,7 +4607,7 @@ ConVar snd_music_selection(
 			int numRoundToEndMatch = mp_maxrounds.GetInt() + GetOvertimePlaying()*mp_overtime_maxrounds.GetInt();
 			if ( numRoundToEndMatch > 0 )
 			{
-				if ( GetRoundsPlayed() >= numRoundToEndMatch || bTeamHasClinchedVictory )
+				if ( GetTotalRoundsPlayed() >= numRoundToEndMatch || bTeamHasClinchedVictory )
 				{
 					bEndMatch = true;
 				}
@@ -4606,27 +4624,19 @@ ConVar snd_music_selection(
 
 				SetOvertimePlaying( GetOvertimePlaying() + 1 );
 				SetPhase( GAMEPHASE_HALFTIME );
+				m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
 				m_flRestartRoundTime = gpGlobals->curtime + mp_halftime_duration.GetFloat();
 				// SwitchTeamsAtRoundReset(); -- don't switch teams, only switch at true halftimes
 				FreezePlayers();
-
-				// show scoreboard
-				for ( int i = 1; i <= MAX_PLAYERS; i++ )
-				{
-					CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
-
-					if ( !pPlayer )
-						continue;
-
-					pPlayer->ShowViewPortPanel( PANEL_SCOREBOARD );
-				}
 			}
 
 			if ( bEndMatch )
 			{
+				m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
+
 				GoToIntermission();
 
-				if ( bTeamHasClinchedVictory && GetRoundsPlayed() < numRoundToEndMatch )
+				if ( bTeamHasClinchedVictory && GetTotalRoundsPlayed() < numRoundToEndMatch )
 				{
 					// Send chat message to let players know why match is ending early
 					CRecipientFilter filter;
@@ -4669,13 +4679,15 @@ ConVar snd_music_selection(
 			// End the match if ( ( maxrounds are used ) and ( we've reached maxrounds or clinched the game ) ) or ( we've exceeded timelimit )
 			if ( mp_maxrounds.GetInt() > 0 )
 			{
-				if ( GetRoundsPlayed() >= mp_maxrounds.GetInt() || bTeamHasClinchedVictory )
+				if ( GetTotalRoundsPlayed() >= mp_maxrounds.GetInt() || bTeamHasClinchedVictory )
 				{
+					m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
 					GoToIntermission();
 				}
 			}
 			else if ( GetMapRemainingTime() <= 0 && m_iRoundWinStatus != WINNER_NONE )
 			{
+				m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
 				GoToIntermission();
 			}
 		}
@@ -4710,13 +4722,14 @@ ConVar snd_music_selection(
 				if (GetWarmupPeriodEndTime() <= gpGlobals->curtime)
 				{
 					// when the warmup period ends, set the round to restart in 3 seconds
-					if (!m_bCompleteReset)
+					if (!m_bCompleteReset && !m_bGameRestart)
 					{
 						GetGlobalTeam( TEAM_CT )->ResetTeamLeaders();
 						GetGlobalTeam( TEAM_TERRORIST )->ResetTeamLeaders();
 
 						m_flRestartRoundTime = gpGlobals->curtime + 4.0;
 						m_bCompleteReset = true;
+						m_bGameRestart = true;
 						FreezePlayers();
 
 						{
@@ -4985,6 +4998,13 @@ ConVar snd_music_selection(
 		{
 			gameeventmanager->FireEvent( event );
 		}
+
+		if ( GetTotalRoundsPlayed() == 0 && !IsWarmupPeriod() )
+ 		{
+ 			IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_match_start" );
+ 			if ( event )
+ 				gameeventmanager->FireEvent( event );
+ 		}
 
 		// Update the timers for all clients and play a sound
 		bool bCTPlayed = false;
@@ -5281,31 +5301,6 @@ ConVar snd_music_selection(
 
 		if ( winEvent )
 		{
-			if ( 1 )
-			{
-				if ( 0 /*team == m_iTimerWinTeam */)
-				{
-					// timer expired, defenders win
-					// show total time that was defended
-					winEvent->SetBool( "show_timer_defend", true );
-					winEvent->SetInt( "timer_time", 0 /*m_pRoundTimer->GetTimerMaxLength() */);
-				}
-				else
-				{
-					// attackers win
-					// show time it took for them to win
-					winEvent->SetBool( "show_timer_attack", true );
-
-					int iTimeElapsed = 90; //m_pRoundTimer->GetTimerMaxLength() - (int)m_pRoundTimer->GetTimeRemaining();
-					winEvent->SetInt( "timer_time", iTimeElapsed );
-				}
-			}
-			else
-			{
-				winEvent->SetBool( "show_timer_attack", false );
-				winEvent->SetBool( "show_timer_defend", false );
-			}
-
 			int iLastEvent = Terrorists_Win;
 
 			winEvent->SetInt( "final_event", iLastEvent );
@@ -5922,6 +5917,7 @@ ConVar snd_music_selection(
 
 			m_flRestartRoundTime = gpGlobals->curtime + iRestartDelay;
 			m_bCompleteReset = true;
+			m_bGameRestart = true;
 			mp_restartgame.SetValue( 0 );
 		}
     }
@@ -6542,24 +6538,6 @@ ConVar snd_music_selection(
 
 			if ( winEvent )
 			{
-				// determine what categories to send
-				if ( GetRoundRemainingTime() <= 0 )
-				{
-					// timer expired, defenders win
-					// show total time that was defended
-					winEvent->SetBool( "show_timer_defend", true );
-					winEvent->SetInt( "timer_time", m_iRoundTime );
-				}
-				else
-				{
-					// attackers win
-					// show time it took for them to win
-					winEvent->SetBool( "show_timer_attack", true );
-
-					int iTimeElapsed = m_iRoundTime - GetRoundRemainingTime();
-					winEvent->SetInt( "timer_time", iTimeElapsed );
-				}
-
 				winEvent->SetInt( "final_event", iReason );
 
 				// Set the fun fact data in the event
@@ -6598,6 +6576,7 @@ ConVar snd_music_selection(
 		if ( GetMapRemainingTime() == 0.0f  )
 		{
 			UTIL_LogPrintf("World triggered \"Intermission_Time_Limit\"\n");
+			m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
 			GoToIntermission();
 		}
 
@@ -7986,7 +7965,7 @@ bool CCSGameRules::IsLastRoundBeforeHalfTime( void )
 			? (mp_maxrounds.GetInt() + (2 * GetOvertimePlaying() - 1) * (mp_overtime_maxrounds.GetInt() / 2))
 			: (mp_maxrounds.GetInt() / 2);
 
-		if ( (numRoundsBeforeHalftime > 0) && (GetRoundsPlayed() == (numRoundsBeforeHalftime - 1)) )
+		if ( (numRoundsBeforeHalftime > 0) && (GetTotalRoundsPlayed() == (numRoundsBeforeHalftime - 1)) )
 		{
 			return true;
 		}
@@ -8330,7 +8309,7 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 				pPlayer->AddAccount( amount, true, false );
 
 			if ( !IsLastRoundBeforeHalfTime() && (GetPhase() != GAMEPHASE_HALFTIME) &&
-				 (GetRoundsPlayed() != mp_maxrounds.GetInt() + GetOvertimePlaying() * mp_overtime_maxrounds.GetInt()) && !bTeamHasClinchedVictory )
+				 (GetTotalRoundsPlayed() != mp_maxrounds.GetInt() + GetOvertimePlaying() * mp_overtime_maxrounds.GetInt()) && !bTeamHasClinchedVictory )
 			{
 				ClientPrint( pPlayer, HUD_PRINTTALK, awardReasonToken, strAmount );
 			}
@@ -8338,7 +8317,7 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 		else
 		{
 			if ( !IsLastRoundBeforeHalfTime() && (GetPhase() != GAMEPHASE_HALFTIME) &&
-				 (GetRoundsPlayed() != mp_maxrounds.GetInt() + GetOvertimePlaying() * mp_overtime_maxrounds.GetInt()) && !bTeamHasClinchedVictory )
+				 (GetTotalRoundsPlayed() != mp_maxrounds.GetInt() + GetOvertimePlaying() * mp_overtime_maxrounds.GetInt()) && !bTeamHasClinchedVictory )
 			{
 				// TODO: This code assumes on there only being 2 possible reasons for DoesPlayerGetRoundStartMoney returning false: Suicide or Running down the clock as T.
 				// This code should not make that assumption and the awardReasonToken should probably be plumbed to express those properly.

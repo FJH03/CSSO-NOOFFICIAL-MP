@@ -57,8 +57,8 @@ C_CS_PlayerResource::C_CS_PlayerResource()
 {
 	vgui::IScheme *pClientScheme = vgui::scheme()->GetIScheme( vgui::scheme()->GetScheme( "ClientScheme" ) );
  
- 	m_Colors[TEAM_TERRORIST] = pClientScheme->GetColor( "TeamTDark", COLOR_BLUE );
- 	m_Colors[TEAM_CT] = pClientScheme->GetColor( "TeamCTDark", COLOR_RED );
+	m_Colors[TEAM_TERRORIST] = pClientScheme->GetColor( "TeamT", COLOR_BLUE );
+	m_Colors[TEAM_CT] = pClientScheme->GetColor( "TeamCT", COLOR_RED );
 	memset( m_iMVPs, 0, sizeof( m_iMVPs ) );
 	memset( m_bHasDefuser, 0, sizeof( m_bHasDefuser ) );
 }
@@ -227,83 +227,6 @@ int C_CS_PlayerResource::GetControlledByPlayer( int index )
 	return m_iControlledByPlayer[index];
 }
 #endif
-
-static const wchar_t *g_pCharsToBeReplaced = L"\\<>&\'\"$#";
-
-static const wchar_t *g_pReplacementStrings[] = {
-	L"&#92;",
-	L"&lt;",
-	L"&gt;",
-	L"&amp;",
-	L"&apos;",
-	L"&quot;",
-	L"&#36;",
-	L"&#35;"
-};
-
-void MakeStringSafe( const wchar_t* oldName, wchar_t* newName, int destBufferSize )
-{
-	const wchar_t* pfound;
-	wchar_t* pout = newName;
-	int charsLeft = ( destBufferSize / sizeof(wchar_t) ) - 1;
-	bool bEncounteredIllegalCharacters = false;
-
-	// throw a zero at the end just in case
-	newName[charsLeft] = L'\0';
-
-	for( const wchar_t *p=oldName; *p != 0 && charsLeft > 0; p++ )
-	{
-		// If we are about to write first character and it is a hash then skip it because it is reserved for localization
-		if ( ( pout == newName ) && ( *p == L'#' ) )
-		{
-			bEncounteredIllegalCharacters = true;
-			continue;
-		}
-
-		// Check the character for replacement sequences
-		pfound = wcschr( g_pCharsToBeReplaced, *p );
-
-		if ( pfound )
-		{
-			int index = pfound - g_pCharsToBeReplaced;
-			int replacementLength = wcslen( g_pReplacementStrings[index] );
-			if ( replacementLength <= charsLeft )
-			{
-				V_wcsncpy( pout, g_pReplacementStrings[index], charsLeft * sizeof( wchar_t ) );
-				charsLeft -= replacementLength;
-				pout += replacementLength;
-			}
-			else
-				break;
-		}
-		else
-		{
-#if 1
-			if ( *p )
-#else
-			if ( iswprint( *p ) || ( *p == L'\t' ) )
-#endif
-			{
-				*pout++ = *p;
-				charsLeft--;
-			}
-			else
-			{
-				bEncounteredIllegalCharacters = true;
-			}
-		}
-	}
-
-	// If we didn't write any safe characters, but encountered illegal characters then write at least a question-mark
-	if ( ( pout == newName ) && ( charsLeft > 0 ) && bEncounteredIllegalCharacters )
-	{
-		*pout++ = L'?';
-		charsLeft--;
-	}
-	
-	if ( charsLeft >= 0 ) // 0 is okay because we started charsLeft off as one too small
-		*pout = 0;
-}
 
 ConVar cl_add_bot_prefix( "cl_add_bot_prefix", "1", FCVAR_ARCHIVE, "Whether to add a BOT prefix to bot names or not.", true, 0, true, 1 );
 const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* buffer, int buffsize, EDecoratedPlayerNameFlag_t flags )

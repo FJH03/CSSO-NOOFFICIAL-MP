@@ -33,8 +33,6 @@ namespace vgui
 	class ComboBox;
 }
 
-#define BLACK_BAR_COLOR	Color(0, 0, 0, 196)
-
 class IBaseFileSystem;
 
 //-----------------------------------------------------------------------------
@@ -51,7 +49,7 @@ public:
 	virtual const char *GetName( void ) { return PANEL_SPECGUI; }
 	virtual void SetData(KeyValues *data) {};
 	virtual void Reset() {};
-	virtual void Update();
+	virtual void Update() {};
 	virtual bool NeedsUpdate( void ) { return false; }
 	virtual bool HasInputElements( void ) { return false; }
 	virtual void ShowPanel( bool bShow );
@@ -62,12 +60,7 @@ public:
 	virtual void SetParent(vgui::VPANEL parent) { BaseClass::SetParent(parent); }
 	virtual void OnThink();
 	
-	virtual int GetTopBarHeight() { return m_pTopBar->GetTall(); }
-	virtual int GetBottomBarHeight() { return m_pBottomBarBlank->GetTall(); }
-	
 	virtual bool ShouldShowPlayerLabel( int specmode );
-	
-	virtual Color GetBlackBarColor( void ) { return BLACK_BAR_COLOR; }
 
 	virtual const char *GetResFile( void ) { return "Resource/UI/Spectator.res"; }
 	
@@ -77,7 +70,6 @@ protected:
 	void SetLabelText(const char *textEntryName, wchar_t *text);
 	void MoveLabelToFront(const char *textEntryName);
 	void UpdateTimer();
-	void SetLogoImage(const char *image);
 
 protected:	
 	enum { INSET_OFFSET = 2 } ; 
@@ -86,12 +78,6 @@ protected:
 	virtual void PerformLayout();
 	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
 //	virtual void OnCommand( const char *command );
-
-	vgui::Panel *m_pTopBar;
-	vgui::Panel *m_pBottomBarBlank;
-
-	vgui::ImagePanel *m_pBannerImage;
-	vgui::Label *m_pPlayerLabel;
 
 	IViewPort *m_pViewPort;
 

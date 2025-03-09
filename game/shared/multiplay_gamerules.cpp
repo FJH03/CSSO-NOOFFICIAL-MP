@@ -1147,7 +1147,7 @@ ConVarRef suitcharger( "sk_suitcharger" );
 			if ( HLTVDirector()->IsActive() )	
 				flWaitTime = MAX( flWaitTime, HLTVDirector()->GetDelay() );
 		}
-
+#ifndef CSTRIKE_DLL
 		for ( int i = 1; i <= MAX_PLAYERS; i++ )
 		{
 			CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
@@ -1157,8 +1157,8 @@ ConVarRef suitcharger( "sk_suitcharger" );
 
 			pPlayer->ShowViewPortPanel( PANEL_SCOREBOARD );
 		}
+#endif
 	}
-
 	void StripChar(char *szBuffer, const char cWhiteSpace )
 	{
 		char *src, *dst;

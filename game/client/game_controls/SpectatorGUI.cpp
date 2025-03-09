@@ -108,22 +108,6 @@ CSpectatorGUI::CSpectatorGUI(IViewPort *pViewPort) : EditablePanel( NULL, PANEL_
 	SetMouseInputEnabled( false );
 	SetKeyBoardInputEnabled( false );
 
-	m_pTopBar = new Panel( this, "topbar" );
- 	m_pBottomBarBlank = new Panel( this, "bottombarblank" );
-
-	// m_pBannerImage = new ImagePanel( m_pTopBar, NULL );
-	m_pPlayerLabel = new Label( this, "playerlabel", "" );
-	m_pPlayerLabel->SetVisible( false );
-	TextImage *image = m_pPlayerLabel->GetTextImage();
-	if ( image )
-	{
-		HFont hFallbackFont = scheme()->GetIScheme( GetScheme() )->GetFont( "DefaultVerySmallFallBack", false );
-		if ( INVALID_FONT != hFallbackFont )
-		{
-			image->SetUseFallbackFont( true, hFallbackFont );
-		}
-	}
-
 	SetPaintBorderEnabled(false);
 	SetPaintBackgroundEnabled(false);
 
@@ -160,14 +144,9 @@ void CSpectatorGUI::ApplySchemeSettings(IScheme *pScheme)
 	{
 		pConditions->deleteThis();
 	}
-	
-	m_pBottomBarBlank->SetVisible( true );
-	m_pTopBar->SetVisible( true );
 
 	BaseClass::ApplySchemeSettings( pScheme );
 	SetBgColor(Color( 0,0,0,0 ) ); // make the background transparent
-	m_pTopBar->SetBgColor(GetBlackBarColor());
-	m_pBottomBarBlank->SetBgColor(GetBlackBarColor());
 	// m_pBottomBar->SetBgColor(Color( 0,0,0,0 ));
 	SetPaintBorderEnabled(false);
 
@@ -183,15 +162,11 @@ void CSpectatorGUI::ApplySchemeSettings(IScheme *pScheme)
 //-----------------------------------------------------------------------------
 void CSpectatorGUI::PerformLayout()
 {
-	int w,h,x,y;
+	int w,h;
 	GetHudSize(w, h);
 	
 	// fill the screen
 	SetBounds(0,0,w,h);
-	
-	// stretch the bottom bar across the screen
-	m_pBottomBarBlank->GetPos(x,y);
-	m_pBottomBarBlank->SetSize( w, h - y );
 }
 
 //-----------------------------------------------------------------------------
@@ -211,17 +186,6 @@ void CSpectatorGUI::OnThink()
 				gViewPortInterface->ShowPanel( PANEL_SCOREBOARD, m_bSpecScoreboard );
 			}
 		}
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: sets the image to display for the banner in the top right corner
-//-----------------------------------------------------------------------------
-void CSpectatorGUI::SetLogoImage(const char *image)
-{
-	if ( m_pBannerImage )
-	{
-		m_pBannerImage->SetImage( scheme()->GetImage(image, false) );
 	}
 }
 
@@ -283,113 +247,6 @@ void CSpectatorGUI::ShowPanel(bool bShow)
 bool CSpectatorGUI::ShouldShowPlayerLabel( int specmode )
 {
 	return ( (specmode == OBS_MODE_IN_EYE) ||	(specmode == OBS_MODE_CHASE) );
-}
-//-----------------------------------------------------------------------------
-// Purpose: Updates the gui, rearranges elements
-//-----------------------------------------------------------------------------
-void CSpectatorGUI::Update()
-{
-	int wide, tall;
-	int bx, by, bwide, btall;
-
-	GetHudSize(wide, tall);
-	m_pTopBar->GetBounds( bx, by, bwide, btall );
-
-	IGameResources *gr = GameResources();
-	int specmode = GetSpectatorMode();
-	int playernum = GetSpectatorTarget();
-	
-	IViewPortPanel *overview = gViewPortInterface->FindPanelByName( PANEL_OVERVIEW );
-
-	if ( overview && overview->IsVisible() )
-	{
-		int mx, my, mwide, mtall;
-
-		VPANEL p = overview->GetVPanel();
-		vgui::ipanel()->GetPos( p, mx, my );
-		vgui::ipanel()->GetSize( p, mwide, mtall );
-				
-		if ( my < btall )
-		{
-			// reduce to bar 
-			m_pTopBar->SetSize( wide - (mx + mwide), btall );
-			m_pTopBar->SetPos( (mx + mwide), 0 );
-		}
-		else
-		{
-			// full top bar
-			m_pTopBar->SetSize( wide , btall );
-			m_pTopBar->SetPos( 0, 0 );
-		}
-	}
-	else
-	{
-		// full top bar
-		m_pTopBar->SetSize( wide , btall ); // change width, keep height
-		m_pTopBar->SetPos( 0, 0 );
-	}
-
-	m_pPlayerLabel->SetVisible( ShouldShowPlayerLabel(specmode) );
-
-	// update player name filed, text & color
-
-	if ( playernum > 0 && playernum <= gpGlobals->maxClients && gr )
-	{
-		Color c = gr->GetTeamColor( gr->GetTeam(playernum) ); // Player's team color
-
-		m_pPlayerLabel->SetFgColor( c );
-		
-		wchar_t playerText[ 80 ], playerName[ 64 ], health[ 10 ];
-		V_wcsncpy( playerText, L"Unable to find #Spec_PlayerItem*", sizeof( playerText ) );
-		memset( playerName, 0x0, sizeof( playerName ) );
-
-		g_pVGuiLocalize->ConvertANSIToUnicode( UTIL_SafeName(gr->GetPlayerName( playernum )), playerName, sizeof( playerName ) );
-		int iHealth = gr->GetHealth( playernum );
-		if ( iHealth > 0  && gr->IsAlive(playernum) )
-		{
-			_snwprintf( health, ARRAYSIZE( health ), L"%i", iHealth );
-			g_pVGuiLocalize->ConstructString( playerText, sizeof( playerText ), g_pVGuiLocalize->Find( "#Spec_PlayerItem_Team" ), 2, playerName,  health );
-		}
-		else
-		{
-			g_pVGuiLocalize->ConstructString( playerText, sizeof( playerText ), g_pVGuiLocalize->Find( "#Spec_PlayerItem" ), 1, playerName );
-		}
-
-		m_pPlayerLabel->SetText( playerText );
-	}
-	else
-	{
-		m_pPlayerLabel->SetText( L"" );
-	}
-
-	// update extra info field
-	wchar_t szEtxraInfo[1024];
-	wchar_t szTitleLabel[1024];
-	char tempstr[128];
-
-	if ( engine->IsHLTV() )
-	{
-		// set spectator number and HLTV title
-		Q_snprintf(tempstr,sizeof(tempstr),"Spectators : %d", HLTVCamera()->GetNumSpectators() );
-		g_pVGuiLocalize->ConvertANSIToUnicode(tempstr,szEtxraInfo,sizeof(szEtxraInfo));
-		
-		Q_strncpy( tempstr, HLTVCamera()->GetTitleText(), sizeof(tempstr) );
-		g_pVGuiLocalize->ConvertANSIToUnicode(tempstr,szTitleLabel,sizeof(szTitleLabel));
-	}
-	else
-	{
-		// otherwise show map name
-		Q_FileBase( engine->GetLevelName(), tempstr, sizeof(tempstr) );
-
-		wchar_t wMapName[64];
-		g_pVGuiLocalize->ConvertANSIToUnicode(tempstr,wMapName,sizeof(wMapName));
-		g_pVGuiLocalize->ConstructString( szEtxraInfo,sizeof( szEtxraInfo ), g_pVGuiLocalize->Find("#Spec_Map" ),1, wMapName );
-
-		g_pVGuiLocalize->ConvertANSIToUnicode( "" ,szTitleLabel,sizeof(szTitleLabel));
-	}
-
-	SetLabelText("extrainfo", szEtxraInfo );
-	SetLabelText("titlelabel", szTitleLabel );
 }
 
 //-----------------------------------------------------------------------------
@@ -499,8 +356,6 @@ CON_COMMAND_F( spec_mode, "Set spectator mode", FCVAR_CLIENTCMD_CAN_EXECUTE )
 
 				if ( mode > LAST_PLAYER_OBSERVERMODE )
 					mode = OBS_MODE_IN_EYE;
-				else if ( mode == OBS_MODE_POI ) // PASSTIME skip POI mode since hltv doesn't have the entity data required to make it work
-					mode = OBS_MODE_ROAMING;
 			}
 			
 			// handle the command clientside

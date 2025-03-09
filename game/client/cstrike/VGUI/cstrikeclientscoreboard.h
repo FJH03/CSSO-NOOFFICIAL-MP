@@ -149,6 +149,8 @@ private:
 
 	TeamDisplayInfo	m_teamDisplayT;
 	TeamDisplayInfo	m_teamDisplayCT;
+
+	bool m_bForceShow;
 };
 
 

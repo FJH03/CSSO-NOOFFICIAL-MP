@@ -1759,6 +1759,7 @@ void CTeamplayRoundBasedRules::State_Think_TEAM_WIN( void )
 		}
 		else if ( IsInTournamentMode() == true )
 		{
+#ifndef CSTRIKE_DLL
 			for ( int i = 1; i <= MAX_PLAYERS; i++ )
 			{
 				CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
@@ -1768,7 +1769,7 @@ void CTeamplayRoundBasedRules::State_Think_TEAM_WIN( void )
 
 				pPlayer->ShowViewPortPanel( PANEL_SCOREBOARD );
 			}
-
+#endif
 			RestartTournament();
 
 			if ( IsInArenaMode() == true )

@@ -277,6 +277,8 @@ public:
 
 	virtual bool ShouldCollide( int collisionGroup0, int collisionGroup1 );
 
+	virtual float	GetRoundRestartTime( void ) { return m_flRestartRoundTime; }
+ 	virtual bool	IsGameRestarting( void ) { return m_bGameRestart; }
 	float GetMapRemainingTime();	// time till end of map, -1 if timelimit is disabled
 	float GetMapElapsedTime();	// How much time has elapsed since the map started.
 	float GetRoundRemainingTime();	// time till end of round
@@ -346,6 +348,9 @@ public:
 
 	bool IsPlayingAnyCompetitiveStrictRuleset( void ) const;
 
+	int GetTotalRoundsPlayed( void ) const { return m_iNumCTWins + m_iNumTerroristWins; }
+ 	int GetOvertimePlaying( void ) const { return m_nOvertimePlaying; }
+
 	virtual bool IsConnectedUserInfoChangeAllowed( CBasePlayer *pPlayer );
 
 private:
@@ -359,6 +364,8 @@ private:
 	CNetworkVar( bool, m_bMatchWaitingForResume ); // When mp_pause_match is called, this state becomes true and will prevent the next freezetime from ending.
 	CNetworkVar( int, m_iRoundTime );		 // (From mp_roundtime) - How many seconds long this round is.
 	CNetworkVar( float, m_fRoundStartTime ); // time round has started
+	CNetworkVar( float, m_flRestartRoundTime ); // the global time when the round is supposed to end, if this is not 0
+ 	CNetworkVar( bool, m_bGameRestart ); // True = mp_restartgame is being processed
 	CNetworkVar( float, m_flGameStartTime );
 	CNetworkVar( int, m_nOvertimePlaying );
 	CNetworkVar( int, m_iHostagesRemaining );
@@ -385,6 +392,8 @@ public:
 	CNetworkVar( bool, m_bBombDropped );
 	CNetworkVar( bool, m_bBombPlanted );
 	CNetworkVar( int, m_iRoundWinStatus );
+	CNetworkVar( int, m_iNumCTWins );
+ 	CNetworkVar( int, m_iNumTerroristWins );
 
 	int GetNumHostagesRemaining( void ) { return m_iHostagesRemaining; }
 
@@ -633,8 +642,6 @@ public:
 
 	bool	IsLastRoundBeforeHalfTime( void );
 
-	int		GetRoundsPlayed() { return m_iNumCTWins + m_iNumTerroristWins; }
-
 	virtual void	SetAllowWeaponSwitch( bool allow );
 	virtual bool	GetAllowWeaponSwitch( void );
 
@@ -648,8 +655,7 @@ public:
 
 	// GAME TIMES
 	int m_iFreezeTime;		// (From mp_freezetime) - How many seconds long the intro round (when players are frozen) is.
-	float m_flRestartRoundTime;	// the global time when the round is supposed to end, if this is not 0
-
+	
 	int m_iNumTerrorist;		// The number of terrorists on the team (this is generated at the end of a round)
 	int m_iNumCT;				// The number of CTs on the team (this is generated at the end of a round)
 	int m_iNumSpawnableTerrorist;
@@ -666,9 +672,7 @@ public:
  	};
  	ICalculateEndOfRoundMVPHook_t *m_pfnCalculateEndOfRoundMVPHook;
 	
-	short m_iNumCTWins;
 	short m_iNumCTWinsThisPhase;
-	short m_iNumTerroristWins;
 	short m_iNumTerroristWinsThisPhase;
 
 	int m_iNumConsecutiveCTLoses;		//SupraFiend: the number of rounds the CTs have lost in a row.
@@ -766,9 +770,6 @@ public:
 	void	AddTeamAccount( int team, int reason );
 	void	AddTeamAccount( int team, int reason, int amount, const char* szAwardText = NULL );
 
-	int GetTotalRoundsPlayed( void ) const { return m_iNumCTWins + m_iNumTerroristWins; }
-	int GetOvertimePlaying( void ) const { return m_nOvertimePlaying; }
-
 	int GetNumWinsToClinch( void ) const;
 	bool IsLastRoundOfMatch() const;
  	bool IsMatchPoint() const;
@@ -813,6 +814,7 @@ private:
 
 	bool			m_bRoundTimeWarningTriggered;
 
+	float			m_phaseChangeAnnouncementTime;
 	float			m_fNextUpdateTeamClanNamesTime;
 
 	float			m_flLastThinkTime;

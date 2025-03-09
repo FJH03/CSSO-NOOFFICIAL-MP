@@ -218,15 +218,9 @@ void CClientScoreBoardDialog::ShowPanel(bool bShow)
 	{
 		Reset();
 		Update();
-		SetVisible( true );
 		MoveToFront();
 	}
-	else
-	{
-		BaseClass::SetVisible( false );
-		SetMouseInputEnabled( false );
-		SetKeyBoardInputEnabled( false );
-	}
+	SetVisible( bShow );
 }
 
 void CClientScoreBoardDialog::FireGameEvent( IGameEvent *event )

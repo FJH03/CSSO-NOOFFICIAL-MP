@@ -23,43 +23,33 @@
 
 using namespace vgui;
 
-class WinPanel_Round : public BorderedPanel, public CHudElement
+class WinPanel_Round: public EditablePanel, public CHudElement
 {
 private:
-	DECLARE_CLASS_SIMPLE( WinPanel_Round, BorderedPanel );
+	DECLARE_CLASS_SIMPLE( WinPanel_Round, EditablePanel );
 
 public:
 	WinPanel_Round(const char *pElementName);
-    ~WinPanel_Round();
 
 	virtual void Reset();
-	virtual void Init();
-	virtual void VidInit();
 	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void FireGameEvent( IGameEvent * event );
-	virtual bool ShouldDraw( void );
-	virtual void Paint( void ) {};
-	virtual void OnScreenSizeChanged(int nOldWide, int nOldTall);
 
-	virtual void OnThink();
-
-	void InitLayout();
 	void Show();
 	void Hide();
 
 protected:
 	void SetMVP( C_CSPlayer* pPlayer, CSMvpReason_t reason );
-	void SetFunFactLabel( const wchar *szFunFact );
 
 private:
-	bool m_bShowTimerDefend;
-	bool m_bShowTimerAttack;
+	Label* m_pWinLabel;
+	Label* m_pFunFactLabel;
+	ImagePanel* m_pMainBackground;
+	ImagePanel* m_pTeamIcon;
+	CAvatarImagePanel* m_pMVPAvatar;
 
-	bool m_bShouldBeVisible;
-
-	// fade tracking
-	bool m_bIsFading;
-	float m_fFadeBeginTime;
+	Color m_clrCT;
+	Color m_clrT;
 };
 
 #endif //CSWINPANEL_ROUND_H

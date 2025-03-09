@@ -12,6 +12,7 @@
 
 #include <vgui/ILocalize.h>
 #include <vgui/ISurface.h>
+#include <vgui_controls/ImagePanel.h>
 #include <filesystem.h>
 #include "cs_gamerules.h"
 #include "c_team.h"
@@ -24,8 +25,10 @@
 #include "voice_status.h"
 #include "view.h"
 #include "VGuiMatSurface/IMatSystemSurface.h"
+#include "c_cs_team.h"
 #include "coordsize.h"
 #include "hud_macros.h"
+
 using namespace vgui;
 DECLARE_HUDELEMENT( CCSMapOverview )
 DECLARE_HUD_MESSAGE( CCSMapOverview, UpdateRadar );
@@ -47,6 +50,8 @@ void Radar_FlashPlayer( int iPlayer )
 	g_pMapOverview->FlashEntity(iPlayer);
 }
 
+extern ConVar mp_maxrounds;
+extern ConVar mp_overtime_maxrounds;
 extern ConVar overview_health;
 extern ConVar overview_names;
 extern ConVar overview_tracks;
@@ -62,7 +67,6 @@ ConVar cl_radar_scale( "cl_radar_scale", "0.7", FCVAR_ARCHIVE, "Sets the radar s
 #define DEATH_ICON_FADE (7.5f)
 #define DEATH_ICON_DURATION (10.0f)
 #define LAST_SEEN_ICON_DURATION (4.0f)
-#define DIFFERENCE_THRESHOLD (200.0f)
 
 // To make your own green radar file from the map overview file, turn this on, and include vtf.lib
 #define no_GENERATE_RADAR_FILE
@@ -72,21 +76,24 @@ ConVar cl_radar_scale( "cl_radar_scale", "0.7", FCVAR_ARCHIVE, "Sets the radar s
 //-----------------------------------------------------------------------------
 CCSSpectatorGUI::CCSSpectatorGUI(IViewPort *pViewPort) : CSpectatorGUI(pViewPort)
 {
-	m_pCTLabel =	NULL;
-	m_pCTScore =	NULL;
-	m_pTerLabel =	NULL;
-	m_pTerScore =	NULL;
-	m_pTimer =		NULL;
-	m_pTimerLabel =	NULL;
-	m_pDivider =	NULL;
-	m_pExtraInfo =	NULL;
+	m_pCTLabel = NULL;
+	m_pCTScore = NULL;
+	m_pTerLabel = NULL;
+	m_pTerScore = NULL;
+	m_pTimerLabel = NULL;
+	m_pRoundCountLabel = NULL;
+	m_pPlayerPanelName = NULL;
+	m_pPlayerPanelTeam = NULL;
+	m_pPlayerPanelBkg = NULL;
+	m_pPlayerPanelAvatar = NULL;
+	m_pPlayerPanelAvatarBkg = NULL;
 
-	m_modifiedWidths = false;
+	m_nLastTime = -1;
+	m_nLastSpecMode = -1;
+	m_nLastSpecTarget = NULL;
 
-	m_scoreWidth = 0;
-	m_extraInfoWidth = 0;
-
-
+	m_bNeedToUpdateRoundCounter = true;
+	ListenForGameEvent( "round_start" );
 }
 
 //-----------------------------------------------------------------------------
@@ -97,41 +104,110 @@ void CCSSpectatorGUI::ApplySchemeSettings(vgui::IScheme *pScheme)
 	BaseClass::ApplySchemeSettings( pScheme );
 
 	// Grab some control pointers
-	m_pCTLabel =	dynamic_cast<Label *>(FindChildByName("CTScoreLabel"));
-	m_pCTScore =	dynamic_cast<Label *>(FindChildByName("CTScoreValue"));
-	m_pTerLabel =	dynamic_cast<Label *>(FindChildByName("TerScoreLabel"));
-	m_pTerScore =	dynamic_cast<Label *>(FindChildByName("TerScoreValue"));
+	m_pCTLabel = dynamic_cast<Label*>(FindChildByName( "CTScoreLabel" ));
+	m_pCTScore = dynamic_cast<Label*>(FindChildByName( "CTScoreValue" ));
+	m_pTerLabel = dynamic_cast<Label*>(FindChildByName( "TerScoreLabel" ));
+	m_pTerScore = dynamic_cast<Label*>(FindChildByName( "TerScoreValue" ));
+	m_pTimerLabel = dynamic_cast<Label*>(FindChildByName( "timerlabel" ));
+	m_pRoundCountLabel = dynamic_cast<Label*>(FindChildByName( "RoundCountLabel" ));
+	m_pPlayerPanelName = dynamic_cast<Label*>(FindChildByName( "PlayerPanelName" ));
+	m_pPlayerPanelTeam = dynamic_cast<ImagePanel*>(FindChildByName( "PlayerPanelTeam" ));
+	m_pPlayerPanelBkg = dynamic_cast<ImagePanel*>(FindChildByName( "PlayerPanelBkg" ));
+	m_pPlayerPanelAvatar = dynamic_cast<CAvatarImagePanel*>(FindChildByName( "PlayerPanelAvatar" ));
+	m_pPlayerPanelAvatarBkg = dynamic_cast<ImagePanel*>(FindChildByName( "PlayerPanelAvatarBkg" ));
 
-	m_pTimer =		dynamic_cast<Label *>(FindChildByName("timerclock"));
-	m_pTimerLabel =	dynamic_cast<Label *>(FindChildByName("timerlabel"));
+	m_pPlayerPanelAvatar->SetDefaultAvatar( scheme()->GetImage( CSTRIKE_DEFAULT_AVATAR, true ) );
+	m_pPlayerPanelAvatar->SetShouldScaleImage( true );
+	m_pPlayerPanelAvatar->SetShouldDrawFriendIcon( false );
 
-	m_pDivider =	dynamic_cast<Panel *>(FindChildByName("DividerBar"));
-
-	m_pExtraInfo =	dynamic_cast<Label *>(FindChildByName("extrainfo"));
+	m_pCTColor = pScheme->GetColor( "TeamCTSpectator", COLOR_WHITE );
+	m_pTColor = pScheme->GetColor( "TeamTSpectator", COLOR_WHITE );
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Resets the list of players
+// Purpose: Updates information about teams
 //-----------------------------------------------------------------------------
-void CCSSpectatorGUI::UpdateSpectatorPlayerList()
+void CCSSpectatorGUI::UpdateTeamInfo()
 {
-	C_Team *cts = GetGlobalTeam( TEAM_CT );
-	if ( cts )
-	{
-		wchar_t frags[ 10 ];
-		_snwprintf( frags, ARRAYSIZE( frags ), L"%i",  cts->Get_Score()  );
+	// these could be NULL if players modified the UI
+	if ( !ControlsPresent() )
+		return;
 
-		SetLabelText( "CTScoreValue", frags );
+    // update the team sections in the scoreboard
+    for ( int teamIndex = TEAM_TERRORIST; teamIndex <= TEAM_CT; teamIndex++ )
+    {
+		wchar_t teamName[512];
+        C_CSTeam *team = GetGlobalCSTeam( teamIndex );
+        if ( team )
+        {
+            // choose dialog variables to set depending on team
+            const char *pDialogVarTeamName = NULL;
+			const char *pDialogVarTeamScore = NULL;
+            switch ( teamIndex )
+            {
+            case TEAM_TERRORIST:
+				g_pVGuiLocalize->ConstructString( teamName, sizeof( teamName ), g_pVGuiLocalize->Find( "#Cstrike_Team_T_Upper" ), nullptr );
+                pDialogVarTeamName = "t_teamname";
+				pDialogVarTeamScore = "t_totalteamscore";
+                break;
+			case TEAM_CT:
+				g_pVGuiLocalize->ConstructString( teamName, sizeof( teamName ), g_pVGuiLocalize->Find( "#Cstrike_Team_CT_Upper" ), nullptr );
+                pDialogVarTeamName = "ct_teamname";
+				pDialogVarTeamScore = "ct_totalteamscore";
+                break;
+            default:
+                Assert( false );
+                break;
+            }
+
+			if ( !StringIsEmpty( team->Get_ClanName() ) )
+			{
+				g_pVGuiLocalize->ConstructString( teamName, sizeof( teamName ), team->Get_ClanName(), nullptr );
+			}
+
+            SetDialogVariable( pDialogVarTeamName, teamName );
+
+			// Team score
+            wchar_t wNumScore[16];
+            V_snwprintf( wNumScore, ARRAYSIZE( wNumScore ), L"%i", team->Get_Score() );
+			SetDialogVariable( pDialogVarTeamScore, wNumScore );
+        }
+    }
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Updates round counter
+//-----------------------------------------------------------------------------
+void CCSSpectatorGUI::UpdateRoundCounter()
+{
+	// these could be NULL if players modified the UI
+	if ( !ControlsPresent() )
+		return;
+
+	if ( !CSGameRules() )
+		return;
+
+	wchar_t wszUnicode[64];
+	if ( CSGameRules()->GetOvertimePlaying() )
+	{
+		wchar_t wszRoundCount[16];
+		int iRoundNumber = 1 + CSGameRules()->GetTotalRoundsPlayed() - ((CSGameRules()->GetOvertimePlaying() - 1) * mp_overtime_maxrounds.GetInt()) - mp_maxrounds.GetInt();
+		V_snwprintf( wszRoundCount, ARRAYSIZE( wszRoundCount ), L"%d/%d", iRoundNumber, mp_overtime_maxrounds.GetInt() );
+
+		wchar_t wszOvertime[4];
+		V_snwprintf( wszOvertime, ARRAYSIZE( wszOvertime ), L"%d", CSGameRules()->GetOvertimePlaying() );
+		g_pVGuiLocalize->ConstructString( wszUnicode, sizeof( wszUnicode ), g_pVGuiLocalize->Find( "#Cstrike_Spec_RoundsLeftOvertime" ), 2, wszOvertime, wszRoundCount );
+	}
+	else
+	{
+		wchar_t wszRoundCount[16];
+		V_snwprintf( wszRoundCount, ARRAYSIZE( wszRoundCount ), L"%d/%d", CSGameRules()->GetTotalRoundsPlayed() + 1, mp_maxrounds.GetInt() );
+		g_pVGuiLocalize->ConstructString( wszUnicode, sizeof( wszUnicode ), g_pVGuiLocalize->Find( "#Cstrike_Spec_RoundsLeft" ), 1, wszRoundCount );
 	}
 
-	C_Team *ts = GetGlobalTeam( TEAM_TERRORIST );
-	if ( ts )
-	{
-		wchar_t frags[ 10 ];
-		_snwprintf( frags, ARRAYSIZE( frags ), L"%i", ts->Get_Score()  );
-		
-		SetLabelText( "TERScoreValue", frags );
-	}
+	m_pRoundCountLabel->SetText( wszUnicode );
+
+	m_bNeedToUpdateRoundCounter = false;
 }
 
 bool CCSSpectatorGUI::NeedsUpdate( void )
@@ -139,9 +215,6 @@ bool CCSSpectatorGUI::NeedsUpdate( void )
 	C_CSPlayer *player = C_CSPlayer::GetLocalCSPlayer();
 	if ( !player )
 		return false;
-
-	if ( m_nLastAccount != player->GetAccount() )
-		return true;
 
 	if ( m_nLastTime != (int)CSGameRules()->GetRoundRemainingTime() )
 		return true;
@@ -163,205 +236,74 @@ void CCSSpectatorGUI::UpdateTimer()
 	// these could be NULL if players modified the UI
 	if ( !ControlsPresent() )
 		return;
-
-	Color timerColor = m_pTimer->GetFgColor();
-	if( g_PlantedC4s.Count() > 0 )
-	{
-		m_pTimer->SetText( "\\" ); // bomb icon  
-		m_pTimerLabel->SetVisible( false );
-
-		if( g_PlantedC4s[0]->m_flNextGlow > gpGlobals->curtime + 0.1f )
-			timerColor[3] = 80;
-		else
-			timerColor[3] = 255;
-
-		m_pTimer->SetFgColor( timerColor );
-		return;
-	}
-
-	timerColor[3] = 255;
-	m_pTimer->SetFgColor( timerColor );
-	m_pTimer->SetText( "e" ); // clock icon
 	
 	m_nLastTime = (int)( CSGameRules()->GetRoundRemainingTime() );
 
 	if ( m_nLastTime < 0 )
 		 m_nLastTime  = 0;
 
-	wchar_t szText[ 63 ];
-	_snwprintf ( szText, ARRAYSIZE( szText ), L"%d:%02d", (m_nLastTime / 60), (m_nLastTime % 60) );
-	szText[62] = 0;
+	wchar_t szText[16];
+	int iMinutes = m_nLastTime / 60;
+	int iSeconds = m_nLastTime % 60;
 
-	SetLabelText("timerlabel", szText );
-	m_pTimerLabel->SetVisible( true );
+	V_snwprintf( szText, ARRAYSIZE( szText ), L"%d : %.2d", iMinutes, iSeconds );
+	m_pTimerLabel->SetText( szText );
 }
-
-void CCSSpectatorGUI::UpdateAccount()
-{
-	C_CSPlayer *player = C_CSPlayer::GetLocalCSPlayer();
-
-	if ( !player )
-		return;
-
-	m_nLastAccount = player->GetAccount();
-
-	if ( (player->GetTeamNumber() == TEAM_TERRORIST) || (player->GetTeamNumber() == TEAM_CT) )
-	{
-		wchar_t szText[ 63 ];
-		_snwprintf ( szText, ARRAYSIZE( szText ), L"$%i", m_nLastAccount );
-		szText[62] = 0;
-
-		SetLabelText( "extrainfo", szText );
-	}
-}
-
-
-/*bool CCSSpectatorGUI::CanSpectateTeam( int iTeam )
-{
-	bool bRetVal = true;
-	int iTeamOnly = 0;// TODO = gCSViewPortInterface->GetForceCamera();
-
-	// if we're not a spectator or HLTV and iTeamOnly is set
-	if ( C_BasePlayer::GetLocalPlayer()->GetTeamNumber() // && !gEngfuncs.IsSpectateOnly() 
-	&& iTeamOnly )
-	{
-		// then we want to force the same team
-		if ( C_BasePlayer::GetLocalPlayer()->GetTeamNumber() != iTeam )
-		{
-			bRetVal = false;
-		}
-	}
-
-	return bRetVal;
-}*/
 
 void CCSSpectatorGUI::Update()
 {
 	BaseClass::Update();
 	
 	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( !pLocalPlayer )
+		return;
 
-	if( pLocalPlayer )
+	C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>(g_PR);
+	if ( !cs_PR )
+		return;
+
+	m_nLastSpecMode = pLocalPlayer->GetObserverMode();
+
+	if ( m_nLastSpecTarget != pLocalPlayer->GetObserverTarget() )
 	{
-		m_nLastSpecMode = pLocalPlayer->GetObserverMode();
 		m_nLastSpecTarget = pLocalPlayer->GetObserverTarget();
+
+		if ( m_nLastSpecTarget && m_nLastSpecTarget->IsPlayer() && m_nLastSpecMode > OBS_MODE_FREEZECAM )
+		{
+			m_pPlayerPanelAvatar->ClearAvatar();
+			C_CSPlayer *pSpecTarget = ToCSPlayer( m_nLastSpecTarget );
+			if ( pSpecTarget ) // shouldn't even be possible but just to be sure
+			{
+				m_pPlayerPanelAvatar->SetDefaultAvatar( GetDefaultAvatarImage( pSpecTarget ) );
+				m_pPlayerPanelAvatar->SetPlayer( pSpecTarget, k_EAvatarSize64x64 );
+				m_pPlayerPanelAvatar->SetVisible( true );
+				m_pPlayerPanelAvatarBkg->SetVisible( true );
+
+				wchar_t wszSpecTargetName[MAX_DECORATED_PLAYER_NAME_LENGTH];
+				wszSpecTargetName[0] = '\0';
+				cs_PR->GetDecoratedPlayerName( pSpecTarget->entindex(), wszSpecTargetName, sizeof( wszSpecTargetName ), k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot );
+				m_pPlayerPanelName->SetVisible( true );
+				m_pPlayerPanelName->SetText( wszSpecTargetName );
+
+				m_pPlayerPanelBkg->SetVisible( true );
+				m_pPlayerPanelTeam->SetVisible( true );
+				m_pPlayerPanelTeam->SetDrawColor( m_nLastSpecTarget->GetTeamNumber() == TEAM_CT ? m_pCTColor : m_pTColor );
+			}
+		}
+		else
+		{
+			m_pPlayerPanelName->SetVisible( false );
+			m_pPlayerPanelBkg->SetVisible( false );
+			m_pPlayerPanelTeam->SetVisible( false );
+			m_pPlayerPanelAvatar->SetVisible( false );
+			m_pPlayerPanelAvatarBkg->SetVisible( false );
+		}
 	}
 
 	UpdateTimer();
-
-	UpdateAccount();
-
-	UpdateSpectatorPlayerList();
-
-	if ( pLocalPlayer )
-	{
-		ResizeControls();
-	}
-
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Save off widths for sizing calculations
-//-----------------------------------------------------------------------------
-void CCSSpectatorGUI::StoreWidths( void )
-{
-	if ( !ControlsPresent() )
-		return;
-
-	if ( !m_modifiedWidths )
-	{
-		m_scoreWidth = m_pCTScore->GetWide();
-		int terScoreWidth = m_pTerScore->GetWide();
-
-		m_extraInfoWidth = m_pExtraInfo->GetWide();
-
-		if ( m_scoreWidth != terScoreWidth )
-		{
-			m_pTerScore = NULL; // We're working with a modified res file.  Don't muck things up playing with positioning.
-		}
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Resize controls so scores & map names are not cut off
-//-----------------------------------------------------------------------------
-void CCSSpectatorGUI::ResizeControls( void )
-{
-	if ( !ControlsPresent() )
-		return;
-
-	int x1, y1, w1, t1;
-	int x2, y2, w2, t2;
-
-	StoreWidths();
-
-	// ensure scores are wide enough
-	int wCT, hCT, wTer, hTer;
-	m_pCTScore->GetBounds( x1, y1, w1, t1 );
-	m_pCTScore->GetContentSize( wCT, hCT );
-	m_pTerScore->GetBounds( x2, y2, w2, t2 );
-	m_pTerScore->GetContentSize( wTer, hTer );
-	
-	int desiredScoreWidth = m_scoreWidth;
-	desiredScoreWidth = MAX( desiredScoreWidth, wCT );
-	desiredScoreWidth = MAX( desiredScoreWidth, wTer );
-
-	int diff = desiredScoreWidth - w1;
-	if ( diff != 0 )
-	{
-		m_pCTScore->GetBounds( x1, y1, w1, t1 );
-		m_pCTScore->SetBounds( x1 - diff, y1, w1 + diff, t1 );
-
-		m_pTerScore->GetBounds( x1, y1, w1, t1 );
-		m_pTerScore->SetBounds( x1 - diff, y1, w1 + diff, t1 );
-
-		m_pCTLabel->GetPos( x1, y1 );
-		m_pCTLabel->SetPos( x1 - diff, y1 );
-
-		m_pTerLabel->GetPos( x1, y1 );
-		m_pTerLabel->SetPos( x1 - diff, y1 );
-
-		m_modifiedWidths = true;
-	}
-
-	// ensure extra info is wide enough
-	int wExtra, hExtra;
-	m_pExtraInfo->GetBounds( x1, y1, w1, t1 );
-	m_pExtraInfo->GetContentSize( wExtra, hExtra );
-
-	int desiredExtraWidth = m_extraInfoWidth;
-	desiredExtraWidth = MAX( desiredExtraWidth, wExtra );
-
-	diff = desiredExtraWidth - w1;
-	if ( diff != 0 )
-	{
-		m_pExtraInfo->GetBounds( x1, y1, w1, t1 );
-		m_pExtraInfo->SetBounds( x1 - diff, y1, w1 + diff, t1 );
-
-		m_pTimer->GetPos( x1, y1 );
-		m_pTimer->SetPos( x1 - diff, y1 );
-
-		m_pTimerLabel->GetPos( x1, y1 );
-		m_pTimerLabel->SetPos( x1 - diff, y1 );
-
-		m_pDivider->GetPos( x1, y1 );
-		m_pDivider->SetPos( x1 - diff, y1 );
-
-		m_pCTScore->GetPos( x1, y1 );
-		m_pCTScore->SetPos( x1 - diff, y1 );
-
-		m_pCTLabel->GetPos( x1, y1 );
-		m_pCTLabel->SetPos( x1 - diff, y1 );
-
-		m_pTerScore->GetPos( x1, y1 );
-		m_pTerScore->SetPos( x1 - diff, y1 );
-
-		m_pTerLabel->GetPos( x1, y1 );
-		m_pTerLabel->SetPos( x1 - diff, y1 );
-
-		m_modifiedWidths = true;
-	}
+	UpdateTeamInfo();
+	if ( m_bNeedToUpdateRoundCounter )
+		UpdateRoundCounter();
 }
 
 //-----------------------------------------------------------------------------
@@ -370,13 +312,22 @@ void CCSSpectatorGUI::ResizeControls( void )
 bool CCSSpectatorGUI::ControlsPresent( void ) const
 {
 	return ( m_pCTLabel != NULL &&
-		m_pCTScore != NULL &&
-		m_pTerLabel != NULL &&
-		m_pTerScore != NULL &&
-		m_pTimer != NULL &&
-		m_pTimerLabel != NULL &&
-		m_pDivider != NULL &&
-		m_pExtraInfo != NULL );
+			 m_pCTScore != NULL &&
+			 m_pTerLabel != NULL &&
+			 m_pTerScore != NULL &&
+			 m_pTimerLabel != NULL &&
+			 m_pRoundCountLabel != NULL &&
+			 m_pPlayerPanelName != NULL &&
+			 m_pPlayerPanelBkg != NULL &&
+			 m_pPlayerPanelTeam != NULL &&
+			 m_pPlayerPanelAvatar != NULL && 
+			 m_pPlayerPanelAvatarBkg != NULL );
+}
+
+void CCSSpectatorGUI::FireGameEvent( IGameEvent *event )
+{
+	// the event should be round_start
+	m_bNeedToUpdateRoundCounter = true; // don't update each frame as TotalRoundsPlayed increments the moment a win is scored not when the actual new round starts
 }
 
 
@@ -411,6 +362,7 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 	Q_memset( m_TeamIconsSelf, 0, sizeof(m_TeamIconsSelf) );
 	Q_memset( m_TeamIconsDead, 0, sizeof(m_TeamIconsDead) );
 	Q_memset( m_TeamIconsOffscreen, 0, sizeof(m_TeamIconsOffscreen) );
+	Q_memset( m_TeamIconsGhost, 0, sizeof( m_TeamIconsGhost ) );
 
 	m_bombIconPlanted = -1;
 	m_bombIconDropped = -1;
@@ -435,6 +387,7 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 	m_TeamIconsSelf[MAP_ICON_T] = AddIconTexture( "sprites/player_red_self" );
 	m_TeamIconsDead[MAP_ICON_T] = AddIconTexture( "sprites/player_red_dead" );
 	m_TeamIconsOffscreen[MAP_ICON_T] = AddIconTexture( "sprites/player_red_offscreen" );
+	m_TeamIconsGhost[MAP_ICON_T] = AddIconTexture( "sprites/player_red_ghost" );
 
 	// setup team blue
 	m_TeamColors[MAP_ICON_CT] = COLOR_BLUE;
@@ -442,6 +395,7 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 	m_TeamIconsSelf[MAP_ICON_CT] = AddIconTexture( "sprites/player_blue_self" );
 	m_TeamIconsDead[MAP_ICON_CT] = AddIconTexture( "sprites/player_blue_dead" );
 	m_TeamIconsOffscreen[MAP_ICON_CT] = AddIconTexture( "sprites/player_blue_offscreen" );
+	m_TeamIconsGhost[MAP_ICON_CT] = AddIconTexture( "sprites/player_blue_ghost" );
 
 	// setup team other
 	m_TeamColors[MAP_ICON_HOSTAGE] = COLOR_GREY;
@@ -449,6 +403,7 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 	m_TeamIconsSelf[MAP_ICON_HOSTAGE] = -1;
 	m_TeamIconsDead[MAP_ICON_HOSTAGE] = AddIconTexture( "sprites/player_hostage_dead" );
 	m_TeamIconsOffscreen[MAP_ICON_HOSTAGE] = AddIconTexture( "sprites/player_hostage_offscreen" );
+	m_TeamIconsGhost[MAP_ICON_HOSTAGE] = AddIconTexture( "sprites/player_hostage_ghost" );
 
 	m_bombIconPlanted = AddIconTexture( "sprites/bomb_planted" );
 	m_bombIconDropped = AddIconTexture( "sprites/bomb_dropped" );
@@ -578,7 +533,6 @@ CCSMapOverview::CSMapPlayer_t* CCSMapOverview::GetCSInfoForHostage(MapPlayer_t *
 
 //-----------------------------------------------------------------------------
 #define TIME_SPOTS_STAY_SEEN (0.5f)
-#define TIME_UNTIL_ENEMY_SEEN (0.5f)
 // rules that define if you can see a player on the overview or not
 bool CCSMapOverview::CanPlayerBeSeen( MapPlayer_t *player )
 {
@@ -616,8 +570,7 @@ bool CCSMapOverview::CanPlayerBeSeen( MapPlayer_t *player )
 
 		// and a living enemy needs to have been seen recently, and have been for a while
 		if( csPlayer->timeLastSeen != -1  
-			&& ( now - csPlayer->timeLastSeen < TIME_SPOTS_STAY_SEEN ) 
-			&& ( now - csPlayer->timeFirstSeen > TIME_UNTIL_ENEMY_SEEN )
+			&& ( now - csPlayer->timeLastSeen < TIME_SPOTS_STAY_SEEN )
 			)
 			return true;
 
@@ -714,6 +667,7 @@ void CCSMapOverview::Init( void )
 	ListenForGameEvent( "hostage_rescued" );
 	ListenForGameEvent( "bomb_defused" );
 	ListenForGameEvent( "bomb_exploded" );
+
 	HOOK_HUD_MESSAGE( CCSMapOverview, UpdateRadar );
 }
 
@@ -895,17 +849,14 @@ void CCSMapOverview::UpdatePlayers()
 				// We are not seen now, but if we were seen recently (and for long enough),
 				// put up a "last known" icon and clear timelastseen
 				// if they are alive.  Death icon is more important, which is why the health check above.
-				if( timeSinceLastSeen < 0.5f  && ( playerCS->timeLastSeen != -1 ) )
+				if( timeSinceLastSeen < TIME_SPOTS_STAY_SEEN && ( playerCS->timeLastSeen != -1 ) )
 				{
-					if( now - playerCS->timeFirstSeen > TIME_UNTIL_ENEMY_SEEN )
-					{
-						playerCS->overrideIcon = m_TeamIcons[ GetIconNumberFromTeamNumber(player->team) ];;
-						playerCS->overrideIconOffscreen = m_TeamIconsOffscreen[ GetIconNumberFromTeamNumber(player->team) ];
-						playerCS->overridePosition = player->position;
-						playerCS->overrideFadeTime = -1;
-						playerCS->overrideExpirationTime = now + LAST_SEEN_ICON_DURATION;
-						playerCS->overrideAngle = player->angle;
-					}
+					playerCS->overrideIcon = m_TeamIconsGhost[ GetIconNumberFromTeamNumber(player->team) ];;
+					playerCS->overrideIconOffscreen = m_TeamIconsOffscreen[ GetIconNumberFromTeamNumber(player->team) ];
+					playerCS->overridePosition = player->position;
+					playerCS->overrideFadeTime = -1;
+					playerCS->overrideExpirationTime = now + LAST_SEEN_ICON_DURATION;
+					playerCS->overrideAngle = player->angle;
 					playerCS->timeLastSeen = -1;
 					playerCS->timeFirstSeen = -1;
 				}
@@ -1003,7 +954,6 @@ void CCSMapOverview::UpdateBomb()
 		{
 			m_bomb.position = pos;
 			m_bomb.state = CSMapBomb_t::BOMB_DROPPED;
-			m_bomb.ringTravelTime = 6.0f;
 			smallestRadius = m_flIconSize;
 			biggestRadius = m_flIconSize * 10.0f;
 		}
@@ -1056,7 +1006,6 @@ bool CCSMapOverview::ShouldDraw( void )
 	float now = gpGlobals->curtime;
 	if( GetMode() == MAP_MODE_RADAR )
 	{
-
 		// We have to be alive and not blind to draw in this mode.
 		C_CSPlayer *pCSPlayer = C_CSPlayer::GetLocalCSPlayer();
 		if( !pCSPlayer || pCSPlayer->GetObserverMode() == OBS_MODE_DEATHCAM ) 
@@ -1344,8 +1293,7 @@ void CCSMapOverview::DrawBomb()
 				return;// They're dead and spectating isn't restricted 
 		}
 		else if( (m_bomb.timeLastSeen == -1)  
-			||  ( now - m_bomb.timeLastSeen >= TIME_SPOTS_STAY_SEEN ) 
-			||  ( now - m_bomb.timeFirstSeen < TIME_UNTIL_ENEMY_SEEN ) 
+			||  ( now - m_bomb.timeLastSeen >= TIME_SPOTS_STAY_SEEN )
 			)
 		{
 			return;// It's in view
@@ -1542,7 +1490,7 @@ void CCSMapOverview::DrawMapPlayers()
 	surface()->DrawSetTextFont( m_hIconFont );
 
 	Color colorGreen( 0, 255, 0, 255 );	// health bar color
-	CBasePlayer *localPlayer = C_BasePlayer::GetLocalPlayer();
+	C_CSPlayer *localPlayer = C_CSPlayer::GetLocalCSPlayer();
 
 	for (int i=0; i < MAX_PLAYERS; i++)
 	{
@@ -1560,7 +1508,6 @@ void CCSMapOverview::DrawMapPlayers()
 		const char *name = NULL;
 
 		bool bIsTeammate = (!IsOtherEnemy( localPlayer->entindex(), player->index+1 ));
-
 		if ( m_bShowNames && CanPlayerNameBeSeen( player ) )
 			name = player->name;
 
@@ -1571,42 +1518,21 @@ void CCSMapOverview::DrawMapPlayers()
 		if( playerCS->overrideExpirationTime > gpGlobals->curtime )// If dead, an X, if alive, an alpha'd normal icon
 		{
 			int alphaToUse = alpha;
+			float timeSinceLastSeen = gpGlobals->curtime - playerCS->timeLastSeen;
 			if( playerCS->overrideFadeTime != -1 && playerCS->overrideFadeTime <= gpGlobals->curtime )
 			{
 				// Fade linearly from fade start to disappear
 				alphaToUse *= 1 - (float)(gpGlobals->curtime - playerCS->overrideFadeTime) / (float)(playerCS->overrideExpirationTime - playerCS->overrideFadeTime);
 			}
 
-			DrawIconCS( playerCS->overrideIcon, playerCS->overrideIconOffscreen, playerCS->overridePosition, m_flIconSize * 1.1f, GetViewAngle(), player->health > 0 ? alphaToUse / 2 : alphaToUse, true, name, &player->color, -1, &colorGreen );
-			if( player->health > 0 )
-				DrawIconCS( m_playerFacing, -1, playerCS->overridePosition, m_flIconSize * 1.1f, playerCS->overrideAngle[YAW], player->health > 0 ? alphaToUse / 2 : alphaToUse, true, name, &player->color, status, &colorGreen );
+			DrawIconCS( playerCS->overrideIcon, playerCS->overrideIconOffscreen, playerCS->overridePosition, m_flIconSize * 1.1f, GetViewAngle(), alphaToUse, true, name, &player->color, -1, &colorGreen );
+			if( player->health > 0 && (bIsTeammate || (timeSinceLastSeen < TIME_SPOTS_STAY_SEEN && ( playerCS->timeLastSeen != -1 ))) )
+				DrawIconCS( m_playerFacing, -1, playerCS->overridePosition, m_flIconSize * 1.1f, playerCS->overrideAngle[YAW], alphaToUse, true, name, &player->color, status, &colorGreen );
 		}
 		else
 		{
-			float zDifference = 0;
-			if( localPlayer )
-			{	
-				if( (localPlayer->GetObserverMode() != OBS_MODE_NONE) && localPlayer->GetObserverTarget() )
-					zDifference = player->position.z - localPlayer->GetObserverTarget()->GetAbsOrigin().z;
-				else
-					zDifference = player->position.z - localPlayer->GetAbsOrigin().z;
-			}
-
 			float sizeForRing = m_flIconSize * 1.4f;
 			float sizeForPlayer = m_flIconSize * 1.1f; // The 1.1 is because the player dots are shrunken a little, so their facing pip can have some space to live
-			if ( zDifference > DIFFERENCE_THRESHOLD )
-			{
-				// A dot above is bigger and a little fuzzy now.
-				sizeForRing *= 1.4f;
-				sizeForPlayer *= 1.4f;
-				alpha *= 0.5f;
-			}
-			else if ( zDifference < -DIFFERENCE_THRESHOLD )
-			{
-				// A dot below is smaller.
-				sizeForRing *= 0.7f;
-				sizeForPlayer *= 0.7f;
-			}
 
 			bool showTalkRing = localPlayer && (localPlayer->GetTeamNumber() == player->team || localPlayer->GetTeamNumber() == TEAM_SPECTATOR);
 
@@ -1630,12 +1556,13 @@ void CCSMapOverview::DrawMapPlayers()
 				angleForPlayer = player->angle[YAW];// And, the self icon now rotates, natch.
 			}
 
+			float timeSinceLastSeen = gpGlobals->curtime - playerCS->timeLastSeen;
 			int offscreenIcon = m_TeamIconsOffscreen[GetIconNumberFromTeamNumber(player->team)];
 			DrawIconCS( player->icon, offscreenIcon, player->position, sizeForPlayer, angleForPlayer, alpha, true, name, &player->color, status, &colorGreen );
 			if( !doingLocalPlayer )
 			{
 				// Draw the facing for everyone but the local player.
-				if( player->health > 0 )
+				if( player->health > 0 && (bIsTeammate || (timeSinceLastSeen < TIME_SPOTS_STAY_SEEN && ( playerCS->timeLastSeen != -1 ))) )
 					DrawIconCS( m_playerFacing, -1, player->position, sizeForPlayer, player->angle[YAW], alpha, true, name, &player->color, status, &colorGreen );
 			}
 		}
@@ -1686,7 +1613,7 @@ void CCSMapOverview::DrawHostages()
 				alphaToUse *= 1 - (float)(gpGlobals->curtime - hostageCS->overrideFadeTime) / (float)(hostageCS->overrideExpirationTime - hostageCS->overrideFadeTime);
 			}
 
-			DrawIconCS( hostageCS->overrideIcon, hostageCS->overrideIconOffscreen, hostageCS->overridePosition, m_flIconSize, hostageCS->overrideAngle[YAW], hostage->health > 0 ? alphaToUse / 2 : alphaToUse, true, name, &hostage->color, status, &colorGreen );
+			DrawIconCS( hostageCS->overrideIcon, hostageCS->overrideIconOffscreen, hostageCS->overridePosition, m_flIconSize, hostageCS->overrideAngle[YAW], alphaToUse, true, name, &hostage->color, status, &colorGreen );
 		}
 		else
 		{
@@ -1698,27 +1625,7 @@ void CCSMapOverview::DrawHostages()
 
 //			engine->Con_NPrintf( i + 30, "ID:%d Pos:(%.0f,%.0f,%.0f)", hostage->index, hostage->position.x, hostage->position.y, hostage->position.z );
 			int normalIcon, offscreenIcon;
-			float zDifference = 0;
-			if( localPlayer )
-			{	
-				if( (localPlayer->GetObserverMode() != OBS_MODE_NONE) && localPlayer->GetObserverTarget() )
-					zDifference = hostage->position.z - localPlayer->GetObserverTarget()->GetAbsOrigin().z;
-				else
-					zDifference = hostage->position.z - localPlayer->GetAbsOrigin().z;
-			}
-
 			float sizeForHostage = m_flIconSize;
-			if( zDifference > DIFFERENCE_THRESHOLD )
-			{
-				// A dot above is bigger and a little fuzzy now.
-				sizeForHostage = m_flIconSize * 1.5f;
-				alpha *= 0.5f;
-			}
-			else if( zDifference < -DIFFERENCE_THRESHOLD )
-			{
-				// A dot below is smaller.
-				sizeForHostage = m_flIconSize * 0.6f;
-			}
 
 			normalIcon = hostage->icon;
 			offscreenIcon = m_TeamIconsOffscreen[ MAP_ICON_HOSTAGE ];
@@ -2186,7 +2093,6 @@ void CCSMapOverview::SetMode(int mode)
 
 void CCSMapOverview::UpdateSizeAndPosition()
 {
-
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	if ( !pPlayer )
 		return;
@@ -2437,6 +2343,8 @@ Vector2D CCSMapOverview::PanelToMap( const Vector2D &panelPos )
 
 	return mapPos;
 }
+
+//-----------------------------------------------------------------------------
 void CCSMapOverview::MsgFunc_UpdateRadar( bf_read &msg )
 {
 	int iPlayerEntity = msg.ReadByte();

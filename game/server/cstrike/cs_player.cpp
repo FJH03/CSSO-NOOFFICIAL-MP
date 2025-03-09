@@ -6693,7 +6693,7 @@ void CCSPlayer::GetIntoGame()
 		// HPE_END
 		//=============================================================================
 
-		if( MPRules->m_flRestartRoundTime == 0.0f )
+		if ( MPRules->GetRoundRestartTime() == 0.0f )
 		{
 			//Bomb target, no bomber and no bomb lying around.
 			if( !MPRules->IsWarmupPeriod() && MPRules->IsBombDefuseMap() && !MPRules->IsThereABomber() && !MPRules->IsThereABomb() )
@@ -10179,7 +10179,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		}
 
 		// [dwenger] Fun-fact processing
-		
+
 		if ( pVictimWeapon && pVictimWeapon->GetWeaponType() == WEAPONTYPE_KNIFE && !pVictimWeapon->IsA( WEAPON_TASER ) && 
  			pInflictor == pAttacker && 
  			pAttackerWeapon && 

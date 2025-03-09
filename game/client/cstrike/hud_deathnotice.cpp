@@ -561,7 +561,7 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	if ( iAssister > 0 )
 	{
 		// if our attacker is the same as our assiter, it means a bot attacked the victim and a player took over that bot
-		if ( iAssister == iKiller )
+		if ( iAssister == iKiller || cs_PR->GetControlledByPlayer(iAssister) == iKiller ) // TODO: GetControlledByPlayer check is a hack!
 			iAssister = 0;
 		else
 		{

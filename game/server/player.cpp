@@ -2376,37 +2376,29 @@ bool CBasePlayer::SetObserverMode(int mode )
 	switch ( mode )
 	{
 		case OBS_MODE_NONE:
-		case OBS_MODE_FIXED :
-		case OBS_MODE_DEATHCAM :
+		case OBS_MODE_FIXED:
+ 		case OBS_MODE_DEATHCAM:
 			SetFOV( this, 0 );	// Reset FOV
 			SetViewOffset( vec3_origin );
 			SetMoveType( MOVETYPE_NONE );
 			break;
 
-		case OBS_MODE_CHASE :
-		case OBS_MODE_POI: // PASSTIME
-		case OBS_MODE_IN_EYE :	
+		case OBS_MODE_CHASE:
+		case OBS_MODE_IN_EYE:
 			// udpate FOV and viewmodels
 			SetObserverTarget( m_hObserverTarget );	
 			SetMoveType( MOVETYPE_OBSERVER );
 			break;
 
-		//=============================================================================
-		// HPE_BEGIN:
 		// [menglish] Added freeze cam to the setter.  Uses same setup as the roaming mode
-		//=============================================================================
 
-		case OBS_MODE_ROAMING :
-		case OBS_MODE_FREEZECAM :
+		case OBS_MODE_ROAMING:
+ 		case OBS_MODE_FREEZECAM:
 			SetFOV( this, 0 );	// Reset FOV
 			SetObserverTarget( m_hObserverTarget );
 			SetViewOffset( vec3_origin );
 			SetMoveType( MOVETYPE_OBSERVER );
 			break;
-
-		//=============================================================================
-		// HPE_END
-		//=============================================================================
 	}
 
 	CheckObserverSettings();
@@ -2481,7 +2473,7 @@ void CBasePlayer::CheckObserverSettings()
 
 	// check if our spectating target is still a valid one
 	
-	if (  m_iObserverMode == OBS_MODE_IN_EYE || m_iObserverMode == OBS_MODE_CHASE || m_iObserverMode == OBS_MODE_FIXED || m_iObserverMode == OBS_MODE_POI )
+	if (  m_iObserverMode == OBS_MODE_IN_EYE || m_iObserverMode == OBS_MODE_CHASE || m_iObserverMode == OBS_MODE_FIXED )
 	{
 		ValidateCurrentObserverTarget();
 				

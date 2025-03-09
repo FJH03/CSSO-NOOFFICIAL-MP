@@ -132,7 +132,7 @@ void CHudTeamCounter::OnThink()
 	C_CSTeam *teamCT = GetGlobalCSTeam( TEAM_CT );
 	C_CSTeam *teamT = GetGlobalCSTeam( TEAM_TERRORIST );
 
-	wchar_t unicode[8];
+	wchar_t unicode[16];
 	if ( teamCT )
 	{
 		V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", teamCT->Get_Score() );
@@ -207,7 +207,7 @@ void CHudTeamCounter::OnThink()
 	else
 		m_pBombIcon->SetVisible( false );
 
-	if ( bBombPlanted )
+	if ( bBombPlanted || pRules->IsWarmupPeriod() )
 		m_pRoundTimerLabel->SetText( L" " );
 	else
 	{
@@ -216,10 +216,6 @@ void CHudTeamCounter::OnThink()
 
 		m_iRoundTime = (int) ceil( pRules->GetRoundRemainingTime() );
 
-		if ( pRules->IsWarmupPeriod() && !pRules->IsWarmupPeriodPaused() )
-		{
-			m_iRoundTime = (int) ceil( pRules->GetWarmupRemainingTime() );
-		}
 		if ( pRules->IsFreezePeriod() )
 		{
 			// in freeze period countdown to round start time

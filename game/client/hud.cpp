@@ -992,7 +992,7 @@ bool CHud::IsHidden( int iHudFlags )
 		return true;
 
 	// Needs to be alive or observing someone
-	if ( ( iHudFlags & HIDEHUD_NOT_OBSERVING_PLAYERS ) && ( pPlayer->IsObserver() && (!pPlayer->GetObserverTarget() || !pPlayer->GetObserverTarget()->IsPlayer()) ) )
+	if ( ( iHudFlags & HIDEHUD_NOT_OBSERVING_PLAYERS ) && ( pPlayer->IsObserver() && (pPlayer->GetObserverMode() < OBS_MODE_FIXED || !pPlayer->GetObserverTarget() || !pPlayer->GetObserverTarget()->IsPlayer()) ) )
 	return true;
 
 	// Hide all HUD elements during screenshot if the user's set hud_freezecamhide ( TF2 )

@@ -14,6 +14,7 @@
 #include "spectatorgui.h"
 #include "mapoverview.h"
 #include "cs_shareddefs.h"
+#include "vgui_avatarimage.h"
 
 extern ConVar mp_playerid; // in cs_gamerules.h
 extern ConVar mp_forcecamera; // in gamevars_shared.h
@@ -35,48 +36,51 @@ public:
 	bool m_bRadarFlash;				// flash or do not, there is no try
 };
 
+
 //-----------------------------------------------------------------------------
 // Purpose: Cstrike Spectator UI
 //-----------------------------------------------------------------------------
-class CCSSpectatorGUI : public CSpectatorGUI
+class CCSSpectatorGUI : public CSpectatorGUI, public CGameEventListener
 {
 private:
 	DECLARE_CLASS_SIMPLE( CCSSpectatorGUI, CSpectatorGUI );
 
 public:
 	CCSSpectatorGUI( IViewPort *pViewPort );
-		
+
 	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
-	virtual void UpdateSpectatorPlayerList( void );
 	virtual void Update( void );
 	virtual bool NeedsUpdate( void );
+	virtual void FireGameEvent( IGameEvent *event );
+
 protected:
 
 	void UpdateTimer();
-	void UpdateAccount();
+	void UpdateTeamInfo();
+	void UpdateRoundCounter();
 
-	int		m_nLastAccount;
+	bool m_bNeedToUpdateRoundCounter;
+
 	int		m_nLastTime;
 	int		m_nLastSpecMode;
 	CBaseEntity	*m_nLastSpecTarget;
 
-	void StoreWidths( void );
-	void ResizeControls( void );
 	bool ControlsPresent( void ) const;
 
 	vgui::Label *m_pCTLabel;
 	vgui::Label *m_pCTScore;
 	vgui::Label *m_pTerLabel;
 	vgui::Label *m_pTerScore;
-	vgui::Label *m_pTimer;
 	vgui::Label *m_pTimerLabel;
-	vgui::Panel *m_pDivider;
-	vgui::Label *m_pExtraInfo;
+	vgui::Label *m_pRoundCountLabel;
+	vgui::Label *m_pPlayerPanelName;
+	vgui::ImagePanel *m_pPlayerPanelBkg;
+	vgui::ImagePanel *m_pPlayerPanelTeam;
+	vgui::ImagePanel *m_pPlayerPanelAvatarBkg;
+	CAvatarImagePanel *m_pPlayerPanelAvatar;
 
-	bool m_modifiedWidths;
-
-	int m_scoreWidth;
-	int m_extraInfoWidth;
+	Color		m_pCTColor;
+	Color		m_pTColor;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -197,6 +201,7 @@ public: // IViewPortPanel interface:
 	virtual int GetIconNumberFromTeamNumber( int teamNumber );
 
 	void MsgFunc_UpdateRadar( bf_read &msg );
+
 protected:
 
 	virtual void	PaintBackground();
@@ -260,6 +265,7 @@ private:
 	int		m_TeamIconsSelf[MAP_ICON_COUNT];
 	int		m_TeamIconsDead[MAP_ICON_COUNT];
 	int		m_TeamIconsOffscreen[MAP_ICON_COUNT];
+	int		m_TeamIconsGhost[MAP_ICON_COUNT];
 
 	int		m_bombIconPlanted;
 	int		m_bombIconDropped;

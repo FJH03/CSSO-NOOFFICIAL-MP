@@ -78,7 +78,9 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
     ListenForGameEvent( "server_spawn" );
     ListenForGameEvent( "game_newmap" );
     ListenForGameEvent( "match_end_conditions" );
-    ListenForGameEvent( "cs_win_panel_match" );
+	ListenForGameEvent( "cs_win_panel_match" );
+	ListenForGameEvent( "announce_phase_end" );
+	ListenForGameEvent( "round_start" );
 
     SetDialogVariable( "server", "" );
     SetVisible( false );
@@ -88,6 +90,8 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
 
 	// [pfreese] Make the scoreboard a popup so it renders over the chat interface (which is also a popup). Hacky.
 	MakePopup();
+	SetMouseInputEnabled( false ); // PiMoN: MakePopup() makes both mouse and keyboard inputs "true", we don't need that
+ 	SetKeyBoardInputEnabled( false );
 	
     m_listItemFont = NULL;
 
@@ -103,8 +107,6 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
         SetDialogVariable( "mapname", m_pMapName );
         m_pLabelMapName->SetVisible( true );
     }
-
-    SetKeyBoardInputEnabled( true );
 
     for ( int i = 0; i < cMaxScoreLines; ++i )
     {
@@ -142,6 +144,8 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
     m_pStatsDisabled[0] = L'\0';
 
 	m_MVPXOffset = 0;
+
+	m_bForceShow = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -1356,6 +1360,16 @@ void CCSClientScoreBoardDialog::FireGameEvent( IGameEvent *event )
         m_gameOver = true;
         UpdateMatchEndText();
     }
+	else if ( Q_strcmp( pEventName, "announce_phase_end" ) == 0 )
+	{
+		m_bForceShow = true;
+		ShowPanel( m_bForceShow );
+	}
+	else if ( Q_strcmp( pEventName, "round_start" ) == 0 )
+	{
+		m_bForceShow = false;
+		ShowPanel( m_bForceShow );
+	}
 
 	BaseClass::FireGameEvent( event );
 }
@@ -1594,6 +1608,9 @@ void CCSClientScoreBoardDialog::ResetFromGameOverState()
 // to leave the keyboard disabled
 void CCSClientScoreBoardDialog::ShowPanel( bool state )
 {
+	if ( m_bForceShow && !state )
+		return;
+
     BaseClass::ShowPanel(state);
 
     int iRenderGroup = gHUD.LookupRenderGroupIndexByName( "hide_for_scoreboard" );
