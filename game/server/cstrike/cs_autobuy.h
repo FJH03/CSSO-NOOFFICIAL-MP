@@ -42,7 +42,7 @@
 	 CSWeaponID	m_nSecondaryId;
 	 CSWeaponID	m_tertiaryId;				// used just for taser right now
 	 CSWeaponID	m_grenades[8];
-	 int			m_armor;					// 0, 1, or 2 (0 = none, 1 = vest, 2 = vest + helmet)
+	 int			m_armor;					// 0, 1, or 2 (0 = none, 1 = kevlar, 2 = kevlar + helmet)
 	 bool		m_defuser;					// do we want a defuser
 	 bool		m_nightVision;				// do we want night vision
 	 bool		m_isNotEmpty;					

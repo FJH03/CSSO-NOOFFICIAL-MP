@@ -336,11 +336,11 @@ void BuyState::OnUpdate( CCSBot *me )
 		for ( int i=0; i<loadout.Count(); ++i )
 		{
 			const char *item = loadout[i];
-			if ( FStrEq( item, "vest" ) )
+			if ( FStrEq( item, "vest" ) || FStrEq( item, "kevlar" ) )
 			{
 				me->GiveNamedItem( "item_kevlar" );
 			}
-			else if ( FStrEq( item, "vesthelm" ) )
+			else if ( FStrEq( item, "vesthelm" ) || FStrEq( item, "assaultsuit" ) )
 			{
 				me->GiveNamedItem( "item_assaultsuit" );
 			}
@@ -555,9 +555,9 @@ void BuyState::OnUpdate( CCSBot *me )
 			}
 
 			// buy armor last, to make sure we bought a weapon first
-			args.Tokenize( "buy vesthelm" );
+			args.Tokenize( "buy assaultsuit" );
 			me->ClientCommand( args );
-			args.Tokenize( "buy vest" );
+			args.Tokenize( "buy kevlar" );
 			me->ClientCommand( args );
 
 			// pistols - if we have no preferred pistol, buy at random

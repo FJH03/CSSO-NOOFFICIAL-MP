@@ -47,8 +47,8 @@ AutoBuyInfoStruct g_autoBuyInfo[] =
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_MACHINEGUN), "negev", "weapon_negev" },	// negev
 	{ (AutoBuyClassType)(AUTOBUYCLASS_PRIMARY | AUTOBUYCLASS_AMMO), "primammo", "primammo" },	// primammo
 	{ (AutoBuyClassType)(AUTOBUYCLASS_SECONDARY | AUTOBUYCLASS_AMMO), "secammo", "secammo" }, // secmmo
-	{ (AutoBuyClassType)(AUTOBUYCLASS_ARMOR), "vest", "item_kevlar" }, // vest
-	{ (AutoBuyClassType)(AUTOBUYCLASS_ARMOR), "vesthelm", "item_assaultsuit" }, // vesthelm
+	{ (AutoBuyClassType)(AUTOBUYCLASS_ARMOR), "kevlar", "item_kevlar" }, // kevlar
+ 	{ (AutoBuyClassType)(AUTOBUYCLASS_ARMOR), "assaultsuit", "item_assaultsuit" }, // assaultsuit
 	{ (AutoBuyClassType)(AUTOBUYCLASS_GRENADE), "flashbang", "weapon_flashbang" }, // flash
 	{ (AutoBuyClassType)(AUTOBUYCLASS_GRENADE), "hegrenade", "weapon_hegrenade" }, // hegren
 	{ (AutoBuyClassType)(AUTOBUYCLASS_GRENADE), "smokegrenade", "weapon_smokegrenade" }, // sgren

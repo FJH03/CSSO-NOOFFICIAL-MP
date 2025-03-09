@@ -4846,7 +4846,7 @@ BuyResult_e CCSPlayer::AttemptToBuyVest( void )
 		if( event )
 		{
 			event->SetInt( "userid", GetUserID() );
-			event->SetString( "item", "vest" );
+			event->SetString( "item", "kevlar" );
 			event->SetBool( "silent", false );
 			gameeventmanager->FireEvent( event );
 		}
@@ -4899,7 +4899,7 @@ BuyResult_e CCSPlayer::AttemptToBuyAssaultSuit( void )
 	if( event )
 	{
 		event->SetInt( "userid", GetUserID() );
-		event->SetString( "item", "vesthelm" );
+		event->SetString( "item", "assaultsuit" );
 		event->SetBool( "silent", false );
 		gameeventmanager->FireEvent( event );
 	}
@@ -8379,11 +8379,11 @@ BuyResult_e CCSPlayer::RebuyArmor()
 		{
 			if (m_rebuyStructLastRound.GetArmor() == 1 )
 			{
-				return HandleCommand_Buy("vest" );
+				return HandleCommand_Buy("kevlar" );
 			}
 			else
 			{
-				return HandleCommand_Buy("vesthelm" );
+				return HandleCommand_Buy("assaultsuit" );
 			}
 		}
 	}
