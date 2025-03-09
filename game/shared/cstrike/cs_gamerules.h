@@ -762,9 +762,12 @@ public:
 	void	AddTeamAccount( int team, int reason );
 	void	AddTeamAccount( int team, int reason, int amount, const char* szAwardText = NULL );
 
+	int GetTotalRoundsPlayed( void ) const { return m_iNumCTWins + m_iNumTerroristWins; }
 	int GetOvertimePlaying( void ) const { return m_nOvertimePlaying; }
 
 	int GetNumWinsToClinch( void ) const;
+	bool IsLastRoundOfMatch() const;
+ 	bool IsMatchPoint() const;
 
 public:
 	CBaseEntity* GetNextSpawnpoint( int teamNumber );
