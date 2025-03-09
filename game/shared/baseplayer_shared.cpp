@@ -1695,7 +1695,7 @@ void CBasePlayer::PlayerUse ( void )
 			CCSPlayer* pPlayer = ToCSPlayer( this );
 			CCSPlayer* pBot = ToCSPlayer( pUseEntity );
 
-			if ( pPlayer && pPlayer->IsAlive() && pBot && pBot->IsBot() && (pBot->GetTeamNumber() == pPlayer->GetTeamNumber()) && pBot->HasC4() )
+			if ( pPlayer && pPlayer->IsAlive() && pBot && pBot->IsBot() && pBot->IsOtherSameTeam(pPlayer->GetTeamNumber()) && pBot->HasC4() )
 			{
 				//distance check is implicit in +use, but check it anyway
 				if ( (pBot->WorldSpaceCenter() - pPlayer->WorldSpaceCenter()).Length() < 200 )

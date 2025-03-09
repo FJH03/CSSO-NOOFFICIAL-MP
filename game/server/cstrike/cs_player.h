@@ -371,6 +371,7 @@ public:
 	virtual void StopReplayMode();
 	virtual void PlayUseDenySound();
 
+	bool IsOtherSameTeam( int nTeam );
 	bool IsOtherEnemy( CCSPlayer *pPlayer );
 	bool IsOtherEnemy( int nEntIndex );
 
@@ -805,7 +806,13 @@ public:
 	// Make sure to register changes for armor.
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_ArmorValue );
 
+	float m_flFlinchStack; // we add to this stack everytime we take damage that would "tag" us - decays constantly
 	CNetworkVar( float, m_flVelocityModifier );
+	void SetFlinchVelocityModifier( float fVelocityModifier )
+ 	{
+ 		// this function only allows more flinch (smaller values) to be applied, not less
+ 		m_flVelocityModifier = Min(m_flVelocityModifier.Get(), fVelocityModifier);
+ 	}
 	CNetworkVar( float, m_flGroundAccelLinearFracLastTime );
 
 	int	m_iHostagesKilled;

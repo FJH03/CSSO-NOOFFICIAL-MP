@@ -313,6 +313,7 @@ public:
 	int					GetCarryLimit( CSWeaponID weaponId );
 	int					GetWeaponPrice( CSWeaponID weaponId ) const;
  
+	bool IsOtherSameTeam( int nTeam );
 	bool IsOtherEnemy( CCSPlayer *pPlayer );
 	bool IsOtherEnemy( int nEntIndex );
 
@@ -577,10 +578,8 @@ private:
 	int		m_iAccount;
 	bool	m_bHasHelmet;
 	
-public:
 	int		m_iClass;
 
-private:
 	int		m_ArmorValue;
 	QAngle	m_angEyeAngles;
 	bool	m_bHasDefuser;

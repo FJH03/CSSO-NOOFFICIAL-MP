@@ -910,6 +910,30 @@ ConVar snd_music_selection(
 		FCVAR_REPLICATED,
 		"Ignore conditions which would end the current round" );
 
+	ConVar mp_damage_scale_ct_body(
+		"mp_damage_scale_ct_body",
+		"1.0",
+		FCVAR_REPLICATED,
+		"Scales the damage a CT player takes by this much when they take damage in the body. (1 == 100%, 0.5 == 50%)" );
+
+	ConVar mp_damage_scale_ct_head(
+		"mp_damage_scale_ct_head",
+		"1.0",
+		FCVAR_REPLICATED,
+		"Scales the damage a CT player takes by this much when they take damage in the head (1 == 100%, 0.5 == 50%).  REMEMBER! headshots do 4x the damage of the body before this scaler is applied." );
+
+	ConVar mp_damage_scale_t_body(
+		"mp_damage_scale_t_body",
+		"1.0",
+		FCVAR_REPLICATED,
+		"Scales the damage a T player takes by this much when they take damage in the body. (1 == 100%, 0.5 == 50%)" );
+
+	ConVar mp_damage_scale_t_head(
+		"mp_damage_scale_t_head",
+		"1.0",
+		FCVAR_REPLICATED,
+		"Scales the damage a T player takes by this much when they take damage in the head (1 == 100%, 0.5 == 50%).  REMEMBER! headshots do 4x the damage of the body before this scaler is applied." );
+
 	ConVar mp_use_official_map_factions(
 		"mp_use_official_map_factions",
 		"0",

@@ -138,6 +138,10 @@ extern ConVar mp_t_default_melee;
 extern ConVar mp_t_default_secondary;
 extern ConVar mp_t_default_primary;
 extern ConVar mp_t_default_grenades;
+extern ConVar mp_damage_scale_ct_body;
+extern ConVar mp_damage_scale_ct_head;
+extern ConVar mp_damage_scale_t_body;
+extern ConVar mp_damage_scale_t_head;
 extern ConVar mp_playercashawards;
 extern ConVar mp_ggprogressive_healthshot_killcount;
 
@@ -155,6 +159,7 @@ extern ConVar ammo_molotov_max;
 extern ConVar mp_randomspawn;
 extern ConVar mp_randomspawn_los;
 extern ConVar mp_randomspawn_dist;
+extern ConVar sv_staminamax;
 
 extern ConVar mp_respawn_immunitytime;
 
@@ -405,7 +410,7 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropBool( SENDINFO( m_bKilledByTaser ) ),
 	SendPropInt( SENDINFO( m_iMoveState ), 0, SPROP_CHANGES_OFTEN ),
 	SendPropInt( SENDINFO( m_iClass ), Q_log2( CS_NUM_CLASSES )+1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_ArmorValue ), 8 ),
+	SendPropInt( SENDINFO( m_ArmorValue ), 8, SPROP_UNSIGNED ),
 	SendPropBool( SENDINFO( m_bHasDefuser ) ),
 	SendPropBool( SENDINFO( m_bNightVisionOn ) ),	//send as int so we can use a RecvProxy on the client
 	SendPropBool( SENDINFO( m_bHasNightVision ) ),
@@ -621,11 +626,12 @@ CCSPlayer::CCSPlayer()
 	m_iGunGameProgressiveWeaponIndex = 0;
 	m_bMadeFinalGunGameProgressiveKill = false;
 	m_LastDamageType = 0;
-
 	m_fImmuneToDamageTime = 0.0f;
 	m_bImmunity = false;
-
 	m_bHasMovedSinceSpawn = false;
+	m_iNumGunGameKillsWithCurrentWeapon = 0;
+	m_iNumRoundTKs = 0;
+	m_switchTeamsOnNextRoundReset = false;
 
 	m_fNextMolotovDamageSoundTime = 0.0f;
 
@@ -860,7 +866,7 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "Player.Respawn" );
 
 	PrecacheScriptSound( "Music.Final_Round_Stinger" );
- 	PrecacheScriptSound( "Music.Match_Point_Stinger" );
+	PrecacheScriptSound( "Music.Match_Point_Stinger" );
 
 	PrecacheScriptSound( "UI.ArmsRace.BecomeMatchLeader" );
 	PrecacheScriptSound( "UI.ArmsRace.BecomeTeamLeader" );
@@ -1425,7 +1431,6 @@ void CCSPlayer::Spawn()
 
 	ResetStamina();
 
-
 	m_fNextMolotovDamageSoundTime = 0.0f;
 
 	m_iNumSpawns++;
@@ -1437,12 +1442,11 @@ void CCSPlayer::Spawn()
 	*/
 	m_bTeamChanged	= false;
 	m_iOldTeam = TEAM_UNASSIGNED;
+
 	m_bHasMovedSinceSpawn = false;
+
 	m_iRadioMessages = 60;
 	m_flRadioTime = gpGlobals->curtime;
-	m_iNumGunGameKillsWithCurrentWeapon = 0;
- 	m_iNumRoundTKs = 0;
- 	m_switchTeamsOnNextRoundReset = false;
 
 	if ( m_hRagdoll )
 	{
@@ -2043,7 +2047,7 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	// [tj] Added a parameter so we know if it was death that caused the drop
 	// [menglish] Keep track of what the player has dropped for the freeze panel callouts
 	CBaseEntity* pAttacker = info.GetAttacker();
-	bool friendlyFire = pAttacker && InSameTeam( pAttacker ) && !IsOtherEnemy( pAttacker->entindex() );
+	bool friendlyFire = pAttacker && IsOtherSameTeam( pAttacker->GetTeamNumber() ) && !IsOtherEnemy( pAttacker->entindex() );
 
 	CCSPlayer* pAttackerPlayer = ToCSPlayer( info.GetAttacker() );
 	if ( pAttackerPlayer )
@@ -2247,11 +2251,10 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 			}
 		}
 	}
-
 	else
- 	{
- 		CSGameRules()->CheckWinConditions();
- 	}
+	{
+		CSGameRules()->CheckWinConditions();
+	}
 
 	OutputDamageGiven();
 	OutputDamageTaken();
@@ -2288,7 +2291,7 @@ void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &
 		return;
 	}
 
-	if ( GetTeamNumber() == pVictim->GetTeamNumber() && !IsOtherEnemy( pCSVictim ) && pVictim != pCSAttacker )
+	if ( IsOtherSameTeam( pVictim->GetTeamNumber() ) && !IsOtherEnemy( pCSVictim ) && pVictim != pCSAttacker )
 	{
 		UpdateTeamLeaderPlaySound( pCSAttacker->GetTeamNumber() );
 	}
@@ -2745,7 +2748,6 @@ void CCSPlayer::UpdateAddonBits()
 
 void CCSPlayer::UpdateRadar()
 {
-
 	// update positions of all players outside of my PVS
 	CBitVec< ABSOLUTE_PLAYER_LIMIT > playerbits;
 	engine->Message_DetermineMulticastRecipients( false, EyePosition(), playerbits );
@@ -3102,7 +3104,7 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	CCSPlayer *pAttacker = ToCSPlayer(info.GetAttacker() );
 
 	// determine some useful info about the source of this damage
-	bool bDamageIsFromTeammate = pAttacker && ( pAttacker != this ) && InSameTeam( pAttacker ) && !IsOtherEnemy( pAttacker );
+	bool bDamageIsFromTeammate = pAttacker && ( pAttacker != this ) && IsOtherSameTeam( pAttacker->GetTeamNumber() ) && !IsOtherEnemy( pAttacker );
 
 	if ( (!bFriendlyFireEnabled && bDamageIsFromTeammate) || ( bDamageIsFromTeammate && CSGameRules()->IsFreezePeriod() ) )
 	{
@@ -3171,7 +3173,7 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 			for ( int i=1; i<=gpGlobals->maxClients; ++i )
 			{
 				CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
-				if ( pPlayer && InSameTeam( pPlayer ) && !IsOtherEnemy( pPlayer->entindex() ) )
+				if ( pPlayer && IsOtherSameTeam( pPlayer->GetTeamNumber() ) && !IsOtherEnemy( pPlayer->entindex() ) )
 				{
 					ClientPrint( pPlayer, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Game_teammate_attack", CFmtStr( "#ENTNAME[%d]%s", pAttacker->entindex(), pAttacker->GetPlayerName() ) );
 				}
@@ -3302,7 +3304,7 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	if ( bDamageTypeAppliesToArmor && ArmorValue() && IsArmored( m_LastHitGroup ) )
 	{
 		fDamageToHealth = flDamage * flArmorRatio;
-		fDamageToArmor = (flDamage - fDamageToHealth ) * flArmorBonus;
+		fDamageToArmor = (flDamage - fDamageToHealth) * flArmorBonus;
 
 		int armorValue = ArmorValue();
 
@@ -3353,6 +3355,61 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		m_lastDamageArmor = 0;
 		if( !(info.GetDamageType() & DMG_FALL ) )
 			Pain( false /*no armor*/, info.GetDamageType() );
+	}
+
+	if ( pInflictorWeapon != NULL || ( pGrenade && fDamageToHealth > 0 ) )
+	{
+		// The word "flinch" actually means "tagging" here which reduces your movement velocity
+		int nKnifeSpeed = 250;
+		float fFlinchModifier = 1.0;// ShouldDoLargeFlinch( info, m_LastHitGroup ) ? pFlinchInfoSource->GetFlinchVelocityModifierLarge( pInflictorWeapon->GetEconItemView() ) : pFlinchInfoSource->GetFlinchVelocityModifierSmall( pInflictorWeapon->GetEconItemView() );
+
+		float flFlinchModLarge = pFlinchInfoSource->m_flFlinchVelocityModifierLarge;
+		float flFlinchModSmall = pFlinchInfoSource->m_flFlinchVelocityModifierSmall;
+
+		// if grenade, scale by the damage
+		if ( pGrenade )
+		{
+			float flScale = 1.0f - ( fDamageToHealth / 40.0f );
+			flFlinchModLarge += ( flScale * 1.05 );
+			flFlinchModLarge = MIN( 1.5f, flFlinchModLarge );
+		}
+
+		// apply the minimum large flinch amount on the first hit and on subsequent hits, 
+		// apply a portion of the small amount - less as we apply more
+		m_flFlinchStack = MIN( m_flFlinchStack, MIN( flFlinchModLarge, flFlinchModLarge - ( 1.0 - m_flFlinchStack ) * flFlinchModSmall ) );
+
+		// don't modify m_flFlinchStack, keep it raw because it will decay in Think
+		fFlinchModifier = m_flFlinchStack;
+
+		//Msg( "%s: m_flFlinchStack = %f\n", GetPlayerName(), m_flFlinchStack );
+
+		// get the player's current max speed based on their weapon 
+		float flWepMaxSpeed = GetActiveCSWeapon() ? GetActiveCSWeapon()->GetMaxSpeed() : nKnifeSpeed;
+
+		// this is the value we use to scale the above fFlinchModifier - 
+		// knives receive less, AKs receive a bit more, etc
+ 		float flLocalWepScaler = MAX( 0.15, ( flWepMaxSpeed - 120 ) / ( nKnifeSpeed - 120 ) ) * 0.8f;
+		flLocalWepScaler += 0.08;
+		fFlinchModifier = ( fFlinchModifier * flLocalWepScaler );
+
+		// the held weapon also determines what the tagging cap should be
+		// since it's accumulative, we want to be able to cap it so we don't keep getting more
+		// tagged the more someone shoots us
+		float flRatio = (MIN( 1.0, ( ( flWepMaxSpeed - 80 ) / ( nKnifeSpeed - 80 ) ) ) * 1.2f) - 0.08f;
+		//float flClampMin = MAX( 0.2, flRatio - ( 0.65 * ( 1 + ( 1.0 - flRatio ) ) ) );
+		float flClampMin = MAX( 0.2, (flRatio / 4) );
+
+		float flClampMax = ( flFlinchModLarge > 0.65 ) ? flFlinchModLarge : 0.65;
+		// do the clamp
+		fFlinchModifier = clamp( fFlinchModifier, flClampMin, flClampMax );
+
+		// reduce stamina slightly
+		m_flStamina = clamp( m_flStamina + ( 8 * ( 1.0 - fFlinchModifier ) ), 0.0f, sv_staminamax.GetFloat() );
+
+		// lerp between no flinch (all damage reduced to 0) to specified flinch (full damage)
+		SetFlinchVelocityModifier( Lerp( fFriendlyFireDamageReductionRatio, 1.0f, fFlinchModifier ) );
+
+		//Msg( "%s: flClampMin = %f, m_flFlinchStack = %f, fFlinchModifier = %f\n", GetPlayerName(), flClampMin, m_flFlinchStack, fFlinchModifier );
 	}
 	
 	// keep track of amount of damage last sustained
@@ -3460,7 +3517,8 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 				if ( !pDamageGivenListPlayer )
 					continue;
 
-				if( ( pDamageGivenListPlayer != pAttacker ) && pAttacker->InSameTeam( pDamageGivenListPlayer ) && !IsOtherEnemy( pDamageGivenListPlayer ) )
+				int nGivenTeam = pDamageGivenListPlayer->GetTeamNumber();
+				if( ( pDamageGivenListPlayer != pAttacker ) && pAttacker->IsOtherSameTeam( nGivenTeam ) && !IsOtherEnemy( pDamageGivenListPlayer ) )
 				{	
 					nDamageGivenThisRound += pAttacker->GetDamageList()[i]->GetActualHealthRemoved();
 				}		
@@ -3494,35 +3552,32 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 	bool bShouldBleed = true;
 	bool bShouldSpark = false;
 
-	CBasePlayer *pAttacker = (CBasePlayer*)ToBasePlayer( info.GetAttacker() );
+	CBasePlayer *pAttacker = (CBasePlayer* )ToBasePlayer( info.GetAttacker() );
 
 	// show blood for firendly fire only if FF is on
-	if ( pAttacker && InSameTeam( pAttacker ) && !IsOtherEnemy( pAttacker->entindex() ) )
+	if ( pAttacker && IsOtherSameTeam( pAttacker->GetTeamNumber() ) && !IsOtherEnemy( pAttacker->entindex() ) )
 		 bShouldBleed = CSGameRules()->IsFriendlyFireOn();
-
+		
 	if ( m_takedamage != DAMAGE_YES )
 		return;
 
 	m_LastHitGroup = ptr->hitgroup;
-//=============================================================================
-// HPE_BEGIN:
-// [menglish] Used when calculating the position this player was hit at in the bone space
-//=============================================================================
-	m_LastHitBox = ptr->hitbox;
-//=============================================================================
-// HPE_END
-//=============================================================================
 
 	m_nForceBone = ptr->physicsbone;	//Save this bone for ragdoll
 
 	float flDamage = info.GetDamage();
 
+	QAngle punchAngle;
+	float flAng;
+	
 	bool hitByBullet = false;
 	bool hitByGrenadeProjectile = false;
 	bool bHeadShot = false;
-	float flHeadshotMultiplier = 4.0f;
 
-	if ( m_bImmunity )
+	float flBodyDamageScale = (GetTeamNumber() == TEAM_CT) ? mp_damage_scale_ct_body.GetFloat() : mp_damage_scale_t_body.GetFloat();
+	float flHeadDamageScale = (GetTeamNumber() == TEAM_CT) ? mp_damage_scale_ct_head.GetFloat() : mp_damage_scale_t_head.GetFloat();
+
+	if( m_bImmunity )
 	{
 		bShouldBleed = false;
 	}
@@ -3535,124 +3590,154 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 		if ( ArmorValue() > 0 )
 			 bShouldBleed = false;
 
-		if ( bShouldBleed == true )
+			if ( bShouldBleed == true )
+			{
+				// punch view if we have no armor
+				punchAngle = GetRawAimPunchAngle();
+				punchAngle.x = mp_flinch_punch_scale.GetFloat() * flDamage * -0.1;
+
+				if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -4 )
+					punchAngle.x = mp_flinch_punch_scale.GetFloat() * -4;
+
+				SetAimPunchAngle( punchAngle );
+			}
+		}
+		else
 		{
-			// punch view if we have no armor
-			QAngle punchAngle = GetRawAimPunchAngle();
-			punchAngle.x = flDamage * -0.1;
+			const CCSWeaponInfo* pWeaponInfo = GetWeaponInfoFromDamageInfo( info );
 
-			if ( punchAngle.x < -4 )
-				punchAngle.x = -4;
+			if ( pWeaponInfo )
+			{
+				hitByBullet = IsGunWeapon( pWeaponInfo->m_WeaponType );
+				hitByGrenadeProjectile = ( ( pWeaponInfo->m_WeaponType == WEAPONTYPE_GRENADE ) && ( info.GetDamageType() & DMG_CLUB ) != 0 );
+			}
 
-			SetAimPunchAngle( punchAngle );
+			switch ( ptr->hitgroup )
+			{
+			case HITGROUP_GENERIC:
+				break;
+
+			case HITGROUP_HEAD:
+
+				if ( m_bHasHelmet && !hitByGrenadeProjectile )
+				{
+					//				bShouldBleed = false;
+					bShouldSpark = true;
+				}
+
+				flDamage *= 4;
+				flDamage *= flHeadDamageScale;
+
+				if ( !m_bHasHelmet )
+				{
+					punchAngle = GetRawAimPunchAngle();
+
+					punchAngle.x += mp_flinch_punch_scale.GetFloat() * flDamage * -0.5;
+
+					if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -12 )
+						punchAngle.x = mp_flinch_punch_scale.GetFloat() * -12;
+
+					punchAngle.z = mp_flinch_punch_scale.GetFloat() * flDamage * random->RandomFloat(-1,1 );
+
+					if ( punchAngle.z < mp_flinch_punch_scale.GetFloat() * -9 )
+						punchAngle.z = mp_flinch_punch_scale.GetFloat() * -9;
+
+					else if ( punchAngle.z > mp_flinch_punch_scale.GetFloat() * 9 )
+						punchAngle.z = mp_flinch_punch_scale.GetFloat() * 9;
+
+					SetAimPunchAngle( punchAngle );
+				}
+
+				bHeadShot = true;
+
+				break;
+
+			case HITGROUP_CHEST:
+
+				flDamage *= 1.0;
+				flDamage *= flBodyDamageScale;
+
+				if ( ArmorValue() <= 0 )
+					flAng = -0.1;
+				else
+					flAng = -0.005;
+
+
+				punchAngle = GetRawAimPunchAngle();
+
+				punchAngle.x += mp_flinch_punch_scale.GetFloat() * flDamage * flAng;
+
+				if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -4 )
+					punchAngle.x = mp_flinch_punch_scale.GetFloat() * -4;
+
+				SetAimPunchAngle( punchAngle );
+
+				break;
+
+			case HITGROUP_STOMACH:
+
+				flDamage *= 1.25;
+				flDamage *= flBodyDamageScale;
+
+				if ( ArmorValue() <= 0 )
+					flAng = -0.1;
+				else
+					flAng = -0.005;
+
+
+				punchAngle = GetRawAimPunchAngle();
+
+				punchAngle.x += mp_flinch_punch_scale.GetFloat() * flDamage * flAng;
+
+				if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -4 )
+					punchAngle.x = mp_flinch_punch_scale.GetFloat() * -4;
+
+				SetAimPunchAngle( punchAngle );
+
+
+				break;
+
+			case HITGROUP_LEFTARM:
+			case HITGROUP_RIGHTARM:
+
+				flDamage *= 1.0;
+				flDamage *= flBodyDamageScale;
+				// 
+				// 			punchAngle = GetRawAimPunchAngle();
+				// 			punchAngle.x = mp_flinch_punch_scale.GetFloat() * flDamage * -0.005;
+				// 
+				// 			if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -2 )
+				// 				punchAngle.x = mp_flinch_punch_scale.GetFloat() * -2;
+				// 
+				// 			SetAimPunchAngle( punchAngle );
+				// 
+				break;
+
+			case HITGROUP_LEFTLEG:
+			case HITGROUP_RIGHTLEG:
+
+				flDamage *= 0.75;
+				flDamage *= flBodyDamageScale;
+				// 
+				// 			punchAngle = GetRawAimPunchAngle();
+				// 			punchAngle.x = mp_flinch_punch_scale.GetFloat() * flDamage * -0.005;
+				// 
+				// 			if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -1 )
+				// 				punchAngle.x = mp_flinch_punch_scale.GetFloat() * -1;
+				// 
+				// 			SetAimPunchAngle( punchAngle );
+				// 
+				break;
+
+			default:
+				break;
 		}
 	}
-	else
-	{
-		const CWeaponCSBase* pCSWeapon = dynamic_cast<CWeaponCSBase*>(info.GetWeapon());
 
-		if ( pCSWeapon )
-		{
-			hitByBullet = IsGunWeapon( pCSWeapon->GetWeaponType() );
-			hitByGrenadeProjectile = ((pCSWeapon->GetWeaponType() == WEAPONTYPE_GRENADE) && (info.GetDamageType() & DMG_CLUB) != 0);
-			flHeadshotMultiplier = pCSWeapon->GetCSWpnData().m_flHeadshotMultiplier;
-		}
-
-// [menglish] Calculate the position this player was hit at in the bone space
-		matrix3x4_t boneTransformToWorld, boneTransformToObject;
-		GetBoneTransform(GetHitboxBone(ptr->hitbox), boneTransformToWorld);
-		MatrixInvert(boneTransformToWorld, boneTransformToObject);
-		VectorTransform(ptr->endpos, boneTransformToObject, m_vLastHitLocationObjectSpace);
-
-		switch ( ptr->hitgroup )
-		{
-		case HITGROUP_GENERIC:
-			break;
-
-		case HITGROUP_HEAD:
-
-			if ( m_bHasHelmet && !hitByGrenadeProjectile )
-			{
-//				bShouldBleed = false;
-				bShouldSpark = true;
-			}
-
-			flDamage *= flHeadshotMultiplier;
-
-			if ( !m_bHasHelmet )
-			{
-				QAngle punchAngle = GetRawAimPunchAngle();
-				punchAngle.x = flDamage * -0.5;
-
-				if ( punchAngle.x < -12 )
-					punchAngle.x = -12;
-
-				punchAngle.z = flDamage * random->RandomFloat(-1,1);
-
-				if ( punchAngle.z < -9 )
-					punchAngle.z = -9;
-
-				else if ( punchAngle.z > 9 )
-					punchAngle.z = 9;
-
-				SetAimPunchAngle( punchAngle );
-			}
-
-			bHeadShot = true;
-
-			break;
-
-		case HITGROUP_CHEST:
-
-			flDamage *= 1.0;
-
-			if ( ArmorValue() <= 0 )
-			{
-				QAngle punchAngle = GetRawAimPunchAngle();
-				punchAngle.x = flDamage * -0.1;
-
-				if ( punchAngle.x < -4 )
-					punchAngle.x = -4;
-
-				SetAimPunchAngle( punchAngle );
-			}
-			break;
-
-		case HITGROUP_STOMACH:
-
-			flDamage *= 1.25;
-
-			if ( ArmorValue() <= 0 )
-			{
-				QAngle punchAngle = GetRawAimPunchAngle();
-				punchAngle.x = flDamage * -0.1;
-
-				if ( punchAngle.x < -4 )
-					punchAngle.x = -4;
-
-				SetAimPunchAngle( punchAngle );
-			}
-
-			break;
-
-		case HITGROUP_LEFTARM:
-		case HITGROUP_RIGHTARM:
-			flDamage *= 1.0;
-			break;
-
-		case HITGROUP_LEFTLEG:
-		case HITGROUP_RIGHTLEG:
-			flDamage *= 0.75;
-			break;
-
-		default:
-			break;
-		}
-	}
 
 	// Since this code only runs on the server, make sure it shows the tempents it creates.
 	CDisablePredictionFiltering disabler;
-
+	
 	if ( bShouldBleed )
 	{
 		// This does smaller splotches on the guy and splats blood on the world.
@@ -3667,14 +3752,14 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 		// reduce blood effect if target has armor
 		if ( ArmorValue() > 0 )
 			data.m_flMagnitude *= 0.5f;
-
+	
 		// reduce blood effect if target is hit in the helmet
 		if ( ptr->hitgroup == HITGROUP_HEAD && bShouldSpark )
-			data.m_flMagnitude *= 0.5;
+			data.m_flMagnitude = 1;
 
 		DispatchEffect( "csblood", data );
 	}
-	if ( ( ptr->hitgroup == HITGROUP_HEAD ) && bShouldSpark ) // they hit a helmet
+	if ( ( ptr->hitgroup == HITGROUP_HEAD/* || bHitShield*/ ) && bShouldSpark ) // they hit a helmet
 	{
 		// show metal spark effect
 		//g_pEffects->Sparks( ptr->endpos, 1, 1, &ptr->plane.normal );
@@ -3683,12 +3768,11 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 		VectorAngles( ptr->plane.normal, angle );
 		DispatchParticleEffect( "impact_helmet_headshot", ptr->endpos, angle );
 	}
-
+	
 	CTakeDamageInfo subInfo = info;
 	subInfo.SetDamage( flDamage );
 
 	float impulseMultiplier = 1.0f;
-
 	if ( hitByBullet )
 	{
 		impulseMultiplier = phys_playerscale.GetFloat();
@@ -3705,7 +3789,6 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 	}
 
 	subInfo.SetDamageForce( info.GetDamageForce() * impulseMultiplier );
-
 	AddMultiDamage( subInfo, this );
 }
 
@@ -3713,12 +3796,12 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 void CCSPlayer::Reset( bool resetScore )
 {
 	if ( resetScore )
- 	{
- 		ResetFragCount();
- 		ResetDeathCount();
- 		ResetAssistsCount();
- 		m_longestLife = -1.0f;
- 	}
+	{
+		ResetFragCount();
+		ResetDeathCount();
+		ResetAssistsCount();
+		m_longestLife = -1.0f;
+	}
 
 	m_iAccount = 0;
 	AddAccount( -mp_startmoney.GetInt(), false );
@@ -4357,9 +4440,9 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos )
 
 			// set silencer bodygroup
 			if ( pCSWeapon->HasSilencer() == Silencer_Removable )
- 			{
- 				pCSWeapon->SetBodygroup( pCSWeapon->FindBodygroupByName( "silencer" ), pCSWeapon->IsSilenced() ? 0 : 1 );
- 			}
+			{
+				pCSWeapon->SetBodygroup( pCSWeapon->FindBodygroupByName( "silencer" ), pCSWeapon->IsSilenced() ? 0 : 1 );
+			}
 
 			//Find out the index of the ammo type
 			int iAmmoIndex = pCSWeapon->GetPrimaryAmmoType();
@@ -4660,6 +4743,7 @@ void CCSPlayer::TransferInventory( CCSPlayer* pTargetPlayer )
 	pTargetPlayer->SetArmorValue( ArmorValue() );
 	pTargetPlayer->m_bHasHelmet = m_bHasHelmet;
 	pTargetPlayer->m_bHasNightVision = m_bHasNightVision;
+	pTargetPlayer->m_bNightVisionOn = m_bNightVisionOn;
 
 	if ( HasDefuser() )
 		pTargetPlayer->GiveDefuser();
@@ -5056,36 +5140,36 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAd
 		}*/
 
 		BuyResult_e equipResult = BUY_INVALID_ITEM;
- 
- 		if ( weaponId == ITEM_KEVLAR )
- 		{
- 			equipResult = AttemptToBuyVest();
- 		}
- 		else if ( weaponId == ITEM_ASSAULTSUIT )
- 		{
- 			equipResult = AttemptToBuyAssaultSuit();
- 		}
- 		else if ( weaponId == ITEM_DEFUSER )
- 		{
- 			equipResult = AttemptToBuyDefuser();
- 		}
- 		else if ( weaponId == ITEM_NVGS )
- 		{
- 			equipResult = AttemptToBuyNightVision();
- 		}
- 
- 		if ( equipResult != BUY_INVALID_ITEM )
- 		{
- 			if ( equipResult == BUY_BOUGHT )
- 			{
- 				if ( bAddToRebuy )
- 				{
- 					AddToRebuy( weaponId );
- 				}
- 				m_iWeaponPurchasesThisRound.GetForModify( weaponId )++;
- 			}
- 			return equipResult; // intentional early return here
- 		}
+
+		if ( weaponId == ITEM_KEVLAR )
+		{
+			equipResult = AttemptToBuyVest();
+		}
+		else if ( weaponId == ITEM_ASSAULTSUIT )
+		{
+			equipResult = AttemptToBuyAssaultSuit();
+		}
+		else if ( weaponId == ITEM_DEFUSER )
+		{
+			equipResult = AttemptToBuyDefuser();
+		}
+		else if ( weaponId == ITEM_NVGS )
+		{
+			equipResult = AttemptToBuyNightVision();
+		}
+
+		if ( equipResult != BUY_INVALID_ITEM )
+		{
+			if ( equipResult == BUY_BOUGHT )
+			{
+				if ( bAddToRebuy )
+				{
+					AddToRebuy( weaponId );
+				}
+				m_iWeaponPurchasesThisRound.GetForModify( weaponId )++;
+			}
+			return equipResult; // intentional early return here
+		}
 	}
 	else
 	{
@@ -8512,11 +8596,11 @@ CBaseEntity *CCSPlayer::FindUseEntity()
 		if ( result.DidHitNonWorldEntity() && result.m_pEnt->IsBaseCombatWeapon() )
 		{
 			CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase * >( result.m_pEnt );
- 			CSWeaponType nType = pWeapon->GetWeaponType();
- 			if ( IsPrimaryOrSecondaryWeapon( nType ) )
- 			{
- 				entity = pWeapon;
- 			}
+			CSWeaponType nType = pWeapon->GetWeaponType();
+			if ( IsPrimaryOrSecondaryWeapon( nType ) )
+			{
+				entity = pWeapon;
+			}
 		}
 	}
 
@@ -8590,20 +8674,20 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pszName, int iSubType )
 	}
 
 	Vector pos = ( GetLocalOrigin() + Weapon_ShootPosition() ) * 0.5f;
- 	QAngle angles;
- 
- 	MDLCACHE_CRITICAL_SECTION();
- 	int weaponBoneAttachment = LookupAttachment( "weapon_hand_R" );
- 
- 	if ( weaponBoneAttachment == 0 )
- 		weaponBoneAttachment = LookupAttachment( "weapon_bone" );
- 
- 	if ( weaponBoneAttachment == 0 || !GetAttachment( weaponBoneAttachment, pos, angles ) )
- 	{
- 		Warning("Missing weapon hand bone attachment for player model.\n");
- 	}
- 
- 	pent->SetLocalOrigin( pos );
+	QAngle angles;
+
+	MDLCACHE_CRITICAL_SECTION();
+	int weaponBoneAttachment = LookupAttachment( "weapon_hand_R" );
+
+	if ( weaponBoneAttachment == 0 )
+		weaponBoneAttachment = LookupAttachment( "weapon_bone" );
+
+	if ( weaponBoneAttachment == 0 || !GetAttachment( weaponBoneAttachment, pos, angles ) )
+	{
+		Warning("Missing weapon hand bone attachment for player model.\n");
+	}
+
+	pent->SetLocalOrigin( pos );
 	pent->AddSpawnFlags( SF_NORESPAWN );
 
 	CWeaponCSBase *pWeapon = dynamic_cast<CWeaponCSBase*>( (CBaseEntity*)pent );
@@ -8615,15 +8699,15 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pszName, int iSubType )
 		}
 
 		if ( !IsControllingBot() )
- 		{
- 			pWeapon->SetStatTrak( m_bLoadoutStatTrak );
- 			pWeapon->SetOriginalOwnerIndex( entindex() );
- 		}
- 		else
- 		{
- 			pWeapon->SetStatTrak( false );
- 			pWeapon->SetOriginalOwnerIndex( GetControlledBot()->entindex() );
- 		}
+		{
+			pWeapon->SetStatTrak( m_bLoadoutStatTrak );
+			pWeapon->SetOriginalOwnerIndex( entindex() );
+		}
+		else
+		{
+			pWeapon->SetStatTrak( false );
+			pWeapon->SetOriginalOwnerIndex( GetControlledBot()->entindex() );
+		}
 	}
 
 	DispatchSpawn( pent );
@@ -8742,24 +8826,24 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 			if ( pHealth )
 			{
 				pHealth->DropHealthshot();
-				ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );	
+				ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
 			}
 			return true;
 		}
 
 		if ( type == WEAPONTYPE_GRENADE )
- 		{
- 			if ( mp_drop_grenade_enable.GetBool() )
- 			{
- 				CBaseCSGrenade* pGrenade = dynamic_cast< CBaseCSGrenade* >(pCSWeapon);
- 				if ( pGrenade )
- 				{
- 					pGrenade->DropPlayerGrenade();
- 					ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
- 				}
- 				return true;
- 			}
- 		}
+		{
+			if ( mp_drop_grenade_enable.GetBool() )
+			{
+				CBaseCSGrenade* pGrenade = dynamic_cast< CBaseCSGrenade* >(pCSWeapon);
+				if ( pGrenade )
+				{
+					pGrenade->DropPlayerGrenade();
+					ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
+				}
+				return true;
+			}
+		}
 
 		switch ( type )
 		{
@@ -9436,7 +9520,7 @@ void CCSPlayer::OutputDamageGiven( void )
 			m_DamageList[i]->GetPlayerDamagerPtr() == this &&
 			m_DamageList[i]->GetPlayerRecipientPtr() &&
 			m_DamageList[i]->GetPlayerRecipientPtr() != this &&
-			InSameTeam( m_DamageList[i]->GetPlayerRecipientPtr() ) &&
+			IsOtherSameTeam( m_DamageList[i]->GetPlayerRecipientPtr()->GetTeamNumber() ) &&
 			!IsOtherEnemy( m_DamageList[i]->GetPlayerRecipientPtr() ) )
 		{	
 			nDamageGivenThisRound += m_DamageList[i]->GetActualHealthRemoved();
@@ -10114,7 +10198,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			if (avengedPlayer)
 			{
 				//Make sure you are avenging someone on your own team (This is the expected flow. Just here to avoid edge cases like team-switching).
-				if ( !pAttacker->IsOtherEnemy(avengedPlayer) )
+				if ( avengedPlayer->IsOtherSameTeam( pAttacker->GetTeamNumber() ) )
 				{
 					CCS_GameStats.Event_PlayerAvengedTeammate(pAttacker, pVictim->m_enemyPlayersKilledThisRound[avengedIndex]);
 				}
@@ -10162,11 +10246,11 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		}
 
 		if ( pAttacker->GetActiveWeapon() && 
- 			pAttacker->GetActiveWeapon()->Clip1() == 1 && 
- 			pAttackerWeapon && 
- 			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_SNIPER_RIFLE &&
- 			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_KNIFE &&
- 			attackerWeaponId != WEAPON_TASER )
+			pAttacker->GetActiveWeapon()->Clip1() == 1 && 
+			pAttackerWeapon && 
+			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_SNIPER_RIFLE &&
+			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_KNIFE &&
+			attackerWeaponId != WEAPON_TASER )
 		{
 			if (pInflictor == pAttacker)
 			{
@@ -10176,15 +10260,14 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		}
 
 		// [dwenger] Fun-fact processing
-
 		if ( pVictimWeapon && pVictimWeapon->GetWeaponType() == WEAPONTYPE_KNIFE && !pVictimWeapon->IsA( WEAPON_TASER ) && 
- 			pInflictor == pAttacker && 
- 			pAttackerWeapon && 
- 			!pAttackerWeapon->IsA( WEAPON_KNIFE ) && 
- 			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_C4 && 
- 			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_GRENADE &&
- 			!pVictim->HasControlledBotThisRound() &&
- 			!pVictim->HasBeenControlledThisRound() )
+			pInflictor == pAttacker && 
+			pAttackerWeapon && 
+			!pAttackerWeapon->IsA( WEAPON_KNIFE ) && 
+			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_C4 && 
+			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_GRENADE &&
+			!pVictim->HasControlledBotThisRound() &&
+			!pVictim->HasBeenControlledThisRound() )
 		{
 			// Victim was wielding knife when killed by a gun
 			pVictim->WieldingKnifeAndKilledByGun(true);
@@ -10317,8 +10400,8 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 	}
 
 
-	//If you kill a friendly player while blind (from an enemy player), give the guy that blinded you an achievement    
-	if ( pAttacker != NULL && pVictim != NULL && !pVictim->IsOtherEnemy(pAttacker) && pAttacker->IsBlind() )
+	//If you kill a friendly player while blind (from an enemy player), give the guy that blinded you an achievement
+	if ( pAttacker != NULL && pVictim != NULL && pVictim->IsOtherSameTeam( pAttacker->GetTeamNumber() ) && pAttacker->IsBlind() )
 	{
 		CCSPlayer* flashbangAttacker = pAttacker->GetLastFlashbangAttacker();
 		if ( flashbangAttacker &&
@@ -10369,8 +10452,8 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			&& teamCount[alivePlayerTeam] - teamIgnoreCount[alivePlayerTeam] >= AchievementConsts::LastPlayerAlive_MinPlayersOnTeam
 			&& teamCount[alivePlayerOpposingTeam] - teamIgnoreCount[alivePlayerOpposingTeam] >= AchievementConsts::DefaultMinOpponentsForAchievement
 			&& ( !(pAlivePlayer->m_iDisplayHistoryBits & DHF_FRIEND_KILLED ) )
- 			&& !pAlivePlayer->HasControlledBotThisRound()
- 			&& !pAlivePlayer->HasBeenControlledThisRound() )
+			&& !pAlivePlayer->HasControlledBotThisRound()
+			&& !pAlivePlayer->HasBeenControlledThisRound() )
 		{
 			pAlivePlayer->AwardAchievement(CSLastPlayerAlive);
 		}
@@ -10610,17 +10693,17 @@ void CCSPlayer::SetPlayerDominatingMe( CCSPlayer *pPlayer, bool bDominated )
 bool CCSPlayer::IsPlayerDominated( int iPlayerIndex )
 {
 	if ( CSGameRules()->IsPlayingGunGame() )
- 		return m_bPlayerDominated.Get( iPlayerIndex );
- 
- 	return false;
+		return m_bPlayerDominated.Get( iPlayerIndex );
+
+	return false;
 }
 
 bool CCSPlayer::IsPlayerDominatingMe( int iPlayerIndex )
 {
 	if ( CSGameRules()->IsPlayingGunGame() )
- 		return m_bPlayerDominatingMe.Get( iPlayerIndex );
- 
- 	return false;
+		return m_bPlayerDominatingMe.Get( iPlayerIndex );
+
+	return false;
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -10849,19 +10932,19 @@ int CCSPlayer::GetNumEnemiesDamaged()
 }
 
 int CCSPlayer::GetTotalActualHealthRemovedFromEnemies()
- {
- 	int totalDamage = 0;
- 	FOR_EACH_LL( m_DamageList, i )
- 	{
- 		if ( m_DamageList[i]->IsDamageRecordValidPlayerToPlayer() &&
- 			 m_DamageList[i]->GetPlayerDamagerPtr() == this &&
- 			 IsOtherEnemy( m_DamageList[i]->GetPlayerRecipientPtr() ) )
- 		{
- 			totalDamage += m_DamageList[i]->GetActualHealthRemoved();
- 		}
- 	}
- 	return totalDamage;
- }
+{
+	int totalDamage = 0;
+	FOR_EACH_LL( m_DamageList, i )
+	{
+		if ( m_DamageList[i]->IsDamageRecordValidPlayerToPlayer() &&
+			 m_DamageList[i]->GetPlayerDamagerPtr() == this &&
+			 IsOtherEnemy( m_DamageList[i]->GetPlayerRecipientPtr() ) )
+		{
+			totalDamage += m_DamageList[i]->GetActualHealthRemoved();
+		}
+	}
+	return totalDamage;
+}
 
 bool CCSPlayer::ShouldCollide( int collisionGroup, int contentsMask ) const
 {

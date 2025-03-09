@@ -293,6 +293,11 @@ bool CCSPlayer::IsPrimaryOrSecondaryWeapon( CSWeaponType nType )
 	return false;
 }
 
+bool CCSPlayer::IsOtherSameTeam( int nTeam )
+{
+ 	return GetTeamNumber() == nTeam;
+}
+
 bool CCSPlayer::IsOtherEnemy( int nEntIndex )
 {
 	CCSPlayer *pPlayer = (CCSPlayer*)UTIL_PlayerByIndex( nEntIndex );
