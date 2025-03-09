@@ -90,13 +90,8 @@ ConVar cl_spec_mode(
 //-----------------------------------------------------------------------------
 CSpectatorGUI::CSpectatorGUI(IViewPort *pViewPort) : EditablePanel( NULL, PANEL_SPECGUI )
 {
-// 	m_bHelpShown = false;
-//	m_bInsetVisible = false;
-//	m_iDuckKey = KEY_NONE;
-	SetSize( 10, 10 ); // Quiet "parent not sized yet" spew
 	m_bSpecScoreboard = false;
 
-	m_pViewPort = pViewPort;
 	g_pSpectatorGUI = this;
 
 	// initialize dialog

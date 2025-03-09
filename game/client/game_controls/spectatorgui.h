@@ -80,8 +80,6 @@ protected:
 //	virtual void OnCommand( const char *command );
 	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
 
-	IViewPort *m_pViewPort;
-
 	// bool m_bHelpShown;
 	// bool m_bInsetVisible;
 	bool m_bSpecScoreboard;
