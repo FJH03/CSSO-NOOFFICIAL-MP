@@ -295,6 +295,7 @@ public:
 	void InputDisableCollision( inputdata_t &inputdata );
 	void InputEnableCollision( inputdata_t &inputdata );
 	void InputSetPlaybackRate( inputdata_t &inputdata );
+	void InputFadeAndKill( inputdata_t &inputdata );
 
 	COutputEvent		m_pOutputAnimBegun;
 	COutputEvent		m_pOutputAnimOver;

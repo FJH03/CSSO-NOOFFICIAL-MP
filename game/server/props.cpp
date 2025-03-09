@@ -1830,13 +1830,14 @@ BEGIN_DATADESC( CDynamicProp )
 	DEFINE_INPUTFUNC( FIELD_STRING,	"SetAnimation",	InputSetAnimation ),
 	DEFINE_INPUTFUNC( FIELD_STRING,	"SetAnimationNoReset",	InputSetAnimationNoReset ),
 	DEFINE_INPUTFUNC( FIELD_STRING,	"SetDefaultAnimation",	InputSetDefaultAnimation ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"TurnOn",		InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"TurnOff",		InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"Enable",		InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"Disable",		InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"EnableCollision",	InputEnableCollision ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"DisableCollision",	InputDisableCollision ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT,		"SetPlaybackRate",	InputSetPlaybackRate ),
+	DEFINE_INPUTFUNC( FIELD_VOID,	"TurnOn",		InputTurnOn ),
+ 	DEFINE_INPUTFUNC( FIELD_VOID,	"TurnOff",		InputTurnOff ),
+ 	DEFINE_INPUTFUNC( FIELD_VOID,	"Enable",		InputTurnOn ),
+ 	DEFINE_INPUTFUNC( FIELD_VOID,	"Disable",		InputTurnOff ),
+ 	DEFINE_INPUTFUNC( FIELD_VOID,	"EnableCollision",	InputEnableCollision ),
+ 	DEFINE_INPUTFUNC( FIELD_VOID,	"DisableCollision",	InputDisableCollision ),
+ 	DEFINE_INPUTFUNC( FIELD_FLOAT,	"SetPlaybackRate",	InputSetPlaybackRate ),
+ 	DEFINE_INPUTFUNC( FIELD_VOID,	"FadeAndKill", InputFadeAndKill ),
 
 	// Outputs
 	DEFINE_OUTPUT( m_pOutputAnimBegun, "OnAnimationBegun" ),
@@ -2333,6 +2334,11 @@ void CDynamicProp::InputDisableCollision( inputdata_t &inputdata )
 void CDynamicProp::InputEnableCollision( inputdata_t &inputdata )
 {
 	RemoveSolidFlags( FSOLID_NOT_SOLID );
+}
+
+void CDynamicProp::InputFadeAndKill( inputdata_t &inputdata )
+{
+ 	SUB_StartFadeOutInstant();
 }
 
 //-----------------------------------------------------------------------------
