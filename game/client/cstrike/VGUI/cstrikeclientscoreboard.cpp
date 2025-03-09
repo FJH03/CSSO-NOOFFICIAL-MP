@@ -87,11 +87,6 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
     SetProportional(true);
     SetPaintBorderEnabled(false);
     SetScheme( "ClientScheme" );
-
-	// [pfreese] Make the scoreboard a popup so it renders over the chat interface (which is also a popup). Hacky.
-	MakePopup();
-	SetMouseInputEnabled( false ); // PiMoN: MakePopup() makes both mouse and keyboard inputs "true", we don't need that
- 	SetKeyBoardInputEnabled( false );
 	
     m_listItemFont = NULL;
 
