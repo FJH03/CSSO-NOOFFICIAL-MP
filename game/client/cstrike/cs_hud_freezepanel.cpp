@@ -269,7 +269,11 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 				iKillerHealth = 0;
 			}
 
+			static ConVarRef sv_damage_print_enable( "sv_damage_print_enable" );
+
 			m_pKillerHealth->SetProgress( clamp( (float) iKillerHealth / (float) iMaxHealth, 0.0f, 1.0f ) );
+			// do not show health bar in competitive and if damage print is disabled
+			m_pKillerHealth->SetVisible( sv_damage_print_enable.GetBool() && !CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() );
 
 			wchar_t wszkillerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 			wszkillerName[0] = '\0';
@@ -279,8 +283,6 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 			int nDamTaken = 0;
 			int nHitsGiven = 0;
 			int nDamGiven = 0;
-
-			static ConVarRef sv_damage_print_enable( "sv_damage_print_enable" );
 
 			if ( sv_damage_print_enable.GetBool() )
 			{
