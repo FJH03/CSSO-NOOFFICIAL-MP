@@ -1350,6 +1350,8 @@ void CCSClientScoreBoardDialog::FireGameEvent( IGameEvent *event )
 				g_pClientMode->SetMapName( m_pMapName );
 			}
 		}
+
+		m_bForceShow = false; // clear it so players wont get stuck on scoreboard after map change
     }
     else if ( Q_strcmp( pEventName, "match_end_conditions" ) == 0 )
     {
