@@ -5799,6 +5799,7 @@ bool TraceToStudioCsgoHitgroupsPriority( IPhysicsSurfaceProps *pProps, const Ray
 		switch ( pbox->group )
 		{
 		case 1:
+		case 8:
 			pHitGroupResult = &arrHitGroupResults[ k_EHitGroupType_Head ];
 			break;
 		case 3:
@@ -5923,7 +5924,10 @@ bool TraceToStudioCsgoHitgroupsPriority( IPhysicsSurfaceProps *pProps, const Ray
 	{
 		mstudiobbox_t *pbox = set->pHitbox(hitbox);
 		VectorMA( ray.m_Start, tr.fraction, ray.m_Delta, tr.endpos );
-		tr.hitgroup = set->pHitbox(hitbox)->group;
+		int hitgroup = set->pHitbox( hitbox )->group;
+ 		if ( hitgroup == 8 ) // is a neck?
+ 			hitgroup = 1; // make it a headshot
+ 		tr.hitgroup = hitgroup;
 		tr.hitbox = hitbox;
 		const mstudiobone_t *pBone = pStudioHdr->pBone( pbox->bone );
 		tr.contents = pBone->contents | CONTENTS_HITBOX;

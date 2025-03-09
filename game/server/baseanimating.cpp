@@ -3142,7 +3142,7 @@ int CBaseAnimating::GetHitboxSetCount( void )
 	return ::GetHitboxSetCount( GetModelPtr() );
 }
 
-static Vector	hullcolor[8] = 
+static Vector	hullcolor[9] = 
 {
 	Vector( 1.0, 1.0, 1.0 ),
 	Vector( 1.0, 0.5, 0.5 ),
@@ -3151,7 +3151,8 @@ static Vector	hullcolor[8] =
 	Vector( 0.5, 0.5, 1.0 ),
 	Vector( 1.0, 0.5, 1.0 ),
 	Vector( 0.5, 1.0, 1.0 ),
-	Vector( 1.0, 1.0, 1.0 )
+	Vector( 0.5, 0.75, 1.0 ),
+ 	Vector( 1.0, 0.75, 0.5 )
 };
 
 //-----------------------------------------------------------------------------
@@ -3184,7 +3185,7 @@ void CBaseAnimating::DrawServerHitboxes( float duration /*= 0.0f*/, bool monocol
 
 		if ( !monocolor )
 		{
-			int j = (pbox->group % 8);
+			int j = (pbox->group % 9);
 			
 			r = ( int ) ( 255.0f * hullcolor[j][0] );
 			g = ( int ) ( 255.0f * hullcolor[j][1] );
