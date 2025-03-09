@@ -12,6 +12,7 @@
 
 #include <vgui/ILocalize.h>
 #include <vgui/ISurface.h>
+#include "vgui/IVGui.h"
 #include <vgui_controls/ImagePanel.h>
 #include <filesystem.h>
 #include "cs_gamerules.h"
@@ -2375,4 +2376,48 @@ void CCSMapOverview::MsgFunc_UpdateRadar( bf_read &msg )
 
 		iPlayerEntity = msg.ReadByte(); // read index for next player
 	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+// Location text under radar
+
+DECLARE_HUDELEMENT( CHudLocation );
+
+CHudLocation::CHudLocation( const char *pName ) :	vgui::Label( NULL, "HudLocation", "" ), CHudElement( pName )
+{
+ 	SetParent( g_pClientMode->GetViewport() );
+}
+
+void CHudLocation::Init()
+{
+ 	// Make sure we get ticked...
+ 	vgui::ivgui()->AddTickSignal( GetVPanel() );
+}
+
+void CHudLocation::LevelInit()
+{
+}
+ 
+bool CHudLocation::ShouldDraw()
+{
+ 	CCSMapOverview *pCSMapOverview = (CCSMapOverview *)GET_HUDELEMENT( CCSMapOverview );
+ 
+ 	if( g_pMapOverview && g_pMapOverview->GetMode() == CMapOverview::MAP_MODE_RADAR && pCSMapOverview && pCSMapOverview->ShouldDraw() == true )
+ 		return true;
+ 
+ 	return false;
+}
+ 
+void CHudLocation::OnTick()
+{
+ 	const char *pszLocation = "";
+ 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+ 	if ( pPlayer )
+ 	{
+ 		pszLocation = pPlayer->GetLastKnownPlaceName();
+ 	}
+ 	SetText( g_pVGuiLocalize->Find( pszLocation ) );
 }
