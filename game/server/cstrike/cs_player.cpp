@@ -3583,6 +3583,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 	bool hitByBullet = false;
 	bool hitByGrenadeProjectile = false;
 	bool bHeadShot = false;
+	float flHeadshotMultiplier = 4.0f;
 
 	float flBodyDamageScale = (GetTeamNumber() == TEAM_CT) ? mp_damage_scale_ct_body.GetFloat() : mp_damage_scale_t_body.GetFloat();
 	float flHeadDamageScale = (GetTeamNumber() == TEAM_CT) ? mp_damage_scale_ct_head.GetFloat() : mp_damage_scale_t_head.GetFloat();
@@ -3620,6 +3621,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 			{
 				hitByBullet = IsGunWeapon( pWeaponInfo->m_WeaponType );
 				hitByGrenadeProjectile = ( ( pWeaponInfo->m_WeaponType == WEAPONTYPE_GRENADE ) && ( info.GetDamageType() & DMG_CLUB ) != 0 );
+				flHeadshotMultiplier = pWeaponInfo->m_flHeadshotMultiplier;
 			}
 
 			switch ( ptr->hitgroup )
@@ -3635,7 +3637,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 					bShouldSpark = true;
 				}
 
-				flDamage *= 4;
+				flDamage *= flHeadshotMultiplier;
 				flDamage *= flHeadDamageScale;
 
 				if ( !m_bHasHelmet )
