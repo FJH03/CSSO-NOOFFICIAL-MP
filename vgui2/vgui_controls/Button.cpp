@@ -455,9 +455,12 @@ void Button::ApplySchemeSettings(IScheme *pScheme)
 	BaseClass::ApplySchemeSettings(pScheme);
 
 	// get the borders we need
-	_defaultBorder = pScheme->GetBorder("ButtonBorder");
-	_depressedBorder = pScheme->GetBorder("ButtonDepressedBorder");
-	_keyFocusBorder = pScheme->GetBorder("ButtonKeyFocusBorder");
+	if ( !_defaultBorder )
+ 		_defaultBorder = pScheme->GetBorder("ButtonBorder");
+ 	if ( !_depressedBorder )
+ 		_depressedBorder = pScheme->GetBorder("ButtonDepressedBorder");
+ 	if ( !_keyFocusBorder )
+ 		_keyFocusBorder = pScheme->GetBorder("ButtonKeyFocusBorder");
 
 	_defaultFgColor = GetSchemeColor("Button.TextColor", Color(255, 255, 255, 255), pScheme);
 	_defaultBgColor = GetSchemeColor("Button.BgColor", Color(0, 0, 0, 255), pScheme);
@@ -882,6 +885,25 @@ void Button::ApplySettings( KeyValues *inResourceData )
 	{
 		_activationType = (ActivationType_t)iButtonActivationType;
 	}
+
+	IScheme *pScheme = scheme()->GetIScheme( GetScheme() );
+ 
+ 	// border?
+ 	const char *pBorder = inResourceData->GetString( "border_default", "ButtonBorder" );
+ 	if ( *pBorder )
+ 	{
+ 		SetDefaultBorder( pScheme->GetBorder( pBorder ) );
+ 	}
+ 	pBorder = inResourceData->GetString( "border_depressed", "ButtonDepressedBorder" );
+ 	if ( *pBorder )
+ 	{
+ 		SetDepressedBorder( pScheme->GetBorder( pBorder ) );
+ 	}
+ 	pBorder = inResourceData->GetString( "border_keyFocus", "ButtonKeyFocusBorder" );
+ 	if ( *pBorder )
+ 	{
+ 		SetKeyFocusBorder( pScheme->GetBorder( pBorder ) );
+ 	}
 }
 
 

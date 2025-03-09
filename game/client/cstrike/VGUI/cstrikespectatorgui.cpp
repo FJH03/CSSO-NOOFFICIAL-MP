@@ -630,6 +630,8 @@ CCSMapOverview::CCSMapOverview( const char *pElementName ) : BaseClass( pElement
 	m_vecRadarVerticalSections.RemoveAll();
 
 	m_bRoundRadar = true;
+
+	RegisterForRenderGroup( "hide_for_buymenu" );
 }
 
 void CCSMapOverview::Init( void )

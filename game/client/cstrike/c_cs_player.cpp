@@ -1769,7 +1769,7 @@ int C_CSPlayer::GetCurrentAssaultSuitPrice()
 	// WARNING: This price logic also exists in CCSPlayer::AttemptToBuyAssaultSuit
 	// and must be kept in sync if changes are made.
 
-	int fullArmor = ArmorValue() >= 100 ? 1 : 0;
+	int fullArmor = ArmorValue() >= GetMaxArmor() ? 1 : 0;
 	if ( fullArmor && !HasHelmet() )
 	{
 		return ITEM_PRICE_HELMET;

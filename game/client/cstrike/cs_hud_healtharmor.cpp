@@ -232,6 +232,8 @@ CHudHealthArmor::CHudHealthArmor( const char *pElementName ) : CHudElement( pEle
 	m_pArmorProgress = new CHudHealthArmorProgress( this, "ArmorProgress" );
 
 	LoadControlSettings( "resource/hud/healtharmor.res" );
+
+	RegisterForRenderGroup( "hide_for_buymenu" );
 }
 
 void CHudHealthArmor::OnScreenSizeChanged( int iOldWide, int iOldTall )

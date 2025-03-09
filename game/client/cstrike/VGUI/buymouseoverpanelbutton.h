@@ -103,8 +103,6 @@ public:
 		if ( !m_iCost1 )
 			m_iCost1 = m_iCost0;
 
-		SetMapTypeState();
-
 		SetLabels();
 	}
 
@@ -115,17 +113,17 @@ public:
 	int GetDECSUseOnly() { return m_iDECSUseOnly; }
 
 	virtual void Paint()
- 	{
- 		// update button colors in real time
- 		SetPriceState();
- 
- 		BaseClass::Paint();
- 	}
+	{
+		// update button colors in real time
+		SetPriceState();
+		SetMapTypeState();
+
+		BaseClass::Paint();
+	}
 
 	virtual void PerformLayout()
 	{
 		BaseClass::PerformLayout();
-		SetMapTypeState();
 
 		SetLabels();
 	}
@@ -137,15 +135,14 @@ public:
 		m_avaliableColor = pScheme->GetColor( "BuyMenu.AvailableColor", Color( 0, 0, 0, 0 ) );
 		m_unavailableColor = pScheme->GetColor( "BuyMenu.UnavailableColor", Color( 0, 0, 0, 0 ) );
 		m_alreadyOwnColor = pScheme->GetColor( "BuyMenu.AlreadyOwnColor", Color( 0, 0, 0, 0 ) ); // Label.DisabledFgColor2
-		m_defaultColor = pScheme->GetColor( "Label.TextColor", Color( 0, 0, 0, 0 ) );
-
-		SetMapTypeState();
 
 		SetLabels();
 	}
 
 	void SetPriceState()
 	{
+		ApplyOverridableColors();
+
 		if ( GetParent() )
 		{
 			Panel *pPanel = dynamic_cast< Panel * >(GetParent()->FindChildByName( "MarketSticker" ) ); 
@@ -166,20 +163,15 @@ public:
 		if ( Q_strncmp( m_command, "buy ", 4 ) == 0 )
 		{
 			const char* weaponClassFromSlot = CSLoadout()->GetWeaponFromSlot( pPlayer, CSLoadout()->GetSlotFromWeapon( pPlayer->GetTeamNumber(), m_command + 4 ) );
+
 			CSWeaponID weaponID = AliasToWeaponID( weaponClassFromSlot ? weaponClassFromSlot : m_command + 4 );
- 
- 			if ( weaponID != WEAPON_NONE && pPlayer->CanAcquire( weaponID, AcquireMethod::Buy ) != AcquireResult::Allowed )
- 				SetFgColor( m_alreadyOwnColor );
- 			else if ( m_iPrice && (m_iPrice > pPlayer->GetAccount()) )
- 				SetFgColor( m_unavailableColor );
- 			else if ( m_iPrice && (m_iPrice <= pPlayer->GetAccount()) )
- 				SetFgColor( m_avaliableColor );
- 			else
-			 	SetFgColor( m_defaultColor );
- 		}
- 		else
- 		{
-			SetFgColor( m_defaultColor );
+
+			if ( weaponID != WEAPON_NONE && pPlayer->CanAcquire( weaponID, AcquireMethod::Buy ) != AcquireResult::Allowed )
+				SetFgColor( m_alreadyOwnColor );
+			else if ( m_iPrice && (m_iPrice > pPlayer->GetAccount()) )
+				SetFgColor( m_unavailableColor );
+			else if ( m_iPrice && (m_iPrice <= pPlayer->GetAccount()) )
+				SetFgColor( m_avaliableColor );
 		}
 	}
 
@@ -212,8 +204,7 @@ public:
 			{
 				if ( m_iASRestrict )
 				{
-					SetFgColor( m_unavailableColor );
-					SetCommand( "buy_unavailable" );
+					SetFgColor( m_alreadyOwnColor );
 				}
 			}
 
@@ -221,8 +212,7 @@ public:
 			{
 				if ( !pRules->IsBombDefuseMap() && !pRules->IsHostageRescueMap() )
 				{
-					SetFgColor( m_unavailableColor );
-					SetCommand( "buy_unavailable" );
+					SetFgColor( m_alreadyOwnColor );
 				}
 			}
 
@@ -230,8 +220,7 @@ public:
 			{
 				if ( !pRules->IsBombDefuseMap() )
 				{
-					SetFgColor( m_unavailableColor );
-					SetCommand( "buy_unavailable" );
+					SetFgColor( m_alreadyOwnColor );
 				}
 			}
 		}
@@ -286,7 +275,6 @@ private:
 	Color m_avaliableColor;
 	Color m_unavailableColor;
 	Color m_alreadyOwnColor;
-	Color m_defaultColor;
 
 	char *m_command;
 	

@@ -18,6 +18,7 @@
 #include "cs_weapon_parse.h"
 #include "c_cs_player.h"
 #include "cs_ammodef.h"
+#include "weapon_selection.h"
 
 ConVar closeonbuy( "closeonbuy", "1", FCVAR_ARCHIVE, "Set non-zero to close the buy menu after buying something", true, 0, true, 1 );
 
@@ -99,7 +100,6 @@ CCSBuyMenu_CT::CCSBuyMenu_CT(IViewPort *pViewPort) : CCSBaseBuyMenu( pViewPort, 
 
 	m_iTeam = TEAM_CT;
 
-	CreateBackground( this );
 	m_backgroundLayoutFinished = false;
 }
 
@@ -113,7 +113,6 @@ CCSBuyMenu_TER::CCSBuyMenu_TER(IViewPort *pViewPort) : CCSBaseBuyMenu( pViewPort
 
 	m_iTeam = TEAM_TERRORIST;
 
-	CreateBackground( this );
 	m_backgroundLayoutFinished = false;
 }
 
@@ -128,7 +127,6 @@ CCSBaseBuyMenu::CCSBaseBuyMenu(IViewPort *pViewPort, const char *subPanelName) :
 
 	m_pMainMenu = new CCSBuySubMenu( this, subPanelName );
 	m_pMainMenu->SetSize( 10, 10 ); // Quiet "parent not sized yet" spew
- 	m_lastMoney = -1;
 }
 
 //-----------------------------------------------------------------------------
@@ -145,8 +143,31 @@ void CCSBaseBuyMenu::SetVisible(bool state)
 		{
 			defaultButton->RequestFocus();
 		}
-		SetMouseInputEnabled( true );
-		m_pMainMenu->SetMouseInputEnabled( true );
+	}
+	SetMouseInputEnabled( state );
+	m_pMainMenu->SetMouseInputEnabled( state );
+
+	int iRenderGroup = gHUD.LookupRenderGroupIndexByName( "hide_for_buymenu" );
+
+	if ( state )
+	{
+		gHUD.LockRenderGroup( iRenderGroup );
+	}
+	else
+	{
+		gHUD.UnlockRenderGroup( iRenderGroup );
+
+		// update the inventory
+		C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+		C_BaseCombatWeapon *pWeapon = (pPlayer) ? pPlayer->GetActiveWeapon() : NULL;
+		if ( pWeapon )
+		{
+			CBaseHudWeaponSelection *pHudSelection = GetHudWeaponSelection();
+			if ( pHudSelection )
+			{
+				pHudSelection->OnWeaponSwitch( pWeapon );
+			}
+		}
 	}
 }
 
@@ -192,8 +213,14 @@ void CCSBaseBuyMenu::PerformLayout()
 
 	// stretch the window to fullscreen
 	if ( !m_backgroundLayoutFinished )
-		LayoutBackgroundPanel( this );
-	m_backgroundLayoutFinished = true;
+	{
+		m_backgroundLayoutFinished = true;
+
+		int screenW, screenH;
+		GetHudSize( screenW, screenH );
+
+		SetBounds( 0, 0, screenW, screenH );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -203,8 +230,6 @@ void CCSBaseBuyMenu::ApplySchemeSettings( vgui::IScheme *pScheme )
 {
 	BaseClass::ApplySchemeSettings( pScheme );
 	ApplyBackgroundSchemeSettings( this, pScheme );
-
-	m_hUnderlineFont = pScheme->GetFont( "CSUnderline", IsProportional() );
 }
 
 //-----------------------------------------------------------------------------
@@ -236,6 +261,7 @@ static bool IsWeaponInvalid( CSWeaponID weaponID )
 void CCSBuySubMenu::OnThink()
 {
 	UpdateVestHelmPrice();
+
 	BaseClass::OnThink();
 }
 
@@ -254,7 +280,20 @@ void CCSBuySubMenu::UpdateVestHelmPrice()
 	if ( pButton )
 	{
 		// Set its price to the current value from the player.
-		pButton->SetCurrentPrice( pPlayer->GetCurrentAssaultSuitPrice() );
+		int price = pPlayer->GetCurrentAssaultSuitPrice();
+		pButton->SetCurrentPrice( price );
+		switch ( price )
+		{
+			case ITEM_PRICE_HELMET:
+				pButton->SetText( "#Cstrike_Kevlar_Helmet_HelmetOnly" );
+				break;
+			case ITEM_PRICE_KEVLAR:
+				pButton->SetText( "#Cstrike_Kevlar_Helmet_KevlarOnly" );
+				break;
+			default:
+				pButton->SetText( "#Cstrike_Kevlar_Helmet" );
+				break;
+		}
 	}
 }
 
@@ -285,38 +324,6 @@ Panel * CCSBuySubMenu::CreateControlByName(const char *controlName)
 	}
 
 	return BaseClass::CreateControlByName( controlName );
-}
-
-void CCSBuySubMenu::OnSizeChanged(int newWide, int newTall)
-{
-	m_backgroundLayoutFinished = false;
-	BaseClass::OnSizeChanged( newWide, newTall );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CCSBuySubMenu::PerformLayout()
-{
-	BaseClass::PerformLayout();
-
-	// Buy submenus need to be shoved over for widescreen
-	int screenW, screenH;
-	GetHudSize( screenW, screenH );
-
-	int fullW, fullH;
-	fullW = scheme()->GetProportionalScaledValueEx( GetScheme(), 640 );
-	fullH = scheme()->GetProportionalScaledValueEx( GetScheme(), 480 );
-
-	fullW = GetAlternateProportionalValueFromScaled( GetScheme(), fullW );
-	fullH = GetAlternateProportionalValueFromScaled( GetScheme(), fullH );
-
-	int offsetX = (screenW - fullW)/2;
-	int offsetY = (screenH - fullH)/2;
-
-	if ( !m_backgroundLayoutFinished )
-		ResizeWindowControls( this, GetWide(), GetTall(), offsetX, offsetY );
-	m_backgroundLayoutFinished = true;
 }
 
 

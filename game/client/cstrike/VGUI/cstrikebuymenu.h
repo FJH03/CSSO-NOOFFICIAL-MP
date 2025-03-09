@@ -77,10 +77,6 @@ public:
 	virtual void SetVisible( bool state );
 
 private:
-	int m_lastMoney;
-
-	HFont m_hUnderlineFont;
-
 	// Background panel -------------------------------------------------------
 
 public:

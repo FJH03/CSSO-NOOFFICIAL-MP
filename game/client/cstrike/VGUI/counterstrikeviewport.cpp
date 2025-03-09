@@ -34,7 +34,6 @@
 #include "cstriketeammenu.h"
 #include "cstrikeclassmenu.h"
 #include "cstrikebuymenu.h"
-#include "cstrikebuyequipmenu.h"
 #include "cstrikespectatorgui.h"
 #include "cstrikeclientscoreboard.h"
 #include "clientmode_csnormal.h"
@@ -48,51 +47,6 @@
 #include "vguicenterprint.h"
 #include "text_message.h"
 
-
-static void OpenPanelWithCheck( const char *panelToOpen, const char *panelToCheck )
-{
-	IViewPortPanel *checkPanel = gViewPortInterface->FindPanelByName( panelToCheck );
-	if ( !checkPanel || !checkPanel->IsVisible() )
-	{
-		gViewPortInterface->ShowPanel( panelToOpen, true );
-	}
-}
-
-
-CON_COMMAND( buyequip, "Show equipment buy menu" )
-{
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-
-	if( pPlayer && pPlayer->m_lifeState == LIFE_ALIVE && pPlayer->State_Get() == STATE_ACTIVE )
-	{
-		if( !pPlayer->IsInBuyZone() )
-		{
-			internalCenterPrint->Print( "#Cstrike_NotInBuyZone" );
-		}
-		else if( !pPlayer->IsInBuyPeriod() )
-		{
-			char strBuyTime[16];
-			Q_snprintf( strBuyTime, sizeof( strBuyTime ), "%d", (int)CSGameRules()->GetBuyTimeLength() );
-			
-			wchar_t buffer[128];
-			wchar_t buytime[16];
-			g_pVGuiLocalize->ConvertANSIToUnicode( strBuyTime, buytime, sizeof(buytime) );
-			g_pVGuiLocalize->ConstructString( buffer, sizeof(buffer), g_pVGuiLocalize->Find("#Cstrike_TitlesTXT_Cant_buy"), 1, buytime );
-			internalCenterPrint->Print( buffer );
-		}
-		else
-		{
-			if( pPlayer->GetTeamNumber() == TEAM_CT )
-			{
-				OpenPanelWithCheck( PANEL_BUY_EQUIP_CT, PANEL_BUY_CT );
-			}
-			else if( pPlayer->GetTeamNumber() == TEAM_TERRORIST )
-			{
-				OpenPanelWithCheck( PANEL_BUY_EQUIP_TER, PANEL_BUY_TER );
-			}
-		}
-	}
-}
 
 CON_COMMAND( buymenu, "Show main buy menu" )
 {
@@ -122,11 +76,13 @@ CON_COMMAND( buymenu, "Show main buy menu" )
 		{
 			if( pPlayer->GetTeamNumber() == TEAM_CT )
 			{
-				OpenPanelWithCheck( PANEL_BUY_CT, PANEL_BUY_EQUIP_CT );
+				if ( gViewPortInterface )
+					gViewPortInterface->ShowPanel( PANEL_BUY_CT, true );
 			}
 			else if( pPlayer->GetTeamNumber() == TEAM_TERRORIST )
 			{
-				OpenPanelWithCheck( PANEL_BUY_TER, PANEL_BUY_EQUIP_TER );
+				if ( gViewPortInterface )
+					gViewPortInterface->ShowPanel( PANEL_BUY_TER, true );
 			}
 		}
 	}
@@ -239,16 +195,6 @@ IViewPortPanel* CounterStrikeViewport::CreatePanelByName(const char *szPanelName
 		newpanel = new CCSBuyMenu_TER( this );
 	}
 
-	else if ( Q_strcmp(PANEL_BUY_EQUIP_CT, szPanelName) == 0 )
-	{
-		newpanel = new CCSBuyEquipMenu_CT( this );
-	}
-
-	else if ( Q_strcmp(PANEL_BUY_EQUIP_TER, szPanelName) == 0 )
-	{
-		newpanel = new CCSBuyEquipMenu_TER( this );
-	}
-
 	else if ( Q_strcmp(PANEL_TEAM, szPanelName) == 0 )
 	{
 		newpanel = new CCSTeamMenu( this );
@@ -276,8 +222,6 @@ void CounterStrikeViewport::CreateDefaultPanels( void )
 
 	AddNewPanel( CreatePanelByName( PANEL_BUY_CT ), "PANEL_BUY_CT" );
 	AddNewPanel( CreatePanelByName( PANEL_BUY_TER ), "PANEL_BUY_TER" );
-	AddNewPanel( CreatePanelByName( PANEL_BUY_EQUIP_CT ), "PANEL_BUY_EQUIP_CT" );
-	AddNewPanel( CreatePanelByName( PANEL_BUY_EQUIP_TER ), "PANEL_BUY_EQUIP_TER" );
 
 	BaseClass::CreateDefaultPanels();
 

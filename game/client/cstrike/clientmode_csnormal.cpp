@@ -828,7 +828,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_TitlesTXT_Bomb_Planted" ), 1, seconds );
 
 		// show centerprint message
-		internalCenterPrint->HintPrint( wszLocalized );	
+		internalCenterPrint->Print( wszLocalized );
 
 		PlayMusicSelection( filter, CSMUSIC_BOMB );
 
@@ -898,8 +898,6 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			gViewPortInterface->ShowPanel( PANEL_BUY, false );
 			gViewPortInterface->ShowPanel( PANEL_BUY_CT, false );
 			gViewPortInterface->ShowPanel( PANEL_BUY_TER, false );
-			gViewPortInterface->ShowPanel( PANEL_BUY_EQUIP_CT, false );
-			gViewPortInterface->ShowPanel( PANEL_BUY_EQUIP_TER, false );
 		}
 	}
 	else if ( Q_strcmp( "player_changename", eventname ) == 0 )
@@ -941,7 +939,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
                 pPlayer->OnAchievementAchieved( iAchievement );
             }
 
-            if ( C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>(g_PR) )
+			if ( C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>(g_PR) )
 			{
 				wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 				cs_PR->GetDecoratedPlayerName( iPlayerIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_Simple );
@@ -1030,7 +1028,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			g_pVGuiLocalize->ConvertANSIToUnicode( pBot->GetPlayerName(), wszPlayerName, sizeof( wszPlayerName ) );
 			g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_TitlesTXT_Hint_Bot_Takeover" ), 1, wszPlayerName );
 
-			internalCenterPrint->Print( wszLocalized );
+			internalCenterPrint->HintPrint( wszLocalized );
 		}
 	}
 
@@ -1146,7 +1144,6 @@ void UpdateImageEntity(
 			if ( szLoadoutWeapon && szLoadoutWeapon[0] )
 				szWeaponClassname = UTIL_VarArgs( "weapon_%s", szLoadoutWeapon );
 		}
-
 		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( szWeaponClassname );
 		if ( hWpnInfo == GetInvalidWeaponInfoHandle() )
 		{
@@ -1167,10 +1164,10 @@ void UpdateImageEntity(
 				szWeaponSequence = "t_buymenu_armor_helmet";
 			}
 			else if ( nWeaponID == ITEM_NVGS )
- 			{
- 				szWeaponModel = "models/weapons/w_eq_nvgs.mdl";
- 				szWeaponSequence = "ct_buymenu_nvgs";
- 			}
+			{
+				szWeaponModel = "models/weapons/w_eq_nvgs.mdl";
+				szWeaponSequence = "ct_buymenu_nvgs";
+			}
 			else
 			{
 				Warning( "UpdateBuyMenuImageEntity: Unable to get weapon info for %s.\n", szWeaponClassname );
@@ -1296,7 +1293,7 @@ void UpdateImageEntity(
 		{
 			pGlovesModel->Remove();
 			pGlovesModel = NULL;
- 			g_GlovesModel.Set( NULL );
+			g_GlovesModel.Set( NULL );
 		}
 	}
 
@@ -1334,10 +1331,10 @@ void UpdateImageEntity(
 	CMatRenderContextPtr pRenderContext( materials );
 
 	if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 95 )
- 	{
- 		// PiMoN: bind a cubemap for swag
- 		pRenderContext->BindLocalCubemap( g_CubemapTexture );
- 	}
+	{
+		// PiMoN: bind a cubemap for swag
+		pRenderContext->BindLocalCubemap( g_CubemapTexture );
+	}
 
 	pRenderContext->SetLightingOrigin( vec3_origin );
 	pRenderContext->SetAmbientLight( 0.4, 0.4, 0.4 );
@@ -1404,7 +1401,13 @@ void ClientModeCSNormal::PostRenderVGui()
 			// Ok, we have a visible class image panel.
 			int x, y, w, h;
 			pPanel->GetBounds( x, y, w, h );
-			pPanel->ParentLocalToScreen( x, y ); // this is parented to a sub panel, not directly to the buy menu
+			pPanel->LocalToScreen( x, y );
+
+			// Allow for the border.
+			x += 1;
+			y += 1;
+			w -= 2;
+			h -= 2;
 
 			UpdateImageEntity( NULL, pPanel->m_szModelName, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, true );
 			return;
@@ -1420,7 +1423,6 @@ void ClientModeCSNormal::PostRenderVGui()
 			// Ok, we have a visible class image panel.
 			int x, y, w, h;
 			pPanel->GetBounds( x, y, w, h );
-
 
 			UpdateImageEntity( NULL, NULL, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, false );
 			return;
