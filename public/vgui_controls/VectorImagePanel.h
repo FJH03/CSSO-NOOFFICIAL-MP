@@ -30,13 +30,13 @@ public:
 public:
 	virtual void ApplySettings( KeyValues *inResourceData );
 	virtual void Paint();
+	virtual void OnSizeChanged( int newWide, int newTall );	// called after the size of a panel has been changed
 
 	void SetTexture( const char *szFilePath );
 	void SetRepeatsCount( int repeats ) { m_nRepeatsCount = repeats; }
 	void DestroyTexture();
-	void SetRenderSize( int wide, int tall );
 	void SetMirrorX( bool state );
- 	void SetMirrorY( bool state );
+	void SetMirrorY( bool state );
 
 private:
 	int m_nTextureId;

@@ -212,12 +212,6 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
         SendPropBool( SENDINFO( m_bWarmupPeriod ) ),
         SendPropFloat( SENDINFO( m_fWarmupPeriodStart ) ),	
 
-		SendPropBool( SENDINFO( m_bTerroristTimeOutActive ) ),
-		SendPropBool( SENDINFO( m_bCTTimeOutActive ) ),
-		SendPropFloat( SENDINFO( m_flTerroristTimeOutRemaining ) ),
-		SendPropFloat( SENDINFO( m_flCTTimeOutRemaining ) ),
-		SendPropInt( SENDINFO( m_nTerroristTimeOuts ) ),
-		SendPropInt( SENDINFO( m_nCTTimeOuts ) ),
 		SendPropInt( SENDINFO( m_iNumCTWins ) ),
 		SendPropInt( SENDINFO( m_iNumTerroristWins ) ),
 

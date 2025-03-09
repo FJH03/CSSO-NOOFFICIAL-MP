@@ -11,6 +11,7 @@
 #include <KeyValues.h>
 #include "filesystem.h"
 #include "VGuiMatSurface/IMatSystemSurface.h"
+#include "tier2/fileutils.h"
 
 #include "lunasvg/lunasvg.h"
 
@@ -45,11 +46,16 @@ void VectorImagePanel::SetTexture( const char *szFilePath )
 	// don't even bother doing anything without a file
 	if ( !szFilePath )
 		return;
-	
+
 	DestroyTexture();
 
 	FileHandle_t f = g_pFullFileSystem->Open( szFilePath, "rt" );
-	// g_pFullFileSystem->RelativePathToFullPath( szFilePath, "MOD", szFullPath, sizeof( szFullPath ) );
+	if ( !f )
+	{
+		Warning( "VectorImagePanel: %s failed to open file \"%s\".\n", GetName(), szFilePath );
+		DestroyTexture();
+		return;
+	}
 
 	// read the whole thing into memory
 	int size = g_pFullFileSystem->Size( f );
@@ -66,6 +72,7 @@ void VectorImagePanel::SetTexture( const char *szFilePath )
 	g_pFullFileSystem->Close( f );
 	std::unique_ptr<Document> document = Document::loadFromData( pMem ); // load the svg
 	free( pMem );
+
 	if ( !document )
 	{
 		Warning( "VectorImagePanel: %s failed to load file \"%s\".\n", GetName(), szFilePath );
@@ -93,12 +100,12 @@ void VectorImagePanel::SetTexture( const char *szFilePath )
 	vgui::surface()->DrawSetTextureRGBA( m_nTextureId, bitmap.data(), wide, tall, 1, true );
 
 	int textureWide, textureTall;
- 	vgui::surface()->DrawGetTextureSize( m_nTextureId, textureWide, textureTall );
- 
- 	texCoords[0] = m_bMirrorX ? (float) wide / (float) textureWide : 0.0f;
- 	texCoords[1] = m_bMirrorY ? (float) tall / (float) textureTall : 0.0f;
- 	texCoords[2] = m_bMirrorX ? 0.0f : (float) wide / (float) textureWide;
- 	texCoords[3] = m_bMirrorY ? 0.0f : (float) tall / (float) textureTall;
+	vgui::surface()->DrawGetTextureSize( m_nTextureId, textureWide, textureTall );
+
+	texCoords[0] = m_bMirrorX ? (float) wide / (float) textureWide : 0.0f;
+	texCoords[1] = m_bMirrorY ? (float) tall / (float) textureTall : 0.0f;
+	texCoords[2] = m_bMirrorX ? 0.0f : (float) wide / (float) textureWide;
+	texCoords[3] = m_bMirrorY ? 0.0f : (float) tall / (float) textureTall;
 }
 
 void VectorImagePanel::DestroyTexture()
@@ -110,11 +117,12 @@ void VectorImagePanel::DestroyTexture()
 	}
 }
 
-void VectorImagePanel::SetRenderSize( int wide, int tall )
+void VectorImagePanel::OnSizeChanged( int newWide, int newTall )
 {
-	m_iRenderSize[0] = wide;
-	m_iRenderSize[1] = tall;
-	SetSize( wide, tall );
+	BaseClass::OnSizeChanged( newWide, newTall );
+
+	m_iRenderSize[0] = newWide;
+	m_iRenderSize[1] = newTall;
 }
 
 void VectorImagePanel::SetMirrorX( bool state )
@@ -139,7 +147,6 @@ void VectorImagePanel::SetMirrorY( bool state )
 	texCoords[3] = m_bMirrorY ? 0.0f : (float) tall / (float) textureTall;
 }
 
-
 void VectorImagePanel::ApplySettings( KeyValues *inResourceData )
 {
 	BaseClass::ApplySettings( inResourceData );
@@ -158,6 +165,7 @@ void VectorImagePanel::ApplySettings( KeyValues *inResourceData )
 				alignScreenWide, m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1], true, OP_SET );
 	ComputePos( this, inResourceData->GetString( "repeat_ypos", NULL ), m_iRepeatMargin[1], m_iRenderSize[1],
 				alignScreenTall, m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1], false, OP_SET );
+
 	m_nRepeatsCount = inResourceData->GetInt( "repeats_count", 1 );
 
 	m_bMirrorX = inResourceData->GetBool( "mirror_x" );

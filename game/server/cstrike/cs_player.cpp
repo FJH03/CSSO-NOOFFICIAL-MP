@@ -4030,21 +4030,7 @@ void CCSPlayer::Blind( float holdTime, float fadeTime, float startingAlpha )
 	m_blindUntilTime = MAX( m_blindUntilTime, gpGlobals->curtime + holdTime + 0.5f * fadeTime );
 	m_blindStartTime = gpGlobals->curtime;
 
-	// Spectators get a lessened flash.
-	if ( (GetObserverMode() != OBS_MODE_NONE)  &&  (GetObserverMode() != OBS_MODE_IN_EYE) )
-	{
-		if ( !mp_fadetoblack.GetBool() )
-		{
-			clr.a = 150;
-
-			fadeTime = MIN(fadeTime, 0.5f); // make sure the spectator flashbang time is 1/2 second or less.
-			holdTime = MIN(holdTime, fadeTime * 0.5f); // adjust the hold time to match the fade time.
-			UTIL_ScreenFade( this, clr, fadeTime, holdTime, FFADE_IN );
-		}
-	}
-	else
-	{
-		fadeTime /= 1.4;
+	fadeTime /= 1.4;
 
 	if ( gpGlobals->curtime > oldBlindUntilTime )
 	{
@@ -4061,13 +4047,12 @@ void CCSPlayer::Blind( float holdTime, float fadeTime, float startingAlpha )
 			m_flFlashMaxAlpha = MAX( m_flFlashMaxAlpha, startingAlpha );
 	}
 
-		// allow bots to react
-		IGameEvent * event = gameeventmanager->CreateEvent( "player_blind" );
-		if ( event )
-		{
-			event->SetInt( "userid", GetUserID() );
-			gameeventmanager->FireEvent( event );
-		}
+	// allow bots to react
+	IGameEvent * event = gameeventmanager->CreateEvent( "player_blind" );
+	if ( event )
+	{
+		event->SetInt( "userid", GetUserID() );
+		gameeventmanager->FireEvent( event );
 	}
 }
 
