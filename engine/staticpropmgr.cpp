@@ -240,7 +240,7 @@ public:
 	// Returns the transform from RenderOrigin/RenderAngles to world
 	virtual const matrix3x4_t &RenderableToWorldTransform()
 	{
-		return m_ModelToWorldPreScaled; // TODO: what actually belongs here?
+		return m_ModelToWorld; // TODO: what actually belongs here?
 	}
 
 public:
