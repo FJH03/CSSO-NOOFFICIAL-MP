@@ -410,6 +410,9 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_flCycleTime[1]	= pKeyValuesData->GetFloat( "CycleTimeAlt", m_flCycleTime[0] );
 	m_flHeadshotMultiplier = pKeyValuesData->GetFloat( "HeadshotMultiplier", 4.0f );
 
+	m_flFlinchVelocityModifierLarge = pKeyValuesData->GetFloat( "FlinchVelocityModifierLarge", 1.0f );
+ 	m_flFlinchVelocityModifierSmall = pKeyValuesData->GetFloat( "FlinchVelocityModifierSmall", 1.0f );
+
 	m_bIsRevolver				= pKeyValuesData->GetBool( "IsRevolver" );
  
  	m_bDoesUnzoomAfterShot		= pKeyValuesData->GetBool( "DoesUnzoomAfterShot" );

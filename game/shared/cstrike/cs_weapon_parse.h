@@ -244,6 +244,9 @@ public:
 	float	m_flCycleTime[2];
 	float	m_flHeadshotMultiplier;
 
+	float	m_flFlinchVelocityModifierLarge;
+ 	float	m_flFlinchVelocityModifierSmall;
+
 	bool	m_bIsRevolver;
  
  	bool	m_bDoesUnzoomAfterShot;
