@@ -4400,7 +4400,7 @@ void C_BaseEntity::CalcAbsolutePosition( )
 	//
 	// So here, we keep our absorigin invalidated. It means we're returning an origin that is a frame old to CalculateIKLocks,
 	// but we'll still render with the right origin.
-	if ( m_iParentAttachment != 0 && (m_pMoveParent->GetFlags() & EFL_SETTING_UP_BONES) )
+	if ( m_iParentAttachment != 0 && (m_pMoveParent->GetEFlags() & EFL_SETTING_UP_BONES) )
 	{
 		m_iEFlags |= EFL_DIRTY_ABSTRANSFORM;
 	}
