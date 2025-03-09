@@ -923,11 +923,11 @@ void CBaseEntity::PhysicsDispatchThink( BASEPTR thinkFunc )
 
 	float startTime = 0.0;
 
-	if ( IsDormant() )
+	/*if ( IsDormant() )
 	{
 		Warning( "Dormant entity %s (%s) is thinking!!\n", GetClassname(), GetDebugName() );
 		Assert(0);
-	}
+	}*/
 
 	if ( thinkLimit )
 	{
