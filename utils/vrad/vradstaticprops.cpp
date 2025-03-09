@@ -320,6 +320,8 @@ private:
 		unsigned int			m_LightmapImageWidth;
 		unsigned int			m_LightmapImageHeight;
 
+		float					m_flUniformScale;
+
 	};
 
 	// Enumeration context
@@ -1047,6 +1049,8 @@ void CVradStaticPropMgr::UnserializeModels( CUtlBuffer& buf )
 		m_StaticProps[i].m_LightmapImageFormat = IMAGE_FORMAT_RGB888;
 		m_StaticProps[i].m_LightmapImageWidth = lump.m_nLightmapResolutionX;
 		m_StaticProps[i].m_LightmapImageHeight = lump.m_nLightmapResolutionY;
+
+		m_StaticProps[i].m_flUniformScale = lump.m_flUniformScale;
 	}
 }
 
@@ -1843,6 +1847,7 @@ void CVradStaticPropMgr::AddPolysForRayTrace( void )
 					{
 						Vector verts[3];
 						queryModel->GetTriangleVerts( nConvex, nTri, verts );
+						*verts *= prop.m_flUniformScale; // TODO: is it needed?
 						for ( int nVert = 0; nVert < 3; ++nVert )
 							verts[nVert] = xform.VMul4x3(verts[nVert]);
 						g_RtEnv.AddTriangle ( TRACE_ID_STATICPROP | nProp, verts[0], verts[1], verts[2], fullCoverage );
@@ -1945,6 +1950,7 @@ void CVradStaticPropMgr::AddPolysForRayTrace( void )
 									// transform position into world coordinate system
 									matrix3x4_t	matrix;
 									AngleMatrix( prop.m_Angles, prop.m_Origin, matrix );
+									MatrixScaleBy( prop.m_flUniformScale, matrix );
 
 									Vector position1;
 									Vector position2;
@@ -2129,6 +2135,7 @@ void CVradStaticPropMgr::BuildTriList( CStaticProp &prop )
 								// transform position into world coordinate system
 								matrix3x4_t	matrix;
 								AngleMatrix( prop.m_Angles, prop.m_Origin, matrix );
+								MatrixScaleBy( prop.m_flUniformScale, matrix );
 
 								Vector position1;
 								Vector position2;

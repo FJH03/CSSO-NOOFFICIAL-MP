@@ -861,11 +861,15 @@ bool CEngineTrace::ClipRayToVPhysics( const Ray_t &ray, unsigned int fMask, ICol
 		vcollide_t *pCollide = g_pMDLCache->GetVCollide( pModel->studio );
 		if ( pCollide && pCollide->solidCount )
 		{
+			CPhysCollide *pPhysCollide = pCollide->solids[0]; // UNDONE: Support other solid indices?!?!?!? (forced zero)
+ 			if ( StaticPropMgr()->IsStaticProp( pEntity->GetEntityHandle() ) )
+ 				pPhysCollide = StaticPropMgr()->GetStaticPropCollide( pEntity->GetEntityHandle() );
+
 			physcollision->TraceBox( 
 				ray,
 				fMask,
 				&studioConvex,
-				pCollide->solids[0], // UNDONE: Support other solid indices?!?!?!? (forced zero)
+				pPhysCollide,
 				pEntity->GetCollisionOrigin(), 
 				pEntity->GetCollisionAngles(), 
 				pTrace );

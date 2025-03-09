@@ -390,7 +390,64 @@ vcollide_t* CM_VCollideForModel( int modelindex, const model_t* pModel )
 	return 0;
 }
 
-
+//-----------------------------------------------------------------------------
+ // returns a physcollide that is scaled based off input data
+ //-----------------------------------------------------------------------------
+CPhysCollide* CM_ScalePhysCollide( vcollide_t *pVCollide, float flScale )
+{
+ 	CPhysCollide *pNewCollide = pVCollide->solids[0];
+ 
+ 	if ( flScale != 1.0f )
+ 	{
+ 		// Create a query to get more information from the collision object
+ 		ICollisionQuery *pQuery = physcollision->CreateQueryModel( pVCollide->solids[0] );	// FIXME: This should iterate over all solids!
+ 		if ( pQuery == NULL )
+ 			return pVCollide->solids[0];
+ 
+ 		// Create a container to hold all the convexes we'll create
+ 		const int nNumConvex = pQuery->ConvexCount();
+ 		CPhysConvex **pConvexes = (CPhysConvex **) stackalloc( sizeof( CPhysConvex * ) * nNumConvex );
+ 
+ 		// For each convex, collect the verts and create a convex from it we'll retain for later
+ 		for ( int i = 0; i < nNumConvex; i++ )
+ 		{
+ 			int nNumTris = pQuery->TriangleCount( i );
+ 			int nNumVerts = nNumTris * 3;
+ 			// FIXME: Really?  stackalloc?
+ 			Vector *pVerts = (Vector *) stackalloc( sizeof( Vector ) * nNumVerts );
+ 			Vector **ppVerts = (Vector **) stackalloc( sizeof( Vector * ) * nNumVerts );
+ 			for ( int j = 0; j < nNumTris; j++ )
+ 			{
+ 				// Get all the verts for this triangle and scale them up
+ 				pQuery->GetTriangleVerts( i, j, pVerts + (j * 3) );
+ 				*(pVerts + (j * 3)) *= flScale;
+ 				*(pVerts + (j * 3) + 1) *= flScale;
+ 				*(pVerts + (j * 3) + 2) *= flScale;
+ 
+ 				// Setup our pointers (blech!)
+ 				*(ppVerts + (j * 3)) = pVerts + (j * 3);
+ 				*(ppVerts + (j * 3) + 1) = pVerts + (j * 3) + 1;
+ 				*(ppVerts + (j * 3) + 2) = pVerts + (j * 3) + 2;
+ 			}
+ 
+ 			// Convert it back to a convex
+ 			pConvexes[i] = physcollision->ConvexFromVerts( ppVerts, nNumVerts );
+ 			Assert( pConvexes[i] != NULL );
+ 			if ( pConvexes[i] == NULL )
+ 				return pVCollide->solids[0];
+ 		}
+ 
+ 		// Clean up
+ 		physcollision->DestroyQueryModel( pQuery );
+ 
+ 		// Create a collision model from all the convexes
+ 		pNewCollide = physcollision->ConvertConvexToCollide( pConvexes, nNumConvex );
+ 		if ( !pNewCollide )
+ 			return pVCollide->solids[0];
+ 	}
+ 
+	return pNewCollide;
+}
 
 
 //=======================================================================

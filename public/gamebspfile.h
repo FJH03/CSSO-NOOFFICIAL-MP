@@ -21,12 +21,14 @@
 //-----------------------------------------------------------------------------
 // This enumerations defines all the four-CC codes for the client lump names
 //-----------------------------------------------------------------------------
+// TODO: We may have some endian considerations here!
+#define GAMELUMP_MAKE_CODE(a, b, c, d) ((a) << 24 | (b) << 16 | (c) << 8 | (d) << 0)
 enum
 {
-	GAMELUMP_DETAIL_PROPS = 'dprp',
-	GAMELUMP_DETAIL_PROP_LIGHTING = 'dplt',
-	GAMELUMP_STATIC_PROPS = 'sprp',
-	GAMELUMP_DETAIL_PROP_LIGHTING_HDR = 'dplh',
+	GAMELUMP_DETAIL_PROPS = GAMELUMP_MAKE_CODE('d', 'p', 'r', 'p'),
+	GAMELUMP_DETAIL_PROP_LIGHTING = GAMELUMP_MAKE_CODE('d', 'p', 'l', 't'),
+	GAMELUMP_STATIC_PROPS = GAMELUMP_MAKE_CODE('s', 'p', 'r', 'p'),
+	GAMELUMP_DETAIL_PROP_LIGHTING_HDR = GAMELUMP_MAKE_CODE('d', 'p', 'l', 'h'),
 };
 
 // Versions...
@@ -34,7 +36,7 @@ enum
 {
 	GAMELUMP_DETAIL_PROPS_VERSION = 4,
 	GAMELUMP_DETAIL_PROP_LIGHTING_VERSION = 0,
-	GAMELUMP_STATIC_PROPS_VERSION = 10,
+	GAMELUMP_STATIC_PROPS_VERSION = 12,
 	GAMELUMP_STATIC_PROP_LIGHTING_VERSION = 0,
 	GAMELUMP_DETAIL_PROP_LIGHTING_HDR_VERSION = 0,
 };
@@ -203,76 +205,9 @@ struct StaticPropLumpV6_t
 	//	int				m_Lighting;			// index into the GAMELUMP_STATIC_PROP_LIGHTING lump
 };
 
-struct StaticPropLumpV7_t
-{
-	DECLARE_BYTESWAP_DATADESC();
-	Vector			m_Origin;
-	QAngle			m_Angles;
-	unsigned short	m_PropType;
-	unsigned short	m_FirstLeaf;
-	unsigned short	m_LeafCount;
-	unsigned char	m_Solid;
-	unsigned char	m_Flags;
-	int				m_Skin;
-	float			m_FadeMinDist;
-	float			m_FadeMaxDist;
-	Vector			m_LightingOrigin;
-	float			m_flForcedFadeScale;
-	unsigned short	m_nMinDXLevel;
-	unsigned short	m_nMaxDXLevel;
-	//	int				m_Lighting;			// index into the GAMELUMP_STATIC_PROP_LIGHTING lump
-	color32			m_DiffuseModulation;	// per instance color and alpha modulation
-};
-
-struct StaticPropLumpV8_t
-{
-	DECLARE_BYTESWAP_DATADESC();
-	Vector			m_Origin;
-	QAngle			m_Angles;
-	unsigned short	m_PropType;
-	unsigned short	m_FirstLeaf;
-	unsigned short	m_LeafCount;
-	unsigned char	m_Solid;
-	unsigned char	m_Flags;
-	int				m_Skin;
-	float			m_FadeMinDist;
-	float			m_FadeMaxDist;
-	Vector			m_LightingOrigin;
-	float			m_flForcedFadeScale;
-	unsigned char	m_nMinCPULevel;
-	unsigned char	m_nMaxCPULevel;
-	unsigned char	m_nMinGPULevel;
-	unsigned char	m_nMaxGPULevel;
-	//	int				m_Lighting;			// index into the GAMELUMP_STATIC_PROP_LIGHTING lump
-	color32			m_DiffuseModulation;	// per instance color and alpha modulation
-};
-
-struct StaticPropLumpV9_t
-{
-	DECLARE_BYTESWAP_DATADESC();
-	Vector			m_Origin;
-	QAngle			m_Angles;
-	unsigned short	m_PropType;
-	unsigned short	m_FirstLeaf;
-	unsigned short	m_LeafCount;
-	unsigned char	m_Solid;
-	unsigned char	m_Flags;
-	int				m_Skin;
-	float			m_FadeMinDist;
-	float			m_FadeMaxDist;
-	Vector			m_LightingOrigin;
-	float			m_flForcedFadeScale;
-	unsigned char	m_nMinCPULevel;
-	unsigned char	m_nMaxCPULevel;
-	unsigned char	m_nMinGPULevel;
-	unsigned char	m_nMaxGPULevel;
-	//	int				m_Lighting;			// index into the GAMELUMP_STATIC_PROP_LIGHTING lump
-	color32			m_DiffuseModulation;	// per instance color and alpha modulation
-	bool			m_bDisableX360;
-};
-
 struct StaticPropLumpV10_t
 {
+	DECLARE_BYTESWAP_DATADESC();
 	Vector			m_Origin;
 	QAngle			m_Angles;
 	unsigned short	m_PropType;
@@ -292,33 +227,6 @@ struct StaticPropLumpV10_t
 	unsigned short  m_nLightmapResolutionY;
 };
 
-// version 10 bsp21
-struct StaticPropLumpV10_21_t
-{
-	DECLARE_BYTESWAP_DATADESC();
-	Vector			m_Origin;
-	QAngle			m_Angles;
-	unsigned short	m_PropType;
-	unsigned short	m_FirstLeaf;
-	unsigned short	m_LeafCount;
-	unsigned char	m_Solid;
-	unsigned char	m_Flags;
-	int				m_Skin;
-	float			m_FadeMinDist;
-	float			m_FadeMaxDist;
-	Vector			m_LightingOrigin;
-	float			m_flForcedFadeScale;
-	unsigned char	m_nMinCPULevel;
-	unsigned char	m_nMaxCPULevel;
-	unsigned char	m_nMinGPULevel;
-	unsigned char	m_nMaxGPULevel;
-	//	int				m_Lighting;			// index into the GAMELUMP_STATIC_PROP_LIGHTING lump
-	color32			m_DiffuseModulation;	// per instance color and alpha modulation
-	bool			m_bDisableX360;
-	int				m_FlagsEx;				// more flags (introduced in v10)
-};
-
-// version 11
 struct StaticPropLumpV11_t
 {
 	DECLARE_BYTESWAP_DATADESC();
@@ -328,21 +236,18 @@ struct StaticPropLumpV11_t
 	unsigned short	m_FirstLeaf;
 	unsigned short	m_LeafCount;
 	unsigned char	m_Solid;
-	unsigned char	m_Flags;
 	int				m_Skin;
 	float			m_FadeMinDist;
 	float			m_FadeMaxDist;
 	Vector			m_LightingOrigin;
 	float			m_flForcedFadeScale;
-	unsigned char	m_nMinCPULevel;
-	unsigned char	m_nMaxCPULevel;
-	unsigned char	m_nMinGPULevel;
-	unsigned char	m_nMaxGPULevel;
+	unsigned short	m_nMinDXLevel;
+	unsigned short	m_nMaxDXLevel;
 	//	int				m_Lighting;			// index into the GAMELUMP_STATIC_PROP_LIGHTING lump
+	unsigned int	m_Flags;
+	unsigned short  m_nLightmapResolutionX;
+	unsigned short  m_nLightmapResolutionY;
 	color32			m_DiffuseModulation;	// per instance color and alpha modulation
-	bool			m_bDisableX360;
-	int				m_FlagsEx;				// more flags (introduced in v10)
-	float			m_flPropScale;
 };
 
 struct StaticPropLump_t
@@ -365,8 +270,8 @@ struct StaticPropLump_t
 	unsigned int	m_Flags;
 	unsigned short  m_nLightmapResolutionX;
 	unsigned short  m_nLightmapResolutionY;
-
 	color32			m_DiffuseModulation;	// per instance color and alpha modulation
+	float			m_flUniformScale;
 
 
 	StaticPropLump_t& operator=(const StaticPropLumpV4_t& _rhs)
@@ -391,6 +296,7 @@ struct StaticPropLump_t
 		m_nLightmapResolutionX	= 0;
 		m_nLightmapResolutionY	= 0;
 		m_DiffuseModulation		= color32{ 255, 255, 255, 255 };
+		m_flUniformScale		= 1.0f;
 
 		// Older versions don't want this.
 		m_Flags					|= STATIC_PROP_NO_PER_TEXEL_LIGHTING;
@@ -422,6 +328,14 @@ struct StaticPropLump_t
 		m_nLightmapResolutionY = _rhs.m_nLightmapResolutionY;
 
 		m_Flags = _rhs.m_Flags;
+		return *this;
+	}
+
+	StaticPropLump_t& operator=(const StaticPropLumpV11_t& _rhs)
+	{
+		(*this) = reinterpret_cast<const StaticPropLumpV10_t&>(_rhs);
+
+		m_DiffuseModulation = _rhs.m_DiffuseModulation;
 		return *this;
 	}
 };

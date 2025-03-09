@@ -56,6 +56,8 @@ struct StaticPropBuild_t
 	unsigned short	m_nMaxDXLevel;
 	int		m_LightmapResolutionX;
 	int		m_LightmapResolutionY;
+	color32 m_DiffuseModulation;
+	float m_flUniformScale;
 };
  
 
@@ -66,11 +68,13 @@ struct ModelCollisionLookup_t
 {
 	CUtlSymbol m_Name;
 	CPhysCollide* m_pCollide;
+	float m_flScale;
 };
 
 static bool ModelLess( ModelCollisionLookup_t const& src1, ModelCollisionLookup_t const& src2 )
 {
-	return src1.m_Name < src2.m_Name;
+	return src1.m_Name < src2.m_Name &&
+		   src1.m_flScale < src2.m_flScale;
 }
 
 static CUtlRBTree<ModelCollisionLookup_t, unsigned short>	s_ModelCollisionCache( 0, 32, ModelLess );
@@ -167,7 +171,7 @@ bool LoadStudioModel( char const* pModelName, char const* pEntityType, CUtlBuffe
 		return false;
 	}
 
-	isstaticprop_ret isStaticProp = IsStaticProp(pHdr);
+	/*isstaticprop_ret isStaticProp = IsStaticProp(pHdr);
 	if ( isStaticProp != RET_VALID )
 	{
 		if ( isStaticProp == RET_FAIL_NOT_MARKED_STATIC_PROP )
@@ -180,7 +184,7 @@ bool LoadStudioModel( char const* pModelName, char const* pEntityType, CUtlBuffe
 			Warning("Error! %s using model \"%s\", which must be used on a dynamic entity (i.e. prop_physics). Deleted.\n", pEntityType, pModelName );
 		}
 		return false;
-	}
+	}*/
 
 	// ensure reset
 	pHdr->pVertexBase = NULL;
@@ -193,26 +197,34 @@ bool LoadStudioModel( char const* pModelName, char const* pEntityType, CUtlBuffe
 //-----------------------------------------------------------------------------
 // Computes a convex hull from a studio mesh
 //-----------------------------------------------------------------------------
-static CPhysConvex* ComputeConvexHull( mstudiomesh_t* pMesh )
+static CPhysConvex* ComputeConvexHull( studiohdr_t* pStudioHdr, mstudiomesh_t* pMesh, float flScale )
 {
 	// Generate a list of all verts in the mesh
-	Vector** ppVerts = (Vector**)stackalloc(pMesh->numvertices * sizeof(Vector*) );
-	const mstudio_meshvertexdata_t *vertData = pMesh->GetVertexData();
+	CUtlVector<Vector> vertCopy;
+	CUtlVector<Vector *> ppVerts;
+	vertCopy.EnsureCount(pMesh->numvertices);
+	ppVerts.EnsureCount(pMesh->numvertices);
+	const mstudio_meshvertexdata_t *vertData = pMesh->GetVertexData( (void *)pStudioHdr );
 	Assert( vertData ); // This can only return NULL on X360 for now
 	for (int i = 0; i < pMesh->numvertices; ++i)
 	{
-		ppVerts[i] = vertData->Position(i);
+		vertCopy[i] = *vertData->Position(i); 
+		// quantize these so that really curved/detailed models don't take forever
+		vertCopy[i].x = float( RoundFloatToInt( vertCopy[i].x * flScale ) );
+		vertCopy[i].y = float( RoundFloatToInt( vertCopy[i].y * flScale ) );
+		vertCopy[i].z = float( RoundFloatToInt( vertCopy[i].z * flScale ) );
+		ppVerts[i] = &vertCopy[i];
 	}
 
 	// Generate a convex hull from the verts
-	return s_pPhysCollision->ConvexFromVerts( ppVerts, pMesh->numvertices );
+	return s_pPhysCollision->ConvexFromVerts( ppVerts.Base(), pMesh->numvertices );
 }
 
 
 //-----------------------------------------------------------------------------
 // Computes a convex hull from the studio model
 //-----------------------------------------------------------------------------
-CPhysCollide* ComputeConvexHull( studiohdr_t* pStudioHdr )
+CPhysCollide* ComputeConvexHull( studiohdr_t* pStudioHdr, float flScale )
 {
 	CUtlVector<CPhysConvex*>	convexHulls;
 
@@ -228,7 +240,15 @@ CPhysCollide* ComputeConvexHull( studiohdr_t* pStudioHdr )
 				// NOTE: This won't work unless the model has been compiled
 				// with $staticprop
 				mstudiomesh_t *pStudioMesh = pStudioModel->pMesh( mesh );
-				convexHulls.AddToTail( ComputeConvexHull( pStudioMesh ) );
+				CPhysConvex *pConvex = ComputeConvexHull( pStudioHdr, pStudioMesh, flScale );
+				if ( !pConvex )
+				{
+					Warning("Can't create hull for mesh %d/%d of model %s\n", mesh, model, pStudioHdr->name );
+				}
+				else
+				{
+					convexHulls.AddToTail( pConvex );
+				}
 			}
 		}
 	}
@@ -242,7 +262,7 @@ CPhysCollide* ComputeConvexHull( studiohdr_t* pStudioHdr )
 //-----------------------------------------------------------------------------
 // Add, find collision model in cache
 //-----------------------------------------------------------------------------
-static CPhysCollide* GetCollisionModel( char const* pModelName )
+static CPhysCollide* GetCollisionModel( char const* pModelName, float flScale )
 {
 	// Convert to a common string
 	char* pTemp = (char*)_alloca(strlen(pModelName) + 1);
@@ -259,6 +279,7 @@ static CPhysCollide* GetCollisionModel( char const* pModelName )
 	// Find it in the cache
 	ModelCollisionLookup_t lookup;
 	lookup.m_Name = pTemp;
+	lookup.m_flScale = flScale;
 	int i = s_ModelCollisionCache.Find( lookup );
 	if (i != s_ModelCollisionCache.InvalidIndex())
 		return s_ModelCollisionCache[i].m_pCollide;
@@ -282,7 +303,7 @@ static CPhysCollide* GetCollisionModel( char const* pModelName )
 	// necessary for vertex access
 	SetCurrentModel( pStudioHdr );
 
-	lookup.m_pCollide = ComputeConvexHull( pStudioHdr );
+	lookup.m_pCollide = ComputeConvexHull( pStudioHdr, flScale );
 	s_ModelCollisionCache.Insert( lookup );
 
 	if ( !lookup.m_pCollide )
@@ -476,7 +497,7 @@ static bool ComputeLightingOrigin( StaticPropBuild_t const& build, Vector& light
 static void AddStaticPropToLump( StaticPropBuild_t const& build )
 {
 	// Get the collision model
-	CPhysCollide* pConvexHull = GetCollisionModel( build.m_pModelName );
+	CPhysCollide* pConvexHull = GetCollisionModel( build.m_pModelName, build.m_flUniformScale );
 	if (!pConvexHull)
 		return;
 
@@ -509,6 +530,8 @@ static void AddStaticPropToLump( StaticPropBuild_t const& build )
 	propLump.m_flForcedFadeScale = build.m_flForcedFadeScale;
 	propLump.m_nMinDXLevel = build.m_nMinDXLevel;
 	propLump.m_nMaxDXLevel = build.m_nMaxDXLevel;
+	propLump.m_DiffuseModulation = build.m_DiffuseModulation;
+	propLump.m_flUniformScale = build.m_flUniformScale;
 	
 	if (build.m_pLightingOrigin && *build.m_pLightingOrigin)
 	{
@@ -662,6 +685,42 @@ void EmitStaticProps()
 			}
 			build.m_nMinDXLevel = (unsigned short)IntForKey( &entities[i], "mindxlevel" );
 			build.m_nMaxDXLevel = (unsigned short)IntForKey( &entities[i], "maxdxlevel" );
+
+			// FIXME: look for ComputeFXBlend and make sure that you don't
+			// need a particlar rendermode for this stuff to happen
+			// Get the per-instance render-color for this static prop
+			const char *pColorKey = ValueForKey( &entities[i], "rendercolor" );
+			if ( *pColorKey != '\0' )
+			{
+				color32 tmp;
+				V_StringToColor32( &tmp, pColorKey );
+				build.m_DiffuseModulation.r = tmp.r;
+				build.m_DiffuseModulation.g = tmp.g;
+				build.m_DiffuseModulation.b = tmp.b;
+				// don't copy alpha, legacy support uses renderamt
+			}
+			else
+			{
+				build.m_DiffuseModulation.r = build.m_DiffuseModulation.g = build.m_DiffuseModulation.b = 255;
+			}
+
+			// Get the per-instance render-alpha for this static prop
+			const char *pAlphaKey = ValueForKey( &entities[i], "renderamt" );
+			if ( *pAlphaKey != '\0' )
+			{
+				build.m_DiffuseModulation.a = Q_atoi( pAlphaKey );
+			}
+			else
+			{
+				build.m_DiffuseModulation.a = 255;
+			}
+
+			// Static prop scale
+			float flScaleKey = FloatForKey( &entities[i], "uniformscale" );
+			if ( flScaleKey <= 0.0f )
+				flScaleKey = 1.0f;
+			build.m_flUniformScale = flScaleKey;
+
 			AddStaticPropToLump( build );
 
 			// strip this ent from the .bsp file

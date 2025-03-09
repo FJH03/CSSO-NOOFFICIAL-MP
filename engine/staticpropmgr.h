@@ -69,6 +69,8 @@ public:
 	virtual int GetStaticPropIndex( IHandleEntity *pHandleEntity ) const = 0;
 
 	virtual bool PropHasBakedLightingDisabled( IHandleEntity *pHandleEntity) const = 0;
+
+	virtual CPhysCollide *GetStaticPropCollide( IHandleEntity *pHandleEntity ) const = 0;
 };
 
 

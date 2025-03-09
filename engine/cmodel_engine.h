@@ -80,6 +80,7 @@ int			CM_BoxVisible( const Vector& mins, const Vector& maxs, const byte *visbits
 typedef struct cmodel_collision_s cmodel_collision_t;
 vcollide_t *CM_GetVCollide( int modelIndex );
 vcollide_t* CM_VCollideForModel( int modelindex, const model_t* pModel );
+CPhysCollide* CM_ScalePhysCollide( vcollide_t *pVCollide, float flScale );
 
 // gets a virtual physcollide for a displacement
 CPhysCollide *CM_PhysCollideForDisp( int index );

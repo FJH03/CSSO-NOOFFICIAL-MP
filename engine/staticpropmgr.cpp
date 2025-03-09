@@ -60,7 +60,6 @@ ConVar r_staticpropinfo( "r_staticpropinfo", "0" );
 ConVar  r_drawmodeldecals( "r_drawmodeldecals", "1" );
 extern ConVar mat_fullbright;
 static bool g_MakingDevShots = false;
-extern int s_MapVersion;
 //-----------------------------------------------------------------------------
 // Index into the fade list
 //-----------------------------------------------------------------------------
@@ -241,7 +240,7 @@ public:
 	// Returns the transform from RenderOrigin/RenderAngles to world
 	virtual const matrix3x4_t &RenderableToWorldTransform()
 	{
-		return m_ModelToWorld;
+		return m_ModelToWorldPreScaled; // TODO: what actually belongs here?
 	}
 
 public:
@@ -316,7 +315,10 @@ private:
 	Vector					m_RenderBBoxMin;
 	Vector					m_RenderBBoxMax;
 	matrix3x4_t				m_ModelToWorld;
+	matrix3x4_t				m_ModelToWorldPreScaled;
 	float					m_flRadius;
+	Vector					m_ModelBBoxMin;
+	Vector					m_ModelBBoxMax;
 
 	Vector					m_WorldRenderBBoxMin;
 	Vector					m_WorldRenderBBoxMax;
@@ -325,6 +327,10 @@ private:
 	// because the time at which the static props are unserialized
 	// doesn't necessarily match the time at which we can initialize the light cache
 	Vector					m_LightingOrigin;
+	Vector4D				m_DiffuseModulation;
+
+	float					m_flUniformScale;
+	CPhysCollide			*m_pPhysCollide;
 };
 
 
@@ -353,6 +359,7 @@ public:
 	virtual bool IsStaticProp( CBaseHandle handle ) const;
 	virtual int GetStaticPropIndex( IHandleEntity *pHandleEntity ) const;
 	virtual ICollideable *GetStaticPropByIndex( int propIndex );
+	virtual CPhysCollide *GetStaticPropCollide( IHandleEntity *pHandleEntity ) const;
 
 	// methods of IStaticPropMgrClient
 	virtual void ComputePropOpacity( const Vector &viewOrigin, float factor );
@@ -480,7 +487,7 @@ CStaticProp::~CStaticProp()
 //-----------------------------------------------------------------------------
 bool CStaticProp::Init( int index, StaticPropLump_t &lump, model_t *pModel )
 {
-	m_EntHandle.Init(index, STATICPROP_EHANDLE_MASK >> NUM_ENT_ENTRY_BITS);
+	m_EntHandle.Init(index, STATICPROP_EHANDLE_MASK >> NUM_SERIAL_NUM_SHIFT_BITS);
 	m_Partition = PARTITION_INVALID_HANDLE;
 	m_flForcedFadeScale = lump.m_flForcedFadeScale;
 	VectorCopy( lump.m_Origin, m_Origin );
@@ -490,6 +497,12 @@ bool CStaticProp::Init( int index, StaticPropLump_t &lump, model_t *pModel )
 	m_LeafCount = lump.m_LeafCount;
 	m_nSolidType = lump.m_Solid;
 	m_FadeIndex = INVALID_FADE_INDEX;
+	m_DiffuseModulation[0] = lump.m_DiffuseModulation.r * ( 1.0f / 255.0f );
+	m_DiffuseModulation[1] = lump.m_DiffuseModulation.g * ( 1.0f / 255.0f );
+	m_DiffuseModulation[2] = lump.m_DiffuseModulation.b * ( 1.0f / 255.0f );
+	m_DiffuseModulation[3] = lump.m_DiffuseModulation.a * ( 1.0f / 255.0f );
+	m_flUniformScale = lump.m_flUniformScale;
+	m_pPhysCollide = NULL;
 
 	MDLCACHE_CRITICAL_SECTION_( g_pMDLCache );
 
@@ -544,12 +557,17 @@ bool CStaticProp::Init( int index, StaticPropLump_t &lump, model_t *pModel )
 	}
 
 	// Cache the model to world matrix since it never changes.
-	AngleMatrix( lump.m_Angles, lump.m_Origin, m_ModelToWorld );
+	AngleMatrix( lump.m_Angles, lump.m_Origin, m_ModelToWorldPreScaled );
+	MatrixCopy( m_ModelToWorldPreScaled, m_ModelToWorld );
+	MatrixScaleBy( m_flUniformScale, m_ModelToWorld );
 
 	// Cache the collision bounding box since it'll never change.
 	modelinfo->GetModelRenderBounds( m_pModel, m_RenderBBoxMin, m_RenderBBoxMax );
-	m_flRadius = m_RenderBBoxMin.DistTo( m_RenderBBoxMax ) * 0.5f;
 	TransformAABB( m_ModelToWorld, m_RenderBBoxMin, m_RenderBBoxMax, m_WorldRenderBBoxMin, m_WorldRenderBBoxMax );
+	m_flRadius = m_RenderBBoxMin.DistTo( m_RenderBBoxMax ) * 0.5f;
+
+	m_ModelBBoxMin = m_pModel->mins * m_flUniformScale;
+	m_ModelBBoxMax = m_pModel->maxs * m_flUniformScale;
 
 	// FIXME: Sucky, but unless we want to re-read the static prop lump when the client is
 	// initialized (possible, but also gross), we need to cache off the illum center now
@@ -597,7 +615,7 @@ const Vector& CStaticProp::OBBMins( ) const
 {
 	if ( GetSolid() == SOLID_VPHYSICS )
 	{
-		return m_pModel->mins;
+		return m_ModelBBoxMin;
 	}
 	Vector& tv = AllocTempVector();
 	// FIXME: why doesn't this just return m_RenderBBoxMin?
@@ -609,7 +627,7 @@ const Vector& CStaticProp::OBBMaxs( ) const
 {
 	if ( GetSolid() == SOLID_VPHYSICS )
 	{
-		return m_pModel->maxs;
+		return m_ModelBBoxMax;
 	}
 	Vector& tv = AllocTempVector();
 	// FIXME: why doesn't this just return m_RenderBBoxMax?
@@ -772,7 +790,7 @@ int CStaticProp::GetFxBlend( )
 
 void CStaticProp::GetColorModulation( float* color )
 {
-	color[0] = color[1] = color[2] = 1.0f;
+	memcpy( color, m_DiffuseModulation.Base(), sizeof( float ) * 3 );
 }
 
 
@@ -833,7 +851,7 @@ const QAngle& CStaticProp::GetCollisionAngles() const
 
 const matrix3x4_t& CStaticProp::CollisionToWorldTransform() const
 {
-	return m_ModelToWorld;
+	return m_ModelToWorldPreScaled; // in theory, this shouldn't be scaled as the physics mesh is being scaled separately
 }
 
 
@@ -1053,7 +1071,7 @@ int	CStaticProp::DrawModelSlow( int flags )
 		else if ( m_nSolidType == SOLID_BBOX )
 		{
 			static Color debugColor( 0, 255, 255, 255 );
-			RenderWireframeBox( m_Origin, vec3_angle, m_pModel->mins, m_pModel->maxs, debugColor, true );
+			RenderWireframeBox( m_Origin, m_Angles, m_ModelBBoxMin, m_ModelBBoxMax, debugColor, true );
 		}
 	}
 
@@ -1108,7 +1126,7 @@ void CStaticProp::InsertPropIntoKDTree()
 	Vector mins, maxs;
 	matrix3x4_t propToWorld;
 	AngleMatrix( m_Angles, m_Origin, propToWorld );
-	TransformAABB( propToWorld, m_pModel->mins, m_pModel->maxs, mins, maxs ); 
+	TransformAABB( propToWorld, m_ModelBBoxMin, m_ModelBBoxMax, mins, maxs );
 
 	// If it's using vphysics, get a good AABB
 	if ( m_nSolidType == SOLID_VPHYSICS )
@@ -1116,13 +1134,15 @@ void CStaticProp::InsertPropIntoKDTree()
 		vcollide_t *pCollide = CM_VCollideForModel( -1, m_pModel );
 		if ( pCollide && pCollide->solidCount )
 		{
-			physcollision->CollideGetAABB( &mins, &maxs, pCollide->solids[0], m_Origin, m_Angles );
+			physcollision->CollideGetAABB( &mins, &maxs, CM_ScalePhysCollide( pCollide, m_flUniformScale ), m_Origin, m_Angles );
 		}
 		else
 		{
+#ifdef DEBUG
 			char szModel[MAX_PATH];
 			Q_strncpy( szModel, m_pModel ? modelloader->GetName( m_pModel ) : "unknown model", sizeof( szModel ) );
 			Warning( "SOLID_VPHYSICS static prop with no vphysics model! (%s)\n", szModel );
+#endif
 			m_nSolidType = SOLID_NONE;
 			return;
 		}
@@ -1169,7 +1189,7 @@ void CStaticProp::CreateVPhysics( IPhysicsEnvironment *pPhysEnv, IVPhysicsKeyHan
 
 	if (pVCollide)
 	{
-		pPhysCollide = pVCollide->solids[0];
+		pPhysCollide = CM_ScalePhysCollide( pVCollide, m_flUniformScale );
 
 		IVPhysicsKeyParser *pParse = physcollision->VPhysicsKeyParserCreate( pVCollide->pKeyValues );
 		while ( !pParse->Finished() )
@@ -1203,7 +1223,7 @@ void CStaticProp::CreateVPhysics( IPhysicsEnvironment *pPhysEnv, IVPhysicsKeyHan
 #endif
 
 		// If there's no collide, we need a bbox...
-		pPhysCollide = physcollision->BBoxToCollide( m_pModel->mins, m_pModel->maxs );
+		pPhysCollide = physcollision->BBoxToCollide( m_ModelBBoxMin, m_ModelBBoxMax );
 		solid.params = g_PhysDefaultObjectParams;
 	}
 
@@ -1216,6 +1236,8 @@ void CStaticProp::CreateVPhysics( IPhysicsEnvironment *pPhysEnv, IVPhysicsKeyHan
 	pPhysEnv->CreatePolyObjectStatic( pPhysCollide, 
 		surfaceData, m_Origin, m_Angles, &solid.params );
 	//PhysCheckAdd( pPhys, "Static" );
+
+	m_pPhysCollide = pPhysCollide;
 }
 
 
@@ -1349,10 +1371,14 @@ void CStaticPropMgr::UnserializeModels( CUtlBuffer& buf )
 				UnserializeLump<StaticPropLumpV10_t>(&lump, buf);
 				break;
 			case 11:
+				UnserializeLump<StaticPropLumpV11_t>( &lump, buf );
+				break;
+			case 12:
 				UnserializeLump<StaticPropLump_t>( &lump, buf );
 				break;
 			default:
 				Assert("Unexpected version while deserializing lumps.");
+				break;
 		}
 
 		m_StaticProps[i].Init( i, lump, m_StaticPropDict[lump.m_PropType].m_pModel );
@@ -1790,12 +1816,12 @@ void CStaticPropMgr::GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vecto
 //-----------------------------------------------------------------------------
 bool CStaticPropMgr::IsStaticProp( IHandleEntity *pHandleEntity ) const
 {
-	return (!pHandleEntity) || ( (pHandleEntity->GetRefEHandle().GetSerialNumber() == (STATICPROP_EHANDLE_MASK >> NUM_ENT_ENTRY_BITS) ) != 0 );
+	return (!pHandleEntity) || ( (pHandleEntity->GetRefEHandle().GetSerialNumber() == (STATICPROP_EHANDLE_MASK >> NUM_SERIAL_NUM_SHIFT_BITS) ) != 0 );
 }
 
 bool CStaticPropMgr::IsStaticProp( CBaseHandle handle ) const
 {
-	return (handle.GetSerialNumber() == (STATICPROP_EHANDLE_MASK >> NUM_ENT_ENTRY_BITS));
+	return (handle.GetSerialNumber() == (STATICPROP_EHANDLE_MASK >> NUM_SERIAL_NUM_SHIFT_BITS));
 }
 
 int CStaticPropMgr::GetStaticPropIndex( IHandleEntity *pHandleEntity ) const
@@ -1812,6 +1838,17 @@ bool CStaticPropMgr::PropHasBakedLightingDisabled( IHandleEntity *pHandleEntity 
 	const CStaticProp &prop = m_StaticProps[nIndex];
 
 	return ( (prop.Flags() & STATIC_PROP_NO_PER_VERTEX_LIGHTING ) != 0 );
+}
+
+CPhysCollide *CStaticPropMgr::GetStaticPropCollide( IHandleEntity *pHandleEntity ) const
+{
+	// Strip off the bits
+	int nIndex = HandleEntityToIndex( pHandleEntity );
+
+	// Get the prop
+	const CStaticProp &prop = m_StaticProps[nIndex];
+
+	return prop.m_pPhysCollide;
 }
 
 //-----------------------------------------------------------------------------
@@ -2366,4 +2403,3 @@ void Cmd_PropCrosshair_f (void)
 }
 
 static ConCommand prop_crosshair( "prop_crosshair", Cmd_PropCrosshair_f, "Shows name for prop looking at", FCVAR_CHEAT );
-

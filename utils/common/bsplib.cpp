@@ -29,8 +29,6 @@
 #include "lzma/lzma.h"
 #include "tier1/lzmaDecoder.h"
 
-#include "tier0/memdbgon.h"
-
 //=============================================================================
 
 // Boundary each lump should be aligned to
@@ -374,6 +372,8 @@ BEGIN_BYTESWAP_DATADESC( StaticPropLump_t )
 	DEFINE_FIELD( m_flForcedFadeScale, FIELD_FLOAT ),
 	DEFINE_FIELD( m_nMinDXLevel, FIELD_SHORT ),
 	DEFINE_FIELD( m_nMaxDXLevel, FIELD_SHORT ),
+	DEFINE_FIELD( m_DiffuseModulation, FIELD_COLOR32 ),
+	DEFINE_FIELD( m_flUniformScale, FIELD_FLOAT ),
 END_BYTESWAP_DATADESC()
 
 BEGIN_BYTESWAP_DATADESC( StaticPropLumpV4_t )
@@ -403,6 +403,60 @@ BEGIN_BYTESWAP_DATADESC( StaticPropLumpV5_t )
 	DEFINE_FIELD( m_FadeMaxDist, FIELD_FLOAT ),
 	DEFINE_FIELD( m_LightingOrigin, FIELD_VECTOR ),
 	DEFINE_FIELD( m_flForcedFadeScale, FIELD_FLOAT ),
+END_BYTESWAP_DATADESC()
+
+BEGIN_BYTESWAP_DATADESC( StaticPropLumpV6_t )
+	DEFINE_FIELD( m_Origin, FIELD_VECTOR ),
+	DEFINE_FIELD( m_Angles, FIELD_VECTOR ),	// QAngle
+	DEFINE_FIELD( m_PropType, FIELD_SHORT ),
+	DEFINE_FIELD( m_FirstLeaf, FIELD_SHORT ),
+	DEFINE_FIELD( m_LeafCount, FIELD_SHORT ),
+	DEFINE_FIELD( m_Solid, FIELD_CHARACTER ),
+	DEFINE_FIELD( m_Flags, FIELD_CHARACTER ),
+	DEFINE_FIELD( m_Skin, FIELD_INTEGER ),
+	DEFINE_FIELD( m_FadeMinDist, FIELD_FLOAT ),
+	DEFINE_FIELD( m_FadeMaxDist, FIELD_FLOAT ),
+	DEFINE_FIELD( m_LightingOrigin, FIELD_VECTOR ),
+	DEFINE_FIELD( m_flForcedFadeScale, FIELD_FLOAT ),
+	DEFINE_FIELD( m_nMinDXLevel, FIELD_SHORT ),
+	DEFINE_FIELD( m_nMaxDXLevel, FIELD_SHORT ),
+END_BYTESWAP_DATADESC()
+
+BEGIN_BYTESWAP_DATADESC( StaticPropLumpV10_t )
+	DEFINE_FIELD( m_Origin, FIELD_VECTOR ),
+	DEFINE_FIELD( m_Angles, FIELD_VECTOR ),	// QAngle
+	DEFINE_FIELD( m_PropType, FIELD_SHORT ),
+	DEFINE_FIELD( m_FirstLeaf, FIELD_SHORT ),
+	DEFINE_FIELD( m_LeafCount, FIELD_SHORT ),
+	DEFINE_FIELD( m_Solid, FIELD_CHARACTER ),
+	DEFINE_FIELD( m_Flags, FIELD_CHARACTER ),
+	DEFINE_FIELD( m_Skin, FIELD_INTEGER ),
+	DEFINE_FIELD( m_FadeMinDist, FIELD_FLOAT ),
+	DEFINE_FIELD( m_FadeMaxDist, FIELD_FLOAT ),
+	DEFINE_FIELD( m_LightingOrigin, FIELD_VECTOR ),
+	DEFINE_FIELD( m_flForcedFadeScale, FIELD_FLOAT ),
+	DEFINE_FIELD( m_nMinDXLevel, FIELD_SHORT ),
+	DEFINE_FIELD( m_nMaxDXLevel, FIELD_SHORT ),
+	DEFINE_FIELD( m_nLightmapResolutionX, FIELD_SHORT ),
+	DEFINE_FIELD( m_nLightmapResolutionY, FIELD_SHORT ),
+END_BYTESWAP_DATADESC()
+
+BEGIN_BYTESWAP_DATADESC( StaticPropLumpV11_t )
+	DEFINE_FIELD( m_Origin, FIELD_VECTOR ),
+	DEFINE_FIELD( m_Angles, FIELD_VECTOR ),	// QAngle
+	DEFINE_FIELD( m_PropType, FIELD_SHORT ),
+	DEFINE_FIELD( m_FirstLeaf, FIELD_SHORT ),
+	DEFINE_FIELD( m_LeafCount, FIELD_SHORT ),
+	DEFINE_FIELD( m_Solid, FIELD_CHARACTER ),
+	DEFINE_FIELD( m_Flags, FIELD_CHARACTER ),
+	DEFINE_FIELD( m_Skin, FIELD_INTEGER ),
+	DEFINE_FIELD( m_FadeMinDist, FIELD_FLOAT ),
+	DEFINE_FIELD( m_FadeMaxDist, FIELD_FLOAT ),
+	DEFINE_FIELD( m_LightingOrigin, FIELD_VECTOR ),
+	DEFINE_FIELD( m_flForcedFadeScale, FIELD_FLOAT ),
+	DEFINE_FIELD( m_nMinDXLevel, FIELD_SHORT ),
+	DEFINE_FIELD( m_nMaxDXLevel, FIELD_SHORT ),
+	DEFINE_FIELD( m_DiffuseModulation, FIELD_COLOR32 ),
 END_BYTESWAP_DATADESC()
 
 BEGIN_BYTESWAP_DATADESC( StaticPropLeafLump_t )
@@ -1106,9 +1160,45 @@ void CGameLump::SwapGameLump( GameLumpId_t id, int version, byte *dest, byte *sr
 				dest += sizeof( StaticPropLumpV5_t );
 			}
 		}
+		else if ( version == 6 )
+		{
+			StaticPropLumpV6_t lump;
+			for ( int i = 0; i < count; ++i )
+			{
+				Q_memcpy( &lump, src, sizeof(StaticPropLumpV6_t) );
+				g_Swap.SwapFieldsToTargetEndian( &lump, &lump );
+				Q_memcpy( dest, &lump, sizeof(StaticPropLumpV6_t) );
+				src += sizeof( StaticPropLumpV6_t );
+				dest += sizeof( StaticPropLumpV6_t );
+			}
+		}
+		else if ( version == 7 || version == 10 ) // PiMoN: v7 and v10 use the same lump on this engine branch
+		{
+			StaticPropLumpV10_t lump;
+			for ( int i = 0; i < count; ++i )
+			{
+				Q_memcpy( &lump, src, sizeof(StaticPropLumpV10_t) );
+				g_Swap.SwapFieldsToTargetEndian( &lump, &lump );
+				Q_memcpy( dest, &lump, sizeof(StaticPropLumpV10_t) );
+				src += sizeof( StaticPropLumpV10_t );
+				dest += sizeof( StaticPropLumpV10_t );
+			}
+		}
+		else if ( version == 11 )
+		{
+			StaticPropLumpV11_t lump;
+			for ( int i = 0; i < count; ++i )
+			{
+				Q_memcpy( &lump, src, sizeof(StaticPropLumpV11_t) );
+				g_Swap.SwapFieldsToTargetEndian( &lump, &lump );
+				Q_memcpy( dest, &lump, sizeof(StaticPropLumpV11_t) );
+				src += sizeof( StaticPropLumpV11_t );
+				dest += sizeof( StaticPropLumpV11_t );
+			}
+		}
 		else
 		{
-			if ( version != 6 )
+			if ( version != 12 )
 			{
 				Error( "Unknown Static Prop Lump version %d didn't get swapped!\n", version );
 			}
@@ -2828,12 +2918,12 @@ int ArrayUsage( const char *szItem, int items, int maxitems, int itemsize )
 
     Msg("%-17.17s %8i/%-8i %8i/%-8i (%4.1f%%) ", 
 		   szItem, items, maxitems, items * itemsize, maxitems * itemsize, percentage );
-	if ( percentage > 80.0 )
-		Msg( "VERY FULL!\n" );
+	if ( percentage > 99.9 )
+		Msg( "SIZE OVERFLOW!!!\n" );
 	else if ( percentage > 95.0 )
 		Msg( "SIZE DANGER!\n" );
-	else if ( percentage > 99.9 )
-		Msg( "SIZE OVERFLOW!!!\n" );
+	else if ( percentage > 80.0 )
+		Msg( "VERY FULL!\n" );
 	else
 		Msg( "\n" );
 	return items * itemsize;
@@ -2844,12 +2934,12 @@ int GlobUsage( const char *szItem, int itemstorage, int maxstorage )
 	float	percentage = maxstorage ? itemstorage * 100.0 / maxstorage : 0.0;
     Msg("%-17.17s     [variable]    %8i/%-8i (%4.1f%%) ", 
 		   szItem, itemstorage, maxstorage, percentage );
-	if ( percentage > 80.0 )
-		Msg( "VERY FULL!\n" );
+	if ( percentage > 99.9 )
+		Msg( "SIZE OVERFLOW!!!\n" );
 	else if ( percentage > 95.0 )
 		Msg( "SIZE DANGER!\n" );
-	else if ( percentage > 99.9 )
-		Msg( "SIZE OVERFLOW!!!\n" );
+	else if ( percentage > 80.0 )
+		Msg( "VERY FULL!\n" );
 	else
 		Msg( "\n" );
 	return itemstorage;
@@ -4380,6 +4470,21 @@ void BuildStaticPropNameTable()
 				{
 					propType = ((StaticPropLumpV5_t *)pGameLumpData)->m_PropType;
 					pGameLumpData += sizeof( StaticPropLumpV5_t );
+				}
+				else if ( nVersion == 6 )
+				{
+					propType = ((StaticPropLumpV6_t *)pGameLumpData)->m_PropType;
+					pGameLumpData += sizeof( StaticPropLumpV6_t );
+				}
+				else if ( nVersion == 7 || nVersion == 10 ) // PiMoN: v7 and v10 use the same lump on this engine branch
+				{
+					propType = ((StaticPropLumpV10_t *)pGameLumpData)->m_PropType;
+					pGameLumpData += sizeof( StaticPropLumpV10_t );
+				}
+				else if ( nVersion == 11 )
+				{
+					propType = ((StaticPropLumpV11_t *)pGameLumpData)->m_PropType;
+					pGameLumpData += sizeof( StaticPropLumpV11_t );
 				}
 				else
 				{
