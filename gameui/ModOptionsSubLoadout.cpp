@@ -45,6 +45,7 @@ const char* szMusicStrings[] =
 	"austinwintory_02",
 	"austinwintory_03",
 	"awolnation_01",
+	"bbnos_01",
 	"beartooth_01",
 	"beartooth_02",
 	"blitzkids_01",
