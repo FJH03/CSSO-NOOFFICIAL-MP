@@ -4949,10 +4949,7 @@ BuyResult_e CCSPlayer::AttemptToBuyDefuser( void )
 //			CBroadcastRecipientFilter filter;
 // 			EmitSound( filter, entindex(), "Player.PickupWeapon" );
 
-			if ( CSGameRules()->IsHostageRescueMap() )
-				AddAccount( -ITEM_PRICE_DEFUSEKIT, true, true, "item_cutters" );
-			else
-				AddAccount( -ITEM_PRICE_DEFUSEKIT, true, true, "item_defuser" );
+			AddAccount( -ITEM_PRICE_DEFUSEKIT, true, true, "item_defuser" );
 
 			return BUY_BOUGHT;
 		}
