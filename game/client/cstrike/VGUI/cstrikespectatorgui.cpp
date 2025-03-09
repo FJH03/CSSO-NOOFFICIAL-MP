@@ -991,22 +991,7 @@ bool CCSMapOverview::ShouldDraw( void )
 	{
 		return false;
 	}
-
-	float now = gpGlobals->curtime;
-	if( GetMode() == MAP_MODE_RADAR )
-	{
-		// We have to be alive and not blind to draw in this mode.
-		C_CSPlayer *pCSPlayer = C_CSPlayer::GetLocalCSPlayer();
-		if( !pCSPlayer || pCSPlayer->GetObserverMode() == OBS_MODE_DEATHCAM ) 
-		{
-			return false;
-		}
-		else if (pCSPlayer->m_flFlashBangTime > now)
-		{
-			return false;
-		}
-	}
-
+	
 	return BaseClass::ShouldDraw();
 }
 
