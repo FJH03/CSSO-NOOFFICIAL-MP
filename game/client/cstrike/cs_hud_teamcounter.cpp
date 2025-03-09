@@ -55,6 +55,9 @@ private:
 	int m_iOriginalXPos;
 	int m_iOriginalYPos;
 	bool m_bIsAtTheBottom;
+
+	CPanelAnimationVar( Color, m_clrC4Planted, "C4PlantedColor", "White" );
+ 	CPanelAnimationVar( Color, m_clrC4Defused, "C4DefusedColor", "White" );
 };
 
 DECLARE_HUDELEMENT( CHudTeamCounter );
@@ -207,12 +210,22 @@ void CHudTeamCounter::OnThink()
 	{
 		C_PlantedC4 *pC4 = g_PlantedC4s[0];
 
-		int alpha = 255;
-		if ( gpGlobals->curtime + 0.1f >= pC4->m_flNextGlow )
-			alpha = 128;
+		if ( pC4->m_bBombDefused )
+ 		{
+ 			m_pBombIcon->SetAlpha( 255 );
+ 			m_pBombIcon->SetFgColor( m_clrC4Defused );
+ 			m_pBombIcon->SetVisible( true );
+ 		}
+ 		else
+ 		{
+ 			int alpha = 255;
+ 			if ( gpGlobals->curtime + 0.1f >= pC4->m_flNextGlow )
+ 				alpha = 128;
 
-		m_pBombIcon->SetAlpha( alpha );
-		m_pBombIcon->SetVisible( !pC4->m_bExplodeWarning );
+				 m_pBombIcon->SetAlpha( alpha );
+				 m_pBombIcon->SetFgColor( m_clrC4Planted );
+				 m_pBombIcon->SetVisible( !pC4->m_bExplodeWarning );
+		}
 	}
 	else
 		m_pBombIcon->SetVisible( false );
