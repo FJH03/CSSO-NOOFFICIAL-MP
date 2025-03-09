@@ -42,8 +42,6 @@
 
 #ifdef CSTRIKE_DLL
 	ConVar cl_righthand( "cl_righthand", "1", FCVAR_ARCHIVE, "Use right-handed view models." );
-
-	extern ConVar loadout_stattrak;
 #endif
 
 #ifdef TF_CLIENT_DLL
@@ -679,9 +677,13 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	}
 
 	// verify stattrak module and add if necessary
-	if ( loadout_stattrak.GetBool() && pCSWeapon->GetCSWpnData().m_szStatTrakModel && pCSWeapon->GetCSWpnData().m_szStatTrakModel[0] )
+	if ( pCSWeapon->HasStatTrak() )
 	{
-		AddViewmodelStatTrak( pCSWeapon );
+		int iEntIndex = pPlayer->entindex();
+ 		if ( pPlayer->IsControllingBot() )
+ 			iEntIndex = pPlayer->GetControlledBotIndex();
+ 
+ 		AddViewmodelStatTrak( pCSWeapon, iEntIndex );
 	}
 	else
 		RemoveViewmodelStatTrak();
@@ -719,7 +721,7 @@ C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *p
 	return NULL;
 }
 
-void C_BaseViewModel::AddViewmodelStatTrak( CWeaponCSBase *pWeapon )
+void C_BaseViewModel::AddViewmodelStatTrak( CWeaponCSBase *pWeapon, int holderIndex )
 {
 	// PiMoN: commenting this out to pretend that it "fixes" a bug with stattrak model not updating in time on weapon switch
 	/*if ( m_viewmodelStatTrakAddon && m_viewmodelStatTrakAddon.Get() && m_viewmodelStatTrakAddon->GetMoveParent() )
@@ -750,6 +752,15 @@ void C_BaseViewModel::AddViewmodelStatTrak( CWeaponCSBase *pWeapon )
 		if ( !cl_righthand.GetBool() )
 		{
 			pStatTrakEnt->SetBodygroup( 0, 1 ); // use a special mirror-image stattrak module that appears correct for lefties
+		}
+
+		// this stat trak weapon doesn't belong to the current holder, display error message on the digital display. This is impossible for knives
+		if ( !CSLoadout()->IsKnife( pWeapon->GetCSWeaponID() ) )
+		{
+			if ( pWeapon->GetOriginalOwnerIndex() != holderIndex )
+			{
+				pStatTrakEnt->SetBodygroup( 1, cl_righthand.GetBool() ? 1 : 2 ); // show the error screen bodygroup
+			}
 		}
 	}
 }

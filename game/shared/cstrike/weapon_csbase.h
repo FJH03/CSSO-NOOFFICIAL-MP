@@ -320,6 +320,13 @@ public:
     void AddToPriorOwnerList(CCSPlayer* pPlayer);
     bool IsAPriorOwner(CCSPlayer* pPlayer);
 
+	void SetStatTrak( bool state ) { m_bStatTrak = state; };
+ 	bool HasStatTrak() { return m_bStatTrak; }
+ 
+ 	// keep track of a player who bought it
+ 	void SetOriginalOwnerIndex( int index ) { m_nOriginalOwnerIndex = index; }
+ 	int GetOriginalOwnerIndex() { return m_nOriginalOwnerIndex; }
+
 protected:
 
 	float	CalculateNextAttackTime( float flCycleTime );
@@ -351,6 +358,9 @@ private:
 	void UpdateGunHeat( float heat, int iAttachmentIndex );
 
 	CNetworkVar( float, m_fLastShotTime );
+
+	CNetworkVar( bool, m_bStatTrak );
+ 	CNetworkVar( int, m_nOriginalOwnerIndex );
 
 #ifdef CLIENT_DLL
 	// Smoke effect variables.

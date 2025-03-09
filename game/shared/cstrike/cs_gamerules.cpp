@@ -7861,6 +7861,8 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 	{
 		pCSPlayer->m_bNeedToChangeGloves = true;
 	}
+	
+	pCSPlayer->m_bLoadoutStatTrak = !!atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_stattrak" ) );
 }
 
 #ifndef CLIENT_DLL

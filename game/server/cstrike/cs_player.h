@@ -848,6 +848,7 @@ public:
 	CNetworkVar( int, m_iLoadoutSlotKnifeWeaponT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesT );
+	bool m_bLoadoutStatTrak;
 
 private:
 	CountdownTimer m_ladderSurpressionTimer;

@@ -11,6 +11,7 @@
 #include "cs_gamerules.h"
 #include "weapon_basecsgrenade.h"
 #include "cs_loadout.h"
+#include <vgui/ILocalize.h>
 
 ConVar cl_showloadout( "cl_showloadout", "1", FCVAR_ARCHIVE, "Toggles display of current loadout." );
 extern ConVar cl_hud_color;
@@ -148,7 +149,18 @@ void CCSHudWeaponSelection::AddWeapon( C_BaseCombatWeapon *pWeapon, bool bSelect
 	}
 	m_weaponPanels[nWepSlot][nWepPos].pSVGPanel->SetRenderSize( weapon_icon_wide, weapon_icon_tall );
 	m_weaponPanels[nWepSlot][nWepPos].pSVGPanel->SetTexture( UTIL_VarArgs( "materials/vgui/weapons/svg/%s.svg", pCSWeapon->GetClassname() + 7 ) );
-	m_weaponPanels[nWepSlot][nWepPos].pNameLabel->SetText( pCSWeapon->GetPrintName() );
+	
+	if ( pCSWeapon->HasStatTrak() )
+ 	{
+ 		wchar_t wszLocalized[256];
+ 		g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_StatTrak" ), 1, g_pVGuiLocalize->Find( pCSWeapon->GetPrintName() ) );
+ 		m_weaponPanels[nWepSlot][nWepPos].pNameLabel->SetText( wszLocalized );
+ 	}
+ 	else
+ 	{
+ 		m_weaponPanels[nWepSlot][nWepPos].pNameLabel->SetText( pCSWeapon->GetPrintName() );
+ 	}
+	
 	m_weaponPanels[nWepSlot][nWepPos].pNameLabel->SizeToContents();
 	UpdateCountLabels();
 

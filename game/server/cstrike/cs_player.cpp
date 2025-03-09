@@ -1324,6 +1324,7 @@ void CCSPlayer::Spawn()
 		m_iLoadoutSlotGlovesT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_gloves_t" ) );
 		m_bNeedToChangeGloves = false;
 	}
+	m_bLoadoutStatTrak = !!atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_stattrak" ) );
 
 	m_RateLimitLastCommandTimes.Purge();
 
@@ -8581,16 +8582,41 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pszName, int iSubType )
 		return NULL;
 	}
 
-	pent->SetLocalOrigin( GetLocalOrigin() );
+	Vector pos = ( GetLocalOrigin() + Weapon_ShootPosition() ) * 0.5f;
+ 	QAngle angles;
+ 
+ 	MDLCACHE_CRITICAL_SECTION();
+ 	int weaponBoneAttachment = LookupAttachment( "weapon_hand_R" );
+ 
+ 	if ( weaponBoneAttachment == 0 )
+ 		weaponBoneAttachment = LookupAttachment( "weapon_bone" );
+ 
+ 	if ( weaponBoneAttachment == 0 || !GetAttachment( weaponBoneAttachment, pos, angles ) )
+ 	{
+ 		Warning("Missing weapon hand bone attachment for player model.\n");
+ 	}
+ 
+ 	pent->SetLocalOrigin( pos );
 	pent->AddSpawnFlags( SF_NORESPAWN );
 
-	CBaseCombatWeapon *pWeapon = dynamic_cast<CBaseCombatWeapon*>( (CBaseEntity*)pent );
+	CWeaponCSBase *pWeapon = dynamic_cast<CWeaponCSBase*>( (CBaseEntity*)pent );
 	if ( pWeapon )
 	{
 		if ( iSubType )
 		{
 			pWeapon->SetSubType( iSubType );
 		}
+
+		if ( !IsControllingBot() )
+ 		{
+ 			pWeapon->SetStatTrak( m_bLoadoutStatTrak );
+ 			pWeapon->SetOriginalOwnerIndex( entindex() );
+ 		}
+ 		else
+ 		{
+ 			pWeapon->SetStatTrak( false );
+ 			pWeapon->SetOriginalOwnerIndex( GetControlledBot()->entindex() );
+ 		}
 	}
 
 	DispatchSpawn( pent );
@@ -8729,8 +8755,8 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 		{
 			if (CSGameRules()->GetCanDonateWeapon() && !pCSWeapon->GetDonated() )
 			{
-				pCSWeapon->SetDonated(true );
-				pCSWeapon->SetDonor(this );
+				pCSWeapon->SetDonated( true );
+				pCSWeapon->SetDonor( this );
 			}
 			CSWeaponDrop( pCSWeapon, true );
 

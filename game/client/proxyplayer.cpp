@@ -386,7 +386,14 @@ bool CStatTrakDigitProxy::HelperOnBindGetStatTrakScore( void *pC_BaseEntity, int
 			CWeaponCSBase *pWeap = pPlayer->GetActiveCSWeapon();
 			if ( pWeap )
 			{
-				*piScore = g_CSClientGameStats.GetStatById( GetWeaponTableEntryFromWeaponId( pWeap->GetCSWeaponID() ).killStatId ).iStatValue;
+				int entindex = pPlayer->entindex();
+ 				if ( pPlayer->IsControllingBot() )
+ 					entindex = pPlayer->GetControlledBotIndex();
+ 
+ 				if ( pWeap->GetOriginalOwnerIndex() == entindex )
+ 					*piScore = g_CSClientGameStats.GetStatById( GetWeaponTableEntryFromWeaponId( pWeap->GetCSWeaponID() ).killStatId ).iStatValue;
+ 				else
+ 					*piScore = 0;
 			}
 		}
 	}

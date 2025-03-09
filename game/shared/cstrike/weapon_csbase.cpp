@@ -170,6 +170,8 @@ SendPropBool( SENDINFO( m_bBurstMode ) ),
 SendPropBool( SENDINFO( m_bSilencerOn ) ),
 SendPropTime( SENDINFO( m_flDoneSwitchingSilencer ) ),
 SendPropTime( SENDINFO( m_flPostponeFireReadyTime ) ),
+SendPropBool( SENDINFO( m_bStatTrak ) ),
+SendPropInt( SENDINFO( m_nOriginalOwnerIndex ) ),
 #if IRONSIGHT
 SendPropInt( SENDINFO( m_iIronSightMode ), 2, SPROP_UNSIGNED ),
 #endif //IRONSIGHT
@@ -184,6 +186,8 @@ RecvPropBool( RECVINFO( m_bReloadVisuallyComplete ) ),
 RecvPropBool( RECVINFO( m_bSilencerOn ) ),
 RecvPropTime( RECVINFO( m_flDoneSwitchingSilencer ) ),
 RecvPropTime( RECVINFO( m_flPostponeFireReadyTime ) ),
+RecvPropBool( RECVINFO( m_bStatTrak ) ),
+RecvPropInt( RECVINFO( m_nOriginalOwnerIndex ) ),
 #if IRONSIGHT
 RecvPropInt( RECVINFO( m_iIronSightMode ) ),
 #endif //IRONSIGHT
@@ -330,6 +334,8 @@ CWeaponCSBase::CWeaponCSBase()
 	m_flDoneSwitchingSilencer = 0.0f;
 
 	m_flRecoilIndex = 0.0f;
+	m_bStatTrak = false;
+ 	m_nOriginalOwnerIndex = -1;
 
 	ResetGunHeat();
 }
