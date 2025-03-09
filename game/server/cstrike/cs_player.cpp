@@ -10313,7 +10313,9 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			&& CSGameRules()->m_iRoundWinStatus == WINNER_NONE
 			&& teamCount[alivePlayerTeam] - teamIgnoreCount[alivePlayerTeam] >= AchievementConsts::LastPlayerAlive_MinPlayersOnTeam
 			&& teamCount[alivePlayerOpposingTeam] - teamIgnoreCount[alivePlayerOpposingTeam] >= AchievementConsts::DefaultMinOpponentsForAchievement
-			&& ( !(pAlivePlayer->m_iDisplayHistoryBits & DHF_FRIEND_KILLED) ))
+			&& ( !(pAlivePlayer->m_iDisplayHistoryBits & DHF_FRIEND_KILLED ) )
+ 			&& !pAlivePlayer->HasControlledBotThisRound()
+ 			&& !pAlivePlayer->HasBeenControlledThisRound() )
 		{
 			pAlivePlayer->AwardAchievement(CSLastPlayerAlive);
 		}

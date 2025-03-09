@@ -51,11 +51,6 @@ void CBombTarget::BombTargetTouch( CBaseEntity* pOther )
 		{
 			p->m_bInBombZone = true;
 			p->m_iBombSiteIndex = entindex();
-			if ( !(p->m_iDisplayHistoryBits & DHF_IN_TARGET_ZONE) )
-			{
-				p->HintMessage( "#Hint_you_are_in_targetzone", false );
-				p->m_iDisplayHistoryBits |= DHF_IN_TARGET_ZONE;
-			}
 		}
 	}
 }
