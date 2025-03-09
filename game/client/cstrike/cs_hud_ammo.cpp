@@ -161,8 +161,8 @@ void CHudAmmo::OnThink()
 
 	if ( m_flBackgroundAlpha != cl_hud_background_alpha.GetFloat() )
 	{
-		Color oldColor = GetBgColor();
-		Color newColor( oldColor.r(), oldColor.g(), oldColor.b(), cl_hud_background_alpha.GetFloat() * 255 );
+		Color newColor = GetBgColor();
+ 		newColor[3] = cl_hud_background_alpha.GetFloat() * 255;
 		SetBgColor( newColor );
 	}
 
