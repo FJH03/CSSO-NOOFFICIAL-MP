@@ -986,6 +986,24 @@ bool CMapOverview::ShouldDraw( void )
 
 void CMapOverview::UpdateSizeAndPosition()
 {
+	if ( g_pSpectatorGUI && g_pSpectatorGUI->IsVisible() )
+ 	{
+ 		int iScreenWide, iScreenTall;
+ 		GetHudSize( iScreenWide, iScreenTall );
+ 
+ 		int iTopBarHeight = g_pSpectatorGUI->GetTopBarHeight();
+ 		int iBottomBarHeight = g_pSpectatorGUI->GetBottomBarHeight();
+ 
+ 		iScreenTall -= ( iTopBarHeight + iBottomBarHeight );
+ 
+ 		int x,y,w,h;
+ 		GetBounds( x,y,w,h );
+ 
+ 		if ( y < iTopBarHeight )
+ 			y = iTopBarHeight;
+ 
+         SetBounds( x,y,w,MIN(h,iScreenTall) );
+ 	}
 }
 
 void CMapOverview::SetCenter(const Vector2D &mappos)

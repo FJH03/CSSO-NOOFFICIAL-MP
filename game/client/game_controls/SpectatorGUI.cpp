@@ -79,10 +79,11 @@ ConVar cl_spec_mode(
 	FCVAR_ARCHIVE | FCVAR_USERINFO | FCVAR_SERVER_CAN_EXECUTE,
 	"spectator mode" );
 
+
+
 //-----------------------------------------------------------------------------
 // main spectator panel
-
-
+//-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
@@ -106,6 +107,9 @@ CSpectatorGUI::CSpectatorGUI(IViewPort *pViewPort) : EditablePanel( NULL, PANEL_
 	SetScheme("ClientScheme");
 	SetMouseInputEnabled( false );
 	SetKeyBoardInputEnabled( false );
+
+	m_pTopBar = new Panel( this, "topbar" );
+ 	m_pBottomBarBlank = new Panel( this, "bottombarblank" );
 
 	// m_pBannerImage = new ImagePanel( m_pTopBar, NULL );
 	m_pPlayerLabel = new Label( this, "playerlabel", "" );
@@ -156,9 +160,14 @@ void CSpectatorGUI::ApplySchemeSettings(IScheme *pScheme)
 	{
 		pConditions->deleteThis();
 	}
+	
+	m_pBottomBarBlank->SetVisible( true );
+	m_pTopBar->SetVisible( true );
 
 	BaseClass::ApplySchemeSettings( pScheme );
 	SetBgColor(Color( 0,0,0,0 ) ); // make the background transparent
+	m_pTopBar->SetBgColor(GetBlackBarColor());
+	m_pBottomBarBlank->SetBgColor(GetBlackBarColor());
 	// m_pBottomBar->SetBgColor(Color( 0,0,0,0 ));
 	SetPaintBorderEnabled(false);
 
@@ -174,11 +183,15 @@ void CSpectatorGUI::ApplySchemeSettings(IScheme *pScheme)
 //-----------------------------------------------------------------------------
 void CSpectatorGUI::PerformLayout()
 {
-	int w,h;
+	int w,h,x,y;
 	GetHudSize(w, h);
 	
 	// fill the screen
 	SetBounds(0,0,w,h);
+	
+	// stretch the bottom bar across the screen
+	m_pBottomBarBlank->GetPos(x,y);
+	m_pBottomBarBlank->SetSize( w, h - y );
 }
 
 //-----------------------------------------------------------------------------
@@ -255,9 +268,12 @@ void CSpectatorGUI::ShowPanel(bool bShow)
 {
 	if ( bShow && !IsVisible() )
 	{
+		InvalidateLayout( true, true );
 		m_bSpecScoreboard = false;
 	}
+
 	SetVisible( bShow );
+
 	if ( !bShow && m_bSpecScoreboard )
 	{
 		gViewPortInterface->ShowPanel( PANEL_SCOREBOARD, false );
@@ -274,12 +290,44 @@ bool CSpectatorGUI::ShouldShowPlayerLabel( int specmode )
 void CSpectatorGUI::Update()
 {
 	int wide, tall;
+	int bx, by, bwide, btall;
 
 	GetHudSize(wide, tall);
+	m_pTopBar->GetBounds( bx, by, bwide, btall );
 
 	IGameResources *gr = GameResources();
 	int specmode = GetSpectatorMode();
 	int playernum = GetSpectatorTarget();
+	
+	IViewPortPanel *overview = gViewPortInterface->FindPanelByName( PANEL_OVERVIEW );
+
+	if ( overview && overview->IsVisible() )
+	{
+		int mx, my, mwide, mtall;
+
+		VPANEL p = overview->GetVPanel();
+		vgui::ipanel()->GetPos( p, mx, my );
+		vgui::ipanel()->GetSize( p, mwide, mtall );
+				
+		if ( my < btall )
+		{
+			// reduce to bar 
+			m_pTopBar->SetSize( wide - (mx + mwide), btall );
+			m_pTopBar->SetPos( (mx + mwide), 0 );
+		}
+		else
+		{
+			// full top bar
+			m_pTopBar->SetSize( wide , btall );
+			m_pTopBar->SetPos( 0, 0 );
+		}
+	}
+	else
+	{
+		// full top bar
+		m_pTopBar->SetSize( wide , btall ); // change width, keep height
+		m_pTopBar->SetPos( 0, 0 );
+	}
 
 	m_pPlayerLabel->SetVisible( ShouldShowPlayerLabel(specmode) );
 
@@ -371,6 +419,7 @@ static void ForwardSpecCmdToServer( const CCommand &args )
 	else if ( args.ArgC() == 2 )
 	{
 		// forward the command with parameter
+		// XXX(JohnS): Whyyyyy
 		char command[128];
 		Q_snprintf( command, sizeof(command), "%s \"%s\"", args[ 0 ], args[ 1 ] );
 		engine->ServerCmd( command );
@@ -491,6 +540,5 @@ CON_COMMAND_F( spec_player, "Spectate player by name", FCVAR_CLIENTCMD_CAN_EXECU
 		ForwardSpecCmdToServer( args );
 	}
 }
-
 
 
