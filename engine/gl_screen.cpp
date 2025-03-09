@@ -161,7 +161,7 @@ void SCR_CenterPrint (char *str)
 	if ( !centerprint )
 		return;
 
-	centerprint->ColorPrint( 255, 255, 255, 0, str );
+	centerprint->Print( str );
 }
 
 //-----------------------------------------------------------------------------

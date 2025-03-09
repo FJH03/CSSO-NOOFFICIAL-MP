@@ -26,27 +26,16 @@ class Panel;
 class CNotificationPanel;
 class CCenterPrint : public ICenterPrint
 {
-private:
-	CNotificationPanel	*vguiNotificationPanel;
-
 public:
-						CCenterPrint( void );
-
-	virtual void		Create( vgui::VPANEL parent );
-	virtual void		Destroy( void );
-	
-	virtual void		SetTextColor( int r, int g, int b, int a );
 	virtual void		Print( char *text );
 	virtual void		Print( wchar_t *text );
-	virtual void		ColorPrint( int r, int g, int b, int a, char *text );
-	virtual void		ColorPrint( int r, int g, int b, int a, wchar_t *text );
 	virtual void		HintPrint( char *text );
 	virtual void		HintPrint( wchar_t *text );
 	virtual void		Clear( void );
 
-	void				SetIsAlert( bool bState );
 };
 
 extern CCenterPrint *internalCenterPrint;
+extern CNotificationPanel vguiNotificationPanel;
 
 #endif // VGUICENTERPRINT_H

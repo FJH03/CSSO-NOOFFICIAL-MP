@@ -485,6 +485,7 @@ public:
 	virtual void PaintBuildOverlay();		// the extra drawing for when in build mode
 	virtual void PostChildPaint();
 	virtual void PerformLayout();
+	void InternalPerformLayout();
 
 	// this enables message mapping for this class - requires matching IMPLEMENT_PANELDESC() in the .cpp file
 	DECLARE_PANELMAP();
@@ -804,7 +805,6 @@ private:
 	void Think();
 	void PerformApplySchemeSettings();
 
-	void InternalPerformLayout();
 	void InternalSetCursor();
 
 	MESSAGE_FUNC_INT_INT( InternalCursorMoved, "CursorMoved", xpos, ypos );

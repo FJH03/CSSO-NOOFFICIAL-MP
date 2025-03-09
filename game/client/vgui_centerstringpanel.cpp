@@ -19,6 +19,7 @@
 #include <vgui_controls/ImagePanel.h>
 #include <vgui/ISurface.h>
 #include <vgui/IScheme.h>
+#include "hudelement.h"
 #include "hud_macros.h"
 #include "text_message.h"
 #include "iclientmode.h"
@@ -29,32 +30,31 @@
 
 static ConVar		scr_centertime( "scr_centertime", "4" );
 
+static CNotificationPanel *g_NotificationPanel = NULL;
+
 //-----------------------------------------------------------------------------
 // Purpose: Implements Center String printing
 //-----------------------------------------------------------------------------
-class CNotificationPanel : public vgui::EditablePanel, public CGameEventListener
+class CNotificationPanel : public vgui::EditablePanel, public CHudElement
 {
 	DECLARE_CLASS_SIMPLE( CNotificationPanel, vgui::EditablePanel );
 
 public:
-						CNotificationPanel( vgui::VPANEL parent );
+						CNotificationPanel( const char *pElementName );
 	virtual				~CNotificationPanel( void );
 
 	// vgui::Panel
-	virtual void		ApplySchemeSettings( vgui::IScheme *pScheme );
-	virtual void		OnTick( void );
-	virtual void		Paint();
+	virtual void		OnThink( void );
 	virtual void		OnScreenSizeChanged( int iOldWide, int iOldTall );
 
 	// CGameEventListener
 	virtual void		FireGameEvent( IGameEvent * event );
 
+	virtual void		MsgFunc_HintText( bf_read &msg );
+
 	// CVGuiCenterPrint
-	virtual void		SetTextColor( int r, int g, int b, int a );
 	virtual void		Print( char *text );
 	virtual void		Print( wchar_t *text );
-	virtual void		ColorPrint( int r, int g, int b, int a, char *text );
-	virtual void		ColorPrint( int r, int g, int b, int a, wchar_t *text );
 	virtual void		Clear( void );
 
 	virtual void		SetAlertVisibility( bool bState );
@@ -72,47 +72,24 @@ private:
 	CPanelAnimationVarAliasType( int, alert_icon_margin, "alert_icon_margin", "0", "proportional_width" );
 	CPanelAnimationVarAliasType( int, bottom_margin, "bottom_margin", "0", "proportional_height" );
 
-	int						m_iOrigXPos;
-	int						m_iOrigYPos;
 	float					m_flCentertimeOff;
-	float					m_flCentertimeOn;
-	bool					m_bIsDrawing;
-	bool					m_bIsFirstDraw;
 };
 
-static void __MsgFunc_HintText( bf_read &msg )
-{
-	// Read the string(s)
-	char szString[255];
-	msg.ReadString( szString, sizeof( szString ) );
-
-	internalCenterPrint->SetIsAlert( false ); // hint equals an info message
-	internalCenterPrint->HintPrint( hudtextmessage->LookupString( szString, NULL ) );
-}
+DECLARE_HUDELEMENT( CNotificationPanel );
+DECLARE_HUD_MESSAGE( CNotificationPanel, HintText );
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : *parent - 
 //-----------------------------------------------------------------------------
-CNotificationPanel::CNotificationPanel( vgui::VPANEL parent ) : 
-	BaseClass( NULL, "NotificationPanel" )
+CNotificationPanel::CNotificationPanel( const char *pElementName ) : CHudElement( pElementName ), EditablePanel(NULL, "NotificationPanel")
 {
 	vgui::Panel *pParent = g_pClientMode->GetViewport();
 	SetParent( pParent );
-	SetVisible( false );
-	SetCursor( null );
-	SetKeyBoardInputEnabled( false );
-	SetMouseInputEnabled( false );
-	SetScheme( "ClientScheme" );
 
-	m_flCentertimeOff = m_flCentertimeOn = 0.0;
+	m_flCentertimeOff = 0.0;
 
-	vgui::ivgui()->AddTickSignal( GetVPanel(), 100 );
-
-	m_iOrigXPos = m_iOrigYPos = 0;
 	m_bIsAlert = true;
-	m_bIsDrawing = false;
-	m_bIsFirstDraw = true;
 
 	m_pTextLabel = new vgui::Label( this, "NotificationText", " " );
 	m_pAlertLabel = new vgui::Label( this, "AlertTitleLabel", "#UI_Alert" );
@@ -125,14 +102,25 @@ CNotificationPanel::CNotificationPanel( vgui::VPANEL parent ) :
 	ComputeSize();
 
 	ListenForGameEvent( "player_hintmessage" );
+	HOOK_HUD_MESSAGE( CNotificationPanel, HintText );
 
-	HOOK_MESSAGE( HintText );
+	g_NotificationPanel = this;
+}
+
+void CNotificationPanel::MsgFunc_HintText( bf_read &msg )
+{
+	// Read the string(s)
+	char szString[255];
+	msg.ReadString( szString, sizeof( szString ) );
+
+	m_bIsAlert = false; // hint equals an info message
+	Print( hudtextmessage->LookupString( szString, NULL ) );
 }
 
 void CNotificationPanel::OnScreenSizeChanged( int iOldWide, int iOldTall )
 {
- 	// reload the .res file so items are rescaled
- 	LoadControlSettings( "resource/hud/notificationpanel.res" );
+	// reload the .res file so items are rescaled
+	LoadControlSettings( "resource/hud/notificationpanel.res" );
 }
 
 //-----------------------------------------------------------------------------
@@ -140,6 +128,7 @@ void CNotificationPanel::OnScreenSizeChanged( int iOldWide, int iOldTall )
 //-----------------------------------------------------------------------------
 CNotificationPanel::~CNotificationPanel( void )
 {
+	g_NotificationPanel = NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -168,36 +157,17 @@ void CNotificationPanel::ComputeSize( void )
 	m_pBorderBottom->SetPos( m_pBorderBottom->GetXPos(), tall - 1 );
 }
 
-void CNotificationPanel::ApplySchemeSettings( vgui::IScheme *pScheme )
-{
-	BaseClass::ApplySchemeSettings(pScheme);
-
-	// Use a large font
-	m_pAlertLabel->SetFont( pScheme->GetFont( "NotificationTitleFont" ) );
-	m_pTextLabel->SetFont( pScheme->GetFont( "NotificationTextFont" ) );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : r - 
-//			g - 
-//			b - 
-//			a - 
-//-----------------------------------------------------------------------------
-void CNotificationPanel::SetTextColor( int r, int g, int b, int a )
-{
-	m_pTextLabel->SetFgColor( Color( r, g, b, a ) );
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void CNotificationPanel::Print( char *text )
 {
 	m_pTextLabel->SetText( text );
+	m_pTextLabel->InternalPerformLayout(); // layout it right now so that is resizes this frame
 	SetAlertVisibility( m_bIsAlert );
 
-	m_bIsDrawing = true;
+	ComputeSize();
+	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "NotificationShow" );
 	
 	m_flCentertimeOff = scr_centertime.GetFloat() + gpGlobals->curtime;
 }
@@ -208,29 +178,13 @@ void CNotificationPanel::Print( char *text )
 void CNotificationPanel::Print( wchar_t *text )
 {
 	m_pTextLabel->SetText( text );
+	m_pTextLabel->InternalPerformLayout(); // layout it right now so that is resizes this frame
 	SetAlertVisibility( m_bIsAlert );
 
-	m_bIsDrawing = true;
+	ComputeSize();
+	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "NotificationShow" );
 	
 	m_flCentertimeOff = scr_centertime.GetFloat() + gpGlobals->curtime;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CNotificationPanel::ColorPrint( int r, int g, int b, int a, char *text )
-{
-	SetTextColor( r, g, b, a );
-	Print( text );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CNotificationPanel::ColorPrint( int r, int g, int b, int a, wchar_t *text )
-{
-	SetTextColor( r, g, b, a );
-	Print( text );
 }
 
 //-----------------------------------------------------------------------------
@@ -240,44 +194,17 @@ void CNotificationPanel::Clear( void )
 {
 	m_flCentertimeOff = 0;
 	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "NotificationHide" );
-	m_bIsDrawing = false;
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CNotificationPanel::OnTick( void )
+void CNotificationPanel::OnThink( void )
 {
-	bool bVisibility = !engine->IsDrawingLoadingImage() && m_bIsDrawing;
-	if ( bVisibility != IsVisible() )
+	if ( GetAlpha() != 0 && m_flCentertimeOff <= gpGlobals->curtime )
 	{
-		SetVisible( bVisibility );
-		if ( bVisibility )
-		{
-			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "NotificationShow" );
-		}
+		g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "NotificationHide" );
 	}
-
-	if ( m_bIsDrawing )
-	{
-		if ( m_flCentertimeOff <= gpGlobals->curtime )
-		{
-			m_bIsDrawing = false;
-			m_bIsFirstDraw = false;
-			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "NotificationHide" );
-		}
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CNotificationPanel::Paint()
-{
-	if ( m_bIsDrawing )
-		ComputeSize();
-
-	BaseClass::Paint();
 }
 
 //-----------------------------------------------------------------------------
@@ -292,108 +219,48 @@ void CNotificationPanel::SetAlertVisibility( bool bState )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Output : 
-//-----------------------------------------------------------------------------
-CCenterPrint::CCenterPrint( void )
-{
-	vguiNotificationPanel = NULL;
-}
-
-void CCenterPrint::SetTextColor( int r, int g, int b, int a )
-{
-	if ( vguiNotificationPanel )
-	{
-		vguiNotificationPanel->SetTextColor( r, g, b, a );
-	}
-}
-
 void CCenterPrint::Print( char *text )
 {
-	if ( vguiNotificationPanel )
+	if ( g_NotificationPanel )
 	{
-		SetIsAlert( true ); // center print equals an alert
-		vguiNotificationPanel->ColorPrint( 255, 255, 255, 255, text );
+		g_NotificationPanel->m_bIsAlert = true; // center print equals an alert
+		g_NotificationPanel->Print( text );
 	}
 }
 
 void CCenterPrint::Print( wchar_t *text )
 {
-	if ( vguiNotificationPanel )
+	if ( g_NotificationPanel )
 	{
-		SetIsAlert( true ); // center print equals an alert
-		vguiNotificationPanel->ColorPrint( 255, 255, 255, 255, text );
-	}
-}
-
-void CCenterPrint::ColorPrint( int r, int g, int b, int a, char *text )
-{
-	if ( vguiNotificationPanel )
-	{
-		SetIsAlert( true ); // center print equals an alert
-		vguiNotificationPanel->ColorPrint( r, g, b, a, text );
-	}
-}
-
-void CCenterPrint::ColorPrint( int r, int g, int b, int a, wchar_t *text )
-{
-	if ( vguiNotificationPanel )
-	{
-		SetIsAlert( true ); // center print equals an alert
-		vguiNotificationPanel->ColorPrint( r, g, b, a, text );
+		g_NotificationPanel->m_bIsAlert = true; // center print equals an alert
+		g_NotificationPanel->Print( text );
 	}
 }
 
 void CCenterPrint::HintPrint( char *text )
 {
-	if ( vguiNotificationPanel )
+	if ( g_NotificationPanel )
 	{
-		SetIsAlert( false );
-		vguiNotificationPanel->ColorPrint( 255, 255, 255, 255, text );
+		g_NotificationPanel->m_bIsAlert = false;
+		g_NotificationPanel->Print( text );
 	}
 }
 
 void CCenterPrint::HintPrint( wchar_t *text )
 {
-	if ( vguiNotificationPanel )
+	if ( g_NotificationPanel )
 	{
-		SetIsAlert( false );
-		vguiNotificationPanel->ColorPrint( 255, 255, 255, 255, text );
+		g_NotificationPanel->m_bIsAlert = false;
+		g_NotificationPanel->Print( text );
 	}
 }
 
 void CCenterPrint::Clear( void )
 {
-	if ( vguiNotificationPanel )
+	if ( g_NotificationPanel )
 	{
-		vguiNotificationPanel->Clear();
+		g_NotificationPanel->Clear();
 	}
-}
-
-void CCenterPrint::Create( vgui::VPANEL parent )
-{
-	if ( vguiNotificationPanel )
-	{
-		Destroy();
-	}
-
-	vguiNotificationPanel = new CNotificationPanel( parent );
-}
-
-void CCenterPrint::Destroy( void )
-{
-	if ( vguiNotificationPanel )
-	{
-		vguiNotificationPanel->SetParent( (vgui::Panel *)NULL );
-		delete vguiNotificationPanel;
-		vguiNotificationPanel = NULL;
-	}
-}
-
-void CCenterPrint::SetIsAlert( bool bState )
-{
-	if ( vguiNotificationPanel )
-		vguiNotificationPanel->m_bIsAlert = bState;
 }
 
 static CCenterPrint g_CenterString;

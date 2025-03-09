@@ -53,7 +53,6 @@ private:
 	CPanelAnimationVarAliasType( int, buyzone_icon_xpos, "buyzone_icon_xpos", "0", "proportional_xpos" );
 	CPanelAnimationVarAliasType( int, buyzone_icon_ypos, "buyzone_icon_ypos", "0", "proportional_ypos" );
 	CPanelAnimationVarAliasType( int, margin_right, "margin_right", "0", "proportional_width" );
-	CPanelAnimationVarAliasType( int, buyzone_icon_margin_right, "buyzone_icon_margin_right", "0", "proportional_width" );
 
 	CPanelAnimationVar( Color, m_clrBuyZoneIconFg, "BuyZoneIconFg", "FgColor" );
 };
@@ -140,8 +139,6 @@ void CHudAccount::OnThink()
 		m_pAccountLabel->WideToContents();
 
 		SetWide( m_pAccountLabel->GetXPos() + m_pAccountLabel->GetWide() + margin_right );
-
-		m_pBuyZoneIcon->SetPos( m_pAccountLabel->GetXPos() + m_pAccountLabel->GetWide() + buyzone_icon_margin_right, m_pBuyZoneIcon->GetYPos() );
 	}
 
 	m_pBuyZoneIcon->SetVisible( m_pBuyZoneIcon && pPlayer->IsInBuyZone() && !CSGameRules()->IsBuyTimeElapsed() );
