@@ -73,8 +73,10 @@ struct ModelCollisionLookup_t
 
 static bool ModelLess( ModelCollisionLookup_t const& src1, ModelCollisionLookup_t const& src2 )
 {
-	return src1.m_Name < src2.m_Name &&
-		   src1.m_flScale < src2.m_flScale;
+	if ( src1.m_Name == src2.m_Name )
+ 		return src1.m_flScale < src2.m_flScale;
+ 
+ 	return src1.m_Name < src2.m_Name;
 }
 
 static CUtlRBTree<ModelCollisionLookup_t, unsigned short>	s_ModelCollisionCache( 0, 32, ModelLess );
@@ -210,9 +212,18 @@ static CPhysConvex* ComputeConvexHull( studiohdr_t* pStudioHdr, mstudiomesh_t* p
 	{
 		vertCopy[i] = *vertData->Position(i); 
 		// quantize these so that really curved/detailed models don't take forever
-		vertCopy[i].x = float( RoundFloatToInt( vertCopy[i].x * flScale ) );
-		vertCopy[i].y = float( RoundFloatToInt( vertCopy[i].y * flScale ) );
-		vertCopy[i].z = float( RoundFloatToInt( vertCopy[i].z * flScale ) );
+		if ( flScale == 1.0f )
+ 		{
+ 			vertCopy[i].x = float( RoundFloatToInt( vertCopy[i].x ) );
+ 			vertCopy[i].y = float( RoundFloatToInt( vertCopy[i].y ) );
+ 			vertCopy[i].z = float( RoundFloatToInt( vertCopy[i].z ) );
+ 		}
+ 		else
+ 		{
+ 			vertCopy[i].x = float( RoundFloatToInt( vertCopy[i].x * flScale ) );
+ 			vertCopy[i].y = float( RoundFloatToInt( vertCopy[i].y * flScale ) );
+ 			vertCopy[i].z = float( RoundFloatToInt( vertCopy[i].z * flScale ) );
+ 		}
 		ppVerts[i] = &vertCopy[i];
 	}
 
@@ -377,7 +388,7 @@ static bool TestLeafAgainstCollide( int depth, int* pNodeList,
 
 static void ComputeConvexHullLeaves_R( int node, int depth, int* pNodeList,
 	Vector const& mins, Vector const& maxs,
-	Vector const& origin, QAngle const& angles,	CPhysCollide* pCollide,
+	Vector const& origin, QAngle const& angles,	CPhysCollide* pCollide, bool bSkipTrace,
 	CUtlVector<unsigned short>& leafList )
 {
 	Assert( pNodeList && pCollide );
@@ -429,12 +440,10 @@ static void ComputeConvexHullLeaves_R( int node, int depth, int* pNodeList,
 			pNodeList[depth] = node;
 			++depth;
 
-			ComputeConvexHullLeaves_R( pNode->children[1], 
-				depth, pNodeList, mins, maxs, origin, angles, pCollide, leafList );
+			ComputeConvexHullLeaves_R( pNode->children[1], depth, pNodeList, mins, maxs, origin, angles, pCollide, bSkipTrace, leafList );
 			
 			pNodeList[depth - 1] = - node - 1;
-			ComputeConvexHullLeaves_R( pNode->children[0],
-				depth, pNodeList, mins, maxs, origin, angles, pCollide, leafList );
+			ComputeConvexHullLeaves_R( pNode->children[0], depth, pNodeList, mins, maxs, origin, angles, pCollide, bSkipTrace, leafList );
 			return;
 		}
 	}
@@ -444,7 +453,7 @@ static void ComputeConvexHullLeaves_R( int node, int depth, int* pNodeList,
 	// Never add static props to solid leaves
 	if ( (dleafs[-node-1].contents & CONTENTS_SOLID) == 0 )
 	{
-		if (TestLeafAgainstCollide( depth, pNodeList, origin, angles, pCollide ))
+		if ( bSkipTrace || TestLeafAgainstCollide( depth, pNodeList, origin, angles, pCollide ) )
 		{
 			leafList.AddToTail( -node - 1 );
 		}
@@ -455,12 +464,27 @@ static void ComputeConvexHullLeaves_R( int node, int depth, int* pNodeList,
 // Places Static Props in the level
 //-----------------------------------------------------------------------------
 
-static void ComputeStaticPropLeaves( CPhysCollide* pCollide, Vector const& origin, 
-				QAngle const& angles, CUtlVector<unsigned short>& leafList )
+static void ComputeStaticPropLeaves( CPhysCollide* pCollide, Vector const& origin, QAngle const& angles, CUtlVector<unsigned short>& leafList )
 {
 	// Compute an axis-aligned bounding box for the collide
 	Vector mins, maxs;
 	s_pPhysCollision->CollideGetAABB( &mins, &maxs, pCollide, origin, angles );
+
+	Vector vSize = maxs - mins;
+ 	bool bSkipTrace = false;
+ 	if ( vSize.x < 1e-2f || vSize.y < 1e-2f || vSize.z < 1e-2f )
+ 	{
+ 		// 2d, enlarge and skip the accurate test
+ 		bSkipTrace = true;
+ 		for ( int i = 0; i < 3; i++ )
+ 		{
+ 			if ( vSize[i] < 1e-2f )
+ 			{
+ 				mins[i] -= 1.0f;
+ 				maxs[i] += 1.0f;
+ 			}
+ 		}
+ 	}
 
 	// Find all leaves that intersect with the bounds
 	int tempNodeList[1024];
