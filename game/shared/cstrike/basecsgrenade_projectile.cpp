@@ -7,9 +7,6 @@
 #include "cbase.h"
 #include "basecsgrenade_projectile.h"
 
-float GetCurrentGravity( void );
-
-
 #ifdef CLIENT_DLL
 
 	#include "c_cs_player.h"
@@ -21,10 +18,13 @@ float GetCurrentGravity( void );
 	#include "soundent.h"
 	#include "te_effect_dispatch.h"
 	#include "KeyValues.h"
+	#include "cs_simple_hostage.h"
 
 	BEGIN_DATADESC( CBaseCSGrenadeProjectile )
 		DEFINE_THINKFUNC( DangerSoundThink ),
 	END_DATADESC()
+
+	#define GRENADE_FAILSAFE_MAX_BOUNCES 20
 
 #endif
 
@@ -33,14 +33,16 @@ IMPLEMENT_NETWORKCLASS_ALIASED( BaseCSGrenadeProjectile, DT_BaseCSGrenadeProject
 
 BEGIN_NETWORK_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile )
 	#ifdef CLIENT_DLL
-		RecvPropVector( RECVINFO( m_vInitialVelocity ) )
+		RecvPropVector( RECVINFO( m_vInitialVelocity ) ),
+		RecvPropInt( RECVINFO( m_nBounces ) )
 	#else
 		SendPropVector( SENDINFO( m_vInitialVelocity ), 
 			20,		// nbits
 			0,		// flags
 			-3000,	// low value
 			3000	// high value
-			)
+			),
+		SendPropInt( SENDINFO( m_nBounces ) )
 	#endif
 END_NETWORK_TABLE()
 
@@ -116,9 +118,41 @@ END_NETWORK_TABLE()
 		SetSolidFlags( FSOLID_NOT_STANDABLE );
 		SetMoveType( MOVETYPE_FLYGRAVITY, MOVECOLLIDE_FLY_CUSTOM );
 		SetSolid( SOLID_BBOX );	// So it will collide with physics props!
+		AddFlag( FL_GRENADE );
 
 		// smaller, cube bounding box so we rest on the ground
-		SetSize( Vector ( -2, -2, -2 ), Vector ( 2, 2, 2 ) );
+		Vector min = Vector( -2, -2, -2 );
+		Vector max = Vector( 2, 2, 2 );
+
+		SetSize( min, max );
+ 		if ( CollisionProp( ) )
+ 			CollisionProp( )->SetCollisionBounds( min, max );
+
+		m_nBounces = 0;
+	}
+
+	int	CBaseCSGrenadeProjectile::UpdateTransmitState()
+	{
+		// always call ShouldTransmit() for grenades
+		return SetTransmitState( FL_EDICT_FULLCHECK );
+	}
+
+	int CBaseCSGrenadeProjectile::ShouldTransmit( const CCheckTransmitInfo *pInfo )
+	{
+		CBaseEntity *pRecipientEntity = CBaseEntity::Instance( pInfo->m_pClientEnt );
+		if ( pRecipientEntity->IsPlayer() )
+		{
+			CBasePlayer *pRecipientPlayer = static_cast<CBasePlayer*>( pRecipientEntity );
+
+			// always transmit to the thrower of the grenade
+			if ( pRecipientPlayer && ( (GetThrower() && pRecipientPlayer == GetThrower()) ||
+				pRecipientPlayer->GetTeamNumber() == TEAM_SPECTATOR) )
+			{
+				return FL_EDICT_ALWAYS;
+			}
+		}
+
+		return FL_EDICT_PVSCHECK;
 	}
 
 	void CBaseCSGrenadeProjectile::DangerSoundThink( void )
@@ -139,7 +173,7 @@ END_NETWORK_TABLE()
 
 		SetNextThink( gpGlobals->curtime + 0.2 );
 
-		if (GetWaterLevel() != 0)
+		if (GetWaterLevel() != WL_NotInWater)
 		{
 			SetAbsVelocity( GetAbsVelocity() * 0.5 );
 		}
@@ -164,38 +198,48 @@ END_NETWORK_TABLE()
 
 	void CBaseCSGrenadeProjectile::ResolveFlyCollisionCustom( trace_t &trace, Vector &vecVelocity )
 	{
-		//Assume all surfaces have the same elasticity
-		float flSurfaceElasticity = 1.0;
+		const float kSleepVelocity = 20.0f;
+		const float kSleepVelocitySquared = kSleepVelocity * kSleepVelocity;
 
-		//Don't bounce off of players with perfect elasticity
-		if( trace.m_pEnt && trace.m_pEnt->IsPlayer() )
-		{
-			flSurfaceElasticity = 0.3;
-		}
+		// Verify that we have an entity.
+		CBaseEntity *pEntity = trace.m_pEnt;
+		Assert( pEntity );
 
 		// if its breakable glass and we kill it, don't bounce.
 		// give some damage to the glass, and if it breaks, pass 
 		// through it.
 		bool breakthrough = false;
 
-		if( trace.m_pEnt && FClassnameIs( trace.m_pEnt, "func_breakable" ) )
+		if( pEntity && FClassnameIs( pEntity, "func_breakable" ) )
 		{
 			breakthrough = true;
 		}
 
-		if( trace.m_pEnt && FClassnameIs( trace.m_pEnt, "func_breakable_surf" ) )
+		if( pEntity && FClassnameIs( pEntity, "func_breakable_surf" ) )
 		{
 			breakthrough = true;
 		}
 
-		if (breakthrough)
+		if( pEntity && FClassnameIs( pEntity, "prop_physics_multiplayer" ) && pEntity->GetMaxHealth() > 0 && pEntity->m_takedamage == DAMAGE_YES )
+		{
+			breakthrough = true;
+		}
+
+		// this one is tricky because BounceTouch hits breakable propers before we hit this function and the damage is already applied there (CBaseGrenade::BounceTouch( CBaseEntity *pOther ))
+		// by the time we hit this, the prop hasn't been removed yet, but it broke, is set to not take anymore damage and is marked for deletion - we have to cover this case here
+		if( pEntity && FClassnameIs( pEntity, "prop_dynamic" ) && pEntity->GetMaxHealth() > 0 && (pEntity->m_takedamage == DAMAGE_YES || (pEntity->m_takedamage == DAMAGE_NO && pEntity->IsEFlagSet( EFL_KILLME ))) )
+		{
+			breakthrough = true;
+		}
+
+		if ( breakthrough )
 		{
 			CTakeDamageInfo info( this, this, 10, DMG_CLUB );
-			trace.m_pEnt->DispatchTraceAttack( info, GetAbsVelocity(), &trace );
+			pEntity->DispatchTraceAttack( info, GetAbsVelocity().Normalized(), &trace );
 
 			ApplyMultiDamage();
 
-			if( trace.m_pEnt->m_iHealth <= 0 )
+			if( pEntity->m_iHealth <= 0 )
 			{
 				// slow our flight a little bit
 				Vector vel = GetAbsVelocity();
@@ -206,7 +250,47 @@ END_NETWORK_TABLE()
 				return;
 			}
 		}
-		
+
+
+		//Assume all surfaces have the same elasticity
+		float flSurfaceElasticity = 1.0;
+
+		//Don't bounce off of players with perfect elasticity
+		if ( pEntity && pEntity->IsPlayer() )
+		{
+			flSurfaceElasticity = 0.3f;
+
+			// and do slight damage to players on the opposite team
+			if ( GetTeamNumber() != pEntity->GetTeamNumber() )
+			{
+				CTakeDamageInfo info( this, GetThrower(), 2, DMG_GENERIC );
+
+				pEntity->TakeDamage( info );
+			}
+		}
+
+		//Don't bounce twice on a selection of problematic entities
+		bool bIsProjectile = dynamic_cast< CBaseCSGrenadeProjectile* >( pEntity ) != NULL;
+		if ( pEntity && !pEntity->IsWorld() && m_lastHitPlayer.Get() == pEntity )
+		{
+			bool bIsHostage = dynamic_cast< CHostage* >( pEntity ) != NULL;
+			if (  pEntity->IsPlayer() || bIsHostage || bIsProjectile )
+			{
+				//DevMsg( "Setting %s to DEBRIS, it is in group %i, it hit %s in group %i\n", this->GetClassname(), this->GetCollisionGroup(), pEntity->GetClassname(), pEntity->GetCollisionGroup() );
+				SetCollisionGroup( COLLISION_GROUP_DEBRIS );
+				if ( bIsProjectile )
+				{
+					//DevMsg( "Setting %s to DEBRIS, it is in group %i.\n", pEntity->GetClassname(), pEntity->GetCollisionGroup() );
+					pEntity->SetCollisionGroup( COLLISION_GROUP_DEBRIS );
+				}
+				return;
+			}
+		}
+		if ( pEntity )
+		{
+			m_lastHitPlayer = pEntity;
+		}
+
 		float flTotalElasticity = GetElasticity() * flSurfaceElasticity;
 		flTotalElasticity = clamp( flTotalElasticity, 0.0f, 0.9f );
 
@@ -219,21 +303,30 @@ END_NETWORK_TABLE()
 		VectorAdd( vecAbsVelocity, GetBaseVelocity(), vecVelocity );
 		float flSpeedSqr = DotProduct( vecVelocity, vecVelocity );
 
-		// Stop if on ground.
-		if ( trace.plane.normal.z > 0.7f )			// Floor
+		bool bIsWeapon = dynamic_cast< CBaseCombatWeapon* >( pEntity ) != NULL;
+		
+		// Stop if on ground or if we bounce and our velocity is really low (keeps it from bouncing infinitely)
+		if ( pEntity &&
+			( ( trace.plane.normal.z > 0.7f ) || (trace.plane.normal.z > 0.1f && flSpeedSqr < kSleepVelocitySquared) ) &&
+			( pEntity->IsStandable() || bIsProjectile || bIsWeapon || pEntity->IsWorld() ) 
+			)
 		{
-			// Verify that we have an entity.
-			CBaseEntity *pEntity = trace.m_pEnt;
-			Assert( pEntity );
+			// clip it again to emulate old behavior and keep it from bouncing up like crazy when you throw it at the ground on the first toss
+			if ( flSpeedSqr > 96000 )
+			{
+				float alongDist = DotProduct( vecAbsVelocity.Normalized(), trace.plane.normal );
+				if ( alongDist > 0.5f )
+				{
+					float flBouncePadding = (1.0f - alongDist) + 0.5f;
+					vecAbsVelocity *= flBouncePadding;
+				}
+			}
 
 			SetAbsVelocity( vecAbsVelocity );
 
-			if ( flSpeedSqr < ( 30 * 30 ) )
+			if ( flSpeedSqr < kSleepVelocitySquared )
 			{
-				if ( pEntity->IsStandable() )
-				{
-					SetGroundEntity( pEntity );
-				}
+				SetGroundEntity( pEntity );
 
 				// Reset velocities.
 				SetAbsVelocity( vec3_origin );
@@ -252,30 +345,25 @@ END_NETWORK_TABLE()
 			}
 			else
 			{
-				Vector vecDelta = GetBaseVelocity() - vecAbsVelocity;	
 				Vector vecBaseDir = GetBaseVelocity();
-				VectorNormalize( vecBaseDir );
-				float flScale = vecDelta.Dot( vecBaseDir );
-
+				if ( !vecBaseDir.IsZero() )
+				{
+					VectorNormalize( vecBaseDir );
+					Vector vecDelta = GetBaseVelocity() - vecAbsVelocity;	
+					float flScale = vecDelta.Dot( vecBaseDir );
+					vecAbsVelocity += GetBaseVelocity() * flScale;
+				}
+					
 				VectorScale( vecAbsVelocity, ( 1.0f - trace.fraction ) * gpGlobals->frametime, vecVelocity ); 
-				VectorMA( vecVelocity, ( 1.0f - trace.fraction ) * gpGlobals->frametime, GetBaseVelocity() * flScale, vecVelocity );
+				
 				PhysicsPushEntity( vecVelocity, &trace );
 			}
 		}
 		else
 		{
-			// If we get *too* slow, we'll stick without ever coming to rest because
-			// we'll get pushed down by gravity faster than we can escape from the wall.
-			if ( flSpeedSqr < ( 30 * 30 ) )
-			{
-				// Reset velocities.
-				SetAbsVelocity( vec3_origin );
-				SetLocalAngularVelocity( vec3_angle );
-			}
-			else
-			{
-				SetAbsVelocity( vecAbsVelocity );
-			}
+			SetAbsVelocity( vecAbsVelocity );
+			VectorScale( vecAbsVelocity, ( 1.0f - trace.fraction ) * gpGlobals->frametime, vecVelocity ); 
+			PhysicsPushEntity( vecVelocity, &trace );
 		}
 		
 		BounceSound();
@@ -293,6 +381,21 @@ END_NETWORK_TABLE()
 				event->SetFloat( "z", GetAbsOrigin().z );
 				gameeventmanager->FireEvent( event );
 			}
+		}
+
+		OnBounced();
+
+		if (m_nBounces > GRENADE_FAILSAFE_MAX_BOUNCES )
+		{
+			//failsafe detonate after 20 bounces
+			SetAbsVelocity( vec3_origin );
+			DetonateOnNextThink();
+			SetNextThink( gpGlobals->curtime );
+			SetMoveType( MOVETYPE_NONE );
+		}
+		else
+		{
+			m_nBounces++;
 		}
 	}
 

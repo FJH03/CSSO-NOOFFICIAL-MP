@@ -35,6 +35,7 @@ public:
 	// This gets sent to the client and placed in the client's interpolation history
 	// so the projectile starts out moving right off the bat.
 	CNetworkVector( m_vInitialVelocity );
+	CNetworkVar( int, m_nBounces );
 
 
 #ifdef CLIENT_DLL
@@ -47,8 +48,12 @@ public:
 #else
 	DECLARE_DATADESC();
 
+	CBaseCSGrenadeProjectile() : m_pWeaponInfo(NULL) {}
 	virtual void PostConstructor( const char *className );
 	virtual ~CBaseCSGrenadeProjectile();
+
+	virtual int				UpdateTransmitState();
+	virtual int				ShouldTransmit( const CCheckTransmitInfo *pInfo );
 
 	//Constants for all CS Grenades
 	static inline float GetGrenadeGravity() { return 0.4f; }
@@ -57,6 +62,8 @@ public:
 
 	//Think function to emit danger sounds for the AI
 	void DangerSoundThink( void );
+
+	virtual void OnBounced( void ) {}
 	
 	virtual float GetShakeAmplitude( void ) { return 0.0f; }
 	virtual void Splash();
@@ -68,7 +75,12 @@ public:
 
     // [jpaquin] give grenade projectiles a link back to the type
 	// of weapon they are
-	CCSWeaponInfo *m_pWeaponInfo;
+	const CCSWeaponInfo *m_pWeaponInfo;
+
+	EHANDLE m_lastHitPlayer;
+
+	void DetonateOnNextThink( void ) { m_flDetonateTime = 0.0f; }
+
 
 	void SetThrownBodygroup( void );
 
