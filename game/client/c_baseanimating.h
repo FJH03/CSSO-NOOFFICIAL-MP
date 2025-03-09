@@ -417,6 +417,7 @@ public:
 	static void						InitBoneSetupThreadPool();
 	static void						ShutdownBoneSetupThreadPool();
 	void							MarkForThreadedBoneSetup();
+	static void						SetupBonesOnBaseAnimating( C_BaseAnimating *&pBaseAnimating );
 
 	// Invalidate bone caches so all SetupBones() calls force bone transforms to be regenerated.
 	static void						InvalidateBoneCaches();

@@ -1394,6 +1394,7 @@ float C_BaseAnimating::GetPoseParameter( int iParameter )
 		Assert(!"C_BaseAnimating::SetPoseParameter: model missing");
 		return 0.0f;
 	}
+
 	if ( iParameter >= 0 )
 	{
 		return Studio_GetPoseParameter( pStudioHdr, iParameter, m_flPoseParameter[ iParameter ] );
@@ -1589,18 +1590,7 @@ void C_BaseAnimating::BuildTransformations( CStudioHdr *hdr, Vector *pos, Quater
 				}
 				else 
 				{
-					// If the parent bone has been scaled (like with BuildBigHeadTransformations)
-					// scale it back down so the jiggly bones show up non-scaled in the correct location.
-					matrix3x4_t parentMX = GetBone( pbones[i].parent );
-
-					float fScale = Square( parentMX[0][0] ) + Square( parentMX[1][0] ) + Square( parentMX[2][0] );
-					if ( fScale > Square( 1.0001f ) )
-					{
-						fScale = 1.0f / FastSqrt( fScale );
-						MatrixScaleBy( fScale, parentMX );
-					}
-
-					ConcatTransforms( parentMX, bonematrix, goalMX );
+					ConcatTransforms( GetBone( pbones[i].parent ), bonematrix, goalMX );
 				}
 
 				// get jiggle properties from QC data
@@ -1612,7 +1602,7 @@ void C_BaseAnimating::BuildTransformations( CStudioHdr *hdr, Vector *pos, Quater
 				}
 
 				// do jiggle physics
-				m_pJiggleBones->BuildJiggleTransformations( i, gpGlobals->realtime, jiggleInfo, goalMX, GetBoneForWrite( i ) );
+				m_pJiggleBones->BuildJiggleTransformations( i, gpGlobals->curtime, jiggleInfo, goalMX, GetBoneForWrite( i ) );
 
 			}
 			else if (hdr->boneParent(i) == -1) 
@@ -2573,10 +2563,25 @@ ConVar cl_threaded_bone_setup("cl_threaded_bone_setup", "1", 0,
 // Purpose: Do the default sequence blending rules as done in HL1
 //-----------------------------------------------------------------------------
 
-static void SetupBonesOnBaseAnimating( C_BaseAnimating *&pBaseAnimating )
+#ifdef DEBUG_BONE_SETUP_THREADING
+CThreadLocalInt<> *pCount;
+#endif
+
+void C_BaseAnimating::SetupBonesOnBaseAnimating( C_BaseAnimating *&pBaseAnimating )
 {
-	if ( !pBaseAnimating->GetMoveParent() )
-		pBaseAnimating->SetupBones( NULL, -1, -1, gpGlobals->curtime );
+	C_BaseAnimating *pCurrent = pBaseAnimating;
+	C_BaseAnimating *pNext;
+	while ( pCurrent )
+	{
+		pNext = pCurrent->m_pNextForThreadedBoneSetup;
+		pCurrent->m_pNextForThreadedBoneSetup = NULL;
+		pCurrent->SetupBones( NULL, -1, -1, gpGlobals->curtime );
+		pCurrent = pNext;
+	}
+
+#ifdef DEBUG_BONE_SETUP_THREADING
+	(*pCount)++;
+#endif
 }
 
 static void PreThreadedBoneSetup()
@@ -2587,6 +2592,10 @@ static void PreThreadedBoneSetup()
 static void PostThreadedBoneSetup()
 {
 	mdlcache->EndLock();
+#ifdef DEBUG_BONE_SETUP_THREADING
+ 	Msg( "  %x done, %d\n", ThreadGetCurrentId(), (int)(*pCount) );
+ 	(*pCount) = 0;
+#endif
 }
 
 static bool g_bDoThreadedBoneSetup;
@@ -2630,17 +2639,74 @@ void C_BaseAnimating::MarkForThreadedBoneSetup()
 
 void C_BaseAnimating::ThreadedBoneSetup()
 {
-	g_bDoThreadedBoneSetup = cl_threaded_bone_setup.GetBool();
+	g_bDoThreadedBoneSetup = ( g_pBoneSetupThreadPool && g_pBoneSetupThreadPool->NumThreads() && cl_threaded_bone_setup.GetInt() );
 	if ( g_bDoThreadedBoneSetup )
 	{
 		int nCount = g_PreviousBoneSetups.Count();
 		if ( nCount > 1 )
 		{
+			VPROF_BUDGET( "C_BaseAnimating::ThreadedBoneSetup", "Client_Animation_Threaded" );
+
+#ifdef DEBUG_BONE_SETUP_THREADING
+			Msg( "{\n" );
+#endif
+			// This loop is here rather than the mark function so we don't have to worry about the list being threadsafe, or worry about entity destruction
+#ifdef _DEBUG
+			CUtlVector<C_BaseAnimating *> test;
+			test.AddVectorToTail( g_PreviousBoneSetups );
+#endif
+			for ( int i = g_PreviousBoneSetups.Count() - 1; i >= 0; i-- )
+			{
+				C_BaseAnimating *pAnimating = g_PreviousBoneSetups[i];
+				C_BaseAnimating *pDependancy;
+				if ( (pDependancy = pAnimating->GetBoneSetupDependancy()) != NULL )
+				{
+					Assert( pAnimating->m_pNextForThreadedBoneSetup == NULL );
+					C_BaseAnimating *pNextDependancy;
+					while ( (pNextDependancy = pDependancy->GetBoneSetupDependancy()) != NULL )
+					{
+						pDependancy = pNextDependancy;
+					}
+					
+					pAnimating->m_pNextForThreadedBoneSetup = pDependancy->m_pNextForThreadedBoneSetup;
+					pDependancy->m_pNextForThreadedBoneSetup = pAnimating;
+					g_PreviousBoneSetups.FastRemove( i );
+					if ( pDependancy->m_iMostRecentBoneSetupRequest != g_iPreviousBoneCounter )
+					{
+						Assert( g_PreviousBoneSetups.Find( pDependancy ) == -1 );
+						pDependancy->m_iMostRecentBoneSetupRequest = g_iPreviousBoneCounter;
+						g_PreviousBoneSetups.AddToTail( pDependancy );
+					}
+				}
+			}
+			nCount = g_PreviousBoneSetups.Count();
+
 			g_bInThreadedBoneSetup = true;
-
-			ParallelProcess( "C_BaseAnimating::ThreadedBoneSetup", g_PreviousBoneSetups.Base(), nCount, &SetupBonesOnBaseAnimating, &PreThreadedBoneSetup, &PostThreadedBoneSetup );
-
+			if ( cl_threaded_bone_setup.GetInt() == 1 )
+			{
+				CParallelProcessor<C_BaseAnimating *, CFuncJobItemProcessor<C_BaseAnimating *> > processor( "C_BaseAnimating::ThreadedBoneSetup" );
+				processor.m_ItemProcessor.Init( &SetupBonesOnBaseAnimating, &PreThreadedBoneSetup, &PostThreadedBoneSetup );
+				processor.Run( g_PreviousBoneSetups.Base(), nCount, INT_MAX, g_pBoneSetupThreadPool );
+			}
+			else
+			{
+				for ( int i = 0; i < nCount; i++ )
+				{
+					SetupBonesOnBaseAnimating( g_PreviousBoneSetups[i] );
+				}
+			}
 			g_bInThreadedBoneSetup = false;
+
+#ifdef _DEBUG
+			for ( int i = test.Count() - 1; i > 0; i-- )
+			{
+				Assert( test[i]->m_pNextForThreadedBoneSetup == NULL );
+			}
+#endif
+
+#ifdef DEBUG_BONE_SETUP_THREADING
+			Msg( "} \n" );
+#endif
 		}
 	}
 	g_iPreviousBoneCounter++;
@@ -2820,11 +2886,6 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 			m_BoneAccessor.SetReadableBones( 0 );
 			m_BoneAccessor.SetWritableBones( 0 );
 			m_flLastBoneSetupTime = currentTime;
-
-#if defined( DBGFLAG_ASSERT )
-			m_vBoneSetupCachedOrigin = GetRenderOrigin();
-			m_qBoneSetupCachedAngles = GetRenderAngles();
-#endif
 		}
 		m_iPrevBoneMask = m_iAccumulatedBoneMask;
 		m_iAccumulatedBoneMask = 0;
@@ -3020,7 +3081,6 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 	if ( pBoneToWorldOut )
 	{
 		AssertMsgOnce( !IsEFlagSet( EFL_DIRTY_ABSTRANSFORM ), "Cached bone data has old abs origin/angles" );
-		//AssertMsgOnce( (m_vBoneSetupCachedOrigin == GetRenderOrigin()) && (m_qBoneSetupCachedAngles == GetRenderAngles()), "Renderable moved since cached" );
 		if ( nMaxBones >= m_CachedBoneData.Count() )
 		{
 			Plat_FastMemcpy( pBoneToWorldOut, m_CachedBoneData.Base(), sizeof( matrix3x4_t ) * m_CachedBoneData.Count() );
@@ -4631,24 +4691,6 @@ void C_BaseAnimating::PostDataUpdate( DataUpdateType_t updateType )
 		{
 			ClientSideAnimationChanged();
 		}
-
-		// cache whatever sequences we should switch to when this one ends
-		m_onEndGoto.RemoveAll();
-		KeyValues *seqKeyValues = GetSequenceKeyValues( GetSequence() );
-		if ( seqKeyValues )
-		{
-			KeyValues *pkvOnEndGoto = seqKeyValues->FindKey( "on_end_goto" );
-			if ( pkvOnEndGoto )
-			{
-				for ( KeyValues *pKV = pkvOnEndGoto->GetFirstValue(); pKV; pKV = pKV->GetNextValue() )
-				{
-					OnEndGoto_t sequence;
-					sequence.nSequence = LookupSequence( pKV->GetName() );
-					sequence.nSequenceWeight = pKV->GetInt();
-					m_onEndGoto.AddToTail( sequence );
-				}
-			}
-		}
 	}
 
 	// reset prev cycle if new sequence
@@ -4940,7 +4982,7 @@ void C_BaseAnimating::OnDataChanged( DataUpdateType_t updateType )
 		if ( m_pRagdoll == NULL )
 			 AddEffects( EF_NODRAW );
 	}
-
+	
 	if ( m_pRagdoll && !m_bClientSideRagdoll || !m_bClientSideRagdoll && m_builtRagdoll )
 	{
 		ClearRagdoll();
@@ -5209,6 +5251,24 @@ void C_BaseAnimating::SetSequence( int nSequence )
 		if ( m_bClientSideAnimation )
 		{
 			ClientSideAnimationChanged();
+		}
+
+		// cache whatever sequences we should switch to when this one ends
+		m_onEndGoto.RemoveAll();
+		KeyValues *seqKeyValues = GetSequenceKeyValues( GetSequence() );
+		if ( seqKeyValues )
+		{
+			KeyValues *pkvOnEndGoto = seqKeyValues->FindKey( "on_end_goto" );
+			if ( pkvOnEndGoto )
+			{
+				for ( KeyValues *pKV = pkvOnEndGoto->GetFirstValue(); pKV; pKV = pKV->GetNextValue() )
+				{
+					OnEndGoto_t sequence;
+					sequence.nSequence = LookupSequence( pKV->GetName() );
+					sequence.nSequenceWeight = pKV->GetInt();
+					m_onEndGoto.AddToTail( sequence );
+				}
+			}
 		}
 	}
 }

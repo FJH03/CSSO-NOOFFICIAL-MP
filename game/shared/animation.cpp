@@ -176,6 +176,7 @@ void SetActivityForSequence( CStudioHdr *pstudiohdr, int i )
 
 void IndexModelSequences( CStudioHdr *pstudiohdr )
 {
+	//VPROF_2( "IndexModelSequences",  IsServerDll() ? VPROF_BUDGETGROUP_SERVER_ANIM : VPROF_BUDGETGROUP_CLIENT_ANIMATION, false, BUDGETFLAG_ALL );
 	int i;
 
 	if (! pstudiohdr)
@@ -436,6 +437,7 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers(
 	}
 }
 
+
 #endif
 
 int SelectHeaviestSequence( CStudioHdr *pstudiohdr, int activity )
@@ -542,7 +544,7 @@ int LookupSequence( CStudioHdr *pstudiohdr, const char *label )
 
 void GetSequenceLinearMotion( CStudioHdr *pstudiohdr, int iSequence, const float poseParameter[], Vector *pVec )
 {
-	if (! pstudiohdr)
+	if ( !pstudiohdr)
 	{
 		Msg( "Bad pstudiohdr in GetSequenceLinearMotion()!\n" );
 		return;
@@ -577,7 +579,7 @@ const char *GetSequenceName( CStudioHdr *pstudiohdr, int iSequence )
 	{
 		if ( pstudiohdr )
 		{
-			Msg( "Bad sequence in GetSequenceName() for model '%s'!\n", pstudiohdr->pszName() );
+			DevMsg( "Bad sequence in GetSequenceName() for model '%s'!\n", pstudiohdr->pszName() );
 		}
 		return "Unknown";
 	}
@@ -1069,7 +1071,7 @@ const char *GetBodygroupName( CStudioHdr *pstudiohdr, int iGroup )
 
 int FindBodygroupByName( CStudioHdr *pstudiohdr, const char *name )
 {
-	if ( !pstudiohdr )
+	if ( !pstudiohdr || !pstudiohdr->IsValid() )
 		return -1;
 
 	int group;
