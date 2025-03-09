@@ -168,7 +168,7 @@ void CHudDeathNotice::ApplySchemeSettings( IScheme *scheme )
 //-----------------------------------------------------------------------------
 void CHudDeathNotice::Init( void )
 {
-	ListenForGameEvent( "player_death" );	
+	ListenForGameEvent( "player_death" );
 }
 
 //-----------------------------------------------------------------------------
@@ -263,8 +263,9 @@ void CHudDeathNotice::Paint()
 			continue;
 		
 		int iLocalPlayerIndex = GetLocalPlayerIndex();
-		bool bVictimIsLocalPlayer = (m_DeathNotices[i].Victim.iEntIndex == iLocalPlayerIndex);
 		bool bKillerIsLocalPlayer = (m_DeathNotices[i].Killer.iEntIndex == iLocalPlayerIndex);
+		bool bVictimIsLocalPlayer = (m_DeathNotices[i].Victim.iEntIndex == iLocalPlayerIndex);
+		bool bAssisterIsLocalPlayer = (m_DeathNotices[i].Assister.iEntIndex == iLocalPlayerIndex);
 
 		const wchar_t *victim = m_DeathNotices[i].Victim.wszName;
 		const wchar_t *killer = m_DeathNotices[i].Killer.wszName;
@@ -337,10 +338,10 @@ void CHudDeathNotice::Paint()
 
 		// Draw background first
 		DrawBox( bkgX, bkgY,
-			bkgWide, bkgTall,
+				 bkgWide, bkgTall,
 				 bVictimIsLocalPlayer ? m_clrVictimBg : m_clrBg, 1.0f );
-		if ( bKillerIsLocalPlayer && !m_DeathNotices[i].bSuicide && m_iBorderSize > 0 )
-				 DrawOutlinedBox( bkgX, bkgY, bkgWide, bkgTall, m_clrBorder, 1.0f, m_iBorderSize );
+		if ( ((bKillerIsLocalPlayer && !m_DeathNotices[i].bSuicide) || bAssisterIsLocalPlayer) )
+			DrawOutlinedBox( bkgX, bkgY, bkgWide, bkgTall, m_clrBorder, 1.0f, MAX(1, m_iBorderSize) ); // HACK: border has 0 size on very low res :(
 
 		y += m_iBackgroundHeightMargin;
 		x -= m_iBackgroundWidthMargin;
@@ -475,18 +476,6 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 
 	C_CSPlayer* pKiller = ToCSPlayer( ClientEntityList().GetBaseEntity( iKiller ) );
 	C_CSPlayer* pVictim = ToCSPlayer( ClientEntityList().GetBaseEntity( iVictim ) );
-	C_CSPlayer* pAssister = ToCSPlayer( ClientEntityList().GetBaseEntity( iAssister ) );
-
-#if CS_CONTROLLABLE_BOTS_ENABLED
-	if ( pKiller && pKiller->IsControllingBot() )
-		iKiller = pKiller->GetControlledBotIndex();
-
-	if ( pVictim && pVictim->IsControllingBot() )
-		iVictim = pVictim->GetControlledBotIndex();
-
-	if ( pAssister && pAssister->IsControllingBot() )
-		iAssister = pAssister->GetControlledBotIndex();
-#endif
 
 	if ( !iKiller )
 	{
@@ -526,10 +515,10 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	{
 		fullkilledwith[0] = 0;
 	}
-	
+
 	// Do we have too many death messages in the queue?
 	if ( m_DeathNotices.Count() > 0 &&
-	m_DeathNotices.Count() >= m_iMaxDeathNotices )
+		m_DeathNotices.Count() >= m_iMaxDeathNotices )
 	{
 		// Remove the oldest one in the queue, which will always be the first
 		m_DeathNotices.Remove(0);
