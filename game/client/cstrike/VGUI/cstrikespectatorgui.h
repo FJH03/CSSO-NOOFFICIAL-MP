@@ -40,7 +40,7 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: Cstrike Spectator UI
 //-----------------------------------------------------------------------------
-class CCSSpectatorGUI : public CSpectatorGUI, public CGameEventListener
+class CCSSpectatorGUI : public CSpectatorGUI
 {
 private:
 	DECLARE_CLASS_SIMPLE( CCSSpectatorGUI, CSpectatorGUI );
@@ -51,15 +51,12 @@ public:
 	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
 	virtual void Update( void );
 	virtual bool NeedsUpdate( void );
-	virtual void FireGameEvent( IGameEvent *event );
 
 protected:
 
 	void UpdateTimer();
 	void UpdateTeamInfo();
 	void UpdateRoundCounter();
-
-	bool m_bNeedToUpdateRoundCounter;
 
 	int		m_nLastTime;
 	int		m_nLastSpecMode;
@@ -315,20 +312,21 @@ private:
 	bool m_bRoundRadar;
 };
 
+
 class CHudLocation : public CHudElement, public vgui::Label
 {
 public:
- 	DECLARE_CLASS_SIMPLE( CHudLocation, vgui::Panel );
- 
- 	CHudLocation( const char *name );
- 
- 	virtual void Init();
- 	virtual void LevelInit();
- 	virtual bool ShouldDraw();
- 
- 	virtual void OnTick( void );
- 
+	DECLARE_CLASS_SIMPLE( CHudLocation, vgui::Panel );
+
+	CHudLocation( const char *name );
+
+	virtual void Init();
+	virtual bool ShouldDraw();
+
+	virtual void OnTick( void );
+
 private:
- 	Color m_fgColor;
+	Color m_fgColor;
 };
+
 #endif // CSSPECTATORGUI_H

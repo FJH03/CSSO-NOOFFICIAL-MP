@@ -92,9 +92,6 @@ CCSSpectatorGUI::CCSSpectatorGUI(IViewPort *pViewPort) : CSpectatorGUI(pViewPort
 	m_nLastTime = -1;
 	m_nLastSpecMode = -1;
 	m_nLastSpecTarget = NULL;
-
-	m_bNeedToUpdateRoundCounter = true;
-	ListenForGameEvent( "round_start" );
 }
 
 //-----------------------------------------------------------------------------
@@ -207,8 +204,6 @@ void CCSSpectatorGUI::UpdateRoundCounter()
 	}
 
 	m_pRoundCountLabel->SetText( wszUnicode );
-
-	m_bNeedToUpdateRoundCounter = false;
 }
 
 bool CCSSpectatorGUI::NeedsUpdate( void )
@@ -303,8 +298,7 @@ void CCSSpectatorGUI::Update()
 
 	UpdateTimer();
 	UpdateTeamInfo();
-	if ( m_bNeedToUpdateRoundCounter )
-		UpdateRoundCounter();
+	UpdateRoundCounter();
 }
 
 //-----------------------------------------------------------------------------
@@ -323,12 +317,6 @@ bool CCSSpectatorGUI::ControlsPresent( void ) const
 			 m_pPlayerPanelTeam != NULL &&
 			 m_pPlayerPanelAvatar != NULL && 
 			 m_pPlayerPanelAvatarBkg != NULL );
-}
-
-void CCSSpectatorGUI::FireGameEvent( IGameEvent *event )
-{
-	// the event should be round_start
-	m_bNeedToUpdateRoundCounter = true; // don't update each frame as TotalRoundsPlayed increments the moment a win is scored not when the actual new round starts
 }
 
 
@@ -2388,36 +2376,32 @@ DECLARE_HUDELEMENT( CHudLocation );
 
 CHudLocation::CHudLocation( const char *pName ) :	vgui::Label( NULL, "HudLocation", "" ), CHudElement( pName )
 {
- 	SetParent( g_pClientMode->GetViewport() );
+	SetParent( g_pClientMode->GetViewport() );
 }
 
 void CHudLocation::Init()
 {
- 	// Make sure we get ticked...
- 	vgui::ivgui()->AddTickSignal( GetVPanel() );
+	// Make sure we get ticked...
+	vgui::ivgui()->AddTickSignal( GetVPanel() );
 }
 
-void CHudLocation::LevelInit()
-{
-}
- 
 bool CHudLocation::ShouldDraw()
 {
- 	CCSMapOverview *pCSMapOverview = (CCSMapOverview *)GET_HUDELEMENT( CCSMapOverview );
- 
- 	if( g_pMapOverview && g_pMapOverview->GetMode() == CMapOverview::MAP_MODE_RADAR && pCSMapOverview && pCSMapOverview->ShouldDraw() == true )
- 		return true;
- 
- 	return false;
+	CCSMapOverview *pCSMapOverview = (CCSMapOverview *)GET_HUDELEMENT( CCSMapOverview );
+
+	if( g_pMapOverview && g_pMapOverview->GetMode() == CMapOverview::MAP_MODE_RADAR && pCSMapOverview && pCSMapOverview->ShouldDraw() == true )
+		return true;
+
+	return false;
 }
- 
+
 void CHudLocation::OnTick()
 {
- 	const char *pszLocation = "";
- 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
- 	if ( pPlayer )
- 	{
- 		pszLocation = pPlayer->GetLastKnownPlaceName();
- 	}
- 	SetText( g_pVGuiLocalize->Find( pszLocation ) );
+	const char *pszLocation = "";
+	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( pPlayer )
+	{
+		pszLocation = pPlayer->GetLastKnownPlaceName();
+	}
+	SetText( g_pVGuiLocalize->Find( pszLocation ) );
 }
