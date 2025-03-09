@@ -58,6 +58,7 @@ public:
 	virtual void OnThink();
 	virtual void ProcessInput( void );
 	virtual void LevelShutdown( void );
+	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
 
 	void AddWeapon( C_BaseCombatWeapon *pWeapon, bool bSelected );
 	void RemoveWeapon( int nSlot, int nPos );

@@ -170,6 +170,7 @@ public:
 	virtual void ApplySettings( KeyValues *inResourceData );
 	virtual void Reset( void );
 	virtual void OnThink();
+	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
 
 private:
 	int		m_iHealth;
@@ -231,6 +232,19 @@ CHudHealthArmor::CHudHealthArmor( const char *pElementName ) : CHudElement( pEle
 	m_pArmorProgress = new CHudHealthArmorProgress( this, "ArmorProgress" );
 
 	LoadControlSettings( "resource/hud/healtharmor.res" );
+}
+
+void CHudHealthArmor::OnScreenSizeChanged( int iOldWide, int iOldTall )
+{
+ 	// reload the .res file so items are rescaled
+ 	LoadControlSettings( "resource/hud/healtharmor.res" );
+ 
+ 	// force recalculation of some stuff
+ 	m_iHUDColor = -1;
+ 	m_flBackgroundAlpha = 0.0f;
+ 	m_iStyle = -1;
+ 	m_iHealth = -1;
+ 	m_iArmor = -1;
 }
 
 //-----------------------------------------------------------------------------

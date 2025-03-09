@@ -28,6 +28,7 @@ public:
 
 	CHudScenarioHostageIcon( const char *name );
 	virtual void OnThink();
+	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
 
 	virtual void FireGameEvent( IGameEvent * event );
 
@@ -60,6 +61,12 @@ CHudScenarioHostageIcon::CHudScenarioHostageIcon( const char *pName ) :
 
 	ListenForGameEvent( "round_start" );
 	ListenForGameEvent( "hostage_rescued" );
+}
+
+void CHudScenarioHostageIcon::OnScreenSizeChanged( int iOldWide, int iOldTall )
+{
+ 	// reload the .res file so items are rescaled
+ 	LoadControlSettings( "resource/hud/hostage.res" );
 }
 
 void CHudScenarioHostageIcon::FireGameEvent( IGameEvent * event )

@@ -36,6 +36,7 @@ public:
 	virtual void Reset( void );
 	virtual bool ShouldDraw();
 	virtual void OnThink();
+	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
 
 private:
 	Label				*m_pCTWinCounterLabel;
@@ -77,6 +78,15 @@ CHudTeamCounter::CHudTeamCounter( const char *pElementName ): CHudElement( pElem
 	m_pTSkullImage = new ImagePanel( this, "TSkullImage" );
 
 	LoadControlSettings( "resource/hud/teamcounter.res" );
+}
+
+void CHudTeamCounter::OnScreenSizeChanged( int iOldWide, int iOldTall )
+{
+ 	// reload the .res file so items are rescaled
+ 	LoadControlSettings( "resource/hud/teamcounter.res" );
+ 
+ 	// force recalculation of some stuff
+ 	m_bIsAtTheBottom = false;
 }
 
 void CHudTeamCounter::Init( void )

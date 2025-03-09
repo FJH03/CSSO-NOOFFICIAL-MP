@@ -44,6 +44,12 @@ CCSHudWeaponSelection::CCSHudWeaponSelection( const char* pElementName ) : CHudE
 	ListenForGameEvent( "hltv_changed_mode" );
 }
 
+void CCSHudWeaponSelection::OnScreenSizeChanged( int iOldWide, int iOldTall )
+{
+ 	// force recalculation of some stuff
+ 	m_iHUDColor = -1;
+}
+
 void CCSHudWeaponSelection::ApplySettings( KeyValues *inResourceData )
 {
 	BaseClass::ApplySettings( inResourceData );

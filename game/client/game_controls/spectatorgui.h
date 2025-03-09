@@ -78,6 +78,7 @@ protected:
 	virtual void PerformLayout();
 	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
 //	virtual void OnCommand( const char *command );
+	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
 
 	IViewPort *m_pViewPort;
 

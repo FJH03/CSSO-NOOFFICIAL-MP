@@ -50,6 +50,12 @@ WinPanel_Round::WinPanel_Round( const char *pElementName ): CHudElement( pElemen
 	LoadControlSettings( "Resource/UI/Win_Round.res" );
 }
 
+void WinPanel_Round::OnScreenSizeChanged( int iOldWide, int iOldTall )
+{
+ 	// reload the .res file so items are rescaled
+ 	LoadControlSettings( "Resource/UI/Win_Round.res" );
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------

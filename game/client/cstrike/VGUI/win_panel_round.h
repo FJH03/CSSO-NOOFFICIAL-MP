@@ -34,6 +34,7 @@ public:
 	virtual void Reset();
 	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void FireGameEvent( IGameEvent * event );
+	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
 
 	void Show();
 	void Hide();

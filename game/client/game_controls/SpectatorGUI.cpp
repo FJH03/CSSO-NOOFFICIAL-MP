@@ -128,22 +128,7 @@ CSpectatorGUI::~CSpectatorGUI()
 //-----------------------------------------------------------------------------
 void CSpectatorGUI::ApplySchemeSettings(IScheme *pScheme)
 {
-	KeyValues *pConditions = NULL;
-
-#ifdef TF_CLIENT_DLL
-	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
-	{
-		pConditions = new KeyValues( "conditions" );
-		AddSubKeyNamed( pConditions, "if_mvm" );
-	}
-#endif
-
-	LoadControlSettings( GetResFile(), NULL, NULL, pConditions );
-
-	if ( pConditions )
-	{
-		pConditions->deleteThis();
-	}
+	LoadControlSettings( GetResFile() );
 
 	BaseClass::ApplySchemeSettings( pScheme );
 	SetBgColor(Color( 0,0,0,0 ) ); // make the background transparent
@@ -157,6 +142,12 @@ void CSpectatorGUI::ApplySchemeSettings(IScheme *pScheme)
 #endif
 }
 
+void CSpectatorGUI::OnScreenSizeChanged( int iOldWide, int iOldTall )
+{
+ 	// reload the .res file so items are rescaled
+ 	LoadControlSettings( GetResFile() );
+}
+ 
 //-----------------------------------------------------------------------------
 // Purpose: makes the GUI fill the screen
 //-----------------------------------------------------------------------------

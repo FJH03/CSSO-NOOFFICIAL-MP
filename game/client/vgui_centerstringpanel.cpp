@@ -44,6 +44,7 @@ public:
 	virtual void		ApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void		OnTick( void );
 	virtual void		Paint();
+	virtual void		OnScreenSizeChanged( int iOldWide, int iOldTall );
 
 	// CGameEventListener
 	virtual void		FireGameEvent( IGameEvent * event );
@@ -126,6 +127,12 @@ CNotificationPanel::CNotificationPanel( vgui::VPANEL parent ) :
 	ListenForGameEvent( "player_hintmessage" );
 
 	HOOK_MESSAGE( HintText );
+}
+
+void CNotificationPanel::OnScreenSizeChanged( int iOldWide, int iOldTall )
+{
+ 	// reload the .res file so items are rescaled
+ 	LoadControlSettings( "resource/hud/notificationpanel.res" );
 }
 
 //-----------------------------------------------------------------------------

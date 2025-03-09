@@ -38,6 +38,7 @@ public:
 	virtual void ApplySettings( KeyValues *inResourceData );
 	virtual void Reset( void );
 	virtual void OnThink();
+	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
 	
 private:
 	CHandle<C_WeaponCSBase>	m_pActiveWeapon;
@@ -92,6 +93,21 @@ CHudAmmo::CHudAmmo( const char *pElementName ): CHudElement( pElementName ), Edi
 	m_pBurstIcon = new VectorImagePanel( this, "BurstIcon" );
 
 	LoadControlSettings( "resource/hud/ammo.res" );
+}
+
+void CHudAmmo::OnScreenSizeChanged( int iOldWide, int iOldTall )
+{
+ 	// reload the .res file so items are rescaled
+ 	LoadControlSettings( "resource/hud/ammo.res" );
+ 
+ 	// force recalculation of some stuff
+ 	m_iHUDColor = -1;
+ 	m_flBackgroundAlpha = 0.0f;
+ 	m_iStyle = -1;
+ 	m_bUsesClips = false;
+ 	m_bIsExhaustible = false;
+ 	m_iAmmoCount = 0;
+ 	m_bBurstMode = false;
 }
 
 void CHudAmmo::Init( void )

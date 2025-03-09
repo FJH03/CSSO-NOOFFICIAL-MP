@@ -40,6 +40,7 @@ public:
 	virtual void LevelInit( void );
 	virtual void OnThink();
 	virtual void FireGameEvent( IGameEvent *event );
+	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
 
 	// Display an alert in the 'alert text' area.  If 'oneShot' is true, will automatically hide.
 	// One-shot messages always flash on set, otherwise will only flash if the panel is coming from
@@ -82,6 +83,16 @@ CHudUniqueAlerts::CHudUniqueAlerts( const char *pElementName ): CHudElement( pEl
 	ListenForGameEvent( "round_announce_last_round_half" );
 	ListenForGameEvent( "round_announce_match_start" );
 	ListenForGameEvent( "round_announce_warmup" );
+}
+
+void CHudUniqueAlerts::OnScreenSizeChanged( int iOldWide, int iOldTall )
+{
+ 	// reload the .res file so items are rescaled
+ 	LoadControlSettings( "resource/hud/uniquealerts.res" );
+ 
+ 	// force recalculation of some stuff
+ 	m_flNextAlertTick = -1;
+ 	m_bLastAlertIsOneShot = false;
 }
 
 void CHudUniqueAlerts::LevelInit( void )

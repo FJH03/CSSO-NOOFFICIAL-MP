@@ -42,6 +42,7 @@ public:
 	virtual void Init( void );
 	virtual void OnThink();
 	virtual bool ShouldDraw();
+	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
 
 private:
 	int		m_iAccount;
@@ -73,6 +74,18 @@ CHudAccount::CHudAccount( const char *pElementName ) : CHudElement( pElementName
 	m_pBuyZoneIcon = new VectorImagePanel( this, "BuyZoneIcon" );
 
 	LoadControlSettings( "resource/hud/account.res" );
+}
+
+void CHudAccount::OnScreenSizeChanged( int iOldWide, int iOldTall )
+{
+ 	// reload the .res file so items are rescaled
+ 	LoadControlSettings( "resource/hud/account.res" );
+ 
+ 	// force recalculation of some stuff
+ 	m_iHUDColor = -1;
+ 	m_flBackgroundAlpha = 0.0f;
+ 	m_iStyle = -1;
+ 	m_iAccount = -1;
 }
 
 //-----------------------------------------------------------------------------

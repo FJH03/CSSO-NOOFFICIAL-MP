@@ -30,6 +30,7 @@ public:
 	CHudVoiceDisabledPanel( const char *name );
 	virtual void OnThink();
 	virtual bool ShouldDraw();
+	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
 
 private:
 	vgui::VectorImagePanel	*m_pIcon;
@@ -49,6 +50,12 @@ CHudVoiceDisabledPanel::CHudVoiceDisabledPanel( const char *pName ):
 	m_pLabel = new vgui::Label( this, "MutedLabel", "#Cstrike_Voice_Disabled" );
 
 	LoadControlSettings( "resource/hud/voicedisabled.res" );
+}
+
+void CHudVoiceDisabledPanel::OnScreenSizeChanged( int iOldWide, int iOldTall )
+{
+ 	// reload the .res file so items are rescaled
+ 	LoadControlSettings( "resource/hud/voicedisabled.res" );
 }
 
 void CHudVoiceDisabledPanel::OnThink()
