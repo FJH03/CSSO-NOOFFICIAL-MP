@@ -138,7 +138,6 @@ void C_PlayerResource::UpdatePlayerName( int slot )
 		Error( "UpdatePlayerName with bogus slot %d\n", slot );
 		return;
 	}
-	
 	player_info_t sPlayerInfo;
 	char const *pchPlayerName = PLAYER_UNCONNECTED_NAME;
 	if ( IsConnected( slot ) && 
@@ -152,6 +151,7 @@ void C_PlayerResource::UpdatePlayerName( int slot )
 			return;
 		}
 	}
+
 	if ( !m_szName[slot] || Q_stricmp( m_szName[slot], pchPlayerName ) )
 	{
 		m_szName[slot] = AllocPooledString( pchPlayerName );
@@ -162,7 +162,7 @@ void C_PlayerResource::ClientThink()
 {
 	BaseClass::ClientThink();
 
-	for ( int i = 1; i <= gpGlobals->maxClients; ++i )
+	for ( int i = 1; i <= MAX_PLAYERS; ++i )
 	{
 		UpdatePlayerName( i );
 	}
@@ -213,9 +213,9 @@ int C_PlayerResource::GetTeam(int iIndex )
 	}
 }
 
-const char * C_PlayerResource::GetTeamName(int index)
+const char * C_PlayerResource::GetTeamName(int index_)
 {
-	C_Team *team = GetGlobalTeam( index );
+	C_Team *team = GetGlobalTeam( index_ );
 
 	if ( !team )
 		return "Unknown";
@@ -223,9 +223,9 @@ const char * C_PlayerResource::GetTeamName(int index)
 	return team->Get_Name();
 }
 
-int C_PlayerResource::GetTeamScore(int index)
+int C_PlayerResource::GetTeamScore(int index_)
 {
-	C_Team *team = GetGlobalTeam( index );
+	C_Team *team = GetGlobalTeam( index_ );
 
 	if ( !team )
 		return 0;
@@ -233,30 +233,30 @@ int C_PlayerResource::GetTeamScore(int index)
 	return team->Get_Score();
 }
 
-int C_PlayerResource::GetFrags(int index )
+int C_PlayerResource::GetFrags(int index_)
 {
 	return 666;
 }
 
-bool C_PlayerResource::IsLocalPlayer(int index)
+bool C_PlayerResource::IsLocalPlayer(int index_)
 {
 	C_BasePlayer *pPlayer =	C_BasePlayer::GetLocalPlayer();
 
 	if ( !pPlayer )
 		return false;
 
-	return ( index == pPlayer->entindex() );
+	return ( index_ == pPlayer->entindex() );
 }
 
 
-bool C_PlayerResource::IsHLTV(int index)
+bool C_PlayerResource::IsHLTV(int index_)
 {
-	if ( !IsConnected( index ) )
+	if ( !IsConnected( index_ ) )
 		return false;
 
 	player_info_t sPlayerInfo;
 	
-	if ( engine->GetPlayerInfo( index, &sPlayerInfo ) )
+	if ( engine->GetPlayerInfo( index_, &sPlayerInfo ) )
 	{
 		return sPlayerInfo.ishltv;
 	}
@@ -264,15 +264,15 @@ bool C_PlayerResource::IsHLTV(int index)
 	return false;
 }
 
-bool C_PlayerResource::IsReplay(int index)
+bool C_PlayerResource::IsReplay(int index_)
 {
 #if defined( REPLAY_ENABLED )
-	if ( !IsConnected( index ) )
+	if ( !IsConnected( index_ ) )
 		return false;
 
 	player_info_t sPlayerInfo;
 
-	if ( engine->GetPlayerInfo( index, &sPlayerInfo ) )
+	if ( engine->GetPlayerInfo( index_, &sPlayerInfo ) )
 	{
 		return sPlayerInfo.isreplay;
 	}

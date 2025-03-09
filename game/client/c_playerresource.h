@@ -30,7 +30,7 @@ public:
 					C_PlayerResource();
 	virtual			~C_PlayerResource();
 
-public : // IGameResources intreface
+public : // IGameResources interface
 
 	// Team data access 
 	virtual int		GetTeamScore( int index );
@@ -59,7 +59,7 @@ public : // IGameResources intreface
 	virtual	void	OnDataChanged(DataUpdateType_t updateType);
 
 protected:
-	void	UpdatePlayerName( int slot );
+	virtual void	UpdatePlayerName( int slot );
 	void	UpdateAsLocalizedFakePlayerName( int slot, char const *pchRawPlayerName );
 
 	// Data for each player that's propagated to all clients
