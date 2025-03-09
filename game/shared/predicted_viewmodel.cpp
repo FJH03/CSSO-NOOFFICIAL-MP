@@ -6,12 +6,10 @@
 #include "cbase.h"
 #include "predicted_viewmodel.h"
 
-#ifdef CLIENT_DLL 
- #include "prediction.h" 
- #ifdef CSTRIKE_DLL
- #include "c_cs_player.h" 
- #endif 
- #endif
+#ifdef CLIENT_DLL
+#include "prediction.h"
+#include "c_cs_player.h"
+#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -30,7 +28,10 @@ END_NETWORK_TABLE()
 CPredictedViewModel::CPredictedViewModel() : m_LagAnglesHistory("CPredictedViewModel::m_LagAnglesHistory")
 {
 	m_vLagAngles.Init();
-	m_LagAnglesHistory.Setup( &m_vLagAngles, 0 );
+	m_LagAnglesHistory.Setup( &m_vLagAngles, INTERPOLATE_LINEAR_ONLY );
+	m_vPredictedOffset.Init();
+	m_flInaccuracyTilt = 0;
+	m_flOldAccuracyDiffSmoothed = 0;
 }
 #else
 CPredictedViewModel::CPredictedViewModel()
@@ -47,60 +48,78 @@ CPredictedViewModel::~CPredictedViewModel()
 }
 
 #ifdef CLIENT_DLL
+extern ConVar	cl_use_new_headbob;
+#endif
+
+//-----------------------------------------------------------------------------
+// Purpose:  Adds head bob for off hand models
+//-----------------------------------------------------------------------------
+void CPredictedViewModel::AddViewModelBob( CBasePlayer *owner, Vector& eyePosition, QAngle& eyeAngles )
+{
+#ifdef CLIENT_DLL
+	if ( cl_use_new_headbob.GetBool() == false )
+		return;
+
+	// if we are an off hand view model and we have a model, add head bob.
+	// (Head bob for main hand model added by the weapon itself.)
+	if ( ViewModelIndex() == HOSTAGE_VIEWMODEL && m_bShouldIgnoreOffsetAndAccuracy )
+	{
+		CalcViewModelBobHelper( owner, &m_BobState, HOSTAGE_VIEWMODEL );
+		AddViewModelBobHelper( eyePosition, eyeAngles, &m_BobState );
+	}
+#endif
+}
+
+#ifdef CLIENT_DLL
 ConVar cl_wpn_sway_interp( "cl_wpn_sway_interp", "0.1", FCVAR_CLIENTDLL );
-ConVar cl_wpn_sway_scale( "cl_wpn_sway_scale", "1.0", FCVAR_CLIENTDLL|FCVAR_CHEAT );
-
-#ifdef CSTRIKE_DLL
- extern ConVar        cl_use_new_headbob; 
-#endif //cstrike_dll 
-#endif //client_dll
-
-//----------------------------------------------------------------------------- 
- // Purpose:  Adds head bob for off hand models 
- //----------------------------------------------------------------------------- 
- void CPredictedViewModel::AddViewModelBob( CBasePlayer *owner, Vector& eyePosition, QAngle& eyeAngles ) 
- { 
- #ifdef CSTRIKE_DLL
- #ifdef CLIENT_DLL 
-         if ( cl_use_new_headbob.GetBool() == false ) 
-                 return; 
-
-         // if we are an off hand view model (index 1) and we have a model, add head bob. 
-         // (Head bob for main hand model added by the weapon itself.) 
-		if ( ViewModelIndex() == HOSTAGE_VIEWMODEL )
-			{
-				CalcViewModelBobHelper( owner, &m_BobState, HOSTAGE_VIEWMODEL );
-				AddViewModelBobHelper( eyePosition, eyeAngles, &m_BobState );
-			}
- #endif 
- #endif 
- }
+ConVar cl_wpn_sway_scale( "cl_wpn_sway_scale", "1.6", FCVAR_CLIENTDLL|FCVAR_CHEAT );
+#endif
 
 void CPredictedViewModel::CalcViewModelLag( Vector& origin, QAngle& angles, QAngle& original_angles )
 {
-	#ifdef CLIENT_DLL
-		// Calculate our drift
-		Vector	forward, right, up;
-		AngleVectors( angles, &forward, &right, &up );
-		
-		// Add an entry to the history.
-		m_vLagAngles = angles;
-		m_LagAnglesHistory.NoteChanged( gpGlobals->curtime, cl_wpn_sway_interp.GetFloat(), false );
-		
-		// Interpolate back 100ms.
-		m_LagAnglesHistory.Interpolate( gpGlobals->curtime, cl_wpn_sway_interp.GetFloat() );
-		
-		// Now take the 100ms angle difference and figure out how far the forward vector moved in local space.
-		Vector vLaggedForward;
-		QAngle angleDiff = m_vLagAngles - angles;
-		AngleVectors( -angleDiff, &vLaggedForward, 0, 0 );
-		Vector vForwardDiff = Vector(1,0,0) - vLaggedForward;
+#ifdef CLIENT_DLL
+	float interp = cl_wpn_sway_interp.GetFloat();
+	if ( !interp || m_bShouldIgnoreOffsetAndAccuracy )
+		return;
 
-		// Now offset the origin using that.
-		vForwardDiff *= cl_wpn_sway_scale.GetFloat();
-		origin += forward*vForwardDiff.x + right*-vForwardDiff.y + up*vForwardDiff.z;
-	#endif
+	if ( prediction->InPrediction() && !prediction->IsFirstTimePredicted() )
+	{
+		origin += m_vPredictedOffset;
+		return;
+	}
+
+	// Calculate our drift
+	Vector	forward, right, up;
+	AngleVectors( angles, &forward, &right, &up );
+	
+	// Add an entry to the history.
+	m_vLagAngles = angles;
+	m_LagAnglesHistory.NoteChanged( gpGlobals->curtime, interp, false );
+	
+	// Interpolate back 100ms.
+	m_LagAnglesHistory.Interpolate( gpGlobals->curtime, interp );
+	
+	// Now take the 100ms angle difference and figure out how far the forward vector moved in local space.
+	Vector vLaggedForward;
+	QAngle angleDiff = m_vLagAngles - angles;
+	AngleVectors( -angleDiff, &vLaggedForward, 0, 0 );
+	Vector vForwardDiff = Vector(1,0,0) - vLaggedForward;
+
+	if ( ShouldFlipViewModel() )
+		right = -right;
+
+	// Now offset the origin using that.
+	vForwardDiff *= cl_wpn_sway_scale.GetFloat();
+	m_vPredictedOffset = forward*vForwardDiff.x + right*-vForwardDiff.y + up*vForwardDiff.z;
+
+	// reduce offset as viewmodel angle approaches nearly vertical
+	float flMult = clamp( abs(DotProduct(up, Vector(0,0,1))) - 0.02f, 0, 1 );
+
+	origin += (m_vPredictedOffset * flMult);
+#endif
 }
+
+
 
 #ifdef CLIENT_DLL
 ConVar cl_gunlowerangle( "cl_gunlowerangle", "2", FCVAR_CLIENTDLL );
@@ -253,7 +272,7 @@ void CPredictedViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& e
 
 			// pull up from offscreen a little
 			vecOffset.z -= vecOffset.Length() * 0.2f;
-
+			
 			// dampen overall
 			vecOffset *= 0.5f;
 

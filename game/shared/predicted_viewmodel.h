@@ -15,13 +15,10 @@
 #include "utlvector.h"
 #include "baseplayer_shared.h"
 #include "shared_classnames.h"
-
-#ifdef CSTRIKE_DLL
-#include "weapon_csbase.h" 
-    #ifdef CLIENT_DLL
-             #include "c_cs_player.h" 
-     #endif //client_dll
-#endif //cstrike_dll
+#include "weapon_csbase.h"
+#ifdef CLIENT_DLL
+#include "c_cs_player.h"
+#endif
 
 #if defined( CLIENT_DLL )
 #define CPredictedViewModel C_PredictedViewModel
@@ -47,7 +44,7 @@ public:
 #endif
 
 #if defined( CLIENT_DLL )
-	BobState_t	&GetBobState() { return m_BobState;}
+	BobState_t	&GetBobState() { return m_BobState; }
 #endif //CLIENT_DLL
 
 #if defined( CLIENT_DLL )
@@ -71,9 +68,11 @@ private:
 
 	CPredictedViewModel( const CPredictedViewModel & ); // not defined, not accessible
 
-protected: 
-         BobState_t                m_BobState;                // view model head bob state
-		 QAngle m_vLoweredWeaponOffset;
+protected:
+	BobState_t		m_BobState;		// view model head bob state
+	QAngle m_vLoweredWeaponOffset;
+	float m_flInaccuracyTilt;
+	float m_flOldAccuracyDiffSmoothed;
 
 #endif
 };

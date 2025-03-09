@@ -467,7 +467,7 @@ void CBaseViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& eyePos
 			}
 		}
 #endif
-		vmorigin += ( viewmodel_offset_y.GetFloat() * vecForward ) + ( viewmodel_offset_z.GetFloat() * vecUp ) + ( viewmodel_offset_x.GetFloat() * vecRight );
+		vmorigin += (vecForward * viewmodel_offset_y.GetFloat()) + (vecUp * viewmodel_offset_z.GetFloat()) + (vecRight * viewmodel_offset_x.GetFloat());
 		vmangles += (owner->m_Local.m_aimPunchAngle * viewmodel_recoil.GetFloat() * 0.5f); // PiMoN: Valve are probably multiplying it by 0.5 as well... right? I mean it makes it look exactly like in CS:GO
 	}
 
