@@ -70,6 +70,7 @@ public:
 	// Additional offset at the Start of the text (from whichever sides it is aligned)
 	virtual void SetTextInset(int xInset, int yInset);		
 	virtual void GetTextInset(int *xInset, int *yInset );
+	virtual void ComputeAlignment(int &tx0, int &ty0, int &tx1, int &ty1);
 
 	// Text colors
 	virtual void SetFgColor(Color color);
@@ -163,7 +164,6 @@ protected:
 	virtual void PerformLayout();
 	virtual wchar_t CalculateHotkey(const char *text);
 	virtual wchar_t CalculateHotkey(const wchar_t *text);
-	virtual void ComputeAlignment(int &tx0, int &ty0, int &tx1, int &ty1);
 	virtual void Paint();
 	MESSAGE_FUNC_PARAMS( OnSetText, "SetText", params );
 	virtual void DrawDashedLine(int x0, int y0, int x1, int y1, int dashLen, int gapLen);

@@ -45,12 +45,15 @@ protected:
 private:
 	Label* m_pWinLabel;
 	Label* m_pFunFactLabel;
+	Label* m_pMVPText;
 	ImagePanel* m_pMainBackground;
 	ImagePanel* m_pTeamIcon;
 	CAvatarImagePanel* m_pMVPAvatar;
 
 	Color m_clrCT;
 	Color m_clrT;
+
+	CPanelAnimationVarAliasType( int, mvp_avatar_margin, "mvp_avatar_margin", "0", "proportional_width" );
 };
 
 #endif //CSWINPANEL_ROUND_H

@@ -44,6 +44,7 @@ WinPanel_Round::WinPanel_Round( const char *pElementName ): CHudElement( pElemen
 	m_pMVPAvatar->SetShouldDrawFriendIcon( false );
 	m_pWinLabel = new Label( this, "WinLabel", L" " );
 	m_pFunFactLabel = new Label( this, "FunFactLabel", L" " );
+	m_pMVPText = new Label( this, "MVP_Text", L"MVP_TEXT" );
 	m_pMainBackground = new ImagePanel( this, "MainBackground" );
 	m_pTeamIcon = new ImagePanel( this, "TeamLogo" );
 
@@ -52,8 +53,8 @@ WinPanel_Round::WinPanel_Round( const char *pElementName ): CHudElement( pElemen
 
 void WinPanel_Round::OnScreenSizeChanged( int iOldWide, int iOldTall )
 {
- 	// reload the .res file so items are rescaled
- 	LoadControlSettings( "Resource/UI/Win_Round.res" );
+	// reload the .res file so items are rescaled
+	LoadControlSettings( "Resource/UI/Win_Round.res" );
 }
 
 //-----------------------------------------------------------------------------
@@ -272,13 +273,18 @@ void WinPanel_Round::SetMVP( C_CSPlayer* pPlayer, CSMvpReason_t reason )
 		}
 
 		g_pVGuiLocalize->ConstructString( wszBuf, sizeof( wszBuf ), pReason, 1, wszPlayerName );
-		SetDialogVariable( "MVP_TEXT", wszBuf );
+		m_pMVPText->SetText( wszBuf );
+		m_pMVPText->InternalPerformLayout(); // layout it right now so that is resizes this frame
+		m_pMVPText->SetVisible( true );
 
 		player_info_t pi;
 		if ( engine->GetPlayerInfo(pPlayer->entindex(), &pi) )
 		{
 			if ( m_pMVPAvatar )
 			{
+				int x1, y1, x2, y2;
+				m_pMVPText->ComputeAlignment( x1, y1, x2, y2 );
+				m_pMVPAvatar->SetPos( x1 - m_pMVPAvatar->GetWide() - mvp_avatar_margin, m_pMVPAvatar->GetYPos() );
 				m_pMVPAvatar->SetDefaultAvatar( GetDefaultAvatarImage( pPlayer ) );
 				m_pMVPAvatar->SetPlayer( pPlayer, k_EAvatarSize64x64 );
 			}
@@ -286,7 +292,7 @@ void WinPanel_Round::SetMVP( C_CSPlayer* pPlayer, CSMvpReason_t reason )
 	}
 	else
 	{
-		SetDialogVariable( "MVP_TEXT", "");
+		m_pMVPText->SetVisible( false );
 	}
 
 	// [Forrest] Allow MVP to be turned off for a server
