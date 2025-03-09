@@ -95,6 +95,8 @@ public:
 
 	Vector					m_vecLastFacing;
 
+	virtual bool			IsViewModel() const { return true; }
+
 	CNetworkVar( bool, m_bShouldIgnoreOffsetAndAccuracy );
 	virtual void			SetShouldIgnoreOffsetAndAccuracy( bool bIgnore ) { m_bShouldIgnoreOffsetAndAccuracy = bIgnore; }
 
@@ -145,7 +147,7 @@ public:
 	QAngle m_angCamDriverLastAng;
 	float m_flCamDriverAppliedTime;
 	float m_flCamDriverWeight;
-	
+
 	virtual void			ApplyBoneMatrixTransform( matrix3x4_t& transform );
 
 	virtual bool			ShouldDraw();
@@ -175,7 +177,6 @@ public:
 
 	// (inherited from C_BaseAnimating)
 	virtual void			FormatViewModelAttachment( int nAttachment, matrix3x4_t &attachmentToWorld );
-	virtual bool			IsViewModel() const;
 
 	void					UpdateAllViewmodelAddons( void );
 
@@ -188,7 +189,6 @@ public:
 	
 	CBaseCombatWeapon		*GetWeapon() const { return m_hWeapon.Get(); }
 
-#ifdef CLIENT_DLL
 	virtual bool			ShouldResetSequenceOnNewModel( void ) { return false; }
 
 	// Attachments
@@ -197,7 +197,6 @@ public:
 	virtual bool			GetAttachment( int number, Vector &origin );
 	virtual	bool			GetAttachment( int number, Vector &origin, QAngle &angles );
 	virtual bool			GetAttachmentVelocity( int number, Vector &originVel, Quaternion &angleVel );
-#endif
 
 	virtual void 			Simulate();
 
@@ -210,6 +209,7 @@ private:
 	virtual void 			OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect );
 
 	CNewParticleEffect* m_viewmodelParticleEffect;
+
 #endif
 
 private:
@@ -231,7 +231,8 @@ private:
 #if defined( CLIENT_DLL )
 	int						m_nOldAnimationParity;
 #endif
-	public:
+
+public:
 	float					m_fCycleOffset;
 
 #ifdef CLIENT_DLL
@@ -256,14 +257,32 @@ private:
 	CUtlVector<ScreenHandle_t>	m_hScreens;
 };
 
-#ifdef CLIENT_DLL
-class C_ViewmodelAttachmentModel: public CBaseViewModel
+inline CBaseViewModel *ToBaseViewModel( CBaseAnimating *pAnim )
 {
-	DECLARE_CLASS( C_ViewmodelAttachmentModel, CBaseViewModel );
+	if ( pAnim && pAnim->IsViewModel() )
+		return assert_cast<CBaseViewModel *>(pAnim);
+	return NULL;
+}
 
+inline CBaseViewModel *ToBaseViewModel( CBaseEntity *pEntity )
+{
+	if ( !pEntity )
+		return NULL;
+	return ToBaseViewModel(pEntity->GetBaseAnimating());
+}
+
+#ifdef CLIENT_DLL
+class C_ViewmodelAttachmentModel: public C_BaseAnimating
+{
+	DECLARE_CLASS( C_ViewmodelAttachmentModel, C_BaseAnimating );
 public:
 	bool InitializeAsClientEntity( const char *pszModelName, RenderGroup_t renderGroup );
+
+	void SetViewmodel( C_BaseViewModel *pVM );
 	virtual int InternalDrawModel( int flags );
+
+private:
+	CHandle< C_BaseViewModel > m_hViewmodel;
 };
 #endif
 

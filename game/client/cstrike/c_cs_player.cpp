@@ -3239,6 +3239,26 @@ bool C_CSPlayer::Weapon_CanSwitchTo( CBaseCombatWeapon *pWeapon )
 	return true;
 }
 
+bool C_CSPlayer::Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex /*=0*/ )
+{
+ 	bool r = BaseClass::Weapon_Switch( pWeapon, viewmodelindex );
+ 
+ 	if ( r )
+ 	{
+ 		// hack so that stattrak updates for different weapons
+ 		for ( int i = 0; i<MAX_VIEWMODELS; ++i )
+ 		{
+ 			C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>(GetViewModel( i ));
+ 			if ( pViewModel )
+ 			{
+ 				pViewModel->RemoveViewmodelStatTrak();
+ 			}
+ 		}
+ 	}
+ 
+ 	return r;
+}
+
 ConVar clTaserShakeFreqMin( "clTaserShakeFreqMin", "0.2", 0, "how often the shake is applied (min time)" );
 ConVar clTaserShakeFreqMax( "clTaserShakeFreqMax", "0.7", 0, "how often the shake is applied (max time)" );
 

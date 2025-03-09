@@ -18,7 +18,9 @@
 #include "tools/bonelist.h"
 #include <KeyValues.h>
 #include "hltvcamera.h"
-
+#ifdef TF_CLIENT_DLL
+	#include "tf_weaponbase.h"
+#endif
 #ifdef CSTRIKE_DLL
 	#include "weapon_csbase.h"
 	#include "weapon_basecsgrenade.h"
@@ -42,13 +44,14 @@
 
 #ifdef CSTRIKE_DLL
 	ConVar cl_righthand( "cl_righthand", "1", FCVAR_ARCHIVE, "Use right-handed view models." );
+	ConVar vm_draw_addon( "vm_draw_addon", "1" );
 #endif
+
+extern ConVar r_drawviewmodel;
 
 #ifdef TF_CLIENT_DLL
 	ConVar cl_flipviewmodels( "cl_flipviewmodels", "0", FCVAR_USERINFO | FCVAR_ARCHIVE | FCVAR_NOT_CONNECTED, "Flip view models." );
 #endif
-
-extern ConVar r_drawviewmodel;
 
 void PostToolMessage( HTOOLHANDLE hEntity, KeyValues *msg );
 
@@ -159,8 +162,8 @@ void FormatViewModelAttachment( Vector &vOrigin, bool bInverse )
 	// aspect ratio cancels out, so only need one factor
 	// the difference between the screen coordinates of the 2 systems is the ratio
 	// of the coefficients of the projection matrices (tan (fov/2) is that coefficient)
-	float factorX = worldx / viewx;
-
+	// NOTE: viewx was coming in as 0 when folks set their viewmodel_fov to 0 and show their weapon.
+	float factorX = viewx ? ( worldx / viewx ) : 0.0f;
 	float factorY = factorX;
 	
 	// Get the coordinates in the viewer's space.
@@ -203,11 +206,6 @@ void C_BaseViewModel::FormatViewModelAttachment( int nAttachment, matrix3x4_t &a
 	PositionMatrix( vecOrigin, attachmentToWorld );
 }
 
-
-bool C_BaseViewModel::IsViewModel() const
-{
-	return true;
-}
 
 void C_BaseViewModel::UncorrectViewModelAttachment( Vector &vOrigin )
 {
@@ -280,7 +278,13 @@ bool C_BaseViewModel::Interpolate( float currentTime )
 		elapsed_time = 0;
 	}
 
-	float dt = elapsed_time * GetSequenceCycleRate( pStudioHdr, GetSequence() ) * GetPlaybackRate();
+	float dt = elapsed_time * (GetPlaybackRate() * GetSequenceCycleRate( pStudioHdr, GetSequence() )) + m_fCycleOffset;
+
+	if ( dt < 0.0f )
+	{
+		dt = 0.0f;
+	}
+
 	if ( dt >= 1.0f )
 	{
 		if ( !IsSequenceLooping( GetSequence() ) )
@@ -389,6 +393,8 @@ int C_BaseViewModel::DrawModel( int flags )
 	if ( !m_bReadyToDraw )
 		return 0;
 
+	CMatRenderContextPtr pRenderContext( materials );
+
 	if ( flags & STUDIO_RENDER )
 	{
 		// Determine blending amount and tell engine
@@ -405,6 +411,9 @@ int C_BaseViewModel::DrawModel( int flags )
 		GetColorModulation( color );
 		render->SetColorModulation(	color );
 	}
+
+	if ( ShouldFlipViewModel() )
+		pRenderContext->CullMode( MATERIAL_CULLMODE_CW );
 		
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	C_BaseCombatWeapon *pWeapon = GetOwningWeapon();
@@ -423,6 +432,8 @@ int C_BaseViewModel::DrawModel( int flags )
 		ret = BaseClass::DrawModel( flags );
 	}
 
+	pRenderContext->CullMode( MATERIAL_CULLMODE_CCW );
+
 	// Now that we've rendered, reset the animation restart flag
 	if ( flags & STUDIO_RENDER )
 	{
@@ -436,7 +447,9 @@ int C_BaseViewModel::DrawModel( int flags )
 			pWeapon->ViewModelDrawn( this );
 		}
 	}
-	if ( flags )
+
+
+	if ( flags && vm_draw_addon.GetBool() )
 	{
 		FOR_EACH_VEC( m_vecViewmodelArmModels, i )
 		{
@@ -568,6 +581,7 @@ void C_BaseViewModel::UpdateAnimationParity( void )
 		// FIXME:  Do we need the magic 0.1?
 		SetCycle( 0.0f ); // GetSequenceCycleRate( GetSequence() ) * 0.1;
 		m_flAnimTime = curtime;
+		m_fCycleOffset = 0.0f;
 	}
 }
 
@@ -676,14 +690,15 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 		}
 	}
 
+
 	// verify stattrak module and add if necessary
 	if ( pCSWeapon->HasStatTrak() )
 	{
 		int iEntIndex = pPlayer->entindex();
- 		if ( pPlayer->IsControllingBot() )
- 			iEntIndex = pPlayer->GetControlledBotIndex();
- 
- 		AddViewmodelStatTrak( pCSWeapon, iEntIndex );
+		if ( pPlayer->IsControllingBot() )
+			iEntIndex = pPlayer->GetControlledBotIndex();
+
+		AddViewmodelStatTrak( pCSWeapon, iEntIndex );
 	}
 	else
 		RemoveViewmodelStatTrak();
@@ -713,7 +728,9 @@ C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *p
 		pEnt->UpdatePartitionListEntry();
 		pEnt->CollisionProp()->MarkPartitionHandleDirty();
 		pEnt->UpdateVisibility();
+		pEnt->SetViewmodel( this );
 		pEnt->SetUseParentLightingOrigin( true );
+
 		RemoveEffects( EF_NODRAW );
 		return pEnt;
 	}	
@@ -723,9 +740,8 @@ C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *p
 
 void C_BaseViewModel::AddViewmodelStatTrak( CWeaponCSBase *pWeapon, int holderIndex )
 {
-	// PiMoN: commenting this out to pretend that it "fixes" a bug with stattrak model not updating in time on weapon switch
-	/*if ( m_viewmodelStatTrakAddon && m_viewmodelStatTrakAddon.Get() && m_viewmodelStatTrakAddon->GetMoveParent() )
-		return;*/
+	if ( m_viewmodelStatTrakAddon && m_viewmodelStatTrakAddon.Get() && m_viewmodelStatTrakAddon->GetMoveParent() )
+		return;
 
 	RemoveViewmodelStatTrak();
 
@@ -744,9 +760,7 @@ void C_BaseViewModel::AddViewmodelStatTrak( CWeaponCSBase *pWeapon, int holderIn
 		pStatTrakEnt->UpdatePartitionListEntry();
 		pStatTrakEnt->CollisionProp()->MarkPartitionHandleDirty();
 		pStatTrakEnt->UpdateVisibility();
-		pStatTrakEnt->AddEffects( EF_BONEMERGE );
-		pStatTrakEnt->AddEffects( EF_BONEMERGE_FASTCULL );
-		pStatTrakEnt->AddEffects( EF_NODRAW );
+		pStatTrakEnt->SetViewmodel( this );
 		pStatTrakEnt->SetUseParentLightingOrigin( true );
 
 		if ( !cl_righthand.GetBool() )
@@ -796,6 +810,7 @@ RenderGroup_t C_BaseViewModel::GetRenderGroup()
 	return RENDER_GROUP_VIEW_MODEL_OPAQUE;
 }
 
+
 bool C_ViewmodelAttachmentModel::InitializeAsClientEntity( const char *pszModelName, RenderGroup_t renderGroup )
 {
 	if ( !BaseClass::InitializeAsClientEntity( pszModelName, renderGroup ) )
@@ -803,18 +818,27 @@ bool C_ViewmodelAttachmentModel::InitializeAsClientEntity( const char *pszModelN
 
 	AddEffects( EF_BONEMERGE );
 	AddEffects( EF_BONEMERGE_FASTCULL );
+
+	// Invisible by default, and made visible->drawn->made invisible when the viewmodel is drawn
 	AddEffects( EF_NODRAW );
 	return true;
+}
+
+void C_ViewmodelAttachmentModel::SetViewmodel( C_BaseViewModel *pVM )
+{
+	m_hViewmodel = pVM;
 }
 
 int C_ViewmodelAttachmentModel::InternalDrawModel( int flags )
 {
 	CMatRenderContextPtr pRenderContext( materials );
-
-	C_BaseViewModel *pViewmodel = (C_BaseViewModel*)GetFollowedEntity();
-	if ( pViewmodel && pViewmodel->ShouldFlipViewModel() )
+	C_BaseViewModel *pViewmodel = m_hViewmodel;
+	if ( pViewmodel && pViewmodel->ShouldFlipModel() )
 		pRenderContext->CullMode( MATERIAL_CULLMODE_CW );
+
 	int r = BaseClass::InternalDrawModel( flags );
+
 	pRenderContext->CullMode( MATERIAL_CULLMODE_CCW );
+
 	return r;
 }
