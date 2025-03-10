@@ -18,7 +18,7 @@
 #include "tier3/tier3.h"
 #include "platform.h"
 #include "bink_material.h"
-#include "tier0/memdbgon.h"
+// #include "tier0/memdbgon.h"
 
 extern "C" {
 #include "yuv_rgb.h"
