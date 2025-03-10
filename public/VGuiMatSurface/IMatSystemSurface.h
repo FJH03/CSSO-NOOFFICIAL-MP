@@ -121,6 +121,7 @@ public:
 
 	virtual void OverrideProportionalBase( int width, int height ) = 0;
 	virtual void RestoreProportionalBase() = 0;
+	virtual void SetZPos( float zpos ) = 0;
 };
 
 

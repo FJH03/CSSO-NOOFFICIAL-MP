@@ -26,6 +26,36 @@
 #include "xbox/xboxstubs.h"
 #endif
 
+struct MenuBackground
+{
+	const char *szFilePath;
+	const char *szName;
+};
+
+static MenuBackground s_MenuBackgrounds[] =
+{
+	{ NULL,									"#GameUI_HUD_MenuBackground_random"			}, // anything listed below
+	{ NULL,									"#GameUI_HUD_MenuBackground_image"			}, // not a video but an image
+	{ "media/background/default.bik",		"#GameUI_HUD_MenuBackground_default"		},
+	{ "media/background/ancient.bik",		"#GameUI_HUD_MenuBackground_ancient"		},
+	{ "media/background/anubis.bik",		"#GameUI_HUD_MenuBackground_anubis"			},
+	{ "media/background/apollo.bik",		"#GameUI_HUD_MenuBackground_apollo"			},
+	{ "media/background/blacksite.bik",		"#GameUI_HUD_MenuBackground_blacksite"		},
+	{ "media/background/broken_fang.bik",	"#GameUI_HUD_MenuBackground_broken_fang"	},
+	{ "media/background/cbble.bik",			"#GameUI_HUD_MenuBackground_cbble"			},
+	{ "media/background/county.bik",		"#GameUI_HUD_MenuBackground_county"			},
+	{ "media/background/engage.bik",		"#GameUI_HUD_MenuBackground_engage"			},
+	{ "media/background/guard.bik",			"#GameUI_HUD_MenuBackground_guard"			},
+	{ "media/background/mutiny.bik",		"#GameUI_HUD_MenuBackground_mutiny"			},
+	{ "media/background/nuke.bik",			"#GameUI_HUD_MenuBackground_nuke"			},
+	{ "media/background/riptide.bik",		"#GameUI_HUD_MenuBackground_riptide"		},
+	{ "media/background/shattered_web.bik",	"#GameUI_HUD_MenuBackground_shattered_web"	},
+	{ "media/background/sirocco.bik",		"#GameUI_HUD_MenuBackground_sirocco"		},
+	{ "media/background/sirocco_night.bik",	"#GameUI_HUD_MenuBackground_sirocco_night"	},
+	{ "media/background/swamp.bik",			"#GameUI_HUD_MenuBackground_swamp"			},
+	{ "media/background/vertigo.bik",		"#GameUI_HUD_MenuBackground_vertigo"		},
+};
+
 enum
 {
 	DIALOG_STACK_IDX_STANDARD,
@@ -37,6 +67,8 @@ class CMatchmakingBasePanel;
 class CBackgroundMenuButton;
 class CGameMenu;
 class CAsyncCtxOnDeviceAttached;
+class IVideoMaterial;
+class IMaterial;
 
 // X360TBD: Move into a separate module when finished
 class CMessageDialogHandler
@@ -285,7 +317,7 @@ public:
 	int  GetMenuAlpha( void );
 
 	void SetMainMenuOverride( vgui::VPANEL panel );
-
+	void RestartBackgroundVideo();
 
 
 protected:
@@ -394,7 +426,17 @@ private:
 
 	vgui::AnimationController	*m_pConsoleAnimationController;
 	KeyValues					*m_pConsoleControlSettings;
-
+	bool						BeginPlayback( const char *pFilename );
+	void						DestroyVideo();
+	void						DrawBackgroundMovie();
+	const char					*GetBackgroundMovieFile();
+	IVideoMaterial				*m_VideoMaterial;
+	IMaterial					*m_pMaterial;
+	int							m_nPlaybackHeight;			// Calculated to address ratio changes
+	int							m_nPlaybackWidth;
+	float						m_flU;	// U,V ranges for video on its sheet
+	float						m_flV;
+	bool						m_bVideoReady;
 	void						DrawBackgroundImage();
 	int							m_iBackgroundImageID;
 	int							m_iRenderTargetImageID;

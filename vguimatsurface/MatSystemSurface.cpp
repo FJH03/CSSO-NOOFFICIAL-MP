@@ -3574,6 +3574,10 @@ float CMatSystemSurface::GetZPos() const
 	return m_flZPos;
 }
 
+void CMatSystemSurface::SetZPos( float zpos )
+{
+	m_flZPos = zpos;
+}
 
 //-----------------------------------------------------------------------------
 // Some drawing methods that cannot be accomplished under Win32

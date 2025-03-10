@@ -28,6 +28,8 @@
 #include "materialsystem/imaterialsystem.h"
 #include "sourcevr/isourcevirtualreality.h"
 #include "VGuiMatSurface/IMatSystemSurface.h"
+#include "video/ivideoservices.h"
+#include "materialsystem/imesh.h"
 
 using namespace vgui;
 
@@ -72,7 +74,7 @@ using namespace vgui;
 #include "matchmaking/achievementsdialog.h"
 #include "iachievementmgr.h"
 #include "UtlSortVector.h"
-
+#include "VGuiMatSurface/IMatSystemSurface.h"
 #include "game/client/IGameClientExports.h"
 
 #include "OptionsSubAudio.h"
@@ -101,6 +103,8 @@ using namespace vgui;
 #define MAIN_MENU_INDENT_X360 10
 
 ConVar vgui_message_dialog_modal( "vgui_message_dialog_modal", "1", FCVAR_ARCHIVE );
+ConVar cl_menu_background( "cl_menu_background", "1", FCVAR_ARCHIVE );
+
 
 extern vgui::DHANDLE<CLoadingDialog> g_hLoadingDialog;
 static CBasePanel	*g_pBasePanel = NULL;
@@ -899,6 +903,11 @@ CBasePanel::CBasePanel() : EditablePanel(NULL, "BaseGameUIPanel")
 	// 	AddUrlButton( this, "vgui/\x74\x65\x6c\x65\x67\x72\x61\x6d\x5f\x6c\x6f\x67\x6f", "\x68\x74\x74\x70\x73\x3a\x2f\x2f\x74\x2e\x6d\x65\x2f\x6e\x69\x6c\x6c\x65\x72\x75\x73\x72\x5f\x73\x6f\x75\x72\x63\x65" );
 	// 	AddUrlButton( this, "vgui/\x67\x69\x74\x68\x75\x62\x5f\x6c\x6f\x67\x6f", "\x68\x74\x74\x70\x73\x3a\x2f\x2f\x67\x69\x74\x68\x75\x62\x2e\x63\x6f\x6d\x2f\x6e\x69\x6c\x6c\x65\x72\x75\x73\x72\x2f\x73\x6f\x75\x72\x63\x65\x2d\x65\x6e\x67\x69\x6e\x65" );
 	// }
+	m_VideoMaterial = NULL;
+	m_pMaterial = NULL;
+	m_nPlaybackWidth = m_nPlaybackHeight = 0;
+	m_flU = m_flV = 0.0f;
+	m_bVideoReady = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -929,6 +938,7 @@ void CBasePanel::ArmFirstMenuItem( void )
 
 CBasePanel::~CBasePanel()
 {
+	DestroyVideo();
 	g_pBasePanel = NULL;
 
 	if ( vgui::surface() )
@@ -1167,6 +1177,7 @@ void CBasePanel::SetBackgroundRenderState(EBackgroundState state)
 		// update main menu music
 		if ( !GameUI().IsBackgroundMusicPlaying() )
 			GameUI().SetBackgroundMusicDesired( true );
+		RestartBackgroundVideo();
 	}
 	else if ( state == BACKGROUND_LOADING )
 	{
@@ -1188,6 +1199,7 @@ void CBasePanel::SetBackgroundRenderState(EBackgroundState state)
 	}
 
 	m_eBackgroundState = state;
+
 }
 
 void CBasePanel::StartExitingProcess()
@@ -1213,6 +1225,11 @@ void CBasePanel::StartExitingProcess()
 //-----------------------------------------------------------------------------
 void CBasePanel::OnSizeChanged( int newWide, int newTall )
 {
+	if ( m_bVideoReady )
+	{
+		// restart the video so its resized for the new screen size
+		RestartBackgroundVideo();
+	}
 	// Recenter message dialogs
 	m_MessageDialogHandler.PositionDialogs( newWide, newTall );
 
@@ -1258,8 +1275,174 @@ void CBasePanel::OnLevelLoadingFinished()
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: Begins playback of a movie
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool CBasePanel::BeginPlayback( const char *pFilename )
+{
+	// need working video services
+	if ( g_pVideo == NULL )
+		return false;
+
+	// Create a new video material
+	if ( m_VideoMaterial != NULL )
+	{
+		g_pVideo->DestroyVideoMaterial( m_VideoMaterial );
+		m_VideoMaterial = NULL;
+	}
+
+	if ( pFilename == NULL )
+		return false;
+
+	m_VideoMaterial = g_pVideo->CreateVideoMaterial( "VideoMaterial", pFilename, "GAME",
+													 VideoPlaybackFlags::DEFAULT_MATERIAL_OPTIONS,
+												  VideoSystem::DETERMINE_FROM_FILE_EXTENSION, false );
+
+	if ( m_VideoMaterial == NULL )
+		return false;
+
+	m_VideoMaterial->SetLooping( true );
+
+	int nWidth, nHeight;
+	m_VideoMaterial->GetVideoImageSize( &nWidth, &nHeight );
+	m_VideoMaterial->GetVideoTexCoordRange( &m_flU, &m_flV );
+	m_pMaterial = m_VideoMaterial->GetMaterial();
+
+	int nScreenWidth, nScreenHeight;
+	GetSize( nScreenWidth, nScreenHeight );
+
+	float widthMultiplier = 1.0f;
+	if ( ((float)nScreenWidth	/	(float)nScreenHeight) <
+		((float)nWidth			/	(float)nHeight) )
+	{
+		widthMultiplier = (float) nHeight / (float) nScreenHeight;
+	}
+
+	m_nPlaybackWidth = nScreenWidth * widthMultiplier;
+	m_nPlaybackHeight = nScreenHeight;
+
+	return true;
+}
+
+//-----------------------------------------------------------------------------
 // Draws the background image.
 //-----------------------------------------------------------------------------
+void CBasePanel::RestartBackgroundVideo()
+{
+	if ( m_eBackgroundState != BACKGROUND_LEVEL )
+	{
+		if ( !m_bVideoReady )
+			m_bVideoReady = BeginPlayback( GetBackgroundMovieFile() );
+	}
+	else
+	{
+		DestroyVideo();
+	}
+}
+
+void CBasePanel::DestroyVideo()
+{
+	// Shut down this video, destroy the video material
+	if ( g_pVideo != NULL && m_VideoMaterial != NULL )
+	{
+		g_pVideo->DestroyVideoMaterial( m_VideoMaterial );
+		m_VideoMaterial = NULL;
+	}
+	m_bVideoReady = false;
+}
+
+const char *CBasePanel::GetBackgroundMovieFile()
+{
+	int index = Clamp( cl_menu_background.GetInt(), 0, (int) ARRAYSIZE( s_MenuBackgrounds ) - 1 );
+	if ( index == 0 )
+	{
+		// a random background
+		index = RandomInt( 1, ARRAYSIZE( s_MenuBackgrounds ) - 1 );
+	}
+	return s_MenuBackgrounds[index].szFilePath;
+
+}
+
+void CBasePanel::DrawBackgroundMovie()
+{
+	if ( !m_VideoMaterial )
+	{
+		m_bVideoReady = false;
+		return;
+	}
+
+	if ( m_VideoMaterial->Update() == false )
+	{
+		m_bVideoReady = false;
+		return;
+	}
+
+	// Black out the background (we could omit drawing under the video surface, but this is straight-forward)
+	vgui::surface()->DrawSetColor( 0, 0, 0, 255 );
+	vgui::surface()->DrawFilledRect( 0, 0, GetWide(), GetTall() );
+
+	// Draw the polys to draw this out
+	CMatRenderContextPtr pRenderContext( materials );
+
+	pRenderContext->MatrixMode( MATERIAL_VIEW );
+	pRenderContext->PushMatrix();
+	pRenderContext->LoadIdentity();
+
+	pRenderContext->MatrixMode( MATERIAL_PROJECTION );
+	pRenderContext->PushMatrix();
+	pRenderContext->LoadIdentity();
+
+	pRenderContext->Bind( m_pMaterial, NULL );
+
+	CMeshBuilder meshBuilder;
+	IMesh* pMesh = pRenderContext->GetDynamicMesh( true );
+	meshBuilder.Begin( pMesh, MATERIAL_QUADS, 1 );
+
+	float flLeftX = 0; // xpos
+	float flRightX = flLeftX + (m_nPlaybackWidth - 1);
+
+	float flTopY = 0; // ypos
+	float flBottomY = flTopY + (m_nPlaybackHeight - 1);
+
+	// Map our UVs to cut out just the portion of the video we're interested in
+	float flLeftU = 0.0f;
+	float flTopV = 0.0f;
+
+	// We need to subtract off a pixel to make sure we don't bleed
+	float flRightU = m_flU - (1.0f / (float) m_nPlaybackWidth);
+	float flBottomV = m_flV - (1.0f / (float) m_nPlaybackHeight);
+
+	// Get the current viewport size
+	int vx, vy, vw, vh;
+	pRenderContext->GetViewport( vx, vy, vw, vh );
+
+	// map from screen pixel coords to -1..1
+	flRightX = FLerp( -1, 1, 0, vw, flRightX );
+	flLeftX = FLerp( -1, 1, 0, vw, flLeftX );
+	flTopY = FLerp( 1, -1, 0, vh, flTopY );
+	flBottomY = FLerp( 1, -1, 0, vh, flBottomY );
+
+	for ( int corner = 0; corner<4; corner++ )
+	{
+		bool bLeft = (corner == 0) || (corner == 3);
+		meshBuilder.Position3f( (bLeft) ? flLeftX : flRightX, (corner & 2) ? flBottomY : flTopY, 0.0f );
+		meshBuilder.Normal3f( 0.0f, 0.0f, 1.0f );
+		meshBuilder.TexCoord2f( 0, (bLeft) ? flLeftU : flRightU, (corner & 2) ? flBottomV : flTopV );
+		meshBuilder.TangentS3f( 0.0f, 1.0f, 0.0f );
+		meshBuilder.TangentT3f( 1.0f, 0.0f, 0.0f );
+		meshBuilder.Color4f( 1.0f, 1.0f, 1.0f, 1.0f );
+		meshBuilder.AdvanceVertex();
+	}
+
+	meshBuilder.End();
+	pMesh->Draw();
+
+	pRenderContext->MatrixMode( MATERIAL_VIEW );
+	pRenderContext->PopMatrix();
+
+	pRenderContext->MatrixMode( MATERIAL_PROJECTION );
+	pRenderContext->PopMatrix();
+}
 void CBasePanel::DrawBackgroundImage()
 {
 	if ( IsX360() && m_bCopyFrameBuffer )
@@ -1295,29 +1478,38 @@ void CBasePanel::DrawBackgroundImage()
 		alpha = 255 - clamp( alpha, 0, 255 );
 	}
 
-	int iImageID = m_iBackgroundImageID;
-	if ( IsX360() )
+	if ( m_bVideoReady )
 	{
-		if ( m_ExitingFrameCount )
+		DrawBackgroundMovie();
+	}
+	else
+	{
+		int iImageID = m_iBackgroundImageID;
+		if ( IsX360() )
 		{
-			if ( !m_bRestartSameGame )
+			if ( m_ExitingFrameCount )
 			{
-				iImageID = m_iProductImageID;
+				if ( !m_bRestartSameGame )
+				{
+					iImageID = m_iProductImageID;
+				}
+			}
+			else if ( m_bUseRenderTargetImage )
+			{
+				// the render target image must be opaque, the alpha channel contents are unknown
+				// it is strictly an opaque background image and never used as an overlay
+				iImageID = m_iRenderTargetImageID;
+				alpha = 255;
 			}
 		}
-		else if ( m_bUseRenderTargetImage )
-		{
-			// the render target image must be opaque, the alpha channel contents are unknown
-			// it is strictly an opaque background image and never used as an overlay
-			iImageID = m_iRenderTargetImageID;
-			alpha = 255;
-		}
+
+		surface()->DrawSetColor( 255, 255, 255, alpha );
+		surface()->DrawSetTexture( iImageID );
+		surface()->DrawTexturedRect( 0, 0, wide, tall );
 	}
-
-	surface()->DrawSetColor( 255, 255, 255, alpha );
-	surface()->DrawSetTexture( iImageID );
-	surface()->DrawTexturedRect( 0, 0, wide, tall );
-
+	// TODO: why is the loading image below the video in the first place??
+	float zpos = surface()->GetZPos();
+	g_pMatSystemSurface->SetZPos( 1.0f );
 	if ( IsX360() && m_ExitingFrameCount )
 	{
 		// Make invisible when going back to appchooser
@@ -1365,6 +1557,8 @@ void CBasePanel::DrawBackgroundImage()
 			}
 		}
 	}
+	// restore the original zpos
+	g_pMatSystemSurface->SetZPos( zpos );
 }
 
 //-----------------------------------------------------------------------------

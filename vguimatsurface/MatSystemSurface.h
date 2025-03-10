@@ -310,7 +310,7 @@ public:
 	virtual vgui::HCursor CreateCursorFromFile( char const *curOrAniFile, char const *pPathID );
 
 	virtual void PaintTraverseEx(VPANEL panel, bool paintPopups = false );
-
+	virtual void SetZPos( float zpos );
 	virtual float GetZPos() const;
 
 	virtual void SetPanelForInput( VPANEL vpanel );

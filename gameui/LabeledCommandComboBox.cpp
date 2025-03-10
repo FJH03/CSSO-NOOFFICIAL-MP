@@ -113,7 +113,7 @@ void CLabeledCommandComboBox::ApplyChanges()
 
 	Assert( m_iCurrentSelection < m_Items.Size() );
 	COMMANDITEM *item = &m_Items[ m_iCurrentSelection ];
-	engine->ClientCmd_Unrestricted( item->command );
+	engine->ExecuteClientCmd( item->command );
 	m_iStartSelection = m_iCurrentSelection;
 }
 
