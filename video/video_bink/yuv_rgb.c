@@ -3,7 +3,6 @@
 
 #include "yuv_rgb.h"
 
-#include <emmintrin.h>
 
 #ifdef _MSC_VER
 // MSVC does not have __SSE2__ macro

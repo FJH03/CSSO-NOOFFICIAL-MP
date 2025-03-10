@@ -6,6 +6,7 @@
 #ifndef BINK_MATERIAL_H
 #define BINK_MATERIAL_H
 
+#include "libavutil/pixfmt.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -206,7 +207,7 @@ class CBinkMaterial : public IVideoMaterial
 		AVStream *m_AVVideoStream;
 		AVStream *m_AVAudioStream;
 
-		int m_AVPixFormat;
+		AVPixelFormat m_AVPixFormat;
 
 		double m_MovieFrameDuration;
 

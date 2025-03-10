@@ -230,7 +230,7 @@ void CBinkMaterial::Reset()
 	m_VideoFrameWidth = 0;
 	m_VideoFrameHeight = 0;
 
-	m_AVPixFormat = 0;
+	m_AVPixFormat = AV_PIX_FMT_YUV420P;
 	m_PlaybackFlags = VideoPlaybackFlags::NO_PLAYBACK_OPTIONS;
 
 	m_bMovieInitialized = false;
@@ -934,7 +934,7 @@ void CBinkMaterial::OpenMovie( const char *theMovieFileName )
 		size_t size = av_image_alloc(m_AVVideoData, m_AVVideoLinesize,
 							m_VideoFrameWidth, m_VideoFrameHeight, m_AVPixFormat, 1);
 
-		m_RGBData = calloc( m_VideoFrameWidth*m_VideoFrameHeight*3, 1 );
+		//m_RGBData = calloc( m_VideoFrameWidth*m_VideoFrameHeight*3, 1 );
 
 		printf("m_AVVideoData size = %zu\nm_VideoFrameWidth=%d\nm_VideoFrameHeight=%d\n", size, m_VideoFrameWidth, m_VideoFrameHeight);
 
