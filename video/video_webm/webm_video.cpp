@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //=============================================================================
 
@@ -36,7 +36,7 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CWebMVideoSubSystem, IVideoSubSystem, VIDEO_S
 // ===========================================================================
 // List of file extensions and features supported by this subsystem
 // ===========================================================================
-VideoFileExtensionInfo_t s_WebMExtensions[] = 
+VideoFileExtensionInfo_t s_WebMExtensions[] =
 {
 	{ ".webm", VideoSystem::WEBM,  VideoSystemFeature::FULL_ENCODE },
 };
@@ -50,11 +50,11 @@ const VideoSystemFeature_t	CWebMVideoSubSystem::DEFAULT_FEATURE_SET = VideoSyste
 // CWebMVideoSubSystem class
 // ===========================================================================
 CWebMVideoSubSystem::CWebMVideoSubSystem() :
-	m_bWebMInitialized( false ),
-	m_LastResult( VideoResult::SUCCESS ),
-	m_CurrentStatus( VideoSystemStatus::NOT_INITIALIZED ),
-	m_AvailableFeatures( CWebMVideoSubSystem::DEFAULT_FEATURE_SET ),
-	m_pCommonServices( nullptr )
+m_bWebMInitialized( false ),
+m_LastResult( VideoResult::SUCCESS ),
+m_CurrentStatus( VideoSystemStatus::NOT_INITIALIZED ),
+m_AvailableFeatures( CWebMVideoSubSystem::DEFAULT_FEATURE_SET ),
+m_pCommonServices( nullptr )
 {
 
 }
@@ -76,7 +76,7 @@ bool CWebMVideoSubSystem::Connect( CreateInterfaceFn factory )
 		return false;
 	}
 
-	if ( g_pFullFileSystem == nullptr || materials == nullptr ) 
+	if ( g_pFullFileSystem == nullptr || materials == nullptr )
 	{
 		Msg( "WebM video subsystem failed to connect to missing a required system\n" );
 		return false;
@@ -123,13 +123,13 @@ void CWebMVideoSubSystem::Shutdown()
 {
 	// Make sure we shut down WebM
 	ShutdownWebM();
-	
+
 	BaseClass::Shutdown();
 }
 
 
 // ===========================================================================
-// IVideoSubSystem identification methods  
+// IVideoSubSystem identification methods
 // ===========================================================================
 VideoSystem_t CWebMVideoSubSystem::GetSystemID()
 {
@@ -161,10 +161,10 @@ const char* CWebMVideoSubSystem::GetVideoSystemName()
 bool CWebMVideoSubSystem::InitializeVideoSystem( IVideoCommonServices *pCommonServices )
 {
 	m_AvailableFeatures = DEFAULT_FEATURE_SET;			// Put here because of issue with static const int, binary OR and DEBUG builds
-	
+
 	AssertPtr( pCommonServices );
 	m_pCommonServices = pCommonServices;
-	
+
 	return ( m_bWebMInitialized ) ? true : SetupWebM();
 }
 
@@ -177,19 +177,19 @@ bool CWebMVideoSubSystem::ShutdownVideoSystem()
 
 VideoResult_t CWebMVideoSubSystem::VideoSoundDeviceCMD( VideoSoundDeviceOperation_t operation, void *pDevice, void *pData )
 {
-	switch ( operation ) 
+	switch ( operation )
 	{
 		case VideoSoundDeviceOperation::SET_DIRECT_SOUND_DEVICE:
 		{
 			return SetResult( VideoResult::OPERATION_NOT_SUPPORTED );
 		}
-		
+
 		case VideoSoundDeviceOperation::SET_MILES_SOUND_DEVICE:
 		case VideoSoundDeviceOperation::HOOK_X_AUDIO:
 		{
 			return SetResult( VideoResult::OPERATION_NOT_SUPPORTED );
 		}
-		
+
 		default:
 		{
 			return SetResult( VideoResult::UNKNOWN_OPERATION );
@@ -206,16 +206,16 @@ int CWebMVideoSubSystem::GetSupportedFileExtensionCount()
 	return s_WebMExtensionCount;
 }
 
- 
+
 const char* CWebMVideoSubSystem::GetSupportedFileExtension( int num )
 {
 	return ( num < 0 || num >= s_WebMExtensionCount ) ? nullptr : s_WebMExtensions[num].m_FileExtension;
 }
 
- 
+
 VideoSystemFeature_t CWebMVideoSubSystem::GetSupportedFileExtensionFeatures( int num )
 {
-	 return ( num < 0 || num >= s_WebMExtensionCount ) ? VideoSystemFeature::NO_FEATURES : s_WebMExtensions[num].m_VideoFeatures;
+	return ( num < 0 || num >= s_WebMExtensionCount ) ? VideoSystemFeature::NO_FEATURES : s_WebMExtensions[num].m_VideoFeatures;
 }
 
 
@@ -224,7 +224,7 @@ VideoSystemFeature_t CWebMVideoSubSystem::GetSupportedFileExtensionFeatures( int
 // ===========================================================================
 VideoResult_t CWebMVideoSubSystem::PlayVideoFileFullScreen( const char *filename, void *mainWindow, int windowWidth, int windowHeight, int desktopWidth, int desktopHeight, bool windowed, float forcedMinTime, VideoPlaybackFlags_t playbackFlags )
 {
-    return SetResult( VideoResult::FEATURE_NOT_AVAILABLE );
+	return SetResult( VideoResult::FEATURE_NOT_AVAILABLE );
 }
 
 
@@ -234,8 +234,8 @@ VideoResult_t CWebMVideoSubSystem::PlayVideoFileFullScreen( const char *filename
 // ===========================================================================
 IVideoMaterial* CWebMVideoSubSystem::CreateVideoMaterial( const char *pMaterialName, const char *pVideoFileName, VideoPlaybackFlags_t flags )
 {
-    SetResult( VideoResult::FEATURE_NOT_AVAILABLE );
-    return NULL;
+	SetResult( VideoResult::FEATURE_NOT_AVAILABLE );
+	return NULL;
 }
 
 
@@ -255,12 +255,12 @@ IVideoRecorder* CWebMVideoSubSystem::CreateVideoRecorder()
 	AssertExitN( m_CurrentStatus == VideoSystemStatus::OK );
 
 	CWebMVideoRecorder *pVideoRecorder = new CWebMVideoRecorder();
-	
+
 	if ( pVideoRecorder != nullptr )
 	{
 		IVideoRecorder *pInterface = (IVideoRecorder*) pVideoRecorder;
 		m_RecorderList.AddToTail( pInterface );
-		
+
 		SetResult( VideoResult::SUCCESS );
 		return pInterface;
 	}
@@ -279,12 +279,12 @@ VideoResult_t CWebMVideoSubSystem::DestroyVideoRecorder( IVideoRecorder *pRecord
 	{
 		CWebMVideoRecorder *pVideoRecorder = (CWebMVideoRecorder*) pRecorder;
 		delete pVideoRecorder;
-		
+
 		m_RecorderList.FindAndFastRemove( pRecorder );
-		
+
 		return SetResult( VideoResult::SUCCESS );
 	}
-	
+
 	return SetResult( VideoResult::RECORDER_NOT_FOUND );
 }
 
@@ -292,7 +292,7 @@ VideoResult_t CWebMVideoSubSystem::CheckCodecAvailability( VideoEncodeCodec_t co
 {
 	AssertExitV( m_CurrentStatus == VideoSystemStatus::OK, SetResult( VideoResult::SYSTEM_NOT_AVAILABLE ) );
 	AssertExitV( codec >= VideoEncodeCodec::DEFAULT_CODEC && codec < VideoEncodeCodec::CODEC_COUNT, SetResult( VideoResult::BAD_INPUT_PARAMETERS ) );
-	
+
 	return SetResult( VideoResult::FEATURE_NOT_AVAILABLE );
 }
 
@@ -328,10 +328,10 @@ bool CWebMVideoSubSystem::SetupWebM()
 	// $$INIT CODE HERE$$
 
 
-	// Note that we are now open for business....	
+	// Note that we are now open for business....
 	m_bWebMInitialized = true;
 	SetResult( VideoResult::SUCCESS );
-    
+
 	return true;
 }
 
@@ -342,7 +342,7 @@ bool CWebMVideoSubSystem::ShutdownWebM()
 	{
 
 	}
-				
+
 	m_bWebMInitialized = false;
 	m_CurrentStatus = VideoSystemStatus::NOT_INITIALIZED;
 	m_AvailableFeatures = VideoSystemFeature::NO_FEATURES;
@@ -350,4 +350,3 @@ bool CWebMVideoSubSystem::ShutdownWebM()
 
 	return true;
 }
-

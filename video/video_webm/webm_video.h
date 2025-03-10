@@ -41,11 +41,11 @@ extern IMaterialSystem	*materials;
 #endif
 
 // libwebm, support for reading/writing webm files
-#include "mkvreader.hpp"
-#include "mkvparser.hpp"
-#include "mkvmuxer.hpp"
-#include "mkvwriter.hpp"
-#include "mkvmuxerutil.hpp"
+#include "mkvparser/mkvreader.h"
+#include "mkvparser/mkvparser.h"
+#include "mkvmuxer/mkvmuxer.h"
+#include "mkvmuxer/mkvwriter.h"
+#include "mkvmuxer/mkvmuxerutil.h"
 
 #include "vorbis/vorbisenc.h"
 #include "vorbis/codec.h"
