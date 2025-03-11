@@ -249,7 +249,7 @@ void CInput::CheckMouseAcclerationVars()
 //-----------------------------------------------------------------------------
 void CInput::Init_Mouse (void)
 {
-	if ( CommandLine()->FindParm("-nomouse" ) ) 
+	if ( IsAndroid() || CommandLine()->FindParm("-nomouse" ) ) 
 		return; 
 
 	m_flPreviousMouseXPosition = 0.0f;
