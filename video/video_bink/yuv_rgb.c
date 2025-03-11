@@ -288,31 +288,52 @@ void yuv420_rgb24_std(
 			
 			//compute Cb Cr color offsets, common to four pixels
 			int16_t b_cb_offset, r_cr_offset, g_cbcr_offset;
+#ifdef ANDROID
 			b_cb_offset = (param->cb_factor*u_tmp)>>6;
 			r_cr_offset = (param->cr_factor*v_tmp)>>6;
 			g_cbcr_offset = (param->g_cb_factor*u_tmp + param->g_cr_factor*v_tmp)>>7;
 			
 			int16_t y_tmp;
 			y_tmp = (param->y_factor*(y_ptr1[0]-param->y_offset))>>7;
-			rgb_ptr1[2] = clamp(y_tmp + r_cr_offset);
+			rgb_ptr1[2] = clamp(y_tmp + b_cb_offset);
 			rgb_ptr1[1] = clamp(y_tmp - g_cbcr_offset);
-			rgb_ptr1[0] = clamp(y_tmp + b_cb_offset);
+			rgb_ptr1[0] = clamp(y_tmp + r_cr_offset);
 			
 			y_tmp = (param->y_factor*(y_ptr1[1]-param->y_offset))>>7;
-			rgb_ptr1[5] = clamp(y_tmp + r_cr_offset);
+			rgb_ptr1[5] = clamp(y_tmp + b_cb_offset);
 			rgb_ptr1[4] = clamp(y_tmp - g_cbcr_offset);
-			rgb_ptr1[3] = clamp(y_tmp + b_cb_offset);
+			rgb_ptr1[3] = clamp(y_tmp + r_cr_offset);
 			
 			y_tmp = (param->y_factor*(y_ptr2[0]-param->y_offset))>>7;
-			rgb_ptr2[2] = clamp(y_tmp + r_cr_offset);
+			rgb_ptr2[2] = clamp(y_tmp + b_cb_offset);
 			rgb_ptr2[1] = clamp(y_tmp - g_cbcr_offset);
-			rgb_ptr2[0] = clamp(y_tmp + b_cb_offset);
+			rgb_ptr2[0] = clamp(y_tmp + r_cr_offset);
 			
 			y_tmp = (param->y_factor*(y_ptr2[1]-param->y_offset))>>7;
-			rgb_ptr2[5] = clamp(y_tmp + r_cr_offset);
+			rgb_ptr2[5] = clamp(y_tmp + b_cb_offset);
 			rgb_ptr2[4] = clamp(y_tmp - g_cbcr_offset);
-			rgb_ptr2[3] = clamp(y_tmp + b_cb_offset);
-			
+			rgb_ptr2[3] = clamp(y_tmp + r_cr_offset);
+#else
+			y_tmp = (param->y_factor*(y_ptr1[0]-param->y_offset))>>7;
+			rgb_ptr1[0] = clamp(y_tmp + r_cr_offset);
+			rgb_ptr1[1] = clamp(y_tmp - g_cbcr_offset);
+			rgb_ptr1[2] = clamp(y_tmp + b_cb_offset);
+
+			y_tmp = (param->y_factor*(y_ptr1[1]-param->y_offset))>>7;
+			rgb_ptr1[3] = clamp(y_tmp + r_cr_offset);
+			rgb_ptr1[4] = clamp(y_tmp - g_cbcr_offset);
+			rgb_ptr1[5] = clamp(y_tmp + b_cb_offset);
+
+			y_tmp = (param->y_factor*(y_ptr2[0]-param->y_offset))>>7;
+			rgb_ptr2[0] = clamp(y_tmp + r_cr_offset);
+			rgb_ptr2[1] = clamp(y_tmp - g_cbcr_offset);
+			rgb_ptr2[2] = clamp(y_tmp + b_cb_offset);
+
+			y_tmp = (param->y_factor*(y_ptr2[1]-param->y_offset))>>7;
+			rgb_ptr2[3] = clamp(y_tmp + r_cr_offset);
+			rgb_ptr2[4] = clamp(y_tmp - g_cbcr_offset);
+			rgb_ptr2[5] = clamp(y_tmp + b_cb_offset);
+#endif
 			rgb_ptr1 += 6;
 			rgb_ptr2 += 6;
 			y_ptr1 += 2;
