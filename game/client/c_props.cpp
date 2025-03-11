@@ -164,6 +164,17 @@ bool C_BasePropDoor::TestCollision( const Ray_t &ray, unsigned int mask, trace_t
 	return false;
 }
 
+//just need to reference by classname in portal
+class C_PropDoorRotating : public C_BasePropDoor
+{
+public:
+	DECLARE_CLASS( C_PropDoorRotating, C_BasePropDoor );
+	DECLARE_CLIENTCLASS();
+};
+
+IMPLEMENT_CLIENTCLASS_DT(C_PropDoorRotating, DT_PropDoorRotating, CPropDoorRotating)
+END_RECV_TABLE()
+
 // ------------------------------------------------------------------------------------------ //
 // Special version of func_physbox.
 // ------------------------------------------------------------------------------------------ //

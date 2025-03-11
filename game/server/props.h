@@ -57,6 +57,7 @@ public:
 	virtual void Spawn();
 	virtual void Precache();
 	virtual float GetAutoAimRadius() { return 24.0f; }
+	virtual void UpdateOnRemove();
 
 	void BreakablePropTouch( CBaseEntity *pOther );
 
@@ -329,7 +330,8 @@ protected:
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CPhysicsProp : public CBreakableProp
+DECLARE_AUTO_LIST( IPhysicsPropAutoList );
+class CPhysicsProp : public CBreakableProp, public IPhysicsPropAutoList
 {
 	DECLARE_CLASS( CPhysicsProp, CBreakableProp );
 	DECLARE_SERVERCLASS();
