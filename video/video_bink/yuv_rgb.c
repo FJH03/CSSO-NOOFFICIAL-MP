@@ -314,6 +314,7 @@ void yuv420_rgb24_std(
 			rgb_ptr2[4] = clamp(y_tmp - g_cbcr_offset);
 			rgb_ptr2[3] = clamp(y_tmp + r_cr_offset);
 #else
+			int16_t y_tmp;
 			y_tmp = (param->y_factor*(y_ptr1[0]-param->y_offset))>>7;
 			rgb_ptr1[0] = clamp(y_tmp + r_cr_offset);
 			rgb_ptr1[1] = clamp(y_tmp - g_cbcr_offset);
