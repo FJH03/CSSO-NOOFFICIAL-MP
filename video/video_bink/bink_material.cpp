@@ -934,8 +934,11 @@ void CBinkMaterial::OpenMovie( const char *theMovieFileName )
 		size_t size = av_image_alloc(m_AVVideoData, m_AVVideoLinesize,
 							m_VideoFrameWidth, m_VideoFrameHeight, m_AVPixFormat, 1);
 
-		//m_RGBData = calloc( m_VideoFrameWidth*m_VideoFrameHeight*3, 1 );
-
+#ifndef ANDROID
+		m_RGBData = calloc( m_VideoFrameWidth*m_VideoFrameHeight*3, 1 );
+#else
+		m_RGBData = calloc( m_VideoFrameWidth*m_VideoFrameHeight*3, 1 );
+#endif
 		printf("m_AVVideoData size = %zu\nm_VideoFrameWidth=%d\nm_VideoFrameHeight=%d\n", size, m_VideoFrameWidth, m_VideoFrameHeight);
 
 		if (size < 0)
