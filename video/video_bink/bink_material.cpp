@@ -825,15 +825,9 @@ void CBinkMaterial::CreateProceduralTexture( const char *pTextureName )
 	int nHeight = ( actualSizeTexture ) ? ALIGN_VALUE( m_VideoFrameHeight, TEXTURE_SIZE_ALIGNMENT ) : ComputeGreaterPowerOfTwo( m_VideoFrameHeight ); 
 
 	// initialize the procedural texture as 32-it RGBA, w/o mipmaps
-#ifdef ANDROID
-	m_Texture.InitProceduralTexture( pTextureName, "VideoCacheTextures", nWidth, nHeight, 
-				IMAGE_FORMAT_RGB888, TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT | TEXTUREFLAGS_NOMIP |
-				TEXTUREFLAGS_PROCEDURAL | TEXTUREFLAGS_SINGLECOPY | TEXTUREFLAGS_NOLOD );
-#else
 	m_Texture.InitProceduralTexture( pTextureName, "VideoCacheTextures", nWidth, nHeight,
-									 IMAGE_FORMAT_RGBA8888, TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT | TEXTUREFLAGS_NOMIP |
-									 TEXTUREFLAGS_PROCEDURAL | TEXTUREFLAGS_SINGLECOPY | TEXTUREFLAGS_NOLOD );
-#endif
+			 IMAGE_FORMAT_RGB888, TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT | TEXTUREFLAGS_NOMIP |
+			 TEXTUREFLAGS_PROCEDURAL | TEXTUREFLAGS_SINGLECOPY | TEXTUREFLAGS_NOLOD );
 	// Use this to get the updated frame from the remote connection	
 	m_Texture->SetTextureRegenerator( &m_TextureRegen /* , false */ );
 
