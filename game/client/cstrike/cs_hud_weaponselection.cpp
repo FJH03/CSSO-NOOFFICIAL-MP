@@ -632,4 +632,14 @@ void CCSHudWeaponSelection::FireGameEvent( IGameEvent *event )
 		ShowAndUpdateSelection( WEPSELECT_SWITCH );
 		m_flUpdateInventoryAt = gpGlobals->curtime + 0.1;
 	}
+	else if ( Q_strcmp( "item_equip", type ) == 0 )
+ 	{
+ 		C_CSPlayer *pPlayer = GetHudPlayer();
+ 		if ( pPlayer && pPlayer->GetUserID() == nEventUserID )
+ 		{
+ 			ShowAndUpdateSelection( WEPSELECT_SWITCH );
+ 			m_flUpdateInventoryAt = gpGlobals->curtime + 0.1;
+ 			m_bUpdateInventoryReset = true;
+ 		}
+ 	}
 }
