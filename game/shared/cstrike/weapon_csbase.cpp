@@ -2280,6 +2280,58 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
  				m_bSilencerOn = false;
  				m_weaponMode = Primary_Mode;
  			}
+			 else if ( nEvent == AE_WPN_CZ_DUMP_CURRENT_MAG )
+ 			{
+ 				CCSPlayer *pCSPlayer = GetPlayerOwner();
+ 				if ( pCSPlayer && pCSPlayer->GetActiveCSWeapon() )
+ 				{
+ 					//m_iClip1 = 0;
+ 					if ( CBaseViewModel *vm = pCSPlayer->GetViewModel( m_nViewModelIndex ) )
+ 					{
+ 						vm->SetBodygroup( vm->FindBodygroupByName( "front_mag" ), 1 );
+ 						//world model
+ 						CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
+ 						if ( pWorldModel )
+ 						{
+ 							pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "front_mag" ), 1 );
+ 						}
+ 						else
+ 						{
+ 							SetBodygroup( FindBodygroupByName( "front_mag" ), 1 );
+ 						}
+ 
+ 						//if the front mag is removed, all subsequent anims use the non-front mag reload
+ 						m_iReloadActivityIndex = ACT_SECONDARY_VM_RELOAD;
+ 					}
+ 				}
+ 			}
+ 			else if ( nEvent == AE_WPN_CZ_UPDATE_BODYGROUP )
+ 			{
+ 				CCSPlayer *pCSPlayer = GetPlayerOwner();
+ 				if ( pCSPlayer && pCSPlayer->GetActiveCSWeapon() )
+ 				{
+ 					int iGroupNum = (GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0) ? 1 : 0;
+ 
+ 					if ( CBaseViewModel *vm = pCSPlayer->GetViewModel( m_nViewModelIndex ) )
+ 					{
+ 						vm->SetBodygroup( vm->FindBodygroupByName( "front_mag" ), iGroupNum );
+ 						//world model
+ 						CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
+ 						if ( pWorldModel )
+ 						{
+ 							pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "front_mag" ), iGroupNum );
+ 						}
+ 						else
+ 						{
+ 							SetBodygroup( FindBodygroupByName( "front_mag" ), iGroupNum );
+ 						}
+ 
+ 						//if the front mag is removed, all subsequent anims use the non-front mag reload
+ 						m_iReloadActivityIndex = (iGroupNum == 0) ? ACT_VM_RELOAD : ACT_SECONDARY_VM_RELOAD;
+ 
+ 					}
+ 				}
+ 			}
 			else if ( nEvent == AE_CL_EJECT_MAG )
 			{
 				SetBodygroup( FindBodygroupByName( "magazine" ), 1 );

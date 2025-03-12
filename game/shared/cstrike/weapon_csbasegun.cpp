@@ -662,7 +662,7 @@ bool CWeaponCSBaseGun::Reload()
 
 	pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.0f );
 
-	int iResult = DefaultReload( GetMaxClip1(), GetMaxClip2(), ACT_VM_RELOAD );
+	int iResult = DefaultReload( GetMaxClip1(), GetMaxClip2(), m_iReloadActivityIndex );
 	if ( !iResult )
 		return false;
 

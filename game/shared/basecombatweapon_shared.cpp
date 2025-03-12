@@ -666,6 +666,7 @@ void CBaseCombatWeapon::Spawn( void )
 	m_iReloadHudHintCount = 0;
 	m_iAltFireHudHintCount = 0;
 	m_flHudHintMinDisplayTime = 0;
+	m_iReloadActivityIndex = ACT_VM_RELOAD;
 
 	m_iNumEmptyAttacks = 0;
 	m_iPrimaryReserveAmmoCount = 0;		// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
@@ -2666,7 +2667,7 @@ bool CBaseCombatWeapon::ReloadsSingly( void ) const
 //-----------------------------------------------------------------------------
 bool CBaseCombatWeapon::Reload( void )
 {
-	return DefaultReload( GetMaxClip1(), GetMaxClip2(), ACT_VM_RELOAD );
+	return DefaultReload( GetMaxClip1(), GetMaxClip2(), m_iReloadActivityIndex );
 }
 
 //=========================================================

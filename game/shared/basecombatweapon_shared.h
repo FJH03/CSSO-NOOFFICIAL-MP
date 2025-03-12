@@ -730,6 +730,7 @@ public:
 	float					m_fMaxRange2;			// What's the furthest this weapon can be used?
 	bool					m_bReloadsSingly;		// True if this weapon reloads 1 round at a time
 	float					m_fFireDuration;		// The amount of time that the weapon has sustained firing
+	int						m_iReloadActivityIndex;
 	int						m_iSubType;
 
 	float					m_flUnlockTime;
