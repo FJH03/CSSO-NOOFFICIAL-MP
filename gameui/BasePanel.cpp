@@ -1329,15 +1329,7 @@ bool CBasePanel::BeginPlayback( const char *pFilename )
 //-----------------------------------------------------------------------------
 void CBasePanel::RestartBackgroundVideo()
 {
-	if ( m_eBackgroundState != BACKGROUND_LEVEL )
-	{
-		if ( !m_bVideoReady )
-			m_bVideoReady = BeginPlayback( GetBackgroundMovieFile() );
-	}
-	else
-	{
-		DestroyVideo();
-	}
+	m_bVideoReady = BeginPlayback( GetBackgroundMovieFile() );
 }
 
 void CBasePanel::DestroyVideo()
