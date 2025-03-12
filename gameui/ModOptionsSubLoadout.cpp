@@ -94,6 +94,7 @@ const char* szMusicStrings[] =
 	"skog_02",
 	"skog_03",
 	"theverkkars_01",
+	"theverkkars_02",
 	"timhuling_01",
 	"treeadams_benbromfield_01",
 	"troelsfolmann_01",
