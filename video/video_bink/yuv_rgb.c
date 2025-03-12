@@ -4,11 +4,7 @@
 #include "yuv_rgb.h"
 
 
-#ifndef ANDROID
-#include <immintrin.h>
-#else
-#include <arm_neon.h>
-#endif
+
 #ifdef _MSC_VER
 // MSVC does not have __SSE2__ macro
   #if (defined(_M_AMD64) || defined(_M_X64) || (_M_IX86_FP == 2))
