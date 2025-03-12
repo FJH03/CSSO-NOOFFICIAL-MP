@@ -372,10 +372,9 @@ void CTargetID::Paint()
 		CWeaponCSBase *pWeapon = static_cast<CWeaponCSBase*>(cl_entitylist->GetEnt( iWeaponEntIndex ));
 		if ( pWeapon )
 		{
-			if ( pPlayer->CanAcquire( pWeapon->GetCSWeaponID(), AcquireMethod::PickUp ) == AcquireResult::Allowed ||
-				 pPlayer->IsPrimaryOrSecondaryWeapon( pWeapon->GetCSWpnData().m_WeaponType ) )
+			if ( pPlayer->CanAcquire( pWeapon->GetCSWeaponID(), AcquireMethod::PickUp ) == AcquireResult::Allowed )
 			{
-				if ( pPlayer->Weapon_GetSlot( pWeapon->GetSlot() ) )
+				if ( pPlayer->Weapon_GetSlot( pWeapon->GetSlot() ) && pPlayer->IsPrimaryOrSecondaryWeapon( pWeapon->GetCSWpnData().m_WeaponType ) )
 				{
 					static wchar_t wszUseBind[32] = L"";
 					UTIL_ReplaceKeyBindings( L"%+use%", 0, wszUseBind, sizeof( wszUseBind ) );
