@@ -619,69 +619,74 @@ bool CBinkMaterial::StopVideo()
 //-----------------------------------------------------------------------------
 bool CBinkMaterial::Update( void )
 {
-	AssertExitF( m_bMoviePlaying );
+    AssertExitF( m_bMoviePlaying );
 
 
 	// are we paused? can't update if so...
-	if ( m_bMoviePaused )
+    if ( m_bMoviePaused )
 		return true;			// reuse the last frame
 
 	// Get current time in the movie
 	float curMovieTime; // = GetMovieTime( m_QTMovie, nullptr );
 
-	if( m_NextInterestingTimeToPlay > Plat_FloatTime() )
-		return true;
+    if( m_NextInterestingTimeToPlay > Plat_FloatTime() )
+        return true;
 
-	m_NextInterestingTimeToPlay += m_MovieFrameDuration;
+    m_NextInterestingTimeToPlay += m_MovieFrameDuration;
 
 	/* read frames from the file */
 
-	int ret;
-	while( (ret = av_read_frame(m_AVFmtCtx, m_AVPkt)) >= 0 )
-	{
-		if (m_AVPkt->stream_index == m_AVVideoStreamID)
-		{
-			avcodec_send_packet(m_AVVideoDecCtx, m_AVPkt);
+    int ret;
+    while( (ret = av_read_frame(m_AVFmtCtx, m_AVPkt)) >= 0 )
+    {
+        if (m_AVPkt->stream_index == m_AVVideoStreamID)
+        {
+            avcodec_send_packet(m_AVVideoDecCtx, m_AVPkt);
 
-			ret = avcodec_receive_frame(m_AVVideoDecCtx, m_AVFrame);
-			if (ret < 0)
-			{
-				av_packet_unref(m_AVPkt);
-				return true;
-			}
+            ret = avcodec_receive_frame(m_AVVideoDecCtx, m_AVFrame);
+            if (ret < 0)
+            {
+                av_packet_unref(m_AVPkt);
+                return true;
+            }
 
 			// write the frame data to output file
 			if (m_AVVideoDecCtx->codec->type == AVMEDIA_TYPE_VIDEO)
 			{
-				av_image_copy(m_AVVideoData, m_AVVideoLinesize, (const uint8_t **)(m_AVFrame->data), m_AVFrame->linesize, m_AVPixFormat, m_VideoFrameWidth, m_VideoFrameHeight);
+            av_image_copy(m_AVVideoData, m_AVVideoLinesize, (const uint8_t **)(m_AVFrame->data), m_AVFrame->linesize, m_AVPixFormat, m_VideoFrameWidth, m_VideoFrameHeight);
 			}
 
-			av_frame_unref(m_AVFrame);
-			break;
-		}
+            av_frame_unref(m_AVFrame);
+            break;
+        }
 
-		av_packet_unref(m_AVPkt);
-	}
-
-
-	if( ret < 0 )
-	{
-		StopVideo();
-		return false;
-	}
+        av_packet_unref(m_AVPkt);
+    }
 
 
+    if( ret < 0 && m_bLoopMovie )
+    {
+        av_seek_frame(m_AVFmtCtx, m_AVVideoStreamID, 0, AVSEEK_FLAG_BACKWARD);
+        return true;
+    }
+    else if( ret < 0 )
+    {
+        StopVideo();
+        return false;
+    }
 
-	yuv420_rgb24_std( m_VideoFrameWidth, m_VideoFrameHeight, m_AVVideoData[0],
-			m_AVVideoData[0]+m_VideoFrameHeight*m_VideoFrameWidth,
-			m_AVVideoData[0]+m_VideoFrameWidth*m_VideoFrameHeight+((m_VideoFrameWidth+1)/2)*((m_VideoFrameHeight+1)/2),
-			m_VideoFrameWidth, (m_VideoFrameWidth+1)/2, m_RGBData, m_VideoFrameWidth*3, YCBCR_601
-		);
+    
 
-	m_Texture->Download();
+    yuv420_rgb24_std( m_VideoFrameWidth, m_VideoFrameHeight, m_AVVideoData[0],
+            m_AVVideoData[0]+m_VideoFrameHeight*m_VideoFrameWidth,
+            m_AVVideoData[0]+m_VideoFrameWidth*m_VideoFrameHeight+((m_VideoFrameWidth+1)/2)*((m_VideoFrameHeight+1)/2),
+            m_VideoFrameWidth, (m_VideoFrameWidth+1)/2, m_RGBData, m_VideoFrameWidth*3, YCBCR_601
+        );
 
-	SetResult( VideoResult::SUCCESS );
-	return true;
+    m_Texture->Download();
+
+    SetResult( VideoResult::SUCCESS );
+    return true;
 }
 
 
