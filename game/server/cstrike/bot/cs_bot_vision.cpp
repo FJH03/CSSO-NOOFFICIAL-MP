@@ -14,6 +14,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+ConVar bot_ignore_players( "bot_ignore_players", "0", FCVAR_CHEAT, "Bots will not see non-bot players." );
+
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Used to update view angles to stay on a ladder
@@ -360,6 +362,9 @@ bool CCSBot::IsVisible( const Vector &pos, bool testFOV, const CBaseEntity *igno
 bool CCSBot::IsVisible( CCSPlayer *player, bool testFOV, unsigned char *visParts ) const
 {
 	VPROF_BUDGET( "CCSBot::IsVisible( player )", VPROF_BUDGETGROUP_NPCS );
+
+	if ( bot_ignore_players.GetBool() && !player->IsBot() )
+ 		return false;
 
 	// optimization - assume if center is not in FOV, nothing is
 	// we're using WorldSpaceCenter instead of GUT so we can skip GetPartPosition below - that's
