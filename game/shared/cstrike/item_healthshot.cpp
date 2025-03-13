@@ -119,6 +119,8 @@ void CItem_Healthshot::DropHealthshot( void )
 
 			pHealth->SetSolidFlags( FSOLID_NOT_STANDABLE | FSOLID_TRIGGER | FSOLID_USE_TRIGGER_BOUNDS );
 			pHealth->SetPreviousOwner( pPlayer );
+
+			Deploy();
 		}
 	}
 

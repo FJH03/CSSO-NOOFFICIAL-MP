@@ -506,12 +506,7 @@ void CBaseCSGrenade::ItemPostFrame()
 				pGrenade->SetSolidFlags( FSOLID_NOT_STANDABLE | FSOLID_TRIGGER | FSOLID_USE_TRIGGER_BOUNDS );
 				pGrenade->SetPreviousOwner( pPlayer );
 
-				// TODO: this only works when weapon is idling!
-				/*SendWeaponAnim( GetDeployActivity() );
-
-				pPlayer->SetNextAttack( gpGlobals->curtime + SequenceDuration() );
-				m_flNextPrimaryAttack = gpGlobals->curtime;
-				m_flNextSecondaryAttack = gpGlobals->curtime;*/
+				Deploy();
 
 				return true;
 			}
