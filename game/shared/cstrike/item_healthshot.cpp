@@ -23,6 +23,8 @@
 #define HEALTHSHOT_INJECT_TIME 1.65f
 
 ConVar healthshot_allow_use_at_full( "healthshot_allow_use_at_full", "0", FCVAR_REPLICATED );
+ConVar sv_health_approach_enabled( "sv_health_approach_enabled", "0", FCVAR_REPLICATED );
+ConVar sv_health_approach_speed( "sv_health_approach_speed", "10", FCVAR_REPLICATED );
 
 IMPLEMENT_NETWORKCLASS_ALIASED( Item_Healthshot, DT_Item_Healthshot )
 
@@ -145,9 +147,15 @@ void CItem_Healthshot::CompleteUse( CCSPlayer *pPlayer )
 {
 	pPlayer->OnHealthshotUsed();
 
-	// Give half health buffer
-	pPlayer->SetHealth( Min( pPlayer->GetHealth() + healthshot_health.GetInt(), pPlayer->GetMaxHealth() ) );
-
+	if ( sv_health_approach_enabled.GetBool() )
+	{
+		pPlayer->SetHealthApproach( healthshot_health.GetInt(), sv_health_approach_speed.GetInt() );
+	}
+	else
+	{
+		// Give half health buffer
+		pPlayer->SetHealth( Min( pPlayer->GetHealth() + healthshot_health.GetInt(), pPlayer->GetMaxHealth() ) );
+	}
 	// emit event	
 // 	IGameEvent *event = gameeventmanager->CreateEvent( "healthshot_used" );
 // 	if( event )

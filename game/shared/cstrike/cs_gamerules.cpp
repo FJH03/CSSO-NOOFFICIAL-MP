@@ -384,6 +384,11 @@ ConVar mp_match_can_clinch(
 	"1",
 	FCVAR_REPLICATED,
 	"Can a team clinch and end the match by being so far ahead that the other team has no way to catching up?" );
+ConVar mp_tdm_healthshot_killcount(
+	"mp_tdm_healthshot_killcount",
+	"3",
+	FCVAR_REPLICATED,
+	"Grant healthshots in team deathmatch after n kills" );
 
 ConVar mp_ggprogressive_round_restart_delay(
 	"mp_ggprogressive_round_restart_delay",

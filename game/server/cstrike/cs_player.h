@@ -374,6 +374,7 @@ public:
 	bool IsOtherSameTeam( int nTeam );
 	bool IsOtherEnemy( CCSPlayer *pPlayer );
 	bool IsOtherEnemy( int nEntIndex );
+	void SetHealthApproach( int iHealth, int iSpeed );
 
 
 public:
@@ -667,6 +668,9 @@ private:
 	bool m_bAbortFreezeCam;
 
 	bool m_bRespawning;
+	int m_iApproachingHealth;
+	int m_iApproachingHealthSpeed;
+	float m_flApproachingHealthLastTime;
 
 protected:
 	void AttemptToExitFreezeCam( void );

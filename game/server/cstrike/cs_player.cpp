@@ -146,6 +146,7 @@ extern ConVar mp_playercashawards;
 extern ConVar mp_ggprogressive_healthshot_killcount;
 extern ConVar mp_damage_headshot_only;
 extern ConVar mp_max_armor;
+extern ConVar mp_tdm_healthshot_killcount;
 
 // [menglish] Added in convars for freeze cam time length
 extern ConVar spec_freeze_time;
@@ -667,6 +668,9 @@ CCSPlayer::CCSPlayer()
 	m_bNeedToChangeGloves = true;
 
 	m_szPlayerDefaultGloves = NULL;
+	m_iApproachingHealth = -1;
+	m_iApproachingHealthSpeed = 0.0f;
+	m_flApproachingHealthLastTime = 0.0f;
 }
 
 
@@ -2871,6 +2875,19 @@ void CCSPlayer::PostThink()
 			
 			//odd that the AFK player 'says' they have dropped the bomb... but it's better than nothing
 			Radio( "SpottedLooseBomb",   "#Cstrike_TitlesTXT_Game_afk_bomb_drop" );
+		}
+	}
+	if ( m_iApproachingHealth > 0 )
+	{
+		float flDelta = 1.0f / (gpGlobals->curtime - m_flApproachingHealthLastTime);
+		int iDeltaHealth = (float)m_iApproachingHealthSpeed / flDelta;
+		iDeltaHealth = MIN( iDeltaHealth, m_iApproachingHealth ); // a safety check to make sure
+
+		if ( iDeltaHealth > 0 )
+		{
+			SetHealth( MIN( GetHealth() + iDeltaHealth, GetMaxHealth() ) );
+			m_iApproachingHealth -= iDeltaHealth;
+			m_flApproachingHealthLastTime = gpGlobals->curtime;
 		}
 	}
 }
@@ -10283,8 +10300,9 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			pAttacker->m_maxNumEnemiesKillStreak = pAttacker->m_NumEnemiesKilledThisSpawn;
 
 		// give a healthshot in DM and GG for every triple kill streak if dont have a healthshot
-		if ( (CSGameRules()->IsPlayingDeathmatch() || CSGameRules()->GetGamemode() == GameModes::ARMS_RACE) &&
-			 (pAttacker->m_NumEnemiesKilledThisSpawn % mp_ggprogressive_healthshot_killcount.GetInt() == 0) &&
+
+		if ( ((CSGameRules()->IsPlayingDeathmatch() && pAttacker->m_NumEnemiesKilledThisSpawn % mp_tdm_healthshot_killcount.GetInt() == 0) ||
+			(CSGameRules()->GetGamemode() == GameModes::ARMS_RACE && pAttacker->m_NumEnemiesKilledThisSpawn % mp_ggprogressive_healthshot_killcount.GetInt() == 0)) &&
 			 !pAttacker->Weapon_OwnsThisType( "weapon_healthshot" ) )
 		{
 			pAttacker->GiveNamedItem( "weapon_healthshot" );
@@ -11647,6 +11665,13 @@ int CCSPlayer::GetNumConcurrentDominations( )
 		}
 	}
 	return numConcurrentDominations;
+}
+
+void CCSPlayer::SetHealthApproach( int iHealth, int iSpeed )
+{
+	m_iApproachingHealth = iHealth;
+	m_iApproachingHealthSpeed = iSpeed;
+	m_flApproachingHealthLastTime = gpGlobals->curtime;
 }
 
 void UTIL_AwardMoneyToTeam( int iAmount, int iTeam, CBaseEntity *pIgnore )
