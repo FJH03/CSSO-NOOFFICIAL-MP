@@ -401,6 +401,7 @@ public:
 	
 	bool					ShouldAnnounceAchievement( void ){ return m_flNextAchievementAnnounceTime < gpGlobals->curtime; }
 	void					SetNextAchievementAnnounceTime( float flTime ){ m_flNextAchievementAnnounceTime = flTime; }
+	virtual void			OnSwitchWeapons( C_BaseCombatWeapon* pWeapon ){}
 
 #if defined USES_ECON_ITEMS
 	// Wearables

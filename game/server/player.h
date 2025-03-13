@@ -326,6 +326,7 @@ public:
 	virtual int				OnTakeDamage( const CTakeDamageInfo &info );
 	virtual void			DamageEffect(float flDamage, int fDamageType);
 
+	virtual void			OnSwitchWeapons( CBaseCombatWeapon* pWeapon ){}
 	virtual void			OnDamagedByExplosion( const CTakeDamageInfo &info );
 
 	void					PauseBonusProgress( bool bPause = true );

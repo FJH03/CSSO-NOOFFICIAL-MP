@@ -1047,7 +1047,8 @@ bool CBasePlayer::Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex 
 		Assert( pViewModel );
 		if ( pViewModel )
 			pViewModel->RemoveEffects( EF_NODRAW );
-		ResetAutoaim( );
+		ResetAutoaim();
+		OnSwitchWeapons( pWeapon );
 #if defined ( CLIENT_DLL )
 		CBaseHudWeaponSelection *pHudSelection = GetHudWeaponSelection();
 		if ( pHudSelection )

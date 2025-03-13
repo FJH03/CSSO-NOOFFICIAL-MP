@@ -563,7 +563,7 @@ public:
 	void DeathSound( const CTakeDamageInfo &info );
 	
 	bool Weapon_CanSwitchTo( CBaseCombatWeapon *pWeapon );
-
+	virtual void OnSwitchWeapons( CBaseCombatWeapon* pWeapon );
 	void ChangeTeam( int iTeamNum );
 	void SwitchTeam( int iTeamNum );	// Changes teams without penalty - used for auto team balancing
 

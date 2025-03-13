@@ -2928,6 +2928,39 @@ bool CCSPlayer::Weapon_CanSwitchTo( CBaseCombatWeapon *pWeapon )
 	return true;
 }
 
+
+void CCSPlayer::OnSwitchWeapons( CBaseCombatWeapon* pBaseWeapon )
+{
+ 	if ( pBaseWeapon )
+ 	{
+ 		CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* >( pBaseWeapon );
+ 
+ 		if ( pWeapon )
+ 		{
+ 			CSWeaponType weaponType = pWeapon->GetWeaponType();
+ 			CSWeaponID weaponID = static_cast<CSWeaponID>( pWeapon->GetCSWeaponID() );
+ 
+ 			if ( weaponType == WEAPONTYPE_GRENADE )
+ 			{	// When switching to grenade remember the preferred grenade
+ 				m_nPreferredGrenadeDrop = weaponID;
+ 			}
+ 
+ 			MDLCACHE_CRITICAL_SECTION();
+ 			// Add a deploy event to let the 3rd person animation system know to update to the current weapon and optionally play a deploy animation if it exists.
+ 			if ( (gpGlobals->curtime - pBaseWeapon->m_flLastTimeInAir) < 0.1f )
+ 			{
+ 				// if the weapon was flying through the air VERY recently, assume we 'caught' it and play a catch anim
+ 				DoAnimationEvent( PLAYERANIMEVENT_CATCH_WEAPON );
+ 			}
+ 			else
+ 			{
+ 				DoAnimationEvent( PLAYERANIMEVENT_DEPLOY );
+ 			}
+ 			
+ 		}
+ 	}
+}
+
 bool CCSPlayer::ShouldDoLargeFlinch( int nHitGroup, CBaseEntity *pAttacker )
 {
 	if ( FBitSet( GetFlags(), FL_DUCKING ) )
@@ -4191,32 +4224,9 @@ bool CCSPlayer::Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex /*
 
 	bool bBaseClassSwitch = BaseClass::Weapon_Switch( pWeapon, viewmodelindex );
 
+	// clear any bomb-plant force-duck when switching to any weapon
 	if ( bBaseClassSwitch )
 		m_bDuckOverride = false;
-
-	if ( pWeapon )
-	{
-		CWeaponCSBase* pCSWeapon = dynamic_cast< CWeaponCSBase* >( pWeapon );
-		if ( pCSWeapon )
-		{
-			if ( pCSWeapon->GetWeaponType() == WEAPONTYPE_GRENADE )
-			{	// When switching to grenade remember the preferred grenade
-				m_nPreferredGrenadeDrop = pCSWeapon->GetCSWeaponID();
-			}
-
-			MDLCACHE_CRITICAL_SECTION();
-			// Add a deploy event to let the 3rd person animation system know to update to the current weapon and optionally play a deploy animation if it exists.
-			if ( (gpGlobals->curtime - pWeapon->m_flLastTimeInAir) < 0.1f )
-			{
-				// if the weapon was flying through the air VERY recently, assume we 'caught' it and play a catch anim
-				DoAnimationEvent( PLAYERANIMEVENT_CATCH_WEAPON );
-			}
-			else
-			{
-				DoAnimationEvent( PLAYERANIMEVENT_DEPLOY );
-			}
-		}
-	}
 
 	return bBaseClassSwitch;
 }
