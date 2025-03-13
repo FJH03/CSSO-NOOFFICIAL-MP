@@ -682,6 +682,11 @@ ConVar mp_max_armor(
 	"2",
 	FCVAR_REPLICATED,
 	"Determines the highest level of armor allowed to be purchased." );
+ConVar mp_weapon_self_inflict_amount(
+	"mp_weapon_self_inflict_amount",
+	"0",
+	FCVAR_REPLICATED,
+	"If Set to non-0, will hurt the attacker by the specified fraction of max damage." );
 
 // [jason] Can the dead speak to the living?
 ConVar sv_deadtalk( "sv_deadtalk", "0",	FCVAR_REPLICATED | FCVAR_NOTIFY, "Dead players can speak (voice, text) to the living" );
@@ -1566,6 +1571,9 @@ ConVar snd_music_selection(
 				break;
 			case GameModes::HEADSHOTS:
 				engine->ServerCommand( "exec gamemode_headshots.cfg\n" );
+				engine->ServerExecute();
+			case GameModes::TRIGGER_DISCIPLINE:
+				engine->ServerCommand( "exec gamemode_trigger_discipline.cfg\n" );
 				engine->ServerExecute();
 				break;
 		}

@@ -65,6 +65,7 @@ extern ConVar mp_buy_anywhere;
 extern ConVar mp_buy_during_immunity;
 extern ConVar mp_free_armor;
 extern ConVar mp_max_armor;
+extern ConVar mp_weapon_self_inflict_amount;
 
 #define	CS_MASK_SHOOT (MASK_SOLID|CONTENTS_DEBRIS)
 #define MAX_PENETRATION_DISTANCE 90 // this is 7.5 feet
@@ -1212,6 +1213,12 @@ void CCSPlayer::FireBullet(
 		// that are locked in for the duration of the server simulation ticks
 		m_iLockViewanglesTickNumber = gpGlobals->tickcount;
 		m_qangLockViewangles = pl.v_angle;
+	}
+
+	if ( mp_weapon_self_inflict_amount.GetFloat() > 0.0f && (!bBulletHitPlayer || bShotHitTeammate) )
+	{
+		float flSelfDamage = MIN( GetHealth() - 1, (float)iDamage * mp_weapon_self_inflict_amount.GetFloat() ); // don't kill the player, leave them at at least 1 hp
+		SetHealth( GetHealth() - RoundFloatToInt( flSelfDamage ) );
 	}
 #endif
 
