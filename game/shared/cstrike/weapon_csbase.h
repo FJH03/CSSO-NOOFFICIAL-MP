@@ -188,8 +188,13 @@ public:
 	// return true if this weapon is a kinf of the given weapon type (ie: "IsKindOf" WEAPONTYPE_RIFLE )
 	bool IsKindOf( CSWeaponType type ) const			{ return GetCSWpnData().m_WeaponType == type; }
 	virtual CSWeaponType GetWeaponType( void ) const	{ return GetCSWpnData().m_WeaponType; }
-	bool IsPrimaryWeapon(void) const					{ return GetCSWpnData().m_WeaponType == WEAPONTYPE_SUBMACHINEGUN || WEAPONTYPE_RIFLE ||
-		WEAPONTYPE_SHOTGUN || WEAPONTYPE_SNIPER_RIFLE || WEAPONTYPE_MACHINEGUN;
+	bool IsPrimaryWeapon( void ) const
+ 	{
+ 		return (GetCSWpnData().m_WeaponType == WEAPONTYPE_SUBMACHINEGUN ||
+ 				GetCSWpnData().m_WeaponType == WEAPONTYPE_RIFLE ||
+ 				GetCSWpnData().m_WeaponType == WEAPONTYPE_SHOTGUN ||
+ 				GetCSWpnData().m_WeaponType == WEAPONTYPE_SNIPER_RIFLE ||
+ 				GetCSWpnData().m_WeaponType == WEAPONTYPE_MACHINEGUN);
 	}
 	
 	const char		*GetTracerType( void ) { return GetCSWpnData().m_szTracerEffect; }
