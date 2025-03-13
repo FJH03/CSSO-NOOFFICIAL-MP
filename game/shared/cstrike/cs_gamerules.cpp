@@ -669,6 +669,12 @@ ConVar sv_kick_ban_duration(
 	FCVAR_REPLICATED | FCVAR_NOTIFY,
 	"How long should a kick ban from the server should last (in minutes)" );
 
+ConVar mp_max_armor(
+	"mp_max_armor",
+	"2",
+	FCVAR_REPLICATED,
+	"Determines the highest level of armor allowed to be purchased." );
+
 // [jason] Can the dead speak to the living?
 ConVar sv_deadtalk( "sv_deadtalk", "0",	FCVAR_REPLICATED | FCVAR_NOTIFY, "Dead players can speak (voice, text) to the living" );
 
@@ -941,6 +947,12 @@ ConVar snd_music_selection(
 		"0",
 		FCVAR_REPLICATED | FCVAR_NOTIFY,
 		"Determines wheter to use official factions for the current map or make faction selections free for everyone.\n 0 - Disable\n 1 - Enable for everyone\n 2 - Enable for bots only" );
+
+	ConVar mp_damage_headshot_only(
+		"mp_damage_headshot_only",
+		"0",
+		FCVAR_REPLICATED,
+		"Determines whether non-headshot hits do any damage." );
 
 	ConCommand EndRound( "endround", &CCSGameRules::EndRound, "End the current round.", FCVAR_CHEAT );
 
@@ -1542,6 +1554,10 @@ ConVar snd_music_selection(
 				break;
 			case GameModes::ARMS_RACE:
 				engine->ServerCommand( "exec gamemode_armsrace.cfg\n" );
+				engine->ServerExecute();
+				break;
+			case GameModes::HEADSHOTS:
+				engine->ServerCommand( "exec gamemode_headshots.cfg\n" );
 				engine->ServerExecute();
 				break;
 		}
@@ -7724,7 +7740,8 @@ bool CCSGameRules::IsPlayingClassic( void ) const
 bool CCSGameRules::IsPlayingDeathmatch( void ) const
 {
 	if ( m_iCurrentGamemode == GameModes::DEATHMATCH ||
-		 m_iCurrentGamemode == GameModes::DEATHMATCH_SHORT )
+		  m_iCurrentGamemode == GameModes::DEATHMATCH_SHORT ||
+ 		  m_iCurrentGamemode == GameModes::HEADSHOTS ) // headshots only is also DM
 		return true;
 
 	return false;

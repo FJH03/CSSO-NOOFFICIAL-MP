@@ -144,6 +144,8 @@ extern ConVar mp_damage_scale_t_body;
 extern ConVar mp_damage_scale_t_head;
 extern ConVar mp_playercashawards;
 extern ConVar mp_ggprogressive_healthshot_killcount;
+extern ConVar mp_damage_headshot_only;
+extern ConVar mp_max_armor;
 
 // [menglish] Added in convars for freeze cam time length
 extern ConVar spec_freeze_time;
@@ -371,8 +373,8 @@ END_SEND_TABLE()
 
 
 BEGIN_SEND_TABLE_NOBASE( CCSPlayer, DT_CSNonLocalPlayerExclusive )
-	// send a lo-res origin to other players
-	SendPropVector	(SENDINFO(m_vecOrigin), -1,  SPROP_COORD|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
+	SendPropVectorXY(SENDINFO(m_vecOrigin),               -1, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_OriginXY, SENDPROP_NONLOCALPLAYER_ORIGINXY_PRIORITY ),
+	SendPropFloat   (SENDINFO_VECTORELEM(m_vecOrigin, 2), -1, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_OriginZ, SENDPROP_NONLOCALPLAYER_ORIGINZ_PRIORITY ),
 END_SEND_TABLE()
 
 
@@ -894,6 +896,7 @@ void CCSPlayer::Precache()
 	PrecacheModel ( "models/items/cs_gift.mdl" );
 
 	PrecacheParticleSystem( "impact_helmet_headshot" );
+	PrecacheParticleSystem( "ricochet_sparks" );
 	PrecacheParticleSystem( "blood_impact_basic" );
 	PrecacheParticleSystem( "blood_impact_heavy" );
 	PrecacheParticleSystem( "blood_impact_medium" );
@@ -2928,37 +2931,50 @@ bool CCSPlayer::Weapon_CanSwitchTo( CBaseCombatWeapon *pWeapon )
 	return true;
 }
 
-
 void CCSPlayer::OnSwitchWeapons( CBaseCombatWeapon* pBaseWeapon )
 {
- 	if ( pBaseWeapon )
- 	{
- 		CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* >( pBaseWeapon );
- 
- 		if ( pWeapon )
- 		{
- 			CSWeaponType weaponType = pWeapon->GetWeaponType();
- 			CSWeaponID weaponID = static_cast<CSWeaponID>( pWeapon->GetCSWeaponID() );
- 
- 			if ( weaponType == WEAPONTYPE_GRENADE )
- 			{	// When switching to grenade remember the preferred grenade
- 				m_nPreferredGrenadeDrop = weaponID;
- 			}
- 
- 			MDLCACHE_CRITICAL_SECTION();
- 			// Add a deploy event to let the 3rd person animation system know to update to the current weapon and optionally play a deploy animation if it exists.
- 			if ( (gpGlobals->curtime - pBaseWeapon->m_flLastTimeInAir) < 0.1f )
- 			{
- 				// if the weapon was flying through the air VERY recently, assume we 'caught' it and play a catch anim
- 				DoAnimationEvent( PLAYERANIMEVENT_CATCH_WEAPON );
- 			}
- 			else
- 			{
- 				DoAnimationEvent( PLAYERANIMEVENT_DEPLOY );
- 			}
- 			
- 		}
- 	}
+	if ( pBaseWeapon )
+	{
+		CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* >( pBaseWeapon );
+
+		if ( pWeapon )
+		{
+			IGameEvent * event = gameeventmanager->CreateEvent( "item_equip" );
+			if( event )
+			{
+				const char *weaponName = pWeapon->GetClassname();
+				if ( IsWeaponClassname( weaponName ) )
+				{
+					weaponName += 7;
+				}
+				event->SetInt( "userid", GetUserID() );
+				event->SetString( "item", weaponName );
+
+				gameeventmanager->FireEvent( event );
+			}
+
+			CSWeaponType weaponType = pWeapon->GetWeaponType();
+			CSWeaponID weaponID = static_cast<CSWeaponID>( pWeapon->GetCSWeaponID() );
+
+			if ( weaponType == WEAPONTYPE_GRENADE )
+			{	// When switching to grenade remember the preferred grenade
+				m_nPreferredGrenadeDrop = weaponID;
+			}
+
+			MDLCACHE_CRITICAL_SECTION();
+			// Add a deploy event to let the 3rd person animation system know to update to the current weapon and optionally play a deploy animation if it exists.
+			if ( (gpGlobals->curtime - pBaseWeapon->m_flLastTimeInAir) < 0.1f )
+			{
+				// if the weapon was flying through the air VERY recently, assume we 'caught' it and play a catch anim
+				DoAnimationEvent( PLAYERANIMEVENT_CATCH_WEAPON );
+			}
+			else
+			{
+				DoAnimationEvent( PLAYERANIMEVENT_DEPLOY );
+			}
+			
+		}
+	}
 }
 
 bool CCSPlayer::ShouldDoLargeFlinch( int nHitGroup, CBaseEntity *pAttacker )
@@ -3595,12 +3611,12 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 	bool bShouldBleed = true;
 	bool bShouldSpark = false;
 
-	CBasePlayer *pAttacker = (CBasePlayer* )ToBasePlayer( info.GetAttacker() );
+	CBasePlayer* pAttacker = (CBasePlayer*) ToBasePlayer( info.GetAttacker() );
 
 	// show blood for firendly fire only if FF is on
 	if ( pAttacker && IsOtherSameTeam( pAttacker->GetTeamNumber() ) && !IsOtherEnemy( pAttacker->entindex() ) )
-		 bShouldBleed = CSGameRules()->IsFriendlyFireOn();
-		
+		bShouldBleed = CSGameRules()->IsFriendlyFireOn();
+
 	if ( m_takedamage != DAMAGE_YES )
 		return;
 
@@ -3610,9 +3626,9 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 	float flDamage = info.GetDamage();
 
-	QAngle punchAngle;
+	QAngle punchAngle = GetRawAimPunchAngle();
 	float flAng;
-	
+
 	bool hitByBullet = false;
 	bool hitByGrenadeProjectile = false;
 	bool bHeadShot = false;
@@ -3621,44 +3637,41 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 	float flBodyDamageScale = (GetTeamNumber() == TEAM_CT) ? mp_damage_scale_ct_body.GetFloat() : mp_damage_scale_t_body.GetFloat();
 	float flHeadDamageScale = (GetTeamNumber() == TEAM_CT) ? mp_damage_scale_ct_head.GetFloat() : mp_damage_scale_t_head.GetFloat();
 
-	if( m_bImmunity )
+	if ( m_bImmunity )
 	{
 		bShouldBleed = false;
 	}
-	else if( info.GetDamageType() & DMG_SHOCK )
+	else if ( info.GetDamageType() & DMG_SHOCK )
 	{
 		bShouldBleed = false;
 	}
-	else if( info.GetDamageType() & DMG_BLAST )
+	else if ( info.GetDamageType() & DMG_BLAST )
 	{
 		if ( ArmorValue() > 0 )
-			 bShouldBleed = false;
+			bShouldBleed = false;
 
-			if ( bShouldBleed == true )
-			{
-				// punch view if we have no armor
-				punchAngle = GetRawAimPunchAngle();
-				punchAngle.x = mp_flinch_punch_scale.GetFloat() * flDamage * -0.1;
-
-				if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -4 )
-					punchAngle.x = mp_flinch_punch_scale.GetFloat() * -4;
-
-				SetAimPunchAngle( punchAngle );
-			}
-		}
-		else
+		if ( bShouldBleed == true )
 		{
-			const CCSWeaponInfo* pWeaponInfo = GetWeaponInfoFromDamageInfo( info );
+			// punch view if we have no armor
+			punchAngle.x = mp_flinch_punch_scale.GetFloat() * flDamage * -0.1;
 
-			if ( pWeaponInfo )
-			{
-				hitByBullet = IsGunWeapon( pWeaponInfo->m_WeaponType );
-				hitByGrenadeProjectile = ( ( pWeaponInfo->m_WeaponType == WEAPONTYPE_GRENADE ) && ( info.GetDamageType() & DMG_CLUB ) != 0 );
-				flHeadshotMultiplier = pWeaponInfo->m_flHeadshotMultiplier;
-			}
+			if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -4 )
+				punchAngle.x = mp_flinch_punch_scale.GetFloat() * -4;
+		}
+	}
+	else
+	{
+		const CCSWeaponInfo* pWeaponInfo = GetWeaponInfoFromDamageInfo( info );
 
-			switch ( ptr->hitgroup )
-			{
+		if ( pWeaponInfo )
+		{
+			hitByBullet = IsGunWeapon( pWeaponInfo->m_WeaponType );
+			hitByGrenadeProjectile = ((pWeaponInfo->m_WeaponType == WEAPONTYPE_GRENADE) && (info.GetDamageType() & DMG_CLUB) != 0);
+			flHeadshotMultiplier = pWeaponInfo->m_flHeadshotMultiplier;
+		}
+
+		switch ( ptr->hitgroup )
+		{
 			case HITGROUP_GENERIC:
 				break;
 
@@ -3666,7 +3679,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 				if ( m_bHasHelmet && !hitByGrenadeProjectile )
 				{
-					//				bShouldBleed = false;
+//					bShouldBleed = false;
 					bShouldSpark = true;
 				}
 
@@ -3675,22 +3688,18 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 				if ( !m_bHasHelmet )
 				{
-					punchAngle = GetRawAimPunchAngle();
-
 					punchAngle.x += mp_flinch_punch_scale.GetFloat() * flDamage * -0.5;
 
 					if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -12 )
 						punchAngle.x = mp_flinch_punch_scale.GetFloat() * -12;
 
-					punchAngle.z = mp_flinch_punch_scale.GetFloat() * flDamage * random->RandomFloat(-1,1 );
+					punchAngle.z = mp_flinch_punch_scale.GetFloat() * flDamage * random->RandomFloat( -1, 1 );
 
 					if ( punchAngle.z < mp_flinch_punch_scale.GetFloat() * -9 )
 						punchAngle.z = mp_flinch_punch_scale.GetFloat() * -9;
 
 					else if ( punchAngle.z > mp_flinch_punch_scale.GetFloat() * 9 )
 						punchAngle.z = mp_flinch_punch_scale.GetFloat() * 9;
-
-					SetAimPunchAngle( punchAngle );
 				}
 
 				bHeadShot = true;
@@ -3707,15 +3716,10 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 				else
 					flAng = -0.005;
 
-
-				punchAngle = GetRawAimPunchAngle();
-
 				punchAngle.x += mp_flinch_punch_scale.GetFloat() * flDamage * flAng;
 
 				if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -4 )
 					punchAngle.x = mp_flinch_punch_scale.GetFloat() * -4;
-
-				SetAimPunchAngle( punchAngle );
 
 				break;
 
@@ -3729,16 +3733,10 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 				else
 					flAng = -0.005;
 
-
-				punchAngle = GetRawAimPunchAngle();
-
 				punchAngle.x += mp_flinch_punch_scale.GetFloat() * flDamage * flAng;
 
 				if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -4 )
 					punchAngle.x = mp_flinch_punch_scale.GetFloat() * -4;
-
-				SetAimPunchAngle( punchAngle );
-
 
 				break;
 
@@ -3747,15 +3745,12 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 				flDamage *= 1.0;
 				flDamage *= flBodyDamageScale;
-				// 
-				// 			punchAngle = GetRawAimPunchAngle();
-				// 			punchAngle.x = mp_flinch_punch_scale.GetFloat() * flDamage * -0.005;
-				// 
-				// 			if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -2 )
-				// 				punchAngle.x = mp_flinch_punch_scale.GetFloat() * -2;
-				// 
-				// 			SetAimPunchAngle( punchAngle );
-				// 
+//
+//				punchAngle.x = mp_flinch_punch_scale.GetFloat() * flDamage * -0.005;
+//
+//				if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -2 )
+//					punchAngle.x = mp_flinch_punch_scale.GetFloat() * -2;
+//
 				break;
 
 			case HITGROUP_LEFTLEG:
@@ -3763,15 +3758,12 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 				flDamage *= 0.75;
 				flDamage *= flBodyDamageScale;
-				// 
-				// 			punchAngle = GetRawAimPunchAngle();
-				// 			punchAngle.x = mp_flinch_punch_scale.GetFloat() * flDamage * -0.005;
-				// 
-				// 			if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -1 )
-				// 				punchAngle.x = mp_flinch_punch_scale.GetFloat() * -1;
-				// 
-				// 			SetAimPunchAngle( punchAngle );
-				// 
+//
+//				punchAngle.x = mp_flinch_punch_scale.GetFloat() * flDamage * -0.005;
+//
+//				if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -1 )
+//					punchAngle.x = mp_flinch_punch_scale.GetFloat() * -1;
+//
 				break;
 
 			default:
@@ -3779,10 +3771,24 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 		}
 	}
 
+	if ( mp_damage_headshot_only.GetBool() )
+	{
+		CWeaponCSBase* pCSWeapon = dynamic_cast<CWeaponCSBase*>(info.GetWeapon());
+		if ( pCSWeapon && (pCSWeapon->IsPrimaryWeapon() || pCSWeapon->IsPistol()) && !bHeadShot )
+		{
+			QAngle angle;
+			VectorAngles( ptr->plane.normal, angle );
+			DispatchParticleEffect( "ricochet_sparks", ptr->endpos, angle );
+
+			return;
+		}
+	}
+
+	SetAimPunchAngle( punchAngle );
 
 	// Since this code only runs on the server, make sure it shows the tempents it creates.
 	CDisablePredictionFiltering disabler;
-	
+
 	if ( bShouldBleed )
 	{
 		// This does smaller splotches on the guy and splats blood on the world.
@@ -3791,20 +3797,20 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 		CEffectData	data;
 		data.m_vOrigin = ptr->endpos;
 		data.m_vNormal = vecDir * -1;
-		data.m_nEntIndex = ptr->m_pEnt ?  ptr->m_pEnt->entindex() : 0;
+		data.m_nEntIndex = ptr->m_pEnt ? ptr->m_pEnt->entindex() : 0;
 		data.m_flMagnitude = flDamage;
 
 		// reduce blood effect if target has armor
 		if ( ArmorValue() > 0 )
 			data.m_flMagnitude *= 0.5f;
-	
+
 		// reduce blood effect if target is hit in the helmet
 		if ( ptr->hitgroup == HITGROUP_HEAD && bShouldSpark )
 			data.m_flMagnitude = 1;
 
 		DispatchEffect( "csblood", data );
 	}
-	if ( ( ptr->hitgroup == HITGROUP_HEAD/* || bHitShield*/ ) && bShouldSpark ) // they hit a helmet
+	if ( (ptr->hitgroup == HITGROUP_HEAD/* || bHitShield*/) && bShouldSpark ) // they hit a helmet
 	{
 		// show metal spark effect
 		//g_pEffects->Sparks( ptr->endpos, 1, 1, &ptr->plane.normal );
@@ -3813,7 +3819,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 		VectorAngles( ptr->plane.normal, angle );
 		DispatchParticleEffect( "impact_helmet_headshot", ptr->endpos, angle );
 	}
-	
+
 	CTakeDamageInfo subInfo = info;
 	subInfo.SetDamage( flDamage );
 
@@ -4063,7 +4069,7 @@ void CCSPlayer::Blind( float holdTime, float fadeTime, float startingAlpha )
 	m_blindUntilTime = MAX( m_blindUntilTime, gpGlobals->curtime + holdTime + 0.5f * fadeTime );
 	m_blindStartTime = gpGlobals->curtime;
 
-	fadeTime /= 1.4;
+	fadeTime /= 1.4f;
 
 	if ( gpGlobals->curtime > oldBlindUntilTime )
 	{
@@ -4927,6 +4933,9 @@ bool CCSPlayer::BAttemptToBuyCheckSufficientBalance( int nCostOfPurchaseToCheck,
 
 BuyResult_e CCSPlayer::AttemptToBuyVest( void )
 {
+	if ( mp_max_armor.GetInt() < 1 )
+		return BUY_NOT_ALLOWED;
+
 	int iKevlarPrice = ITEM_PRICE_KEVLAR;
 
 	if ( ArmorValue() >= 100 )
@@ -4968,6 +4977,9 @@ BuyResult_e CCSPlayer::AttemptToBuyVest( void )
 
 BuyResult_e CCSPlayer::AttemptToBuyAssaultSuit( void )
 {
+	if ( mp_max_armor.GetInt() < 2 )
+		return BUY_NOT_ALLOWED;
+
 	int iPrice = GetWeaponPrice( ITEM_ASSAULTSUIT );
 
 	// process the result
@@ -8876,7 +8888,7 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 				if ( pGrenade )
 				{
 					if ( pGrenade->DropPlayerGrenade() )
- 						ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
+						ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
 				}
 				return true;
 			}
@@ -10114,20 +10126,6 @@ void CCSPlayer::PlayerEmptiedAmmoForFirearm( CBaseCombatWeapon* pBaseWeapon )
 
 		if ( pWeapon )
 		{
-			IGameEvent * event = gameeventmanager->CreateEvent( "item_equip" );
- 			if( event )
- 			{
- 				const char *weaponName = pWeapon->GetClassname();
- 				if ( IsWeaponClassname( weaponName ) )
- 				{
- 					weaponName += 7;
- 				}
- 				event->SetInt( "userid", GetUserID() );
- 				event->SetString( "item", weaponName );
- 
- 				gameeventmanager->FireEvent( event );
- 			}
-
 			CSWeaponType weaponType = pWeapon->GetWeaponType();
 			CSWeaponID weaponID = static_cast<CSWeaponID>( pWeapon->GetCSWeaponID() );
 
@@ -11041,18 +11039,18 @@ bool CCSPlayer::ShouldCollide( int collisionGroup, int contentsMask ) const
 		unsigned int otherTeamMask = ( contentsMask & ( CONTENTS_TEAM1 | CONTENTS_TEAM2 ) );
 		
 		// See if we have a team and we're on the same or opposite team.
- 		// If we are on the same team and teammate collisions are off, then don't collide.
- 		// If we are on the opposite team and enemies collisions are off, then don't collide.
- 		if ( myTeamMask != 0x0 )
+		// If we are on the same team and teammate collisions are off, then don't collide.
+		// If we are on the opposite team and enemies collisions are off, then don't collide.
+		if ( myTeamMask != 0x0 )
 		{
 			if ( !CSGameRules()->IsEnemySolid() && myTeamMask != otherTeamMask )
- 			{
- 				return false;
- 			}
- 			if ( !CSGameRules()->IsTeammateSolid() && myTeamMask == otherTeamMask )
- 			{
- 				return false;
- 			}
+			{
+				return false;
+			}
+			if ( !CSGameRules()->IsTeammateSolid() && myTeamMask == otherTeamMask )
+			{
+				return false;
+			}
 		}
 	}
 

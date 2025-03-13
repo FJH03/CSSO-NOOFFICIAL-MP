@@ -64,6 +64,7 @@ extern ConVar mp_buy_allow_grenades;
 extern ConVar mp_buy_anywhere;
 extern ConVar mp_buy_during_immunity;
 extern ConVar mp_free_armor;
+extern ConVar mp_max_armor;
 
 #define	CS_MASK_SHOOT (MASK_SOLID|CONTENTS_DEBRIS)
 #define MAX_PENETRATION_DISTANCE 90 // this is 7.5 feet
@@ -1845,6 +1846,11 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 				return AcquireResult::AlreadyOwned;
 			}
 
+			if ( mp_max_armor.GetInt() < 1 )
+ 			{
+ 				return AcquireResult::NotAllowedByMode;
+ 			}
+
 			return AcquireResult::Allowed;
 		}
 		else if ( weaponId == ITEM_ASSAULTSUIT )
@@ -1859,6 +1865,11 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 			{
 				return AcquireResult::AlreadyOwned;
 			}
+
+			if ( mp_max_armor.GetInt() < 2 )
+ 			{
+ 				return AcquireResult::NotAllowedByMode;
+ 			}
 
 			return AcquireResult::Allowed;
 		}
