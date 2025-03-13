@@ -297,7 +297,6 @@ const char* CTSASPlayerModelStrings[MAX_SAS_SKINS] =
 	"models/player/custom_player/legacy/ctm_sas_variantb.mdl",
 	"models/player/custom_player/legacy/ctm_sas_variantc.mdl",
 	"models/player/custom_player/legacy/ctm_sas_variantd.mdl",
-	"models/player/custom_player/legacy/ctm_sas_variante.mdl",
 };
 const char* CTGIGNPlayerModelStrings[MAX_FACTION_SKINS] =
 {
