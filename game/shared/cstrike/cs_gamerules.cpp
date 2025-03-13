@@ -388,6 +388,7 @@ ConVar mp_match_can_clinch(
 	"1",
 	FCVAR_REPLICATED,
 	"Can a team clinch and end the match by being so far ahead that the other team has no way to catching up?" );
+
 ConVar mp_tdm_healthshot_killcount(
 	"mp_tdm_healthshot_killcount",
 	"3",
@@ -675,6 +676,7 @@ ConVar sv_kick_ban_duration(
 	"15",
 	FCVAR_REPLICATED | FCVAR_NOTIFY,
 	"How long should a kick ban from the server should last (in minutes)" );
+
 ConVar sv_tk_count_before_punish(
 	"sv_tk_count_before_punish",
 	"3",
@@ -686,11 +688,13 @@ ConVar mp_max_armor(
 	"2",
 	FCVAR_REPLICATED,
 	"Determines the highest level of armor allowed to be purchased." );
+
 ConVar mp_weapon_self_inflict_amount(
 	"mp_weapon_self_inflict_amount",
 	"0",
 	FCVAR_REPLICATED,
 	"If Set to non-0, will hurt the attacker by the specified fraction of max damage." );
+
 ConVar mp_use_official_map_factions(
 	"mp_use_official_map_factions",
 	"0",
@@ -963,7 +967,6 @@ ConVar snd_music_selection(
 		"1.0",
 		FCVAR_REPLICATED,
 		"Scales the damage a T player takes by this much when they take damage in the head (1 == 100%, 0.5 == 50%).  REMEMBER! headshots do 4x the damage of the body before this scaler is applied." );
-
 
 	ConVar mp_damage_headshot_only(
 		"mp_damage_headshot_only",
@@ -1436,7 +1439,7 @@ ConVar snd_music_selection(
 		m_fWarmupPeriodStart = gpGlobals->curtime;
 
 		// Add the gun game weapons.
-		if ( GetGamemode() == GameModes::ARMS_RACE )
+		if ( IsPlayingGunGameProgressive() )
 		{
 			if ( mp_ggprogressive_use_random_weapons.GetBool() )
 			{
@@ -1576,6 +1579,7 @@ ConVar snd_music_selection(
 			case GameModes::HEADSHOTS:
 				engine->ServerCommand( "exec gamemode_headshots.cfg\n" );
 				engine->ServerExecute();
+				break;
 			case GameModes::TRIGGER_DISCIPLINE:
 				engine->ServerCommand( "exec gamemode_trigger_discipline.cfg\n" );
 				engine->ServerExecute();
@@ -2718,10 +2722,18 @@ ConVar snd_music_selection(
 		InitializePlayerCounts( NumAliveTerrorist, NumAliveCT, NumDeadTerrorist, NumDeadCT );
 
         /*********************************** GUN GAME PROGRESSIVE CHECK *******************************************************/
-        if ( GetGamemode() == GameModes::ARMS_RACE )
-        {
-			return GunGameProgressiveEndCheck();
-        }
+		if ( IsPlayingGunGame() )
+		{
+			if ( GunGameProgressiveEndCheck() )
+			{
+				return true;
+			}
+
+			if ( IsPlayingGunGameProgressive() )
+			{
+				return false;
+			}
+		}
 
 
 		/***************************** OTHER PLAYER's CHECK *********************************************************/
@@ -3079,7 +3091,7 @@ ConVar snd_music_selection(
 			return false;
 		}
 
-		if ( GetGamemode() != GameModes::ARMS_RACE )
+		if ( !IsPlayingGunGame() )
 			return false;
 
 		CCSPlayer *pWinner = NULL;
@@ -3192,7 +3204,7 @@ ConVar snd_music_selection(
         int maxDamage = 0;
         CSMvpReason_t mvpReason = CSMVP_ELIMINATION;
 
-        if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+        if ( IsPlayingGunGameProgressive() )
         {
             // Handle winner of gun game progressive
             for ( int i = 1; i <= gpGlobals->maxClients; i++ )
@@ -3221,7 +3233,7 @@ ConVar snd_music_selection(
 					if ( pPlayer->HasBeenControlledThisRound() )
 						continue;
 
-					if ( CSGameRules()->IsPlayingDeathmatch() )
+					if ( CSGameRules()->IsPlayingGunGameDeathmatch() )
 					{
 						int nScore = pPlayer->GetFrags();
 						int nEntindex = pPlayer->entindex();
@@ -3693,7 +3705,7 @@ ConVar snd_music_selection(
 
 		//If this is the first restart since halftime, do the appropriate bookkeeping.
 		bool bClearAccountsAfterHalftime = false;
-		if ( GetGamemode() == GameModes::ARMS_RACE )
+		if ( IsPlayingGunGameProgressive() )
 		{
 			ClearGunGameData();
 		}
@@ -4489,7 +4501,7 @@ ConVar snd_music_selection(
 
 	void CCSGameRules::GiveC4()
 	{
-		if ( IsWarmupPeriod() || GetGamemode() == GameModes::ARMS_RACE || IsPlayingDeathmatch() )
+		if ( IsWarmupPeriod() || IsPlayingGunGame() )
 			return;
 
 		enum {
@@ -5108,7 +5120,7 @@ ConVar snd_music_selection(
 
 		// New code to get rid of round draws!!
 
-		if ( IsPlayingDeathmatch() )
+		if ( IsPlayingGunGameDeathmatch() )
 		{
 			// TODO: make this a shared function so playercount runs the same code
 			CCSPlayer *pWinner = NULL;
@@ -5637,7 +5649,7 @@ ConVar snd_music_selection(
 
 		ent = NULL; 
 		// if we're playing armsrace, add the armsrace spawns to the list as well
-		if ( GetGamemode() == GameModes::ARMS_RACE )
+		if ( IsPlayingGunGameProgressive() )
 		{
 			while ( ( ent = gEntList.FindEntityByClassname( ent, "info_armsrace_terrorist" ) ) != NULL )
 			{
@@ -5729,7 +5741,7 @@ ConVar snd_music_selection(
 
     void CCSGameRules::SortSpawnPointLists( void )
     {
-		if ( GetGamemode() == GameModes::ARMS_RACE )
+		if ( IsPlayingGunGameProgressive() )
 		{
 			// Sort the spawn point lists
 			m_TerroristSpawnPoints.Sort( ArmsRaceSpawnPointSortFunction );
@@ -5763,7 +5775,7 @@ ConVar snd_music_selection(
 
 	void CCSGameRules::SortMasterSpawnPointLists( void )
 	{
-		if ( GetGamemode() == GameModes::ARMS_RACE )
+		if ( IsPlayingGunGameProgressive() )
 		{
 			// Sort the spawn point lists
 			m_TerroristSpawnPointsMasterList.Sort( ArmsRaceSpawnPointSortFunction );
@@ -5916,7 +5928,7 @@ ConVar snd_music_selection(
 			}
 		}
 
-		if ( GetGamemode() == GameModes::ARMS_RACE )
+		if ( IsPlayingGunGameProgressive() )
 		{
 			while ( ( ent = gEntList.FindEntityByClassname( ent, "info_armsrace_terrorist" ) ) != NULL )
 			{
@@ -6643,7 +6655,7 @@ ConVar snd_music_selection(
 			gameeventmanager->FireEvent( event );
 		}
 
-		if ( GetMapRemainingTime() == 0.0f  )
+		if ( GetMapRemainingTime() == 0.0f )
 		{
 			UTIL_LogPrintf("World triggered \"Intermission_Time_Limit\"\n");
             m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
@@ -6655,7 +6667,7 @@ ConVar snd_music_selection(
 			// Perform round-related processing at the point when a round winner has been determined
 			RoundWin();
 
-			if ( IsPlayingDeathmatch() )
+			if ( IsPlayingGunGameDeathmatch() )
 				GoToIntermission();
 		}
 	}
@@ -6745,7 +6757,7 @@ ConVar snd_music_selection(
 			// [tj] Check flawless victory achievement - currently requiring extermination
 			if (((iReason == CTs_Win && m_bNoCTsDamaged) || (iReason == Terrorists_Win && m_bNoTerroristsDamaged))
 				&& losingTeam && losingTeam->GetNumPlayers() - ignoreCount >= AchievementConsts::DefaultMinOpponentsForAchievement
-				&& GetGamemode() != GameModes::ARMS_RACE)
+				&& !CSGameRules()->IsPlayingGunGameProgressive())
 			{
 				CTeam *pTeam = GetGlobalTeam( iWinnerTeam );
 
@@ -7472,7 +7484,6 @@ bool CCSGameRules::IsTeammateSolid( void ) const
 {
 	return mp_solid_teammates.GetBool();
 }
-
 // Returns true if enemies are solid obstacles in the current game mode
 bool CCSGameRules::IsEnemySolid( void ) const
 {
@@ -7745,17 +7756,25 @@ CAmmoDef* GetAmmoDef()
 
 bool CCSGameRules::IsPlayingClassic( void ) const
 {
-	if ( m_iCurrentGamemode < GameModes::CLASSIC_GAMEMODES && m_iCurrentGamemode > GameModes::CUSTOM )
+	if ( m_iCurrentGamemode < GameModes::CLASSIC_GAMEMODES )
 		return true;
 
 	return false;
 }
 
-bool CCSGameRules::IsPlayingDeathmatch( void ) const
+bool CCSGameRules::IsPlayingGunGameProgressive( void ) const
+{
+	if ( m_iCurrentGamemode == GameModes::ARMS_RACE )
+		return true;
+
+	return false;
+}
+
+bool CCSGameRules::IsPlayingGunGameDeathmatch( void ) const
 {
 	if ( m_iCurrentGamemode == GameModes::DEATHMATCH ||
-		  m_iCurrentGamemode == GameModes::DEATHMATCH_SHORT ||
- 		  m_iCurrentGamemode == GameModes::HEADSHOTS ) // headshots only is also DM
+		 m_iCurrentGamemode == GameModes::DEATHMATCH_SHORT ||
+		 m_iCurrentGamemode == GameModes::HEADSHOTS ) // headshots only is also DM
 		return true;
 
 	return false;
@@ -7763,8 +7782,8 @@ bool CCSGameRules::IsPlayingDeathmatch( void ) const
 
 bool CCSGameRules::IsPlayingGunGame( void ) const
 {
-	return (m_iCurrentGamemode == GameModes::ARMS_RACE ||
-			 IsPlayingDeathmatch());
+	return (IsPlayingGunGameProgressive() ||
+			 IsPlayingGunGameDeathmatch());
 }
 
 #ifndef CLIENT_DLL
@@ -8194,7 +8213,7 @@ void CCSGameRules::CalculateMaxGunGameProgressiveWeaponIndex( void )
 {
     m_iMaxGunGameProgressiveWeaponIndex = 0;
 
-    if ( GetGamemode() == GameModes::ARMS_RACE )
+	if ( IsPlayingGunGameProgressive() )
     {
         // Loop through all players and find the max progressive weapon index
         for ( int i = 1; i <= gpGlobals->maxClients; i++ )

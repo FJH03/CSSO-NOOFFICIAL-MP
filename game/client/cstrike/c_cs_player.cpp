@@ -1716,7 +1716,7 @@ float C_CSPlayer::GetMinFOV() const
 
 int C_CSPlayer::GetAccount() const
 {
-	if ( CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
+	if ( CSGameRules() && CSGameRules()->IsPlayingGunGameDeathmatch() )
 		return 99999;
 
 	return m_iAccount;
@@ -2327,7 +2327,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "round_start", name ) == 0 )
 	{
-		if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
+		if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->IsPlayingGunGameDeathmatch() )
 			m_bShouldAutobuyDMWeapons = true;
 	}
 	else if ( Q_strcmp( name, "cs_pre_restart" ) == 0 )
@@ -2403,7 +2403,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 
 			m_flLastSpawnTimeIndex = gpGlobals->curtime;
 
-			if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
+			if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->IsPlayingGunGameDeathmatch() )
 				m_bShouldAutobuyDMWeapons = true;
 
 			RemoveGlovesModel();
@@ -2438,7 +2438,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
  					filter.AddRecipient( this );
  					C_BaseEntity::EmitSound( filter, entindex(), "UI.DeathMatchBonusKill" );
  				}
- 				else if ( CSGameRules()->IsPlayingDeathmatch() || CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+ 				else if ( CSGameRules()->IsPlayingGunGameDeathmatch() || CSGameRules()->IsPlayingGunGameProgressive() )
  				{
  					// Play level-up gun game sound because it's a better kill sound than the default one.
  					C_RecipientFilter filter;
@@ -2451,7 +2451,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	else if ( Q_strcmp( "gg_final_weapon_achieved", name ) == 0 )
 	{
 		int nGoldKnifeUserID = event->GetInt( "playerid", -1 );
-		if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE && nGoldKnifeUserID == pLocalPlayer->GetUserID() )
+		if ( CSGameRules()->IsPlayingGunGameProgressive() && nGoldKnifeUserID == pLocalPlayer->GetUserID() )
 		{
 			// Play an audio cue corresponding to getting the final weapon
 			//EmitSound( "GunGameWeapon.AchievedFinalWeapon" );
@@ -2693,7 +2693,7 @@ void C_CSPlayer::ClientThink()
 		}
 	}
 
-	if ( CSGameRules()->IsPlayingDeathmatch() && IsLocalPlayer() && IsAlive() && GetObserverMode() == OBS_MODE_NONE )
+	if ( CSGameRules()->IsPlayingGunGameDeathmatch() && IsLocalPlayer() && IsAlive() && GetObserverMode() == OBS_MODE_NONE )
 	{
 		float flTimeLeft = m_fImmuneToDamageTime - gpGlobals->curtime;
 		if ( m_fImmuneToDamageTimeLast != 0 || flTimeLeft >= 0 )

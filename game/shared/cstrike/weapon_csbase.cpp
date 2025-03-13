@@ -1319,7 +1319,7 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 
 	FallInit();
 
-	if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+	if ( CSGameRules()->IsPlayingGunGameProgressive() )
 	{
 		// Don't allow non-c4 weapon pickups in gun game progressive mode
 		if ( !IsA( WEAPON_C4 ) )

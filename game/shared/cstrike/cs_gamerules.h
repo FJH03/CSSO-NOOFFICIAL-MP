@@ -238,7 +238,7 @@ public:
 	virtual bool ShouldCollide( int collisionGroup0, int collisionGroup1 );
 
 	virtual float	GetRoundRestartTime( void ) { return m_flRestartRoundTime; }
- 	virtual bool	IsGameRestarting( void ) { return m_bGameRestart; }
+	virtual bool	IsGameRestarting( void ) { return m_bGameRestart; }
 	float GetMapRemainingTime();	// time till end of map, -1 if timelimit is disabled
 	float GetMapElapsedTime();	// How much time has elapsed since the map started.
 	float GetRoundRemainingTime();	// time till end of round
@@ -269,16 +269,12 @@ public:
 	bool IsMatchWaitingForResume( void );
 	void SetMatchWaitingForResume( bool pause ) { m_bMatchWaitingForResume = pause; };
 
-	int GetGamemode( void ) { return m_iCurrentGamemode; };
-
-	CNetworkVar( int, m_iCurrentGamemode );
-
 #ifndef CLIENT_DLL
 	bool IsArmorFree();
 #endif
 	bool IsTeammateSolid( void ) const;				// returns true if teammates are solid obstacles in the current game mode
-	bool IsEnemySolid( void ) const;				
-	
+	bool IsEnemySolid( void ) const;				// returns true if enemies are solid obstacles in the current game mode
+
 	bool HasHalfTime( void ) const;
 
 	int GetCurrentGunGameWeapon( int nCurrentWeaponIndex, int nTeamID );
@@ -302,14 +298,15 @@ public:
 	void AddHostageRescueTime( void );
 
 	bool IsPlayingClassic( void ) const;
-	bool IsPlayingDeathmatch( void ) const;
+	bool IsPlayingGunGameProgressive( void ) const;
+	bool IsPlayingGunGameDeathmatch( void ) const;
 	bool IsPlayingGunGame( void ) const;
 
 	bool IsPlayingAnyCompetitiveStrictRuleset( void ) const;
 
 	int GetTotalRoundsPlayed( void ) const { return m_iNumCTWins + m_iNumTerroristWins; }
- 	int GetOvertimePlaying( void ) const { return m_nOvertimePlaying; }
-
+	int GetOvertimePlaying( void ) const { return m_nOvertimePlaying; }
+	
 	virtual bool IsConnectedUserInfoChangeAllowed( CBasePlayer *pPlayer );
 
 private:
@@ -324,7 +321,7 @@ private:
 	CNetworkVar( int, m_iRoundTime );		 // (From mp_roundtime) - How many seconds long this round is.
 	CNetworkVar( float, m_fRoundStartTime ); // time round has started
 	CNetworkVar( float, m_flRestartRoundTime ); // the global time when the round is supposed to end, if this is not 0
- 	CNetworkVar( bool, m_bGameRestart ); // True = mp_restartgame is being processed
+	CNetworkVar( bool, m_bGameRestart ); // True = mp_restartgame is being processed
 	CNetworkVar( float, m_flGameStartTime );
 	CNetworkVar( int, m_nOvertimePlaying );
 	CNetworkVar( int, m_iHostagesRemaining );
@@ -341,6 +338,8 @@ private:
 	
 	CNetworkVar( int, m_iMapFactionCT );
 	CNetworkVar( int, m_iMapFactionT );
+
+	CNetworkVar( int, m_iCurrentGamemode );
 	
 	GamePhase m_gamePhase;
 
@@ -352,7 +351,7 @@ public:
 	CNetworkVar( bool, m_bBombPlanted );
 	CNetworkVar( int, m_iRoundWinStatus );
 	CNetworkVar( int, m_iNumCTWins );
- 	CNetworkVar( int, m_iNumTerroristWins );
+	CNetworkVar( int, m_iNumTerroristWins );
 
 	int GetNumHostagesRemaining( void ) { return m_iHostagesRemaining; }
 
@@ -526,7 +525,7 @@ public:
 	bool PrisonRoundEndCheck();
 	bool BombRoundEndCheck( bool bNeededPlayers );
 	bool HostageRescueRoundEndCheck( bool bNeededPlayers );
-	
+
 	CCSPlayer* CalculateEndOfRoundMVP();
 
 	// Check to see if the teams exterminated each other. Ends the round and returns true if so.
@@ -614,7 +613,7 @@ public:
 
 	// GAME TIMES
 	int m_iFreezeTime;		// (From mp_freezetime) - How many seconds long the intro round (when players are frozen) is.
-	
+
 	int m_iNumTerrorist;		// The number of terrorists on the team (this is generated at the end of a round)
 	int m_iNumCT;				// The number of CTs on the team (this is generated at the end of a round)
 	int m_iNumSpawnableTerrorist;
@@ -625,12 +624,12 @@ public:
 	bool m_bCompleteReset;		// Set to TRUE to have the scores reset next time round restarts
 
 	class ICalculateEndOfRoundMVPHook_t
- 	{
- 	public:
- 		virtual CCSPlayer* CalculateEndOfRoundMVP() = 0;
- 	};
- 	ICalculateEndOfRoundMVPHook_t *m_pfnCalculateEndOfRoundMVPHook;
-	
+	{
+	public:
+		virtual CCSPlayer* CalculateEndOfRoundMVP() = 0;
+	};
+	ICalculateEndOfRoundMVPHook_t *m_pfnCalculateEndOfRoundMVPHook;
+
 	short m_iNumCTWinsThisPhase;
 	short m_iNumTerroristWinsThisPhase;
 
@@ -731,17 +730,17 @@ public:
 
 	int GetNumWinsToClinch( void ) const;
 	bool IsLastRoundOfMatch() const;
- 	bool IsMatchPoint() const;
+	bool IsMatchPoint() const;
 
 	// AreTeamsPlayingSwitchedSides() -- will return true when match is in second half, or in the half of overtime period where teams are switched.
- 	// Overtime logic is as follows: TeamA plays CTs as first half of regulation, then Ts as second half of regulation,
- 	//				then if tied in regulation continues to play Ts as first half of 1st overtime, then switches to CTs for second half of 1st overtime,
- 	//				then if still tied after 1st OT they continue to play CTs as first half of 2nd overtime, then switch to Ts for second half of 2nd overtime,
- 	//				then if still tied after 2nd OT they continue to play Ts as first half of 3rd overtime, then switch to CTs for second half of 3rd overtime,
- 	//				and so on until the match determines a winner.
- 	// So AreTeamsPlayingSwitchedSides will return true when TeamA is playing T-side and will return false when TeamA plays CT-side as they started match on CT
- 	// in scenario outlined above.
- 	bool AreTeamsPlayingSwitchedSides() const;
+	// Overtime logic is as follows: TeamA plays CTs as first half of regulation, then Ts as second half of regulation,
+	//				then if tied in regulation continues to play Ts as first half of 1st overtime, then switches to CTs for second half of 1st overtime,
+	//				then if still tied after 1st OT they continue to play CTs as first half of 2nd overtime, then switch to Ts for second half of 2nd overtime,
+	//				then if still tied after 2nd OT they continue to play Ts as first half of 3rd overtime, then switch to CTs for second half of 3rd overtime,
+	//				and so on until the match determines a winner.
+	// So AreTeamsPlayingSwitchedSides will return true when TeamA is playing T-side and will return false when TeamA plays CT-side as they started match on CT
+	// in scenario outlined above.
+	bool AreTeamsPlayingSwitchedSides() const;
 
 public:
 	CBaseEntity* GetNextSpawnpoint( int teamNumber );

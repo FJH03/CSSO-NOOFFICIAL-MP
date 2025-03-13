@@ -1521,7 +1521,7 @@ void CCSPlayer::Spawn()
 			AddFlag( FL_FROZEN );
 		}
 
-		if ( CSGameRules()->IsPlayingDeathmatch() && !IsBot() )
+		if ( CSGameRules()->IsPlayingGunGameDeathmatch() && !IsBot() )
 		{
 			// set immune time to super high and open the buy menu
 			m_bInBuyZone = true;
@@ -1572,7 +1572,7 @@ void CCSPlayer::Spawn()
 	// play a respawn sound if you're in deathmatch 
 	if ( State_Get() == STATE_ACTIVE )
 	{
-		if ( (CSGameRules()->IsPlayingDeathmatch() && GetTeamNumber() >= TEAM_TERRORIST) )
+		if ( (CSGameRules()->IsPlayingGunGameDeathmatch() && GetTeamNumber() >= TEAM_TERRORIST) )
 		{
 			EmitSound( "Player.Respawn" );
 		}
@@ -1644,7 +1644,7 @@ void CCSPlayer::GiveDefaultItems()
 		 pchTeamKnifeName = KnivesEntitiesStrings[CSLoadout()->GetKnifeForPlayer(this, GetTeamNumber())];
 
 	// don't give default items if the player is in deathmatch- we control weapon giving in DM, the player could get a random weapon
-	if ( CSGameRules()->IsPlayingDeathmatch() )
+	if ( CSGameRules()->IsPlayingGunGameDeathmatch() )
 	{
 		CBaseCombatWeapon *knife = Weapon_GetSlot( WEAPON_SLOT_KNIFE );	
 		// if the player doesn't have something in the melee slot, give them a knife
@@ -1679,7 +1679,7 @@ void CCSPlayer::GiveDefaultItems()
 		return;
 	}
 
-	if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+	if ( CSGameRules()->IsPlayingGunGameProgressive() )
 	{
 		// Single Player Progressive Gun Game, so give the current weapon
 		GiveCurrentProgressiveGunGameWeapon();
@@ -2058,7 +2058,7 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	{
 		CWeaponCSBase* pAttackerWeapon = dynamic_cast< CWeaponCSBase * >( info.GetWeapon() );	// this can be NULL if the kill is by HE/molly/impact/etc. (inflictor is non-NULL and points to grenade then)
 
-		if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE && gg_knife_kill_demotes.GetBool() )
+		if ( CSGameRules()->IsPlayingGunGameProgressive() && gg_knife_kill_demotes.GetBool() )
 		{
 			if ( pAttackerWeapon && CSLoadout()->IsKnife( pAttackerWeapon->GetCSWeaponID() ) )
 			{
@@ -2333,7 +2333,7 @@ void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &
 			bool bKilledLeader = false;
 			//bool bUpgradedWeapon = false;
 
-			if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+			if ( CSGameRules()->IsPlayingGunGameProgressive() )
 			{
 				if ( pCSVictim != pCSAttacker )
 				{
@@ -2481,7 +2481,7 @@ void CCSPlayer::GiveNextProgressiveGunGameWeapon( void )
 		// Assign the new weapon
 		GiveWeaponFromID( nextWeaponID );
 
-		if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+		if ( CSGameRules()->IsPlayingGunGameProgressive() )
 		{
 			IGameEvent *event = gameeventmanager->CreateEvent( "ggprogressive_player_levelup" );
 			if ( event )
@@ -4196,7 +4196,7 @@ void CCSPlayer::RoundRespawn()
 {
 	if ( CSGameRules()->IsPlayingGunGame() )
 	{
-		Reset( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE );
+		Reset( CSGameRules()->IsPlayingGunGameProgressive() );
 
 		// Reinitialize some gun-game progressive variables
 
@@ -5142,7 +5142,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item, bool bAddToRebuy/* =
 		m_bMadePurchseThisRound = true;
 		CCS_GameStats.IncrementStat(this, CSSTAT_ITEMS_PURCHASED, 1);
 
-		if ( CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
+		if ( CSGameRules() && CSGameRules()->IsPlayingGunGameDeathmatch() )
 			AddAccount( 9999, false, false );
 	}
 	return result;
@@ -6264,7 +6264,7 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 	else if ( FStrEq( pcmd, "autobuy" ) )
 	{
 		// hijack autobuy for when money isnt relevant and we want random weapons instead, such as deathmatch.
-		if ( CSGameRules()->IsPlayingDeathmatch() )
+		if ( CSGameRules()->IsPlayingGunGameDeathmatch() )
 		{
 			engine->ClientCommand( edict(), "dm_togglerandomweapons" );
 		}
@@ -6991,7 +6991,7 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 		else if ( GetTeamNumber() == TEAM_CT )
 		{
 			pSpot = g_pLastCTSpawn;
-			if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+			if ( CSGameRules()->IsPlayingGunGameProgressive() )
  			{
  				if ( SelectSpawnSpot( "info_armsrace_counterterrorist", pSpot ) )
  				{
@@ -7013,7 +7013,7 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 		{
 			pSpot = g_pLastTerroristSpawn;
 			
- 			if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+			if ( CSGameRules()->IsPlayingGunGameProgressive() )
  			{
  				if ( SelectSpawnSpot( "info_armsrace_terrorist", pSpot ) )
  				{
@@ -7971,7 +7971,7 @@ void CCSPlayer::AutoBuy( const char *autobuyString )
 
 int	CCSPlayer::GetAccountBalance( void )
 {
-	if ( CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
+	if ( CSGameRules() && CSGameRules()->IsPlayingGunGameDeathmatch() )
 		return 99999;
 
 	return m_iAccount;
@@ -10858,7 +10858,7 @@ bool CCSPlayer::IsPlayerDominatingMe( int iPlayerIndex )
 //--------------------------------------------------------------------------------------------------------
 bool CCSPlayer::UpdateTeamLeaderPlaySound( int nTeam )
 {
-	if ( CSGameRules()->GetGamemode() != GameModes::ARMS_RACE )
+	if ( !CSGameRules()->IsPlayingGunGameProgressive() )
 		return false;
 
 	bool bPlayedSound = false;
@@ -11031,7 +11031,7 @@ void CCSPlayer::CommitSuicide( const Vector &vecForce, bool bExplode /*= false*/
 
 void CCSPlayer::DecrementProgressiveWeaponFromSuicide( void )
 {
-	if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+	if ( CSGameRules()->IsPlayingGunGameProgressive() )
 	{
 		if ( (m_LastDamageType & DMG_FALL) || m_wasNotKilledNaturally ) // Did we die from falling or changing teams?
 		{

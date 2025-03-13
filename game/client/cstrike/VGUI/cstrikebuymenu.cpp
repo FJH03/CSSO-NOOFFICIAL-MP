@@ -1116,7 +1116,7 @@ void CCSBuyMenu::Update()
 	}
 
 	int iBuyTimeLeft = (int) (CSGameRules()->GetBuyTimeLength() - CSGameRules()->GetRoundElapsedTime());
-	if ( CSGameRules()->IsPlayingDeathmatch() )
+	if ( CSGameRules()->IsPlayingGunGameDeathmatch() )
 		iBuyTimeLeft = (int) (pPlayer->m_fImmuneToDamageTime - gpGlobals->curtime);
 	if ( iBuyTimeLeft < 0 )
 		iBuyTimeLeft = 0;
@@ -1131,8 +1131,8 @@ void CCSBuyMenu::Update()
 		V_snwprintf( wszTimer, sizeof( wszTimer ), L"%.2d : %.2d : %.2d", iHours, iMinutes, iSeconds );
 
 		wchar_t wszString[256];
-		if ( CSGameRules()->IsPlayingDeathmatch() )
-			g_pVGuiLocalize->ConstructString( wszMessage, sizeof( wszMessage ), g_pVGuiLocalize->Find( "#BuyMenu_MaxItemsOfType" ), 1, wszCarryLimit );
+		if ( CSGameRules()->IsPlayingGunGameDeathmatch() )
+			g_pVGuiLocalize->ConstructString( wszString, sizeof( wszString ), g_pVGuiLocalize->Find( "BuyMenu_ImmunityTimerText" ), 1, wszTimer );
 		else
 			g_pVGuiLocalize->ConstructString( wszString, sizeof( wszString ), g_pVGuiLocalize->Find( "BuyMenu_TimerText" ), 1, wszTimer );
 

@@ -1884,7 +1884,7 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 		}
 		else if ( weaponId == ITEM_DEFUSER )
 		{
-			if ( CSGameRules() && CSGameRules()->IsPlayingDeathmatch() )
+			if ( CSGameRules() && CSGameRules()->IsPlayingGunGameDeathmatch() )
 			{
 				if ( acquireMethod == AcquireMethod::Buy )
 					return AcquireResult::NotAllowedForPurchase;
