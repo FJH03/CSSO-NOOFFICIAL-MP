@@ -20,12 +20,12 @@
 #include "view.h"
 #include "model_types.h"
 #include "vgui_avatarimage.h"
+#include "cs_hud_weaponselection.h"
 
 #include "c_cs_player.h"
 #include "cs_loadout.h"
 #include "c_breakableprop.h"
 #include "ammodef.h"
-#include "cs_gamerules.h"
 
 #include "lunasvg/lunasvg.h"
 using namespace lunasvg;
@@ -349,7 +349,7 @@ void CCSBuyMenuItemButton::SetWeaponID( CSWeaponID nWeaponID )
 	if ( !pPlayer )
 		return;
 
-	m_nItemID = CSLoadout()->GetLoadoutWeaponID( pPlayer, nWeaponID );
+	m_nItemID = CSLoadout()->GetLoadoutWeaponID( pPlayer, pPlayer->GetTeamNumber(), nWeaponID );
 	m_pWeaponInfo = NULL;
 	m_bDisabled = false; // reset it once we have a new weapon
 
@@ -1080,6 +1080,12 @@ void CCSBuyMenu::ShowPanel( bool bShow )
 	{
 		engine->ClientCmd_Unrestricted( "gameui_allowescapetoshow\n" );
 
+		CCSHudWeaponSelection* pHudWS = GET_HUDELEMENT( CCSHudWeaponSelection );
+		if ( pHudWS )
+		{
+			pHudWS->ShowAndUpdateSelection( WEPSELECT_SWITCH );
+		}
+
 		SetVisible( false );
 		SetMouseInputEnabled( false );
 	}
@@ -1093,6 +1099,13 @@ void CCSBuyMenu::Update()
 	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if ( !pPlayer )
 		return;
+
+	if ( !pPlayer->IsInBuyZone() )
+	{
+		// player has left the buy zone
+		ShowPanel( false );
+		return;
+	}
 
 	if ( m_iAccount != pPlayer->GetAccount() )
 	{
@@ -1130,6 +1143,13 @@ void CCSBuyMenu::Update()
 void CCSBuyMenu::OnClose()
 {
 	engine->ClientCmd_Unrestricted( "gameui_allowescapetoshow\n" );
+
+	CCSHudWeaponSelection* pHudWS = GET_HUDELEMENT( CCSHudWeaponSelection );
+	if ( pHudWS )
+	{
+		pHudWS->ShowAndUpdateSelection( WEPSELECT_SWITCH );
+	}
+
 	BaseClass::OnClose();
 }
 
