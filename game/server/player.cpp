@@ -5386,6 +5386,9 @@ void CBasePlayer::AllowImmediateDecalPainting()
 	{
 		if ( CSGameRules()->IsWarmupPeriod() )
 			return;
+		if ( !CSGameRules()->IsPlayingClassic() &&
+			!CSGameRules()->IsPlayingGunGameTRBomb() )
+		   return;
 	}
 #endif
 	m_flNextDecalTime = gpGlobals->curtime;

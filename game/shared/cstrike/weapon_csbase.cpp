@@ -710,10 +710,6 @@ void CWeaponCSBase::ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer )
 		// there's a bit of a cool-off before you can alt-fire at normal alt-fire rate
 		m_flNextSecondaryAttack = gpGlobals->curtime + (GetCSWpnData().m_flCycleTime[Secondary_Mode] * 1.7f);
 	}
-
-#ifndef CLIENT_DLL
-	pPlayer->ClearImmunity();
-#endif
 }
 
 bool CWeaponCSBase::ItemPostFrame_ProcessZoomAction( CCSPlayer *pPlayer )
@@ -799,10 +795,6 @@ bool CWeaponCSBase::ItemPostFrame_ProcessSecondaryAttack( CCSPlayer *pPlayer )
 #endif
 
 	CallSecondaryAttack();
-
-#ifndef CLIENT_DLL
-	pPlayer->ClearImmunity();
-#endif
 
 	return true;
 }
@@ -1319,7 +1311,7 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 
 	FallInit();
 
-	if ( CSGameRules()->IsPlayingGunGameProgressive() )
+	if ( CSGameRules()->IsPlayingGunGameProgressive() || CSGameRules()->IsPlayingGunGameTRBomb() )
 	{
 		// Don't allow non-c4 weapon pickups in gun game progressive mode
 		if ( !IsA( WEAPON_C4 ) )

@@ -91,6 +91,7 @@ namespace GameModes
 		ARMS_RACE,
 		HEADSHOTS,
 		TRIGGER_DISCIPLINE,
+		DEMOLITION,
 
 		NUM_GAMEMODES,
 	};

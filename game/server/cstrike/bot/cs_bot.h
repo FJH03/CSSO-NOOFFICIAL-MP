@@ -23,6 +23,7 @@
 #include "weapon_csbase.h"
 #include "cs_nav_pathfind.h"
 #include "cs_nav_area.h"
+#include "cs_gamerules.h"
 
 class CBaseDoor;
 class CBasePropDoor;
@@ -1911,15 +1912,15 @@ public:
 	{
 		m_bot = bot;
 		m_route = route;
+
+		float baseDangerFactor = CSGameRules()->IsPlayingGunGameTRBomb() ? 0.25f : 100.0f;
+ 		m_dangerFactor = (1.0f - (0.95f * m_bot->GetProfile()->GetAggression())) * baseDangerFactor;
 	}
 
 	// HPE_TODO[pmf]: check that these new parameters are okay to be ignored
 	float operator() ( CNavArea *area, CNavArea *fromArea, const CNavLadder *ladder, const CFuncElevator *elevator, float length )
 	{
-		float baseDangerFactor = 100.0f;	// 100
-
-		// respond to the danger modulated by our aggression (even super-aggressives pay SOME attention to danger)
-		float dangerFactor = (1.0f - (0.95f * m_bot->GetProfile()->GetAggression())) * baseDangerFactor;
+		float dangerFactor = m_dangerFactor;
 
 		if (fromArea == NULL)
 		{
@@ -2055,8 +2056,9 @@ public:
 	}
 
 private:
-	CCSBot *m_bot;
-	RouteType m_route;
+	CCSBot*		m_bot;
+	RouteType	m_route;
+	float		m_dangerFactor;
 };
 
 inline CCSBot *ToCSBot( CBaseEntity *pEntity )

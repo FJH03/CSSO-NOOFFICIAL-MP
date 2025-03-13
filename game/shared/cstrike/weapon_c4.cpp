@@ -738,7 +738,15 @@ END_PREDICTION_DATA()
  			CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = NULL;
 
 		// Do the Damage
-		float flBombRadius = 500;
+		float flBombRadius;
+ 		if ( CSGameRules()->IsPlayingGunGameTRBomb() )
+ 		{
+ 			flBombRadius = 300;
+ 		}
+ 		else
+ 		{
+ 			flBombRadius = 500;
+ 		}
 		if ( g_pMapInfo )
 			flBombRadius = g_pMapInfo->m_flBombRadius;
 

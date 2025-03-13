@@ -274,7 +274,7 @@ public:
 
 	virtual CBaseEntity	*GiveNamedItem( const char *pszName, int iSubType = 0 );
 	virtual bool		IsBeingGivenItem() const { return m_bIsBeingGivenItem; }
-	void		DropNamedItem( const char* pszName );
+			void		DropNamedItem( const char* pszName );
 	
 	virtual CBaseEntity *FindUseEntity( void );
 	virtual bool		IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredCaps );
@@ -375,6 +375,7 @@ public:
 	bool IsOtherSameTeam( int nTeam );
 	bool IsOtherEnemy( CCSPlayer *pPlayer );
 	bool IsOtherEnemy( int nEntIndex );
+
 	void SetHealthApproach( int iHealth, int iSpeed );
 
 
@@ -472,6 +473,7 @@ public:
 
 	bool IsBlind( void ) const;		// return true if this player is blind (from a flashbang)
 	virtual void Blind( float holdTime, float fadeTime, float startingAlpha = 255 );	// player blinded by a flashbang
+	void Unblind( void );	// removes the blind effect from the player
 	float m_blindUntilTime;
 	float m_blindStartTime;
 
@@ -515,7 +517,7 @@ public:
 	bool HandleCommand_JoinTeam( int iTeam );
 
 	BuyResult_e HandleCommand_Buy( const char *item, bool bAddToRebuy = true, bool bDrop = false );
- 	BuyResult_e HandleCommand_Buy_Internal( const char *item, bool bAddToRebuy = true, bool bDrop = false );
+	BuyResult_e HandleCommand_Buy_Internal( const char *item, bool bAddToRebuy = true, bool bDrop = false );
 
 	AcquireResult::Type CanAcquire( CSWeaponID weaponId, AcquireMethod::Type acquireMethod );
 	int					GetCarryLimit( CSWeaponID weaponId );
@@ -661,12 +663,14 @@ private:
 	int	m_iDeathFrame;
 	float m_flDeathYaw;
 
-	bool m_switchTeamsOnNextRoundReset;
-
 // [menglish] Freeze cam function and variable declarations	 
 	bool m_bAbortFreezeCam;
 
 	bool m_bRespawning;
+	int m_iNumGunGameTRBombTotalPoints;
+	bool m_bShouldProgressGunGameTRBombModeWeapon;
+	bool m_switchTeamsOnNextRoundReset;
+
 	int m_iApproachingHealth;
 	int m_iApproachingHealthSpeed;
 	float m_flApproachingHealthLastTime;
@@ -677,6 +681,8 @@ protected:
 	void GiveCurrentProgressiveGunGameWeapon( void );
 	void GiveNextProgressiveGunGameWeapon( void );
 	void SubtractProgressiveWeaponIndex( void );
+
+	void SendGunGameWeaponUpgradeAlert( void );
 
 public:
 
@@ -691,6 +697,7 @@ public:
 	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune
 	CNetworkVar( bool, m_bMadeFinalGunGameProgressiveKill );
 	CNetworkVar( int, m_iGunGameProgressiveWeaponIndex );	// index of current gun game weapon
+	CNetworkVar( int, m_iNumGunGameTRKillPoints );	// number of kill points accumulated so far in TR Gun Game mode (resets to 0 when weapon is upgraded)
 	CNetworkVar( int, m_iNumGunGameKillsWithCurrentWeapon );
 	int m_iNumRoundTKs;	// number of teammate kills a player has in a single round
 	CNetworkVar( bool, m_bHasMovedSinceSpawn );		// Whether player has moved from spawn position
@@ -707,6 +714,7 @@ public:
 	EHANDLE		m_hDroppedEquipment[DROPPED_COUNT];
 
 	int GetPlayerGunGameWeaponIndex( void ) { return m_iGunGameProgressiveWeaponIndex; }
+	int GetNumGunGameTRKillPoints( void ) { return m_iNumGunGameTRKillPoints; }
 	int GetNumGunGameKillsWithCurrentWeapon( void ) { return m_iNumGunGameKillsWithCurrentWeapon; }
 
 	int GetNumRoundKills( void ) { return m_NumEnemiesKilledThisRound; }
@@ -740,6 +748,9 @@ public:
 	int GetNumFirearmsUsed() { return m_WeaponTypesUsed.Count(); }
 	int GetNumFirearmsRanOutOfAmmo() { return m_WeaponTypesRunningOutOfAmmo.Count(); }
 	bool DidPlayerEmptyAmmoForWeapon( CBaseCombatWeapon* pBaseWeapon );
+
+	void PlayerUsedGrenade( int nWeaponID );
+	void PlayerUsedKnife( void );
 
 	void ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
 
@@ -858,9 +869,12 @@ public:
 
 	void ClearImmunity( void );
 	void ClearGunGameProgressiveWeaponIndex( void ) { m_iGunGameProgressiveWeaponIndex = 0; }
+	void ResetTRBombModeWeaponProgressFlag( void ) { m_bShouldProgressGunGameTRBombModeWeapon = false; }
+	void ResetTRBombModeKillPoints( void ) { m_iNumGunGameTRKillPoints = 0; }
 
 	void SwitchTeamsAtRoundReset( void ) { m_switchTeamsOnNextRoundReset = true; }
 	bool WillSwitchTeamsAtRoundReset( void ) { return m_switchTeamsOnNextRoundReset; }
+	void ResetTRBombModeData( void );
 
 	CNetworkVar( int, m_iLoadoutSlotAgentCT );
 	CNetworkVar( int, m_iLoadoutSlotAgentT );
@@ -1208,6 +1222,11 @@ public:
 	int		GetNumFootsteps( void ) { return m_iFootsteps; }
 	int		GetMediumHealthKills( void ) { return m_iMediumHealthKills; }
 
+	void	ClearTRModeHEGrenade( void ) { m_bGunGameTRModeHasHEGrenade = false; }
+	void	ClearTRModeFlashbang( void ) { m_bGunGameTRModeHasFlashbang = false; }
+	void	ClearTRModeMolotov( void ) { m_bGunGameTRModeHasMolotov = false; }
+	void	ClearTRModeIncendiary( void ) { m_bGunGameTRModeHasIncendiary = false; }
+
 private:
     CNetworkArray( bool, m_bPlayerDominated, MAX_PLAYERS+1 );		// array of state per other player whether player is dominating other players
     CNetworkArray( bool, m_bPlayerDominatingMe, MAX_PLAYERS+1 );	// array of state per other player whether other players are dominating this player
@@ -1241,6 +1260,12 @@ private:
 
 	// Track last damage type
 	int	m_LastDamageType;
+
+	// Used to track whether or not a player in TR gun game mode has earned grenades
+	bool m_bGunGameTRModeHasHEGrenade;
+	bool m_bGunGameTRModeHasFlashbang;
+	bool m_bGunGameTRModeHasMolotov;
+	bool m_bGunGameTRModeHasIncendiary;
 
 #if CS_CONTROLLABLE_BOTS_ENABLED
 public:

@@ -1045,6 +1045,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropBool( RECVINFO( m_bHasMovedSinceSpawn ) ),
 	RecvPropBool( RECVINFO( m_bMadeFinalGunGameProgressiveKill ) ),
 	RecvPropInt( RECVINFO( m_iGunGameProgressiveWeaponIndex ) ),
+	RecvPropInt( RECVINFO( m_iNumGunGameTRKillPoints ) ),
 	RecvPropFloat( RECVINFO( m_fImmuneToDamageTime ) ),
 	RecvPropBool( RECVINFO( m_bImmunity ) ),
 	RecvPropInt( RECVINFO( m_iLastZoom ) ),
@@ -1156,6 +1157,7 @@ C_CSPlayer::C_CSPlayer() :
 	ListenForGameEvent( "item_equip" );
 
 	ListenForGameEvent( "ggprogressive_player_levelup" );
+	ListenForGameEvent( "gg_player_impending_upgrade" );
 	ListenForGameEvent( "gg_killed_enemy" );
 	ListenForGameEvent( "gg_final_weapon_achieved" );
 
@@ -2426,6 +2428,17 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			C_BaseEntity::EmitSound( filter, entindex(), "GunGameWeapon.LevelUp" );
 		}
 	}
+	else if ( Q_strcmp( "gg_player_impending_upgrade", name ) == 0 )
+ 	{
+ 		// Let the local player know a level-up is impending
+ 		if ( GetUserID() == EventUserID )
+ 		{
+ 			// Play level-up gun game sound
+ 			C_RecipientFilter filter;
+ 			filter.AddRecipient( this );
+ 			C_BaseEntity::EmitSound( filter, entindex(), "GunGameWeapon.ImpendingLevelUp" );
+ 		}
+ 	}
 	else if ( Q_strcmp( "gg_killed_enemy", name ) == 0 )
 	{
 		if ( CSGameRules()->IsPlayingGunGame() )

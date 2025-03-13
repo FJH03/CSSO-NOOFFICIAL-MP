@@ -147,6 +147,7 @@ extern ConVar mp_tdm_healthshot_killcount;
 extern ConVar mp_ggprogressive_healthshot_killcount;
 extern ConVar mp_damage_headshot_only;
 extern ConVar mp_max_armor;
+extern ConVar mp_ggtr_bomb_pts_for_upgrade;
 
 // [menglish] Added in convars for freeze cam time length
 extern ConVar spec_freeze_time;
@@ -434,6 +435,7 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropBool( SENDINFO( m_bHasMovedSinceSpawn ) ),
 	SendPropBool( SENDINFO( m_bMadeFinalGunGameProgressiveKill ) ),
 	SendPropInt( SENDINFO( m_iGunGameProgressiveWeaponIndex ), 32, SPROP_UNSIGNED | SPROP_CHANGES_OFTEN ),
+	SendPropInt( SENDINFO( m_iNumGunGameTRKillPoints ) ),
 	SendPropFloat( SENDINFO( m_fImmuneToDamageTime ) ),
 	SendPropBool( SENDINFO( m_bImmunity ) ),
 	SendPropInt( SENDINFO( m_iLastZoom ), 8, SPROP_UNSIGNED ),
@@ -643,8 +645,15 @@ CCSPlayer::CCSPlayer()
 	m_bImmunity = false;
 	m_bHasMovedSinceSpawn = false;
 	m_iNumGunGameKillsWithCurrentWeapon = 0;
+	m_iNumGunGameTRKillPoints = 0;
+	m_iNumGunGameTRBombTotalPoints = 0;
 	m_iNumRoundTKs = 0;
+	m_bShouldProgressGunGameTRBombModeWeapon = false;
 	m_switchTeamsOnNextRoundReset = false;
+	m_bGunGameTRModeHasHEGrenade = false;
+	m_bGunGameTRModeHasFlashbang = false;
+	m_bGunGameTRModeHasMolotov = false;
+	m_bGunGameTRModeHasIncendiary = false;
 
 	m_fNextMolotovDamageSoundTime = 0.0f;
 
@@ -1679,7 +1688,7 @@ void CCSPlayer::GiveDefaultItems()
 		return;
 	}
 
-	if ( CSGameRules()->IsPlayingGunGameProgressive() )
+	if ( CSGameRules()->IsPlayingGunGameProgressive() || CSGameRules()->IsPlayingGunGameTRBomb() )
 	{
 		// Single Player Progressive Gun Game, so give the current weapon
 		GiveCurrentProgressiveGunGameWeapon();
@@ -1692,6 +1701,80 @@ void CCSPlayer::GiveDefaultItems()
 			if ( thisWeaponID != WEAPON_KNIFE_GG )
 			{
 				GiveNamedItem( pchTeamKnifeName );
+			}
+		}
+
+		// Award grenades in TR Bomb mode
+		if ( CSGameRules()->IsPlayingGunGameTRBomb() )
+		{
+			bool bGiveMolotov = false;
+			bool bGiveFlashbang = false;
+			bool bGiveHEGrenade = false;
+			bool bGiveIncendiary = false;
+
+			int nBonusGrenade = CSGameRules()->GetGunGameTRBonusGrenade( this );
+
+			if ( nBonusGrenade == WEAPON_MOLOTOV && !m_bGunGameTRModeHasMolotov )
+			{
+				// Award a molotov cocktail
+				bGiveMolotov = true;
+				m_bGunGameTRModeHasMolotov = true;			
+			}
+			else if ( nBonusGrenade == WEAPON_INCGRENADE && !m_bGunGameTRModeHasIncendiary )
+			{
+				// Award an incendiary grenade
+				bGiveIncendiary = true;
+				m_bGunGameTRModeHasIncendiary = true;
+			}
+			else if ( nBonusGrenade == WEAPON_FLASHBANG && !m_bGunGameTRModeHasFlashbang )
+			{
+				// Award a flash grenade
+				bGiveFlashbang = true;
+				m_bGunGameTRModeHasFlashbang = true;
+			}
+			else if ( nBonusGrenade == WEAPON_HEGRENADE && !m_bGunGameTRModeHasHEGrenade )
+			{
+				// Award an he grenade
+				bGiveHEGrenade = true;
+				m_bGunGameTRModeHasHEGrenade = true;
+			}
+
+			// Give grenades as necessary based on flags since we want unused grenades to persist between rounds
+			if ( m_bGunGameTRModeHasMolotov && !HasWeaponOfType( WEAPON_MOLOTOV ) )
+			{
+				GiveWeaponFromID( WEAPON_MOLOTOV );
+				m_bGunGameTRModeHasMolotov = true;
+			}
+
+			if ( m_bGunGameTRModeHasIncendiary && !HasWeaponOfType( WEAPON_INCGRENADE ) )
+			{
+				GiveWeaponFromID( WEAPON_INCGRENADE );
+				m_bGunGameTRModeHasIncendiary = true;
+			}
+
+			if ( m_bGunGameTRModeHasFlashbang && !HasWeaponOfType( WEAPON_FLASHBANG ) )
+			{
+				GiveWeaponFromID( WEAPON_FLASHBANG );
+				m_bGunGameTRModeHasFlashbang = true;
+			}
+
+			if ( m_bGunGameTRModeHasHEGrenade && !HasWeaponOfType( WEAPON_HEGRENADE ) )
+			{
+				GiveWeaponFromID( WEAPON_HEGRENADE );
+				m_bGunGameTRModeHasHEGrenade = true;
+			}
+
+			if ( bGiveMolotov || bGiveFlashbang || bGiveHEGrenade || bGiveIncendiary)
+			{
+				IGameEvent * event = gameeventmanager->CreateEvent( "gg_bonus_grenade_achieved" );
+
+				if ( event )
+				{
+					event->SetInt( "userid", GetUserID() );
+					gameeventmanager->FireEvent( event );
+				}
+
+				//HintMessage( "BONUS GREANDE!", true, true );
 			}
 		}
 
@@ -2240,6 +2323,15 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	State_Transition( STATE_DEATH_ANIM );	// Transition into the dying state.
 	BaseClass::Event_Killed( subinfo );
 
+	if ( CSGameRules()->IsPlayingGunGameTRBomb() )
+	{
+		// Lose all awarded grenades on death
+		m_bGunGameTRModeHasHEGrenade = false;
+		m_bGunGameTRModeHasFlashbang = false;
+		m_bGunGameTRModeHasMolotov = false;
+		m_bGunGameTRModeHasIncendiary = false;
+	}
+
 	if ( CSGameRules()->IsPlayingGunGame() )
 	{
 		RecordRebuyStructLastRound();
@@ -2328,6 +2420,43 @@ void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &
 
 				gameeventmanager->FireEvent( event );
 
+			}
+
+			if ( CSGameRules()->IsPlayingGunGameTRBomb() )
+			{
+				// don't award if controlling a bot or in the warmup round
+				if ( !IsControllingBot() && !CSGameRules()->IsWarmupPeriod() )
+				{
+					// Don't allow kill points for upgrades after a round has ended - (with some slack)
+					// also don't upgrade if we hit the last round before half-time
+					if ( CSGameRules()->GetRoundRestartTime() + 0.5f < gpGlobals->curtime && !CSGameRules()->IsLastRoundBeforeHalfTime() )
+					{
+						// Bump up the count of how many kills this player has in the current round
+						m_iNumGunGameTRKillPoints++;
+						m_iNumGunGameTRBombTotalPoints++;
+
+						if ( m_iNumGunGameTRKillPoints == mp_ggtr_bomb_pts_for_upgrade.GetInt() || CSGameRules()->GetGunGameTRBonusGrenade( this ) > 0 )
+						{
+							// Play client sound for impending weapon upgrade...
+							SendGunGameWeaponUpgradeAlert();
+						}
+					}
+				}
+
+				// Test for end of round for gun game TR (ensure that the weapon that made the kill is the one that matches the last weapon in the progression )
+				CWeaponCSBase* pWeapon = dynamic_cast<CWeaponCSBase *>( info.GetWeapon() );
+				int wID = pWeapon ? pWeapon->GetCSWeaponID() : WEAPON_NONE;
+				int curwID = CSGameRules()->GetCurrentGunGameWeapon( m_iGunGameProgressiveWeaponIndex, GetTeamNumber() );
+				if ( wID == curwID && CSGameRules()->IsFinalGunGameProgressiveWeapon( m_iGunGameProgressiveWeaponIndex, GetTeamNumber() ) )
+				{
+					// Determine if current # kills with this weapon >= # kills necessary to level up the weapon
+					if ( m_iNumGunGameKillsWithCurrentWeapon >= CSGameRules()->GetGunGameNumKillsRequiredForWeapon( m_iGunGameProgressiveWeaponIndex, GetTeamNumber() ) )
+					{
+						// Made the proper number of kills with the final weapon so record this fact
+						m_bMadeFinalGunGameProgressiveKill = true;
+
+					}
+				}
 			}
 
 			bool bKilledLeader = false;
@@ -2452,6 +2581,25 @@ void CCSPlayer::GiveCurrentProgressiveGunGameWeapon( void )
 	CSGameRules()->CalculateMaxGunGameProgressiveWeaponIndex();
 }
 
+void CCSPlayer::IncrementGunGameProgressiveWeapon( int nNumLevelsToIncrease )
+{
+	int newWeaponIndex = m_iGunGameProgressiveWeaponIndex + nNumLevelsToIncrease - 1;
+
+	if ( newWeaponIndex >= CSGameRules()->GetNumProgressiveGunGameWeapons( GetTeamNumber() ) - 1 )
+	{
+		// Clamp weapon index to 2nd to last index
+		newWeaponIndex = CSGameRules()->GetNumProgressiveGunGameWeapons( GetTeamNumber() ) - 2;
+	}
+
+	if ( newWeaponIndex >= m_iGunGameProgressiveWeaponIndex )
+	{
+		// Bump up the player's weapon level to the new weapon
+		m_iGunGameProgressiveWeaponIndex = newWeaponIndex;
+
+		GiveNextProgressiveGunGameWeapon();
+	}
+}
+
 void CCSPlayer::GiveNextProgressiveGunGameWeapon( void )
 {
 	int nextWeaponID = CSGameRules()->GetNextGunGameWeapon( m_iGunGameProgressiveWeaponIndex, GetTeamNumber() );
@@ -2481,7 +2629,22 @@ void CCSPlayer::GiveNextProgressiveGunGameWeapon( void )
 		// Assign the new weapon
 		GiveWeaponFromID( nextWeaponID );
 
-		if ( CSGameRules()->IsPlayingGunGameProgressive() )
+		// Send a game event for leveling up
+		if ( CSGameRules()->IsPlayingGunGameTRBomb() )
+		{
+			IGameEvent* event = gameeventmanager->CreateEvent( "ggtr_player_levelup" );
+			if ( event )
+			{
+				const char* szName = WeaponIdAsString( static_cast<CSWeaponID>(nextWeaponID) );
+
+				event->SetInt( "userid", GetUserID() );
+				event->SetInt( "weaponrank", m_iGunGameProgressiveWeaponIndex );
+				event->SetString( "weaponname", szName );
+
+				gameeventmanager->FireEvent( event );
+			}
+		}
+		else if ( CSGameRules()->IsPlayingGunGameProgressive() )
 		{
 			IGameEvent *event = gameeventmanager->CreateEvent( "ggprogressive_player_levelup" );
 			if ( event )
@@ -4206,8 +4369,21 @@ void CCSPlayer::RoundRespawn()
 		// Clear out weapons in progressive mode
 		m_iGunGameProgressiveWeaponIndex = 0;
 
-		// Ensure player has the default items
-		GiveDefaultItems();
+		if ( !CSGameRules()->IsPlayingGunGameTRBomb() )
+		{
+			// Ensure player has the default items
+			GiveDefaultItems();
+		}
+		else
+		{
+			// Progress weapons over rounds for TR Bomb mode
+			if ( m_bShouldProgressGunGameTRBombModeWeapon )
+			{
+				ResetTRBombModeWeaponProgressFlag();
+				if ( CSGameRules()->GetTotalRoundsPlayed() > 0 )
+					IncrementGunGameProgressiveWeapon( 1 );
+			}
+		}
 	}
 
 	//MIKETODO: menus
@@ -4219,6 +4395,13 @@ void CCSPlayer::RoundRespawn()
 		respawn( this, false );
 		m_nButtons = 0;
 		SetNextThink( TICK_NEVER_THINK );
+	}
+
+	if ( CSGameRules()->IsPlayingGunGameTRBomb() )
+	{
+		// [hpe:jason] Reset the kill points after we award the upgrade, so the UI continues to show that 
+		//		the next weapon level has been unlocked until we respawn for the next round.
+		m_iNumGunGameTRKillPoints = 0;
 	}
 
 	m_iNumRoundTKs = 0;
@@ -7013,7 +7196,7 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 		{
 			pSpot = g_pLastTerroristSpawn;
 			
-			if ( CSGameRules()->IsPlayingGunGameProgressive() )
+ 			if ( CSGameRules()->IsPlayingGunGameProgressive() )
  			{
  				if ( SelectSpawnSpot( "info_armsrace_terrorist", pSpot ) )
  				{
@@ -10140,11 +10323,40 @@ CSWeaponID CCSPlayer::GetWeaponIdCausingDamange( const CTakeDamageInfo &info )
 	return WEAPON_NONE;
 }
 
+void CCSPlayer::PlayerUsedKnife( void )
+{
+	// Player immunity is cleared upon weapon use
+	ClearImmunity();
+}
 
-//=============================================================================
-// HPE_BEGIN:
+void CCSPlayer::PlayerUsedGrenade( int nWeaponID )
+{
+	// Player immunity is cleared upon weapon use
+	ClearImmunity();
+
+	if ( CSGameRules()->IsPlayingGunGameTRBomb() )
+	{
+		// Clear ownership flag for a grenade used in TR mode
+		if ( nWeaponID == WEAPON_FLASHBANG && m_bGunGameTRModeHasFlashbang )
+		{
+			m_bGunGameTRModeHasFlashbang = false;
+		}
+		else if ( nWeaponID == WEAPON_HEGRENADE && m_bGunGameTRModeHasHEGrenade )
+		{
+			m_bGunGameTRModeHasHEGrenade = false;
+		}
+		else if ( nWeaponID == WEAPON_MOLOTOV && m_bGunGameTRModeHasMolotov )
+		{
+			m_bGunGameTRModeHasMolotov = false;
+		}
+		else if ( nWeaponID == WEAPON_INCGRENADE && m_bGunGameTRModeHasIncendiary )
+		{
+			m_bGunGameTRModeHasIncendiary = false;
+		}
+	}
+}
+
 // [dwenger] adding tracking for weapon used fun fact
-//=============================================================================
 void CCSPlayer::PlayerUsedFirearm( CBaseCombatWeapon* pBaseWeapon )
 {
 	if ( pBaseWeapon )
@@ -10644,6 +10856,21 @@ void CCSPlayer::OnRoundEnd(int winningTeam, int reason)
 
 	if (winningTeam == WINNER_CT || winningTeam == WINNER_TER)
 	{
+		if ( CSGameRules()->IsPlayingGunGameTRBomb() && !CSGameRules()->IsWarmupPeriod() )
+		{
+			if ( m_iNumGunGameTRKillPoints >= mp_ggtr_bomb_pts_for_upgrade.GetInt() || CSGameRules()->GetGunGameTRBonusGrenade( this ) > 0 )
+			{
+				// Play client sound for impending weapon upgrade...
+				SendGunGameWeaponUpgradeAlert();
+			}
+
+			if ( m_iNumGunGameTRKillPoints > mp_ggtr_bomb_pts_for_upgrade.GetInt() - 1 )
+			{
+				// Need to bump the player's TR Bomb Mode weapon to the next level
+				m_bShouldProgressGunGameTRBombModeWeapon = true;
+			}
+		}
+
 		int losingTeamId = (winningTeam == TEAM_CT) ? TEAM_TERRORIST : TEAM_CT;
 		
 		CTeam* losingTeam = GetGlobalTeam(losingTeamId);
@@ -10718,6 +10945,17 @@ void CCSPlayer::OnRoundEnd(int winningTeam, int reason)
 	}
 
 	m_lastRoundResult = reason;
+}
+
+void CCSPlayer::SendGunGameWeaponUpgradeAlert( void )
+{
+	// Send a game event for leveling up
+	IGameEvent *event = gameeventmanager->CreateEvent( "gg_player_impending_upgrade" );
+	if ( event )
+	{
+		event->SetInt( "userid", GetUserID() );
+		gameeventmanager->FireEvent( event );
+	}
 }
 
 void CCSPlayer::OnPreResetRound()
@@ -11119,6 +11357,16 @@ bool CCSPlayer::ShouldCollide( int collisionGroup, int contentsMask ) const
 	}
 
 	return BaseClass::ShouldCollide( collisionGroup, contentsMask );
+}
+
+void CCSPlayer::ResetTRBombModeData( void )
+{
+	m_iGunGameProgressiveWeaponIndex = 0;
+	m_iNumGunGameKillsWithCurrentWeapon = 0;
+	m_iNumGunGameTRKillPoints = 0;
+	m_iNumGunGameTRBombTotalPoints = 0;
+	m_bShouldProgressGunGameTRBombModeWeapon = false;
+	m_bMadeFinalGunGameProgressiveKill = false;
 }
 
 #if CS_CONTROLLABLE_BOTS_ENABLED

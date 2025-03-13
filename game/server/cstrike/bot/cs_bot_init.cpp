@@ -127,7 +127,22 @@ bool CCSBot::Initialize( const BotProfile *profile, int team )
 
 	// CS bot initialization
 	m_diedLastRound = false;
-	m_morale = POSITIVE;			// starting a new round makes everyone a little happy
+	if ( CSGameRules()->IsPlayingGunGameTRBomb() )
+ 	{
+ 		// in demolition, start the CT's off with terrible morale, so they try to camp the bombsite
+ 		if ( team == TEAM_CT )
+ 		{
+ 			m_morale = TERRIBLE;
+ 		}
+ 		else
+ 		{
+ 			m_morale = POSITIVE;			// starting a new round makes everyone a little happy
+ 		}
+ 	}
+ 	else
+ 	{
+ 		m_morale = POSITIVE;			// starting a new round makes everyone a little happy
+ 	}
 
 	m_combatRange = RandomFloat( 325.0f, 425.0f );
 

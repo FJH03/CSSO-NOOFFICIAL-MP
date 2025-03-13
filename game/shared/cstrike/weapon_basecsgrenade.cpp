@@ -583,6 +583,8 @@ void CBaseCSGrenade::ItemPostFrame()
 		{
 			int iWeaponId = GetWeaponID();
 
+			pCSPlayer->PlayerUsedGrenade( iWeaponId );
+
 			if ( !sv_ignoregrenaderadio.GetBool() )
 			{
 				switch ( iWeaponId )

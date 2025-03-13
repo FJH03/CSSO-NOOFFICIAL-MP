@@ -186,6 +186,12 @@ void CCSNavArea::CustomAnalysis( bool isIncremental /*= false */ )
 // return danger decay rate per second
 float CCSNavArea::GetDangerDecayRate( void ) const
 {
+	if ( CSGameRules()->IsPlayingGunGameTRBomb() )
+ 	{
+ 		// decay danger faster in this aggressive bomb planting mode
+ 		return 1.0f / 30.0f;
+ 	}
+	
 	// one kill == 1.0, which we will forget about in two minutes
 	return 1.0f / 120.0f;
 }

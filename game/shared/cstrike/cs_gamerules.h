@@ -69,7 +69,7 @@ struct WeaponProgression
 	int m_Kills;
 };
 
-static WeaponProgression ggWeaponProgressionCT[] =
+static WeaponProgression g_GGProgressiveWeaponProgression[] =
 {
 	{ "bizon",		2 },
 	{ "ump45",		2 },
@@ -92,6 +92,34 @@ static WeaponProgression ggWeaponProgressionCT[] =
 	{ "fiveseven",	2 },
 	{ "elite",		2 },
 	{ "knifegg",	1 }
+};
+
+static WeaponProgression g_GGTRWeaponProgressionCT[] =
+{
+	{ "m4a4",		1 },
+	{ "famas",		1 },
+	{ "p90",		1 },
+	{ "mp9",		1 },
+	{ "xm1014",		1 },
+	{ "deagle",		1 },
+	{ "fiveseven",	1 },
+	{ "ssg08",		1 },
+	{ "awp",		1 },
+	{ "scar20",		1 }
+};
+
+static WeaponProgression g_GGTRWeaponProgressionT[] =
+{
+	{ "ak47",		1 },
+	{ "galilar",	1 },
+	{ "p90",		1 },
+	{ "mac10",		1 },
+	{ "xm1014",		1 },
+	{ "deagle",		1 },
+	{ "tec9",		1 },
+	{ "ssg08",		1 },
+	{ "awp",		1 },
+	{ "g3sg1",		1 }
 };
 
 struct GGWeaponAliasName
@@ -287,6 +315,7 @@ public:
 	int GetNumProgressiveGunGameWeapons( int nTeamID ) const;
 	int GetProgressiveGunGameWeapon( int nWeaponIndex, int nTeamID ) const { return nTeamID == TEAM_CT ? m_GGProgressiveWeaponOrderCT[nWeaponIndex] : m_GGProgressiveWeaponOrderT[nWeaponIndex]; }
 	int GetProgressiveGunGameWeaponKillRequirement( int nWeaponIndex, int nTeamID ) const { return nTeamID == TEAM_CT ? m_GGProgressiveWeaponKillUpgradeOrderCT[nWeaponIndex] : m_GGProgressiveWeaponKillUpgradeOrderT[nWeaponIndex]; }
+	int GetGunGameTRBonusGrenade( CCSPlayer *pPlayer );
 
 	virtual int	DefaultFOV();
 
@@ -300,6 +329,7 @@ public:
 	bool IsPlayingClassic( void ) const;
 	bool IsPlayingGunGameProgressive( void ) const;
 	bool IsPlayingGunGameDeathmatch( void ) const;
+	bool IsPlayingGunGameTRBomb( void ) const;
 	bool IsPlayingGunGame( void ) const;
 
 	bool IsPlayingAnyCompetitiveStrictRuleset( void ) const;

@@ -460,6 +460,7 @@ public:
 	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune
 	CNetworkVar( bool, m_bMadeFinalGunGameProgressiveKill );
 	CNetworkVar( int, m_iGunGameProgressiveWeaponIndex ); // index of current gun game weapon
+	CNetworkVar( int, m_iNumGunGameTRKillPoints );	// number of kill points accumulated so far in TR Gun Game mode (resets to 0 when weapon is upgraded)
 
 	bool IsInHostageRescueZone( void );
 
@@ -541,6 +542,7 @@ public:
 
 	bool MadeFinalGunGameProgressiveKill( void ) { return m_bMadeFinalGunGameProgressiveKill; }
 	int GetPlayerGunGameWeaponIndex( void ) { return m_iGunGameProgressiveWeaponIndex; }
+	int GetNumGunGameTRKillPoints( void ) { return m_iNumGunGameTRKillPoints; }
 	
 	bool IsAbleToInstantRespawn( void );
 

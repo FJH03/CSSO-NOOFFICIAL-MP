@@ -225,6 +225,10 @@ bool CKnife::SwingOrStab( CSWeaponMode weaponMode )
 	if ( !pPlayer )
 		return false;
 
+#ifndef CLIENT_DLL
+		pPlayer->PlayerUsedKnife();
+#endif
+
 	// bStab: false=primary, true=secondary
 	float fRange = (weaponMode == Primary_Mode) ? KNIFE_RANGE_LONG : KNIFE_RANGE_SHORT; // knife range
 

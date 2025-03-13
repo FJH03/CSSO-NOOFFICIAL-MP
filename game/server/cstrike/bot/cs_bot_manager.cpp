@@ -136,7 +136,15 @@ void CCSBotManager::RestartRound( void )
 
 	SetLooseBomb( NULL );
 	m_isBombPlanted = false;
-	m_earliestBombPlantTimestamp = gpGlobals->curtime + RandomFloat( 10.0f, 30.0f ); // 60
+	if ( CSGameRules()->IsPlayingGunGameTRBomb() )
+ 	{
+ 		// push to plant the bomb quickly in this game mode
+ 		m_earliestBombPlantTimestamp = gpGlobals->curtime + RandomFloat( 0.0f, 10.0f );
+ 	}
+ 	else
+ 	{
+ 		m_earliestBombPlantTimestamp = gpGlobals->curtime + RandomFloat( 10.0f, 30.0f ); // 60
+ 	}
 	m_bombDefuser = NULL;
 
 	ResetRadioMessageTimestamps();
@@ -1332,7 +1340,7 @@ void CCSBotManager::ExtractScenarioData( void )
 	m_zoneCount = 0;
 	m_gameScenario = SCENARIO_DEATHMATCH;
 
-	if ( !CSGameRules()->IsPlayingClassic() )
+	if ( !CSGameRules()->IsPlayingClassic() && !CSGameRules()->IsPlayingGunGameTRBomb() ) // demolition mode requires to perform tasks as well
 		return;
 
 	//
