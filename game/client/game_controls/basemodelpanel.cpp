@@ -256,17 +256,16 @@ void CModelPanel::ParseLightInfo( KeyValues *inResourceData )
 					lightOuterCone = pLightKeys->GetFloat( "outer_cone", 8.0f );
 				}
 
-				m_pModelInfo->m_pLightDesc[m_pModelInfo->m_nNumLightDescs] = new LightDesc_t;
 				switch ( lightType )
 				{
 					case MATERIAL_LIGHT_DIRECTIONAL:
-						m_pModelInfo->m_pLightDesc[m_pModelInfo->m_nNumLightDescs]->InitDirectional( lightPosOrDir, lightColor );
+						m_pModelInfo->m_pLightDesc[m_pModelInfo->m_nNumLightDescs].InitDirectional( lightPosOrDir, lightColor );
 						break;
 					case MATERIAL_LIGHT_POINT:
-						m_pModelInfo->m_pLightDesc[m_pModelInfo->m_nNumLightDescs]->InitPoint( lightPosOrDir, lightColor );
+						m_pModelInfo->m_pLightDesc[m_pModelInfo->m_nNumLightDescs].InitPoint( lightPosOrDir, lightColor );
 						break;
 					case MATERIAL_LIGHT_SPOT:
-						m_pModelInfo->m_pLightDesc[m_pModelInfo->m_nNumLightDescs]->InitSpot( lightPosOrDir, lightColor, lightLookAt, lightInnerCone, lightOuterCone );
+						m_pModelInfo->m_pLightDesc[m_pModelInfo->m_nNumLightDescs].InitSpot( lightPosOrDir, lightColor, lightLookAt, lightInnerCone, lightOuterCone );
 						break;
 				}
 				m_pModelInfo->m_nNumLightDescs++;
@@ -926,7 +925,7 @@ void CModelPanel::Paint()
 	pRenderContext->SetLightingOrigin( vec3_origin );
 	pRenderContext->SetAmbientLight( m_pModelInfo->m_vecAmbientLight.x, m_pModelInfo->m_vecAmbientLight.y, m_pModelInfo->m_vecAmbientLight.z );
 
-	g_pStudioRender->SetLocalLights( m_pModelInfo->m_nNumLightDescs, *m_pModelInfo->m_pLightDesc );
+	g_pStudioRender->SetLocalLights( m_pModelInfo->m_nNumLightDescs, m_pModelInfo->m_pLightDesc );
 
 	Frustum dummyFrustum;
 	render->Push3DView( view, 0, NULL, dummyFrustum );

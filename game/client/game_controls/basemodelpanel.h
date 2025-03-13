@@ -145,11 +145,6 @@ public:
 			m_pszVCD = NULL;
 		}
 
-		for ( int i = 0; i < m_nNumLightDescs; i++ )
-		{
-			delete m_pLightDesc[i];
-		}
-
 		m_Animations.PurgeAndDeleteElements();
 		m_AttachedModelsInfo.PurgeAndDeleteElements();
 	}
@@ -164,7 +159,7 @@ public:
 	Vector2D	m_vecViewportOffset;
 	Vector		m_vecFramedOriginOffset;
 	CUtlMap< int, int > m_mapBodygroupValues;
-	LightDesc_t *m_pLightDesc[MATERIAL_MAX_LIGHT_COUNT];
+	LightDesc_t m_pLightDesc[MATERIAL_MAX_LIGHT_COUNT];
 	int			m_nNumLightDescs;
 	Vector		m_vecAmbientLight;
 
