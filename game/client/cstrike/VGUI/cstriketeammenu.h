@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose:
+// Purpose: 
 //
 // $NoKeywords: $
 //=============================================================================//
@@ -51,6 +51,11 @@ private:
 	CHandle<C_BaseAnimating> m_hPlayerModel;
 	CHandle<C_BaseAnimating> m_hWeaponModel;
 	CHandle<C_BaseAnimating> m_hGlovesModel;
+
+	CPanelAnimationVarAliasType( int, viewport_xpos, "viewport_xpos", "0", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, viewport_ypos, "viewport_ypos", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, viewport_wide, "viewport_wide", "0", "proportional_width" );
+	CPanelAnimationVarAliasType( int, viewport_tall, "viewport_tall", "0", "proportional_height" );
 };
 
 class CCSTeamMenu: public Frame, public IViewPortPanel

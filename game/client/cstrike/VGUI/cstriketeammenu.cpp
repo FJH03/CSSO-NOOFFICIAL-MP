@@ -336,10 +336,6 @@ void CCSTeamMenuAgentImage::Paint()
 	if ( !m_hPlayerModel.Get() )
 		return;
 
-	int x, y, w, h;
-	GetBounds( x, y, w, h );
-	ParentLocalToScreen( x, y );
-
 	// do we have a valid sequence?
 	if ( m_hPlayerModel->GetSequence() != -1 )
 	{
@@ -348,12 +344,15 @@ void CCSTeamMenuAgentImage::Paint()
 
 	// Now draw it.
 	CViewSetup view;
-	view.x = x; // we actually want to offset by the 
-	view.y = y; // viewport origin here because Push3DView expects global coords below
-	view.width = w;
-	view.height = h;
+	view.x = viewport_xpos; // we actually want to offset by the 
+	view.y = viewport_ypos; // viewport origin here because Push3DView expects global coords below
+	view.width = viewport_wide;		// added separate viewport width and height parameters so that
+	view.height = viewport_tall;	// FOV gets scaled correctly down below
 
 	view.m_bOrtho = false;
+
+	int w, h;
+	GetSize( w, h );
 
 	// scale the FOV for aspect ratios other than 4/3
 	float flWidthRatio = ((float) w / (float) h) / (4.0f / 3.0f);
