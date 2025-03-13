@@ -1620,12 +1620,6 @@ void CBasePlayer::PlayerUse ( void )
 			if ( (pPlayerWeapon && pPlayer->HandleDropWeapon( pPlayerWeapon, true )) || !pPlayerWeapon )
 			{
 				pWeapon->Touch( this );
-
-				if ( pWeapon->IsPrimaryWeapon() )
-				{
-					// change the weapon to a picked up one if it's primary
-					pPlayer->Weapon_Switch( pWeapon, 0 );
-				}
 			}
 		}
 		else if ( pPlayer && bOpenBuyWithUse && pPlayer->IsInBuyZone() && pPlayer->CanPlayerBuy( false ) && !CSGameRules()->IsPlayingGunGame() )
