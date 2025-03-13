@@ -42,7 +42,7 @@ PRECACHE_WEAPON_REGISTER( weapon_healthshot );
 // END_DATADESC()
 // #endif
 
-ConVar healthshot_health( "healthshot_health", "50", FCVAR_CHEAT | FCVAR_REPLICATED );
+ConVar healthshot_health( "healthshot_health", "50", FCVAR_REPLICATED );
 
 void CItem_Healthshot::WeaponIdle()
 {
