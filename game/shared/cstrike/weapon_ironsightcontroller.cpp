@@ -158,7 +158,7 @@ Vector2D CIronSightController::GetDotCoords(void)
 
 bool CIronSightController::ShouldHideCrossHair( void )
 {
-	return ( (IsApproachingSighted() || IsApproachingUnSighted()) && GetIronSightAmount() > IRONSIGHT_HIDE_CROSSHAIR_THRESHOLD );
+	return ( !ironsight_override.GetBool() && (IsApproachingSighted() || IsApproachingUnSighted()) && GetIronSightAmount() > IRONSIGHT_HIDE_CROSSHAIR_THRESHOLD );
 }
 
 const char *CIronSightController::GetDotMaterial( void )
