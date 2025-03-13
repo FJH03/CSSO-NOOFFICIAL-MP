@@ -56,7 +56,7 @@ projects={
 		'filesystem',
 		'game/client',
 		'game/server',
-		'gameui',
+		# 'gameui',
 		'lunasvg',
 		'inputsystem',
 		'ivp/havana',
