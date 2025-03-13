@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose:
+// Purpose: 
 //
 // $NoKeywords: $
 //=============================================================================//
@@ -348,7 +348,7 @@ void CCSTeamMenuAgentImage::Paint()
 
 	// Now draw it.
 	CViewSetup view;
-	view.x = x; // we actually want to offset by the
+	view.x = x; // we actually want to offset by the 
 	view.y = y; // viewport origin here because Push3DView expects global coords below
 	view.width = w;
 	view.height = h;

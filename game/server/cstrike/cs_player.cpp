@@ -1662,10 +1662,6 @@ void CCSPlayer::GiveDefaultItems()
 
 			if ( secondaryString && *secondaryString )
 			{
-				LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( GetTeamNumber(), secondaryString + 7 ); // +7 to get rid of weapon_ prefix
-				if ( loadout_slot != SLOT_NONE )
-					secondaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
-
 				CSWeaponID weaponId = CSLoadout()->GetLoadoutWeaponID( this, GetTeamNumber(), WeaponIdFromString( secondaryString ) );
 				if ( weaponId )
 				{
@@ -1777,10 +1773,6 @@ void CCSPlayer::GiveDefaultItems()
 
 		if ( primaryString && *primaryString )
 		{
-			LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( GetTeamNumber(), primaryString + 7 ); // +7 to get rid of weapon_ prefix
-			if ( loadout_slot != SLOT_NONE )
-				primaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
-
 			CSWeaponID weaponId = CSLoadout()->GetLoadoutWeaponID( this, GetTeamNumber(), WeaponIdFromString( primaryString ) );
 			if ( weaponId )
 			{
@@ -10274,16 +10266,11 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		// get the weapon used - some of the achievements will need this data
 		CWeaponCSBase* pAttackerWeapon = dynamic_cast< CWeaponCSBase * >(pAttacker->GetActiveWeapon());
 
-		//=============================================================================
-		// HPE_BEGIN:
+		bool bIsAttackerEligibleForAchievements = !pAttacker->HasControlledBotThisRound() && 
+												  !pAttacker->HasBeenControlledThisRound();
+
 		// [dwenger] Fun-fact processing
-		//=============================================================================
-
 		CWeaponCSBase* pVictimWeapon = dynamic_cast< CWeaponCSBase* >(pVictim->GetActiveWeapon());
-
-		//=============================================================================
-		// HPE_END
-		//=============================================================================
 
 		CSWeaponID attackerWeaponId = GetWeaponIdCausingDamange(info);
 
@@ -10292,14 +10279,14 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			pAttacker->AwardAchievement(CSKilledDefuser);			
 			pAttacker->m_bKilledDefuser = true;
 
-			if (attackerWeaponId == WEAPON_HEGRENADE)
+			if (attackerWeaponId == WEAPON_HEGRENADE && bIsAttackerEligibleForAchievements)
 			{
 				pAttacker->AwardAchievement(CSKilledDefuserWithGrenade);
 			}
 		}
 
 		// [pfreese] Achievement check for attacker killing player while reloading
-		if (pVictim->IsReloading())
+		if (pVictim->IsReloading() && bIsAttackerEligibleForAchievements)
 		{
 			pAttacker->AwardAchievement(CSKillEnemyReloading);
 		}
@@ -10307,7 +10294,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		if (pVictim->IsRescuing())
 		{
 			// Ensure the killer did not injure any hostages
-			if ( !pAttacker->InjuredAHostage() && pVictim->GetNumFollowers() == g_Hostages.Count() )
+			if ( !pAttacker->InjuredAHostage() && bIsAttackerEligibleForAchievements )
 			{
 				pAttacker->AwardAchievement(CSKilledRescuer);
 				pAttacker->m_bKilledRescuer = true;
@@ -10335,8 +10322,8 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			pAttacker->m_maxNumEnemiesKillStreak = pAttacker->m_NumEnemiesKilledThisSpawn;
 
 		// give a healthshot in DM and GG for every triple kill streak if dont have a healthshot
-		if ( ((CSGameRules()->IsPlayingDeathmatch() && pAttacker->m_NumEnemiesKilledThisSpawn % mp_tdm_healthshot_killcount.GetInt() == 0) ||
-			  (CSGameRules()->GetGamemode() == GameModes::ARMS_RACE && pAttacker->m_NumEnemiesKilledThisSpawn % mp_ggprogressive_healthshot_killcount.GetInt() == 0)) &&
+		if ( ((CSGameRules()->IsPlayingGunGameDeathmatch() && pAttacker->m_NumEnemiesKilledThisSpawn % mp_tdm_healthshot_killcount.GetInt() == 0) ||
+			  (CSGameRules()->IsPlayingGunGameProgressive() && pAttacker->m_NumEnemiesKilledThisSpawn % mp_ggprogressive_healthshot_killcount.GetInt() == 0)) &&
 			 !pAttacker->Weapon_OwnsThisType( "weapon_healthshot" ) )
 		{
 			pAttacker->GiveNamedItem( "weapon_healthshot" );
@@ -10372,32 +10359,32 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		}
 
 		//If we killed enough players in the time window, award the achievement
-		if (pAttacker->m_killTimes.Count() >= AchievementConsts::KillingSpree_Kills)
+		if (pAttacker->m_killTimes.Count() >= AchievementConsts::KillingSpree_Kills && bIsAttackerEligibleForAchievements)
 		{
 			pAttacker->m_KillingSpreeStartTime = gpGlobals->curtime;
 			pAttacker->AwardAchievement(CSKillingSpree);
 		}
 
 		// Did the attacker just kill someone on a killing spree?
-		if (pVictim->m_KillingSpreeStartTime >= 0 && pVictim->m_KillingSpreeStartTime - gpGlobals->curtime <= AchievementConsts::KillingSpreeEnder_TimeWindow)
+		if (pVictim->m_KillingSpreeStartTime >= 0 && pVictim->m_KillingSpreeStartTime - gpGlobals->curtime <= AchievementConsts::KillingSpreeEnder_TimeWindow && bIsAttackerEligibleForAchievements)
 		{
 			pAttacker->AwardAchievement(CSKillingSpreeEnder);
 		}
 
 		//Check the "killed someone with their own weapon" achievement
-		if (pAttackerWeapon && pAttackerWeapon->GetPreviousOwner() == pVictim)
+		if (pAttackerWeapon && pAttackerWeapon->GetPreviousOwner() == pVictim && bIsAttackerEligibleForAchievements)
 		{
 			pAttacker->AwardAchievement(CSKillEnemyWithFormerGun);
 		}
 
 		//If this player has killed the entire team award him the achievement
-		if (pAttacker->m_NumEnemiesKilledThisRound == pAttacker->m_NumEnemiesAtRoundStart && pAttacker->m_NumEnemiesKilledThisRound >= AchievementConsts::KillEnemyTeam_MinKills)
+		if (pAttacker->m_NumEnemiesKilledThisRound == pAttacker->m_NumEnemiesAtRoundStart && pAttacker->m_NumEnemiesKilledThisRound >= AchievementConsts::KillEnemyTeam_MinKills && bIsAttackerEligibleForAchievements)
 		{
 			pAttacker->AwardAchievement(CSKillEnemyTeam);
 		}
 
 		//If this is a posthumous kill award the achievement
-		if (!pAttacker->IsAlive() && attackerWeaponId == WEAPON_HEGRENADE)
+		if (!pAttacker->IsAlive() && attackerWeaponId == WEAPON_HEGRENADE && bIsAttackerEligibleForAchievements)
 		{
 			CCS_GameStats.IncrementStat(pAttacker, CSSTAT_GRENADE_POSTHUMOUSKILLS, 1);
 			ToCSPlayer(pAttacker)->AwardAchievement(CSPosthumousGrenadeKill);
@@ -10410,7 +10397,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			pAttackerWeapon->GetWeaponType() != WEAPONTYPE_KNIFE &&
 			attackerWeaponId != WEAPON_TASER )
 		{
-			if (pInflictor == pAttacker)
+			if (pInflictor == pAttacker && bIsAttackerEligibleForAchievements)
 			{
 				pAttacker->AwardAchievement(CSKillEnemyLastBullet);
 				CCS_GameStats.IncrementStat(pAttacker, CSSTAT_KILLS_WITH_LAST_ROUND, 1);
@@ -10441,7 +10428,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			if (pAttacker->m_killWeapons.Find(attackerWeaponId) == -1)
 			{
 				pAttacker->m_killWeapons.AddToTail(attackerWeaponId);
-				if (pAttacker->m_killWeapons.Count() >= AchievementConsts::KillsWithMultipleGuns_MinWeapons && CSGameRules()->GetGamemode() != GameModes::ARMS_RACE)
+				if (pAttacker->m_killWeapons.Count() >= AchievementConsts::KillsWithMultipleGuns_MinWeapons && bIsAttackerEligibleForAchievements && !CSGameRules()->IsPlayingGunGameProgressive())
 				{
 					pAttacker->AwardAchievement(CSKillsWithMultipleGuns);					
 				}
@@ -10459,12 +10446,12 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			}
 
 			++pAttacker->m_killsWhileBlind;
-			if (pAttacker->m_killsWhileBlind >= AchievementConsts::KillEnemiesWhileBlind_Kills)
+			if (pAttacker->m_killsWhileBlind >= AchievementConsts::KillEnemiesWhileBlind_Kills && bIsAttackerEligibleForAchievements)
 			{
 				pAttacker->AwardAchievement(CSKillEnemiesWhileBlind);
 			}
 
-			if (pAttacker->m_killsWhileBlind >= AchievementConsts::KillEnemiesWhileBlindHard_Kills)
+			if (pAttacker->m_killsWhileBlind >= AchievementConsts::KillEnemiesWhileBlindHard_Kills && bIsAttackerEligibleForAchievements)
 			{
 				pAttacker->AwardAchievement(CSKillEnemiesWhileBlindHard);
 			}
@@ -10474,27 +10461,27 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		bool victimZoomed = ( pVictim->GetFOV() != pVictim->GetDefaultFOV() );
 		bool attackerZoomed = ( pAttacker->GetFOV() != pAttacker->GetDefaultFOV() );
 		bool attackerUsedSniperRifle = pAttackerWeapon && pAttackerWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_SNIPER_RIFLE && pInflictor == pAttacker;
-		if (victimZoomed && attackerUsedSniperRifle)
+		if (victimZoomed && attackerUsedSniperRifle && bIsAttackerEligibleForAchievements)
 		{
 			pAttacker->AwardAchievement(CSKillSniperWithSniper);
 		}
 
-		if ( CSLoadout()->IsKnife( attackerWeaponId ) && victimZoomed)
+		if ( CSLoadout()->IsKnife( attackerWeaponId ) && victimZoomed && bIsAttackerEligibleForAchievements)
 		{
 			pAttacker->AwardAchievement(CSKillSniperWithKnife);
 		}
-		if (attackerUsedSniperRifle && !attackerZoomed)
+		if (attackerUsedSniperRifle && !attackerZoomed && bIsAttackerEligibleForAchievements)
 		{
 			pAttacker->AwardAchievement(CSHipShot);
 		}
 
 		//Kill a player at low health
-		if (pAttacker->IsAlive() && pAttacker->GetHealth() <= AchievementConsts::KillWhenAtLowHealth_MaxHealth)
+		if (pAttacker->IsAlive() && pAttacker->GetHealth() <= AchievementConsts::KillWhenAtLowHealth_MaxHealth && bIsAttackerEligibleForAchievements)
 		{
 			pAttacker->AwardAchievement(CSKillWhenAtLowHealth);
 		}
 		//Kill a player at medium health
-		if ( pAttacker->IsAlive() && pAttacker->GetHealth() <= AchievementConsts::KillWhenAtMediumHealth_MaxHealth )
+		if ( pAttacker->IsAlive() && pAttacker->GetHealth() <= AchievementConsts::KillWhenAtMediumHealth_MaxHealth && bIsAttackerEligibleForAchievements )
 		{
 			pAttacker->m_iMediumHealthKills++;
 		}
@@ -10502,7 +10489,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		//Kill a player with a knife during the pistol round
 		if (CSGameRules()->IsPistolRound())
 		{
-			if ( CSLoadout()->IsKnife( attackerWeaponId ) )
+			if ( CSLoadout()->IsKnife( attackerWeaponId ) && bIsAttackerEligibleForAchievements )
 			{
 				pAttacker->AwardAchievement(CSPistolRoundKnifeKill);
 			}
@@ -10515,7 +10502,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		{
 			CSWeaponID victimWeaponID = victimWeapon->GetCSWeaponID();
 
-			if (attackerWeaponId == WEAPON_ELITE && victimWeaponID == WEAPON_ELITE)
+			if (attackerWeaponId == WEAPON_ELITE && victimWeaponID == WEAPON_ELITE && bIsAttackerEligibleForAchievements)
 			{
 				pAttacker->AwardAchievement(CSWinDualDuel);
 			}
@@ -10525,17 +10512,21 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		bool attackerInAir = pAttacker->GetMoveType() != MOVETYPE_LADDER && pAttacker->GetNearestSurfaceBelow(AchievementConsts::KillInAir_MinimumHeight) == NULL;
 		bool victimInAir = pVictim->GetMoveType() != MOVETYPE_LADDER && pVictim->GetNearestSurfaceBelow(AchievementConsts::KillInAir_MinimumHeight) == NULL;
 
-		if (attackerInAir)
+		// [dkorus] in air achievements are only allowable when using a gun weapon (including taser)
+		if ( pAttackerWeapon && IsGunWeapon(pAttackerWeapon->GetWeaponType()) && bIsAttackerEligibleForAchievements )
 		{
-			pAttacker->AwardAchievement(CSKillWhileInAir);
-		}
-		if (victimInAir)
-		{
-			pAttacker->AwardAchievement(CSKillEnemyInAir);
-		}
-		if (attackerInAir && victimInAir)
-		{
-			pAttacker->AwardAchievement(CSKillerAndEnemyInAir);
+			if (attackerInAir)
+			{
+				pAttacker->AwardAchievement(CSKillWhileInAir);
+			}
+			if (victimInAir)
+			{
+				pAttacker->AwardAchievement(CSKillEnemyInAir);
+			}
+			if (attackerInAir && victimInAir)
+			{
+				pAttacker->AwardAchievement(CSKillerAndEnemyInAir);
+			}
 		}
 
 		//[tj] advance to the next stage of the defuse defense achievement
@@ -10544,7 +10535,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			pAttacker->m_defuseDefenseStep = DD_KILLED_TERRORIST;            
 		}
 
-		if (pVictim->HasC4() && pVictim->GetBombPickuptime() + AchievementConsts::KillBombPickup_MaxTime > gpGlobals->curtime)
+		if (pVictim->HasC4() && pVictim->GetBombPickuptime() + AchievementConsts::KillBombPickup_MaxTime > gpGlobals->curtime && bIsAttackerEligibleForAchievements)
 		{
 			pAttacker->AwardAchievement(CSKillBombPickup);
 		}
