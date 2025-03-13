@@ -66,6 +66,7 @@ bool CWeaponBaseItem::Deploy( void )
 {
 	m_bRedraw = false;
 	m_UseTimer.Invalidate();
+	m_bUseVisuallyComplete = false;
 	return BaseClass::Deploy();
 }
 
@@ -76,6 +77,29 @@ bool CWeaponBaseItem::Holster( CBaseCombatWeapon *pSwitchingTo )
 	m_bRedraw = false;
 	m_UseTimer.Invalidate();
 	return BaseClass::Holster( pSwitchingTo );
+}
+
+//--------------------------------------------------------------------------------------------------------
+void CWeaponBaseItem::ItemHolsterFrame()
+{
+	if ( m_bUseVisuallyComplete )
+	{
+		CBasePlayer* pPlayer = GetPlayerOwner();
+		if ( pPlayer && pPlayer->IsAlive() )
+		{
+			// if we are already done using, then remove the weapon in here instead of waiting for
+			// use animation to complete (because we are already holstered, duh)
+			// adding this in Holster() won't work because its a process of calling multiple methods
+			// and it won't be good to just suddenly remove this weapon in the middle of this processs, isn't it?
+			if ( pPlayer->GetAmmoCount( m_iPrimaryAmmoType ) <= 0 )
+			{
+				pPlayer->Weapon_Drop( this, NULL, NULL );
+#ifndef CLIENT_DLL	
+				UTIL_Remove( this );
+#endif
+			}
+		}
+	}
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -196,8 +220,7 @@ void CWeaponBaseItem::ItemPostFrame( void )
 	if ( m_UseTimer.HasStarted() && m_UseTimer.IsElapsed() )
 	{
 		// pills can only help you so much
-		CCSPlayer *pPlayer = ToCSPlayer( GetPlayerOwner() );
-		if ( !pPlayer || !pPlayer->IsAlive() )
+		if ( !pPlayer->IsAlive() )
 		{
 			m_UseTimer.Invalidate();
 			return;

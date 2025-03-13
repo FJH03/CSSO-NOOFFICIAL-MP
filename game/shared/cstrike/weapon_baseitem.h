@@ -49,6 +49,7 @@ public:
 
 	virtual bool Deploy( void );
 	virtual bool Holster( CBaseCombatWeapon *pSwitchingTo = NULL );
+	virtual void ItemHolsterFrame( void );
 
 	virtual void WeaponIdle( void );					// called when no buttons pressed
 
