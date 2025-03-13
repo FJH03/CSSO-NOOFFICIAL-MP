@@ -33,6 +33,8 @@
 #include "ai_behavior_follow.h"
 #include "ai_behavior_lead.h"
 #include "gameinterface.h"
+#include "ilagcompensationmanager.h"
+#include "weapon_c4.h"
 
 #ifdef HL2_DLL
 #include "hl2_player.h"
@@ -63,7 +65,7 @@ void Cmd_ShowtriggersToggle_f( const CCommand &args )
 	{
 		if ( IsTriggerClass(pEntity) )
 		{
-			// If a classname is specified, only show triggles of that type
+			// If a classname is specified, only show triggers of that type
 			if ( args.ArgC() > 1 )
 			{
 				const char *sClassname = args[1];
@@ -474,6 +476,7 @@ void CBaseTrigger::StartTouch(CBaseEntity *pOther)
 		{
 			// First entity to touch us that passes our filters
 			m_OnStartTouchAll.FireOutput( pOther, this );
+			StartTouchAll();
 		}
 	}
 }
@@ -513,7 +516,10 @@ void CBaseTrigger::EndTouch(CBaseEntity *pOther)
 			else if ( hOther->IsPlayer() && !hOther->IsAlive() )
 			{
 #ifdef STAGING_ONLY
-				AssertMsg( 0, CFmtStr( "Dead player [%s] is still touching this trigger at [%f %f %f]", hOther->GetEntityName().ToCStr(), XYZ( hOther->GetAbsOrigin() ) ) );
+				if ( !HushAsserts() )
+				{
+					AssertMsg( false, "Dead player [%s] is still touching this trigger at [%f %f %f]", hOther->GetEntityName().ToCStr(), XYZ( hOther->GetAbsOrigin() ) );
+				}
 				Warning( "Dead player [%s] is still touching this trigger at [%f %f %f]", hOther->GetEntityName().ToCStr(), XYZ( hOther->GetAbsOrigin() ) );
 #endif
 				m_hTouchingEntities.Remove( i );
@@ -529,6 +535,7 @@ void CBaseTrigger::EndTouch(CBaseEntity *pOther)
 		if ( !bFoundOtherTouchee /*&& !m_bDisabled*/ )
 		{
 			m_OnEndTouchAll.FireOutput(pOther, this);
+			EndTouchAll();
 		}
 	}
 }
@@ -536,7 +543,7 @@ void CBaseTrigger::EndTouch(CBaseEntity *pOther)
 //-----------------------------------------------------------------------------
 // Purpose: Return true if the specified entity is touching us
 //-----------------------------------------------------------------------------
-bool CBaseTrigger::IsTouching( CBaseEntity *pOther )
+bool CBaseTrigger::IsTouching( const CBaseEntity *pOther ) const
 {
 	EHANDLE hOther;
 	hOther = pOther;
@@ -633,8 +640,8 @@ void CTriggerRemove::Touch( CBaseEntity *pOther )
 BEGIN_DATADESC( CTriggerHurt )
 
 	// Function Pointers
-	DEFINE_FUNCTION( RadiationThink ),
-	DEFINE_FUNCTION( HurtThink ),
+	DEFINE_FUNCTION( CTriggerHurtShim::RadiationThinkShim ),
+	DEFINE_FUNCTION( CTriggerHurtShim::HurtThinkShim ),
 
 	// Fields
 	DEFINE_FIELD( m_flOriginalDamage, FIELD_FLOAT ),
@@ -660,6 +667,7 @@ END_DATADESC()
 
 LINK_ENTITY_TO_CLASS( trigger_hurt, CTriggerHurt );
 
+IMPLEMENT_AUTO_LIST( ITriggerHurtAutoList );
 
 //-----------------------------------------------------------------------------
 // Purpose: Called when spawning, after keyvalues have been handled.
@@ -676,7 +684,7 @@ void CTriggerHurt::Spawn( void )
 	SetThink( NULL );
 	if (m_bitsDamageInflict & DMG_RADIATION)
 	{
-		SetThink ( &CTriggerHurt::RadiationThink );
+		SetThink ( &CTriggerHurtShim::RadiationThinkShim );
 		SetNextThink( gpGlobals->curtime + random->RandomFloat(0.0, 0.5) );
 	}
 }
@@ -720,6 +728,15 @@ void CTriggerHurt::RadiationThink( void )
 bool CTriggerHurt::HurtEntity( CBaseEntity *pOther, float damage )
 {
 	if ( !pOther->m_takedamage || !PassesTriggerFilters(pOther) )
+		return false;
+
+	// If player is disconnected, we're probably in this routine via the
+	//  PhysicsRemoveTouchedList() function to make sure all Untouch()'s are called for the
+	//  player. Calling TakeDamage() in this case can get into the speaking criteria, which
+	//  will then loop through the control points and the touched list again. We shouldn't
+	//  need to hurt players that are disconnected, so skip all of this...
+	bool bPlayerDisconnected = pOther->IsPlayer() && ( ((CBasePlayer *)pOther)->IsConnected() == false );
+	if ( bPlayerDisconnected )
 		return false;
 
 	if ( damage < 0 )
@@ -861,9 +878,27 @@ void CTriggerHurt::Touch( CBaseEntity *pOther )
 {
 	if ( m_pfnThink == NULL )
 	{
-		SetThink( &CTriggerHurt::HurtThink );
+		SetThink( &CTriggerHurtShim::HurtThinkShim );
 		SetNextThink( gpGlobals->curtime );
 	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Checks if this point is in any trigger_hurt zones with positive damage
+//-----------------------------------------------------------------------------
+bool IsTakingTriggerHurtDamageAtPoint( const Vector &vecPoint )
+{
+	for ( int i = 0; i < ITriggerHurtAutoList::AutoList().Count(); i++ )
+	{
+		// Some maps use trigger_hurt with negative values as healing triggers; don't consider those
+		CTriggerHurt *pTrigger = static_cast<CTriggerHurt*>( ITriggerHurtAutoList::AutoList()[i] );
+		if ( !pTrigger->m_bDisabled && pTrigger->PointIsWithin( vecPoint ) && pTrigger->m_flDamage > 0.f )
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 
@@ -2126,6 +2161,7 @@ int CChangeLevel::ChangeList( levellist_t *pLevelList, int maxList )
 	return count;
 }
 
+
 //-----------------------------------------------------------------------------
 // Purpose: A trigger volume that gently slows players traveling in a particular direction.
 // Useful for 'softly' stopping players without them feeling like they've hit an invisible wall.
@@ -2133,35 +2169,35 @@ int CChangeLevel::ChangeList( levellist_t *pLevelList, int maxList )
 
 struct softbarrierplane_t
 {
-        cplane_t m_plane;
-        Vector m_vecWorldPointOnPlane;
+	cplane_t m_plane;
+	Vector m_vecWorldPointOnPlane;
 };
 
 class CTriggerSoftBarrier : public CBaseTrigger
 {
 public:
-        DECLARE_CLASS( CTriggerSoftBarrier, CBaseTrigger );
+	DECLARE_CLASS( CTriggerSoftBarrier, CBaseTrigger );
 
-        void Spawn( void );
-        void Activate( void );
-        void Touch( CBaseEntity *pOther );
-        void Untouch( CBaseEntity *pOther );
-        void InputSetPushDirection( inputdata_t &inputdata );
+	void Spawn( void );
+	void Activate( void );
+	void Touch( CBaseEntity *pOther );
+	void Untouch( CBaseEntity *pOther );
+	void InputSetPushDirection( inputdata_t &inputdata );
 
-        Vector m_vecPushDir;
+	Vector m_vecPushDir;
 
-        DECLARE_DATADESC();
+	DECLARE_DATADESC();
 
-        void SetupFrontAndBackPlanes( void );
-        float GetDistanceToPlane( int nPlaneIdx, Vector vecWorldPos );
+	void SetupFrontAndBackPlanes( void );
+	float GetDistanceToPlane( int nPlaneIdx, Vector vecWorldPos );
 
-        softbarrierplane_t m_planes[2];
-        bool m_bInitialized;
+	softbarrierplane_t m_planes[2];
+	bool m_bInitialized;
 };
 
 BEGIN_DATADESC( CTriggerSoftBarrier )
-        DEFINE_KEYFIELD( m_vecPushDir, FIELD_VECTOR, "pushdir" ),
-        DEFINE_INPUTFUNC( FIELD_VECTOR, "SetPushDirection", InputSetPushDirection ),
+	DEFINE_KEYFIELD( m_vecPushDir, FIELD_VECTOR, "pushdir" ),
+	DEFINE_INPUTFUNC( FIELD_VECTOR, "SetPushDirection", InputSetPushDirection ),
 END_DATADESC()
 
 LINK_ENTITY_TO_CLASS( trigger_softbarrier, CTriggerSoftBarrier );
@@ -2171,68 +2207,68 @@ LINK_ENTITY_TO_CLASS( trigger_softbarrier, CTriggerSoftBarrier );
 
 void CTriggerSoftBarrier::SetupFrontAndBackPlanes()
 {
-        // find and save the brush faces that are most in line and opposite the push vector
-        m_bInitialized = false;
-        if ( IsBSPModel() )
-        {
-                // Transform the push dir into global space
-                Vector vecAbsDir;
-                VectorRotate( m_vecPushDir, EntityToWorldTransform(), vecAbsDir );
+	// find and save the brush faces that are most in line and opposite the push vector
+	m_bInitialized = false;
+	if ( IsBSPModel() )
+	{
+		// Transform the push dir into global space
+		Vector vecAbsDir;
+		VectorRotate( m_vecPushDir, EntityToWorldTransform(), vecAbsDir );
 
-                float flFaceIdxFrontDot = 0;
-                float flFaceIdxBackDot = 0;
+		float flFaceIdxFrontDot = 0;
+		float flFaceIdxBackDot = 0;
 
-                bool bFoundFront = false;
-                bool bFoundBack = false;
+		bool bFoundFront = false;
+		bool bFoundBack = false;
 
-                const model_t *pModel = GetModel();
-                int nCount = modelinfo->GetBrushModelPlaneCount( pModel );
-                for ( int i = 0; i < nCount; ++i )
-                {
-                        cplane_t localPlane;
-                        Vector vecTemp;
-                        modelinfo->GetBrushModelPlane( pModel, i, localPlane, &vecTemp );
+		const model_t *pModel = GetModel();
+		int nCount = modelinfo->GetBrushModelPlaneCount( pModel );
+		for ( int i = 0; i < nCount; ++i )
+		{
+			cplane_t localPlane;
+			Vector vecTemp;
+			modelinfo->GetBrushModelPlane( pModel, i, localPlane, &vecTemp );
 
-                        cplane_t worldPlane;
-                        MatrixTransformPlane( EntityToWorldTransform(), localPlane, worldPlane );
+			cplane_t worldPlane;
+			MatrixTransformPlane( EntityToWorldTransform(), localPlane, worldPlane );
 
-                        float flDot = DotProduct( worldPlane.normal, vecAbsDir );
+			float flDot = DotProduct( worldPlane.normal, vecAbsDir );
 
-                        if ( flDot > flFaceIdxFrontDot )
-                        {
-                                flFaceIdxFrontDot = flDot;
-                                m_planes[SOFTPLANE_FRONT].m_plane = worldPlane;
-                                m_planes[SOFTPLANE_FRONT].m_plane.normal = -m_planes[SOFTPLANE_FRONT].m_plane.normal;
-                                VectorTransform( vecTemp, EntityToWorldTransform(), m_planes[SOFTPLANE_FRONT].m_vecWorldPointOnPlane );
-                                bFoundFront = true;
-                                continue;
-                        }
+			if ( flDot > flFaceIdxFrontDot )
+			{
+				flFaceIdxFrontDot = flDot;
+				m_planes[SOFTPLANE_FRONT].m_plane = worldPlane;
+				m_planes[SOFTPLANE_FRONT].m_plane.normal = -m_planes[SOFTPLANE_FRONT].m_plane.normal;
+				VectorTransform( vecTemp, EntityToWorldTransform(), m_planes[SOFTPLANE_FRONT].m_vecWorldPointOnPlane );
+				bFoundFront = true;
+				continue;
+			}
 
-                        if ( flDot < flFaceIdxBackDot && flDot != flFaceIdxFrontDot )
-                        {
-                                flFaceIdxBackDot = flDot;
-                                m_planes[SOFTPLANE_BACK].m_plane = worldPlane;
-                                m_planes[SOFTPLANE_BACK].m_plane.normal = -m_planes[SOFTPLANE_BACK].m_plane.normal;
-                                VectorTransform( vecTemp, EntityToWorldTransform(), m_planes[SOFTPLANE_BACK].m_vecWorldPointOnPlane );
-                                bFoundBack = true;
-                                continue;
-                        }
-                }
+			if ( flDot < flFaceIdxBackDot && flDot != flFaceIdxFrontDot )
+			{
+				flFaceIdxBackDot = flDot;
+				m_planes[SOFTPLANE_BACK].m_plane = worldPlane;
+				m_planes[SOFTPLANE_BACK].m_plane.normal = -m_planes[SOFTPLANE_BACK].m_plane.normal;
+				VectorTransform( vecTemp, EntityToWorldTransform(), m_planes[SOFTPLANE_BACK].m_vecWorldPointOnPlane );
+				bFoundBack = true;
+				continue;
+			}
+		}
 
-                if ( bFoundBack == false || bFoundFront == false )
-                {
-                        Warning( "Warning: Softbarrier trigger couldn't find front or back planes. Removing!\n" );
-                        UTIL_Remove( this );
-                }
+		if ( bFoundBack == false || bFoundFront == false )
+		{
+			Warning( "Warning: Softbarrier trigger couldn't find front or back planes. Removing!\n" );
+			UTIL_Remove( this );
+		}
 
-                m_bInitialized = true;
+		m_bInitialized = true;
 
-        }
-        else
-        {
-                Warning( "Warning: Softbarrier trigger is NOT a bsp model. Removing!\n" );
-                UTIL_Remove( this );
-        }
+	}
+	else
+	{
+		Warning( "Warning: Softbarrier trigger is NOT a bsp model. Removing!\n" );
+		UTIL_Remove( this );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -2240,19 +2276,19 @@ void CTriggerSoftBarrier::SetupFrontAndBackPlanes()
 //-----------------------------------------------------------------------------
 void CTriggerSoftBarrier::Spawn()
 {
-        // Convert pushdir from angles to a vector
-        Vector vecAbsDir;
-        QAngle angPushDir = QAngle(m_vecPushDir.x, m_vecPushDir.y, m_vecPushDir.z);
-        AngleVectors(angPushDir, &vecAbsDir);
+	// Convert pushdir from angles to a vector
+	Vector vecAbsDir;
+	QAngle angPushDir = QAngle(m_vecPushDir.x, m_vecPushDir.y, m_vecPushDir.z);
+	AngleVectors(angPushDir, &vecAbsDir);
 
-        // Transform the vector into entity space
-        VectorIRotate( vecAbsDir, EntityToWorldTransform(), m_vecPushDir );
+	// Transform the vector into entity space
+	VectorIRotate( vecAbsDir, EntityToWorldTransform(), m_vecPushDir );
 
-        BaseClass::Spawn();
+	BaseClass::Spawn();
 
-        InitTrigger();
+	InitTrigger();
 
-        SetupFrontAndBackPlanes();
+	SetupFrontAndBackPlanes();
 }
 
 
@@ -2260,26 +2296,26 @@ void CTriggerSoftBarrier::Spawn()
 //-----------------------------------------------------------------------------
 void CTriggerSoftBarrier::Activate()
 {
-        BaseClass::Activate();
+	BaseClass::Activate();
 }
 
 float CTriggerSoftBarrier::GetDistanceToPlane( int nPlaneIdx, Vector vecWorldPos )
 {
-        Vector vToPlane = ( vecWorldPos - m_planes[nPlaneIdx].m_vecWorldPointOnPlane );
-        float flDistToPlane = DotProduct( m_planes[nPlaneIdx].m_plane.normal, vToPlane );
-
-        //// draw debug arrows
-        //Vector vTouchPos = vecWorldPos + flDistToPlane * -m_planes[nPlaneIdx].m_plane.normal;
-        //if ( nPlaneIdx == 0 )
-        //{
-        //        NDebugOverlay::HorzArrow( vTouchPos, vTouchPos - m_planes[nPlaneIdx].m_plane.normal * -100, 10, 0, 255, 0, 0, true, 0.1 );
-        //}
-        //else
-        //{
-        //        NDebugOverlay::HorzArrow( vTouchPos, vTouchPos - m_planes[nPlaneIdx].m_plane.normal * -100, 10, 255, 0, 0, 0, true, 0.1 );
-        //}
-
-        return flDistToPlane;
+	Vector vToPlane = ( vecWorldPos - m_planes[nPlaneIdx].m_vecWorldPointOnPlane );
+	float flDistToPlane = DotProduct( m_planes[nPlaneIdx].m_plane.normal, vToPlane );
+	
+	//// draw debug arrows
+	//Vector vTouchPos = vecWorldPos + flDistToPlane * -m_planes[nPlaneIdx].m_plane.normal;
+	//if ( nPlaneIdx == 0 )
+	//{
+	//	NDebugOverlay::HorzArrow( vTouchPos, vTouchPos - m_planes[nPlaneIdx].m_plane.normal * -100, 10, 0, 255, 0, 0, true, 0.1 );
+	//}
+	//else
+	//{
+	//	NDebugOverlay::HorzArrow( vTouchPos, vTouchPos - m_planes[nPlaneIdx].m_plane.normal * -100, 10, 255, 0, 0, 0, true, 0.1 );
+	//}
+	
+	return flDistToPlane;
 }
 
 //-----------------------------------------------------------------------------
@@ -2288,67 +2324,67 @@ float CTriggerSoftBarrier::GetDistanceToPlane( int nPlaneIdx, Vector vecWorldPos
 //-----------------------------------------------------------------------------
 void CTriggerSoftBarrier::Touch( CBaseEntity *pOther )
 {
-        if ( !pOther->IsSolid() || (pOther->GetMoveType() == MOVETYPE_PUSH || pOther->GetMoveType() == MOVETYPE_NONE ) )
-                return;
+	if ( !pOther->IsSolid() || (pOther->GetMoveType() == MOVETYPE_PUSH || pOther->GetMoveType() == MOVETYPE_NONE ) )
+		return;
 
-        if (!PassesTriggerFilters(pOther))
-                return;
+	if (!PassesTriggerFilters(pOther))
+		return;
 
-        // FIXME: If something is hierarchically attached, should we try to push the parent?
-        if (pOther->GetMoveParent())
-                return;
+	// FIXME: If something is hierarchically attached, should we try to push the parent?
+	if (pOther->GetMoveParent())
+		return;
 
-        // only for players for the time being
-        if ( pOther->IsPlayer() && pOther->IsAlive() && m_bInitialized )
-        {
-                MoveType_t playerMoveType = pOther->GetMoveType();
-                if ( playerMoveType == MOVETYPE_NONE || playerMoveType == MOVETYPE_PUSH || playerMoveType == MOVETYPE_NOCLIP )
-                        return;
+	// only for players for the time being
+	if ( pOther->IsPlayer() && pOther->IsAlive() && m_bInitialized )
+	{
+		MoveType_t playerMoveType = pOther->GetMoveType();
+		if ( playerMoveType == MOVETYPE_NONE || playerMoveType == MOVETYPE_PUSH || playerMoveType == MOVETYPE_NOCLIP )
+			return;
 
-                // get the player distance to the front plane
-                float flDistToFront = GetDistanceToPlane( SOFTPLANE_FRONT, pOther->GetAbsOrigin() );
+		// get the player distance to the front plane
+		float flDistToFront = GetDistanceToPlane( SOFTPLANE_FRONT, pOther->GetAbsOrigin() );
 
-                // get the player distance to the back plane
-                float flDistToBack = GetDistanceToPlane( SOFTPLANE_BACK, pOther->GetAbsOrigin() );
+		// get the player distance to the back plane
+		float flDistToBack = GetDistanceToPlane( SOFTPLANE_BACK, pOther->GetAbsOrigin() );
 
-                // get how far between the planes we are (and apply some nonlinear bias)
-                float flDistRatio = Bias( clamp( flDistToFront / MAX( flDistToFront + flDistToBack, 0.0001f ), 0, 1 ), 0.2f );
+		// get how far between the planes we are (and apply some nonlinear bias)
+		float flDistRatio = Bias( clamp( flDistToFront / MAX( flDistToFront + flDistToBack, 0.0001f ), 0, 1 ), 0.2f );
 
-                Vector vecPushNormal = Lerp( flDistRatio, -m_planes[SOFTPLANE_FRONT].m_plane.normal, m_planes[SOFTPLANE_BACK].m_plane.normal ).Normalized();
-                Vector vecPlayerVel = pOther->GetAbsVelocity();
+		Vector vecPushNormal = Lerp( flDistRatio, -m_planes[SOFTPLANE_FRONT].m_plane.normal, m_planes[SOFTPLANE_BACK].m_plane.normal ).Normalized();
+		Vector vecPlayerVel = pOther->GetAbsVelocity();
 
-                float flVelDot = DotProduct( vecPlayerVel.Normalized(), vecPushNormal );
-                if ( flVelDot < 0 )
-                {
-                        // get the component of velocity that's pointing into the soft barrier
-                        float flNormal = DotProduct( vecPlayerVel, vecPushNormal );
+		float flVelDot = DotProduct( vecPlayerVel.Normalized(), vecPushNormal );
+		if ( flVelDot < 0 )
+		{
+			// get the component of velocity that's pointing into the soft barrier
+			float flNormal = DotProduct( vecPlayerVel, vecPushNormal );
 
-                        Vector vecCross;
-                        VectorScale( vecPushNormal, flNormal, vecCross );
+			Vector vecCross;
+			VectorScale( vecPushNormal, flNormal, vecCross );
 
-                        // this is the player's velocity if they were on the back plane
-                        Vector vecLateral;
-                        VectorSubtract( vecPlayerVel, vecCross, vecLateral );
+			// this is the player's velocity if they were on the back plane
+			Vector vecLateral;
+			VectorSubtract( vecPlayerVel, vecCross, vecLateral );
 
-                        // lerp the velocity to the lateral velocity, depending on how close we are to the back plane
-                        pOther->SetAbsVelocity( Lerp( flDistRatio, vecPlayerVel, vecLateral ) );
-                }
-        }
+			// lerp the velocity to the lateral velocity, depending on how close we are to the back plane
+			pOther->SetAbsVelocity( Lerp( flDistRatio, vecPlayerVel, vecLateral ) );
+		}
+	}
 }
 
 void CTriggerSoftBarrier::InputSetPushDirection( inputdata_t &inputdata )
 {
-        inputdata.value.Vector3D( m_vecPushDir );
+	inputdata.value.Vector3D( m_vecPushDir );
 
-        // Convert pushdir from angles to a vector
-        Vector vecAbsDir;
-        QAngle angPushDir = QAngle(m_vecPushDir.x, m_vecPushDir.y, m_vecPushDir.z);
-        AngleVectors(angPushDir, &vecAbsDir);
+	// Convert pushdir from angles to a vector
+	Vector vecAbsDir;
+	QAngle angPushDir = QAngle(m_vecPushDir.x, m_vecPushDir.y, m_vecPushDir.z);
+	AngleVectors(angPushDir, &vecAbsDir);
 
-        // Transform the vector into entity space
-        VectorIRotate( vecAbsDir, EntityToWorldTransform(), m_vecPushDir );
+	// Transform the vector into entity space
+	VectorIRotate( vecAbsDir, EntityToWorldTransform(), m_vecPushDir );
 
-        SetupFrontAndBackPlanes();
+	SetupFrontAndBackPlanes();
 }
 
 
@@ -2523,6 +2559,43 @@ void CTriggerPush::Touch( CBaseEntity *pOther )
 	}
 }
 
+//-----------------------------------------------------------------------------
+// Bomb reset trigger - places dropped bomb at the last valid player-held location
+//-----------------------------------------------------------------------------
+class CTriggerBombReset : public CBaseTrigger
+{
+public:
+	DECLARE_CLASS(CTriggerBombReset, CBaseTrigger);
+
+	void Spawn(void);
+	void Touch(CBaseEntity *pOther);
+
+	DECLARE_DATADESC();
+};
+
+LINK_ENTITY_TO_CLASS(trigger_bomb_reset, CTriggerBombReset);
+
+BEGIN_DATADESC(CTriggerBombReset)
+END_DATADESC()
+
+void CTriggerBombReset::Spawn(void)
+{
+	InitTrigger();
+
+	//the bomb is technically 'debris' so always set this flag
+	CollisionProp()->AddSolidFlags(FSOLID_TRIGGER_TOUCH_DEBRIS);
+}
+
+void CTriggerBombReset::Touch(CBaseEntity *pOther)
+{
+	// If the bomb touches this trigger, tell it to reset to its last known valid position.
+	CC4 *pC4 = dynamic_cast< CC4* > (pOther);
+	if (pC4)
+	{
+		pC4->ResetToLastValidPlayerHeldPosition();
+	}
+}
+
 
 //-----------------------------------------------------------------------------
 // Teleport trigger
@@ -2534,8 +2607,8 @@ class CTriggerTeleport : public CBaseTrigger
 public:
 	DECLARE_CLASS( CTriggerTeleport, CBaseTrigger );
 
-	void Spawn( void );
-	void Touch( CBaseEntity *pOther );
+	virtual void Spawn( void ) OVERRIDE;
+	virtual void Touch( CBaseEntity *pOther ) OVERRIDE;
 
 	string_t m_iLandmark;
 
@@ -2550,13 +2623,10 @@ BEGIN_DATADESC( CTriggerTeleport )
 
 END_DATADESC()
 
-
-
 void CTriggerTeleport::Spawn( void )
 {
 	InitTrigger();
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Teleports the entity that touched us to the location of our target,
@@ -2638,6 +2708,46 @@ void CTriggerTeleport::Touch( CBaseEntity *pOther )
 
 LINK_ENTITY_TO_CLASS( info_teleport_destination, CPointEntity );
 
+
+//-----------------------------------------------------------------------------
+// Teleport Relative trigger
+//-----------------------------------------------------------------------------
+class CTriggerTeleportRelative : public CBaseTrigger
+{
+public:
+	DECLARE_CLASS(CTriggerTeleportRelative, CBaseTrigger);
+
+	virtual void Spawn( void ) OVERRIDE;
+	virtual void Touch( CBaseEntity *pOther ) OVERRIDE;
+
+	Vector m_TeleportOffset;
+
+	DECLARE_DATADESC();
+};
+
+LINK_ENTITY_TO_CLASS( trigger_teleport_relative, CTriggerTeleportRelative );
+BEGIN_DATADESC( CTriggerTeleportRelative )
+	DEFINE_KEYFIELD( m_TeleportOffset, FIELD_VECTOR, "teleportoffset" )
+END_DATADESC()
+
+
+void CTriggerTeleportRelative::Spawn( void )
+{
+	InitTrigger();
+}
+
+void CTriggerTeleportRelative::Touch( CBaseEntity *pOther )
+{
+	if ( !PassesTriggerFilters(pOther) )
+	{
+		return;
+	}
+
+	const Vector finalPos = m_TeleportOffset + WorldSpaceCenter();
+	const Vector *momentum = &vec3_origin;
+
+	pOther->Teleport( &finalPos, NULL, momentum );
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: Saves the game when the player touches the trigger. Can be enabled or disabled
@@ -2742,8 +2852,6 @@ LINK_ENTITY_TO_CLASS( trigger_autosave, CTriggerSave );
 //-----------------------------------------------------------------------------
 void CTriggerSave::Spawn( void )
 {
-	m_minHitPoints = 1;
-
 	if ( g_pGameRules->IsDeathmatch() )
 	{
 		UTIL_Remove( this );
@@ -2761,7 +2869,7 @@ void CTriggerSave::Spawn( void )
 void CTriggerSave::Touch( CBaseEntity *pOther )
 {
 	// Only save on clients
-	if ( !pOther->IsPlayer() || !pOther->IsAlive() )
+	if ( !pOther->IsPlayer() )
 		return;
 
 	if ( m_fDangerousTimer != 0.0f )
@@ -4848,8 +4956,7 @@ void CTriggerVPhysicsMotion::StartTouch( CBaseEntity *pOther )
 #ifndef _XBOX
 	if ( m_ParticleTrail.m_strMaterialName != NULL_STRING )
 	{
-		CEntityParticleTrail *pTrail = CEntityParticleTrail::Create( pOther, m_ParticleTrail, this ); 
-		pTrail->SetShouldDeletedOnChangelevel( true );
+		CEntityParticleTrail::Create( pOther, m_ParticleTrail, this ); 
 	}
 #endif
 
@@ -5046,6 +5153,78 @@ void CServerRagdollTrigger::EndTouch(CBaseEntity *pOther)
 	if ( pCombatChar )
 	{
 		pCombatChar->m_bForceServerRagdoll = false;
+	}
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: A trigger that adds impulse to touching entities
+//-----------------------------------------------------------------------------
+class CTriggerApplyImpulse : public CBaseTrigger
+{
+public:
+	DECLARE_CLASS( CTriggerApplyImpulse, CBaseTrigger );
+	DECLARE_DATADESC();
+
+	CTriggerApplyImpulse();
+
+	void Spawn( void );
+
+	void InputApplyImpulse( inputdata_t& );
+
+private:
+	Vector m_vecImpulseDir;
+	float m_flForce;
+};
+
+
+BEGIN_DATADESC( CTriggerApplyImpulse )
+	DEFINE_KEYFIELD( m_vecImpulseDir, FIELD_VECTOR, "impulse_dir" ),
+	DEFINE_KEYFIELD( m_flForce, FIELD_FLOAT, "force" ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "ApplyImpulse", InputApplyImpulse ),
+END_DATADESC()
+
+
+LINK_ENTITY_TO_CLASS( trigger_apply_impulse, CTriggerApplyImpulse );
+
+
+CTriggerApplyImpulse::CTriggerApplyImpulse()
+{
+	m_flForce = 300.f;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTriggerApplyImpulse::Spawn()
+{
+	// Convert pushdir from angles to a vector
+	Vector vecAbsDir;
+	QAngle angPushDir = QAngle(m_vecImpulseDir.x, m_vecImpulseDir.y, m_vecImpulseDir.z);
+	AngleVectors(angPushDir, &vecAbsDir);
+
+	// Transform the vector into entity space
+	VectorIRotate( vecAbsDir, EntityToWorldTransform(), m_vecImpulseDir );
+
+	BaseClass::Spawn();
+
+	InitTrigger();
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTriggerApplyImpulse::InputApplyImpulse( inputdata_t& )
+{
+	Vector vecImpulse = m_flForce * m_vecImpulseDir;
+	FOR_EACH_VEC( m_hTouchingEntities, i )
+	{
+		if ( m_hTouchingEntities[i] )
+		{
+			m_hTouchingEntities[i]->ApplyAbsVelocityImpulse( vecImpulse );
+		}
 	}
 }
 
