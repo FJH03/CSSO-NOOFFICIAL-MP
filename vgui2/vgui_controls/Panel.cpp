@@ -4683,6 +4683,13 @@ void Panel::ApplySettings(KeyValues *inResourceData)
 //-----------------------------------------------------------------------------
 void Panel::GetSettings( KeyValues *outResourceData )
 {
+	// Override base resolution first
+	g_pMatSystemSurface->OverrideProportionalBase( m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1] );
+ 
+	// Base resolution override
+	outResourceData->SetInt( "base_resolution_wide", m_iBaseResolutionOverride[0] );
+	outResourceData->SetInt( "base_resolution_tall", m_iBaseResolutionOverride[1] );
+
 	// control class name (so it can be recreated later if needed)
 	outResourceData->SetString( "ControlName", GetClassName() );
 
@@ -4801,6 +4808,9 @@ void Panel::GetSettings( KeyValues *outResourceData )
 			outResourceData->SetColor( m_OverridableColorEntries[i].m_pszScriptName, m_OverridableColorEntries[i].m_colFromScript );
 		}
 	}
+
+	// Restore original proportional base so other panels are not affected
+	g_pMatSystemSurface->RestoreProportionalBase();
 }
 
 //-----------------------------------------------------------------------------
@@ -4858,7 +4868,7 @@ Color Panel::GetSchemeColor(const char *keyName, Color defaultColor, IScheme *pS
 //-----------------------------------------------------------------------------
 const char *Panel::GetDescription( void )
 {
-	static const char *panelDescription = "string fieldName, int xpos, int ypos, int wide, int tall, bool visible, bool enabled, int tabPosition, corner pinCorner, autoresize autoResize, string tooltiptext";
+	static const char *panelDescription = "string fieldName, int xpos, int ypos, int wide, int tall, int base_resolution_wide, int base_resolution_tall, bool visible, bool enabled, int tabPosition, corner pinCorner, autoresize autoResize, string tooltiptext";
 	return panelDescription;
 }
 

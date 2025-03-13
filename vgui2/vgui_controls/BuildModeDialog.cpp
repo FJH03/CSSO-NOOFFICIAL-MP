@@ -601,7 +601,7 @@ const char *ParseTokenFromString( const char **string )
 
 	// read in all the alnum characters
 	int pos = 0;
-	while ( V_isalnum(tok[pos]) )
+	while ( V_isalnum(tok[pos]) || tok[pos] == '_' ) // PiMoN: I had to add the '_' check because a lot of my parameters use this_is_a_name format instead of Valve-style thisIsAName format
 	{
 		buf[pos] = tok[pos];
 		pos++;
