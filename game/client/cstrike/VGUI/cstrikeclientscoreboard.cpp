@@ -1402,19 +1402,12 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, PlayerScore
     playerScoreInfo.assists = g_PR->GetAssists( playerIndex );
     playerScoreInfo.deaths = g_PR->GetDeaths( playerIndex );
 
-    if ( g_PR->GetPing( playerIndex ) < 1 )
-    {
-        if ( g_PR->IsFakePlayer( playerIndex ) )
-        {
-			playerScoreInfo.ping = -1;
-        }
-        else
-        {
-			playerScoreInfo.ping = 0;
-        }
-    }
-    else
-    {
+    if ( g_PR->IsFakePlayer( playerIndex ) )
+ 	{
+ 		playerScoreInfo.ping = -1;
+ 	}
+ 	else
+ 	{
 		playerScoreInfo.ping = g_PR->GetPing( playerIndex );
     }
 
