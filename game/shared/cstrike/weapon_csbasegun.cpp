@@ -92,7 +92,7 @@ bool CWeaponCSBaseGun::Deploy()
 
 Activity CWeaponCSBaseGun::GetDeployActivity( void )
 {
-	if ( IsSilenced() )
+	if ( HasSilencer() == Silencer_Removable && IsSilenced() )
 	{
 		return ACT_VM_DRAW_SILENCED;
 	}
