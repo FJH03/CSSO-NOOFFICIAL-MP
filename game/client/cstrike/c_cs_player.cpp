@@ -1151,6 +1151,7 @@ C_CSPlayer::C_CSPlayer() :
 	ListenForGameEvent( "cs_pre_restart" );
 	ListenForGameEvent( "player_death" );
 	ListenForGameEvent( "player_spawn" );
+	ListenForGameEvent( "item_equip" );
 
 	ListenForGameEvent( "ggprogressive_player_levelup" );
 	ListenForGameEvent( "gg_killed_enemy" );
@@ -2469,6 +2470,22 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
+	else if ( Q_strcmp( "item_equip", name ) == 0 )
+ 	{
+ 		// We only update the view model for the local player.
+ 		if ( pLocalPlayer && pLocalPlayer->GetUserID() == EventUserID )
+ 		{
+ 			for ( int i = 0; i < MAX_VIEWMODELS; ++i )
+ 			{
+ 				C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>(GetViewModel( i ));
+ 				if ( pViewModel )
+ 				{
+ 					// Update the StatTrak module
+ 					pViewModel->RemoveViewmodelStatTrak();
+ 				}
+ 			}
+ 		}
+ 	}
 }
 
 static void ClientBuyHelperForwardToServer( char const *szCommand, char const *szParam )

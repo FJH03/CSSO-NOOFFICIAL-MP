@@ -737,9 +737,8 @@ void C_BaseViewModel::AddViewmodelArmModel( const char *pszArmsModel, int nSkint
 
 void C_BaseViewModel::AddViewmodelStatTrak( CWeaponCSBase *pWeapon, int holderIndex )
 {
-	// PiMoN: HOW DOES CSGO HANDLE THIS??
- 	/*if ( m_viewmodelStatTrakAddon && m_viewmodelStatTrakAddon.Get() && m_viewmodelStatTrakAddon->GetMoveParent() )
- 		return;*/
+	if ( m_viewmodelStatTrakAddon && m_viewmodelStatTrakAddon.Get() && m_viewmodelStatTrakAddon->GetMoveParent() )
+ 		return;
 
 	RemoveViewmodelStatTrak();
 
