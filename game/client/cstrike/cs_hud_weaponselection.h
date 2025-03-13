@@ -22,7 +22,6 @@ using namespace vgui;
 #define MAX_WEP_SELECT_PANELS 12
 #define MAX_WEP_SELECT_POSITIONS 6
 #define WEAPON_SELECTION_FADE_TIME_SEC 0.1
-#define WEAPON_SELECTION_FADE_SPEED 100.0 / WEAPON_SELECTION_FADE_TIME_SEC
 #define WEAPON_SELECTION_FADE_DELAY 5.0
 
 struct WeaponSelectPanel
@@ -79,9 +78,6 @@ protected:
 	virtual void FireGameEvent( IGameEvent *event );
 
 private:
-	float	m_flLastUpdate;
-	float	m_flFadeStartTime;
-
 	WeaponSelectPanel m_weaponPanels[MAX_WEP_SELECT_PANELS][MAX_WEP_SELECT_POSITIONS];
 	CHandle< C_BaseCombatWeapon > m_hSelectedWeapon;
 

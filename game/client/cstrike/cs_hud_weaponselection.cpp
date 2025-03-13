@@ -12,6 +12,7 @@
 #include "weapon_basecsgrenade.h"
 #include "cs_loadout.h"
 #include <vgui/ILocalize.h>
+#include <vgui_controls/AnimationController.h>
 
 ConVar cl_showloadout( "cl_showloadout", "1", FCVAR_ARCHIVE, "Toggles display of current loadout." );
 extern ConVar cl_hud_color;
@@ -25,7 +26,6 @@ CCSHudWeaponSelection::CCSHudWeaponSelection( const char* pElementName ) : CHudE
 
 	SetHiddenBits( HIDEHUD_NOT_OBSERVING_PLAYERS );
 
-	m_flFadeStartTime = 0;
 	m_flUpdateInventoryAt = -1;
 	m_bUpdateInventoryReset = false;
 	m_nPrevWepAlignSlot = -1;
@@ -100,21 +100,6 @@ void CCSHudWeaponSelection::ProcessInput( void )
 
 		ShowAndUpdateSelection( WEPSELECT_SWITCH );
 		m_flUpdateInventoryAt = -1;
-	}
-
-	float deltaTime = gpGlobals->curtime - m_flLastUpdate;
-	m_flLastUpdate = gpGlobals->curtime;
-	if ( gpGlobals->curtime >= m_flFadeStartTime )
-	{
-		if ( cl_showloadout.GetBool() || (CSGameRules() && CSGameRules()->GetGamemode() == GameModes::ARMS_RACE) )
-		{
-			SetAlpha( 255 );
-		}
-		else
-		{
-			int alpha = GetAlpha() - deltaTime * WEAPON_SELECTION_FADE_SPEED;
-			SetAlpha( MAX( 0, alpha ) );
-		}
 	}
 }
 
@@ -434,11 +419,11 @@ void CCSHudWeaponSelection::ShowAndUpdateSelection( int nType, C_BaseCombatWeapo
 	UpdateCountLabels();
 	UpdatePanelPositions();
 
-	float flStartFadeTime = gpGlobals->curtime + WEAPON_SELECTION_FADE_DELAY;
-	if ( nType == WEPSELECT_DROP )
-		flStartFadeTime -= WEAPON_SELECTION_FADE_DELAY/2;
-
-	m_flFadeStartTime = flStartFadeTime;
+	if ( !cl_showloadout.GetBool() )
+ 	{
+ 		g_pClientMode->GetViewportAnimationController()->CancelAnimationsForPanel( this );
+ 		g_pClientMode->GetViewportAnimationController()->RunAnimationCommand( this, "alpha", 0, WEAPON_SELECTION_FADE_DELAY, WEAPON_SELECTION_FADE_TIME_SEC, vgui::AnimationController::INTERPOLATOR_LINEAR );
+ 	}
 }
 
 void CCSHudWeaponSelection::UpdatePanelPositions( void )
