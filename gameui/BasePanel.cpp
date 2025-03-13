@@ -107,8 +107,40 @@ ConVar cl_menu_background( "cl_menu_background", "1", FCVAR_ARCHIVE );
 
 
 extern vgui::DHANDLE<CLoadingDialog> g_hLoadingDialog;
+
 static CBasePanel	*g_pBasePanel = NULL;
 static float		g_flAnimationPadding = 0.01f;
+static Frame* g_pVGuiPreviewPanel = NULL;
+CON_COMMAND( vgui_previewres, "Load and preview a .res file." )
+{
+	if ( !g_pBasePanel )
+		return;
+
+	if ( args.ArgC() != 3 )
+	{
+		ConMsg( "Usage: vgui_previewres <path_to_file> <panel_name>\n" );
+		return;
+	}
+
+	const char* pszFileName = args[1];
+	const char* pszPanelName = args[2];
+
+	if ( g_pVGuiPreviewPanel )
+	{
+		g_pVGuiPreviewPanel->DeletePanel();
+		g_pVGuiPreviewPanel = NULL;
+	}
+
+	g_pVGuiPreviewPanel = new Frame( g_pBasePanel, pszPanelName );
+	g_pVGuiPreviewPanel->LoadControlSettings( pszFileName );
+	g_pVGuiPreviewPanel->MoveToCenterOfScreen();
+	g_pVGuiPreviewPanel->SetMinimizeButtonVisible( false );
+	g_pVGuiPreviewPanel->SetMaximizeButtonVisible( false );
+	g_pVGuiPreviewPanel->SetSizeable( false );
+	g_pVGuiPreviewPanel->SetMoveable( false );
+	g_pVGuiPreviewPanel->SetVisible( true );
+}
+
 
 extern const char *COM_GetModDirectory( void );
 
