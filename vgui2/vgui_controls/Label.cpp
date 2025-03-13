@@ -16,6 +16,7 @@
 #include <vgui/ISurface.h>
 #include <vgui/IScheme.h>
 #include <KeyValues.h>
+#include <VGuiMatSurface/IMatSystemSurface.h>
 
 #include <vgui_controls/Label.h>
 #include <vgui_controls/Image.h>
@@ -1279,7 +1280,13 @@ void Label::ApplySettings( KeyValues *inResourceData )
 	m_bUseProportionalInsets = inResourceData->GetInt("use_proportional_insets", 0) > 0;
 	if ( m_bUseProportionalInsets )
 	{
+		// Override base resolution first
+		g_pMatSystemSurface->OverrideProportionalBase( m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1] );
+ 
 		inset_x = scheme()->GetProportionalScaledValueEx( GetScheme(), inset_x );
+
+		// Restore original proportional base so other panels are not affected
+		g_pMatSystemSurface->RestoreProportionalBase();
 	}
 
 	SetTextInset( inset_x, inset_y );
