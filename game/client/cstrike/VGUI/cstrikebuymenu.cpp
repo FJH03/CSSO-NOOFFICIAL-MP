@@ -286,7 +286,7 @@ void CCSBuyMenuItemButton::OnCursorEntered()
 				V_snwprintf( wszCarryLimit, sizeof( wszCarryLimit ), L"%d", GetAmmoDef()->MaxCarry( m_pWeaponInfo->iAmmoType, pPlayer ) );
 
 				wchar_t wszMessage[256];
-				g_pVGuiLocalize->ConstructString( wszMessage, sizeof( wszMessage ), g_pVGuiLocalize->Find( "#BuyMenu_CanOnlyCarryXGrenades" ), 1, wszCarryLimit );
+				g_pVGuiLocalize->ConstructString( wszMessage, sizeof( wszMessage ), g_pVGuiLocalize->Find( "#BuyMenu_MaxItemsOfType" ), 1, wszCarryLimit );
 
 				pParent->ShowSpecialMessage( wszMessage, PerWeaponMessage );
 				break;
