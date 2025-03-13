@@ -53,7 +53,6 @@ void VectorImagePanel::SetTexture( const char *szFilePath )
 	if ( !f )
 	{
 		Warning( "VectorImagePanel: %s failed to open file \"%s\".\n", GetName(), szFilePath );
-		DestroyTexture();
 		return;
 	}
 
@@ -76,7 +75,6 @@ void VectorImagePanel::SetTexture( const char *szFilePath )
 	if ( !document )
 	{
 		Warning( "VectorImagePanel: %s failed to load file \"%s\".\n", GetName(), szFilePath );
-		DestroyTexture();
 		return;
 	}
 
@@ -85,7 +83,6 @@ void VectorImagePanel::SetTexture( const char *szFilePath )
 	if ( !bitmap.valid() )
 	{
 		Warning( "VectorImagePanel: %s failed to render file \"%s\".\n", GetName(), szFilePath );
-		DestroyTexture();
 		return;
 	}
 
