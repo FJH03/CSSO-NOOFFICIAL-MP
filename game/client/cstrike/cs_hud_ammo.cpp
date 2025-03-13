@@ -11,12 +11,14 @@
 #include "iclientmode.h"
 
 #include <vgui/ISurface.h>
+#include <vgui/ILocalize.h>
 #include <vgui_controls/AnimationController.h>
 #include <vgui_controls/EditablePanel.h>
 #include <vgui_controls/Label.h>
 #include <vgui_controls/VectorImagePanel.h>
 
 #include "c_cs_player.h"
+#include "cs_client_gamestats.h"
 #include "cs_gamerules.h"
 
 using namespace vgui;
@@ -24,6 +26,7 @@ using namespace vgui;
 extern ConVar cl_hud_healthammo_style;
 extern ConVar cl_hud_background_alpha;
 extern ConVar cl_hud_color;
+extern ConVar loadout_stattrak;
 
 //-----------------------------------------------------------------------------
 // Purpose: Displays current ammunition level
@@ -45,6 +48,7 @@ private:
 
 	Label				*m_pPrimaryAmmoLabel;
 	Label				*m_pPrimaryReserveAmmoLabel;
+	Label				*m_pStatTrakCounter;
 	VectorImagePanel	*m_pBulletIcon;
 	VectorImagePanel	*m_pExhaustibleWeaponIcon;
 	VectorImagePanel	*m_pBurstIcon;
@@ -88,6 +92,7 @@ CHudAmmo::CHudAmmo( const char *pElementName ): CHudElement( pElementName ), Edi
 
 	m_pPrimaryAmmoLabel = new Label( this, "PrimaryAmmoLabel", "10" );
 	m_pPrimaryReserveAmmoLabel = new Label( this, "PrimaryReserveAmmoLabel", "/ 20" );
+	m_pStatTrakCounter = new Label( this, "StatTrakCounter", "0" );
 	m_pBulletIcon = new VectorImagePanel( this, "BulletIcon" );
 	m_pExhaustibleWeaponIcon = new VectorImagePanel( this, "ExhaustibleWeaponIcon" );
 	m_pBurstIcon = new VectorImagePanel( this, "BurstIcon" );
@@ -251,5 +256,37 @@ void CHudAmmo::OnThink()
 		m_pExhaustibleWeaponIcon->SetRepeatsCount( pPlayer->GetAmmoCount( pWeapon->GetPrimaryAmmoType() ) );
 		if ( bWeaponChanged )
 			m_pExhaustibleWeaponIcon->SetTexture( UTIL_VarArgs( "materials/vgui/weapons/svg/%s.svg", pWeapon->GetClassname() + 7 ) );
+	}
+	if ( pWeapon->HasStatTrak() )
+	{
+		int iStatTrakCounter = 0;
+		int entindex = pPlayer->entindex();
+		if ( pPlayer->IsControllingBot() )
+			entindex = pPlayer->GetControlledBotIndex();
+
+		if ( pWeapon->GetOriginalOwnerIndex() == entindex )
+			iStatTrakCounter = g_CSClientGameStats.GetStatById( GetWeaponTableEntryFromWeaponId( pWeapon->GetCSWeaponID() ).killStatId ).iStatValue;
+		else
+			iStatTrakCounter = 0;
+
+		if ( iStatTrakCounter > 0 )
+		{
+			wchar_t wszStatTrakCounter[8];
+			V_snwprintf( wszStatTrakCounter, sizeof( wszStatTrakCounter ), L"%d", iStatTrakCounter );
+
+			wchar_t wszLocalized[32];
+			g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_StatTrak" ), 1, wszStatTrakCounter );
+
+			m_pStatTrakCounter->SetText( wszLocalized );
+			m_pStatTrakCounter->SetVisible( true );
+		}
+		else
+		{
+			m_pStatTrakCounter->SetVisible( false );
+		}
+	}
+	else
+	{
+		m_pStatTrakCounter->SetVisible( false );
 	}
 }

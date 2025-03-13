@@ -14,6 +14,7 @@
 #include <vgui/ISurface.h>
 #include "vgui/IVGui.h"
 #include <vgui_controls/ImagePanel.h>
+#include <vgui_controls/VectorImagePanel.h>
 #include <filesystem.h>
 #include "cs_gamerules.h"
 #include "c_team.h"
@@ -89,6 +90,7 @@ CCSSpectatorGUI::CCSSpectatorGUI(IViewPort *pViewPort) : CSpectatorGUI(pViewPort
 	m_pPlayerPanelAvatar = NULL;
 	m_pPlayerPanelAvatarBkg = NULL;
 	m_pPlayerPanelBorderUpper = NULL;
+	m_pBombIcon = NULL;
 
 	m_nLastTime = -1;
 	m_nLastSpecMode = -1;
@@ -115,6 +117,7 @@ void CCSSpectatorGUI::ApplySchemeSettings(vgui::IScheme *pScheme)
 	m_pPlayerPanelAvatar = dynamic_cast<CAvatarImagePanel*>(FindChildByName( "PlayerPanelAvatar" ));
 	m_pPlayerPanelAvatarBkg = dynamic_cast<ImagePanel*>(FindChildByName( "PlayerPanelAvatarBkg" ));
 	m_pPlayerPanelBorderUpper = dynamic_cast<ImagePanel*>(FindChildByName( "PlayerPanelBorderUpper" ));
+	m_pBombIcon = dynamic_cast<VectorImagePanel*>(FindChildByName( "BombIcon" ));
 
 	m_pPlayerPanelAvatar->SetDefaultAvatar( scheme()->GetImage( CSTRIKE_DEFAULT_AVATAR, true ) );
 	m_pPlayerPanelAvatar->SetShouldScaleImage( true );
@@ -231,18 +234,45 @@ void CCSSpectatorGUI::UpdateTimer()
 	// these could be NULL if players modified the UI
 	if ( !ControlsPresent() )
 		return;
-	
-	m_nLastTime = (int)( CSGameRules()->GetRoundRemainingTime() );
+	bool bBombPlanted = (g_PlantedC4s.Count() > 0);
+	if ( bBombPlanted )
+	{
+		C_PlantedC4 *pC4 = g_PlantedC4s[0];
 
-	if ( m_nLastTime < 0 )
-		 m_nLastTime  = 0;
+		if ( pC4->m_bBombDefused )
+		{
+			m_pBombIcon->SetAlpha( 255 );
+			m_pBombIcon->SetFgColor( m_clrC4Defused );
+			m_pBombIcon->SetVisible( true );
+		}
+		else
+		{
+			int alpha = 255;
+			if ( gpGlobals->curtime + 0.1f >= pC4->m_flNextGlow )
+				alpha = 128;
 
-	wchar_t szText[16];
-	int iMinutes = m_nLastTime / 60;
-	int iSeconds = m_nLastTime % 60;
+			m_pBombIcon->SetAlpha( alpha );
+			m_pBombIcon->SetFgColor( m_clrC4Planted );
+			m_pBombIcon->SetVisible( !pC4->m_bExplodeWarning );
+		}
+		m_pTimerLabel->SetText( L" " );
+	}
+	else
+	{
+		m_pBombIcon->SetVisible( false );
 
-	V_snwprintf( szText, ARRAYSIZE( szText ), L"%d : %.2d", iMinutes, iSeconds );
-	m_pTimerLabel->SetText( szText );
+		m_nLastTime = (int) (CSGameRules()->GetRoundRemainingTime());
+
+		if ( m_nLastTime < 0 )
+			m_nLastTime = 0;
+
+		wchar_t szText[16];
+		int iMinutes = m_nLastTime / 60;
+		int iSeconds = m_nLastTime % 60;
+
+		V_snwprintf( szText, ARRAYSIZE( szText ), L"%d : %.2d", iMinutes, iSeconds );
+		m_pTimerLabel->SetText( szText );
+	}
 }
 
 void CCSSpectatorGUI::Update()
@@ -272,7 +302,6 @@ void CCSSpectatorGUI::Update()
 				m_pPlayerPanelAvatar->SetDefaultAvatar( GetDefaultAvatarImage( pSpecTarget ) );
 				m_pPlayerPanelAvatar->SetPlayer( pSpecTarget, k_EAvatarSize64x64 );
 				m_pPlayerPanelAvatar->SetVisible( true );
-				m_pPlayerPanelAvatarBkg->SetVisible( true );
 
 				wchar_t wszSpecTargetName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 				wszSpecTargetName[0] = '\0';
@@ -317,7 +346,8 @@ bool CCSSpectatorGUI::ControlsPresent( void ) const
 			 m_pPlayerPanelBkg != NULL &&
 			 m_pPlayerPanelTeam != NULL &&
 			 m_pPlayerPanelAvatar != NULL && 
-			 m_pPlayerPanelAvatarBkg != NULL );
+			 m_pPlayerPanelAvatarBkg != NULL &&
+			 m_pBombIcon != NULL );
 }
 
 
