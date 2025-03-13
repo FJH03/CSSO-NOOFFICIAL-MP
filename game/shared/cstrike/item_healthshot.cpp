@@ -22,6 +22,8 @@
 
 #define HEALTHSHOT_INJECT_TIME 1.65f
 
+ConVar healthshot_allow_use_at_full( "healthshot_allow_use_at_full", "0", FCVAR_REPLICATED );
+
 IMPLEMENT_NETWORKCLASS_ALIASED( Item_Healthshot, DT_Item_Healthshot )
 
 BEGIN_NETWORK_TABLE( CItem_Healthshot, DT_Item_Healthshot )
@@ -71,7 +73,7 @@ bool CItem_Healthshot::CanUseOnSelf( CCSPlayer *pPlayer )
 	if ( !pPlayer )
 		return false;
 
-	if ( pPlayer->GetHealth() >= pPlayer->GetMaxHealth() )
+	if ( !healthshot_allow_use_at_full.GetBool() && pPlayer->GetHealth() >= pPlayer->GetMaxHealth() )
 	{
 #ifndef CLIENT_DLL
 		ClientPrint( pPlayer, HUD_PRINTCENTER, "#Cstrike_Healthshot_AlreadyAtMax" );
