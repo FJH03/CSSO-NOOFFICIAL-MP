@@ -2521,9 +2521,10 @@ void CCSGOPlayerAnimState::DoAnimationEvent( PlayerAnimEvent_t animEvent, int nD
 		}
 		case PLAYERANIMEVENT_FIRE_GUN_SECONDARY:
 		{
-			if ( m_pWeapon->GetWeaponType() == WEAPONTYPE_SNIPER_RIFLE )
+			if ( m_pWeapon->GetWeaponType() == WEAPONTYPE_SNIPER_RIFLE || m_pWeapon->HasSilencer() == Silencer_Permanent )
 			{
 				// hack: sniper rifles use primary fire anim when 'alt' firing, meaning scoped.
+				// PiMoN: same for weapons with undetachable silencer
 				SetLayerSequence( ANIMATION_LAYER_WEAPON_ACTION, SelectSequenceFromActMods( ACT_CSGO_FIRE_PRIMARY ) );
 			}
 			else
