@@ -25,7 +25,6 @@
 #include "usermessages.h"
 #include "hud_macros.h"
 #include "c_baseanimating.h"
-#include "backgroundpanel.h"	// rounded border support
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -41,17 +40,6 @@ ConVar cl_disablefreezecam(
 
 extern Color LerpColors( Color cStart, Color cEnd, float flPercent );
 
-
-class CHudHealthArmorProgress: public ContinuousProgressBar
-{
-	DECLARE_CLASS_SIMPLE( CHudHealthArmorProgress, ContinuousProgressBar );
-
-public:
-	CHudHealthArmorProgress( Panel *parent, const char *panelName );
-	virtual void Paint();
-};
-
-
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
@@ -64,7 +52,7 @@ CCSFreezePanel::CCSFreezePanel( const char *pElementName ) :
 	RegisterForRenderGroup( "hide_for_scoreboard" );
 
 	m_pAvatar = new CAvatarImagePanel( this, "AvatarImage" );
-	m_pKillerHealth = new CHudHealthArmorProgress( this, "KillerHealth" );
+	m_pKillerHealth = new vgui::ContinuousProgressBarWithBorder( this, "KillerHealth" );
 	m_pDominationIcon = new ImagePanel( this, "DominationIcon" );
 	m_pDamageTakenBackground = new ImagePanel( this, "DamageTakenBackground" );
 	m_pDamageGivenBackground = new ImagePanel( this, "DamageGivenBackground" );

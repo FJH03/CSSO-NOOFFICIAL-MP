@@ -20,12 +20,13 @@
 #include "vgui_avatarimage.h"
 #include "hud.h"
 #include "hudelement.h"
+#include "vgui_borderprogress.h"
 
 #include "cs_shareddefs.h"
 
 using namespace vgui;
 
-class CHudHealthArmorProgress;
+class ContinuousProgressBarWithBorder;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -56,14 +57,14 @@ public:
 protected:
 
 private:
-	CAvatarImagePanel*			m_pAvatar;
-	CHudHealthArmorProgress*	m_pKillerHealth;
-	ImagePanel*					m_pDominationIcon;
-	ImagePanel*					m_pDamageTakenBackground;
-	ImagePanel*					m_pDamageGivenBackground;
-	Label*						m_pDamageTakenLabel;
-	Label*						m_pDamageGivenLabel;
-	Label*						m_pScreenshotLabel;
+	CAvatarImagePanel*						m_pAvatar;
+	vgui::ContinuousProgressBarWithBorder*	m_pKillerHealth;
+	ImagePanel*								m_pDominationIcon;
+	ImagePanel*								m_pDamageTakenBackground;
+	ImagePanel*								m_pDamageGivenBackground;
+	Label*									m_pDamageTakenLabel;
+	Label*									m_pDamageGivenLabel;
+	Label*									m_pScreenshotLabel;
 
 	bool					m_bShouldBeVisible;
 

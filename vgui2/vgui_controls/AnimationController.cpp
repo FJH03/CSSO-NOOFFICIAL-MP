@@ -1141,11 +1141,14 @@ void AnimationController::CancelAnimationsForPanel( Panel *pWithinParent )
 //-----------------------------------------------------------------------------
 // Purpose: Runs a custom command from code, not from a script file
 //-----------------------------------------------------------------------------
-void AnimationController::RunAnimationCommand(vgui::Panel *panel, const char *variable, float targetValue, float startDelaySeconds, float duration, Interpolators_e interpolator, float animParameter /* = 0 */ )
+void AnimationController::RunAnimationCommand(vgui::Panel *panel, const char *variable, float targetValue, float startDelaySeconds, float duration, Interpolators_e interpolator, float animParameter /* = 0 */, bool removeQueue /* = true */)
 {
-	// clear any previous animations of this variable
 	UtlSymId_t var = g_ScriptSymbols.AddString(variable);
-	RemoveQueuedAnimationByType(panel, var, UTL_INVAL_SYMBOL);
+	if ( removeQueue )
+ 	{
+ 		// clear any previous animations of this variable
+ 		RemoveQueuedAnimationByType(panel, var, UTL_INVAL_SYMBOL);
+ 	}
 
 	// build a new animation
 	AnimCmdAnimate_t animateCmd;
@@ -1165,11 +1168,14 @@ void AnimationController::RunAnimationCommand(vgui::Panel *panel, const char *va
 //-----------------------------------------------------------------------------
 // Purpose: Runs a custom command from code, not from a script file
 //-----------------------------------------------------------------------------
-void AnimationController::RunAnimationCommand(vgui::Panel *panel, const char *variable, Color targetValue, float startDelaySeconds, float duration, Interpolators_e interpolator, float animParameter /* = 0 */ )
+void AnimationController::RunAnimationCommand(vgui::Panel *panel, const char *variable, Color targetValue, float startDelaySeconds, float duration, Interpolators_e interpolator, float animParameter /* = 0 */, bool removeQueue /* = true */)
 {
-	// clear any previous animations of this variable
 	UtlSymId_t var = g_ScriptSymbols.AddString(variable);
-	RemoveQueuedAnimationByType(panel, var, UTL_INVAL_SYMBOL);
+	if ( removeQueue )
+ 	{
+ 		// clear any previous animations of this variable
+ 		RemoveQueuedAnimationByType(panel, var, UTL_INVAL_SYMBOL);
+ 	}
 
 	// build a new animation
 	AnimCmdAnimate_t animateCmd;

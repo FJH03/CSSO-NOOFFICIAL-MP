@@ -16,8 +16,8 @@
 #include <vgui_controls/AnimationController.h>
 #include <vgui_controls/Label.h>
 #include <vgui_controls/EditablePanel.h>
-#include <vgui_controls/ProgressBar.h>
 #include <vgui_controls/VectorImagePanel.h>
+#include "vgui_borderprogress.h"
 
 using namespace vgui;
 
@@ -30,23 +30,17 @@ extern ConVar cl_hud_healthammo_style;
 extern ConVar cl_hud_background_alpha;
 extern ConVar cl_hud_color;
 
+namespace vgui
+{
+	
 //-----------------------------------------------------------------------------
 // Purpose: Overriding Paint method to allow for correct border rendering
 //-----------------------------------------------------------------------------
-class CHudHealthArmorProgress: public ContinuousProgressBar
-{
-	DECLARE_CLASS_SIMPLE( CHudHealthArmorProgress, ContinuousProgressBar );
-
-public:
-	CHudHealthArmorProgress( Panel *parent, const char *panelName );
-	virtual void Paint();
-};
-
-CHudHealthArmorProgress::CHudHealthArmorProgress( Panel *parent, const char *panelName ): ContinuousProgressBar( parent, panelName )
+ContinuousProgressBarWithBorder::ContinuousProgressBarWithBorder( Panel *parent, const char *panelName ): ContinuousProgressBar( parent, panelName )
 {
 }
 
-void CHudHealthArmorProgress::Paint()
+void ContinuousProgressBarWithBorder::Paint()
 {
 	// allow for border
 	int x = 1, y = 1;
@@ -156,6 +150,7 @@ void CHudHealthArmorProgress::Paint()
 	}
 }
 
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: Health panel
@@ -185,8 +180,8 @@ private:
 	Label		*m_pArmorLabel;
 	Label		*m_pSimpleArmorLabel;
 
-	CHudHealthArmorProgress	*m_pHealthProgress;
-	CHudHealthArmorProgress	*m_pArmorProgress;
+	ContinuousProgressBarWithBorder	*m_pHealthProgress;
+	ContinuousProgressBarWithBorder	*m_pArmorProgress;
 
 	CPanelAnimationVarAliasType( int, simple_wide, "simple_wide", "0", "proportional_width" );
 	CPanelAnimationVarAliasType( int, simple_tall, "simple_tall", "0", "proportional_height" );
@@ -228,8 +223,8 @@ CHudHealthArmor::CHudHealthArmor( const char *pElementName ) : CHudElement( pEle
 	m_pArmorLabel = new Label( this, "ArmorLabel", "" );
 	m_pSimpleArmorLabel = new Label( this, "SimpleArmorLabel", "" );
 
-	m_pHealthProgress = new CHudHealthArmorProgress( this, "HealthProgress" );
-	m_pArmorProgress = new CHudHealthArmorProgress( this, "ArmorProgress" );
+	m_pHealthProgress = new ContinuousProgressBarWithBorder( this, "HealthProgress" );
+	m_pArmorProgress = new ContinuousProgressBarWithBorder( this, "ArmorProgress" );
 
 	LoadControlSettings( "resource/hud/healtharmor.res" );
 
@@ -238,15 +233,15 @@ CHudHealthArmor::CHudHealthArmor( const char *pElementName ) : CHudElement( pEle
 
 void CHudHealthArmor::OnScreenSizeChanged( int iOldWide, int iOldTall )
 {
- 	// reload the .res file so items are rescaled
- 	LoadControlSettings( "resource/hud/healtharmor.res" );
- 
- 	// force recalculation of some stuff
- 	m_iHUDColor = -1;
- 	m_flBackgroundAlpha = 0.0f;
- 	m_iStyle = -1;
- 	m_iHealth = -1;
- 	m_iArmor = -1;
+	// reload the .res file so items are rescaled
+	LoadControlSettings( "resource/hud/healtharmor.res" );
+
+	// force recalculation of some stuff
+	m_iHUDColor = -1;
+	m_flBackgroundAlpha = 0.0f;
+	m_iStyle = -1;
+	m_iHealth = -1;
+	m_iArmor = -1;
 }
 
 //-----------------------------------------------------------------------------
@@ -317,7 +312,7 @@ void CHudHealthArmor::OnThink()
 	if ( m_flBackgroundAlpha != cl_hud_background_alpha.GetFloat() )
 	{
 		Color newColor = GetBgColor();
- 		newColor[3] = cl_hud_background_alpha.GetFloat() * 255;
+		newColor[3] = cl_hud_background_alpha.GetFloat() * 255;
 		SetBgColor( newColor );
 	}
 
@@ -333,7 +328,7 @@ void CHudHealthArmor::OnThink()
 		m_pSimpleArmorLabel->SetFgColor( clr );
 		m_pHealthProgress->SetFgColor( clr );
 		m_pArmorProgress->SetFgColor( clr );
-	}	
+	}
 
 	C_CSPlayer *pPlayer = GetHudPlayer();
 	if ( !pPlayer )
@@ -342,7 +337,7 @@ void CHudHealthArmor::OnThink()
 		SetPaintBackgroundEnabled( false );
 		return;
 	}
-
+	
 	SetPaintEnabled( true );
 	SetPaintBackgroundEnabled( true );
 
@@ -350,7 +345,6 @@ void CHudHealthArmor::OnThink()
 	int iRealArmor = 0;
 	int iMaxHealth = pPlayer->GetMaxHealth();
 	int iMaxArmor = pPlayer->GetMaxArmor();
-	
 	// Never below zero
 	iRealHealth = MAX( pPlayer->GetHealth(), 0 );
 	iRealArmor = MAX( pPlayer->ArmorValue(), 0 );
@@ -380,7 +374,6 @@ void CHudHealthArmor::OnThink()
 		V_snwprintf( unicode, sizeof( unicode ), L"%d", m_iHealth );
 		m_pHealthLabel->SetText( unicode );
 		m_pHealthProgress->SetProgress( clamp( (float)m_iHealth / (float)iMaxHealth, 0.0f, 1.0f ) );
-
 	}
 
 	if ( iRealArmor != m_iArmor )
