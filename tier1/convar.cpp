@@ -879,7 +879,7 @@ bool ConVar::ClampValue( float& value )
 		value = m_fMinVal;
 		return true;
 	}
-
+	
 	if ( m_bHasMax && ( value > m_fMaxVal ) )
 	{
 		value = m_fMaxVal;
@@ -994,7 +994,7 @@ void ConVar::Create( const char *pName, const char *pDefaultValue, int flags /*=
 	m_fMinVal = fMin;
 	m_bHasMax = bMax;
 	m_fMaxVal = fMax;
-
+	
 	m_bHasCompMin = bCompMin;
 	m_fCompMinVal = fCompMin;
 	m_bHasCompMax = bCompMax;
@@ -1211,79 +1211,55 @@ bool ConVarRef::IsValid() const
 	return m_pConVar != &s_EmptyConVar;
 }
 
+struct PrintConVarFlags_t
+{
+	int flag;
+	const char *desc;
+};
+
+static PrintConVarFlags_t g_PrintConVarFlags[] =
+{
+	{ FCVAR_GAMEDLL, "game" },
+	{ FCVAR_CLIENTDLL, "client" },
+	{ FCVAR_ARCHIVE, "archive" },
+	{ FCVAR_NOTIFY, "notify" },
+	{ FCVAR_SPONLY, "singleplayer" },
+	{ FCVAR_NOT_CONNECTED, "notconnected" },
+	{ FCVAR_CHEAT, "cheat" },
+	{ FCVAR_REPLICATED, "replicated" },
+	{ FCVAR_SERVER_CAN_EXECUTE, "server_can_execute" },
+	{ FCVAR_CLIENTCMD_CAN_EXECUTE, "clientcmd_can_execute" },
+	{ FCVAR_USERINFO, "user" },
+};
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void ConVar_PrintFlags( const ConCommandBase *var )
+void ConVar_AppendFlags( const ConCommandBase *var, char *buf, size_t bufsize )
 {
-	bool any = false;
-	if ( var->IsFlagSet( FCVAR_GAMEDLL ) )
+	for ( int i = 0; i < ARRAYSIZE( g_PrintConVarFlags ) ; ++i )
 	{
-		ConMsg( " game" );
-		any = true;
-	}
-
-	if ( var->IsFlagSet( FCVAR_CLIENTDLL ) )
-	{
-		ConMsg( " client" );
-		any = true;
-	}
-
-	if ( var->IsFlagSet( FCVAR_ARCHIVE ) )
-	{
-		ConMsg( " archive" );
-		any = true;
-	}
-
-	if ( var->IsFlagSet( FCVAR_NOTIFY ) )
-	{
-		ConMsg( " notify" );
-		any = true;
-	}
-
-	if ( var->IsFlagSet( FCVAR_SPONLY ) )
-	{
-		ConMsg( " singleplayer" );
-		any = true;
-	}
-
-	if ( var->IsFlagSet( FCVAR_NOT_CONNECTED ) )
-	{
-		ConMsg( " notconnected" );
-		any = true;
-	}
-
-	if ( var->IsFlagSet( FCVAR_CHEAT ) )
-	{
-		ConMsg( " cheat" );
-		any = true;
-	}
-
-	if ( var->IsFlagSet( FCVAR_REPLICATED ) )
-	{
-		ConMsg( " replicated" );
-		any = true;
-	}
-
-	if ( var->IsFlagSet( FCVAR_SERVER_CAN_EXECUTE ) )
-	{
-		ConMsg( " server_can_execute" );
-		any = true;
-	}
-
-	if ( var->IsFlagSet( FCVAR_CLIENTCMD_CAN_EXECUTE ) )
-	{
-		ConMsg( " clientcmd_can_execute" );
-		any = true;
-	}
-
-	if ( any )
-	{
-		ConMsg( "\n" );
+		const PrintConVarFlags_t &info =  g_PrintConVarFlags[ i ];
+		if ( var->IsFlagSet( info.flag ) )
+		{
+			char append[ 128 ];
+			Q_snprintf( append, sizeof( append ), " %s", info.desc );
+			Q_strncat( buf, append, bufsize, COPY_ALL_CHARACTERS );
+		}
 	}
 }
 
+static void AppendPrintf( char *buf, size_t bufsize, char const *fmt, ... )
+{
+	char scratch[ 1024 ];
+	va_list argptr;
+	va_start( argptr, fmt );
+	_vsnprintf( scratch, sizeof( scratch ) - 1, fmt, argptr );
+	va_end( argptr );
+	scratch[ sizeof( scratch ) - 1 ] = 0;
+
+	Q_strncat( buf, scratch, bufsize, COPY_ALL_CHARACTERS );
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1298,6 +1274,9 @@ void ConVar_PrintDescription( const ConCommandBase *pVar )
 
 	Color clr;
 	clr.SetColor( 255, 100, 100, 255 );
+
+	char outstr[ 4096 ];
+	outstr[ 0 ] = 0;
 
 	if ( !pVar->IsCommand() )
 	{
@@ -1333,29 +1312,27 @@ void ConVar_PrintDescription( const ConCommandBase *pVar )
 
 		if ( value )
 		{
-			ConColorMsg( clr, "\"%s\" = \"%s\"", var->GetName(), value );
+			AppendPrintf( outstr, sizeof( outstr ), "\"%s\" = \"%s\"", var->GetName(), value );
 
-			if ( stricmp( value, var->GetDefault() ) )
+			if ( V_stricmp( value, var->GetDefault() ) )
 			{
-				ConMsg( " ( def. \"%s\" )", var->GetDefault() );
+				AppendPrintf( outstr, sizeof( outstr ), " ( def. \"%s\" )", var->GetDefault() );
 			}
 		}
 
 		if ( bMin )
 		{
-			ConMsg( " min. %f", fMin );
+			AppendPrintf( outstr, sizeof( outstr ), " min. %f", fMin );
 		}
 		if ( bMax )
 		{
-			ConMsg( " max. %f", fMax );
+			AppendPrintf( outstr, sizeof( outstr ), " max. %f", fMax );
 		}
 
-		ConMsg( "\n" );
-
-		// Handled virtualized cvars.
+		// Handle virtualized cvars.
 		if ( pBounded && fabs( pBounded->GetFloat() - var->GetFloat() ) > 0.0001f )
 		{
-			ConColorMsg( clr, "** NOTE: The real value is %.3f but the server has temporarily restricted it to %.3f **\n",
+			AppendPrintf( outstr, sizeof( outstr ), " [%.3f server clamped to %.3f]",
 				var->GetFloat(), pBounded->GetFloat() );
 		}
 	}
@@ -1363,14 +1340,18 @@ void ConVar_PrintDescription( const ConCommandBase *pVar )
 	{
 		ConCommand *var = ( ConCommand * )pVar;
 
-		ConColorMsg( clr, "\"%s\"\n", var->GetName() );
+		AppendPrintf( outstr, sizeof( outstr ), "\"%s\" ", var->GetName() );
 	}
 
-	ConVar_PrintFlags( pVar );
+	ConVar_AppendFlags( pVar, outstr, sizeof( outstr ) );
 
 	pStr = pVar->GetHelpText();
-	if ( pStr && pStr[0] )
+	if ( pStr && *pStr )
 	{
-		ConMsg( " - %s\n", pStr );
+		ConMsg( "%-80s - %.80s\n", outstr, pStr );
+	}
+	else
+	{
+	 	ConMsg( "%-80s\n", outstr );
 	}
 }
