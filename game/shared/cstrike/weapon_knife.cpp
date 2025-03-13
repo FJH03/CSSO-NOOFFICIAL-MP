@@ -27,6 +27,9 @@
 Vector head_hull_mins( -16, -16, -18 );
 Vector head_hull_maxs( 16, 16, 18 );
 
+extern ConVar mp_damage_scale_ct_body;
+extern ConVar mp_damage_scale_t_body;
+
 #ifndef CLIENT_DLL
 	//-----------------------------------------------------------------------------
 	// Purpose: Only send to local player if this weapon is the active weapon
@@ -216,13 +219,6 @@ void CKnife::WeaponIdle()
 	SendWeaponAnim( ACT_VM_IDLE );
 }
 
-// [tj] Hacky cheat code to control knife damage
-#ifndef CLIENT_DLL
-	ConVar KnifeDamageScale("knife_damage_scale", "100", FCVAR_DEVELOPMENTONLY);
-#endif
-
-
-
 bool CKnife::SwingOrStab( CSWeaponMode weaponMode )
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
@@ -301,6 +297,7 @@ bool CKnife::SwingOrStab( CSWeaponMode weaponMode )
 		ClearMultiDamage();
 
 		float flDamage = 0.f;	// set below
+		int iTeamNumber = TEAM_UNASSIGNED;
 #endif
 		if ( pEntity && pEntity->IsPlayer() )
 		{
@@ -316,6 +313,10 @@ bool CKnife::SwingOrStab( CSWeaponMode weaponMode )
 			//Triple the damage if we are stabbing them in the back.
 			if ( flDot > 0.475f )
 				bBackStab = true;
+
+#ifndef CLIENT_DLL
+				iTeamNumber = pEntity->GetTeamNumber();
+#endif
 		}
 
 #ifndef CLIENT_DLL
@@ -348,8 +349,10 @@ bool CKnife::SwingOrStab( CSWeaponMode weaponMode )
 			}
 		}
 
-		// [tj] Hacky cheat to lower knife damage for testing
-		flDamage *= (KnifeDamageScale.GetInt() / 100.0f);
+		if ( iTeamNumber == TEAM_CT )
+ 			flDamage *= mp_damage_scale_ct_body.GetFloat();
+ 		else
+ 			flDamage *= mp_damage_scale_t_body.GetFloat();
 #endif
 
 		if ( weaponMode == Secondary_Mode )
