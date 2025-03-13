@@ -1087,7 +1087,7 @@ bool CCSMapOverview::AdjustPointToPanel(Vector2D *pos)
 	return madeChange;
 }
 
-#define CIRCLE_SEGMENTS 180 // ideally 360, but dont forget about dx8 folks :sunglasses:
+#define CIRCLE_SEGMENTS 60 // ideally 360, but with such small vertex positions it isn't noticeable
 
 void CCSMapOverview::PaintBackground()
 {
