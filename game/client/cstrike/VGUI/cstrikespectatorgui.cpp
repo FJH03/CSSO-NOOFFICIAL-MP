@@ -143,12 +143,12 @@ void CCSSpectatorGUI::UpdateTeamInfo()
             switch ( teamIndex )
             {
             case TEAM_TERRORIST:
-				g_pVGuiLocalize->ConstructString( teamName, sizeof( teamName ), g_pVGuiLocalize->Find( "#Cstrike_Team_T_Upper" ), nullptr );
+				V_wcsncpy( teamName, g_pVGuiLocalize->Find( "#Cstrike_Team_T_Upper" ), sizeof( teamName ) );
                 pDialogVarTeamName = "t_teamname";
 				pDialogVarTeamScore = "t_totalteamscore";
                 break;
 			case TEAM_CT:
-				g_pVGuiLocalize->ConstructString( teamName, sizeof( teamName ), g_pVGuiLocalize->Find( "#Cstrike_Team_CT_Upper" ), nullptr );
+				V_wcsncpy( teamName, g_pVGuiLocalize->Find( "#Cstrike_Team_CT_Upper" ), sizeof( teamName ) );
                 pDialogVarTeamName = "ct_teamname";
 				pDialogVarTeamScore = "ct_totalteamscore";
                 break;
