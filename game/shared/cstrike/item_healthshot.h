@@ -52,6 +52,7 @@ public:
 
 #ifndef CLIENT_DLL
 	virtual void CompleteUse( CCSPlayer *pPlayer );
+	virtual	void Operator_HandleAnimEvent( animevent_t* pEvent, CBaseCombatCharacter* pOperator );
 #endif
 
 private:

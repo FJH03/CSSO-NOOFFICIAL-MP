@@ -24,8 +24,10 @@ IMPLEMENT_NETWORKCLASS_ALIASED( WeaponBaseItem, DT_WeaponBaseItem )
 BEGIN_NETWORK_TABLE( CWeaponBaseItem, DT_WeaponBaseItem )
 #ifndef CLIENT_DLL
 SendPropBool( SENDINFO( m_bRedraw ) ),
+SendPropBool( SENDINFO( m_bUseVisuallyComplete ) ),
 #else
 RecvPropBool( RECVINFO( m_bRedraw ) ),
+RecvPropBool( RECVINFO( m_bUseVisuallyComplete ) ),
 #endif
 
 END_NETWORK_TABLE()
@@ -33,6 +35,7 @@ END_NETWORK_TABLE()
 #if defined CLIENT_DLL
 BEGIN_PREDICTION_DATA( CWeaponBaseItem )
 DEFINE_PRED_FIELD( m_bRedraw, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
+DEFINE_PRED_FIELD( m_bUseVisuallyComplete, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 END_PREDICTION_DATA()
 #endif
 
@@ -46,6 +49,7 @@ END_DATADESC()
 CWeaponBaseItem::CWeaponBaseItem()
 {
 	m_bRedraw = false;
+	m_bUseVisuallyComplete = false;
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -198,8 +202,9 @@ void CWeaponBaseItem::ItemPostFrame( void )
 			m_UseTimer.Invalidate();
 			return;
 		}
-#ifndef CLIENT_DLL		
-		CompleteUse( pPlayer );
+#ifndef CLIENT_DLL
+		if ( !m_bUseVisuallyComplete )
+			CompleteUse( pPlayer );
 		// BaseClass::ItemPostFrame() clears IN_ATTACK2, so we restore it here to prevent the next weapon from bashing immediately
 		pPlayer->m_nButtons = buttons;
 
@@ -207,8 +212,11 @@ void CWeaponBaseItem::ItemPostFrame( void )
 #endif
 		m_UseTimer.Invalidate();
 
-		// remove the ammo
-		pPlayer->RemoveAmmo( 1, m_iPrimaryAmmoType, true );
+		if ( !m_bUseVisuallyComplete )
+		{
+			// remove the ammo
+			pPlayer->RemoveAmmo( 1, m_iPrimaryAmmoType, true );
+		}
 
 		if ( pPlayer->GetAmmoCount(m_iPrimaryAmmoType) <= 0 )
 		{
@@ -244,6 +252,7 @@ void CWeaponBaseItem::ItemPostFrame( void )
 		}
 #endif
 	}
+
 }
 
 // //--------------------------------------------------------------------------------------------------------

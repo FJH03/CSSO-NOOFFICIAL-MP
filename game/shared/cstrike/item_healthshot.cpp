@@ -8,6 +8,8 @@
 #include "cbase.h"
 #include "item_healthshot.h"
 #include "cs_gamerules.h"
+#include "eventlist.h"
+#include "npcevent.h"
 
 #if defined( CLIENT_DLL )
 #include "c_cs_player.h"
@@ -156,6 +158,30 @@ void CItem_Healthshot::CompleteUse( CCSPlayer *pPlayer )
 
 	BaseClass::CompleteUse( pPlayer );
 }
+void CItem_Healthshot::Operator_HandleAnimEvent( animevent_t* pEvent, CBaseCombatCharacter* pOperator )
+{
+ 	int nEvent = pEvent->event;
+ 	if ( (pEvent->type & AE_TYPE_NEWEVENTSYSTEM) && (pEvent->type & AE_TYPE_SERVER) )
+ 	{
+ 		if ( nEvent == AE_WPN_HEALTHSHOT_INJECT )
+ 		{
+ 			CCSPlayer* pPlayer = ToCSPlayer( GetPlayerOwner() );
+ 			if ( !pPlayer || !pPlayer->IsAlive() )
+ 				return;
+ 			
+ 			CompleteUse( pPlayer );
+ 
+ 			SetUseVisuallyComplete( true );
+ 
+ 			// remove the ammo
+ 			pPlayer->RemoveAmmo( 1, m_iPrimaryAmmoType, true );
+ 			return;
+ 		}
+ 	}
+ 
+ 	BaseClass::Operator_HandleAnimEvent( pEvent, pOperator );
+}
+
 #endif	//CLIENT_DLL
 
 float CItem_Healthshot::GetUseTimerDuration( void )

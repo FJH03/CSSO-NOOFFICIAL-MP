@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: base class for belt items, eg pills and adrenaline
 //
@@ -64,11 +64,14 @@ public:
 	virtual void CompleteUse( CCSPlayer *pPlayer ) {}
 #endif
 
+	void SetUseVisuallyComplete( bool bState ) { m_bUseVisuallyComplete = bState; }
+
 private:
 	CWeaponBaseItem( const CWeaponBaseItem & ) {}
 
 	CNetworkVarEmbedded( CountdownTimer, m_UseTimer );
 	CNetworkVar( bool, m_bRedraw );	// Draw the weapon again after throwing a grenade
+	CNetworkVar( bool, m_bUseVisuallyComplete );
 
 };
 
