@@ -2469,8 +2469,6 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 		m_bSilencerOn = HasSilencer() ? true : false;
  		m_weaponMode = HasSilencer() ? Secondary_Mode : Primary_Mode;
 
-		m_weaponMode = Primary_Mode;
-
 #if IRONSIGHT
 		UpdateIronSightController();
 #endif //IRONSIGHT
