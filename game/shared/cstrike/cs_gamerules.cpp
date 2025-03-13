@@ -8367,9 +8367,8 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 				if ( pPlayer->m_PreControlData.m_iAccount > mp_maxmoney.GetInt() )
 					pPlayer->m_PreControlData.m_iAccount = mp_maxmoney.GetInt();
 			}
-			else
 #endif
-				pPlayer->AddAccount( amount, true, false );
+			pPlayer->AddAccount( amount, true, false );
 
 			if ( !IsLastRoundBeforeHalfTime() && (GetPhase() != GAMEPHASE_HALFTIME) &&
 				 (GetTotalRoundsPlayed() != mp_maxrounds.GetInt() + GetOvertimePlaying() * mp_overtime_maxrounds.GetInt()) && !bTeamHasClinchedVictory )
