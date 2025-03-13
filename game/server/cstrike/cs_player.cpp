@@ -632,6 +632,11 @@ CCSPlayer::CCSPlayer()
 	m_flGotHostageTalkTimer = 0;
 	m_flDefusingTalkTimer = 0;
 	m_flC4PlantTalkTimer = 0;
+	m_flFlinchStack = 1.0;
+ 
+ 	// setting this to the current time prevents late-joining players from getting prioritized for receiving the defuser/bomb
+ 	m_fLastGivenDefuserTime = gpGlobals->curtime;
+ 	m_fLastGivenBombTime = gpGlobals->curtime;
 
 	m_vLastHitLocationObjectSpace = Vector(0,0,0);
 
@@ -1643,6 +1648,11 @@ void CCSPlayer::GiveDefaultItems()
 	if ( m_bIsControllingBot )
 		return;
 #endif
+
+	if ( CSGameRules()->IsBombDefuseMap() && mp_defuser_allocation.GetInt() == DefuserAllocation::All && GetTeamNumber() == TEAM_CT )
+	{
+		GiveDefuser( false );
+	}
 
 	if ( CSGameRules()->IsArmorFree() )
 		GiveNamedItem( "item_assaultsuit" );
@@ -4024,12 +4034,15 @@ void CCSPlayer::Reset( bool resetScore )
 	}
 
 	m_iAccount = 0;
-	AddAccount( -mp_startmoney.GetInt(), false );
 
 	//remove any weapons they bought before the round started
 	RemoveAllItems( true );
 
 	AddAccount( CSGameRules()->GetStartMoney(), true );
+
+	// setting this to the current time prevents late-joining players from getting prioritized for receiving the defuser/bomb
+	m_fLastGivenDefuserTime = gpGlobals->curtime;
+	m_fLastGivenBombTime = gpGlobals->curtime;
 }
 
 //-----------------------------------------------------------------------------
@@ -4227,16 +4240,13 @@ void CCSPlayer::GiveDefuser(bool bPickedUp /* = false */)
 
 	m_bHasDefuser = true;
 
-	//=============================================================================
-	// HPE_BEGIN:
-	// [dwenger] Added for fun-fact support
-	//=============================================================================
-
+	if ( !bPickedUp )
+ 	{
+ 		m_fLastGivenDefuserTime = gpGlobals->curtime;
+ 	}
+ 
+ 	// [dwenger] Added for fun-fact support
 	m_bPickedUpDefuser = bPickedUp;
-
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 }
 
 // player blinded by a flashbang
@@ -6997,8 +7007,12 @@ void CCSPlayer::GetIntoGame()
 		if ( MPRules->GetRoundRestartTime() == 0.0f )
 		{
 			//Bomb target, no bomber and no bomb lying around.
-			if( !MPRules->IsWarmupPeriod() && MPRules->IsBombDefuseMap() && !MPRules->IsThereABomber() && !MPRules->IsThereABomb() )
-				MPRules->GiveC4(); //Checks for terrorists.
+			if( !MPRules->IsPlayingGunGameProgressive() && !MPRules->IsPlayingGunGameDeathmatch() &&
+ 				!MPRules->IsWarmupPeriod() && 
+ 				MPRules->IsBombDefuseMap() && !MPRules->IsThereABomber() && !MPRules->IsThereABomb() )
+ 			{
+ 				MPRules->GiveC4ToRandomPlayer(); //Checks for terrorists.
+ 			}
 		}
 
 		// If a new terrorist is entering the fray, then up the # of potential escapers.

@@ -782,9 +782,11 @@ public:
 	const char *GetClanName( void ) const;
 
 
-	CNetworkVar( bool, m_bHasDefuser );			    // Does this player have a defuser kit?
-	CNetworkVar( bool, m_bHasNightVision );		    // Does this player have night vision?
-	CNetworkVar( bool, m_bNightVisionOn );		    // Is the NightVision turned on ?
+	CNetworkVar( bool, m_bHasDefuser );			// Does this player have a defuser kit?
+ 	float m_fLastGivenDefuserTime;				// the last time this player received the defuser
+ 	float m_fLastGivenBombTime;					// the last time this player received the bomb
+ 	CNetworkVar( bool, m_bHasNightVision );		// Does this player have night vision?
+ 	CNetworkVar( bool, m_bNightVisionOn );		// Is the NightVision turned on ?
 
 	// last known navigation area of player - NULL if unknown
 	CNavArea *m_lastNavArea;

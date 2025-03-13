@@ -28,6 +28,7 @@
 
 static ConVar hud_deathnotice_time( "hud_deathnotice_time", "6", 0 );
 ConVar cl_show_clan_in_death_notice( "cl_show_clan_in_death_notice", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Is set, the clan name will show next to player names in the death notices." );
+extern ConVar mp_display_kill_assists;
 
 // Player entries in a death notice
 struct DeathNoticePlayer
@@ -466,7 +467,7 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	// the event should be "player_death"
 	
 	int iKiller = engine->GetPlayerForUserID( event->GetInt("attacker") );
-	int iAssister = engine->GetPlayerForUserID( event->GetInt("assister") );
+	int iAssister = mp_display_kill_assists.GetBool() ? engine->GetPlayerForUserID( event->GetInt("assister") ) : 0;
 	int iVictim = engine->GetPlayerForUserID( event->GetInt("userid") );
 	const char *killedwith = event->GetString( "weapon" );
 	bool headshot = event->GetInt( "headshot" ) > 0;

@@ -341,6 +341,12 @@ ConVar mp_maxmoney(
 	true, 0,
 	false, 0 );
 
+ConVar mp_afterroundmoney(
+	"mp_afterroundmoney",
+	"0",
+	FCVAR_REPLICATED,
+	"amount of money awared to every player after each round" );
+
 ConVar mp_respawn_immunitytime("mp_respawn_immunitytime", "4.0", FCVAR_REPLICATED, "How many seconds after respawn immunity lasts." );
 
 ConVar mp_playerid(
@@ -672,6 +678,30 @@ ConVar mp_molotovusedelay(
 	"Number of seconds to delay before the molotov can be used after acquiring it",
 	true, 0.0,
 	true, 30.0 );
+
+ConVar mp_display_kill_assists(
+	"mp_display_kill_assists",
+	"1",
+	FCVAR_REPLICATED,
+	"Whether to display and score player assists",
+	true, 0,
+	true, 1 );
+
+ConVar mp_defuser_allocation(
+	"mp_defuser_allocation",
+	"0",
+	FCVAR_REPLICATED,
+	"How to allocate defusers to CTs at start or round: 0=none, 1=random, 2=everyone",
+	true, 0,
+	true, 2 );
+
+ConVar mp_give_player_c4(
+	"mp_give_player_c4",
+	"1",
+	FCVAR_REPLICATED,
+	"Whether this map should spawn a c4 bomb for a player or not.",
+	true, 0,
+	true, 1 );
 
 ConVar mp_weapons_allow_zeus(
 	"mp_weapons_allow_zeus",
@@ -1858,6 +1888,10 @@ ConVar snd_music_selection(
 			return;
 
 		pPlayer->EquipSuit();
+
+		// remove any defusers left over from previous random if there is just one random one
+		if ( mp_defuser_allocation.GetInt() == DefuserAllocation::Random )
+			pPlayer->RemoveDefuser();
 		
 		bool addDefault = true;
 
@@ -4095,6 +4129,8 @@ ConVar snd_music_selection(
 		m_bRoundTimeWarningTriggered = false;
 		
 		//Adrian - No cash for anyone at first rounds! ( well, only the default. )
+        // Get the cash bonus awarded for completing the round
+		int RoundBonus = m_bCompleteReset ? 0 : mp_afterroundmoney.GetInt();
 		if ( m_bCompleteReset )
 		{
 			//We are starting fresh. So it's like no one has ever won or lost.
@@ -4116,6 +4152,12 @@ ConVar snd_music_selection(
 
 			pPlayer->m_iNumSpawns	= 0;
 			pPlayer->m_bTeamChanged	= false;
+
+			// Award between round auto bonuses
+			if ( RoundBonus > 0 )
+			{
+				pPlayer->AddAccount( RoundBonus, false );
+			}
 
 			// tricky, make players non solid while moving to their spawn points
 			if ( (pPlayer->GetTeamNumber() == TEAM_CT) || (pPlayer->GetTeamNumber() == TEAM_TERRORIST) )
@@ -4468,7 +4510,15 @@ ConVar snd_music_selection(
 
 		// Give C4 to the terrorists
 		if ( m_bMapHasBombTarget == true )
-			GiveC4();
+		{
+			if ( !IsWarmupPeriod() && !IsPlayingGunGameProgressive() && !IsPlayingGunGameDeathmatch() )
+			{
+				GiveC4ToRandomPlayer(); // Give C4 to the terrorists
+
+				if ( mp_defuser_allocation.GetInt() == DefuserAllocation::Random )
+					GiveDefuserToRandomPlayer();
+			}
+		}
 
 		// Reset game variables
         m_flIntermissionStartTime = 0;
@@ -4606,77 +4656,129 @@ ConVar snd_music_selection(
 		}
 	}
 
-	void CCSGameRules::GiveC4()
+	static int BombSortPredicate(CCSPlayer * const *left, CCSPlayer * const *right) 
 	{
-		if ( IsWarmupPeriod() || IsPlayingGunGame() )
-			return;
-
-		enum {
-			ALL_TERRORISTS = 0,
-			HUMAN_TERRORISTS,
-		};
-		int iTerrorists[2][ABSOLUTE_PLAYER_LIMIT];
-		int numAliveTs[2] = { 0, 0 };
-		int lastBombGuyIndex[2] = { -1, -1 };
-
-		//Create an array of the indeces of bomb carrier candidates
-		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+		// should we prioritize humans over bots?
+		if (cv_bot_defer_to_human_items.GetBool() )
 		{
-			CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+			if ( (*left)->IsBot() && !(*right)->IsBot() )
+				return 1;
 
-			if( pPlayer && pPlayer->IsAlive() && pPlayer->GetTeamNumber() == TEAM_TERRORIST && numAliveTs[ALL_TERRORISTS] < ABSOLUTE_PLAYER_LIMIT  )
-			{
-				if ( pPlayer == m_pLastBombGuy )
-				{
-					lastBombGuyIndex[ALL_TERRORISTS] = numAliveTs[ALL_TERRORISTS];
-					lastBombGuyIndex[HUMAN_TERRORISTS] = numAliveTs[HUMAN_TERRORISTS];
-				}
-
-				iTerrorists[ALL_TERRORISTS][numAliveTs[ALL_TERRORISTS]] = i;
-				numAliveTs[ALL_TERRORISTS]++;
-				if ( !pPlayer->IsBot() )
-				{
-					iTerrorists[HUMAN_TERRORISTS][numAliveTs[HUMAN_TERRORISTS]] = i;
-					numAliveTs[HUMAN_TERRORISTS]++;
-				}
-			}
+			if ( !(*left)->IsBot() && (*right)->IsBot() )
+				return -1;
 		}
 
-		int which = cv_bot_defer_to_human_items.GetBool();
-		if ( numAliveTs[HUMAN_TERRORISTS] == 0 )
-		{
-			which = ALL_TERRORISTS;
-		}
+		if ( (*left)->m_fLastGivenBombTime < (*right)->m_fLastGivenBombTime )
+			return -1;
 
-		//pick one of the candidates randomly
-		if( numAliveTs[which] > 0 )
-		{
-			int index = random->RandomInt(0,numAliveTs[which]-1);
-			if ( lastBombGuyIndex[which] >= 0 )
-			{
-				// give the C4 sequentially
-				index = (lastBombGuyIndex[which] + 1) % numAliveTs[which];
-			}
-			CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( iTerrorists[which][index] ) );
+		if ( (*left)->m_fLastGivenBombTime > (*right)->m_fLastGivenBombTime )
+			return +1;
 
-			Assert( pPlayer && pPlayer->GetTeamNumber() == TEAM_TERRORIST && pPlayer->IsAlive() );
-
-			pPlayer->GiveNamedItem( WEAPON_C4_CLASSNAME );
-			pPlayer->SelectItem( WEAPON_C4_CLASSNAME );
-			m_pLastBombGuy = pPlayer;
-
-			//pPlayer->SetBombIcon();
-			//pPlayer->pev->body = 1;
-
-			// Log this information
-			//UTIL_LogPrintf("\"%s<%i><%s><TERRORIST>\" triggered \"Spawned_With_The_Bomb\"\n", 
-			//	STRING( pPlayer->GetPlayerName() ),
-			//	GETPLAYERUSERID( pPlayer->edict() ),
-			//	GETPLAYERAUTHID( pPlayer->edict() ) );
-		}
-
-		m_bBombDropped = false;
+		return 0;
 	}
+
+	void CCSGameRules::GiveC4ToRandomPlayer()
+	{
+        // Don't give C4 if not everyone is in the game, we are going to restart or if the convar says we should not
+        bool bNeeded = false;
+        NeededPlayersCheck( bNeeded );
+        float timeToRestart = GetRoundRestartTime() - gpGlobals->curtime;
+        if ( !mp_give_player_c4.GetBool() || timeToRestart > 0.001f  )
+        {
+            return;
+        }
+
+        CUtlVector<CCSPlayer*> candidates;
+        candidates.EnsureCapacity(MAX_PLAYERS);
+
+        // add all eligible terrorist candidates to a list
+        for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+        {
+            CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+            if ( pPlayer && pPlayer->IsAlive() && pPlayer->GetTeamNumber() == TEAM_TERRORIST )
+            {
+                candidates.AddToTail(pPlayer);
+            }
+        }
+
+        // randomly shuffle the list; this will keep the selection random in case of ties
+        FOR_EACH_VEC(candidates, i)
+        {
+            V_swap(candidates[i], candidates[random->RandomInt( 0, candidates.Count() - 1)] );
+        }
+
+        // now sort the list
+        candidates.Sort(BombSortPredicate);
+
+        // give bomb to the first candidate
+        if ( candidates.Count() > 0 )
+        {
+            CCSPlayer *pPlayer = candidates[0];
+            Assert( pPlayer && pPlayer->GetTeamNumber() == TEAM_TERRORIST && pPlayer->IsAlive() );
+
+            pPlayer->GiveNamedItem( WEAPON_C4_CLASSNAME );
+            pPlayer->SelectItem( WEAPON_C4_CLASSNAME );
+            pPlayer->m_fLastGivenBombTime = gpGlobals->curtime;
+        }
+
+        m_bBombDropped = false;
+    }
+
+    static int DefuserSortPredicate(CCSPlayer * const *left, CCSPlayer * const *right) 
+    {
+        // should we prioritize humans over bots?
+        if (cv_bot_defer_to_human_items.GetBool() )
+        {
+            if ( (*left)->IsBot() && !(*right)->IsBot() )
+                return 1;
+
+            if ( !(*left)->IsBot() && (*right)->IsBot() )
+                return -1;
+        }
+
+        if ( (*left)->m_fLastGivenDefuserTime < (*right)->m_fLastGivenDefuserTime )
+            return -1;
+
+        if ( (*left)->m_fLastGivenDefuserTime > (*right)->m_fLastGivenDefuserTime )
+            return +1;
+
+        return 0;
+    }
+
+    void CCSGameRules::GiveDefuserToRandomPlayer()
+    {
+        int iDefusersToGive = 2;
+        CUtlVector<CCSPlayer*> candidates;
+        candidates.EnsureCapacity(MAX_PLAYERS);
+
+        // add all CT candidates to a list
+        for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+        {
+            CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+            if ( pPlayer && pPlayer->IsAlive() && pPlayer->GetTeamNumber() == TEAM_CT )
+            {
+                candidates.AddToTail(pPlayer);
+            }
+        }
+
+        // randomly shuffle the list; this will keep the selection random in case of ties
+        FOR_EACH_VEC(candidates, i)
+        {
+            V_swap(candidates[i], candidates[random->RandomInt( 0, candidates.Count() - 1)] );
+        }
+
+        // now sort the shuffled list into subgroups
+        candidates.Sort(DefuserSortPredicate);
+
+        // give defusers to the first N candidates
+        for ( int i = 0; i < iDefusersToGive && i < candidates.Count(); ++i )
+        {
+            CCSPlayer *pPlayer = candidates[i];
+            Assert( pPlayer && pPlayer->GetTeamNumber() == TEAM_CT && pPlayer->IsAlive() );
+            pPlayer->GiveDefuser(false);
+            pPlayer->HintMessage( "#Hint_you_have_the_defuser", false, true );
+        }
+    }
 
 	void CCSGameRules::Think()
 	{

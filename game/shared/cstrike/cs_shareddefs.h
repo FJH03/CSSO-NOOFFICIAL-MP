@@ -97,6 +97,16 @@ namespace GameModes
 	};
 };
 
+namespace DefuserAllocation
+{
+ 	enum Type
+ 	{
+ 		None = 0,
+ 		Random = 1,
+ 		All = 2,
+ 	};
+};
+
 namespace TeamCashAward
 {
  	enum Type

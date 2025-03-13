@@ -53,6 +53,7 @@ extern ConVar mp_c4timer;
 extern ConVar mp_buytime;
 extern ConVar mp_freezetime;
 extern ConVar mp_playerid;
+extern ConVar mp_defuser_allocation;
 extern ConVar mp_death_drop_gun;
 extern ConVar mp_death_drop_grenade;
 extern ConVar mp_death_drop_defuser;
@@ -583,7 +584,8 @@ public:
 
 
 	// BOMB MAP FUNCTIONS
-	void GiveC4();
+	void GiveC4ToRandomPlayer();
+ 	void GiveDefuserToRandomPlayer();
 	bool IsThereABomber();
 	bool IsThereABomb();
 
