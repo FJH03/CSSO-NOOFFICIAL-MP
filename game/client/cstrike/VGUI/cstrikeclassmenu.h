@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //=============================================================================//
@@ -11,99 +11,71 @@
 #pragma once
 #endif
 
-#include <classmenu.h>
-#include <vgui_controls/EditablePanel.h>
-#include <filesystem.h>
-#include <cs_shareddefs.h>
-#include "cbase.h"
-#include "cs_gamerules.h"
-#include "vgui_controls/ImagePanel.h"
-#include "backgroundpanel.h"
+#include <vgui_controls/Frame.h>
+#include <vgui_controls/Button.h>
+#include <game/client/iviewport.h>
+#include "cstriketeammenu.h"
+#include "cs_shareddefs.h"
 
 using namespace vgui;
 
-
-//-----------------------------------------------------------------------------
-// These are maintained in a list so the renderer can draw a 3D character
-// model on top of them.
-//-----------------------------------------------------------------------------
-
-class CCSClassImagePanel: public vgui::Panel
+class CCSClassMenu: public Frame, public IViewPortPanel
 {
-	typedef vgui::Panel BaseClass;
-
+	DECLARE_CLASS_SIMPLE( CCSClassMenu, Frame );
 public:
+	CCSClassMenu( IViewPort* pViewPort );
 
-	CCSClassImagePanel( vgui::Panel *pParent, const char *pName );
-	virtual ~CCSClassImagePanel();
-	virtual void ApplySettings( KeyValues *inResourceData );
+	// IViewPortPanel overrides
+	virtual const char* GetName( void ) { return PANEL_CLASS; }
+	virtual void SetData( KeyValues* data ) {}
+	virtual void Reset() {}
+	virtual void Update();
+	virtual bool NeedsUpdate( void ) { return true; }
+	virtual bool HasInputElements( void ) { return true; }
+	vgui::VPANEL GetVPanel( void ) { return BaseClass::GetVPanel(); }
+	virtual bool IsVisible() { return BaseClass::IsVisible(); }
+	virtual void SetParent( vgui::VPANEL parent ) { BaseClass::SetParent( parent ); }
+	virtual void ShowPanel( bool bShow );
 
-public:
-	char m_szModelName[80];
-	float m_flViewXPos;
-	float m_flViewYPos;
-	float m_flViewZPos;
-	float m_flViewFOV;
+	// vgui overrides
+	virtual void OnClose();
+	virtual void OnCommand( const char* command );
+	virtual void OnKeyCodeTyped( KeyCode code );
+
+private:
+	Button* m_pCancelButton;
+
+	IViewPort* m_pViewPort;
 };
 
-extern CUtlVector<CCSClassImagePanel*> g_ClassImagePanels;
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Draws the Terrorist class menu
-//-----------------------------------------------------------------------------
-
-class CClassMenu_TER : public CClassMenu
+class CCSClassMenu_TER: public CCSClassMenu
 {
+	DECLARE_CLASS_SIMPLE( CCSClassMenu_TER, CCSClassMenu );
+public:
+	CCSClassMenu_TER( IViewPort* pViewPort );
+
+	virtual const char* GetName( void ) { return PANEL_CLASS_TER; }
+	virtual void ShowPanel( bool bShow );
+
+	void ResetAgentModels();
+
 private:
-	DECLARE_CLASS_SIMPLE( CClassMenu_TER, CClassMenu );
-
-	// Background panel -------------------------------------------------------
-
-public:
-	virtual void PaintBackground();
-	virtual void PerformLayout();
-	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
-	bool m_backgroundLayoutFinished;
-
-	// End background panel ---------------------------------------------------
-	
-public:
-	CClassMenu_TER(IViewPort *pViewPort);
-	virtual Panel* CreateControlByName(const char *controlName);
-	const char *GetName( void );
-	void ShowPanel(bool bShow);
-	void Update();
-	virtual void SetVisible(bool state);
+	CCSTeamMenuAgentImage* m_pAgentModels[LAST_T_CLASS];
 };
 
-
-//-----------------------------------------------------------------------------
-// Purpose: Draws the Counter-Terrorist class menu
-//-----------------------------------------------------------------------------
-
-class CClassMenu_CT : public CClassMenu
+class CCSClassMenu_CT: public CCSClassMenu
 {
+	DECLARE_CLASS_SIMPLE( CCSClassMenu_CT, CCSClassMenu );
+public:
+	CCSClassMenu_CT( IViewPort* pViewPort );
+
+	virtual const char* GetName( void ) { return PANEL_CLASS_CT; }
+	virtual void ShowPanel( bool bShow );
+
+	void ResetAgentModels();
+
 private:
-	DECLARE_CLASS_SIMPLE( CClassMenu_CT, CClassMenu );
-
-	// Background panel -------------------------------------------------------
-
-public:
-	virtual void PaintBackground();
-	virtual void PerformLayout();
-	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
-	bool m_backgroundLayoutFinished;
-
-	// End background panel ---------------------------------------------------
-	
-public:
-	CClassMenu_CT(IViewPort *pViewPort);
-	virtual Panel *CreateControlByName(const char *controlName);
-	const char *GetName( void );
-	void ShowPanel(bool bShow);
-	void Update();
-	virtual void SetVisible(bool state);
+	CCSTeamMenuAgentImage* m_pAgentModels[LAST_T_CLASS];
 };
 
 #endif // CSCLASSMENU_H

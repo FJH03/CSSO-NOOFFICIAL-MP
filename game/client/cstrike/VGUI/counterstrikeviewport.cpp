@@ -173,12 +173,13 @@ IViewPortPanel* CounterStrikeViewport::CreatePanelByName(const char *szPanelName
 
 	else if ( Q_strcmp(PANEL_CLASS_CT, szPanelName) == 0 )
 	{
-		newpanel = new CClassMenu_CT( this );	
+		newpanel = new CCSClassMenu_CT( this );
+
 	}
 
 	else if ( Q_strcmp(PANEL_CLASS_TER, szPanelName) == 0 )
 	{
-		newpanel = new CClassMenu_TER( this );	
+		newpanel = new CCSClassMenu_TER( this );
 	}
 
 	else if ( Q_strcmp(PANEL_BUY, szPanelName) == 0 )

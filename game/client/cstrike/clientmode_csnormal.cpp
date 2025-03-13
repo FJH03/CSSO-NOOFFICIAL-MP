@@ -7,6 +7,7 @@
 //===========================================================================//
 #include "cbase.h"
 #include "hud.h"
+#include "cs_gamerules.h"
 #include "clientmode_csnormal.h"
 #include "cdll_client_int.h"
 #include <engine/ivdebugoverlay.h>

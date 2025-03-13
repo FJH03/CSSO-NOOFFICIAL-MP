@@ -419,8 +419,6 @@ public:
 	void CheckTKPunishment( void );
 
 	bool	IsBotOrControllingBot();
-	bool	HasAgentSet( int team );
-	int		GetAgentID( int team );
 	bool	m_bNeedToChangeAgent;
 
 	CNetworkVar( bool, m_bNeedToChangeGloves );
@@ -864,8 +862,8 @@ public:
 	void SwitchTeamsAtRoundReset( void ) { m_switchTeamsOnNextRoundReset = true; }
 	bool WillSwitchTeamsAtRoundReset( void ) { return m_switchTeamsOnNextRoundReset; }
 
-	int m_iLoadoutSlotAgentCT;
-	int m_iLoadoutSlotAgentT;
+	CNetworkVar( int, m_iLoadoutSlotAgentCT );
+	CNetworkVar( int, m_iLoadoutSlotAgentT );
 	CNetworkVar( int, m_iLoadoutSlotKnifeWeaponCT );
 	CNetworkVar( int, m_iLoadoutSlotKnifeWeaponT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesCT );

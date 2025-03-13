@@ -468,6 +468,8 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_iLoadoutSlotGlovesT ) ),
 	SendPropInt( SENDINFO( m_iLoadoutSlotKnifeWeaponCT ) ),
 	SendPropInt( SENDINFO( m_iLoadoutSlotKnifeWeaponT ) ),
+	SendPropInt( SENDINFO( m_iLoadoutSlotAgentCT ) ),
+	SendPropInt( SENDINFO( m_iLoadoutSlotAgentT ) ),
 
 
 END_SEND_TABLE()
@@ -1111,16 +1113,16 @@ void CCSPlayer::InitialSpawn( void )
 
 void CCSPlayer::SetModelFromClass( void )
 {
-	if ( HasAgentSet( GetTeamNumber() ) && !IsBotOrControllingBot() )
+	if ( CSLoadout()->HasAgentSet( this, GetTeamNumber() ) && !IsBotOrControllingBot() )
 	{
 		if ( GetTeamNumber() == TEAM_CT )
 		{
-			SetModel( GetCSAgentInfoCT( GetAgentID( GetTeamNumber() ) )->m_szModel );
+			SetModel( GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer( this, GetTeamNumber() ) )->m_szModel );
 			return;
 		}
 		else if ( GetTeamNumber() == TEAM_TERRORIST )
 		{
-			SetModel( GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_szModel );
+			SetModel( GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer( this, GetTeamNumber() ) )->m_szModel );
 			return;
 		}
 	}
@@ -1360,17 +1362,17 @@ void CCSPlayer::Spawn()
 
 	// we need to do that because player can change their agent but the class won't
 	// change and it won't change arms as well
-	if ( HasAgentSet( GetTeamNumber() ) && !IsBotOrControllingBot() )
+	if ( CSLoadout()->HasAgentSet( this, GetTeamNumber() ) && !IsBotOrControllingBot() )
 	{
 		if ( GetTeamNumber() == TEAM_CT )
-			m_iClass = GetCSAgentInfoCT( GetAgentID( GetTeamNumber() ) )->m_iClass;
+			m_iClass = GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer( this, GetTeamNumber() ) )->m_iClass;
 		if ( GetTeamNumber() == TEAM_TERRORIST )
-			m_iClass = GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_iClass;
+			m_iClass = GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer( this, GetTeamNumber() ) )->m_iClass;
 	}
 	// PiMoN: placing it here since the server can change the varriable mid-game
-	else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && CSGameRules()->GetMapFactionsForThisPlayer(this) > -1 )
+	else if ( CSGameRules()->UseMapFactionsForThisPlayer(this, GetTeamNumber()) && CSGameRules()->GetMapFactionsForThisPlayer(this, GetTeamNumber()) > -1 )
 	{
-		m_iClass = CSGameRules()->GetMapFactionsForThisPlayer(this);
+		m_iClass = CSGameRules()->GetMapFactionsForThisPlayer(this, GetTeamNumber());
 	}
 
 	// Set their player model.
@@ -1591,9 +1593,9 @@ void CCSPlayer::Spawn()
 	}
 
 	if ( GetTeamNumber() == TEAM_CT )
-		m_bIsFemale = (HasAgentSet( TEAM_CT )) ? (GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_bIsFemale) : false;
+		m_bIsFemale = (CSLoadout()->HasAgentSet( this, TEAM_CT )) ? (GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer( this, TEAM_CT ) )->m_bIsFemale) : false;
 	else
-		m_bIsFemale = (HasAgentSet( TEAM_TERRORIST )) ? (GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_bIsFemale) : false;
+		m_bIsFemale = (CSLoadout()->HasAgentSet( this, TEAM_TERRORIST )) ? (GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer( this, TEAM_TERRORIST ) )->m_bIsFemale) : false;
 }
 
 void CCSPlayer::ShowViewPortPanel( const char * name, bool bShow, KeyValues *data )
@@ -1660,7 +1662,11 @@ void CCSPlayer::GiveDefaultItems()
 
 			if ( secondaryString && *secondaryString )
 			{
-				CSWeaponID weaponId = CSLoadout()->GetLoadoutWeaponID( this, WeaponIdFromString( secondaryString ) );
+				LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( GetTeamNumber(), secondaryString + 7 ); // +7 to get rid of weapon_ prefix
+				if ( loadout_slot != SLOT_NONE )
+					secondaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
+
+				CSWeaponID weaponId = CSLoadout()->GetLoadoutWeaponID( this, GetTeamNumber(), WeaponIdFromString( secondaryString ) );
 				if ( weaponId )
 				{
 					const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
@@ -1751,7 +1757,7 @@ void CCSPlayer::GiveDefaultItems()
 
 		if ( secondaryString && *secondaryString )
 		{
-			CSWeaponID weaponId = CSLoadout()->GetLoadoutWeaponID( this, WeaponIdFromString( secondaryString ) );
+			CSWeaponID weaponId = CSLoadout()->GetLoadoutWeaponID( this, GetTeamNumber(), WeaponIdFromString( secondaryString ) );
 			if ( weaponId )
 			{
 				const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
@@ -1771,7 +1777,11 @@ void CCSPlayer::GiveDefaultItems()
 
 		if ( primaryString && *primaryString )
 		{
-			CSWeaponID weaponId = CSLoadout()->GetLoadoutWeaponID( this, WeaponIdFromString( primaryString ) );
+			LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( GetTeamNumber(), primaryString + 7 ); // +7 to get rid of weapon_ prefix
+			if ( loadout_slot != SLOT_NONE )
+				primaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
+
+			CSWeaponID weaponId = CSLoadout()->GetLoadoutWeaponID( this, GetTeamNumber(), WeaponIdFromString( primaryString ) );
 			if ( weaponId )
 			{
 				const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
@@ -5702,12 +5712,12 @@ void CCSPlayer::Radio( const char *pszRadioSound, const char *pszRadioText, bool
 	char strRadioSound[256];
 
 	// special case for agents
-	if ( HasAgentSet( GetTeamNumber() ) && !IsBotOrControllingBot() )
+	if ( CSLoadout()->HasAgentSet( this, GetTeamNumber() ) && !IsBotOrControllingBot() )
 	{
 		if ( GetTeamNumber() == TEAM_CT )
-			Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s.%s", GetCSAgentInfoCT( GetAgentID( GetTeamNumber() ) )->m_szRadioPrefix, pszRadioSound );
+			Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s.%s", GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer( this, GetTeamNumber() ) )->m_szRadioPrefix, pszRadioSound );
 		if ( GetTeamNumber() == TEAM_TERRORIST )
-			Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s.%s", GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_szRadioPrefix, pszRadioSound );
+			Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s.%s", GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer( this, GetTeamNumber() ) )->m_szRadioPrefix, pszRadioSound );
 	}
 	else
 		Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s.%s", GetCSClassInfo( m_iClass )->m_szRadioPrefix, pszRadioSound );
@@ -6527,7 +6537,7 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 	if ( team == GetTeamNumber() )
 	{
 		// if we don't have an agent and also map factions are disabled (or there are no default factions for current map) let the players choose a faction
-		if ( !HasAgentSet( GetTeamNumber() ) && (!CSGameRules()->UseMapFactionsForThisPlayer(this) || CSGameRules()->GetMapFactionsForThisPlayer(this) == -1) )
+		if ( !CSLoadout()->HasAgentSet( this, GetTeamNumber() ) && (!CSGameRules()->UseMapFactionsForThisPlayer(this, GetTeamNumber()) || CSGameRules()->GetMapFactionsForThisPlayer(this, GetTeamNumber()) == -1) )
 		{
 			// Let people change class (skin) by re-joining the same team
 			if ( GetTeamNumber() == TEAM_TERRORIST )
@@ -6542,11 +6552,11 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 		}
 		else
 		{
-			if ( HasAgentSet(GetTeamNumber()) )
-				HandleCommand_JoinClass( GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_iClass );
-			else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && CSGameRules()->GetMapFactionsForThisPlayer(this) > -1 )
+			if ( CSLoadout()->HasAgentSet(this, GetTeamNumber()) )
+				HandleCommand_JoinClass( GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer( this, GetTeamNumber() ) )->m_iClass );
+			else if ( CSGameRules()->UseMapFactionsForThisPlayer(this, GetTeamNumber()) && CSGameRules()->GetMapFactionsForThisPlayer(this, GetTeamNumber()) > -1 )
 			{
-				HandleCommand_JoinClass( CSGameRules()->GetMapFactionsForThisPlayer(this) );
+				HandleCommand_JoinClass( CSGameRules()->GetMapFactionsForThisPlayer(this, GetTeamNumber()) );
 			}
 			return true;
 		}
@@ -6716,7 +6726,7 @@ bool CCSPlayer::HandleCommand_JoinClass( int iClass )
 		CommitSuicide( false, true );
 	}
 
-	if ( !HasAgentSet( GetTeamNumber() ) )
+	if ( !CSLoadout()->HasAgentSet( this, GetTeamNumber() ) )
 	{
 		m_iClass = iClass;
 		SetRandomClassSkin();
@@ -6724,9 +6734,9 @@ bool CCSPlayer::HandleCommand_JoinClass( int iClass )
 	else
 	{
 		if ( GetTeamNumber() == TEAM_CT )
-			m_iClass = GetCSAgentInfoCT( GetAgentID(GetTeamNumber()) )->m_iClass;
+			m_iClass = GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer(this, GetTeamNumber()) )->m_iClass;
 		if ( GetTeamNumber() == TEAM_TERRORIST )
-			m_iClass = GetCSAgentInfoT( GetAgentID(GetTeamNumber()) )->m_iClass;
+			m_iClass = GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer(this, GetTeamNumber()) )->m_iClass;
 	}
 
 	if (State_Get() == STATE_PICKINGCLASS)
@@ -7500,24 +7510,24 @@ void CCSPlayer::State_Enter_PICKINGCLASS()
 
 	PhysObjectSleep();
 	
-	if ( CSGameRules()->GetMapFactionsForThisPlayer(this) > -1 )
+	if ( CSGameRules()->GetMapFactionsForThisPlayer(this, GetTeamNumber()) > -1 )
 	{
-		HandleCommand_JoinClass( CSGameRules()->GetMapFactionsForThisPlayer(this) );
+		HandleCommand_JoinClass( CSGameRules()->GetMapFactionsForThisPlayer(this, GetTeamNumber()) );
 	}
 	else
 	{
 		// show the class menu:
 		if ( GetTeamNumber() == TEAM_TERRORIST )
 		{
-			if ( HasAgentSet( TEAM_TERRORIST ) )
-				HandleCommand_JoinClass( GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_iClass );
+			if ( CSLoadout()->HasAgentSet( this, TEAM_TERRORIST ) )
+				HandleCommand_JoinClass( GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer( this, TEAM_TERRORIST ) )->m_iClass );
 			else
 				ShowViewPortPanel( PANEL_CLASS_TER );
 		}
 		else if ( GetTeamNumber() == TEAM_CT )
 		{
-			if ( HasAgentSet( TEAM_CT ) )
-				HandleCommand_JoinClass( GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_iClass );
+			if ( CSLoadout()->HasAgentSet( this, TEAM_CT ) )
+				HandleCommand_JoinClass( GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer( this, TEAM_CT ) )->m_iClass );
 			else
 				ShowViewPortPanel( PANEL_CLASS_CT );
 		}
@@ -9400,9 +9410,9 @@ void CCSPlayer::SwitchTeam( int iTeamNum )
 	}
 
 	//reset class
-	if ( CSGameRules()->UseMapFactionsForThisPlayer(this) )
+	if ( CSGameRules()->UseMapFactionsForThisPlayer(this, GetTeamNumber()) )
 	{
-		m_iClass = CSGameRules()->GetMapFactionsForThisPlayer( this );
+		m_iClass = CSGameRules()->GetMapFactionsForThisPlayer( this, GetTeamNumber() );
 		SetRandomClassSkin();
 	}
 	else
@@ -11515,32 +11525,6 @@ CCSBot* CCSPlayer::FindNearestControllableBot( bool bMustBeValidObserverTarget )
 	return pNearestBot;
 }
 #endif // CS_CONTROLLABLE_BOTS_ENABLED
-
-bool CCSPlayer::HasAgentSet( int team )
-{
-	if ( IsBotOrControllingBot() )
-		return false;
-
-	if ( team == TEAM_CT )
-		return ( m_iLoadoutSlotAgentCT > 0 );
-	if ( team == TEAM_TERRORIST )
-		return ( m_iLoadoutSlotAgentT > 0 );
-
-	return false;
-}
-
-int CCSPlayer::GetAgentID( int team )
-{
-	if ( IsBotOrControllingBot() )
-		return 0;
-
-	if ( team == TEAM_CT )
-		return m_iLoadoutSlotAgentCT;
-	if ( team == TEAM_TERRORIST )
-		return m_iLoadoutSlotAgentT;
-
-	return 0;
-}
 
 bool CCSPlayer::CanHearAndReadChatFrom( CBasePlayer *pPlayer )
 {

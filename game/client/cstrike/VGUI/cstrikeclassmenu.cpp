@@ -1,270 +1,312 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //=============================================================================//
 
 #include "cbase.h"
 #include "cstrikeclassmenu.h"
-
-#include <KeyValues.h>
-#include <filesystem.h>
-#include <vgui_controls/Button.h>
-#include <vgui/IVGui.h>
-
-#include "hud.h" // for gEngfuncs
+#include "view_shared.h"
+#include "view.h"
+#include "model_types.h"
 #include "cs_gamerules.h"
+#include "cs_loadout.h"
 
-using namespace vgui;
-
-
-// ----------------------------------------------------------------------------- //
-// Class image panels. These maintain a list of the class image panels so 
-// it can render 3D images into them.
-// ----------------------------------------------------------------------------- //
-
-CUtlVector<CCSClassImagePanel*> g_ClassImagePanels;
-
-
-CCSClassImagePanel::CCSClassImagePanel( vgui::Panel *pParent, const char *pName )
-	: BaseClass( pParent, pName )
+CCSClassMenu::CCSClassMenu( IViewPort* pViewPort ): Frame( NULL, GetName() )
 {
-	g_ClassImagePanels.AddToTail( this );
-	m_szModelName[0] = NULL;
+	m_pViewPort = pViewPort;
+
+	// initialize dialog
+	SetTitle( "", true );
+
+	// load the new scheme early!!
+	SetScheme( "ClientScheme" );
+	SetMoveable( false );
+	SetSizeable( false );
+
+	SetProportional( true );
+
+	// initialize elements
+	m_pCancelButton = new Button( this, "CancelButton", "#Cstrike_Cancel" );
 }
 
-CCSClassImagePanel::~CCSClassImagePanel()
+void CCSClassMenu::Update()
 {
-	g_ClassImagePanels.FindAndRemove( this );
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pPlayer )
+		return;
+
+	if ( m_pCancelButton )
+		m_pCancelButton->SetVisible( pPlayer->IsAlive() );
 }
 
-void CCSClassImagePanel::ApplySettings( KeyValues *inResourceData )
+void CCSClassMenu::ShowPanel( bool bShow )
 {
-	const char *pName = inResourceData->GetString( "3DModel" );
-	if ( pName )
+	if ( bShow )
 	{
-		Q_strncpy( m_szModelName, pName, sizeof( m_szModelName ) );
+		// hide the system buttons
+		SetTitleBarVisible( false );
+
+		Activate();
+		SetMouseInputEnabled( true );
+
+		engine->ClientCmd_Unrestricted( "gameui_preventescapetoshow\n" );
+	}
+	else
+	{
+		engine->ClientCmd_Unrestricted( "gameui_allowescapetoshow\n" );
+
+		SetVisible( false );
+		SetMouseInputEnabled( false );
 	}
 
-	m_flViewXPos = inResourceData->GetFloat( "view_xpos", 0.0f );
-	m_flViewYPos = inResourceData->GetFloat( "view_ypos", 0.0f );
-	m_flViewZPos = inResourceData->GetFloat( "view_zpos", 0.0f );
-	m_flViewFOV = inResourceData->GetFloat( "view_fov", 0.0f );
-	
-	BaseClass::ApplySettings( inResourceData );
+	m_pViewPort->ShowBackGround( bShow );
 }
 
-// ----------------------------------------------------------------------------- //
-// CClassMenu_TER
-// ----------------------------------------------------------------------------- //
-
-CClassMenu_TER::CClassMenu_TER(IViewPort *pViewPort) : CClassMenu(pViewPort, PANEL_CLASS_TER)
+void CCSClassMenu::OnClose()
 {
+	engine->ClientCmd_Unrestricted( "gameui_allowescapetoshow\n" );
+	BaseClass::OnClose();
+}
+
+void CCSClassMenu::OnCommand( const char* command )
+{
+	Close();
+	gViewPortInterface->ShowBackGround( false );
+	engine->ClientCmd( command );
+}
+
+void CCSClassMenu::OnKeyCodeTyped( KeyCode code )
+{
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pPlayer )
+	{
+		BaseClass::OnKeyCodeTyped( code );
+		return;
+	}
+
+	// ESC cancels
+	if ( code == KEY_ESCAPE && pPlayer->IsAlive() )
+	{
+		ShowPanel( false );
+	}
+	else
+	{
+		BaseClass::OnKeyCodeTyped( code );
+	}
+}
+
+
+CCSClassMenu_TER::CCSClassMenu_TER( IViewPort* pViewPort ): CCSClassMenu( pViewPort )
+{
+	for ( int i = 0; i < ARRAYSIZE( m_pAgentModels ); i++ )
+	{
+		char szPanelName[32];
+		V_snprintf( szPanelName, sizeof( szPanelName ), "AgentModel%d", i );
+		m_pAgentModels[i] = new CCSTeamMenuAgentImage( this, szPanelName, TEAM_TERRORIST );
+		m_pAgentModels[i]->SetPaintBackgroundEnabled( false );
+	}
+
 	LoadControlSettings( "Resource/UI/ClassMenu_TER.res" );
-	CreateBackground( this );
-	m_backgroundLayoutFinished = false;
 }
 
-const char *CClassMenu_TER::GetName( void ) 
-{ 
-	return PANEL_CLASS_TER; 
-}
-
-void CClassMenu_TER::ShowPanel(bool bShow)
+void CCSClassMenu_TER::ShowPanel( bool bShow )
 {
-	if ( bShow)
-	{
-		engine->CheckPoint( "ClassMenu" );
-	}
-
 	BaseClass::ShowPanel( bShow );
 
+	if ( bShow )
+		ResetAgentModels();
 }
 
-void CClassMenu_TER::SetVisible(bool state)
+void CCSClassMenu_TER::ResetAgentModels()
 {
-	BaseClass::SetVisible(state);
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pPlayer )
+		return;
 
-	if ( state )
+	for ( int i = 0; i < ARRAYSIZE( m_pAgentModels ); i++ )
 	{
-		Panel *pAutoButton = FindChildByName( "autoselect_t" );
-		if ( pAutoButton )
+		char szHotkey[4];
+		Q_snprintf( szHotkey, sizeof( szHotkey ), "%d", i+1 );
+		m_pAgentModels[i]->SetHotkey( szHotkey[0] );
+
+		const char* pszPlayerModel = NULL;
+		switch ( i+FIRST_T_CLASS )
 		{
-			pAutoButton->RequestFocus();
+			case CS_CLASS_PHOENIX_CONNNECTION:
+			{
+				pszPlayerModel = TPhoenixPlayerModelStrings[0];
+				break;
+			}
+			case CS_CLASS_L337_KREW:
+			{
+				pszPlayerModel = TLeetPlayerModelStrings[0];
+				break;
+			}
+			case CS_CLASS_SEPARATIST:
+			{
+				pszPlayerModel = TSeparatistPlayerModelStrings[0];
+				break;
+			}
+			case CS_CLASS_BALKAN:
+			{
+				pszPlayerModel = TBalkanPlayerModelStrings[0];
+				break;
+			}
+			case CS_CLASS_PROFESSIONAL:
+			{
+				pszPlayerModel = TProfessionalPlayerModelStrings[0];
+				break;
+			}
+			case CS_CLASS_ANARCHIST:
+			{
+				pszPlayerModel = TAnarchistPlayerModelStrings[0];
+				break;
+			}
+			case CS_CLASS_PIRATE:
+			{
+				pszPlayerModel = TPiratePlayerModelStrings[0];
+				break;
+			}
+		}
+		m_pAgentModels[i]->SetPlayerModel( pszPlayerModel );
+
+		CSWeaponID nWeaponID = CSLoadout()->GetLoadoutWeaponID( pPlayer, TEAM_TERRORIST, WEAPON_GLOCK );
+		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( WeaponIdAsString( nWeaponID ) );
+		if ( hWpnInfo != GetInvalidWeaponInfoHandle() )
+		{
+			CCSWeaponInfo* pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
+			if ( pWeaponInfo )
+			{
+				m_pAgentModels[i]->SetWeaponModel( pWeaponInfo->szWorldModel );
+				m_pAgentModels[i]->SetSequence( pWeaponInfo->m_szClassMenuAnim );
+			}
+		}
+
+		if ( CSLoadout()->HasGlovesSet( pPlayer, TEAM_TERRORIST ) )
+		{
+			const char* pszGlovesViewModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szViewModel;
+			const char* pszGlovesWorldModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel;
+			if ( pszGlovesViewModel && pPlayer->m_szPlayerDefaultGloves && m_pAgentModels[i]->DoesModelSupportGloves( pszGlovesViewModel, pPlayer->m_szPlayerDefaultGloves ) )
+			{
+				m_pAgentModels[i]->SetGlovesModel( pszGlovesWorldModel );
+			}
+			else
+			{
+				m_pAgentModels[i]->SetGlovesModel( NULL );
+			}
+		}
+		else
+		{
+			m_pAgentModels[i]->SetGlovesModel( NULL );
 		}
 	}
 }
 
-bool modelExists( const char *search, const CUtlVector< const char * > &names )
+
+CCSClassMenu_CT::CCSClassMenu_CT( IViewPort* pViewPort ): CCSClassMenu( pViewPort )
 {
-	for ( int i=0; i<names.Count(); ++i )
+	for ( int i = 0; i < ARRAYSIZE( m_pAgentModels ); i++ )
 	{
-		if ( Q_stristr( names[i], search ) != NULL )
-		{
-			return true;
-		}
+		char szPanelName[32];
+		V_snprintf( szPanelName, sizeof( szPanelName ), "AgentModel%d", i );
+		m_pAgentModels[i] = new CCSTeamMenuAgentImage( this, szPanelName, TEAM_CT );
+		m_pAgentModels[i]->SetPaintBackgroundEnabled( false );
 	}
 
-	return false;
-}
-
-void CClassMenu_TER::Update()
-{
-	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
-
-	if ( pLocalPlayer && pLocalPlayer->PlayerClass() >= FIRST_T_CLASS && pLocalPlayer->PlayerClass() <= LAST_T_CLASS )
-	{
-		SetVisibleButton( "CancelButton", true );
-	}
-	else
-	{
-		SetVisibleButton( "CancelButton", false ); 
-	}
-
-	// if we don't have the new models installed,
-	// turn off the militia and spetsnaz buttons
-	SetVisibleButton( "militia", false );
-}
-
-
-Panel *CClassMenu_TER::CreateControlByName(const char *controlName)
-{
-	if ( Q_stricmp( controlName, "CSClassImagePanel" ) == 0 )
-	{
-		return new CCSClassImagePanel( NULL, controlName );
-	}
-
-	return BaseClass::CreateControlByName( controlName );
-}
-
-
-
-// ----------------------------------------------------------------------------- //
-// CClassMenu_CT
-// ----------------------------------------------------------------------------- //
-
-CClassMenu_CT::CClassMenu_CT(IViewPort *pViewPort) : CClassMenu(pViewPort, PANEL_CLASS_CT)
-{
 	LoadControlSettings( "Resource/UI/ClassMenu_CT.res" );
-	CreateBackground( this );
-	m_backgroundLayoutFinished = false;
 }
 
-Panel *CClassMenu_CT::CreateControlByName(const char *controlName)
+void CCSClassMenu_CT::ShowPanel( bool bShow )
 {
-	if ( Q_stricmp( controlName, "CSClassImagePanel" ) == 0 )
-	{
-		return new CCSClassImagePanel( NULL, controlName );
-	}
-
-	return BaseClass::CreateControlByName( controlName );
-}
-
-const char *CClassMenu_CT::GetName( void ) 
-{ 
-	return PANEL_CLASS_CT; 
-}
-
-void CClassMenu_CT::ShowPanel(bool bShow)
-{
-	if ( bShow)
-	{
-		engine->CheckPoint( "ClassMenu" );
-	}
-
 	BaseClass::ShowPanel( bShow );
 
+	if ( bShow )
+		ResetAgentModels();
 }
 
-void CClassMenu_CT::SetVisible(bool state)
+void CCSClassMenu_CT::ResetAgentModels()
 {
-	BaseClass::SetVisible(state);
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pPlayer )
+		return;
 
-	if ( state )
+	for ( int i = 0; i < ARRAYSIZE( m_pAgentModels ); i++ )
 	{
-		Panel *pAutoButton = FindChildByName( "autoselect_ct" );
-		if ( pAutoButton )
+		const char* pszPlayerModel = NULL;
+		switch ( i+FIRST_CT_CLASS )
 		{
-			pAutoButton->RequestFocus();
+			char szHotkey[4];
+			Q_snprintf( szHotkey, sizeof( szHotkey ), "%d", i + 1 );
+			m_pAgentModels[i]->SetHotkey( szHotkey[0] );
+
+			case CS_CLASS_SEAL_TEAM_6:
+			{
+				pszPlayerModel = CTST6PlayerModelStrings[0];
+				break;
+			}
+			case CS_CLASS_GSG_9:
+			{
+				pszPlayerModel = CTGSG9PlayerModelStrings[0];
+				break;
+			}
+			case CS_CLASS_SAS:
+			{
+				pszPlayerModel = CTSASPlayerModelStrings[0];
+				break;
+			}
+			case CS_CLASS_GIGN:
+			{
+				pszPlayerModel = CTGIGNPlayerModelStrings[0];
+				break;
+			}
+			case CS_CLASS_FBI:
+			{
+				pszPlayerModel = CTFBIPlayerModelStrings[0];
+				break;
+			}
+			case CS_CLASS_IDF:
+			{
+				pszPlayerModel = CTIDFPlayerModelStrings[0];
+				break;
+			}
+			case CS_CLASS_SWAT:
+			{
+				pszPlayerModel = CTSWATPlayerModelStrings[0];
+				break;
+			}
+		}
+		m_pAgentModels[i]->SetPlayerModel( pszPlayerModel );
+
+		CSWeaponID nWeaponID = CSLoadout()->GetLoadoutWeaponID( pPlayer, TEAM_CT, WEAPON_HKP2000 );
+		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( WeaponIdAsString( nWeaponID ) );
+		if ( hWpnInfo != GetInvalidWeaponInfoHandle() )
+		{
+			CCSWeaponInfo* pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
+			if ( pWeaponInfo )
+			{
+				m_pAgentModels[i]->SetWeaponModel( pWeaponInfo->szWorldModel );
+				m_pAgentModels[i]->SetSequence( pWeaponInfo->m_szClassMenuAnim );
+			}
+		}
+
+		if ( CSLoadout()->HasGlovesSet( pPlayer, TEAM_CT ) )
+		{
+			const char* pszGlovesViewModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szViewModel;
+			const char* pszGlovesWorldModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel;
+			if ( pszGlovesViewModel && pPlayer->m_szPlayerDefaultGloves && m_pAgentModels[i]->DoesModelSupportGloves( pszGlovesViewModel, pPlayer->m_szPlayerDefaultGloves ) )
+			{
+				m_pAgentModels[i]->SetGlovesModel( pszGlovesWorldModel );
+			}
+			else
+			{
+				m_pAgentModels[i]->SetGlovesModel( NULL );
+			}
+		}
+		else
+		{
+			m_pAgentModels[i]->SetGlovesModel( NULL );
 		}
 	}
 }
-
-void CClassMenu_CT::Update()
-{
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-
-	if ( pPlayer && pPlayer->PlayerClass() >= FIRST_CT_CLASS && pPlayer->PlayerClass() <= LAST_CT_CLASS )
-	{
-		SetVisibleButton( "CancelButton", true );
-	}
-	else
-	{
-		SetVisibleButton( "CancelButton", false ); 
-	}
-
-	// if we don't have the new models installed,
-	// turn off the militia and spetsnaz buttons
-	SetVisibleButton( "spetsnaz", false );
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: The CS background is painted by image panels, so we should do nothing
-//-----------------------------------------------------------------------------
-void CClassMenu_TER::PaintBackground()
-{
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Scale / center the window
-//-----------------------------------------------------------------------------
-void CClassMenu_TER::PerformLayout()
-{
-	BaseClass::PerformLayout();
-
-	// stretch the window to fullscreen
-	if ( !m_backgroundLayoutFinished )
-		LayoutBackgroundPanel( this );
-	m_backgroundLayoutFinished = true;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CClassMenu_TER::ApplySchemeSettings( vgui::IScheme *pScheme )
-{
-	BaseClass::ApplySchemeSettings( pScheme );
-	ApplyBackgroundSchemeSettings( this, pScheme );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: The CS background is painted by image panels, so we should do nothing
-//-----------------------------------------------------------------------------
-void CClassMenu_CT::PaintBackground()
-{
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Scale / center the window
-//-----------------------------------------------------------------------------
-void CClassMenu_CT::PerformLayout()
-{
-	BaseClass::PerformLayout();
-
-	// stretch the window to fullscreen
-	if ( !m_backgroundLayoutFinished )
-		LayoutBackgroundPanel( this );
-	m_backgroundLayoutFinished = true;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CClassMenu_CT::ApplySchemeSettings( vgui::IScheme *pScheme )
-{
-	BaseClass::ApplySchemeSettings( pScheme );
-	ApplyBackgroundSchemeSettings( this, pScheme );
-}
-

@@ -145,9 +145,9 @@ bool CCSBot::Initialize( const BotProfile *profile, int team )
 		HandleCommand_JoinTeam( m_desiredTeam );
 
 		// if we have map factions enabled, use them instead of random faction
-		if ( CSGameRules()->UseMapFactionsForThisPlayer( this ) && CSGameRules()->GetMapFactionsForThisPlayer( this ) > -1 )
+		if ( CSGameRules()->UseMapFactionsForThisPlayer( this, GetTeamNumber() ) && CSGameRules()->GetMapFactionsForThisPlayer( this, GetTeamNumber() ) > -1 )
 		{
-			HandleCommand_JoinClass( CSGameRules()->GetMapFactionsForThisPlayer( this ) );
+			HandleCommand_JoinClass( CSGameRules()->GetMapFactionsForThisPlayer( this, GetTeamNumber() ) );
 			return true;
 		}
 

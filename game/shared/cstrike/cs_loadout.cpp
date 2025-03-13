@@ -99,10 +99,9 @@ const char* CCSLoadout::GetWeaponFromSlot( CBasePlayer* pPlayer, LoadoutSlot_t s
 	return NULL;
 }
 
-CSWeaponID CCSLoadout::GetLoadoutWeaponID( CBasePlayer* pPlayer, CSWeaponID iWeaponID )
+CSWeaponID CCSLoadout::GetLoadoutWeaponID( CBasePlayer* pPlayer, int iTeamNumber, CSWeaponID iWeaponID )
 {
 	LoadoutSlot_t iSlot = SLOT_NONE;
-	int iTeamNumber = pPlayer->GetTeamNumber();
 
 	for ( int i = 0; i < ARRAYSIZE( WeaponLoadout ); i++ )
 	{
@@ -253,4 +252,52 @@ int CCSLoadout::GetKnifeForPlayer( CCSPlayer* pPlayer, int team )
 	}
 
 	return value - 1; // arrays are started with index 0 not 1
+}
+
+bool CCSLoadout::HasAgentSet( CCSPlayer* pPlayer, int team )
+{
+	if ( !pPlayer )
+		return false;
+
+	if ( pPlayer->IsBotOrControllingBot() )
+		return false;
+
+	int value = 0;
+	switch ( team )
+	{
+		case TEAM_CT:
+			value = pPlayer->m_iLoadoutSlotAgentCT;
+			break;
+		case TEAM_TERRORIST:
+			value = pPlayer->m_iLoadoutSlotAgentT;
+			break;
+		default:
+			break;
+	}
+
+	return (value > 0) ? true : false;
+}
+
+int CCSLoadout::GetAgentForPlayer( CCSPlayer* pPlayer, int team )
+{
+	if ( !pPlayer )
+		return 0;
+
+	if ( pPlayer->IsBotOrControllingBot() )
+		return 0;
+
+	int value = 0;
+	switch ( team )
+	{
+		case TEAM_CT:
+			value = pPlayer->m_iLoadoutSlotAgentCT;
+			break;
+		case TEAM_TERRORIST:
+			value = pPlayer->m_iLoadoutSlotAgentT;
+			break;
+		default:
+			break;
+	}
+
+	return value;
 }

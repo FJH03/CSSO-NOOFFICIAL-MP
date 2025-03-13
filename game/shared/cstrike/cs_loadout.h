@@ -61,7 +61,7 @@ public:
 	// get the weapon from a client's slot
 	const char*		GetWeaponFromSlot( CBasePlayer* pPlayer, LoadoutSlot_t slot );
 
-	CSWeaponID		GetLoadoutWeaponID( CBasePlayer* pPlayer, CSWeaponID iWeaponID );
+	CSWeaponID		GetLoadoutWeaponID( CBasePlayer* pPlayer, int iTeamNumber, CSWeaponID iWeaponID );
 	const char*		GetLoadoutWeapon( CBasePlayer* pPlayer, const char* pszWeaponName );
 	
 	bool			HasGlovesSet( CCSPlayer* pPlayer, int team );
@@ -69,6 +69,8 @@ public:
 
 	bool			HasKnifeSet( CCSPlayer* pPlayer, int team );
 	int				GetKnifeForPlayer( CCSPlayer* pPlayer, int team );
+	bool			HasAgentSet( CCSPlayer* pPlayer, int team );
+	int				GetAgentForPlayer( CCSPlayer* pPlayer, int team );
 };
 
 

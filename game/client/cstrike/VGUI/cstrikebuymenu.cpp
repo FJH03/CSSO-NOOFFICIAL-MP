@@ -21,7 +21,7 @@
 #include "model_types.h"
 #include "vgui_avatarimage.h"
 #include "cs_hud_weaponselection.h"
-
+#include "cs_gamerules.h"
 #include "c_cs_player.h"
 #include "cs_loadout.h"
 #include "c_breakableprop.h"

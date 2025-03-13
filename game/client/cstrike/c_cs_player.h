@@ -650,6 +650,8 @@ private:
 	CNetworkVar( bool, m_bIsHoldingLookAtWeapon );
 
 public:
+	CNetworkVar( int, m_iLoadoutSlotAgentCT );
+	CNetworkVar( int, m_iLoadoutSlotAgentT );
 	CNetworkVar( int, m_iLoadoutSlotKnifeWeaponCT );
 	CNetworkVar( int, m_iLoadoutSlotKnifeWeaponT );
 	CNetworkVar( int, m_iLoadoutSlotGlovesCT );

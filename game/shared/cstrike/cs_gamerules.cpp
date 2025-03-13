@@ -206,6 +206,8 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderCT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponKillUpgradeOrderCT[0] ) ) ),
 		RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponKillUpgradeOrderT[0] ) ) ),
 		RecvPropInt( RECVINFO( m_iCurrentGamemode ) ),
+		RecvPropInt( RECVINFO( m_iMapFactionCT ) ),
+		RecvPropInt( RECVINFO( m_iMapFactionT ) ),
 	#else
 		SendPropBool( SENDINFO( m_bFreezePeriod ) ),
 		SendPropBool( SENDINFO( m_bMatchWaitingForResume ) ),
@@ -236,6 +238,8 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponKillUpgradeOrderCT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderCT ), 0, SPROP_UNSIGNED ) ),
 		SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponKillUpgradeOrderT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderT ), 0, SPROP_UNSIGNED ) ),
 		SendPropInt( SENDINFO( m_iCurrentGamemode ) ),
+		SendPropInt( SENDINFO( m_iMapFactionCT ) ),
+		SendPropInt( SENDINFO( m_iMapFactionT ) ),
 	#endif
 END_NETWORK_TABLE()
 
@@ -687,6 +691,11 @@ ConVar mp_weapon_self_inflict_amount(
 	"0",
 	FCVAR_REPLICATED,
 	"If Set to non-0, will hurt the attacker by the specified fraction of max damage." );
+ConVar mp_use_official_map_factions(
+	"mp_use_official_map_factions",
+	"0",
+	FCVAR_REPLICATED | FCVAR_NOTIFY,
+	"Determines wheter to use official factions for the current map or make faction selections free for everyone.\n 0 - Disable\n 1 - Enable for everyone\n 2 - Enable for bots only" );
 
 // [jason] Can the dead speak to the living?
 ConVar sv_deadtalk( "sv_deadtalk", "0",	FCVAR_REPLICATED | FCVAR_NOTIFY, "Dead players can speak (voice, text) to the living" );
@@ -955,11 +964,6 @@ ConVar snd_music_selection(
 		FCVAR_REPLICATED,
 		"Scales the damage a T player takes by this much when they take damage in the head (1 == 100%, 0.5 == 50%).  REMEMBER! headshots do 4x the damage of the body before this scaler is applied." );
 
-	ConVar mp_use_official_map_factions(
-		"mp_use_official_map_factions",
-		"0",
-		FCVAR_REPLICATED | FCVAR_NOTIFY,
-		"Determines wheter to use official factions for the current map or make faction selections free for everyone.\n 0 - Disable\n 1 - Enable for everyone\n 2 - Enable for bots only" );
 
 	ConVar mp_damage_headshot_only(
 		"mp_damage_headshot_only",
@@ -7376,15 +7380,14 @@ float CCSGameRules::GetWarmupRemainingTime()
 	return (float) GetWarmupPeriodEndTime() - gpGlobals->curtime;
 }
 
-#ifndef CLIENT_DLL
-bool CCSGameRules::UseMapFactionsForThisPlayer( CBasePlayer* pPlayer )
+bool CCSGameRules::UseMapFactionsForThisPlayer( CBasePlayer* pPlayer, int iTeamNumber )
 {
 	// im not sure that its even possible
 	if ( !pPlayer )
 		return false;
 
 	// is there any map factions defined at all
-	if ( !MapFactionsDefined(pPlayer->GetTeamNumber()) )
+	if ( !MapFactionsDefined( iTeamNumber ) )
 		return false;
 
 	// 1 means enable for everyone
@@ -7397,12 +7400,12 @@ bool CCSGameRules::UseMapFactionsForThisPlayer( CBasePlayer* pPlayer )
 
 	return false;
 }
-int CCSGameRules::GetMapFactionsForThisPlayer( CBasePlayer* pPlayer )
+int CCSGameRules::GetMapFactionsForThisPlayer( CBasePlayer* pPlayer, int iTeamNumber )
 {
-	if ( !UseMapFactionsForThisPlayer(pPlayer) )
+	if ( !UseMapFactionsForThisPlayer( pPlayer, iTeamNumber ) )
 		return -1;
 
-	switch ( pPlayer->GetTeamNumber() )
+	switch ( iTeamNumber )
 	{
 		case TEAM_CT:
 			return m_iMapFactionCT;
@@ -7413,9 +7416,9 @@ int CCSGameRules::GetMapFactionsForThisPlayer( CBasePlayer* pPlayer )
 	return -1;
 }
 
-bool CCSGameRules::MapFactionsDefined( int teamnum )
+bool CCSGameRules::MapFactionsDefined( int iTeamNumber )
 {
-	switch ( teamnum )
+	switch ( iTeamNumber )
 	{
 		case TEAM_CT:
 			return m_iMapFactionCT > -1;
@@ -7425,7 +7428,6 @@ bool CCSGameRules::MapFactionsDefined( int teamnum )
 	
 	return false;
 }
-#endif
 
 #ifndef CLIENT_DLL
 void CCSGameRules::StartWarmup( void )

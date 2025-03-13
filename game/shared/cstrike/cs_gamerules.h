@@ -253,11 +253,9 @@ public:
 	int GetMaxGunGameProgressiveWeaponIndex( void ) { return m_iMaxGunGameProgressiveWeaponIndex; }
 
 	void	LoadMapProperties();
-#ifndef CLIENT_DLL
-	bool	UseMapFactionsForThisPlayer( CBasePlayer* pPlayer );
-	int		GetMapFactionsForThisPlayer( CBasePlayer* pPlayer );
-	bool	MapFactionsDefined( int teamnum );
-#endif
+	bool	UseMapFactionsForThisPlayer( CBasePlayer* pPlayer, int iTeamNumber );
+	int		GetMapFactionsForThisPlayer( CBasePlayer* pPlayer, int iTeamNumber );
+	bool	MapFactionsDefined( int iTeamNumber );
 
 	bool IsVIPMap() const;
 	bool IsBombDefuseMap() const;
@@ -341,8 +339,8 @@ private:
 	CNetworkArray( int, m_GGProgressiveWeaponKillUpgradeOrderCT, 60 );	// CT gun game number of kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
 	CNetworkArray( int, m_GGProgressiveWeaponKillUpgradeOrderT, 60 );	// T gun game number of kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
 	
-	int		m_iMapFactionCT;
-	int		m_iMapFactionT;
+	CNetworkVar( int, m_iMapFactionCT );
+	CNetworkVar( int, m_iMapFactionT );
 	
 	GamePhase m_gamePhase;
 
