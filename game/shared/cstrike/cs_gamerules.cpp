@@ -4443,12 +4443,8 @@ ConVar snd_music_selection(
 				if ( !pPlayer )
 					continue;
 
-				if ( pPlayer->GetTeamNumber() == TEAM_CT || pPlayer->GetTeamNumber() == TEAM_TERRORIST )
-				{
-					int amount_to_assign = -pPlayer->GetAccountBalance() + GetStartMoney();
-
-					pPlayer->AddAccount( amount_to_assign, false );
-				}
+				int amount_to_assign = -pPlayer->GetAccountBalance() + GetStartMoney();
+				pPlayer->AddAccount( amount_to_assign, false );
 			}
 
 			m_iNumConsecutiveTerroristLoses = mp_starting_losses.GetInt();
