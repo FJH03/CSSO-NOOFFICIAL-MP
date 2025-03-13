@@ -125,8 +125,6 @@ bool CHudTeamCounter::ShouldDraw()
 	return true;
 }
 
-#define WEAPON_SELECTION_FADE_TIME_SEC 0.1
-#define WEAPON_SELECTION_FADE_SPEED 100.0 / WEAPON_SELECTION_FADE_TIME_SEC
 void CHudTeamCounter::OnThink()
 {
 	if ( m_bIsAtTheBottom != hud_playercount_pos.GetBool() )
