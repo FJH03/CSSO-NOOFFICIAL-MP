@@ -17,12 +17,12 @@
 #include "tier0/memdbgon.h"
 
 IFileSystem	*filesystem = NULL;
-																				
+
 bool IsBufferBinaryVCD( char *pBuffer, int bufferSize )
-{	
+{
 	if ( bufferSize > 4 && *(int *)pBuffer == SCENE_BINARY_TAG )
 	{
-		return true;	
+		return true;
 	}
 
 	return false;
@@ -65,7 +65,7 @@ bool CSceneFileCache::Connect( CreateInterfaceFn factory )
 	{
 		return false;
 	}
-	
+
 	return true;
 }
 
@@ -84,7 +84,7 @@ InitReturnVal_t CSceneFileCache::Init()
 		if ( filesystem->ReadFile( pSceneImageName, "GAME", m_SceneImageFile ) )
 		{
 			SceneImageHeader_t *pHeader = (SceneImageHeader_t *)m_SceneImageFile.Base();
-			if ( pHeader->nId != SCENE_IMAGE_ID || 
+			if ( pHeader->nId != SCENE_IMAGE_ID ||
 				pHeader->nVersion != SCENE_IMAGE_VERSION )
 			{
 				Error( "CSceneFileCache: Bad scene image file %s\n", pSceneImageName );
@@ -163,6 +163,7 @@ bool CSceneFileCache::GetSceneCachedData( char const *pFilename, SceneCachedData
 		// not available
 		pData->sceneId = -1;
 		pData->msecs = 0;
+		pData->m_fLastSpeakSecs = 0;
 		pData->numSounds = 0;
 		return false;
 	}
@@ -170,9 +171,10 @@ bool CSceneFileCache::GetSceneCachedData( char const *pFilename, SceneCachedData
 	// get scene summary
 	SceneImageEntry_t *pEntries = (SceneImageEntry_t *)( (byte *)pHeader + pHeader->nSceneEntryOffset );
 	SceneImageSummary_t *pSummary = (SceneImageSummary_t *)( (byte *)pHeader + pEntries[iScene].nSceneSummaryOffset );
-	
+
 	pData->sceneId = iScene;
 	pData->msecs = pSummary->msecs;
+	pData->m_fLastSpeakSecs = pSummary->GetDurToSpeechEnd();
 	pData->numSounds = pSummary->numSounds;
 
 	return true;
@@ -227,12 +229,14 @@ int CSceneFileCache::FindSceneInImage( const char *pSceneName )
 
 	V_strncpy( szCleanName, pSceneName, sizeof( szCleanName ) );
 	V_strlower( szCleanName );
-#ifdef POSIX
+	#ifdef POSIX
 	V_FixSlashes( szCleanName, '\\' );
-#else
+	#else
 	V_FixSlashes( szCleanName );
-#endif
-	V_SetExtension( szCleanName, ".vcd", sizeof( szCleanName ) );
+	#endif
+	// Many vcd's in CSGO have a '.' in the filename, which breaks this call
+	// We're going to assume that all filenames have the correct extension
+	//	V_SetExtension( szCleanName, ".vcd", sizeof( szCleanName ) );
 
 	CRC32_t crcFilename = CRC32_ProcessSingleBuffer( szCleanName, strlen( szCleanName ) );
 

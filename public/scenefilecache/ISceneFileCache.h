@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //=============================================================================
 
@@ -17,6 +17,7 @@
 struct SceneCachedData_t
 {
 	unsigned int	msecs;
+	float			m_fLastSpeakSecs;
 	int				numSounds;
 	int				sceneId;
 };
