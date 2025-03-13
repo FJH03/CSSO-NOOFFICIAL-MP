@@ -195,7 +195,6 @@ public:
 
 	void AbortBombPlant();
 
-	void PlayArmingBeeps( void );
 	void PlayPlantInitSound( void );
 	virtual void	OnPickedUp( CBaseCombatCharacter *pNewOwner );
 	virtual void	Drop( const Vector &vecVelocity );

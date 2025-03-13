@@ -1305,10 +1305,6 @@ void CC4::PrimaryAttack()
 		}
 		else
 		{
-#ifndef CLIENT_DLL
-			PlayArmingBeeps();
-#endif
-
 			if( gpGlobals->curtime >= m_fArmedTime ) //the c4 is ready to be armed
 			{
 				//check to make sure the player is still in the bomb target area
@@ -1484,60 +1480,6 @@ void CC4::WeaponIdle()
 			SendWeaponAnim( ACT_VM_DRAW );
 		else
 			SendWeaponAnim( ACT_VM_IDLE );
-	}
-}
-
-int m_iBeepFrames[NUM_BEEPS] = { 20, 29, 37, 44, 50, 59, 65 };
-int iNumArmingAnimFrames = 83;
-
-void CC4::PlayArmingBeeps( void )
-{
-	float flStartTime = m_fArmedTime - WEAPON_C4_ARM_TIME;
-
-	float flProgress = ( gpGlobals->curtime - flStartTime ) / ( WEAPON_C4_ARM_TIME - 0.75 );
-
-	int currentFrame = (int)( (float)iNumArmingAnimFrames * flProgress );
-
-	int i;
-	for( i=0;i<NUM_BEEPS;i++ )
-	{
-		if( currentFrame <= m_iBeepFrames[i] )
-		{
-			break;
-		}
-		else if( !m_bPlayedArmingBeeps[i] )
-		{
-			m_bPlayedArmingBeeps[i] = true;
-
-			CCSPlayer *owner = GetPlayerOwner();
-			if ( !owner && !owner->IsAlive() )
-				break;
-
-			Vector soundPosition = owner->GetAbsOrigin() + Vector( 0, 0, 5 );
-			CPASAttenuationFilter filter( soundPosition );
-
-			filter.RemoveRecipient( owner );
-
-			// remove anyone that is first person spec'ing the planter
-			int i;
-			CBasePlayer *pPlayer;
-			for( i=1;i<=gpGlobals->maxClients;i++ )
-			{
-				pPlayer = UTIL_PlayerByIndex( i );
-
-				if ( !pPlayer )
-					continue;
-
-				if( pPlayer->GetObserverMode() == OBS_MODE_IN_EYE && pPlayer->GetObserverTarget() == GetOwner() )
-				{
-					filter.RemoveRecipient( pPlayer );
-				}
-			}
-
-			EmitSound(filter, entindex(), "c4.click");
-			
-			break;
-		}
 	}
 }
 
