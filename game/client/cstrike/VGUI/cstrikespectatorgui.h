@@ -75,6 +75,10 @@ protected:
 	vgui::ImagePanel *m_pPlayerPanelAvatarBkg;
 	vgui::ImagePanel *m_pPlayerPanelBorderUpper;
 	CAvatarImagePanel *m_pPlayerPanelAvatar;
+	vgui::VectorImagePanel *m_pBombIcon;
+
+	CPanelAnimationVar( Color, m_clrC4Planted, "C4PlantedColor", "White" );
+	CPanelAnimationVar( Color, m_clrC4Defused, "C4DefusedColor", "White" );
 
 	CPanelAnimationVar( Color, m_pCTStripColor, "CTStripColor", "White" );
  	CPanelAnimationVar( Color, m_pTStripColor, "TStripColor", "White" );

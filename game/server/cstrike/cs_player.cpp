@@ -883,6 +883,7 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "UI.ArmsRace.Demoted" );
 	PrecacheScriptSound( "UI.ArmsRace.LevelUp" );
 
+	PrecacheScriptSound( "Hostage.Breath" );
 	// CS Bot sounds
 	PrecacheScriptSound( "Bot.StuckSound" );
 	PrecacheScriptSound( "Bot.StuckStart" );
@@ -8760,10 +8761,25 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pszName, int iSubType )
 		{
 			pWeapon->SetSubType( iSubType );
 		}
+	}
+
+	DispatchSpawn( pent );
+	m_bIsBeingGivenItem = true;
+	if ( pent != NULL && !(pent->IsMarkedForDeletion()) )
+	{
+		pent->Touch( this );
+	}
+	m_bIsBeingGivenItem = false;
+
+	// PiMoN: putting it here because WpnData is initialized AFTER spawning,
+	// fucking hell I lost an hour to figure it out and had two OOMs while doing so
+	// and the worst thing is that I actually knew that but I didn't think about it
+	if ( pWeapon )
+	{
 
 		if ( !IsControllingBot() )
 		{
-			pWeapon->SetStatTrak( m_bLoadoutStatTrak );
+			pWeapon->SetStatTrak( m_bLoadoutStatTrak && pWeapon->GetCSWpnData().m_szStatTrakModel && pWeapon->GetCSWpnData().m_szStatTrakModel[0] );
 			pWeapon->SetOriginalOwnerIndex( entindex() );
 		}
 		else
@@ -8772,15 +8788,6 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pszName, int iSubType )
 			pWeapon->SetOriginalOwnerIndex( GetControlledBot()->entindex() );
 		}
 	}
-
-	DispatchSpawn( pent );
-
-	m_bIsBeingGivenItem = true;
-	if ( pent != NULL && !(pent->IsMarkedForDeletion()) )
-	{
-		pent->Touch( this );
-	}
-	m_bIsBeingGivenItem = false;
 
 	StockPlayerAmmo( pWeapon );
 

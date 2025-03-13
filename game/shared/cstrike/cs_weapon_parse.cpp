@@ -316,6 +316,7 @@ CCSWeaponInfo::CCSWeaponInfo()
 	m_szAddonModel[0] = 0;
 	m_szMagModel[0] = 0;
 	m_szAddonLocation[0] = '\0';
+	m_szStatTrakModel[0] = '\0';
 	m_fThrowVelocity = 0.0f;
 	m_iKillAward = 0;
 	m_vecIronsightEyePos.Init();
