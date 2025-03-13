@@ -245,7 +245,10 @@ void CCSFreezePanel::FireGameEvent( IGameEvent * event )
 
 		// Get the entity who killed us
 		int iKillerIndex = event->GetInt( "killer" );
-		CCSPlayer* pKiller =  ToCSPlayer(ClientEntityList().GetBaseEntity(iKillerIndex));
+		int iVictimIndex = event->GetInt( "victim" ); // always the local player
+		if ( iKillerIndex == 0 ) // world killed us, means it was a suicide
+			iKillerIndex = iVictimIndex;
+		CCSPlayer* pKiller = ToCSPlayer(ClientEntityList().GetBaseEntity(iKillerIndex));
 		m_pAvatar->ClearAvatar();
 
 		if ( pKiller )

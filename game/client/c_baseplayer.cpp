@@ -999,6 +999,7 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 			if ( pEvent )
 			{
 				pEvent->SetInt( "killer", target ? target->entindex() : GetLastKillerIndex() );
+				pEvent->SetInt( "victim", entindex() );
 				pEvent->SetInt( "hits_taken", m_nLastKillerHitsTaken );
 				pEvent->SetInt( "damage_taken", m_nLastKillerDamageTaken );
 				pEvent->SetInt( "hits_given", m_nLastKillerHitsGiven );

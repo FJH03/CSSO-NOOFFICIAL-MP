@@ -265,7 +265,8 @@ void CHudHealthArmor::ApplySettings( KeyValues *inResourceData )
 //-----------------------------------------------------------------------------
 void CHudHealthArmor::Reset()
 {
-	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( gHUD.GetSequenceNameForHUDColor( "HealthRestored", m_iHUDColor ) );
+	// force recomputation of health vgui animation
+	m_iHealth = -1;
 }
 
 //-----------------------------------------------------------------------------

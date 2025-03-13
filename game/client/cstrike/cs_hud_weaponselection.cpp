@@ -36,6 +36,11 @@ CCSHudWeaponSelection::CCSHudWeaponSelection( const char* pElementName ) : CHudE
 	m_pDefuserIcon->ClearSchemeUpdateFlag(); // again, I will not even risk that cuz there is no color overrider
 	m_bHasDefuser = false;
 
+	for ( int i = 0; i < MAX_WEP_SELECT_PANELS; i++ )
+	{
+		m_pSlotLabels[i] = NULL;
+	}
+
 	ListenForGameEvent( "round_prestart" );
 	ListenForGameEvent( "round_start" );
 	ListenForGameEvent( "bot_takeover" );
@@ -157,6 +162,7 @@ void CCSHudWeaponSelection::AddWeapon( C_BaseCombatWeapon *pWeapon, bool bSelect
 
 	m_weaponPanels[nWepSlot][nWepPos].pNameLabel->SizeToContents();
 	UpdateCountLabels();
+	UpdateSlotLabels();
 
 	// force a weapon switch to catch where we got a user message but not the network update, yet
 	m_flUpdateInventoryAt = gpGlobals->curtime + 0.1;
@@ -417,6 +423,7 @@ void CCSHudWeaponSelection::ShowAndUpdateSelection( int nType, C_BaseCombatWeapo
 
 	UpdateIconColors();
 	UpdateCountLabels();
+	UpdateSlotLabels();
 	UpdatePanelPositions();
 
 	if ( !cl_showloadout.GetBool() )
@@ -589,7 +596,58 @@ void CCSHudWeaponSelection::UpdateCountLabels()
 		}
 	}
 }
+void CCSHudWeaponSelection::UpdateSlotLabels()
+{
+	C_CSPlayer* pPlayer = GetHudPlayer();
+	if ( !pPlayer )
+		return;
 
+	int iXPos = 0, iYPos = 0;
+	bool bFirstTime = true;
+	for ( int i = MAX_WEP_SELECT_PANELS - 1; i >= 0; i-- )
+	{
+		if ( pPlayer->Weapon_GetSlot( i ) )
+		{
+			if ( !m_pSlotLabels[i] )
+			{
+				char szPanelName[128];
+				Q_snprintf( szPanelName, sizeof( szPanelName ), "WeaponSelectPanel_SlotLabel_%d", i );
+
+				wchar_t wszSlot[4];
+				V_snwprintf( wszSlot, sizeof( wszSlot ), L"%d", i+1 );
+
+				m_pSlotLabels[i] = new Label( this, szPanelName, wszSlot );
+				m_pSlotLabels[i]->ClearSchemeUpdateFlag(); // I will not even risk with it after last time
+				m_pSlotLabels[i]->SetFont( m_hSlotLabelFont );
+				m_pSlotLabels[i]->SetFgColor( m_clrSelected );
+				m_pSlotLabels[i]->SetContentAlignment( Label::a_east );
+			}
+
+			if ( bFirstTime )
+			{
+				iXPos = GetWide() - icons_base_xpos + slot_label_xpos;
+				iYPos = icons_base_ypos + slot_label_ypos;
+				if ( pPlayer->HasDefuser() )
+					iYPos -= weapon_icon_defuser_margin;
+
+				bFirstTime = false;
+			}
+			else
+			{
+				iYPos -= weapon_icon_slot_margin;
+			}
+			m_pSlotLabels[i]->SetPos( iXPos, iYPos );
+		}
+		else
+		{
+			if ( m_pSlotLabels[i] )
+			{
+				m_pSlotLabels[i]->DeletePanel();
+				m_pSlotLabels[i] = NULL;
+			}
+		}
+	}
+}
 void CCSHudWeaponSelection::FireGameEvent( IGameEvent *event )
 {
 	const char *type = event->GetName();
