@@ -297,7 +297,7 @@ bool CCSPlayer::IsPrimaryOrSecondaryWeapon( CSWeaponType nType )
 
 bool CCSPlayer::IsOtherSameTeam( int nTeam )
 {
- 	return GetTeamNumber() == nTeam;
+	return GetTeamNumber() == nTeam;
 }
 
 bool CCSPlayer::IsOtherEnemy( int nEntIndex )
@@ -1839,6 +1839,8 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 	if ( pWeaponInfo == NULL )
 	{
 		// assume its an item
+		if ( acquireMethod == AcquireMethod::BuyDrop )
+			return AcquireResult::NotAllowedForPurchase; // cant drop buy anything that isnt a firearm
 
 		if ( weaponId == ITEM_KEVLAR )
 		{
@@ -1854,9 +1856,9 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 			}
 
 			if ( mp_max_armor.GetInt() < 1 )
- 			{
- 				return AcquireResult::NotAllowedByMode;
- 			}
+			{
+				return AcquireResult::NotAllowedByMode;
+			}
 
 			return AcquireResult::Allowed;
 		}
@@ -1874,9 +1876,9 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 			}
 
 			if ( mp_max_armor.GetInt() < 2 )
- 			{
- 				return AcquireResult::NotAllowedByMode;
- 			}
+			{
+				return AcquireResult::NotAllowedByMode;
+			}
 
 			return AcquireResult::Allowed;
 		}
@@ -1900,6 +1902,7 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 
 			return AcquireResult::Allowed;
 		}
+
 		return AcquireResult::InvalidItem;
 	}
 
@@ -1909,7 +1912,8 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 	{
 		if ( mp_buy_allow_grenades.GetBool() == false )
 		{
-			if ( acquireMethod == AcquireMethod::Buy )
+			if ( acquireMethod == AcquireMethod::Buy ||
+				 acquireMethod == AcquireMethod::BuyDrop )
 				return AcquireResult::NotAllowedForPurchase;
 		}
 
@@ -1953,16 +1957,19 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 			return AcquireResult::ReachedGrenadeTotalLimit;
 		}
 
-		// don't allow players with an inferno spawning weapon to pick up another inferno spawning weapon
-		if ( weaponId == WEAPON_INCGRENADE )
+		if ( acquireMethod != AcquireMethod::BuyDrop )
 		{
-			 if ( Weapon_OwnsThisType( "weapon_molotov" ) )
-				 return AcquireResult::AlreadyOwned;
-		}
-		else if ( weaponId == WEAPON_MOLOTOV )
-		{
-			if ( Weapon_OwnsThisType( "weapon_incgrenade" ) )
-				return AcquireResult::AlreadyOwned;
+			// don't allow players with an inferno spawning weapon to pick up another inferno spawning weapon
+			if ( weaponId == WEAPON_INCGRENADE )
+			{
+				 if ( Weapon_OwnsThisType( "weapon_molotov" ) )
+					 return AcquireResult::AlreadyOwned;
+			}
+			else if ( weaponId == WEAPON_MOLOTOV )
+			{
+				if ( Weapon_OwnsThisType( "weapon_incgrenade" ) )
+					return AcquireResult::AlreadyOwned;
+			}
 		}
 	}
 	else if ( nType == WEAPONTYPE_STACKABLEITEM )
@@ -1987,10 +1994,11 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 	else if ( weaponId == WEAPON_C4 )
 	{
 		// TODO[pmf]: Data drive this from the scripts
-		if ( acquireMethod == AcquireMethod::Buy )
+		if ( acquireMethod == AcquireMethod::Buy ||
+			 acquireMethod == AcquireMethod::BuyDrop )
 			return AcquireResult::NotAllowedForPurchase;
 	}
-	else if ( Weapon_OwnsThisType( WeaponIdAsString(weaponId) ) )
+	else if ( Weapon_OwnsThisType( WeaponIdAsString(weaponId) ) && acquireMethod != AcquireMethod::BuyDrop )
 	{
 		return AcquireResult::AlreadyOwned;
 	}
@@ -2009,7 +2017,8 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 	}
 
 	// additional constraints for purchasing weapons
-	if ( acquireMethod == AcquireMethod::Buy )
+	if ( acquireMethod == AcquireMethod::Buy || 
+		 acquireMethod == AcquireMethod::BuyDrop )
 	{
 		if ( pWeaponInfo->m_iTeam != TEAM_UNASSIGNED && GetTeamNumber() != pWeaponInfo->m_iTeam )
 		{

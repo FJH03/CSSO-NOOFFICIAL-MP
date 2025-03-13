@@ -6,324 +6,1504 @@
 //=============================================================================//
 
 #include "cbase.h"
-#include "cstrikebuysubmenu.h"
 #include "cstrikebuymenu.h"
-#include "cs_shareddefs.h"
-#include "backgroundpanel.h"
-#include "cstrike/bot/shared_util.h"
 #include <vgui/ISurface.h>
 #include <vgui/ILocalize.h>
-#include "cs_gamerules.h"
-#include "vgui_controls/RichText.h"
-#include "cs_weapon_parse.h"
+#include <vgui/IInput.h>
+#include <vgui_controls/Label.h>
+#include <vgui_controls/ImagePanel.h>
+#include <vgui_controls/VectorImagePanel.h>
+#include "filesystem.h"
+#include "IGameUIFuncs.h" // for key bindings
+#include "VGuiMatSurface/IMatSystemSurface.h"
+#include "view_shared.h"
+#include "view.h"
+#include "model_types.h"
+#include "vgui_avatarimage.h"
+
 #include "c_cs_player.h"
-#include "cs_ammodef.h"
-#include "weapon_selection.h"
+#include "cs_loadout.h"
+#include "c_breakableprop.h"
+#include "ammodef.h"
+#include "cs_gamerules.h"
 
-ConVar closeonbuy( "closeonbuy", "1", FCVAR_ARCHIVE, "Set non-zero to close the buy menu after buying something", true, 0, true, 1 );
+#include "lunasvg/lunasvg.h"
+using namespace lunasvg;
 
-using namespace vgui;
-
-// ----------------------------------------------------------------------------- //
-// Buy menu player image panels. These maintain a list of the player image panels so 
-// it can render 3D images into them.
-// ----------------------------------------------------------------------------- //
-
-CUtlVector<CCSBuyMenuPlayerImagePanel*> g_BuyMenuPlayerImagePanels;
+ConVar closeonbuy( "closeonbuy", "0", FCVAR_ARCHIVE, "Set non-zero to close the buy menu after buying something", true, 0, true, 1 );
 
 
-CCSBuyMenuPlayerImagePanel::CCSBuyMenuPlayerImagePanel( vgui::Panel *pParent, const char *pName )
-	: BaseClass( pParent, pName )
+void BuyMenuItemIcon::SetTexture( const char* pszTexturePath, int iWide, int iTall, CSWeaponID nItemID )
 {
-	g_BuyMenuPlayerImagePanels.AddToTail( this );
-}
+	// don't even bother doing anything without a file
+	if ( !pszTexturePath )
+		return;
 
-CCSBuyMenuPlayerImagePanel::~CCSBuyMenuPlayerImagePanel()
-{
-	g_BuyMenuPlayerImagePanels.FindAndRemove( this );
-}
+	DestroyIcon();
 
-void CCSBuyMenuPlayerImagePanel::ApplySettings( KeyValues *inResourceData )
-{
-	m_flViewXPos = inResourceData->GetFloat( "view_xpos", 0.0f );
-	m_flViewYPos = inResourceData->GetFloat( "view_ypos", 0.0f );
-	m_flViewZPos = inResourceData->GetFloat( "view_zpos", 0.0f );
-	m_flViewFOV = inResourceData->GetFloat( "view_fov", 0.0f );
-
-	BaseClass::ApplySettings( inResourceData );
-}
-
-// ----------------------------------------------------------------------------- //
-// Buy menu image panels. These maintain a list of the buy menu image panels so 
-// it can render 3D images into them.
-// ----------------------------------------------------------------------------- //
-
-CUtlVector<CCSBuyMenuImagePanel*> g_BuyMenuImagePanels;
-
-
-CCSBuyMenuImagePanel::CCSBuyMenuImagePanel( vgui::Panel *pParent, const char *pName )
-	: BaseClass( pParent, pName )
-{
-	g_BuyMenuImagePanels.AddToTail( this );
-	m_szWeaponName[0] = NULL;
-}
-
-CCSBuyMenuImagePanel::~CCSBuyMenuImagePanel()
-{
-	g_BuyMenuImagePanels.FindAndRemove( this );
-}
-
-void CCSBuyMenuImagePanel::ApplySettings( KeyValues *inResourceData )
-{
-	const char *pString = inResourceData->GetString( "weaponName" );
-	if ( pString )
+	FileHandle_t f = g_pFullFileSystem->Open( pszTexturePath, "rt" );
+	if ( !f )
 	{
-		Q_strncpy( m_szWeaponName, pString, sizeof( m_szWeaponName ) );
+		DevWarning( "BuyMenuItemIcon: failed to open .svg file \"%s\".\n", pszTexturePath );
+		return;
 	}
 
-	m_flViewXPos = inResourceData->GetFloat( "view_xpos", 0.0f );
-	m_flViewYPos = inResourceData->GetFloat( "view_ypos", 0.0f );
-	m_flViewZPos = inResourceData->GetFloat( "view_zpos", 0.0f );
-	m_flViewFOV = inResourceData->GetFloat( "view_fov", 0.0f );
-	
-	BaseClass::ApplySettings( inResourceData );
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Constructor
-//-----------------------------------------------------------------------------
-CCSBuyMenu_CT::CCSBuyMenu_CT(IViewPort *pViewPort) : CCSBaseBuyMenu( pViewPort, "BuySubMenu_CT" )
-{
-	m_pMainMenu->LoadControlSettings( "Resource/UI/BuyMenu_CT.res" );
-	m_pMainMenu->SetVisible( false );
-
-	m_iTeam = TEAM_CT;
-
-	m_backgroundLayoutFinished = false;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Constructor
-//-----------------------------------------------------------------------------
-CCSBuyMenu_TER::CCSBuyMenu_TER(IViewPort *pViewPort) : CCSBaseBuyMenu( pViewPort, "BuySubMenu_TER" )
-{
-	m_pMainMenu->LoadControlSettings( "Resource/UI/BuyMenu_TER.res" );
-	m_pMainMenu->SetVisible( false );
-
-	m_iTeam = TEAM_TERRORIST;
-
-	m_backgroundLayoutFinished = false;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Constructor
-//-----------------------------------------------------------------------------
-CCSBaseBuyMenu::CCSBaseBuyMenu(IViewPort *pViewPort, const char *subPanelName) : CBuyMenu( pViewPort )
-{
-	SetTitle( "#Cstrike_Buy_Menu", true);
-
-	SetProportional( true );
-
-	m_pMainMenu = new CCSBuySubMenu( this, subPanelName );
-	m_pMainMenu->SetSize( 10, 10 ); // Quiet "parent not sized yet" spew
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CCSBaseBuyMenu::SetVisible(bool state)
-{
-	BaseClass::SetVisible(state);
-
-	if ( state )
+	// read the whole thing into memory
+	int size = g_pFullFileSystem->Size( f );
+	// read into temporary memory block
+	int nBufSize = size + 1;
+	if ( IsXbox() )
 	{
-		Panel *defaultButton = FindChildByName( "CancelButton" );
-		if ( defaultButton )
-		{
-			defaultButton->RequestFocus();
-		}
+		nBufSize = AlignValue( nBufSize, 512 );
 	}
-	SetMouseInputEnabled( state );
-	m_pMainMenu->SetMouseInputEnabled( state );
+	char* pMem = (char*) malloc( nBufSize );
+	int bytesRead = g_pFullFileSystem->ReadEx( pMem, nBufSize, size, f );
+	Assert( bytesRead <= size );
+	pMem[bytesRead] = 0;
+	g_pFullFileSystem->Close( f );
+	std::unique_ptr<Document> document = Document::loadFromData( pMem ); // load the svg
+	free( pMem );
 
-	int iRenderGroup = gHUD.LookupRenderGroupIndexByName( "hide_for_buymenu" );
-
-	if ( state )
+	if ( !document )
 	{
-		gHUD.LockRenderGroup( iRenderGroup );
+		DevWarning( "BuyMenuItemIcon: failed to load .svg file \"%s\".\n", pszTexturePath );
+		return;
+	}
+
+	Bitmap bitmap = document->renderToBitmap( iWide, iTall ); // render the svg
+
+	if ( !bitmap.valid() )
+	{
+		DevWarning( "BuyMenuItemIcon: failed to render .svg file \"%s\".\n", pszTexturePath );
+		return;
+	}
+
+	if ( m_nTextureID == -1 )
+	{
+		m_nTextureID = vgui::surface()->CreateNewTextureID( true );
+	}
+
+	int wide = bitmap.width();
+	int tall = bitmap.height();
+	m_iTextureSize[0] = wide;
+	m_iTextureSize[1] = tall;
+	vgui::surface()->DrawSetTextureRGBA( m_nTextureID, bitmap.data(), wide, tall, 1, true );
+
+	int textureWide, textureTall;
+	vgui::surface()->DrawGetTextureSize( m_nTextureID, textureWide, textureTall );
+
+	m_flTextureCoords[0] = (float) wide / (float) textureWide;
+	m_flTextureCoords[1] = 0.0f;
+	m_flTextureCoords[2] = 0.0f;
+	m_flTextureCoords[3] = (float) tall / (float) textureTall;
+
+	m_nItemID = nItemID;
+}
+
+void BuyMenuItemIcon::DestroyIcon()
+{
+	if ( m_nTextureID != -1 )
+	{
+		vgui::surface()->DestroyTextureID( m_nTextureID );
+		m_nTextureID = -1;
+		m_iTextureSize[0] = m_iTextureSize[1] = 0;
+		m_flTextureCoords[0] = m_flTextureCoords[1] =
+		m_flTextureCoords[2] = m_flTextureCoords[3] = 0.0f;
+		m_nItemID = WEAPON_NONE;
+	}
+}
+
+
+CCSBuyMenuCategoryButton::CCSBuyMenuCategoryButton( Panel* parent, const char* panelName ):
+	Button( parent, panelName, "" )
+{
+}
+
+void CCSBuyMenuCategoryButton::Paint()
+{
+	BaseClass::Paint();
+
+	if ( GetHotKey() != '\0' )
+	{
+		// draw the hotkey on top
+		surface()->DrawSetTextFont( m_hHotkeyFont );
+		surface()->DrawSetTextPos( hotkey_xpos, hotkey_ypos );
+		surface()->DrawSetTextColor( m_clrHotkey );
+		surface()->DrawUnicodeChar( GetHotKey() );
+	}
+}
+
+
+CCSBuyMenuItemButton::CCSBuyMenuItemButton( Panel* parent, const char* panelName ):
+	CCSBuyMenuCategoryButton( parent, panelName )
+{
+	m_iPrice = -1;
+	m_wszPrice[0] = '\0';
+	m_nItemID = WEAPON_NONE;
+	m_pWeaponInfo = NULL;
+	m_clrPrice = COLOR_WHITE;
+	m_clrIcon = COLOR_WHITE;
+	m_bDisabled = false;
+	m_bDropBuy = false;
+}
+
+CCSBuyMenuItemButton::~CCSBuyMenuItemButton()
+{
+	m_ItemIcon.DestroyIcon();
+}
+
+void CCSBuyMenuItemButton::Paint()
+{
+	BaseClass::Paint();
+
+	if ( m_wszPrice != '\0' )
+	{
+		HFont hMoneyFont = GetFont();
+		int xpos, ypos, wide, tall;
+		GetSize( wide, tall );
+
+		xpos = (wide / 2) - (UTIL_ComputeStringWidth( hMoneyFont, m_wszPrice ) / 2);
+		ypos = (tall / 2) - (surface()->GetFontTall( hMoneyFont ) / 2);
+
+		surface()->DrawSetTextFont( GetFont() );
+		surface()->DrawSetTextPos( xpos, ypos );
+		surface()->DrawSetTextColor( m_clrPrice );
+		surface()->DrawPrintText( m_wszPrice, wcslen( m_wszPrice ) );
+	}
+
+	if ( m_ItemIcon.m_nTextureID != -1 )
+	{
+		vgui::surface()->DrawSetTexture( m_ItemIcon.m_nTextureID );
+		vgui::surface()->DrawSetColor( m_clrIcon );
+
+		g_pMatSystemSurface->DisableClipping( true );
+
+		int x0 = GetWide() - m_ItemIcon.m_iTextureSize[0] - icon_xpos;
+		int x1 = x0 + m_ItemIcon.m_iTextureSize[0];
+		int y0 = (GetTall() / 2) - (m_ItemIcon.m_iTextureSize[1] / 2);
+		int y1 = y0 + m_ItemIcon.m_iTextureSize[1];
+		vgui::surface()->DrawTexturedSubRect( x0, y0, x1, y1, m_ItemIcon.m_flTextureCoords[0], m_ItemIcon.m_flTextureCoords[1],
+															  m_ItemIcon.m_flTextureCoords[2], m_ItemIcon.m_flTextureCoords[3] );
+
+		g_pMatSystemSurface->DisableClipping( false );
+	}
+}
+
+void CCSBuyMenuItemButton::OnThink()
+{
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pPlayer )
+		return;
+
+	m_clrPrice = m_clrPriceAvailableFg;
+	m_clrIcon = m_clrAvailableFg;
+	SetDefaultColor( m_clrAvailableFg, m_clrAvailableBg );
+
+	AcquireMethod::Type nAcquireMethod = AcquireMethod::Buy;
+	if ( m_bDropBuy )
+		nAcquireMethod = AcquireMethod::BuyDrop;
+	if ( pPlayer->CanAcquire( m_nItemID, nAcquireMethod ) != AcquireResult::Allowed || m_bDisabled )
+	{
+		m_clrPrice = m_clrUnavailableFg;
+		m_clrIcon = m_clrUnavailableFg;
+		SetDefaultColor( m_clrUnavailableFg, m_clrUnavailableBg );
+	}
+	else if ( pPlayer->GetAccount() < m_iPrice )
+	{
+		m_clrPrice = m_clrPriceUnavailableFg;
+		m_clrIcon = m_clrUnavailableFg;
+		SetDefaultColor( m_clrUnavailableFg, m_clrAvailableBg );
+	}
+}
+
+void CCSBuyMenuItemButton::OnCursorEntered()
+{
+	BaseClass::OnCursorEntered();
+
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pPlayer )
+		return;
+
+	const char* pszWeaponModel = NULL;
+	const char* pszWeaponSequence = NULL;
+	if ( m_pWeaponInfo )
+	{
+		pszWeaponModel = m_pWeaponInfo->szWorldModel;
+		if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST )
+			pszWeaponSequence = m_pWeaponInfo->m_szBuyMenuAnimT;
+		else
+			pszWeaponSequence = m_pWeaponInfo->m_szBuyMenuAnim;
 	}
 	else
 	{
-		gHUD.UnlockRenderGroup( iRenderGroup );
-
-		// update the inventory
-		C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-		C_BaseCombatWeapon *pWeapon = (pPlayer) ? pPlayer->GetActiveWeapon() : NULL;
-		if ( pWeapon )
+		switch ( m_nItemID )
 		{
-			CBaseHudWeaponSelection *pHudSelection = GetHudWeaponSelection();
-			if ( pHudSelection )
+			case ITEM_DEFUSER:
+				pszWeaponModel = "models/weapons/w_defuser.mdl";
+				pszWeaponSequence = "t_buymenu_defuser";
+				break;
+			case ITEM_KEVLAR:
+				pszWeaponModel = "models/weapons/w_eq_armor.mdl";
+				pszWeaponSequence = "t_buymenu_armor_helmet";
+				break;
+			case ITEM_ASSAULTSUIT:
+				pszWeaponModel = "models/weapons/w_eq_armor_helmet.mdl";
+				pszWeaponSequence = "t_buymenu_armor_helmet";
+				break;
+			case ITEM_NVGS:
+				pszWeaponModel = "models/weapons/w_eq_nvgs.mdl";
+				pszWeaponSequence = "ct_buymenu_nvgs";
+				break;
+			default:
+				DevWarning( "Invalid buy menu weapon!\n" );
+				return;
+		}
+	}
+
+	CCSBuyMenu* pParent = dynamic_cast<CCSBuyMenu*>(GetParent());
+	if ( pParent )
+	{
+		pParent->SetPlayerImageWeapon( pszWeaponModel, pszWeaponSequence );
+
+		AcquireMethod::Type nAcquireMethod = AcquireMethod::Buy;
+		if ( m_bDropBuy )
+			nAcquireMethod = AcquireMethod::BuyDrop;
+		switch ( pPlayer->CanAcquire( m_nItemID, nAcquireMethod ) )
+		{
+			case AcquireResult::AlreadyOwned:
 			{
-				pHudSelection->OnWeaponSwitch( pWeapon );
+				pParent->ShowSpecialMessage( "#BuyMenu_AlreadyCarrying", PerWeaponMessage );
+				break;
+			}
+			case AcquireResult::AlreadyPurchased:
+			{
+				pParent->ShowSpecialMessage( "#BuyMenu_AlreadyPurchased", PerWeaponMessage );
+				break;
+			}
+			case AcquireResult::ReachedGrenadeTypeLimit:
+			{
+				wchar_t wszCarryLimit[8];
+				V_snwprintf( wszCarryLimit, sizeof( wszCarryLimit ), L"%d", GetAmmoDef()->MaxCarry( m_pWeaponInfo->iAmmoType, pPlayer ) );
+
+				wchar_t wszMessage[256];
+				g_pVGuiLocalize->ConstructString( wszMessage, sizeof( wszMessage ), g_pVGuiLocalize->Find( "#BuyMenu_CanOnlyCarryXGrenades" ), 1, wszCarryLimit );
+
+				pParent->ShowSpecialMessage( wszMessage, PerWeaponMessage );
+				break;
+			}
+			case AcquireResult::ReachedGrenadeTotalLimit:
+			{
+				wchar_t wszCarryLimit[8];
+				V_snwprintf( wszCarryLimit, sizeof( wszCarryLimit ), L"%d", ammo_grenade_limit_total.GetInt() );
+
+				wchar_t wszMessage[256];
+				g_pVGuiLocalize->ConstructString( wszMessage, sizeof( wszMessage ), g_pVGuiLocalize->Find( "#BuyMenu_CanOnlyCarryXGrenades" ), 1, wszCarryLimit );
+
+				pParent->ShowSpecialMessage( wszMessage, PerWeaponMessage );
+				break;
+			}
+			case AcquireResult::NotAllowedByTeam:
+			{
+				pParent->ShowSpecialMessage( "#BuyMenu_NotAllowedByTeam", PerWeaponMessage );
+				break;
+			}
+			case AcquireResult::NotAllowedByMap:
+			{
+				pParent->ShowSpecialMessage( "#BuyMenu_NotAllowedByMap", PerWeaponMessage );
+				break;
+			}
+			case AcquireResult::NotAllowedByMode:
+			{
+				pParent->ShowSpecialMessage( "#BuyMenu_NotAllowedByMode", PerWeaponMessage );
+				break;
+			}
+			case AcquireResult::NotAllowedForPurchase:
+			{
+				pParent->ShowSpecialMessage( "#BuyMenu_NotAllowedForPurchase", PerWeaponMessage );
+				break;
+			}
+			default:
+				break;
+		}
+	}
+}
+
+void CCSBuyMenuItemButton::OnCursorExited()
+{
+	BaseClass::OnCursorExited();
+
+	CCSBuyMenu* pParent = dynamic_cast<CCSBuyMenu*>(GetParent());
+	if ( pParent )
+		pParent->HideSpecialMessage( PerWeaponMessage );
+}
+
+void CCSBuyMenuItemButton::SetPrice( int iPrice )
+{
+	m_iPrice = iPrice;
+	V_snwprintf( m_wszPrice, sizeof( m_wszPrice ), L"$%d", iPrice );
+}
+
+void CCSBuyMenuItemButton::SetWeaponID( CSWeaponID nWeaponID )
+{
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pPlayer )
+		return;
+
+	m_nItemID = CSLoadout()->GetLoadoutWeaponID( pPlayer, nWeaponID );
+	m_pWeaponInfo = NULL;
+	m_bDisabled = false; // reset it once we have a new weapon
+
+	WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( WeaponIdAsString( m_nItemID ) );
+	if ( hWpnInfo != GetInvalidWeaponInfoHandle() )
+	{
+		m_pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
+		if ( m_nItemID != nWeaponID && m_pWeaponInfo )
+		{
+			wchar_t wszOldHotkey = GetHotKey();
+			// the player has a different loadout weapon, change some visuals to match it
+			char szItemIcon[128];
+			Q_snprintf( szItemIcon, sizeof( szItemIcon ), "materials/vgui/weapons/svg/%s.svg", WeaponIDToAlias( m_nItemID ) );
+			m_ItemIcon.SetTexture( szItemIcon, icon_wide, icon_tall, m_nItemID );
+			SetPrice( m_pWeaponInfo->GetWeaponPrice() );
+			SetText( m_pWeaponInfo->szPrintName );
+			SetHotkey( wszOldHotkey ); // restore the old hotkey because it's reset after SetText()
+		}
+	}
+}
+
+
+CCSBuyMenuPlayerImage::CCSBuyMenuPlayerImage( Panel* parent, const char* panelName ): EditablePanel( parent, panelName )
+{
+	m_nFOV = 54;
+	m_hPlayerModel = NULL;
+	m_hWeaponModel = NULL;
+	m_hGlovesModel = NULL;
+	m_vecCameraPos.Init();
+	m_angCameraAng.Init();
+	m_nNumLightDescs = 0;
+	m_vecAmbientLight.Init( 0.4f, 0.4f, 0.4f );
+	m_DefaultCubemap.Init( materials->FindTexture( "editor/cube_vertigo", NULL, true ) );
+	m_bMousePressed = false;
+	m_flRotationAngleLeft = 0.0f;
+	m_flRotationTimeLeft = 0.0f;
+}
+
+CCSBuyMenuPlayerImage::~CCSBuyMenuPlayerImage()
+{
+	if ( m_hPlayerModel.Get() )
+	{
+		m_hPlayerModel->Remove();
+		m_hPlayerModel = NULL;
+	}
+	if ( m_hWeaponModel.Get() )
+	{
+		m_hWeaponModel->Remove();
+		m_hWeaponModel = NULL;
+	}
+	if ( m_hGlovesModel.Get() )
+	{
+		m_hGlovesModel->Remove();
+		m_hGlovesModel = NULL;
+	}
+
+	m_DefaultCubemap.Shutdown();
+}
+
+void CCSBuyMenuPlayerImage::ApplySettings( KeyValues* inResourceData )
+{
+	BaseClass::ApplySettings( inResourceData );
+
+	const char* pCameraOrigin = inResourceData->GetString( "camera_origin" );
+	if ( pCameraOrigin[0] != 0 )
+	{
+		sscanf( pCameraOrigin, "%f %f %f", &m_vecCameraPos.x, &m_vecCameraPos.y, &m_vecCameraPos.z );
+	}
+	const char* pCameraAngles = inResourceData->GetString( "camera_angles" );
+	if ( pCameraAngles[0] != 0 )
+	{
+		sscanf( pCameraAngles, "%f %f %f", &m_angCameraAng.x, &m_angCameraAng.y, &m_angCameraAng.z );
+	}
+
+	m_nFOV = inResourceData->GetInt( "fov", 54 );
+
+	KeyValues* pData = inResourceData->FindKey( "lights" );
+	if ( pData )
+	{
+		ParseLightInfo( pData );
+	}
+}
+
+void CCSBuyMenuPlayerImage::OnMousePressed( vgui::MouseCode code )
+{
+	RequestFocus();
+
+	// Save where they clicked
+	input()->GetCursorPosition( m_nLastMouseX, m_nLastMouseY );
+
+	m_bMousePressed = true;
+}
+
+void CCSBuyMenuPlayerImage::OnMouseReleased( vgui::MouseCode code )
+{
+	m_bMousePressed = false;
+}
+
+#define ROTATION_TIME 1.0f // seconds
+void CCSBuyMenuPlayerImage::OnCursorMoved( int x, int y )
+{
+	if ( m_bMousePressed )
+	{
+		int xpos, ypos;
+		input()->GetCursorPos( xpos, ypos );
+
+		// Only want the x delta.
+		float flDelta = xpos - m_nLastMouseX;
+
+		// Apply the delta and rotate the player.
+		if ( !m_hPlayerModel.Get() )
+			return;
+
+		m_flRotationAngleLeft += flDelta;
+		if ( m_flRotationAngleLeft != 0 )
+			m_flRotationTimeLeft = ROTATION_TIME;
+
+		m_nLastMouseX = xpos;
+		m_nLastMouseY = ypos;
+	}
+}
+
+void CCSBuyMenuPlayerImage::OnCursorExited()
+{
+	m_bMousePressed = false;
+}
+
+void CCSBuyMenuPlayerImage::ParseLightInfo( KeyValues* inResourceData )
+{
+	const char* pAmbientColor = inResourceData->GetString( "ambient_light" );
+	if ( pAmbientColor[0] != 0 )
+	{
+		sscanf( pAmbientColor, "%f %f %f", &(m_vecAmbientLight.x), &(m_vecAmbientLight.y), &(m_vecAmbientLight.z) );
+	}
+
+	KeyValues* pLightKeys = inResourceData->GetFirstTrueSubKey();
+	while ( pLightKeys )
+	{
+		if ( m_nNumLightDescs >= MATERIAL_MAX_LIGHT_COUNT )
+		{
+			DevMsg( "Too many lights defined in %s. Only using first %d. \n", GetName(), MATERIAL_MAX_LIGHT_COUNT );
+			break;
+		}
+
+		const char* pLightType = pLightKeys->GetName();
+		if ( pLightType[0] != 0 )
+		{
+			LightType_t lightType = MATERIAL_LIGHT_DISABLE;
+
+			if ( V_strnicmp( pLightType, "point_light", 11 ) == 0 )
+			{
+				lightType = MATERIAL_LIGHT_POINT;
+			}
+			else if ( V_strnicmp( pLightType, "directional_light", 17 ) == 0 )
+			{
+				lightType = MATERIAL_LIGHT_DIRECTIONAL;
+			}
+			else if ( V_strnicmp( pLightType, "spot_light", 10 ) == 0 )
+			{
+				lightType = MATERIAL_LIGHT_SPOT;
+			}
+			else
+			{
+				DevMsg( "Error Parsing lights in %s! Unknown light type %s. \n", GetName(), pLightType );
+			}
+
+			if ( lightType != MATERIAL_LIGHT_DISABLE )
+			{
+				Vector lightPosOrDir( 0, 0, 0 );
+				Vector lightColor( 0, 0, 0 );
+				const char* pLightPosOrDir = pLightKeys->GetString( (lightType == MATERIAL_LIGHT_DIRECTIONAL) ? "direction" : "position" );
+				if ( pLightPosOrDir[0] != 0 )
+				{
+					sscanf( pLightPosOrDir, "%f %f %f", &(lightPosOrDir.x), &(lightPosOrDir.y), &(lightPosOrDir.z) );
+				}
+				const char* pLightColor = pLightKeys->GetString( "color" );
+				if ( pLightColor[0] != 0 )
+				{
+					sscanf( pLightColor, "%f %f %f", &(lightColor.x), &(lightColor.y), &(lightColor.z) );
+				}
+
+				Vector lightLookAt( 0, 0, 0 );
+				float lightInnerCone = 1.0f;
+				float lightOuterCone = 10.0f;
+				if ( lightType == MATERIAL_LIGHT_SPOT )
+				{
+					const char* pLightLookAt = pLightKeys->GetString( "lookat" );
+					if ( pLightLookAt[0] != 0 )
+					{
+						sscanf( pLightLookAt, "%f %f %f", &(lightLookAt.x), &(lightLookAt.y), &(lightLookAt.z) );
+					}
+					lightInnerCone = pLightKeys->GetFloat( "inner_cone", 1.0f );
+					lightOuterCone = pLightKeys->GetFloat( "outer_cone", 8.0f );
+				}
+
+				switch ( lightType )
+				{
+					case MATERIAL_LIGHT_DIRECTIONAL:
+						m_pLightDesc[m_nNumLightDescs].InitDirectional( lightPosOrDir, lightColor );
+						break;
+					case MATERIAL_LIGHT_POINT:
+						m_pLightDesc[m_nNumLightDescs].InitPoint( lightPosOrDir, lightColor );
+						break;
+					case MATERIAL_LIGHT_SPOT:
+						m_pLightDesc[m_nNumLightDescs].InitSpot( lightPosOrDir, lightColor, lightLookAt, lightInnerCone, lightOuterCone );
+						break;
+				}
+				m_nNumLightDescs++;
+			}
+		}
+
+		pLightKeys = pLightKeys->GetNextTrueSubKey();
+	}
+}
+
+void CCSBuyMenuPlayerImage::SetPlayerModel( const char* pszModel )
+{
+	if ( !pszModel )
+	{
+		if ( m_hPlayerModel.Get() )
+		{
+			m_hPlayerModel->Remove();
+			m_hPlayerModel = NULL;
+		}
+		return;
+	}
+
+	if ( m_hPlayerModel.Get() )
+	{
+		m_hPlayerModel->SetModel( pszModel );
+	}
+	else
+	{
+		C_BaseAnimating* pEnt = new C_BaseAnimating;
+		if ( !pEnt )
+			return;
+		if ( pEnt->InitializeAsClientEntity( pszModel, RENDER_GROUP_OPAQUE_ENTITY ) == false )
+		{
+			// we failed to initialize this entity so just return gracefully
+			pEnt->Remove();
+			return;
+		}
+		// setup the handle
+		m_hPlayerModel = pEnt;
+		m_hPlayerModel->DontRecordInTools();
+		m_hPlayerModel->AddEffects( EF_NODRAW );
+	}
+}
+
+void CCSBuyMenuPlayerImage::SetWeaponModel( const char* pszModel )
+{
+	if ( !pszModel || !m_hPlayerModel.Get() )
+	{
+		if ( m_hWeaponModel.Get() )
+		{
+			m_hWeaponModel->Remove();
+			m_hWeaponModel = NULL;
+		}
+		return;
+	}
+
+	if ( m_hWeaponModel.Get() )
+	{
+		m_hWeaponModel->SetModel( pszModel );
+	}
+	else
+	{
+		C_BaseAnimating* pEnt = new C_BaseAnimating;
+		if ( !pEnt )
+			return;
+		if ( pEnt->InitializeAsClientEntity( pszModel, RENDER_GROUP_OPAQUE_ENTITY ) == false )
+		{
+			// we failed to initialize this entity so just return gracefully
+			pEnt->Remove();
+			return;
+		}
+		// setup the handle
+		m_hWeaponModel = pEnt;
+		m_hWeaponModel->DontRecordInTools();
+		m_hWeaponModel->AddEffects( EF_NODRAW );
+		m_hWeaponModel->FollowEntity( m_hPlayerModel.Get() );
+	}
+}
+
+void CCSBuyMenuPlayerImage::SetGlovesModel( const char* pszModel )
+{
+	if ( !pszModel || !m_hPlayerModel.Get() )
+	{
+		if ( m_hGlovesModel.Get() )
+		{
+			m_hGlovesModel->Remove();
+			m_hGlovesModel = NULL;
+		}
+
+		if ( m_hPlayerModel.Get() )
+		{
+			m_hPlayerModel->SetBodygroup( m_hPlayerModel->FindBodygroupByName( "gloves" ), 0 );
+		}
+
+		return;
+	}
+
+	if ( m_hGlovesModel.Get() )
+	{
+		m_hGlovesModel->SetModel( pszModel );
+	}
+	else
+	{
+		C_BaseAnimating* pEnt = new C_BaseAnimating;
+		if ( !pEnt )
+			return;
+		if ( pEnt->InitializeAsClientEntity( pszModel, RENDER_GROUP_OPAQUE_ENTITY ) == false )
+		{
+			// we failed to initialize this entity so just return gracefully
+			pEnt->Remove();
+			return;
+		}
+		// setup the handle
+		m_hGlovesModel = pEnt;
+		m_hGlovesModel->DontRecordInTools();
+		m_hGlovesModel->AddEffects( EF_NODRAW );
+		m_hGlovesModel->FollowEntity( m_hPlayerModel.Get() );
+
+		m_hPlayerModel->SetBodygroup( m_hPlayerModel->FindBodygroupByName( "gloves" ), 1 );
+	}
+}
+
+void CCSBuyMenuPlayerImage::SetSequence( const char* pszSequence )
+{
+	if ( m_hPlayerModel.Get() )
+	{
+		int sequence = m_hPlayerModel->LookupSequence( pszSequence );
+		if ( sequence != ACT_INVALID )
+		{
+			m_hPlayerModel->ResetSequence( sequence );
+			m_hPlayerModel->SetCycle( 0 );
+		}
+	}
+}
+
+void CCSBuyMenuPlayerImage::ResetRotation()
+{
+	m_bMousePressed = false;
+	m_flRotationAngleLeft = 0.0f;
+	m_flRotationTimeLeft = 0.0f;
+
+	if ( !m_hPlayerModel.Get() )
+		return;
+	m_hPlayerModel->SetAbsAngles( vec3_angle );
+}
+
+bool CCSBuyMenuPlayerImage::DoesModelSupportGloves(const char* pszGlovesViewModelName, const char* pszDefaultViewModelName )
+{
+	if ( m_hPlayerModel.Get() )
+		return m_hPlayerModel->DoesModelSupportGloves( pszGlovesViewModelName , pszDefaultViewModelName );
+
+	return false;
+}
+
+void CCSBuyMenuPlayerImage::Paint()
+{
+	C_BasePlayer* pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+
+	if ( !pLocalPlayer )
+		return;
+
+	MDLCACHE_CRITICAL_SECTION();
+
+	if ( !m_hPlayerModel.Get() )
+		return;
+
+	int x, y, w, h;
+	GetBounds( x, y, w, h );
+	ParentLocalToScreen( x, y );
+
+	if ( m_flRotationTimeLeft > 0.0f )
+	{
+		QAngle angPlayerModel = m_hPlayerModel->GetAbsAngles();
+
+		float flPercentage = m_flRotationTimeLeft / ROTATION_TIME;
+		float flDelta = m_flRotationAngleLeft * flPercentage * gpGlobals->frametime;
+		angPlayerModel.y += flDelta;
+		m_flRotationAngleLeft -= flDelta;
+
+		if ( angPlayerModel.y > 360.0f )
+			angPlayerModel.y -= 360.0f;
+		else if ( angPlayerModel.y < -360.0f )
+			angPlayerModel.y += 360.0f;
+		m_hPlayerModel->SetAbsAngles( angPlayerModel );
+
+		m_flRotationTimeLeft -= gpGlobals->frametime;
+	}
+	else
+	{
+		m_flRotationAngleLeft = 0.0f;
+	}
+
+	// do we have a valid sequence?
+	if ( m_hPlayerModel->GetSequence() != -1 )
+	{
+		m_hPlayerModel->FrameAdvance( gpGlobals->frametime );
+	}
+
+	// Now draw it.
+	CViewSetup view;
+	view.x = x; // we actually want to offset by the 
+	view.y = y; // viewport origin here because Push3DView expects global coords below
+	view.width = w;
+	view.height = h;
+
+	view.m_bOrtho = false;
+
+	// scale the FOV for aspect ratios other than 4/3
+	float flWidthRatio = ((float) w / (float) h) / (4.0f / 3.0f);
+	view.fov = ScaleFOVByWidthRatio( m_nFOV, flWidthRatio );
+
+	view.origin = m_vecCameraPos;
+	view.angles = m_angCameraAng;
+	view.zNear = VIEW_NEARZ;
+	view.zFar = 1000;
+
+	CMatRenderContextPtr pRenderContext( materials );
+
+	pRenderContext->BindLocalCubemap( m_DefaultCubemap );
+
+	pRenderContext->SetLightingOrigin( vec3_origin );
+	pRenderContext->SetAmbientLight( m_vecAmbientLight.x, m_vecAmbientLight.y, m_vecAmbientLight.z );
+
+	g_pStudioRender->SetLocalLights( m_nNumLightDescs, m_pLightDesc );
+
+	Frustum dummyFrustum;
+	render->Push3DView( view, 0, NULL, dummyFrustum );
+
+	modelrender->SuppressEngineLighting( true );
+	float color[3] = { 1.0f, 1.0f, 1.0f };
+	render->SetColorModulation( color );
+	render->SetBlend( 1.0f );
+	m_hPlayerModel->DrawModel( STUDIO_RENDER );
+	if ( m_hWeaponModel.Get() )
+		m_hWeaponModel->DrawModel( STUDIO_RENDER );
+	if ( m_hGlovesModel.Get() )
+		m_hGlovesModel->DrawModel( STUDIO_RENDER );
+
+	modelrender->SuppressEngineLighting( false );
+
+	render->PopView( dummyFrustum );
+
+	pRenderContext->BindLocalCubemap( NULL );
+	pRenderContext.SafeRelease();
+}
+
+
+CCSBuyMenuLoadoutPanel::CCSBuyMenuLoadoutPanel( Panel* parent, const char* panelName ): EditablePanel( parent, panelName )
+{
+	m_pPlayer = NULL;
+	m_pPlayerAvatarImage = new CAvatarImagePanel( this, "PlayerAvatarImage" );
+	m_pPlayerAvatarImage->SetShouldDrawFriendIcon( false );
+	m_pPlayerSkullImage = new VectorImagePanel( this, "PlayerSkullImage" );
+	m_pPlayerSkullImage->ClearSchemeUpdateFlag();
+	m_pPlayerSkullImage->SetFgColor( COLOR_WHITE );
+	m_pPlayerSkullImage->SetTexture( "materials/vgui/hud/svg/elimination.svg" );
+
+	m_ItemIcons[AssaultSuit].SetTexture( "materials/vgui/weapons/svg/armor.svg", 0, 20, ITEM_ASSAULTSUIT );
+	m_ItemIcons[Kevlar].SetTexture( "materials/vgui/hud/svg/shield.svg", 0, 20, ITEM_KEVLAR );
+	m_ItemIcons[Defuser].SetTexture( "materials/vgui/weapons/svg/defuser.svg", 0, 24, ITEM_DEFUSER );
+	m_ItemIcons[Taser].SetTexture( "materials/vgui/weapons/svg/taser.svg", 0, 24, WEAPON_TASER );
+	m_ItemIcons[SmokeGrenade].SetTexture( "materials/vgui/weapons/svg/smokegrenade.svg", 0, 24, WEAPON_SMOKEGRENADE );
+	m_ItemIcons[HEGrenade].SetTexture( "materials/vgui/weapons/svg/hegrenade.svg", 0, 24, WEAPON_HEGRENADE );
+	m_ItemIcons[Flashbang].SetTexture( "materials/vgui/weapons/svg/flashbang.svg", 0, 24, WEAPON_FLASHBANG );
+	m_ItemIcons[DecoyGrenade].SetTexture( "materials/vgui/weapons/svg/decoy.svg", 0, 24, WEAPON_DECOY );
+	m_ItemIcons[IncGrenade].SetTexture( "materials/vgui/weapons/svg/incgrenade.svg", 0, 24, WEAPON_INCGRENADE );
+	m_ItemIcons[Molotov].SetTexture( "materials/vgui/weapons/svg/molotov.svg", 0, 24, WEAPON_MOLOTOV );
+	m_ItemIcons[BombWeapon].SetTexture( "materials/vgui/weapons/svg/c4.svg", 0, 24, WEAPON_C4 );
+}
+
+CCSBuyMenuLoadoutPanel::~CCSBuyMenuLoadoutPanel()
+{
+	m_pPlayer = NULL;
+}
+
+void CCSBuyMenuLoadoutPanel::ApplySchemeSettings( IScheme* pScheme )
+{
+	BaseClass::ApplySchemeSettings( pScheme );
+
+	int xpos = GetWide() - avatar_xpos;
+	m_pPlayerAvatarImage->SetBounds( xpos, avatar_ypos, avatar_wide, avatar_tall );
+	m_pPlayerSkullImage->SetBounds( xpos, avatar_ypos, avatar_wide, avatar_tall );
+	m_pPlayerSkullImage->SetZPos( 2 );
+}
+
+void CCSBuyMenuLoadoutPanel::Paint()
+{
+	BaseClass::Paint();
+
+	if ( !m_pPlayer )
+		return;
+
+	wchar_t wszMoney[8];
+	V_snwprintf( wszMoney, ARRAYSIZE( wszMoney ), L"$%d", m_pPlayer->GetAccount() );
+
+	int iWide = UTIL_ComputeStringWidth( m_hMoneyFont, wszMoney );
+	surface()->DrawSetTextFont( m_hMoneyFont );
+	surface()->DrawSetTextPos( m_pPlayerAvatarImage->GetXPos() - money_xpos - iWide, money_ypos );
+	surface()->DrawSetTextColor( m_clrMoney );
+	surface()->DrawPrintText( wszMoney, wcslen( wszMoney ) );
+
+	int iXPos = GetWide() - icons_xpos;
+	for ( int i = 0; i < TotalIconTypes; i++ )
+	{
+		bool bRender = false;
+
+		m_pPlayerSkullImage->SetVisible( !m_pPlayer->IsAlive() );
+		if ( m_pPlayer->IsAlive() )
+		{
+			switch ( i )
+			{
+				case AssaultSuit:
+					bRender = (m_pPlayer->HasHelmet() && m_pPlayer->ArmorValue() > 0);
+					break;
+				case Kevlar:
+					bRender = (!m_pPlayer->HasHelmet() && m_pPlayer->ArmorValue() > 0);
+					break;
+				case Defuser:
+					bRender = m_pPlayer->HasDefuser();
+					break;
+				case Taser:
+					bRender = (m_pPlayer->Weapon_OwnsThisType( "weapon_taser" ) != NULL);
+					break;
+				case SmokeGrenade:
+					bRender = (m_pPlayer->Weapon_OwnsThisType( "weapon_smokegrenade" ) != NULL);
+					break;
+				case HEGrenade:
+					bRender = (m_pPlayer->Weapon_OwnsThisType( "weapon_hegrenade" ) != NULL);
+					break;
+				case Flashbang:
+					bRender = (m_pPlayer->Weapon_OwnsThisType( "weapon_flashbang" ) != NULL);
+					break;
+				case DecoyGrenade:
+					bRender = (m_pPlayer->Weapon_OwnsThisType( "weapon_decoy" ) != NULL);
+					break;
+				case IncGrenade:
+					bRender = (m_pPlayer->Weapon_OwnsThisType( "weapon_incgrenade" ) != NULL);
+					break;
+				case Molotov:
+					bRender = (m_pPlayer->Weapon_OwnsThisType( "weapon_molotov" ) != NULL);
+					break;
+				case SecondaryWeapon:
+					if ( CWeaponCSBase* pWeapon = dynamic_cast<CWeaponCSBase*>(m_pPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL )) )
+					{
+						bRender = true;
+						if ( m_ItemIcons[i].m_nItemID != pWeapon->GetCSWeaponID() )
+						{
+							char szItemIcon[128];
+							Q_snprintf( szItemIcon, sizeof( szItemIcon ), "materials/vgui/weapons/svg/%s.svg", pWeapon->GetClassname() + 7 );
+							m_ItemIcons[i].SetTexture( szItemIcon, 24, 0, pWeapon->GetCSWeaponID() );
+						}
+					}
+					break;
+				case BombWeapon:
+					bRender = m_pPlayer->HasC4();
+					break;
+				case PrimaryWeapon:
+					if ( CWeaponCSBase* pWeapon = dynamic_cast<CWeaponCSBase*>(m_pPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE )) )
+					{
+						bRender = true;
+						if ( m_ItemIcons[i].m_nItemID != pWeapon->GetCSWeaponID() )
+						{
+							char szItemIcon[128];
+							Q_snprintf( szItemIcon, sizeof( szItemIcon ), "materials/vgui/weapons/svg/%s.svg", pWeapon->GetClassname() + 7 );
+							m_ItemIcons[i].SetTexture( szItemIcon, 0, 24, pWeapon->GetCSWeaponID() );
+						}
+					}
+					break;
+			}
+		}
+
+		if ( bRender && m_ItemIcons[i].m_nTextureID != -1 )
+		{
+			vgui::surface()->DrawSetTexture( m_ItemIcons[i].m_nTextureID );
+			vgui::surface()->DrawSetColor( COLOR_WHITE );
+
+			g_pMatSystemSurface->DisableClipping( true );
+
+			int x0 = iXPos - m_ItemIcons[i].m_iTextureSize[0];
+			int x1 = x0 + m_ItemIcons[i].m_iTextureSize[0];
+			int y0 = (GetTall() / 2) - (m_ItemIcons[i].m_iTextureSize[1] / 2);
+			int y1 = y0 + m_ItemIcons[i].m_iTextureSize[1];
+			vgui::surface()->DrawTexturedSubRect( x0, y0, x1, y1, m_ItemIcons[i].m_flTextureCoords[0], m_ItemIcons[i].m_flTextureCoords[1],
+																  m_ItemIcons[i].m_flTextureCoords[2], m_ItemIcons[i].m_flTextureCoords[3] );
+
+			g_pMatSystemSurface->DisableClipping( false );
+
+			iXPos -= m_ItemIcons[i].m_iTextureSize[0];
+			iXPos -= icons_margin;
+		}
+	}
+}
+
+void CCSBuyMenuLoadoutPanel::SetPlayer( C_CSPlayer* pPlayer )
+{
+	if ( !pPlayer )
+		return;
+
+	m_pPlayer = pPlayer;
+	m_pPlayerAvatarImage->SetPlayer( pPlayer, k_EAvatarSize32x32 );
+	m_pPlayerAvatarImage->SetDefaultAvatar( GetDefaultAvatarImage( pPlayer ) );
+}
+
+
+CCSBuyMenu::CCSBuyMenu( IViewPort* pViewPort ): Frame( NULL, PANEL_BUY )
+{
+	m_pViewPort = pViewPort;
+
+	// initialize dialog
+	SetTitle( "", true );
+
+	// load the new scheme early!!
+	SetScheme( "ClientScheme" );
+	SetMoveable( false );
+	SetSizeable( false );
+
+	SetProportional( true );
+
+	// initialize variables
+	m_bShowingCategory = false;
+	m_iBuyMenuKey = BUTTON_CODE_INVALID;
+	m_iAccount = -1;
+	m_bDropBuy = false;
+	m_nMessageType = InvalidMessage;
+	m_iBuyTimeLeft = -1;
+
+	// initialize elements
+	m_pMoneyLabel = new Label( this, "MoneyLabel", L"" );
+	m_pSpecialMessageLabel = new Label( this, "SpecialMessageLabel", L"" );
+	m_pBuyTimeLeftLabel = new Label( this, "BuyTimeLeftLabel", L"" );
+	m_pBuyItemsBackground = new Panel( this, "BuyItemsBackground" );
+	m_pPlayerModel = new CCSBuyMenuPlayerImage( this, "PlayerModel" );
+	m_kvBuyMenuConfig = new KeyValues( "BuyMenuConfig" );
+	if ( !m_kvBuyMenuConfig->LoadFromFile( g_pFullFileSystem, "scripts/buymenuconfig.txt", "GAME" ) )
+		DevWarning( "Failed to load the buy menu config! Buy menu won't work!\n" );
+
+	LoadControlSettings( "Resource/UI/BuyMenu.res" );
+}
+
+void CCSBuyMenu::ShowPanel( bool bShow )
+{
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pPlayer )
+		return;
+
+	if ( bShow )
+	{
+		// hide the system buttons
+		SetTitleBarVisible( false );
+
+		Activate();
+		SetMouseInputEnabled( true );
+
+		m_iBuyMenuKey = gameuifuncs->GetButtonCodeForBind( "buymenu" );
+		m_iAccount = -1;
+
+		const char* pszPlayerModel = modelinfo->GetModelName( pPlayer->GetModel() );
+		m_pPlayerModel->SetPlayerModel( pszPlayerModel );
+		if ( CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
+		{
+			const char* pszGlovesViewModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szViewModel;
+			const char* pszGlovesWorldModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel;
+			if ( pszGlovesViewModel && pPlayer->m_szPlayerDefaultGloves && m_pPlayerModel->DoesModelSupportGloves( pszGlovesViewModel, pPlayer->m_szPlayerDefaultGloves ) )
+			{
+				m_pPlayerModel->SetGlovesModel( pszGlovesWorldModel );
+			}
+			else
+			{
+				m_pPlayerModel->SetGlovesModel( NULL );
+			}
+		}
+		else
+		{
+			m_pPlayerModel->SetGlovesModel( NULL );
+		}
+		m_pPlayerModel->ResetRotation(); // reset the mouse state so it wont rotate the player when you get back in
+		ResetWeapon();
+
+		int iPanel = 1;
+		while ( true )
+		{
+			char szPanelName[16];
+			Q_snprintf( szPanelName, sizeof( szPanelName ), "BuyLoadout%d", iPanel );
+			CCSBuyMenuLoadoutPanel* pPanel = dynamic_cast<CCSBuyMenuLoadoutPanel*>(FindChildByName( szPanelName ));
+			if ( pPanel )
+			{
+				pPanel->SetVisible( false );
+			}
+			else
+			{
+				// ran out of buttons, stop
+				break;
+			}
+			iPanel++;
+		}
+
+		iPanel = 1;
+		for ( int i = 0; i <= gpGlobals->maxClients; i++ )
+		{
+			C_CSPlayer* pLoadoutPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+			if ( !pLoadoutPlayer || pLoadoutPlayer->IsOtherEnemy( pPlayer ) )
+				continue;
+
+			char szPanelName[16];
+			Q_snprintf( szPanelName, sizeof( szPanelName ), "BuyLoadout%d", iPanel );
+			CCSBuyMenuLoadoutPanel* pPanel = dynamic_cast<CCSBuyMenuLoadoutPanel*>(FindChildByName( szPanelName ));
+			if ( pPanel )
+			{
+				iPanel++;
+				pPanel->SetVisible( true );
+				pPanel->SetPlayer( pLoadoutPlayer );
+			}
+			else
+			{
+				// ran out of buttons, stop
+				break;
+			}
+		}
+
+		engine->ClientCmd_Unrestricted( "gameui_preventescapetoshow\n" );
+	}
+	else
+	{
+		engine->ClientCmd_Unrestricted( "gameui_allowescapetoshow\n" );
+
+		SetVisible( false );
+		SetMouseInputEnabled( false );
+	}
+
+	m_pViewPort->ShowBackGround( bShow );
+	HideCategory();
+}
+
+void CCSBuyMenu::Update()
+{
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pPlayer )
+		return;
+
+	if ( m_iAccount != pPlayer->GetAccount() )
+	{
+		m_iAccount = pPlayer->GetAccount();
+		wchar_t wszUnicode[8];
+		V_snwprintf( wszUnicode, ARRAYSIZE( wszUnicode ), L"$%d", m_iAccount );
+		m_pMoneyLabel->SetText( wszUnicode );
+	}
+
+	int iBuyTimeLeft = (int) (CSGameRules()->GetBuyTimeLength() - CSGameRules()->GetRoundElapsedTime());
+	if ( CSGameRules()->IsPlayingDeathmatch() )
+		iBuyTimeLeft = (int) (pPlayer->m_fImmuneToDamageTime - gpGlobals->curtime);
+	if ( iBuyTimeLeft < 0 )
+		iBuyTimeLeft = 0;
+
+	if ( m_iBuyTimeLeft != iBuyTimeLeft )
+	{
+		m_iBuyTimeLeft = iBuyTimeLeft;
+		wchar_t wszTimer[32];
+		int iHours = m_iBuyTimeLeft / 3600;
+		int iMinutes = (m_iBuyTimeLeft - 3600 * iHours) / 60;
+		int iSeconds = m_iBuyTimeLeft % 60;
+		V_snwprintf( wszTimer, sizeof( wszTimer ), L"%.2d : %.2d : %.2d", iHours, iMinutes, iSeconds );
+
+		wchar_t wszString[256];
+		if ( CSGameRules()->IsPlayingDeathmatch() )
+			g_pVGuiLocalize->ConstructString( wszString, sizeof( wszString ), g_pVGuiLocalize->Find( "BuyMenu_ImmunityTimerText" ), 1, wszTimer );
+		else
+			g_pVGuiLocalize->ConstructString( wszString, sizeof( wszString ), g_pVGuiLocalize->Find( "BuyMenu_TimerText" ), 1, wszTimer );
+
+		m_pBuyTimeLeftLabel->SetText( wszString );
+	}
+}
+
+void CCSBuyMenu::OnClose()
+{
+	engine->ClientCmd_Unrestricted( "gameui_allowescapetoshow\n" );
+	BaseClass::OnClose();
+}
+
+void CCSBuyMenu::OnCommand( const char* command )
+{
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pPlayer )
+		return;
+
+	if ( !Q_stricmp( command, "vguicancel" ) )
+	{
+		Close();
+
+		gViewPortInterface->ShowBackGround( false );
+	}
+	else
+	{
+		KeyValues* kvSubMenu = m_kvBuyMenuConfig->FindKey( command );
+		if ( kvSubMenu )
+		{
+			ShowCategory( kvSubMenu );
+		}
+		else
+		{
+			if ( m_bDropBuy )
+			{
+				char szCommand[128];
+				Q_snprintf( szCommand, sizeof( szCommand ), "%s drop", command );
+				engine->ClientCmd( szCommand );
+			}
+			else
+			{
+				engine->ClientCmd( command );
+			}
+
+			if ( !V_strncmp( command, "buy ", 4 ) )
+			{
+				if ( closeonbuy.GetBool() )
+				{
+					ShowPanel( false );
+				}
+				else if ( !m_bDropBuy )
+				{
+					CSWeaponID nWeaponID = AliasToWeaponID( command + 4 );
+					if ( nWeaponID < WEAPON_LAST ) // it is a firearm
+						HideCategory();
+				}
 			}
 		}
 	}
 }
 
-//-----------------------------------------------------------------------------
-static void GetPanelBounds( Panel *pPanel, wrect_t& bounds )
+Panel* CCSBuyMenu::CreateControlByName( const char* controlName )
 {
-	if ( !pPanel )
+	if ( !Q_stricmp( "CCSBuyMenuCategoryButton", controlName ) )
 	{
-		bounds.bottom = bounds.left = bounds.right = bounds.top = 0;
+		return new CCSBuyMenuCategoryButton( this, controlName );
+	}
+	else if ( !Q_stricmp( "CCSBuyMenuItemButton", controlName ) )
+	{
+		return new CCSBuyMenuItemButton( this, controlName );
+	}
+	else if ( !Q_stricmp( "CCSBuyMenuLoadoutPanel", controlName ) )
+	{
+		return new CCSBuyMenuLoadoutPanel( this, controlName );
 	}
 	else
 	{
-		pPanel->GetBounds( bounds.left, bounds.top, bounds.right, bounds.bottom );
-		bounds.right += bounds.left;
-		bounds.bottom += bounds.top;
+		return BaseClass::CreateControlByName( controlName );
 	}
 }
 
-//-----------------------------------------------------------------------------
-Panel * CCSBaseBuyMenu::CreateControlByName( const char *controlName )
+void CCSBuyMenu::OnKeyCodeTyped( KeyCode code )
 {
-	if ( Q_stricmp( controlName, "CCSBuyMenuPlayerImagePanel" ) == 0 )
+	// ESC cancels
+	if ( code == KEY_ESCAPE )
 	{
-		return new CCSBuyMenuPlayerImagePanel( NULL, controlName );
+		if ( m_bShowingCategory )
+			HideCategory();
+		else
+			ShowPanel( false );
 	}
-
-	return BaseClass::CreateControlByName( controlName );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: The CS background is painted by image panels, so we should do nothing
-//-----------------------------------------------------------------------------
-void CCSBaseBuyMenu::PaintBackground()
-{
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Scale / center the window
-//-----------------------------------------------------------------------------
-void CCSBaseBuyMenu::PerformLayout()
-{
-	BaseClass::PerformLayout();
-
-	// stretch the window to fullscreen
-	if ( !m_backgroundLayoutFinished )
+	else if ( m_iBuyMenuKey != BUTTON_CODE_INVALID && m_iBuyMenuKey == code )
 	{
-		m_backgroundLayoutFinished = true;
-
-		int screenW, screenH;
-		GetHudSize( screenW, screenH );
-
-		SetBounds( 0, 0, screenW, screenH );
+		HideCategory();
+	}
+	else
+	{
+		BaseClass::OnKeyCodeTyped( code );
 	}
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CCSBaseBuyMenu::ApplySchemeSettings( vgui::IScheme *pScheme )
+void CCSBuyMenu::OnKeyCodePressed( KeyCode code )
 {
-	BaseClass::ApplySchemeSettings( pScheme );
-	ApplyBackgroundSchemeSettings( this, pScheme );
+	if ( code == KEY_LCONTROL )
+	{
+		m_bDropBuy = true;
+		ShowSpecialMessage( "#BuyMenu_BuyForTeammate_Hint", GlobalMessage );
+
+		int i = 1;
+		while ( true )
+		{
+			char szPanelName[16];
+			Q_snprintf( szPanelName, sizeof( szPanelName ), "BuyItem%d", i );
+			CCSBuyMenuItemButton* pButton = dynamic_cast<CCSBuyMenuItemButton*>(FindChildByName( szPanelName ));
+			if ( pButton )
+			{
+				pButton->SetDropBuy( m_bDropBuy );
+			}
+			else
+			{
+				// ran out of buttons, stop
+				break;
+			}
+			i++;
+		}
+	}
+	else
+	{
+		BaseClass::OnKeyCodePressed( code );
+	}
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-static bool IsWeaponInvalid( CSWeaponID weaponID )
+void CCSBuyMenu::OnKeyCodeReleased( KeyCode code )
 {
-	if ( weaponID == WEAPON_NONE )
-		return false;
+	if ( code == KEY_LCONTROL )
+	{
+		m_bDropBuy = false;
+		HideSpecialMessage( GlobalMessage );
 
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+		int i = 1;
+		while ( true )
+		{
+			char szPanelName[16];
+			Q_snprintf( szPanelName, sizeof( szPanelName ), "BuyItem%d", i );
+			CCSBuyMenuItemButton* pButton = dynamic_cast<CCSBuyMenuItemButton*>(FindChildByName( szPanelName ));
+			if ( pButton )
+			{
+				pButton->SetDropBuy( m_bDropBuy );
+			}
+			else
+			{
+				// ran out of buttons, stop
+				break;
+			}
+			i++;
+		}
+	}
+	else
+	{
+		BaseClass::OnKeyCodeReleased( code );
+	}
+}
+
+void CCSBuyMenu::ShowCategory( KeyValues* kvCategory )
+{
+	HideCategory();
+
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if ( !pPlayer )
-		return true;
-
-	CCSWeaponInfo *info = GetWeaponInfo( weaponID );
-	if ( !info )
-		return true;
-
-	/// @TODO: assasination maps have a specific set of weapons that can be used in them.
-	if ( info->m_iTeam != TEAM_UNASSIGNED && pPlayer->GetTeamNumber() != info->m_iTeam )
-		return true;
-
-	return false;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CCSBuySubMenu::OnThink()
-{
-	UpdateVestHelmPrice();
-
-	BaseClass::OnThink();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: When buying vest+helmet, if you already have a vest with no damage
-// then the price is reduced to just the helmet.  Because this can change during
-// the game, we need to update the enable/disable state of the menu item dynamically.
-//-----------------------------------------------------------------------------
-void CCSBuySubMenu::UpdateVestHelmPrice()
-{
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-	if ( pPlayer == NULL )
 		return;
 
-	BuyMouseOverPanelButton *pButton = dynamic_cast< BuyMouseOverPanelButton * > ( FindChildByName( "kevlar_helmet", false ) );
-	if ( pButton )
+	if ( !kvCategory )
 	{
-		// Set its price to the current value from the player.
-		int price = pPlayer->GetCurrentAssaultSuitPrice();
-		pButton->SetCurrentPrice( price );
-		switch ( price )
+		DevWarning( "Got NULL buy menu category!\n" );
+		return;
+	}
+
+	int i = 1;
+	for ( KeyValues* pkvItem = kvCategory->GetFirstSubKey(); pkvItem; pkvItem = pkvItem->GetNextKey() )
+	{
+		const char* pszName = pkvItem->GetString( "name" );
+		const char* pszWeapon = pkvItem->GetName();
+		const char* pszIcon = pkvItem->GetString( "icon" );
+		int iPrice = pkvItem->GetInt( "price" );
+		int iTeamNumber = pkvItem->GetInt( "team" );
+		bool bBombHostageOnly = pkvItem->GetBool( "de_cs_only" );
+		if ( iTeamNumber != TEAM_UNASSIGNED && pPlayer->GetTeamNumber() != iTeamNumber )
+			continue;
+
+		CSWeaponID nWeaponID = AliasToWeaponID( pszWeapon );
+		if ( nWeaponID == WEAPON_NONE )
+			continue;
+
+		char szPanelName[16];
+		Q_snprintf( szPanelName, sizeof( szPanelName ), "BuyItem%d", i );
+		CCSBuyMenuItemButton* pButton = dynamic_cast<CCSBuyMenuItemButton*>(FindChildByName( szPanelName ));
+		if ( pButton )
 		{
-			case ITEM_PRICE_HELMET:
-				pButton->SetText( "#Cstrike_Kevlar_Helmet_HelmetOnly" );
-				break;
-			case ITEM_PRICE_KEVLAR:
-				pButton->SetText( "#Cstrike_Kevlar_Helmet_KevlarOnly" );
-				break;
-			default:
-				pButton->SetText( "#Cstrike_Kevlar_Helmet" );
-				break;
+			char szHotkey[4];
+			Q_snprintf( szHotkey, sizeof( szHotkey ), "%d", i );
+
+			if ( nWeaponID == ITEM_DEFUSER && CSGameRules()->IsHostageRescueMap() )
+			{
+				pszName = "#CStrike_WPNHUD_Cutters";
+			}
+
+			pButton->SetText( pszName );
+			pButton->SetHotkey( szHotkey[0] );
+			pButton->SetPrice( iPrice );
+			pButton->SetIcon( pszIcon );
+			pButton->SetWeaponID( nWeaponID );
+			if ( bBombHostageOnly && !CSGameRules()->IsBombDefuseMap() && !CSGameRules()->IsHostageRescueMap() )
+				pButton->SetDisabled( true );
+
+			char szCommand[128];
+			Q_snprintf( szCommand, sizeof( szCommand ), "buy %s", pszWeapon );
+			pButton->SetCommand( szCommand );
+
+			pButton->SetVisible( true );
+		}
+		else
+		{
+			// ran out of buttons, stop
+			break;
+		}
+
+		i++;
+	}
+
+	// remove hotkeys from categories
+	i = 1;
+	while ( true )
+	{
+		char szPanelName[16];
+		Q_snprintf( szPanelName, sizeof( szPanelName ), "BuyCategory%d", i );
+		Button* pButton = dynamic_cast<Button*>(FindChildByName( szPanelName ));
+		if ( pButton )
+		{
+			pButton->SetHotkey( '\0' );
+		}
+		else
+		{
+			// ran out of buttons, stop
+			break;
+		}
+		i++;
+	}
+
+	m_pBuyItemsBackground->SetVisible( true );
+	m_pSpecialMessageLabel->SetVisible( true );
+	m_bShowingCategory = true;
+}
+
+void CCSBuyMenu::HideCategory()
+{
+	// hide the items first
+	int i = 1;
+	while ( true )
+	{
+		char szPanelName[16];
+		Q_snprintf( szPanelName, sizeof( szPanelName ), "BuyItem%d", i );
+		Button* pButton = dynamic_cast<Button*>(FindChildByName( szPanelName ));
+		if ( pButton )
+		{
+			pButton->SetVisible( false );
+			pButton->SetHotkey( '\0' );
+		}
+		else
+		{
+			// ran out of buttons, stop
+			break;
+		}
+		i++;
+	}
+
+	// then add hotkeys back to categories
+	i = 1;
+	while ( true )
+	{
+		char szPanelName[16];
+		Q_snprintf( szPanelName, sizeof( szPanelName ), "BuyCategory%d", i );
+		Button* pButton = dynamic_cast<Button*>(FindChildByName( szPanelName ));
+		if ( pButton )
+		{
+			char szHotkey[4];
+			Q_snprintf( szHotkey, sizeof( szHotkey ), "%d", i );
+
+			pButton->SetHotkey( szHotkey[0] );
+		}
+		else
+		{
+			// ran out of buttons, stop
+			break;
+		}
+		i++;
+	}
+
+	m_pBuyItemsBackground->SetVisible( false );
+	m_pSpecialMessageLabel->SetVisible( false );
+	m_bShowingCategory = false;
+	ResetWeapon();
+	HideSpecialMessage( GlobalMessage );
+}
+
+void CCSBuyMenu::SetPlayerImageWeapon( const char* pszWeaponModel, const char* pszWeaponSequence )
+{
+	m_pPlayerModel->SetWeaponModel( pszWeaponModel );
+	m_pPlayerModel->SetSequence( pszWeaponSequence );
+}
+
+void CCSBuyMenu::ResetWeapon()
+{
+	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( !pPlayer )
+		return;
+
+	const char* pszPlayerSequence = "t_buymenu_nowep";
+	const char* pszPlayerWeaponModel = NULL;
+
+	C_WeaponCSBase* pWeapon = dynamic_cast<C_WeaponCSBase*>(pPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE ));
+	if ( !pWeapon )
+	{
+		pWeapon = dynamic_cast<C_WeaponCSBase*>(pPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL ));
+		if ( !pWeapon )
+		{
+			pWeapon = dynamic_cast<C_WeaponCSBase*>(pPlayer->Weapon_GetSlot( WEAPON_SLOT_KNIFE ));
+			if ( !pWeapon )
+			{
+				pWeapon = pPlayer->GetActiveCSWeapon();
+			}
+		}
+	}
+	if ( pWeapon )
+	{
+		pszPlayerWeaponModel = pWeapon->GetCSWpnData().szWorldModel;
+		if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST )
+			pszPlayerSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnimT;
+		else
+			pszPlayerSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnim;
+	}
+
+	m_pPlayerModel->SetWeaponModel( pszPlayerWeaponModel );
+	m_pPlayerModel->SetSequence( pszPlayerSequence );
+}
+
+void CCSBuyMenu::ShowSpecialMessage( const char* pszText, BuyMenuSpecialMessageType_t nMessageType )
+{
+	if ( !m_pSpecialMessageLabel )
+		return;
+
+	if ( nMessageType >= m_nMessageType )
+	{
+		if ( pszText && *pszText )
+		{
+			m_pSpecialMessageLabel->SetText( pszText );
+			m_nMessageType = nMessageType;
 		}
 	}
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CCSBuySubMenu::OnCommand( const char *command )
+void CCSBuyMenu::ShowSpecialMessage( const wchar_t* pwszText, BuyMenuSpecialMessageType_t nMessageType )
 {
-	if ( FStrEq( command, "buy_unavailable" ) )
-	{
-		C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-		if ( pPlayer )
-		{
-			pPlayer->EmitSound( "BuyPreset.CantBuy" );
-		}
-		BaseClass::OnCommand( "vguicancel" );
+	if ( !m_pSpecialMessageLabel )
 		return;
-	}
 
-	BaseClass::OnCommand( command );
-}
-
-Panel * CCSBuySubMenu::CreateControlByName(const char *controlName)
-{
-	if ( Q_stricmp( controlName, "CSBuyMenuImagePanel" ) == 0 )
+	if ( nMessageType >= m_nMessageType )
 	{
-		return new CCSBuyMenuImagePanel( NULL, controlName );
+		if ( pwszText && *pwszText )
+		{
+			m_pSpecialMessageLabel->SetText( pwszText );
+			m_nMessageType = nMessageType;
+		}
 	}
-
-	return BaseClass::CreateControlByName( controlName );
 }
 
+void CCSBuyMenu::HideSpecialMessage( BuyMenuSpecialMessageType_t nMessageType )
+{
+	if ( !m_pSpecialMessageLabel )
+		return;
 
+	if ( nMessageType >= m_nMessageType )
+	{
+		m_pSpecialMessageLabel->SetText( "" );
+		m_nMessageType = InvalidMessage;
+	}
+}

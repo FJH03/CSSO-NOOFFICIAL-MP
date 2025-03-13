@@ -1,3 +1,9 @@
+//========= Copyright PiMoNFeeD, CS:SO, All rights reserved. ==================//
+//
+// Purpose: player loadout
+//
+//=============================================================================//
+
 #ifndef CSLOADOUT_H
 #define CSLOADOUT_H
 #ifdef _WIN32
@@ -19,7 +25,7 @@ class CCSPlayer;
 // Loadout slots
 enum LoadoutSlot_t
 {
-	SLOT_NONE = 0,
+	SLOT_NONE = -1,
 	SLOT_M4,
 	SLOT_HKP2000,
 	SLOT_FIVESEVEN,
@@ -28,14 +34,17 @@ enum LoadoutSlot_t
 	SLOT_MP7_T,
 	SLOT_DEAGLE_CT,
 	SLOT_DEAGLE_T,
+
+	SLOT_MAX = SLOT_DEAGLE_T
 };
 
 struct CLoadout
 {
-	LoadoutSlot_t	m_iLoadoutSlot;
 	const char*		m_szCommand;
 	const char*		m_szFirstWeapon;
 	const char*		m_szSecondWeapon;
+	CSWeaponID		m_iFirstWeaponID;
+	CSWeaponID		m_iSecondWeaponID;
 };
 
 class CCSLoadout
@@ -51,12 +60,18 @@ public:
 	LoadoutSlot_t	GetSlotFromWeapon( int team, const char* weaponName );
 	// get the weapon from a client's slot
 	const char*		GetWeaponFromSlot( CBasePlayer* pPlayer, LoadoutSlot_t slot );
+
+	CSWeaponID		GetLoadoutWeaponID( CBasePlayer* pPlayer, CSWeaponID iWeaponID );
+	const char*		GetLoadoutWeapon( CBasePlayer* pPlayer, const char* pszWeaponName );
+	
 	bool			HasGlovesSet( CCSPlayer* pPlayer, int team );
-	int			GetGlovesForPlayer( CCSPlayer* pPlayer, int team );
+	int				GetGlovesForPlayer( CCSPlayer* pPlayer, int team );
 
 	bool			HasKnifeSet( CCSPlayer* pPlayer, int team );
 	int				GetKnifeForPlayer( CCSPlayer* pPlayer, int team );
 };
+
+
 extern CCSLoadout *g_pCSLoadout;
 
 inline CCSLoadout *CSLoadout()

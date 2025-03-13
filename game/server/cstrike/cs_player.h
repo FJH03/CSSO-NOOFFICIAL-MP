@@ -274,6 +274,7 @@ public:
 
 	virtual CBaseEntity	*GiveNamedItem( const char *pszName, int iSubType = 0 );
 	virtual bool		IsBeingGivenItem() const { return m_bIsBeingGivenItem; }
+	void		DropNamedItem( const char* pszName );
 	
 	virtual CBaseEntity *FindUseEntity( void );
 	virtual bool		IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredCaps );
@@ -515,8 +516,8 @@ public:
 	bool HandleCommand_JoinClass( int iClass );
 	bool HandleCommand_JoinTeam( int iTeam );
 
-	BuyResult_e HandleCommand_Buy( const char *item, bool bAddToRebuy = true );
-	BuyResult_e HandleCommand_Buy_Internal( const char *item, bool bAddToRebuy = true );
+	BuyResult_e HandleCommand_Buy( const char *item, bool bAddToRebuy = true, bool bDrop = false );
+ 	BuyResult_e HandleCommand_Buy_Internal( const char *item, bool bAddToRebuy = true, bool bDrop = false );
 
 	AcquireResult::Type CanAcquire( CSWeaponID weaponId, AcquireMethod::Type acquireMethod );
 	int					GetCarryLimit( CSWeaponID weaponId );

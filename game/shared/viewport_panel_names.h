@@ -22,8 +22,6 @@
 #define PANEL_SPECGUI		"specgui"	// passive spectator elements (top/bottom bars)
 #define PANEL_INFO			"info"
 #define PANEL_BUY			"buy"
-#define PANEL_BUY_CT		"buy_ct"
-#define PANEL_BUY_TER		"buy_ter"
 #define PANEL_NAV_PROGRESS	"nav_progress"
 #define PANEL_INTRO			"intro"
 

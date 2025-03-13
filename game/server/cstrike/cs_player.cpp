@@ -143,10 +143,10 @@ extern ConVar mp_damage_scale_ct_head;
 extern ConVar mp_damage_scale_t_body;
 extern ConVar mp_damage_scale_t_head;
 extern ConVar mp_playercashawards;
+extern ConVar mp_tdm_healthshot_killcount;
 extern ConVar mp_ggprogressive_healthshot_killcount;
 extern ConVar mp_damage_headshot_only;
 extern ConVar mp_max_armor;
-extern ConVar mp_tdm_healthshot_killcount;
 
 // [menglish] Added in convars for freeze cam time length
 extern ConVar spec_freeze_time;
@@ -668,6 +668,7 @@ CCSPlayer::CCSPlayer()
 	m_bNeedToChangeGloves = true;
 
 	m_szPlayerDefaultGloves = NULL;
+
 	m_iApproachingHealth = -1;
 	m_iApproachingHealthSpeed = 0.0f;
 	m_flApproachingHealthLastTime = 0.0f;
@@ -888,6 +889,7 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "UI.ArmsRace.LevelUp" );
 
 	PrecacheScriptSound( "Hostage.Breath" );
+
 	// CS Bot sounds
 	PrecacheScriptSound( "Bot.StuckSound" );
 	PrecacheScriptSound( "Bot.StuckStart" );
@@ -1658,17 +1660,13 @@ void CCSPlayer::GiveDefaultItems()
 
 			if ( secondaryString && *secondaryString )
 			{
-				LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( GetTeamNumber(), secondaryString + 7 ); // +7 to get rid of weapon_ prefix
-				if ( loadout_slot != SLOT_NONE )
-					secondaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
-
-				CSWeaponID weaponId = WeaponIdFromString( secondaryString );
+				CSWeaponID weaponId = CSLoadout()->GetLoadoutWeaponID( this, WeaponIdFromString( secondaryString ) );
 				if ( weaponId )
 				{
 					const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
 					if ( pWeaponInfo && pWeaponInfo->m_WeaponType == WEAPONTYPE_PISTOL )
 					{
-						GiveNamedItem( secondaryString );
+						GiveNamedItem( WeaponIdAsString( weaponId ) );
 						m_bUsingDefaultPistol = true;
 					}
 				}
@@ -1726,20 +1724,16 @@ void CCSPlayer::GiveDefaultItems()
 		meleeString = engine->ParseFile( meleeString, token, sizeof( token ) );
 		while ( meleeString != NULL )
 		{
-			LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( GetTeamNumber(), token );
-			if ( loadout_slot != SLOT_NONE )
-				V_strcpy( token, UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) ) );
-
 			// if it's not a knife, give it.  This is pretty much only going to be a taser, but we support anything
-			if ( V_strncmp( token, "weapon_knife", 12 ) )
+			if ( V_strncmp( CSLoadout()->GetLoadoutWeapon( this, token ), "knife", 5 ) )
 			{
-				CSWeaponID weaponId = WeaponIdFromString( token );
+				CSWeaponID weaponId = AliasToWeaponID( token );
 				if ( weaponId )
-			{	
+				{
 					const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
 					if ( pWeaponInfo && pWeaponInfo->m_WeaponType == WEAPONTYPE_KNIFE )
 					{
-						GiveNamedItem( token );
+						GiveNamedItem( WeaponIdAsString( weaponId ) );
 					}
 				}
 			}
@@ -1757,16 +1751,12 @@ void CCSPlayer::GiveDefaultItems()
 
 		if ( secondaryString && *secondaryString )
 		{
-			LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( GetTeamNumber(), secondaryString + 7 ); // +7 to get rid of weapon_ prefix
-			if ( loadout_slot != SLOT_NONE )
-				secondaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
-
-			CSWeaponID weaponId = WeaponIdFromString( secondaryString );
+			CSWeaponID weaponId = CSLoadout()->GetLoadoutWeaponID( this, WeaponIdFromString( secondaryString ) );
 			if ( weaponId )
 			{
 				const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
 				if ( pWeaponInfo && pWeaponInfo->m_WeaponType == WEAPONTYPE_PISTOL )
-					GiveNamedItem( secondaryString );
+					GiveNamedItem( WeaponIdAsString( weaponId ) );
 			}
 		}
 	}
@@ -1781,16 +1771,12 @@ void CCSPlayer::GiveDefaultItems()
 
 		if ( primaryString && *primaryString )
 		{
-			LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( GetTeamNumber(), primaryString + 7 ); // +7 to get rid of weapon_ prefix
-			if ( loadout_slot != SLOT_NONE )
-				primaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
-
-			CSWeaponID weaponId = WeaponIdFromString( primaryString );
+			CSWeaponID weaponId = CSLoadout()->GetLoadoutWeaponID( this, WeaponIdFromString( primaryString ) );
 			if ( weaponId )
 			{
 				const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
 				if ( pWeaponInfo && pWeaponInfo->m_WeaponType != WEAPONTYPE_KNIFE && pWeaponInfo->m_WeaponType != WEAPONTYPE_PISTOL && pWeaponInfo->m_WeaponType != WEAPONTYPE_C4 && pWeaponInfo->m_WeaponType != WEAPONTYPE_GRENADE && pWeaponInfo->m_WeaponType != WEAPONTYPE_EQUIPMENT )
-					GiveNamedItem( primaryString );
+					GiveNamedItem( WeaponIdAsString( weaponId ) );
 			}
 		}
 	}
@@ -3982,17 +3968,17 @@ void CCSPlayer::AddAccountAward( int reason, int amount, const CWeaponCSBase *pW
 
 void CCSPlayer::AddAccountFromTeam( int amount, bool bTrackChange, TeamCashAward::Type reason )
 {
- 	// no awards in the warmup period
- 	if ( CSGameRules() && CSGameRules()->IsWarmupPeriod() )
- 		return;
- 
- 	AddAccount( amount, bTrackChange, false, NULL );
- 
- 	if( IsControllingBot() )
- 	{
- 		// make sure we award team bonus to the actual player controlling the bot
- 		m_PreControlData.m_iAccount = clamp( m_PreControlData.m_iAccount + amount, 0, mp_maxmoney.GetInt() );
- 	}
+	// no awards in the warmup period
+	if ( CSGameRules() && CSGameRules()->IsWarmupPeriod() )
+		return;
+
+	AddAccount( amount, bTrackChange, false, NULL );
+
+	if( IsControllingBot() )
+	{
+		// make sure we award team bonus to the actual player controlling the bot
+		m_PreControlData.m_iAccount = clamp( m_PreControlData.m_iAccount + amount, 0, mp_maxmoney.GetInt() );
+	}
 }
 
 void CCSPlayer::AddAccount( int amount, bool bTrackChange, bool bItemBought, const char *pItemName )
@@ -5143,15 +5129,12 @@ BuyResult_e CCSPlayer::AttemptToBuyNightVision( void )
 
 //[tj]  This is essentially a shim so I can easily check the return
 //      value without adding new code to all the return points.
-BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item, bool bAddToRebuy/* = true */ )
+BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item, bool bAddToRebuy/* = true */, bool bDrop/* = true */ )
 {
 	bAddToRebuy = (bAddToRebuy && !m_bIsInRebuy); // Only addtorebuy if bAddToRebuy is default and we're not in rebuy.
 
-	const char* loadoutItem = CSLoadout()->GetWeaponFromSlot( this, CSLoadout()->GetSlotFromWeapon( GetTeamNumber(), item ) );
-	if ( loadoutItem != NULL )
-		item = loadoutItem;
-
-	BuyResult_e result = HandleCommand_Buy_Internal(item, bAddToRebuy);
+	const char *szLoadoutItem = CSLoadout()->GetLoadoutWeapon( this, item );
+	BuyResult_e result = HandleCommand_Buy_Internal(szLoadoutItem, bAddToRebuy, bDrop);
 	if (result == BUY_BOUGHT)
 	{
 		m_bMadePurchseThisRound = true;
@@ -5163,13 +5146,13 @@ BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item, bool bAddToRebuy/* =
 	return result;
 }
 
-BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAddToRebuy/* = true */ )
+BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAddToRebuy/* = true */, bool bDrop/* = true */ )
 {
 	BuyResult_e result = BUY_PLAYER_CANT_BUY; // set some defaults
- 	if ( !CanPlayerBuy( true ) )
- 	{
- 		return BUY_PLAYER_CANT_BUY;
- 	}
+	if ( !CanPlayerBuy( true ) )
+	{
+		return BUY_PLAYER_CANT_BUY;
+	}
 
 	CSWeaponID weaponId = AliasToWeaponID( wpnName );
 	const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
@@ -5229,7 +5212,10 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAd
 	}
 	else
 	{
-		AcquireResult::Type acquireResult = CanAcquire( weaponId, AcquireMethod::Buy );
+		AcquireMethod::Type nAcquireMethod = AcquireMethod::Buy;
+		if ( bDrop )
+			nAcquireMethod = AcquireMethod::BuyDrop;
+		AcquireResult::Type acquireResult = CanAcquire( weaponId, nAcquireMethod );
 		switch ( acquireResult )
 		{
 		case AcquireResult::Allowed:
@@ -5267,7 +5253,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAd
 		}
 		else // essentially means: ( GetAccountBalance() >= pWeaponInfo->GetWeaponPrice( pItem ) )
 		{
-			if ( m_lifeState != LIFE_DEAD )
+			if ( m_lifeState != LIFE_DEAD && !bDrop )
 			{
 				if ( pWeaponInfo->iSlot == WEAPON_SLOT_PISTOL )
 				{
@@ -5289,7 +5275,11 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAd
 			if ( bPurchase && pWeaponInfo->iSlot == WEAPON_SLOT_PISTOL )
 				m_bUsingDefaultPistol = false;
 
-			GiveNamedItem( pWeaponInfo->szClassName );
+			if ( bDrop )
+				DropNamedItem( pWeaponInfo->szClassName );
+			else
+				GiveNamedItem( pWeaponInfo->szClassName );
+
 			AddAccount( -pWeaponInfo->GetWeaponPrice(), true, true, pWeaponInfo->szClassName );
 		}
 	}
@@ -6209,9 +6199,10 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 	else if ( FStrEq( pcmd, "buy" ) )
 	{
 		BuyResult_e result = BUY_INVALID_ITEM;
-		if ( args.ArgC() == 2 )
+		if ( args.ArgC() >= 2 )
 		{
-			result = HandleCommand_Buy( args[1] );
+			bool bDrop = args.ArgC() > 2 ? (Q_strcmp( args[2], "drop" ) == 0) : false;
+			result = HandleCommand_Buy( args[1], true, bDrop );
 		}
 		if ( result == BUY_INVALID_ITEM )
 		{
@@ -8087,11 +8078,7 @@ void CCSPlayer::PostAutoBuyCommandProcessing(const AutoBuyInfoStruct *commandInf
 	}
 
 	char classname[64];
-	Q_strcpy( classname, commandInfo->m_classname );
-
-	const char* loadoutWeapon = CSLoadout()->GetWeaponFromSlot( this, CSLoadout()->GetSlotFromWeapon( GetTeamNumber(), commandInfo->m_command ) );
-	if ( loadoutWeapon != NULL )
-		Q_snprintf( classname, sizeof( classname ), "weapon_%s", loadoutWeapon );
+	Q_snprintf( classname, sizeof( classname ), "weapon_%s", CSLoadout()->GetLoadoutWeapon( this, commandInfo->m_command ) );
 
 	CBaseCombatWeapon *pPrimary = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
 	CBaseCombatWeapon *pSecondary = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
@@ -8781,6 +8768,7 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pszName, int iSubType )
 	}
 
 	DispatchSpawn( pent );
+
 	m_bIsBeingGivenItem = true;
 	if ( pent != NULL && !(pent->IsMarkedForDeletion()) )
 	{
@@ -8793,7 +8781,6 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pszName, int iSubType )
 	// and the worst thing is that I actually knew that but I didn't think about it
 	if ( pWeapon )
 	{
-
 		if ( !IsControllingBot() )
 		{
 			pWeapon->SetStatTrak( m_bLoadoutStatTrak && pWeapon->GetCSWpnData().m_szStatTrakModel && pWeapon->GetCSWpnData().m_szStatTrakModel[0] );
@@ -8809,6 +8796,44 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pszName, int iSubType )
 	StockPlayerAmmo( pWeapon );
 
 	return pent;
+}
+
+void CCSPlayer::DropNamedItem( const char* pszName )
+{
+	CWeaponCSBase* pWeapon = static_cast<CWeaponCSBase*>(CreateEntityByName( pszName ));
+
+	if ( pWeapon )
+	{
+		Vector vecWeaponThrowFromPos = EyePosition();
+		QAngle angWeaponThrowFromAngle = EyeAngles();
+
+		Vector vForward;
+		AngleVectors( angWeaponThrowFromAngle, &vForward, NULL, NULL );
+		vecWeaponThrowFromPos = vecWeaponThrowFromPos + (vForward * 100);
+
+		DispatchSpawn( pWeapon );
+
+		// set it non-solid because it hits itself during the trace when trying to throw it
+		pWeapon->SetSolidFlags( FSOLID_NOT_SOLID );
+		pWeapon->SetMoveCollide( MOVECOLLIDE_FLY_BOUNCE );
+
+		Weapon_Drop( pWeapon, &vecWeaponThrowFromPos, NULL );
+
+		pWeapon->SetSolidFlags( FSOLID_NOT_STANDABLE | FSOLID_TRIGGER | FSOLID_USE_TRIGGER_BOUNDS );
+		pWeapon->SetPreviousOwner( this );
+
+		if ( !IsControllingBot() )
+		{
+			pWeapon->SetStatTrak( m_bLoadoutStatTrak && pWeapon->GetCSWpnData().m_szStatTrakModel && pWeapon->GetCSWpnData().m_szStatTrakModel[0] );
+			pWeapon->SetOriginalOwnerIndex( entindex() );
+		}
+		else
+		{
+			pWeapon->SetStatTrak( false );
+			pWeapon->SetOriginalOwnerIndex( GetControlledBot()->entindex() );
+		}
+		StockPlayerAmmo( pWeapon );
+	}
 }
 
 void CCSPlayer::DoAnimationEvent( PlayerAnimEvent_t event, int nData )
@@ -10300,9 +10325,8 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			pAttacker->m_maxNumEnemiesKillStreak = pAttacker->m_NumEnemiesKilledThisSpawn;
 
 		// give a healthshot in DM and GG for every triple kill streak if dont have a healthshot
-
 		if ( ((CSGameRules()->IsPlayingDeathmatch() && pAttacker->m_NumEnemiesKilledThisSpawn % mp_tdm_healthshot_killcount.GetInt() == 0) ||
-			(CSGameRules()->GetGamemode() == GameModes::ARMS_RACE && pAttacker->m_NumEnemiesKilledThisSpawn % mp_ggprogressive_healthshot_killcount.GetInt() == 0)) &&
+			  (CSGameRules()->GetGamemode() == GameModes::ARMS_RACE && pAttacker->m_NumEnemiesKilledThisSpawn % mp_ggprogressive_healthshot_killcount.GetInt() == 0)) &&
 			 !pAttacker->Weapon_OwnsThisType( "weapon_healthshot" ) )
 		{
 			pAttacker->GiveNamedItem( "weapon_healthshot" );
@@ -11673,6 +11697,7 @@ void CCSPlayer::SetHealthApproach( int iHealth, int iSpeed )
 	m_iApproachingHealthSpeed = iSpeed;
 	m_flApproachingHealthLastTime = gpGlobals->curtime;
 }
+
 
 void UTIL_AwardMoneyToTeam( int iAmount, int iTeam, CBaseEntity *pIgnore )
 {

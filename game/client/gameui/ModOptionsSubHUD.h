@@ -42,7 +42,6 @@ protected:
 private:
 	CLabeledCommandComboBox*	m_pPlayerCountPos;
 	CLabeledCommandComboBox*	m_pHealthAmmoStyle;
-	CLabeledCommandComboBox*	m_pSimplePlayerModelLighting;
 	CLabeledCommandComboBox*	m_pHUDColor;
 	CCvarSlider*				m_pHUDBackgroundAlpha;
 	CCvarSlider*				m_pRadarScale;

@@ -74,15 +74,11 @@ CON_COMMAND( buymenu, "Show main buy menu" )
 		}
 		else
 		{
-			if( pPlayer->GetTeamNumber() == TEAM_CT )
+			if( pPlayer->GetTeamNumber() == TEAM_CT ||
+				pPlayer->GetTeamNumber() == TEAM_TERRORIST )
 			{
 				if ( gViewPortInterface )
-					gViewPortInterface->ShowPanel( PANEL_BUY_CT, true );
-			}
-			else if( pPlayer->GetTeamNumber() == TEAM_TERRORIST )
-			{
-				if ( gViewPortInterface )
-					gViewPortInterface->ShowPanel( PANEL_BUY_TER, true );
+					gViewPortInterface->ShowPanel( PANEL_BUY, true );
 			}
 		}
 	}
@@ -185,14 +181,9 @@ IViewPortPanel* CounterStrikeViewport::CreatePanelByName(const char *szPanelName
 		newpanel = new CClassMenu_TER( this );	
 	}
 
-	else if ( Q_strcmp(PANEL_BUY_CT, szPanelName) == 0 )
+	else if ( Q_strcmp(PANEL_BUY, szPanelName) == 0 )
 	{
-		newpanel = new CCSBuyMenu_CT( this );
-	}
-
-	else if ( Q_strcmp(PANEL_BUY_TER, szPanelName) == 0 )
-	{
-		newpanel = new CCSBuyMenu_TER( this );
+		newpanel = new CCSBuyMenu( this );
 	}
 
 	else if ( Q_strcmp(PANEL_TEAM, szPanelName) == 0 )
@@ -219,9 +210,7 @@ void CounterStrikeViewport::CreateDefaultPanels( void )
 	AddNewPanel( CreatePanelByName( PANEL_TEAM ), "PANEL_TEAM" );
 	AddNewPanel( CreatePanelByName( PANEL_CLASS_CT ), "PANEL_CLASS_CT" );
 	AddNewPanel( CreatePanelByName( PANEL_CLASS_TER ), "PANEL_CLASS_TER" );
-
-	AddNewPanel( CreatePanelByName( PANEL_BUY_CT ), "PANEL_BUY_CT" );
-	AddNewPanel( CreatePanelByName( PANEL_BUY_TER ), "PANEL_BUY_TER" );
+	AddNewPanel( CreatePanelByName( PANEL_BUY ), "PANEL_BUY" );
 
 	BaseClass::CreateDefaultPanels();
 

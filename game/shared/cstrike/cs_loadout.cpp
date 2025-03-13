@@ -1,3 +1,9 @@
+//========= Copyright PiMoNFeeD, CS:SO, All rights reserved. ==================//
+//
+// Purpose: player loadout
+//
+//=============================================================================//
+
 #include "cbase.h"
 #include "cs_loadout.h"
 #include "cs_shareddefs.h"
@@ -39,14 +45,14 @@ CCSLoadout::~CCSLoadout()
 
 CLoadout WeaponLoadout[]
 {
-	{	SLOT_M4,		"loadout_slot_m4_weapon",			"m4a4",			"m4a1_silencer"	},
-	{	SLOT_HKP2000,	"loadout_slot_hkp2000_weapon",		"hkp2000",		"usp_silencer"	},
-	{	SLOT_FIVESEVEN,	"loadout_slot_fiveseven_weapon",	"fiveseven",	"cz75a"			},
-	{	SLOT_TEC9,		"loadout_slot_tec9_weapon",			"tec9",			"cz75a"			},
-	{	SLOT_MP7_CT,	"loadout_slot_mp7_weapon_ct",		"mp7",			"mp5sd"			},
-	{	SLOT_MP7_T,		"loadout_slot_mp7_weapon_t",		"mp7",			"mp5sd"			},
-	{	SLOT_DEAGLE_CT,	"loadout_slot_deagle_weapon_ct",	"deagle",		"revolver"		},
-	{	SLOT_DEAGLE_T,	"loadout_slot_deagle_weapon_t",		"deagle",		"revolver"		},
+	{	"loadout_slot_m4_weapon",			"m4a4",			"m4a1_silencer",	WEAPON_M4A4,		WEAPON_M4A1		},
+	{	"loadout_slot_hkp2000_weapon",		"hkp2000",		"usp_silencer",		WEAPON_HKP2000,		WEAPON_USP		},
+	{	"loadout_slot_fiveseven_weapon",	"fiveseven",	"cz75a",			WEAPON_FIVESEVEN,	WEAPON_CZ75A	},
+	{	"loadout_slot_tec9_weapon",			"tec9",			"cz75a",			WEAPON_TEC9,		WEAPON_CZ75A	},
+	{	"loadout_slot_mp7_weapon_ct",		"mp7",			"mp5sd",			WEAPON_MP7,			WEAPON_MP5SD	},
+	{	"loadout_slot_mp7_weapon_t",		"mp7",			"mp5sd",			WEAPON_MP7,			WEAPON_MP5SD	},
+	{	"loadout_slot_deagle_weapon_ct",	"deagle",		"revolver",			WEAPON_DEAGLE,		WEAPON_REVOLVER	},
+	{	"loadout_slot_deagle_weapon_t",		"deagle",		"revolver",			WEAPON_DEAGLE,		WEAPON_REVOLVER	},
 };
 
 LoadoutSlot_t CCSLoadout::GetSlotFromWeapon( int team, const char* weaponName )
@@ -55,10 +61,9 @@ LoadoutSlot_t CCSLoadout::GetSlotFromWeapon( int team, const char* weaponName )
 
 	for ( int i = 0; i < ARRAYSIZE( WeaponLoadout ); i++ )
 	{
-		if ( Q_strcmp( WeaponLoadout[i].m_szFirstWeapon, weaponName ) == 0 )
-			slot = WeaponLoadout[i].m_iLoadoutSlot;
-		else if ( Q_strcmp( WeaponLoadout[i].m_szSecondWeapon, weaponName ) == 0 )
-			slot = WeaponLoadout[i].m_iLoadoutSlot;
+		if ( Q_strcmp( WeaponLoadout[i].m_szFirstWeapon, weaponName ) == 0 ||
+			 Q_strcmp( WeaponLoadout[i].m_szSecondWeapon, weaponName ) == 0 )
+			slot = (LoadoutSlot_t)i;
 
 		if ( slot == SLOT_MP7_CT || slot == SLOT_MP7_T )
 		{
@@ -72,27 +77,86 @@ LoadoutSlot_t CCSLoadout::GetSlotFromWeapon( int team, const char* weaponName )
 		if ( slot != SLOT_NONE )
 			break;
 	}
+
 	return slot;
 }
+
 const char* CCSLoadout::GetWeaponFromSlot( CBasePlayer* pPlayer, LoadoutSlot_t slot )
 {
-	for ( int i = 0; i < ARRAYSIZE( WeaponLoadout ); i++ )
+	if ( slot >= 0 && slot < SLOT_MAX )
 	{
-		if ( WeaponLoadout[i].m_iLoadoutSlot == slot )
-		{
-			int value = 0;
+		int value = 0;
 #ifdef CLIENT_DLL
-			ConVarRef convar( WeaponLoadout[i].m_szCommand );
-			if (convar.IsValid())
-				value = convar.GetInt();
+		ConVarRef convar( WeaponLoadout[slot].m_szCommand );
+		if (convar.IsValid())
+			value = convar.GetInt();
 #else
-			value = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pPlayer->edict() ), WeaponLoadout[i].m_szCommand ) );
+		value = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pPlayer->edict() ), WeaponLoadout[slot].m_szCommand ) );
 #endif
-			return (value > 0) ? WeaponLoadout[i].m_szSecondWeapon : WeaponLoadout[i].m_szFirstWeapon;
-		}
+		return (value > 0) ? WeaponLoadout[slot].m_szSecondWeapon : WeaponLoadout[slot].m_szFirstWeapon;
 	}
 
 	return NULL;
+}
+
+CSWeaponID CCSLoadout::GetLoadoutWeaponID( CBasePlayer* pPlayer, CSWeaponID iWeaponID )
+{
+	LoadoutSlot_t iSlot = SLOT_NONE;
+	int iTeamNumber = pPlayer->GetTeamNumber();
+
+	for ( int i = 0; i < ARRAYSIZE( WeaponLoadout ); i++ )
+	{
+		if ( WeaponLoadout[i].m_iFirstWeaponID == iWeaponID ||
+			 WeaponLoadout[i].m_iSecondWeaponID == iWeaponID )
+			iSlot = (LoadoutSlot_t)i;
+
+		if ( iSlot == SLOT_MP7_CT || iSlot == SLOT_MP7_T )
+		{
+			iSlot = (iTeamNumber == TEAM_CT) ? SLOT_MP7_CT : SLOT_MP7_T;
+		}
+		if ( iSlot == SLOT_DEAGLE_CT || iSlot == SLOT_DEAGLE_T )
+		{
+			iSlot = (iTeamNumber == TEAM_CT) ? SLOT_DEAGLE_CT : SLOT_DEAGLE_T;
+		}
+
+		if ( iSlot != SLOT_NONE )
+			break;
+	}
+
+	if ( iSlot != SLOT_NONE )
+	{
+		int value = 0;
+#ifdef CLIENT_DLL
+		ConVarRef convar( WeaponLoadout[iSlot].m_szCommand );
+		if ( convar.IsValid() )
+			value = convar.GetInt();
+#else
+		value = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pPlayer->edict() ), WeaponLoadout[iSlot].m_szCommand ) );
+#endif
+		return (value > 0) ? WeaponLoadout[iSlot].m_iSecondWeaponID : WeaponLoadout[iSlot].m_iFirstWeaponID;
+	}
+
+	return iWeaponID;
+}
+
+const char* CCSLoadout::GetLoadoutWeapon( CBasePlayer* pPlayer, const char* pszWeaponName )
+{
+	LoadoutSlot_t iSlot = GetSlotFromWeapon( pPlayer->GetTeamNumber(), pszWeaponName );
+
+	if ( iSlot != SLOT_NONE )
+	{
+		int value = 0;
+#ifdef CLIENT_DLL
+		ConVarRef convar( WeaponLoadout[iSlot].m_szCommand );
+		if ( convar.IsValid() )
+			value = convar.GetInt();
+#else
+		value = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pPlayer->edict() ), WeaponLoadout[iSlot].m_szCommand ) );
+#endif
+		return (value > 0) ? WeaponLoadout[iSlot].m_szSecondWeapon : WeaponLoadout[iSlot].m_szFirstWeapon;
+	}
+
+	return pszWeaponName;
 }
 
 bool CCSLoadout::HasGlovesSet( CCSPlayer* pPlayer, int team )
@@ -179,10 +243,10 @@ int CCSLoadout::GetKnifeForPlayer( CCSPlayer* pPlayer, int team )
 	switch ( team )
 	{
 		case TEAM_CT:
-		        value = pPlayer->m_iLoadoutSlotKnifeWeaponCT;
+			value = pPlayer->m_iLoadoutSlotKnifeWeaponCT;
 			break;
 		case TEAM_TERRORIST:
-		        value = pPlayer->m_iLoadoutSlotKnifeWeaponT;
+			value = pPlayer->m_iLoadoutSlotKnifeWeaponT;
 			break;
 		default:
 			break;

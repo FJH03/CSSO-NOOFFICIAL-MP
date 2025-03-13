@@ -36,7 +36,6 @@ public:
 	virtual float	GetViewModelFOV( void );
 
 	virtual void	FireGameEvent( IGameEvent *event );
-	virtual void	PostRenderVGui();
 
 	virtual bool	ShouldDrawViewModel( void );
 

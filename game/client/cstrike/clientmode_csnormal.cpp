@@ -76,13 +76,6 @@ ConVar default_fov( "default_fov", "90", FCVAR_CHEAT );
 
 IClientMode *g_pClientMode = NULL;
 
-// This is a temporary entity used to render the player's model while drawing the class selection menu.
-CHandle<C_BaseAnimating> g_PlayerModel;	// player
-CHandle<C_BaseAnimating> g_GlovesModel;	// gloves
-CHandle<C_BaseAnimating> g_WeaponModel;	// weapon
-
-static ITexture *g_CubemapTexture;
-
 STUB_WEAPON_CLASS( cycler_weapon,	WeaponCycler,	C_BaseCombatWeapon );
 STUB_WEAPON_CLASS( weapon_cubemap,	WeaponCubemap,	C_BaseCombatWeapon );
 
@@ -282,17 +275,11 @@ void CCSModeManager::LevelInit( const char *newmap )
 		cl_detail_avoid_force.SetValue( "0.4" );
 		cl_detail_avoid_recover_speed.SetValue( "0.25" );
 	}
-
-	g_CubemapTexture = NULL;
-	g_CubemapTexture = g_pMaterialSystem->FindTexture( "editor/cube_vertigo", NULL, true );
-	g_CubemapTexture->IncrementReferenceCount();
 }
 
 void CCSModeManager::LevelShutdown( void )
 {
 	g_pClientMode->LevelShutdown();
-
-	g_CubemapTexture->DecrementReferenceCount();
 }
 
 //-----------------------------------------------------------------------------
@@ -330,6 +317,7 @@ void ClientModeCSNormal::Init()
 	ListenForGameEvent( "round_freeze_end" );
 	ListenForGameEvent( "round_mvp" );
 	ListenForGameEvent( "bot_takeover" );
+	ListenForGameEvent( "server_spawn" );
 
 	usermessages->HookMessage( "KillCam", MsgFunc_KillCam );
 
@@ -663,12 +651,8 @@ float ClientModeCSNormal::GetViewModelFOV( void )
 
 void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 {
-	CBaseHudChat *pHudChat = (CBaseHudChat *)GET_HUDELEMENT( CHudChat );
 	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
 	CLocalPlayerFilter filter;
-	
-	if ( !pLocalPlayer || !pHudChat )
-		return;
 
 	const char *eventname = event->GetName();
 
@@ -704,6 +688,9 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "round_end", eventname ) == 0 )
 	{
+		if ( !pLocalPlayer )
+			return;
+
 		int winningTeam = event->GetInt("winner");
 		int reason = event->GetInt("reason");
 
@@ -766,7 +753,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		CBaseHudChat *pHudChat = (CBaseHudChat *)GET_HUDELEMENT( CHudChat );
 		C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
 		
-		if ( !pPlayer )
+		if ( !pPlayer || !pHudChat )
 			return;
 
 		bool bDisconnected = event->GetBool("disconnect");
@@ -862,6 +849,9 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "hostage_killed", eventname ) == 0 )
 	{
+		if ( !pLocalPlayer )
+			return;
+
 		// play sound for spectators and CTs
 		if ( pLocalPlayer->IsObserver() || (pLocalPlayer->GetTeamNumber() == TEAM_CT) )
 		{
@@ -876,6 +866,9 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "hostage_hurt", eventname ) == 0 )
 	{
+		if ( !pLocalPlayer )
+			return;
+
 		// Let the loacl player know he harmed a hostage
 		if ( pLocalPlayer->GetUserID() == event->GetInt("userid") )
 		{
@@ -896,8 +889,6 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		{
 			// we just died, hide any buy panels
 			gViewPortInterface->ShowPanel( PANEL_BUY, false );
-			gViewPortInterface->ShowPanel( PANEL_BUY_CT, false );
-			gViewPortInterface->ShowPanel( PANEL_BUY_TER, false );
 		}
 	}
 	else if ( Q_strcmp( "player_changename", eventname ) == 0 )
@@ -919,7 +910,6 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 
         if ( !hudChat || !pPlayer )
             return;
-
 
         CAchievementMgr *pAchievementMgr = dynamic_cast<CAchievementMgr *>( engine->GetAchievementMgr() );
         if ( !pAchievementMgr )
@@ -964,6 +954,9 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
     }
 	else if ( V_strcmp( "round_freeze_end", eventname ) == 0 )
 	{
+		if ( !pLocalPlayer )
+			return;
+
 		int nObsMode = pLocalPlayer->GetObserverMode();
 		if ( nObsMode == OBS_MODE_FIXED || nObsMode == OBS_MODE_ROAMING )
 		{
@@ -995,6 +988,9 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 	}
 	else if ( V_strcmp( "cs_round_final_beep", eventname ) == 0 )
 	{
+		if ( !pLocalPlayer )
+			return;
+
 		bool bTeamPanelActive = ( gViewPortInterface->GetActivePanel() && ( V_strcmp( gViewPortInterface->GetActivePanel()->GetName(), PANEL_TEAM ) == 0 ) );
 
 		if( !bTeamPanelActive )
@@ -1031,418 +1027,9 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			internalCenterPrint->HintPrint( wszLocalized );
 		}
 	}
-
 	else
 	{
 		BaseClass::FireGameEvent( event );
-	}
-}
-
-
-bool ShouldRecreateImageEntity( C_BaseAnimating *pEnt, const char *pNewModelName )
-{
-	if ( !pNewModelName || !pNewModelName[0] )
-		return false;
-
-	if ( !pEnt )
-		return true;
-
-	const model_t *pModel = pEnt->GetModel();
-
-	if ( !pModel )
-		return true;
-
-	const char *pName = modelinfo->GetModelName( pModel );
-	if ( !pName )
-		return true;
-
-	// reload only if names are different
-	return( Q_stricmp( pName, pNewModelName ) != 0 );
-}
-
-ConVar cl_simple_player_lighting( "cl_simple_player_lighting", "0", FCVAR_ARCHIVE );
-void UpdateImageEntity(
-	const char *szWeaponClassname,
-	const char *szPlayerModel,
-	int x, int y, int width, int height,
-	float viewX, float viewY, float viewZ, float viewFOV,
-	bool bIsClassSelection )
-{
-	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
-	
-	if ( !pLocalPlayer )
-		return;
-
-	MDLCACHE_CRITICAL_SECTION();
-
-	const char* szWeaponModel = NULL;
-	const char* szWeaponSequence = NULL;
-	int iTeamNumber = pLocalPlayer->GetTeamNumber();
-
-	if ( !szPlayerModel || !szPlayerModel[0] )
-		szPlayerModel = modelinfo->GetModelName( pLocalPlayer->GetModel() );
-
-	bool bActiveWeapon = false;
-	if ( !szWeaponClassname || !szWeaponClassname[0] )
-	{
-		C_BaseCombatWeapon *pPrimaryWeapon = pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE );
-		C_BaseCombatWeapon *pSecondaryWeapon = pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL );
-		C_BaseCombatWeapon *pKnifeWeapon = pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_KNIFE );
-		C_BaseCombatWeapon *pActiveWeapon = pLocalPlayer->GetActiveWeapon();
-
-		if ( pPrimaryWeapon )
-		{
-			szWeaponClassname = pPrimaryWeapon->GetClassname();
-			bActiveWeapon = true;
-		}
-		else if ( pSecondaryWeapon )
-		{
-			szWeaponClassname = pSecondaryWeapon->GetClassname();
-			bActiveWeapon = true;
-		}
-		else if ( pKnifeWeapon )
-		{
-			szWeaponClassname = pKnifeWeapon->GetClassname();
-			bActiveWeapon = true;
-		}
-		else if ( pActiveWeapon )
-		{
-			szWeaponClassname = pActiveWeapon->GetClassname();
-			bActiveWeapon = true;
-		}
-		else if ( bIsClassSelection )
-		{
-			szWeaponClassname = "weapon_ak47";
-			if ( Q_strncmp( V_UnqualifiedFileName( szPlayerModel ), "ctm_", 4 ) == 0 )
-			{
-				// give CTs an m4
-				szWeaponClassname = "weapon_m4a4";
-			}
-		}
-	}
-
-	if ( iTeamNumber < TEAM_TERRORIST ) // invalid team number
-	{
-		if ( Q_strncmp( V_UnqualifiedFileName( szPlayerModel ), "ctm_", 4 ) == 0 )
-			iTeamNumber = TEAM_CT;
-		else
-			iTeamNumber = TEAM_TERRORIST;
-	}
-
-	bool bSilenced = true;
-
-	if ( !szWeaponClassname || !szWeaponClassname[0] )
-	{
-		szWeaponSequence = "t_buymenu_nowep";
-	}
-	else
-	{
-		// don't swap active weapon for a loadout one
-		if ( !bActiveWeapon )
-		{
-			const char* szLoadoutWeapon = CSLoadout()->GetWeaponFromSlot( pLocalPlayer, CSLoadout()->GetSlotFromWeapon( iTeamNumber, szWeaponClassname + 7 ) ); // +7 to get rid of weapon_ prefix
-			if ( szLoadoutWeapon && szLoadoutWeapon[0] )
-				szWeaponClassname = UTIL_VarArgs( "weapon_%s", szLoadoutWeapon );
-		}
-		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( szWeaponClassname );
-		if ( hWpnInfo == GetInvalidWeaponInfoHandle() )
-		{
-			CSWeaponID nWeaponID = WeaponIdFromString( szWeaponClassname );
-			if ( nWeaponID == ITEM_DEFUSER )
-			{
-				szWeaponModel = "models/weapons/w_defuser.mdl";
-				szWeaponSequence = "t_buymenu_defuser";
-			}
-			else if ( nWeaponID == ITEM_KEVLAR )
-			{
-				szWeaponModel = "models/weapons/w_eq_armor.mdl";
-				szWeaponSequence = "t_buymenu_armor_helmet";
-			}
-			else if ( nWeaponID == ITEM_ASSAULTSUIT )
-			{
-				szWeaponModel = "models/weapons/w_eq_armor_helmet.mdl";
-				szWeaponSequence = "t_buymenu_armor_helmet";
-			}
-			else if ( nWeaponID == ITEM_NVGS )
-			{
-				szWeaponModel = "models/weapons/w_eq_nvgs.mdl";
-				szWeaponSequence = "ct_buymenu_nvgs";
-			}
-			else
-			{
-				Warning( "UpdateBuyMenuImageEntity: Unable to get weapon info for %s.\n", szWeaponClassname );
-				return;
-			}
-		}
-		else
-		{
-			CCSWeaponInfo *pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
-			if ( pWeaponInfo )
-			{
-				szWeaponModel = pWeaponInfo->szWorldModel;
-				if ( bIsClassSelection )
-				{
-					if ( iTeamNumber == TEAM_TERRORIST )
-						szWeaponSequence = pWeaponInfo->m_szClassMenuAnimT;
-					else
-						szWeaponSequence = pWeaponInfo->m_szClassMenuAnim;
-				}
-				else
-				{
-					if ( iTeamNumber == TEAM_TERRORIST )
-						szWeaponSequence = pWeaponInfo->m_szBuyMenuAnimT;
-					else
-						szWeaponSequence = pWeaponInfo->m_szBuyMenuAnim;
-				}
-			}
-			else
-			{
-				Warning( "UpdateBuyMenuImageEntity: Unable to get weapon info for %s.\n", szWeaponClassname );
-				return;
-			}
-		}
-	}
-
-	C_BaseAnimating *pPlayerModel = g_PlayerModel.Get();
-
-	// Does the entity even exist yet?
-	bool recreatePlayer = ShouldRecreateImageEntity( pPlayerModel, szPlayerModel );
-	if ( recreatePlayer )
-	{
-		if ( pPlayerModel )
-			pPlayerModel->Remove();
-
-		pPlayerModel = new C_BaseAnimating;
-		pPlayerModel->InitializeAsClientEntity( szPlayerModel, RENDER_GROUP_OPAQUE_ENTITY );
-		pPlayerModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
-		pPlayerModel->m_flAnimTime = gpGlobals->curtime;
-		pPlayerModel->SetSequence( pPlayerModel->LookupSequence( szWeaponSequence ) );
-
-		g_PlayerModel = pPlayerModel;
-	}
-
-	bool bCreateGloves = false;
-	const char *szGlovesViewModel = NULL;
-	if ( CSLoadout()->HasGlovesSet( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )
-	{
-		szGlovesViewModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )->szViewModel;
-	}
-	if ( pPlayerModel && szGlovesViewModel && pLocalPlayer->m_szPlayerDefaultGloves && pPlayerModel->DoesModelSupportGloves( szGlovesViewModel, pLocalPlayer->m_szPlayerDefaultGloves ) )
-	{
-		bCreateGloves = true;
-	}
-
-	C_BaseAnimating *pWeaponModel = g_WeaponModel.Get();
-
-	// Does the entity even exist yet?
-	if ( szWeaponModel && (recreatePlayer || ShouldRecreateImageEntity( pWeaponModel, szWeaponModel )) )
-	{
-		if ( pWeaponModel )
-			pWeaponModel->Remove();
-
-		pWeaponModel = new C_BaseAnimating;
-		pWeaponModel->InitializeAsClientEntity( szWeaponModel, RENDER_GROUP_OPAQUE_ENTITY );
-		pWeaponModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
-		pWeaponModel->FollowEntity( pPlayerModel ); // attach to player model
-		pWeaponModel->m_flAnimTime = gpGlobals->curtime;
-
-		int silencerBodygroup = pWeaponModel->FindBodygroupByName( "silencer" );
-		if ( silencerBodygroup > -1 )
-			pWeaponModel->SetBodygroup( silencerBodygroup, bSilenced ? 0 : 1 );
-		g_WeaponModel = pWeaponModel;
-	}
-	else if ( !szWeaponModel || !szWeaponModel[0] )
-	{
-		// so the weapon model is gone when playing a nowep sequence
-		if ( pWeaponModel )
-		{
-			pWeaponModel->Remove();
-			pWeaponModel = NULL;
-			g_WeaponModel.Set( NULL );
-		}
-	}
-
-	C_BaseAnimating *pGlovesModel = g_GlovesModel.Get();
-
-	if ( bCreateGloves )
-	{
-		const char* pGlovesName = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )->szWorldModel;
-
-		// Does the entity even exist yet?
-		if ( recreatePlayer || ShouldRecreateImageEntity( pGlovesModel, pGlovesName ) )
-		{
-			if ( pGlovesModel )
-				pGlovesModel->Remove();
-
-			pGlovesModel = new C_BaseAnimating;
-			pGlovesModel->InitializeAsClientEntity( pGlovesName, RENDER_GROUP_OPAQUE_ENTITY );
-			pGlovesModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
-			pGlovesModel->FollowEntity( pPlayerModel ); // attach to player model
-			pGlovesModel->m_nSkin = GetPlayerViewmodelArmConfigForPlayerModel( szPlayerModel )->iSkintoneIndex; // set the corrent skin tone
-			pGlovesModel->m_flAnimTime = gpGlobals->curtime;
-
-			g_GlovesModel = pGlovesModel;
-		}
-
-		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 1 );
-	}
-	else
-	{
-		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 0 );
-		if ( pGlovesModel )
-		{
-			pGlovesModel->Remove();
-			pGlovesModel = NULL;
-			g_GlovesModel.Set( NULL );
-		}
-	}
-
-	Vector playerPos = vec3_origin;
-	QAngle playerAng = vec3_angle;
-	pPlayerModel->SetAbsOrigin( playerPos );
-	pPlayerModel->SetAbsAngles( playerAng );
-
-	// now set the sequence for this player model if needed
-	if ( !bIsClassSelection )
-	{
-		int sequence = pPlayerModel->LookupSequence( szWeaponSequence );
-		if ( pPlayerModel->GetSequence() != sequence )
-			pPlayerModel->SetSequence( sequence );
-	}
-	pPlayerModel->FrameAdvance( gpGlobals->frametime );
-
-	// Now draw it.
-	CViewSetup view;
-	view.x = x;
-	view.y = y;
-	view.width = width;
-	view.height = height;
-
-	view.m_bOrtho = false;
-	view.fov = viewFOV;
-
-	Vector viewOrigin = playerPos + Vector( viewX, viewY, viewZ );
-	view.origin = viewOrigin;
-
-	view.angles.Init( 0.0f, 180.0f, 0.0f );
-	view.zNear = VIEW_NEARZ;
-	view.zFar = 1000;
-
-	CMatRenderContextPtr pRenderContext( materials );
-
-	if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 95 )
-	{
-		// PiMoN: bind a cubemap for swag
-		pRenderContext->BindLocalCubemap( g_CubemapTexture );
-	}
-
-	pRenderContext->SetLightingOrigin( vec3_origin );
-	pRenderContext->SetAmbientLight( 0.4, 0.4, 0.4 );
-
-	// PiMoN: let this model have a proper lighting for once!
-	if ( cl_simple_player_lighting.GetBool() )
-	{
-		static LightDesc_t spotLight( Vector( 128, 0, 128 ), Vector( 1, 1, 1 ), Vector( 0, 0, 64 ), 0.5f, 1.0f );
-		g_pStudioRender->SetLocalLights( 1, &spotLight );
-	}
-	else
-	{
-		static LightDesc_t lights[3];
-		lights[0].InitDirectional( Vector( -0.50f, 0.80f, 0.00f ), Vector( 0.21f, 0.21f, 0.22f ) );
-		lights[1].InitDirectional( Vector( 0.70f, -0.80f, 0.00f ), Vector( 0.07f, 0.10f, 0.13f ) );
-		lights[2].InitSpot( Vector( 66.32f, -17.06f, 124.60f ), Vector( 1.10f, 1.25f, 1.35f ), Vector( 0.0f, 0.0f, 56.0f ), 0.25f, 1.0f );
-		g_pStudioRender->SetLocalLights( 3, lights );
-	}
-
-	Frustum dummyFrustum;
-	render->Push3DView( view, 0, NULL, dummyFrustum );
-
-	modelrender->SuppressEngineLighting( true );
-	float color[3] = { 1.0f, 1.0f, 1.0f };
-	render->SetColorModulation( color );
-	render->SetBlend( 1.0f );
-	pPlayerModel->DrawModel( STUDIO_RENDER );
-	if ( pWeaponModel )
-	{
-		pWeaponModel->DrawModel( STUDIO_RENDER );
-	}
-	if ( pGlovesModel )
-	{
-		pGlovesModel->DrawModel( STUDIO_RENDER );
-	}
-	modelrender->SuppressEngineLighting( false );
-
-	render->PopView( dummyFrustum );
-
-	pRenderContext->BindLocalCubemap( NULL );
-	pRenderContext.SafeRelease();
-}
-
-bool WillPanelBeVisible( vgui::VPANEL hPanel )
-{
-	while ( hPanel )
-	{
-		if ( !vgui::ipanel()->IsVisible( hPanel ) )
-			return false;
-
-		hPanel = vgui::ipanel()->GetParent( hPanel );
-	}
-	return true;
-}
-
-void ClientModeCSNormal::PostRenderVGui()
-{
-	// If the team menu is up, then we will render the model of the character that is currently selected.
-	for ( int i=0; i < g_ClassImagePanels.Count(); i++ )
-	{
-		CCSClassImagePanel *pPanel = g_ClassImagePanels[i];
-		if ( WillPanelBeVisible( pPanel->GetVPanel() ) )
-		{
-			// Ok, we have a visible class image panel.
-			int x, y, w, h;
-			pPanel->GetBounds( x, y, w, h );
-			pPanel->LocalToScreen( x, y );
-
-			// Allow for the border.
-			x += 1;
-			y += 1;
-			w -= 2;
-			h -= 2;
-
-			UpdateImageEntity( NULL, pPanel->m_szModelName, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, true );
-			return;
-		}
-	}
-
-	// If the team menu is up, then we will render the model of the character that is currently selected.
-	for ( int i=0; i < g_BuyMenuPlayerImagePanels.Count(); i++ )
-	{
-		CCSBuyMenuPlayerImagePanel *pPanel = g_BuyMenuPlayerImagePanels[i];
-		if ( WillPanelBeVisible( pPanel->GetVPanel() ) )
-		{
-			// Ok, we have a visible class image panel.
-			int x, y, w, h;
-			pPanel->GetBounds( x, y, w, h );
-
-			UpdateImageEntity( NULL, NULL, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, false );
-			return;
-		}
-	}
-
-	// If the buy menu is up, then we will render the model of the weapon that is currently selected.
-	for ( int i=0; i < g_BuyMenuImagePanels.Count(); i++ )
-	{
-		CCSBuyMenuImagePanel *pPanel = g_BuyMenuImagePanels[i];
-		if ( WillPanelBeVisible( pPanel->GetVPanel() ) )
-		{
-			// Ok, we have a visible class image panel.
-			int x, y, w, h;
-			pPanel->GetBounds( x, y, w, h );
-			pPanel->ParentLocalToScreen( x, y ); // this is parented to a sub panel, not directly to the buy menu
-
-			UpdateImageEntity( pPanel->m_szWeaponName, NULL, x, y, w, h, pPanel->m_flViewXPos, pPanel->m_flViewYPos, pPanel->m_flViewZPos, pPanel->m_flViewFOV, false );
-			return;
-		}
 	}
 }
 
@@ -1506,12 +1093,12 @@ bool ClientModeCSNormal::CanRecordDemo( char *errorMsg, int length ) const
  
 void ClientModeCSNormal::SetServerName(wchar_t* name)
 {
-	V_wcsncpy(m_pServerName, name, sizeof( m_pServerName ) );
+	V_wcsncpy( m_pServerName, name, sizeof( m_pServerName ) );
 }
 
 void ClientModeCSNormal::SetMapName(wchar_t* name)
 {
-	V_wcsncpy(m_pMapName, name, sizeof( m_pMapName ) );
+	V_wcsncpy( m_pMapName, name, sizeof( m_pMapName ) );
 }
 
 //=============================================================================

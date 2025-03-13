@@ -542,6 +542,7 @@ namespace AcquireMethod
 	{
 		PickUp,
 		Buy,
+		BuyDrop,
 	};
 }
 

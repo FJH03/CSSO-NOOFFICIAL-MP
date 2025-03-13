@@ -27,6 +27,7 @@
 #include <vgui/ISurface.h>
 #include "hud_lcd.h"
 #include "VGuiMatSurface/IMatSystemSurface.h"
+#include <game/client/iviewport.h>
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -303,6 +304,10 @@ bool CHudElement::ShouldDraw( void )
 			if ( gHUD.IsRenderGroupLockedFor( this, m_HudRenderGroups.Element(iGroupIndex ) ) )
 				return false;
 		}
+
+		IViewPortPanel* pPanel = gViewPortInterface->FindPanelByName( PANEL_BUY );
+ 		if ( pPanel && pPanel->IsVisible() )
+ 			return false;
 	}
 
 	return bShouldDraw;

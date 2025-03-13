@@ -48,8 +48,6 @@ CCSHudWeaponSelection::CCSHudWeaponSelection( const char* pElementName ) : CHudE
 	ListenForGameEvent( "spec_target_updated" );
 	ListenForGameEvent( "hltv_changed_mode" );
 	ListenForGameEvent( "item_equip" );
-
-	RegisterForRenderGroup( "hide_for_buymenu" );
 }
 
 void CCSHudWeaponSelection::OnScreenSizeChanged( int iOldWide, int iOldTall )

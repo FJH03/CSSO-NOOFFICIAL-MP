@@ -51,7 +51,6 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 	//=========
 	m_pPlayerCountPos = new CLabeledCommandComboBox( this, "PlayerCountPositionComboBox" );
 	m_pHealthAmmoStyle = new CLabeledCommandComboBox( this, "HealthAmmoStyleComboBox" );
-	m_pSimplePlayerModelLighting = new CLabeledCommandComboBox( this, "SimplePlayerModelLightingComboBox" );
 	m_pHUDColor = new CLabeledCommandComboBox( this, "HUDColorComboBox" );
 	m_pHUDBackgroundAlpha = new CCvarSlider( this, "HUDBackgroundAlphaSlider", "", 0.0f, 1.0f, "cl_hud_background_alpha" );
 	m_pRadarScale = new CCvarSlider( this, "RadarScaleSlider", "", 0.25f, 1.0f, "cl_radar_scale" );
@@ -65,9 +64,6 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 
 	m_pHealthAmmoStyle->AddItem( "#GameUI_HUD_HealthAmmoStyle_0", "cl_hud_healthammo_style 0" );
 	m_pHealthAmmoStyle->AddItem( "#GameUI_HUD_HealthAmmoStyle_1", "cl_hud_healthammo_style 1" );
-
-	m_pSimplePlayerModelLighting->AddItem( "#GameUI_HUD_SimplePlayerModelLighting_0", "cl_simple_player_lighting 0" );
-	m_pSimplePlayerModelLighting->AddItem( "#GameUI_HUD_SimplePlayerModelLighting_1", "cl_simple_player_lighting 1" );
 
 	m_pRadarSquare->AddItem( "#GameUI_HUD_RadarSquare_0", "cl_radar_square 0" );
 	m_pRadarSquare->AddItem( "#GameUI_HUD_RadarSquare_1", "cl_radar_square 1" );
@@ -89,7 +85,6 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 
 	m_pPlayerCountPos->AddActionSignalTarget( this );
 	m_pHealthAmmoStyle->AddActionSignalTarget( this );
-	m_pSimplePlayerModelLighting->AddActionSignalTarget( this );
 	m_pHUDColor->AddActionSignalTarget( this );
 	m_pHUDBackgroundAlpha->AddActionSignalTarget( this );
 	m_pRadarScale->AddActionSignalTarget( this );
@@ -130,10 +125,6 @@ void CModOptionsSubHUD::OnResetData()
 	if ( cl_hud_healthammo_style.IsValid() )
 		m_pHealthAmmoStyle->SetInitialItem( cl_hud_healthammo_style.GetInt() );
 
-	ConVarRef cl_simple_player_lighting( "cl_simple_player_lighting" );
-	if ( cl_simple_player_lighting.IsValid() )
-		m_pSimplePlayerModelLighting->SetInitialItem( cl_simple_player_lighting.GetInt() );
-
 	ConVarRef cl_hud_color( "cl_hud_color" );
 	if ( cl_hud_color.IsValid() )
 		m_pHUDColor->SetInitialItem( cl_hud_color.GetInt() );
@@ -141,10 +132,10 @@ void CModOptionsSubHUD::OnResetData()
 	ConVarRef cl_radar_square( "cl_radar_square" );
 	if ( cl_radar_square.IsValid() )
 		m_pRadarSquare->SetInitialItem( cl_radar_square.GetInt() );
+
 	ConVarRef cl_menu_background( "cl_menu_background" );
 	if ( cl_menu_background.IsValid() )
 		m_pMenuBackground->SetInitialItem( cl_menu_background.GetInt() );
-
 
 	m_pHUDBackgroundAlpha->Reset();
 	m_pRadarScale->Reset();
@@ -159,14 +150,12 @@ void CModOptionsSubHUD::OnApplyChanges()
 {
 	m_pPlayerCountPos->ApplyChanges();
 	m_pHealthAmmoStyle->ApplyChanges();
-	m_pSimplePlayerModelLighting->ApplyChanges();
 	m_pHUDColor->ApplyChanges();
 	m_pHUDBackgroundAlpha->ApplyChanges();
 	m_pRadarScale->ApplyChanges();
 	m_pAlwaysShowInventory->ApplyChanges();
 	m_pRadarRotate->ApplyChanges();
 	m_pRadarSquare->ApplyChanges();
-
 
 	ConVarRef cl_menu_background( "cl_menu_background" );
 	if ( cl_menu_background.GetInt() != m_pMenuBackground->GetActiveItem() )

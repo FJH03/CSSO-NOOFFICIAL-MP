@@ -488,12 +488,10 @@ $Project "Client (CStrike)"
 				$File	"cstrike\VGUI\bordered_panel.h"
 				$File	"cstrike\VGUI\backgroundpanel.cpp"
 				$File	"cstrike\VGUI\backgroundpanel.h"
-				$File	"cstrike\VGUI\buymouseoverpanelbutton.h"
 				$File	"cstrike\VGUI\counterstrikeviewport.cpp"
 				$File	"cstrike\VGUI\counterstrikeviewport.h"
 				$File	"cstrike\VGUI\cstrikebuymenu.cpp"
 				$File	"cstrike\VGUI\cstrikebuymenu.h"
-				$File	"cstrike\VGUI\cstrikebuysubmenu.h"
 				$File	"cstrike\VGUI\cstrikeclassmenu.cpp"
 				$File	"cstrike\VGUI\cstrikeclassmenu.h"
 				$File	"cstrike\VGUI\cstrikeclientscoreboard.cpp"
@@ -519,8 +517,6 @@ $Project "Client (CStrike)"
 
 		$Folder	"game_controls"
 		{
-			$File	"game_controls\buymenu.cpp"
-			$File	"game_controls\buysubmenu.cpp"
 			$File	"game_controls\classmenu.cpp"
 		}
 	}
@@ -530,8 +526,6 @@ $Project "Client (CStrike)"
 
 		$Folder	"game_controls header files"
 		{
-			$File	"game_controls\buymenu.h"
-			$File	"game_controls\buysubmenu.h"
 			$File	"game_controls\classmenu.h"
 		}
 	}

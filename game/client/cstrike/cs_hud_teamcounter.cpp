@@ -81,8 +81,6 @@ CHudTeamCounter::CHudTeamCounter( const char *pElementName ): CHudElement( pElem
 	m_pTSkullImage = new ImagePanel( this, "TSkullImage" );
 
 	LoadControlSettings( "resource/hud/teamcounter.res" );
-
-	RegisterForRenderGroup( "hide_for_buymenu" );
 }
 
 void CHudTeamCounter::OnScreenSizeChanged( int iOldWide, int iOldTall )
