@@ -57,7 +57,7 @@ void CCSHudWeaponSelection::ApplySettings( KeyValues *inResourceData )
 {
 	BaseClass::ApplySettings( inResourceData );
 
-	m_pDefuserIcon->SetSize( defuser_icon_wide, defuser_icon_tall );
+	m_pDefuserIcon->SetRenderSize( defuser_icon_wide, defuser_icon_tall );
 	m_pDefuserIcon->SetTexture( inResourceData->GetString( "defuser_icon", NULL ) );
 	m_pDefuserIcon->SetPos( GetWide() - icons_base_xpos - m_pDefuserIcon->GetWide() + defuser_icon_xpos,
 							defuser_icon_ypos );
@@ -141,7 +141,7 @@ void CCSHudWeaponSelection::AddWeapon( C_BaseCombatWeapon *pWeapon, bool bSelect
 		m_weaponPanels[nWepSlot][nWepPos].bInitialized = true;
 		m_weaponPanels[nWepSlot][nWepPos].bSelected = bSelected;
 	}
-	m_weaponPanels[nWepSlot][nWepPos].pSVGPanel->SetSize( weapon_icon_wide, weapon_icon_tall );
+	m_weaponPanels[nWepSlot][nWepPos].pSVGPanel->SetRenderSize( weapon_icon_wide, weapon_icon_tall );
 	m_weaponPanels[nWepSlot][nWepPos].pSVGPanel->SetTexture( UTIL_VarArgs( "materials/vgui/weapons/svg/%s.svg", pCSWeapon->GetClassname() + 7 ) );
 
 	if ( pCSWeapon->HasStatTrak() && pCSWeapon->GetCSWpnData().m_szStatTrakModel && pCSWeapon->GetCSWpnData().m_szStatTrakModel[0] )

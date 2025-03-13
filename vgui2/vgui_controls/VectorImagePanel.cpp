@@ -117,12 +117,11 @@ void VectorImagePanel::DestroyTexture()
 	}
 }
 
-void VectorImagePanel::OnSizeChanged( int newWide, int newTall )
+void VectorImagePanel::SetRenderSize( int wide, int tall )
 {
-	BaseClass::OnSizeChanged( newWide, newTall );
-
-	m_iRenderSize[0] = newWide;
-	m_iRenderSize[1] = newTall;
+	m_iRenderSize[0] = wide;
+ 	m_iRenderSize[1] = tall;
+ 	SetSize( wide, tall );
 }
 
 void VectorImagePanel::SetMirrorX( bool state )
