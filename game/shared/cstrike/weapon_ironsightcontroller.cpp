@@ -116,21 +116,16 @@ void CIronSightController::UpdateIronSightAmount( void )
 	float flIronSightAmountTarget = IsApproachingSighted() ? 1.0f : 0.0f;
 	float flIronSightUpdOrDownSpeed = IsApproachingSighted() ? m_flIronSightPullUpSpeed : m_flIronSightPutDownSpeed;
 
-#ifdef DEBUG
 	if (ironsight_override.GetBool())
 		flIronSightUpdOrDownSpeed = IsApproachingSighted() ? ironsight_speed_bringup.GetFloat() : ironsight_speed_putdown.GetFloat();
-#endif
 
 	m_flIronSightAmount = Approach(flIronSightAmountTarget, m_flIronSightAmount, gpGlobals->frametime * flIronSightUpdOrDownSpeed);
 
 	m_flIronSightAmountGained = Gain( m_flIronSightAmount, 0.8f );
 	m_flIronSightAmountBiased = Bias( m_flIronSightAmount, 0.2f );
 
-#ifdef DEBUG
 	if ( ironsight_spew_amount.GetBool() )
 		DevMsg( "Ironsight amount: %f, Gained: %f, Biased: %f\n", m_flIronSightAmount, m_flIronSightAmountGained, m_flIronSightAmountBiased );
-#endif
-
 }
 
 #ifdef CLIENT_DLL
@@ -232,24 +227,17 @@ void CIronSightController::ApplyIronSightPositioning( Vector &vecPosition, QAngl
 		QAngle angDelta = QAngleDiff( m_angViewLast, angAngle );
 	
 		//dampen the delta to simulate 'looseness', but the faster we move, the more looseness approaches ironsight_running_looseness.GetFloat(), which is as waggly as possible
-#ifdef DEBUG
 		if ( ironsight_override.GetBool() )
 		{
 			AddToAngleAverage( angDelta * Lerp(m_flSpeedRatio, ironsight_looseness.GetFloat(), ironsight_running_looseness.GetFloat()) );
 		}
 		else
-#endif
 		{
 			AddToAngleAverage( angDelta * Lerp(m_flSpeedRatio, m_flIronSightLooseness, 0.3f ) );
 		}
 
 		//m_angViewLast tries to catch up to angAngle
-#ifdef DEBUG
 		m_angViewLast -= angDelta * clamp( gpGlobals->frametime * ironsight_catchupspeed.GetFloat(), 0, 1 );
-#else
-		m_angViewLast -= angDelta * clamp( gpGlobals->frametime * ironsight_catchupspeed, 0, 1 );
-#endif
-
 	}
 	else
 	{
@@ -265,7 +253,6 @@ void CIronSightController::ApplyIronSightPositioning( Vector &vecPosition, QAngl
 
 
 	//offset the matrix by the ironsight eye position
-#ifdef DEBUG
 	if ( ironsight_override.GetBool() )
 	{
 		Vector vecTemp; //when overridden use convar values instead of schema driven ones so we can iterate on the values quickly while authoring
@@ -273,20 +260,17 @@ void CIronSightController::ApplyIronSightPositioning( Vector &vecPosition, QAngl
 			MatrixTranslate( matIronSightMatrix, (-vecTemp) * GetIronSightAmountGained() );
 	}
 	else
-#endif
 	{
 		//use schema defined offset
 		MatrixTranslate( matIronSightMatrix, (-m_vecEyePos) * GetIronSightAmountGained() );
 	}
 	
 	//additionally offset by the ironsight origin of rotation, the weapon will pivot around this offset from the eye
-#ifdef DEBUG
 	if ( ironsight_override.GetBool() )
 	{
 		MatrixTranslate( matIronSightMatrix, Vector( ironsight_pivot_forward.GetFloat(), 0, 0 ) );
 	}
 	else
-#endif
 	{
 		MatrixTranslate( matIronSightMatrix, Vector( m_flIronSightPivotForward, 0, 0 ) );
 	}
@@ -297,7 +281,6 @@ void CIronSightController::ApplyIronSightPositioning( Vector &vecPosition, QAngl
 		angDeltaAverage = -angDeltaAverage;
 
 	//apply ironsight eye rotation
-#ifdef DEBUG
 	if ( ironsight_override.GetBool() )
 	{
 		QAngle angTemp;  //when overridden use convar values instead of schema driven ones so we can iterate on the values quickly while authoring
@@ -309,7 +292,6 @@ void CIronSightController::ApplyIronSightPositioning( Vector &vecPosition, QAngl
 		}
 	}
 	else
-#endif
 	{
 		
 		//use schema defined angles
@@ -323,13 +305,11 @@ void CIronSightController::ApplyIronSightPositioning( Vector &vecPosition, QAngl
 		angDeltaAverage = -angDeltaAverage;
 
 	//move the weapon back to the ironsight eye position
-#ifdef DEBUG
 	if ( ironsight_override.GetBool() )
 	{
 		MatrixTranslate( matIronSightMatrix, Vector( -ironsight_pivot_forward.GetFloat(), 0, 0 ) );
 	}
 	else
-#endif
 	{
 		MatrixTranslate( matIronSightMatrix, Vector( -m_flIronSightPivotForward, 0, 0 ) );
 	}	
@@ -371,19 +351,14 @@ void CIronSightController::ApplyIronSightPositioning( Vector &vecPosition, QAngl
 
 }
 
-#ifdef DEBUG
-ConVar r_ironsight_scope_effect("r_ironsight_scope_effect", "1", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT);
-ConVar ironsight_laser_dot_render_tweak1("ironsight_laser_dot_render_tweak1", "61", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT);
-ConVar ironsight_laser_dot_render_tweak2("ironsight_laser_dot_render_tweak2", "64", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT);
-#endif
+ConVar r_ironsight_scope_effect("r_ironsight_scope_effect", "1", FCVAR_REPLICATED | FCVAR_CHEAT);
+ConVar ironsight_laser_dot_render_tweak1("ironsight_laser_dot_render_tweak1", "61", FCVAR_REPLICATED | FCVAR_CHEAT);
+ConVar ironsight_laser_dot_render_tweak2("ironsight_laser_dot_render_tweak2", "64", FCVAR_REPLICATED | FCVAR_CHEAT);
 
 void CIronSightController::RenderScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSetup )
 {
-
-#ifdef DEBUG
 	if ( !r_ironsight_scope_effect.GetBool() )
 		return;
-#endif
 
 	if ( !IsInIronSight() )
 		return;
@@ -411,15 +386,9 @@ void CIronSightController::RenderScopeEffect( int x, int y, int w, int h, CViewS
 
 	if ( !IsErrorMaterial(pMatDot) )
 	{
-#ifdef DEBUG
 		pRenderContext->DrawScreenSpaceRectangle( pMatDot, (w * dotCoords.x) - (iWidth / 2), (h * dotCoords.y) - (iWidth / 2), iWidth, iWidth,
 												  0, 0, ironsight_laser_dot_render_tweak1.GetInt(), ironsight_laser_dot_render_tweak1.GetInt(),
 												  ironsight_laser_dot_render_tweak2.GetInt(), ironsight_laser_dot_render_tweak2.GetInt() );
-#else
-		pRenderContext->DrawScreenSpaceRectangle( pMatDot, (w * dotCoords.x) - (iWidth / 2), (h * dotCoords.y) - (iWidth / 2), iWidth, iWidth,
-												  0, 0, 61, 61,
-												  64, 64 );
-#endif
 	}
 }
 
@@ -461,12 +430,10 @@ float CIronSightController::GetIronSightFOV( float flDefaultFOV, bool bUseBiased
 
 	float flIronSightFOVAmount = bUseBiasedValue ? GetIronSightAmountBiased() : GetIronSightAmount();
 
-#ifdef DEBUG
 	if ( ironsight_override.GetBool() )
 	{
 		return Lerp( flIronSightFOVAmount, flDefaultFOV, ironsight_fov.GetFloat() );
 	}
-#endif
 	
 	return Lerp( flIronSightFOVAmount, flDefaultFOV, GetIronSightIdealFOV() );
 }

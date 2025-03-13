@@ -24,7 +24,7 @@
 #include "matsys_controls/colorpickerpanel.h"
 #include "matsys_controls/vtfpreviewpanel.h"
 #include "filesystem.h"
-#include "keyvalues.h"
+#include "KeyValues.h"
 #include "vstdlib/random.h"
 
 #include "weapon_csbase.h"
