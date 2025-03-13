@@ -26,6 +26,10 @@
 #include "ModInfo.h"
 #include "BasePanel.h"
 
+#include "iclientmode.h"
+#include "cs_shareddefs.h"
+#include <filesystem.h>
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include <tier0/memdbgon.h>
 
@@ -61,7 +65,10 @@ CLoadingDialog::CLoadingDialog( vgui::Panel *parent ) : Frame(parent, "LoadingDi
 	m_pCancelButton = new Button( this, "CancelButton", "#GameUI_Cancel" );
 	m_pTimeRemainingLabel = new Label( this, "TimeRemainingLabel", "" );
 	m_pCancelButton->SetCommand( "Cancel" );
-
+	m_pMapNameLabel = new Label( this, "MapNameLabel", "" );
+	m_pMapImage = new ImagePanel( this, "MapImage" );
+	m_pGameModeNameLabel = new Label( this, "GameModeNameLabel", "" );
+	m_pGameModeDescriptionLabel = new Label( this, "GameModeDescriptionLabel", "" );
 	if ( ModInfo().IsSinglePlayerOnly() == false && m_bConsoleStyle == true )
 	{
 		m_pLoadingBackground = new Panel( this, "LoadingDialogBG" );
@@ -86,6 +93,10 @@ CLoadingDialog::CLoadingDialog( vgui::Panel *parent ) : Frame(parent, "LoadingDi
 		m_pCancelButton->SetVisible( false );
 		m_pTimeRemainingLabel->SetVisible( false );
 		m_pCancelButton->SetVisible( false );
+		m_pMapNameLabel->SetVisible( false );
+		m_pMapImage->SetVisible( false );
+		m_pGameModeNameLabel->SetVisible( false );
+		m_pGameModeDescriptionLabel->SetVisible( false );
 
 		SetMinimumSize( 0, 0 );
 		SetTitleBarVisible( false );
@@ -100,7 +111,13 @@ CLoadingDialog::CLoadingDialog( vgui::Panel *parent ) : Frame(parent, "LoadingDi
 		m_pProgress2->SetVisible(false);
 	}
 
-	SetupControlSettings( false );
+	ListenForGameEvent( "server_spawn" );
+	ListenForGameEvent( "server_shutdown" );
+	m_szMapName[0] = '\0';
+	m_iGameMode = -1;
+	m_bMapNameChanged = true;
+
+	SetupControlSettings();
 }
 
 //-----------------------------------------------------------------------------
@@ -112,6 +129,38 @@ CLoadingDialog::~CLoadingDialog()
 	{
 		vgui::surface()->RestrictPaintToSinglePanel( NULL );
 	}
+}
+
+void CLoadingDialog::FireGameEvent( IGameEvent* event )
+{
+	const char* eventname = event->GetName();
+	if ( !eventname || !eventname[0] )
+		return;
+
+	if ( Q_strcmp( "server_spawn", eventname ) == 0 )
+	{
+		const char* pszMapName = event->GetString( "mapname" );
+		SetMapName( pszMapName );
+	}
+	else if ( Q_strcmp( "server_shutdown", eventname ) == 0 )
+	{
+		m_szMapName[0] = '\0';
+		m_iGameMode = -1;
+	}
+}
+
+void CLoadingDialog::SetMapName( const char* mapname )
+{
+	if ( mapname )
+	{
+		Q_strncpy( m_szMapName, mapname, sizeof( m_szMapName ) );
+	}
+	else
+	{
+		m_szMapName[0] = '\0';
+	}
+
+	m_bMapNameChanged = true;
 }
 
 void CLoadingDialog::PaintBackground()
@@ -159,10 +208,8 @@ void CLoadingDialog::PaintBackground()
 //-----------------------------------------------------------------------------
 // Purpose: sets up dialog layout
 //-----------------------------------------------------------------------------
-void CLoadingDialog::SetupControlSettings( bool bForceShowProgressText )
+void CLoadingDialog::SetupControlSettings()
 {
-	m_bShowingVACInfo = false;
-
 	if ( GameUI().IsConsoleUI() )
 	{
 		KeyValues *pControlSettings = BasePanel()->GetConsoleControlSettings()->FindKey( "LoadingDialogNoBanner.res" );
@@ -170,19 +217,7 @@ void CLoadingDialog::SetupControlSettings( bool bForceShowProgressText )
 		return;
 	}
 
-	if ( ModInfo().IsSinglePlayerOnly() && !bForceShowProgressText )
-	{
-		LoadControlSettings("Resource/LoadingDialogNoBannerSingle.res");
-	}
-	else if ( gameuifuncs->IsConnectedToVACSecureServer() )
-	{
-		LoadControlSettings("Resource/LoadingDialogVAC.res");
-		m_bShowingVACInfo = true;
-	}
-	else
-	{
-		LoadControlSettings("Resource/LoadingDialogNoBanner.res");
-	}
+	LoadControlSettings("Resource/LoadingDialogNoBanner.res");
 }
 
 //-----------------------------------------------------------------------------
@@ -232,6 +267,10 @@ void CLoadingDialog::SetupControlSettingsForErrorDisplay( const char *settingsFi
 	BaseClass::Activate();
 	
 	m_pProgress->SetVisible(false);
+	m_pMapNameLabel->SetVisible(false);
+	m_pMapImage->SetVisible(false);
+	m_pGameModeNameLabel->SetVisible(false);
+	m_pGameModeDescriptionLabel->SetVisible(false);
 
 	m_pInfoLabel->SetVisible(true);
 	m_pCancelButton->SetText("#GameUI_Close");
@@ -409,7 +448,7 @@ bool CLoadingDialog::SetShowProgressText( bool show )
 	bool bret = m_pInfoLabel->IsVisible();
 	if ( bret != show )
 	{
-		SetupControlSettings( show );
+		SetupControlSettings();
 		m_pInfoLabel->SetVisible( show );
 	}
 	return bret;
@@ -441,6 +480,53 @@ void CLoadingDialog::OnThink()
 	}
 
 	SetAlpha( 255 );
+
+	if ( m_szMapName[0] != '\0' )
+	{
+		if ( m_bMapNameChanged )
+		{
+			m_bMapNameChanged = false;
+
+			m_pMapNameLabel->SetVisible( true );
+			m_pMapNameLabel->SetText( m_szMapName );
+
+			KeyValues* kvMapData = new KeyValues( m_szMapName );
+			char tempfile[MAX_PATH];
+			Q_snprintf( tempfile, sizeof( tempfile ), "resource/overviews/%s.txt", m_szMapName );
+
+			if ( kvMapData->LoadFromFile( g_pFullFileSystem, tempfile, "GAME" ) )
+			{
+				Q_snprintf( tempfile, sizeof( tempfile ), "../%s", kvMapData->GetString( "material" ) ); // use map overview material
+				m_pMapImage->SetImage( tempfile );
+			}
+
+			kvMapData->deleteThis();
+		}
+
+		ConVarRef mp_gamemode_override( "mp_gamemode_override" );
+		if ( m_iGameMode != mp_gamemode_override.GetInt() )
+		{
+			m_iGameMode = mp_gamemode_override.GetInt();
+
+			char szLabel[64];
+			Q_snprintf( szLabel, sizeof( szLabel ), "#GameUI_GameMode_%d", m_iGameMode );
+			m_pGameModeNameLabel->SetText( szLabel );
+			m_pGameModeNameLabel->SetVisible( true );
+			Q_snprintf( szLabel, sizeof( szLabel ), "#GameUI_GameMode_Description_%d", m_iGameMode );
+			m_pGameModeDescriptionLabel->SetText( szLabel );
+			m_pGameModeDescriptionLabel->SetVisible( true );
+		}
+	}
+	else
+	{
+		if ( m_bMapNameChanged )
+		{
+			m_pMapNameLabel->SetText( "#GameUI_Loading" );
+			m_pMapImage->SetImage( "map_blank" );
+		}
+		m_pGameModeNameLabel->SetVisible( false );
+		m_pGameModeDescriptionLabel->SetVisible( false );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -527,10 +613,6 @@ bool CLoadingDialog::SetProgressPoint( float fraction )
 		return IsX360();
 	}
 
-	if ( !m_bShowingVACInfo && gameuifuncs->IsConnectedToVACSecureServer() )
-	{
-		SetupControlSettings( false );
-	}
 
 	int nOldDrawnSegments = m_pProgress->GetDrawnSegmentCount();
 	m_pProgress->SetProgress( fraction );
@@ -553,7 +635,6 @@ void CLoadingDialog::SetSecondaryProgress( float progress )
 	// if we haven't yet shown secondary progress then reconfigure the dialog
 	if (!m_bShowingSecondaryProgress)
 	{
-		LoadControlSettings("Resource/LoadingDialogDualProgress.res");
 		m_bShowingSecondaryProgress = true;
 		m_pProgress2->SetVisible(true);
 		m_flSecondaryProgressStartTime = (float)system()->GetFrameTime();
