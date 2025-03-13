@@ -30,23 +30,19 @@
 #define IRONSIGHT_VIEWMODEL_BOB_MULT_Y 0.1
 #define IRONSIGHT_VIEWMODEL_BOB_PERIOD_Y 10
 
-#ifdef DEBUG
-	ConVar ironsight_override(				"ironsight_override",			"0",		FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
-	ConVar ironsight_position(				"ironsight_position",			"0 0 0",	FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
-	ConVar ironsight_angle(					"ironsight_angle",				"0 0 0",	FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
-	ConVar ironsight_fov(					"ironsight_fov",				"60",		FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
-	ConVar ironsight_pivot_forward(			"ironsight_pivot_forward",		"0",		FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
-	ConVar ironsight_looseness(				"ironsight_looseness",			"0.1",		FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
-	ConVar ironsight_speed_bringup(			"ironsight_speed_bringup",		"4.0",		FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
-	ConVar ironsight_speed_putdown(			"ironsight_speed_putdown",		"2.0",		FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
-	
-	ConVar ironsight_catchupspeed(			"ironsight_catchupspeed",		"60.0",		FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
-	ConVar ironsight_running_looseness(		"ironsight_running_looseness",	"0.3",		FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
+ConVar ironsight_override(				"ironsight_override",			"0",		FCVAR_REPLICATED | FCVAR_CHEAT );
+ConVar ironsight_position(				"ironsight_position",			"0 0 0",	FCVAR_REPLICATED | FCVAR_CHEAT );
+ConVar ironsight_angle(					"ironsight_angle",				"0 0 0",	FCVAR_REPLICATED | FCVAR_CHEAT );
+ConVar ironsight_fov(					"ironsight_fov",				"60",		FCVAR_REPLICATED | FCVAR_CHEAT );
+ConVar ironsight_pivot_forward(			"ironsight_pivot_forward",		"0",		FCVAR_REPLICATED | FCVAR_CHEAT );
+ConVar ironsight_looseness(				"ironsight_looseness",			"0.1",		FCVAR_REPLICATED | FCVAR_CHEAT );
+ConVar ironsight_speed_bringup(			"ironsight_speed_bringup",		"4.0",		FCVAR_REPLICATED | FCVAR_CHEAT );
+ConVar ironsight_speed_putdown(			"ironsight_speed_putdown",		"2.0",		FCVAR_REPLICATED | FCVAR_CHEAT );
 
-	ConVar ironsight_spew_amount(			"ironsight_spew_amount",		"0",		FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
-#else
-	#define ironsight_catchupspeed			60.0f
-#endif
+ConVar ironsight_catchupspeed(			"ironsight_catchupspeed",		"60.0",		FCVAR_REPLICATED | FCVAR_CHEAT );
+ConVar ironsight_running_looseness(		"ironsight_running_looseness",	"0.3",		FCVAR_REPLICATED | FCVAR_CHEAT );
+
+ConVar ironsight_spew_amount(			"ironsight_spew_amount",		"0",		FCVAR_REPLICATED | FCVAR_CHEAT );
 
 CIronSightController::CIronSightController( void )
 {
