@@ -1132,7 +1132,7 @@ void CCSBuyMenu::Update()
 
 		wchar_t wszString[256];
 		if ( CSGameRules()->IsPlayingDeathmatch() )
-			g_pVGuiLocalize->ConstructString( wszString, sizeof( wszString ), g_pVGuiLocalize->Find( "BuyMenu_ImmunityTimerText" ), 1, wszTimer );
+			g_pVGuiLocalize->ConstructString( wszMessage, sizeof( wszMessage ), g_pVGuiLocalize->Find( "#BuyMenu_MaxItemsOfType" ), 1, wszCarryLimit );
 		else
 			g_pVGuiLocalize->ConstructString( wszString, sizeof( wszString ), g_pVGuiLocalize->Find( "BuyMenu_TimerText" ), 1, wszTimer );
 
