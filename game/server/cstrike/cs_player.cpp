@@ -883,6 +883,7 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "UI.ArmsRace.Demoted" );
 	PrecacheScriptSound( "UI.ArmsRace.LevelUp" );
 
+	PrecacheScriptSound( "Hostage.Breath" );
 	// CS Bot sounds
 	PrecacheScriptSound( "Bot.StuckSound" );
 	PrecacheScriptSound( "Bot.StuckStart" );
