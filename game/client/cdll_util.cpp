@@ -23,6 +23,7 @@
 #include "engine/ivmodelinfo.h"
 #include "c_te_effect_dispatch.h"
 #include <vgui_controls/Controls.h>
+#include <vgui_controls/EditablePanel.h>
 #include <vgui/ISurface.h>
 #include <vgui/ILocalize.h>
 #include "view.h"
@@ -997,6 +998,27 @@ void UTIL_ReplaceKeyBindings( const wchar_t *inbuf, int inbufsizebytes, OUT_Z_BY
 	}
 
 	outbuf[pos] = '\0';
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void UTIL_SetControlStringWithKeybindings( vgui::EditablePanel *panel, const char *controlName, const char *str )
+{
+ 	if ( !panel || !controlName || !str )
+ 		return;
+ 
+ 	const wchar_t *unicodeStr = g_pVGuiLocalize->Find( str );
+ 	if ( unicodeStr )
+ 	{
+ 		wchar_t buf[512];
+ 		UTIL_ReplaceKeyBindings( unicodeStr, 0, buf, sizeof( buf ) );
+ 		panel->SetControlString( controlName, buf );
+ 	}
+ 	else
+ 	{
+ 		panel->SetControlString( controlName, str );
+ 	}
 }
 
 //-----------------------------------------------------------------------------

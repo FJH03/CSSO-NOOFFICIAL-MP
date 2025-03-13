@@ -38,6 +38,7 @@ typedef CGameTrace trace_t;
 namespace vgui
 {
 	typedef unsigned long HFont;
+	class EditablePanel;
 };
 
 
@@ -67,6 +68,7 @@ void	UTIL_FreeFile( byte *buffer );
 void	UTIL_MakeSafeName( const char *oldName, OUT_Z_CAP(newNameBufSize) char *newName, int newNameBufSize );	///< Cleans up player names for putting in vgui controls (cleaned names can be up to original*2+1 in length)
 const char *UTIL_SafeName( const char *oldName );	///< Wraps UTIL_MakeSafeName, and returns a static buffer
 void	UTIL_ReplaceKeyBindings( const wchar_t *inbuf, int inbufsizebytes, OUT_Z_BYTECAP(outbufsizebytes) wchar_t *outbuf, int outbufsizebytes );
+void	UTIL_SetControlStringWithKeybindings( vgui::EditablePanel *panel, const char *controlName, const char *str );
 
 // Fade out an entity based on distance fades
 unsigned char UTIL_ComputeEntityFade( C_BaseEntity *pEntity, float flMinDist, float flMaxDist, float flFadeScale );
