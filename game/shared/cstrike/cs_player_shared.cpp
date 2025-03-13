@@ -1666,7 +1666,7 @@ bool CCSPlayer::CanMove() const
 
 unsigned int CCSPlayer::PhysicsSolidMaskForEntity( void ) const
 {
-	if ( !CSGameRules()->IsTeammateSolid() )
+	if ( !CSGameRules()->IsTeammateSolid() || !CSGameRules()->IsEnemySolid() )
 	{
 		switch ( GetTeamNumber() )
 		{

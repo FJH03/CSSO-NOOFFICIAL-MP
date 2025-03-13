@@ -10127,7 +10127,7 @@ void CCSPlayer::PlayerEmptiedAmmoForFirearm( CBaseCombatWeapon* pBaseWeapon )
  
  				gameeventmanager->FireEvent( event );
  			}
-			
+
 			CSWeaponType weaponType = pWeapon->GetWeaponType();
 			CSWeaponID weaponID = static_cast<CSWeaponID>( pWeapon->GetCSWeaponID() );
 
@@ -11040,11 +11040,19 @@ bool CCSPlayer::ShouldCollide( int collisionGroup, int contentsMask ) const
 		unsigned int myTeamMask = ( PhysicsSolidMaskForEntity() & ( CONTENTS_TEAM1 | CONTENTS_TEAM2 ) );
 		unsigned int otherTeamMask = ( contentsMask & ( CONTENTS_TEAM1 | CONTENTS_TEAM2 ) );
 		
-		// See if we have a team and we're on the same team.
-		// If we are on the same team, then don't collide.
-		if ( myTeamMask != 0x0 && myTeamMask == otherTeamMask  )
+		// See if we have a team and we're on the same or opposite team.
+ 		// If we are on the same team and teammate collisions are off, then don't collide.
+ 		// If we are on the opposite team and enemies collisions are off, then don't collide.
+ 		if ( myTeamMask != 0x0 )
 		{
-			return false;
+			if ( !CSGameRules()->IsEnemySolid() && myTeamMask != otherTeamMask )
+ 			{
+ 				return false;
+ 			}
+ 			if ( !CSGameRules()->IsTeammateSolid() && myTeamMask == otherTeamMask )
+ 			{
+ 				return false;
+ 			}
 		}
 	}
 

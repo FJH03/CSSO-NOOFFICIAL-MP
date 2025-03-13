@@ -319,7 +319,8 @@ public:
 	bool IsArmorFree();
 #endif
 	bool IsTeammateSolid( void ) const;				// returns true if teammates are solid obstacles in the current game mode
-
+	bool IsEnemySolid( void ) const;				
+	
 	bool HasHalfTime( void ) const;
 
 	int GetCurrentGunGameWeapon( int nCurrentWeaponIndex, int nTeamID );

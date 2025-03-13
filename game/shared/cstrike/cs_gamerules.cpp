@@ -7429,7 +7429,8 @@ void CCSGameRules::EndWarmup( void )
 #endif
 
 
-ConVar mp_solid_teammates("mp_solid_teammates", "1", FCVAR_REPLICATED, "Determines whether teammates are solid or not." ); // TODO: make this shit work properly and make it FCVAR_REPLICATED!
+ConVar mp_solid_teammates("mp_solid_teammates", "1", FCVAR_REPLICATED, "Determines whether teammates are solid or not." );
+ConVar mp_solid_enemies("mp_solid_enemies", "1", FCVAR_REPLICATED, "Determines whether enemies are solid or not." );
 ConVar mp_free_armor("mp_free_armor", "0", FCVAR_REPLICATED, "Determines whether armor and helmet are given automatically." );
 ConVar mp_halftime("mp_halftime", "0", FCVAR_REPLICATED, "Determines whether the match switches sides in a halftime event.");
 ConVar mp_randomspawn("mp_randomspawn", "0", FCVAR_REPLICATED, "Determines whether players are to spawn. 0 = default; 1 = both teams; 2 = Terrorists; 3 = CTs." );
@@ -7440,6 +7441,12 @@ ConVar mp_randomspawn_dist( "mp_randomspawn_dist", "0", FCVAR_REPLICATED, "If us
 bool CCSGameRules::IsTeammateSolid( void ) const
 {
 	return mp_solid_teammates.GetBool();
+}
+
+// Returns true if enemies are solid obstacles in the current game mode
+bool CCSGameRules::IsEnemySolid( void ) const
+{
+	return mp_solid_enemies.GetBool();
 }
 
 bool CCSGameRules::IsVIPMap() const
