@@ -807,6 +807,7 @@ CCSBuyMenuLoadoutPanel::CCSBuyMenuLoadoutPanel( Panel* parent, const char* panel
 	m_pPlayer = NULL;
 	m_pPlayerAvatarImage = new CAvatarImagePanel( this, "PlayerAvatarImage" );
 	m_pPlayerAvatarImage->SetShouldDrawFriendIcon( false );
+	m_pPlayerAvatarImage->SetShouldScaleImage( true );
 	m_pPlayerSkullImage = new VectorImagePanel( this, "PlayerSkullImage" );
 	m_pPlayerSkullImage->ClearSchemeUpdateFlag();
 	m_pPlayerSkullImage->SetFgColor( COLOR_WHITE );
