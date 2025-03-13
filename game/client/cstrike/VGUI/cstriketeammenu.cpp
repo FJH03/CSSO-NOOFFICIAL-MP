@@ -351,12 +351,7 @@ void CCSTeamMenuAgentImage::Paint()
 
 	view.m_bOrtho = false;
 
-	int w, h;
-	GetSize( w, h );
-
-	// scale the FOV for aspect ratios other than 4/3
-	float flWidthRatio = ((float) w / (float) h) / (4.0f / 3.0f);
-	view.fov = ScaleFOVByWidthRatio( m_nFOV, flWidthRatio );
+	view.fov = m_nFOV;
 
 	view.origin = m_vecCameraPos;
 	view.angles = m_angCameraAng;
