@@ -3962,6 +3962,21 @@ void CCSPlayer::AddAccountAward( int reason, int amount, const CWeaponCSBase *pW
 	AddAccount( amount, true, false );
 }
 
+void CCSPlayer::AddAccountFromTeam( int amount, bool bTrackChange, TeamCashAward::Type reason )
+{
+ 	// no awards in the warmup period
+ 	if ( CSGameRules() && CSGameRules()->IsWarmupPeriod() )
+ 		return;
+ 
+ 	AddAccount( amount, bTrackChange, false, NULL );
+ 
+ 	if( IsControllingBot() )
+ 	{
+ 		// make sure we award team bonus to the actual player controlling the bot
+ 		m_PreControlData.m_iAccount = clamp( m_PreControlData.m_iAccount + amount, 0, mp_maxmoney.GetInt() );
+ 	}
+}
+
 void CCSPlayer::AddAccount( int amount, bool bTrackChange, bool bItemBought, const char *pItemName )
 {
 	m_iAccount += amount;

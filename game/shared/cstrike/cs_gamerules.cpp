@@ -8356,19 +8356,7 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 		// hand out team cash awards from previous round
 		if ( pPlayer->DoesPlayerGetRoundStartMoney() )
 		{
-#if CS_CONTROLLABLE_BOTS_ENABLED
-			// special case for players who are controlling bots at the moment
-			// if we don't do it then that player simply won't get any money
-			if ( pPlayer->IsControllingBot() )
-			{
-				pPlayer->m_PreControlData.m_iAccount += amount;
-
-				// clamp the values so we dont go over max money
-				if ( pPlayer->m_PreControlData.m_iAccount > mp_maxmoney.GetInt() )
-					pPlayer->m_PreControlData.m_iAccount = mp_maxmoney.GetInt();
-			}
-#endif
-			pPlayer->AddAccount( amount, true, false );
+			pPlayer->AddAccountFromTeam( amount, true, (TeamCashAward::Type)reason );
 
 			if ( !IsLastRoundBeforeHalfTime() && (GetPhase() != GAMEPHASE_HALFTIME) &&
 				 (GetTotalRoundsPlayed() != mp_maxrounds.GetInt() + GetOvertimePlaying() * mp_overtime_maxrounds.GetInt()) && !bTeamHasClinchedVictory )

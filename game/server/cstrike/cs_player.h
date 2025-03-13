@@ -431,6 +431,7 @@ public:
 	void AddAccount( int amount, bool bTrackChange=true, bool bItemBought=false, const char *pItemName = NULL );
 	void AddAccountAward( int reason );
 	void AddAccountAward( int reason, int amount, const CWeaponCSBase *pWeapon = NULL );
+	void AddAccountFromTeam( int amount, bool bTrackChange, TeamCashAward::Type reason );
 
 	void HintMessage( const char *pMessage, bool bDisplayIfDead, bool bOverrideClientSettings = false ); // Displays a hint message to the player
 	CHintMessageQueue *m_pHintMessageQueue;
@@ -1288,8 +1289,6 @@ private:
 	};
 
 	void SavePreControlData();
-
-public:
 
 	PreControlData	m_PreControlData;
 
