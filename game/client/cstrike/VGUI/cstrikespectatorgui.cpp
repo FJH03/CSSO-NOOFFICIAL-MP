@@ -115,7 +115,7 @@ void CCSSpectatorGUI::ApplySchemeSettings(vgui::IScheme *pScheme)
 	m_pPlayerPanelTeam = dynamic_cast<ImagePanel*>(FindChildByName( "PlayerPanelTeam" ));
 	m_pPlayerPanelBkg = dynamic_cast<ImagePanel*>(FindChildByName( "PlayerPanelBkg" ));
 	m_pPlayerPanelAvatar = dynamic_cast<CAvatarImagePanel*>(FindChildByName( "PlayerPanelAvatar" ));
-	m_pPlayerPanelAvatarBkg = dynamic_cast<ImagePanel*>(FindChildByName( "PlayerPanelAvatarBkg" ));
+	m_pPlayerPanelAvatarBkg = dynamic_cast<Panel*>(FindChildByName( "PlayerPanelAvatarBkg" ));
 	m_pPlayerPanelBorderUpper = dynamic_cast<ImagePanel*>(FindChildByName( "PlayerPanelBorderUpper" ));
 	m_pBombIcon = dynamic_cast<VectorImagePanel*>(FindChildByName( "BombIcon" ));
 

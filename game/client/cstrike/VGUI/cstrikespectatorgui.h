@@ -72,7 +72,7 @@ protected:
 	vgui::Label *m_pPlayerPanelName;
 	vgui::ImagePanel *m_pPlayerPanelBkg;
 	vgui::ImagePanel *m_pPlayerPanelTeam;
-	vgui::ImagePanel *m_pPlayerPanelAvatarBkg;
+	vgui::Panel *m_pPlayerPanelAvatarBkg;
 	vgui::ImagePanel *m_pPlayerPanelBorderUpper;
 	CAvatarImagePanel *m_pPlayerPanelAvatar;
 	vgui::VectorImagePanel *m_pBombIcon;
