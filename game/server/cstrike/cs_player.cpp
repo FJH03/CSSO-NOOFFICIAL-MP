@@ -5132,7 +5132,11 @@ BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item, bool bAddToRebuy/* =
 
 BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAddToRebuy/* = true */ )
 {
-	BuyResult_e result = CanPlayerBuy( false ) ? BUY_PLAYER_CANT_BUY : BUY_INVALID_ITEM; // set some defaults
+	BuyResult_e result = BUY_PLAYER_CANT_BUY; // set some defaults
+ 	if ( !CanPlayerBuy( true ) )
+ 	{
+ 		return BUY_PLAYER_CANT_BUY;
+ 	}
 
 	CSWeaponID weaponId = AliasToWeaponID( wpnName );
 	const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
@@ -5192,11 +5196,6 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName, bool bAd
 	}
 	else
 	{
-		if( !CanPlayerBuy( true ) )
-		{
-			return BUY_PLAYER_CANT_BUY;
-		}
-
 		AcquireResult::Type acquireResult = CanAcquire( weaponId, AcquireMethod::Buy );
 		switch ( acquireResult )
 		{
