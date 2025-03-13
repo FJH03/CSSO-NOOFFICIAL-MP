@@ -10114,6 +10114,20 @@ void CCSPlayer::PlayerEmptiedAmmoForFirearm( CBaseCombatWeapon* pBaseWeapon )
 
 		if ( pWeapon )
 		{
+			IGameEvent * event = gameeventmanager->CreateEvent( "item_equip" );
+ 			if( event )
+ 			{
+ 				const char *weaponName = pWeapon->GetClassname();
+ 				if ( IsWeaponClassname( weaponName ) )
+ 				{
+ 					weaponName += 7;
+ 				}
+ 				event->SetInt( "userid", GetUserID() );
+ 				event->SetString( "item", weaponName );
+ 
+ 				gameeventmanager->FireEvent( event );
+ 			}
+			
 			CSWeaponType weaponType = pWeapon->GetWeaponType();
 			CSWeaponID weaponID = static_cast<CSWeaponID>( pWeapon->GetCSWeaponID() );
 

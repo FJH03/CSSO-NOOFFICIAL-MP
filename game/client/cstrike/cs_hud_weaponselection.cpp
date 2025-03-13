@@ -42,6 +42,7 @@ CCSHudWeaponSelection::CCSHudWeaponSelection( const char* pElementName ) : CHudE
 	ListenForGameEvent( "spec_mode_updated" );
 	ListenForGameEvent( "spec_target_updated" );
 	ListenForGameEvent( "hltv_changed_mode" );
+	ListenForGameEvent( "item_equip" );
 
 	RegisterForRenderGroup( "hide_for_buymenu" );
 }
@@ -621,7 +622,7 @@ void CCSHudWeaponSelection::FireGameEvent( IGameEvent *event )
 		m_bUpdateInventoryReset = true;
 	}
 
-	if ( ((Q_strcmp( "bot_takeover", type ) == 0 || Q_strcmp( "spec_target_updated", type ) == 0) && nPlayerUserID == nEventUserID) )
+	if ( ((Q_strcmp( "bot_takeover", type ) == 0 || Q_strcmp( "spec_target_updated", type ) == 0 || Q_strcmp( "item_equip", type ) == 0) && nPlayerUserID == nEventUserID) )
 	{
 		ShowAndUpdateSelection( WEPSELECT_SWITCH );
 		m_flUpdateInventoryAt = gpGlobals->curtime + 0.1;
