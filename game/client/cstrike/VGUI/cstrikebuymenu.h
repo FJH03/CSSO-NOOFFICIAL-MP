@@ -192,6 +192,9 @@ private:
 	CPanelAnimationVarAliasType( int, avatar_tall, "avatar_tall", "32", "proportional_height" );
 	CPanelAnimationVarAliasType( int, money_xpos, "money_xpos", "w8", "proportional_xpos" );
 	CPanelAnimationVarAliasType( int, money_ypos, "money_ypos", "12", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, icons_wide, "icons_wide", "24", "proportional_width" );
+	CPanelAnimationVarAliasType( int, icons_tall, "icons_tall", "24", "proportional_height" );
+	CPanelAnimationVarAliasType( int, armor_icons_size, "armor_icons_size", "20", "proportional_height" );
 	CPanelAnimationVarAliasType( int, icons_xpos, "icons_xpos", "152", "proportional_xpos" );
 	CPanelAnimationVarAliasType( int, icons_margin, "icons_margin", "w8", "proportional_width" );
 	CPanelAnimationVar( Color, m_clrMoney, "money_color", "204 204 204 255" );

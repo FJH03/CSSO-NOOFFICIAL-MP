@@ -812,18 +812,6 @@ CCSBuyMenuLoadoutPanel::CCSBuyMenuLoadoutPanel( Panel* parent, const char* panel
 	m_pPlayerSkullImage->ClearSchemeUpdateFlag();
 	m_pPlayerSkullImage->SetFgColor( COLOR_WHITE );
 	m_pPlayerSkullImage->SetTexture( "materials/vgui/hud/svg/elimination.svg" );
-
-	m_ItemIcons[AssaultSuit].SetTexture( "materials/vgui/weapons/svg/armor.svg", 0, 20, ITEM_ASSAULTSUIT );
-	m_ItemIcons[Kevlar].SetTexture( "materials/vgui/hud/svg/shield.svg", 0, 20, ITEM_KEVLAR );
-	m_ItemIcons[Defuser].SetTexture( "materials/vgui/weapons/svg/defuser.svg", 0, 24, ITEM_DEFUSER );
-	m_ItemIcons[Taser].SetTexture( "materials/vgui/weapons/svg/taser.svg", 0, 24, WEAPON_TASER );
-	m_ItemIcons[SmokeGrenade].SetTexture( "materials/vgui/weapons/svg/smokegrenade.svg", 0, 24, WEAPON_SMOKEGRENADE );
-	m_ItemIcons[HEGrenade].SetTexture( "materials/vgui/weapons/svg/hegrenade.svg", 0, 24, WEAPON_HEGRENADE );
-	m_ItemIcons[Flashbang].SetTexture( "materials/vgui/weapons/svg/flashbang.svg", 0, 24, WEAPON_FLASHBANG );
-	m_ItemIcons[DecoyGrenade].SetTexture( "materials/vgui/weapons/svg/decoy.svg", 0, 24, WEAPON_DECOY );
-	m_ItemIcons[IncGrenade].SetTexture( "materials/vgui/weapons/svg/incgrenade.svg", 0, 24, WEAPON_INCGRENADE );
-	m_ItemIcons[Molotov].SetTexture( "materials/vgui/weapons/svg/molotov.svg", 0, 24, WEAPON_MOLOTOV );
-	m_ItemIcons[BombWeapon].SetTexture( "materials/vgui/weapons/svg/c4.svg", 0, 24, WEAPON_C4 );
 }
 
 CCSBuyMenuLoadoutPanel::~CCSBuyMenuLoadoutPanel()
@@ -839,6 +827,18 @@ void CCSBuyMenuLoadoutPanel::ApplySchemeSettings( IScheme* pScheme )
 	m_pPlayerAvatarImage->SetBounds( xpos, avatar_ypos, avatar_wide, avatar_tall );
 	m_pPlayerSkullImage->SetBounds( xpos, avatar_ypos, avatar_wide, avatar_tall );
 	m_pPlayerSkullImage->SetZPos( 2 );
+
+	m_ItemIcons[AssaultSuit].SetTexture( "materials/vgui/weapons/svg/armor.svg", 0, armor_icons_size, ITEM_ASSAULTSUIT );
+	m_ItemIcons[Kevlar].SetTexture( "materials/vgui/hud/svg/shield.svg", 0, armor_icons_size, ITEM_KEVLAR );
+	m_ItemIcons[Defuser].SetTexture( "materials/vgui/weapons/svg/defuser.svg", 0, icons_tall, ITEM_DEFUSER );
+	m_ItemIcons[Taser].SetTexture( "materials/vgui/weapons/svg/taser.svg", 0, icons_tall, WEAPON_TASER );
+	m_ItemIcons[SmokeGrenade].SetTexture( "materials/vgui/weapons/svg/smokegrenade.svg", 0, icons_tall, WEAPON_SMOKEGRENADE );
+	m_ItemIcons[HEGrenade].SetTexture( "materials/vgui/weapons/svg/hegrenade.svg", 0, icons_tall, WEAPON_HEGRENADE );
+	m_ItemIcons[Flashbang].SetTexture( "materials/vgui/weapons/svg/flashbang.svg", 0, icons_tall, WEAPON_FLASHBANG );
+	m_ItemIcons[DecoyGrenade].SetTexture( "materials/vgui/weapons/svg/decoy.svg", 0, icons_tall, WEAPON_DECOY );
+	m_ItemIcons[IncGrenade].SetTexture( "materials/vgui/weapons/svg/incgrenade.svg", 0, icons_tall, WEAPON_INCGRENADE );
+	m_ItemIcons[Molotov].SetTexture( "materials/vgui/weapons/svg/molotov.svg", 0, icons_tall, WEAPON_MOLOTOV );
+	m_ItemIcons[BombWeapon].SetTexture( "materials/vgui/weapons/svg/c4.svg", 0, icons_tall, WEAPON_C4 );
 }
 
 void CCSBuyMenuLoadoutPanel::Paint()
@@ -905,7 +905,7 @@ void CCSBuyMenuLoadoutPanel::Paint()
 						{
 							char szItemIcon[128];
 							Q_snprintf( szItemIcon, sizeof( szItemIcon ), "materials/vgui/weapons/svg/%s.svg", pWeapon->GetClassname() + 7 );
-							m_ItemIcons[i].SetTexture( szItemIcon, 24, 0, pWeapon->GetCSWeaponID() );
+							m_ItemIcons[i].SetTexture( szItemIcon, icons_wide, 0, pWeapon->GetCSWeaponID() );
 						}
 					}
 					break;
@@ -920,7 +920,7 @@ void CCSBuyMenuLoadoutPanel::Paint()
 						{
 							char szItemIcon[128];
 							Q_snprintf( szItemIcon, sizeof( szItemIcon ), "materials/vgui/weapons/svg/%s.svg", pWeapon->GetClassname() + 7 );
-							m_ItemIcons[i].SetTexture( szItemIcon, 0, 24, pWeapon->GetCSWeaponID() );
+							m_ItemIcons[i].SetTexture( szItemIcon, 0, icons_tall, pWeapon->GetCSWeaponID() );
 						}
 					}
 					break;
