@@ -128,7 +128,7 @@ void CCSClassMenu_TER::ResetAgentModels()
 	for ( int i = 0; i < ARRAYSIZE( m_pAgentModels ); i++ )
 	{
 		char szHotkey[4];
-		Q_snprintf( szHotkey, sizeof( szHotkey ), "%d", i+1 );
+		Q_snprintf( szHotkey, sizeof( szHotkey ), "%d", i + 1 );
 		m_pAgentModels[i]->SetHotkey( szHotkey[0] );
 
 		const char* pszPlayerModel = NULL;
@@ -234,13 +234,13 @@ void CCSClassMenu_CT::ResetAgentModels()
 
 	for ( int i = 0; i < ARRAYSIZE( m_pAgentModels ); i++ )
 	{
+		char szHotkey[4];
+		Q_snprintf( szHotkey, sizeof( szHotkey ), "%d", i + 1 );
+		m_pAgentModels[i]->SetHotkey( szHotkey[0] );
+
 		const char* pszPlayerModel = NULL;
 		switch ( i+FIRST_CT_CLASS )
 		{
-			char szHotkey[4];
-			Q_snprintf( szHotkey, sizeof( szHotkey ), "%d", i + 1 );
-			m_pAgentModels[i]->SetHotkey( szHotkey[0] );
-
 			case CS_CLASS_SEAL_TEAM_6:
 			{
 				pszPlayerModel = CTST6PlayerModelStrings[0];
