@@ -291,8 +291,6 @@ ConVar ammo_grenade_limit_total( "ammo_grenade_limit_total", "3", FCVAR_REPLICAT
 
 ConVar ammo_item_limit_healthshot( "ammo_item_limit_healthshot", "4", FCVAR_REPLICATED );
 
-//ConVar mp_dynamicpricing( "mp_dynamicpricing", "0", FCVAR_REPLICATED, "Enables or Disables the dynamic weapon prices" );
-
 #if defined( GAME_DLL )
 ConVar cs_AssistDamageThreshold( "cs_AssistDamageThreshold", "40.0", FCVAR_DEVELOPMENTONLY, "cs_AssistDamageThreshold defines the amount of damage needed to score an assist" );
 #endif
@@ -668,6 +666,11 @@ ConVar sv_kick_ban_duration(
 	"15",
 	FCVAR_REPLICATED | FCVAR_NOTIFY,
 	"How long should a kick ban from the server should last (in minutes)" );
+ConVar sv_tk_count_before_punish(
+	"sv_tk_count_before_punish",
+	"3",
+	FCVAR_REPLICATED,
+	"How many team kills a player has to deal before being banned for team killing." );
 
 ConVar mp_max_armor(
 	"mp_max_armor",
@@ -2435,13 +2438,13 @@ ConVar snd_music_selection(
 			++pCSScorer->m_iTeamKills;
 			pCSScorer->m_bJustKilledTeammate = true;
 
-			if ( mp_autokick.GetBool() )
+			if ( mp_autokick.GetBool() && sv_tk_count_before_punish.GetInt() > 0 )
 			{
 				char strTeamKills[8];
-				Q_snprintf( strTeamKills, sizeof( strTeamKills ), "%d", (3 - pCSScorer->m_iTeamKills) );
+				Q_snprintf( strTeamKills, sizeof( strTeamKills ), "%d", (sv_tk_count_before_punish.GetInt() - pCSScorer->m_iTeamKills) );
 				ClientPrint( pCSScorer, HUD_PRINTTALK, "#Game_teammate_kills", strTeamKills );
 
-				if ( pCSScorer->m_iTeamKills >= 3 )
+				if ( pCSScorer->m_iTeamKills >= sv_tk_count_before_punish.GetInt() )
 				{
 					if ( sv_kick_ban_duration.GetInt() > 0 )
 					{
