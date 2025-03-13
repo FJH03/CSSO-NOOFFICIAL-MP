@@ -122,7 +122,7 @@ bool CHudTeamCounter::ShouldDraw()
 	if ( pPlayer->IsObserver() )
 		return false;
 
-	return true;
+		return CHudElement::ShouldDraw();
 }
 
 void CHudTeamCounter::OnThink()
