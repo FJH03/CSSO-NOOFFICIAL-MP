@@ -470,7 +470,7 @@ void CBaseCSGrenade::ItemPostFrame()
 	bool CBaseCSGrenade::DropPlayerGrenade()
 	{
 		CCSPlayer *pPlayer = ToCSPlayer( GetPlayerOwner() );
-		if ( !pPlayer || m_flNextPrimaryAttack > 0.0f || m_flNextSecondaryAttack > 0.0f )
+		if ( !pPlayer || m_flNextPrimaryAttack > gpGlobals->curtime || m_flNextSecondaryAttack > gpGlobals->curtime )
  			return false;
 
 		int iAmount = pPlayer->GetAmmoCount( GetPrimaryAmmoType() );
