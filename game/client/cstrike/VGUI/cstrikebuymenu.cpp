@@ -39,7 +39,7 @@ void BuyMenuItemIcon::SetTexture( const char* pszTexturePath, int iWide, int iTa
 	if ( !pszTexturePath )
 		return;
 
-	DestroyIcon();
+	DestroyTexture();
 
 	FileHandle_t f = g_pFullFileSystem->Open( pszTexturePath, "rt" );
 	if ( !f )
@@ -100,7 +100,7 @@ void BuyMenuItemIcon::SetTexture( const char* pszTexturePath, int iWide, int iTa
 	m_nItemID = nItemID;
 }
 
-void BuyMenuItemIcon::DestroyIcon()
+void BuyMenuItemIcon::DestroyTexture()
 {
 	if ( m_nTextureID != -1 )
 	{
@@ -149,7 +149,7 @@ CCSBuyMenuItemButton::CCSBuyMenuItemButton( Panel* parent, const char* panelName
 
 CCSBuyMenuItemButton::~CCSBuyMenuItemButton()
 {
-	m_ItemIcon.DestroyIcon();
+	m_ItemIcon.DestroyTexture();
 }
 
 void CCSBuyMenuItemButton::Paint()
@@ -817,6 +817,11 @@ CCSBuyMenuLoadoutPanel::CCSBuyMenuLoadoutPanel( Panel* parent, const char* panel
 CCSBuyMenuLoadoutPanel::~CCSBuyMenuLoadoutPanel()
 {
 	m_pPlayer = NULL;
+
+	for ( int i = 0; i < TotalIconTypes; i++ )
+	{
+		m_ItemIcons[i].DestroyTexture();
+	}
 }
 
 void CCSBuyMenuLoadoutPanel::ApplySchemeSettings( IScheme* pScheme )

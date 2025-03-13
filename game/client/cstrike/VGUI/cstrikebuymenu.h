@@ -61,7 +61,7 @@ public:
 	}
 
 	void SetTexture( const char* pszTexturePath, int iWide, int iTall, CSWeaponID nItemID );
-	void DestroyIcon();
+	void DestroyTexture();
 
 	int m_nTextureID;
 	int m_iTextureSize[2];
