@@ -467,16 +467,16 @@ void CBaseCSGrenade::ItemPostFrame()
 		m_fThrowTime = gpGlobals->curtime + 0.1f;
 	}
 
-	void CBaseCSGrenade::DropPlayerGrenade()
+	bool CBaseCSGrenade::DropPlayerGrenade()
 	{
 		CCSPlayer *pPlayer = ToCSPlayer( GetPlayerOwner() );
-		if ( !pPlayer )
-			return;
+		if ( !pPlayer || m_flNextPrimaryAttack > 0.0f || m_flNextSecondaryAttack > 0.0f )
+ 			return false;
 
 		int iAmount = pPlayer->GetAmmoCount( GetPrimaryAmmoType() );
 		if ( iAmount <= 1 )
 		{
-			pPlayer->CSWeaponDrop( this, true );
+			return pPlayer->CSWeaponDrop( this, true );
 			return;
 		}
 		else
@@ -512,8 +512,12 @@ void CBaseCSGrenade::ItemPostFrame()
 				pPlayer->SetNextAttack( gpGlobals->curtime + SequenceDuration() );
 				m_flNextPrimaryAttack = gpGlobals->curtime;
 				m_flNextSecondaryAttack = gpGlobals->curtime;*/
+
+				return true;
 			}
 		}
+
+		return false;
 	}
 
 	void CBaseCSGrenade::ThrowGrenade()

@@ -8865,8 +8865,8 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 				CBaseCSGrenade* pGrenade = dynamic_cast< CBaseCSGrenade* >(pCSWeapon);
 				if ( pGrenade )
 				{
-					pGrenade->DropPlayerGrenade();
-					ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
+					if ( pGrenade->DropPlayerGrenade() )
+ 						ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
 				}
 				return true;
 			}
