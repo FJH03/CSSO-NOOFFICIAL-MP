@@ -1576,6 +1576,10 @@ ConVar snd_music_selection(
 				engine->ServerCommand( "exec gamemode_trigger_discipline.cfg\n" );
 				engine->ServerExecute();
 				break;
+			case GameModes::TRIGGER_DISCIPLINE:
+				engine->ServerCommand( "exec gamemode_trigger_discipline.cfg\n" );
+				engine->ServerExecute();
+				break;
 		}
 
 		m_pLastGrenade.bIsValid = false;
