@@ -218,7 +218,6 @@ public:
 	virtual int GetMaxArmor() const;
 
 	bool			Weapon_CanSwitchTo(C_BaseCombatWeapon *pWeapon);
- 	virtual	bool	Weapon_Switch( C_BaseCombatWeapon *pWeapon, int viewmodelindex = 0 );		// Switch to given weapon if has ammo (false if failed)
 
 	virtual void UpdateClientSideAnimation();
 	virtual void ProcessMuzzleFlashEvent();
