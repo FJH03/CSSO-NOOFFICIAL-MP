@@ -64,7 +64,6 @@ CCSClientScoreBoardDialog::CCSClientScoreBoardDialog( IViewPort *pViewPort ) : C
     m_iImageDominated = kInvalidImageID;
     m_iImageNemesis = kInvalidImageID;
     m_iImageBomb = kInvalidImageID;
-    m_iImageVIP = kInvalidImageID;
     m_iImageFriend = kInvalidImageID;
     m_iImageNemesisDead = kInvalidImageID;
     m_iImageDominationDead = kInvalidImageID;
@@ -690,7 +689,15 @@ void CCSClientScoreBoardDialog::UpdateTeamInfo()
 			SetDialogVariable( pDialogVarTeamScore, wNumScore );
 
 			// Team score this phase
-			V_snwprintf( wNumScore, ARRAYSIZE( wNumScore ), L"%i", team->Get_ScoreThisPhase() );
+			int iScoreThisPhase = team->Get_Score();
+ 			if ( CSGameRules()->GetOvertimePlaying() )
+ 				iScoreThisPhase = team->Get_Score_Overtime();
+ 			else if ( CSGameRules()->GetGamePhase() == GAMEPHASE_PLAYING_FIRST_HALF )
+ 				iScoreThisPhase = team->Get_Score_First_Half();
+ 			else if ( CSGameRules()->GetGamePhase() == GAMEPHASE_PLAYING_SECOND_HALF )
+ 				iScoreThisPhase = team->Get_Score_Second_Half();
+ 
+ 			V_snwprintf( wNumScore, ARRAYSIZE( wNumScore ), L"%i", iScoreThisPhase );
 			SetDialogVariable( pDialogVarTeamScoreThisPhase, wNumScore );
 
 			// Number of alive players
@@ -1424,12 +1431,6 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, PlayerScore
 	playerScoreInfo.bStatusPlayerColor = false;
 
 	// set the status icon; lowest priority icons are tested first, and highest last
-
-	if ( cs_PR->IsVIP( playerIndex ) && bShowExtraInfo )
-	{
-		playerScoreInfo.szStatus = "../hud/scoreboard_clock";
-		playerScoreInfo.bStatusPlayerColor = true;
-	}
 
 	bool isAlive = g_PR->IsAlive( playerIndex );
 

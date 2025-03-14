@@ -156,10 +156,65 @@ static GGWeaponAliasName ggWeaponAliasNameList[] =
 #endif
 
 #ifndef CLIENT_DLL
-struct playerscore_t
-{
-	int iPlayerIndex;
-	int iScore;
+class CCSMatch
+{		
+public:
+	CCSMatch();
+
+	void Reset( void );
+
+	void SetPhase( GamePhase phase );
+	GamePhase GetPhase( void ) const { return m_phase; }
+
+	//These functions add to both the score and the number of rounds
+	void AddTerroristWins( int numWins );
+	void AddCTWins( int numWins);
+	void IncrementRound( int nNumRounds );
+
+	//These functions only adjust the score (without adding to the number of rounds played)
+	void AddTerroristBonusPoints( int numWins );
+	void AddCTBonusPoints( int numWins);
+
+	int GetTerroristScore( void ) const 	{ return m_terroristScoreTotal; }
+	int GetCTScore( void ) const  			{ return m_ctScoreTotal; }	
+
+	int GetRoundsPlayed( void ) const		{ return m_actualRoundsPlayed; }	
+	
+	//Since the teams change in halftime modes and we want to retain their scores, we swap the scores
+	//between halves.
+	void SwapTeamScores( void );
+	
+	int GetWinningTeam( void );	
+
+	//These are the internal functions that actually mess with the scores, adjusting the appropriate phase-specific scores as well.
+	void AddTerroristScore( int score );
+	void AddCTScore( int score );
+	void GoToOvertime( int numOvertimesToAdd );
+
+private:
+	//This is called anytime the match-internal scores are updated to reflect the changes in the team object (so the scores can be replicated)
+	void UpdateTeamScores( void );
+
+	// Called when we wish to change the full all-talk rules, based on entering a specific phase of the match
+	void EnableFullAlltalk( bool bEnable );
+
+	//This is the number of rounds that have been played, regardless of the actual score of the match (e.g. Demolition mode can give bonus points)
+	short m_actualRoundsPlayed;
+
+	// This is the index of the overtime that is being played, 0 when game has no overtime or is still in regulation time, 1 for first overtime, 2 for second, etc.
+	short m_nOvertimePlaying;
+
+	short m_ctScoreFirstHalf;
+	short m_ctScoreSecondHalf;
+	short m_ctScoreOvertime;
+	short m_ctScoreTotal;
+
+	short m_terroristScoreFirstHalf;
+	short m_terroristScoreSecondHalf;
+	short m_terroristScoreOvertime;
+	short m_terroristScoreTotal;
+
+	GamePhase m_phase;
 };
 
 class SpawnPoint : public CServerOnlyPointEntity
@@ -236,7 +291,6 @@ public:
 	int		GetMapFactionsForThisPlayer( CBasePlayer* pPlayer, int iTeamNumber );
 	bool	MapFactionsDefined( int iTeamNumber );
 
-	bool IsVIPMap() const;
 	bool IsBombDefuseMap() const;
 	bool IsHostageRescueMap() const;
 	bool IsIntermission() const;
@@ -294,7 +348,8 @@ public:
 	bool IsPlayingClassicCasual( void ) const;
 	bool IsPlayingAnyCompetitiveStrictRuleset( void ) const;
 
-	int GetTotalRoundsPlayed( void ) const { return m_iNumCTWins + m_iNumTerroristWins; }
+	GamePhase GetGamePhase( void ) const { return (GamePhase) m_gamePhase.Get(); }
+	int GetTotalRoundsPlayed( void ) const { return m_totalRoundsPlayed; }
 	int GetOvertimePlaying( void ) const { return m_nOvertimePlaying; }
 	
 	virtual bool IsConnectedUserInfoChangeAllowed( CBasePlayer *pPlayer );
@@ -313,6 +368,8 @@ private:
 	CNetworkVar( float, m_flRestartRoundTime ); // the global time when the round is supposed to end, if this is not 0
 	CNetworkVar( bool, m_bGameRestart ); // True = mp_restartgame is being processed
 	CNetworkVar( float, m_flGameStartTime );
+	CNetworkVar( int, m_gamePhase );
+	CNetworkVar( int, m_totalRoundsPlayed );
 	CNetworkVar( int, m_nOvertimePlaying );
 	CNetworkVar( int, m_iHostagesRemaining );
 	CNetworkVar( bool, m_bAnyHostageReached );
@@ -329,18 +386,11 @@ private:
 	
 	CNetworkVar( int, m_iMapFactionCT );
 	CNetworkVar( int, m_iMapFactionT );
-	
-	GamePhase m_gamePhase;
 
 public:
-	void SetPhase( GamePhase phase );
-	GamePhase GetPhase( void ) const { return m_gamePhase; }
-
 	CNetworkVar( bool, m_bBombDropped );
 	CNetworkVar( bool, m_bBombPlanted );
 	CNetworkVar( int, m_iRoundWinStatus );
-	CNetworkVar( int, m_iNumCTWins );
-	CNetworkVar( int, m_iNumTerroristWins );
 
 	int GetNumHostagesRemaining( void ) { return m_iHostagesRemaining; }
 
@@ -472,15 +522,18 @@ public:
 	void PreRestartRound( void );
 	void RestartRound( void );
 	void RoundWin( void );
+	int	 GetRoundsPlayed( void ) const { return m_match.GetRoundsPlayed(); }
+
 	void BalanceTeams( void );
 	void MoveHumansToHumanTeam( void );
 	bool TeamFull( int team_id );
 	int	 MaxNumPlayersOnTerrTeam();
 	int  MaxNumPlayersOnCTTeam();
+
 	bool WillTeamHaveRoomForPlayer( CCSPlayer* pPlayer, int newTeam );
+
 	bool TeamStacked( int newTeam_id, int curTeam_id  );
 	bool FPlayerCanRespawn( CBasePlayer *pPlayer );
-	void UpdateTeamScores();
 	void CheckMapConditions();
 	void MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound(int team);
 
@@ -512,7 +565,6 @@ public:
 
 	// Check to see if the round is over for the various game types. Terminates the round
 	// and returns true if the round should end.
-	bool PrisonRoundEndCheck();
 	bool BombRoundEndCheck( bool bNeededPlayers );
 	bool HostageRescueRoundEndCheck( bool bNeededPlayers );
 
@@ -536,12 +588,6 @@ public:
 	// GUN GAME PROGRESSIVE FUNCTION
 	bool GunGameProgressiveEndCheck( void );
 
-
-	// VIP FUNCTIONS
-	bool VIPRoundEndCheck( bool bNeededPlayers );
-	void PickNextVIP();
-
-
 	// BOMB MAP FUNCTIONS
 	void GiveC4ToRandomPlayer();
 	void GiveDefuserToRandomPlayer();
@@ -564,6 +610,8 @@ public:
 
 	virtual bool FAllowNPCs( void );
 
+	CCSMatch* GetMatch( void );
+
 	struct GrenadeRecording_t
 	{
 		Vector vecSrc;
@@ -585,6 +633,9 @@ protected:
 	virtual void GoToIntermission( void );
 
 public:
+	// Let's the match store recplicated vars in the game rules.
+	void SetGamePhase( GamePhase newPhase ) { m_gamePhase = newPhase; }
+	void SetTotalRoundsPlayed( int roundsPlayed ) { m_totalRoundsPlayed = roundsPlayed; }
 	void SetOvertimePlaying( int nOvertimePlaying ) { m_nOvertimePlaying = nOvertimePlaying; }
 
 	bool IsFriendlyFireOn();
@@ -620,9 +671,6 @@ public:
 		virtual CCSPlayer* CalculateEndOfRoundMVP() = 0;
 	};
 	ICalculateEndOfRoundMVPHook_t *m_pfnCalculateEndOfRoundMVPHook;
-
-	short m_iNumCTWinsThisPhase;
-	short m_iNumTerroristWinsThisPhase;
 
 	int m_iNumConsecutiveCTLoses;		//SupraFiend: the number of rounds the CTs have lost in a row.
 	int m_iNumConsecutiveTerroristLoses;//SupraFiend: the number of rounds the Terrorists have lost in a row.
@@ -698,19 +746,6 @@ public:
 	int m_nLastFreezeEndBeep;
 
 
-	// PRISON ESCAPE VARIABLES
-	int		m_iHaveEscaped;
-	bool	m_bMapHasEscapeZone;
-	int		m_iNumEscapers;
-	int		m_iNumEscapeRounds;		// keeps track of the # of consecutive rounds of escape played.. Teams will be swapped after 8 rounds
-
-
-	// VIP VARIABLES
-	int		m_iMapHasVIPSafetyZone;	// 0 = uninitialized;   1 = has VIP safety zone;   2 = DOES not have VIP safetyzone
-	CHandle<CCSPlayer> m_pVIP;
-	int		m_iConsecutiveVIP;
-
-
 	// BOMB MAP VARIABLES
 	bool	m_bTargetBombed;	// whether or not the bomb has been bombed
 	bool	m_bBombDefused;	// whether or not the bomb has been defused
@@ -745,6 +780,8 @@ public:
 	void AddSpawnPointToMasterList( SpawnPoint* pSpawnPoint );
 	void GenerateSpawnPointListsFirstTime( void );
 	void RefreshCurrentSpawnPointLists( void );
+
+	CCSMatch		m_match;
 
 	void ShuffleSpawnPointLists( void );
 	void ShuffleMasterSpawnPointLists( void );
@@ -805,8 +842,10 @@ inline CCSGameRules* CSGameRules()
 	return static_cast<CCSGameRules*>(g_pGameRules);
 }
 
-#define IGNORE_SPECTATORS true
-int UTIL_HumansInGame( bool ignoreSpectators = false );
+#define IGNORE_SPECTATORS false
+#define IGNORE_UNASSIGNED true
+int UTIL_HumansInGame( bool ignoreSpectators = false, bool ignoreUnassigned = false );
+int UTIL_SpectatorsInGame( void );
 
 
 //-----------------------------------------------------------------------------

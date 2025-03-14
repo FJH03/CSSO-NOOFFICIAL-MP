@@ -395,7 +395,6 @@ public:
 	void OnLand( float fVelocity );
 
 	bool HasC4() const;	// Is this player carrying a C4 bomb?
-	bool IsVIP() const;	// Is this player the VIP?
 
 	virtual void SetAnimation( PLAYER_ANIM playerAnim );
 

@@ -1687,16 +1687,6 @@ bool C_CSPlayer::HasNightVision() const
 	return m_bHasNightVision;
 }
 
-bool C_CSPlayer::IsVIP() const
-{
-	C_CS_PlayerResource *pCSPR = (C_CS_PlayerResource*)GameResources();
-
-	if ( !pCSPR )
-		return false;
-
-	return pCSPR->IsVIP( entindex() );
-}
-
 C_CSPlayer* C_CSPlayer::GetLocalCSPlayer()
 {
 	return (C_CSPlayer*)C_BasePlayer::GetLocalPlayer();

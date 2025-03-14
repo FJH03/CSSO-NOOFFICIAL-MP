@@ -398,7 +398,7 @@ void ClientModeCSNormal::Update()
 	static bool bStartedHalfTimeMusic = false;
 	static float flHalfTimeStart = 0.0;
 	
-	if( CSGameRules() && CSGameRules()->GetPhase() == GAMEPHASE_HALFTIME  )
+	if ( CSGameRules() && (CSGameRules()->GetGamePhase() == GAMEPHASE_HALFTIME || CSGameRules()->GetGamePhase() == GAMEPHASE_MATCH_ENDED) )
 	{
 		if( !bStartedHalfTimeMusic && gpGlobals->curtime - flHalfTimeStart > 6.5 )
 		{

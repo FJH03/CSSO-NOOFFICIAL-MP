@@ -33,7 +33,6 @@ public:
 					C_CS_PlayerResource();
 	virtual			~C_CS_PlayerResource();
 
-	bool			IsVIP(int iIndex );
 	bool			HasC4(int iIndex );
 	bool			IsHostageAlive(int iIndex);
 	bool			IsHostageFollowingSomeone(int iIndex);

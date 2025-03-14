@@ -26,17 +26,9 @@ class C_CSTeam : public C_Team
 	DECLARE_CLASS( C_CSTeam, C_Team );
 public:
 	DECLARE_CLIENTCLASS();
-	DECLARE_PREDICTABLE();
 
 					C_CSTeam();
 	virtual			~C_CSTeam();
-
-	// Data Handling
-	int		Get_ScoreThisPhase( void );
-
-private:
-	// Data received from the server
-	int		m_iScoreThisPhase;
 };
 
 // Global team handling functions

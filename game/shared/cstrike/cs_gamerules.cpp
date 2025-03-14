@@ -183,10 +183,10 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropBool( RECVINFO( m_bMatchWaitingForResume ) ),
         RecvPropBool( RECVINFO( m_bWarmupPeriod ) ),
         RecvPropFloat( RECVINFO( m_fWarmupPeriodStart ) ),	
-		RecvPropInt( RECVINFO( m_iNumCTWins ) ),
-		RecvPropInt( RECVINFO( m_iNumTerroristWins ) ),
 
 		RecvPropInt( RECVINFO( m_iRoundTime ) ),
+        RecvPropInt( RECVINFO( m_gamePhase ) ),
+        RecvPropInt( RECVINFO( m_totalRoundsPlayed ) ),
 		RecvPropInt( RECVINFO( m_nOvertimePlaying ) ),
 		RecvPropFloat( RECVINFO( m_fRoundStartTime ) ),
 		RecvPropBool( RECVINFO( m_bGameRestart ) ),
@@ -215,10 +215,9 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
         SendPropBool( SENDINFO( m_bWarmupPeriod ) ),
         SendPropFloat( SENDINFO( m_fWarmupPeriodStart ) ),	
 
-		SendPropInt( SENDINFO( m_iNumCTWins ) ),
-		SendPropInt( SENDINFO( m_iNumTerroristWins ) ),
-
 		SendPropInt( SENDINFO( m_iRoundTime ), 16 ),
+        SendPropInt( SENDINFO( m_gamePhase ), 4, SPROP_UNSIGNED ),
+        SendPropInt( SENDINFO( m_totalRoundsPlayed ), 16 ),
 		SendPropInt( SENDINFO( m_nOvertimePlaying ), 16 ),
 		SendPropFloat( SENDINFO( m_fRoundStartTime ), 32, SPROP_NOSCALE ),
 		SendPropFloat( SENDINFO( m_flRestartRoundTime ) ),
@@ -411,6 +410,14 @@ ConVar mp_match_can_clinch(
 	"1",
 	FCVAR_REPLICATED,
 	"Can a team clinch and end the match by being so far ahead that the other team has no way to catching up?" );
+
+ConVar mp_ggtr_end_round_kill_bonus(
+	"mp_ggtr_end_round_kill_bonus",
+	"1",
+	FCVAR_REPLICATED,
+	"Number of bonus points awarded in Demolition Mode when knife kill ends round",
+	true, 0,
+	true, 10 );
 
 ConVar mp_ggtr_last_weapon_kill_ends_half(
 	"mp_ggtr_last_weapon_kill_ends_half",
@@ -788,6 +795,10 @@ ConVar sv_full_alltalk( "sv_full_alltalk", "0", FCVAR_REPLICATED, "Any player (i
 
 ConVar sv_talk_enemy_dead( "sv_talk_enemy_dead", "0", FCVAR_REPLICATED, "Dead players can hear all dead enemy communication (voice, chat)" );
 ConVar sv_talk_enemy_living( "sv_talk_enemy_living", "0", FCVAR_REPLICATED, "Living players can hear all living enemy communication (voice, chat)" );
+
+#ifdef GAME_DLL
+ConVar sv_auto_full_alltalk_during_warmup_half_end( "sv_auto_full_alltalk_during_warmup_half_end", "1", FCVAR_NONE, "When enabled will automatically turn on full all talk mode in warmup, at halftime and at the end of the match" );
+#endif
 
 ConVar sv_spec_hear( "sv_spec_hear", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Determines who spectators can hear: 0: only spectators; 1: all players; 2: spectated team; 3: self only; 4: nobody" );
 
@@ -1301,7 +1312,37 @@ ConVar snd_music_selection(
 		return false;
 	}
 
-	int UTIL_HumansInGame( bool ignoreSpectators )
+	// Returns the number of human spectators in the game
+	int UTIL_SpectatorsInGame( void )
+	{
+		int iCount = 0;
+
+		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+		{
+			CCSPlayer *entity = CCSPlayer::Instance( i );
+
+			if ( entity && !FNullEnt( entity->edict() ) )
+			{
+				if ( FStrEq( entity->GetPlayerName(), "" ) )
+					continue;
+
+				if ( FBitSet( entity->GetFlags(), FL_FAKECLIENT ) )
+					continue;
+
+				if ( entity->IsBot() )
+					continue;
+
+				if ( entity->GetTeamNumber() == TEAM_SPECTATOR )
+				{
+					iCount++;
+				}
+			}
+		}
+
+		return iCount;
+	}
+
+	int UTIL_HumansInGame( bool ignoreSpectators, bool ignoreUnassigned )
 	{
 		int iCount = 0;
 
@@ -1321,6 +1362,9 @@ ConVar snd_music_selection(
 					continue;
 
 				if ( ignoreSpectators && entity->State_Get() == STATE_PICKINGCLASS )
+					continue;
+
+				if ( ignoreUnassigned && entity->GetTeamNumber() == TEAM_UNASSIGNED )
 					continue;
 
 				iCount++;
@@ -1352,6 +1396,215 @@ ConVar snd_music_selection(
     };
 #endif
 
+    CCSMatch::CCSMatch()
+    {
+        Reset();
+    }
+
+    void CCSMatch::Reset( void )
+    {
+        m_actualRoundsPlayed = 0;
+        CSGameRules()->SetTotalRoundsPlayed( 0 );
+		m_nOvertimePlaying = 0;
+		CSGameRules()->SetOvertimePlaying( 0 );
+
+        m_ctScoreFirstHalf = 0;
+        m_ctScoreSecondHalf = 0;
+		m_ctScoreOvertime = 0;
+        m_ctScoreTotal = 0;
+
+        m_terroristScoreFirstHalf = 0;
+        m_terroristScoreSecondHalf = 0;
+		m_terroristScoreOvertime = 0;
+        m_terroristScoreTotal = 0;
+        
+        if ( CSGameRules()->HasHalfTime() )
+        {
+            SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
+        }
+        else
+        {
+            SetPhase( GAMEPHASE_PLAYING_STANDARD );
+        }		
+        UpdateTeamScores();
+    }
+
+    void CCSMatch::SetPhase( GamePhase phase )
+    {
+		CCSGameRules *pRules = CSGameRules();
+		if ( ( m_phase == GAMEPHASE_HALFTIME ) && mp_halftime_pausematch.GetInt() && pRules )
+		{	// when halftime is over, we pause the match if needed
+			if ( !pRules->IsMatchWaitingForResume() )
+			{
+				UTIL_ClientPrintAll( HUD_PRINTCENTER, "#SFUI_Notice_Match_Will_Pause" );
+			}
+			pRules->SetMatchWaitingForResume( true );
+		}
+
+        m_phase = phase;
+
+		// When going to overtime halftime pause the timer if requested
+		if ( ( m_phase == GAMEPHASE_HALFTIME ) && m_nOvertimePlaying && mp_overtime_halftime_pausetimer.GetInt() )
+			mp_halftime_pausetimer.SetValue( mp_overtime_halftime_pausetimer.GetInt() );
+
+        EnableFullAlltalk( CSGameRules()->IsWarmupPeriod() || m_phase == GAMEPHASE_HALFTIME || m_phase == GAMEPHASE_MATCH_ENDED );
+
+        CSGameRules()->SetGamePhase( phase );
+    }
+
+    void CCSMatch::AddTerroristWins( int numWins )
+    {
+        m_actualRoundsPlayed += numWins;
+        CSGameRules()->SetTotalRoundsPlayed( m_actualRoundsPlayed );
+        AddTerroristScore( numWins );
+    }
+    
+    void CCSMatch::AddCTWins( int numWins )
+    {
+        m_actualRoundsPlayed += numWins;
+        CSGameRules()->SetTotalRoundsPlayed( m_actualRoundsPlayed );
+        AddCTScore( numWins );
+    }
+
+	void CCSMatch::IncrementRound( int nNumRounds )
+	{
+		m_actualRoundsPlayed += nNumRounds;
+		CSGameRules()->SetTotalRoundsPlayed( m_actualRoundsPlayed );
+	}
+
+    void CCSMatch::AddTerroristBonusPoints( int points )
+    {
+        AddTerroristScore( points );
+    }
+
+    void CCSMatch::AddCTBonusPoints( int points)
+    {
+        AddCTScore( points );
+    }		
+
+    void CCSMatch::AddTerroristScore( int score )
+    {
+        m_terroristScoreTotal += score;
+
+		if ( m_nOvertimePlaying > 0 )
+		{
+			m_terroristScoreOvertime += score;
+		}
+        else if ( m_phase == GAMEPHASE_PLAYING_FIRST_HALF )
+        {
+            m_terroristScoreFirstHalf += score;
+        }
+        else if ( m_phase == GAMEPHASE_PLAYING_SECOND_HALF )
+        {
+            m_terroristScoreSecondHalf += score;
+        }
+        UpdateTeamScores();
+    }
+    
+    void CCSMatch::AddCTScore( int score )
+    {
+        m_ctScoreTotal += score;		
+
+		if ( m_nOvertimePlaying > 0 )
+		{
+			m_ctScoreOvertime += score;
+		}
+		else if ( m_phase == GAMEPHASE_PLAYING_FIRST_HALF )
+        {
+            m_ctScoreFirstHalf += score;
+        }
+        else if ( m_phase == GAMEPHASE_PLAYING_SECOND_HALF )
+        {
+            m_ctScoreSecondHalf += score;
+        }
+        UpdateTeamScores();
+    }
+
+	void CCSMatch::GoToOvertime( int numOvertimesToAdd )
+	{
+		m_nOvertimePlaying += numOvertimesToAdd;
+		CSGameRules()->SetOvertimePlaying( m_nOvertimePlaying );
+	}
+
+    void CCSMatch::SwapTeamScores( void )
+    {
+        short temp = m_terroristScoreFirstHalf;
+        m_terroristScoreFirstHalf = m_ctScoreFirstHalf;
+        m_ctScoreFirstHalf = temp;
+
+        temp = m_terroristScoreSecondHalf;
+        m_terroristScoreSecondHalf = m_ctScoreSecondHalf;
+        m_ctScoreSecondHalf = temp;
+
+		temp = m_terroristScoreOvertime;
+		m_terroristScoreOvertime = m_ctScoreOvertime;
+		m_ctScoreOvertime = temp;
+
+        temp = m_terroristScoreTotal;
+        m_terroristScoreTotal = m_ctScoreTotal;
+        m_ctScoreTotal = temp;
+        
+        UpdateTeamScores();
+    }
+
+    void CCSMatch::UpdateTeamScores( void )
+    {
+        CTeam *pTerrorists = GetGlobalTeam( TEAM_TERRORIST );
+        CTeam *pCTs = GetGlobalTeam( TEAM_CT );
+
+        if ( pTerrorists )
+        {
+            pTerrorists->SetScore( m_terroristScoreTotal );
+            pTerrorists->SetScoreFirstHalf( m_terroristScoreFirstHalf );
+            pTerrorists->SetScoreSecondHalf( m_terroristScoreSecondHalf );
+			pTerrorists->SetScoreOvertime( m_terroristScoreOvertime );
+        }
+
+        if ( pCTs )
+        {
+            pCTs->SetScore( m_ctScoreTotal);
+            pCTs->SetScoreFirstHalf( m_ctScoreFirstHalf );
+            pCTs->SetScoreSecondHalf( m_ctScoreSecondHalf );
+			pCTs->SetScoreOvertime( m_ctScoreOvertime );
+        }
+    }
+
+    void CCSMatch::EnableFullAlltalk( bool bEnable )
+    {
+		if ( !sv_auto_full_alltalk_during_warmup_half_end.GetBool() )
+			bEnable = false;
+
+        static ConVarRef sv_full_alltalk( "sv_full_alltalk" );
+        sv_full_alltalk.SetValue( bEnable );
+    }
+
+    int CCSMatch::GetWinningTeam( void )
+    {
+		/*CTeam* pTerrorists = GetGlobalTeam(TEAM_TERRORIST);
+		CTeam *pCTs = GetGlobalTeam( TEAM_CT );
+
+		if ( pTerrorists && pTerrorists->m_bSurrendered )
+		{
+			return TEAM_CT;
+		}
+		else if ( pCTs && pCTs->m_bSurrendered )
+		{
+			 return TEAM_TERRORIST;
+		}
+        else */if ( m_terroristScoreTotal > m_ctScoreTotal )
+        {
+            return TEAM_TERRORIST;
+        }
+        else if ( m_terroristScoreTotal < m_ctScoreTotal )
+        {
+            return TEAM_CT;
+        }
+        else
+        {
+            return WINNER_NONE;
+        }
+    }
+
     template < class T > void VectorShuffle( CUtlVector< T > &arrayToShuffle )
     {
         int numEntries = arrayToShuffle.Count();
@@ -1381,6 +1634,7 @@ ConVar snd_music_selection(
 		m_gamePhase = GAMEPHASE_PLAYING_STANDARD;
 		m_iRoundWinStatus = WINNER_NONE;
 		m_iFreezeTime = 0;
+		m_totalRoundsPlayed = 0;
 		m_nOvertimePlaying = 0;
 
 		m_fRoundStartTime = 0;
@@ -1391,10 +1645,6 @@ ConVar snd_music_selection(
 		m_iNumSpawnableTerrorist = m_iNumSpawnableCT = 0;
 		m_bFirstConnected = false;
 		m_bCompleteReset = false;
-		m_iNumCTWins = 0;
-		m_iNumCTWinsThisPhase = 0;
-		m_iNumTerroristWins = 0;
-		m_iNumTerroristWinsThisPhase = 0;
 		m_iNumConsecutiveCTLoses = 0;
 		m_iNumConsecutiveTerroristLoses = 0;
 		m_bTargetBombed = false;
@@ -1456,15 +1706,6 @@ ConVar snd_music_selection(
 		m_pFunFactManager = new CCSFunFactMgr();
 		m_pFunFactManager->Init();
 
-		m_iHaveEscaped = 0;
-		m_bMapHasEscapeZone = false;
-		m_iNumEscapers = 0;
-		m_iNumEscapeRounds = 0;
-
-		m_iMapHasVIPSafetyZone = 0;
-		m_pVIP = NULL;
-		m_iConsecutiveVIP = 0;
-
 		m_bMapHasBombZone = false;
 		m_bBombDropped = false;
 		m_bBombPlanted = false;
@@ -1483,19 +1724,6 @@ ConVar snd_music_selection(
 		m_phaseChangeAnnouncementTime = 0.0f;
 		m_fNextUpdateTeamClanNamesTime = 0.0f;
 
-		m_bHasTriggeredRoundStartMusic = false;
-
-		ReadMultiplayCvars();
-
-		m_bGameRestart = false;
-
-		m_bSwitchingTeamsAtRoundReset = false;
-
-		m_iNextCTSpawnPoint = 0;
-		m_iNextTerroristSpawnPoint = 0;
-
-		m_iMaxGunGameProgressiveWeaponIndex = 0;
-
 		// Create the team managers
 		for ( int i = 0; i < ARRAYSIZE( sTeamNames ); i++ )
 		{
@@ -1504,6 +1732,8 @@ ConVar snd_music_selection(
 
 			g_Teams.AddToTail( pTeam );
 		}
+
+		m_bHasTriggeredRoundStartMusic = false;
 
 		InitializeGameTypeAndMode();
 
@@ -1518,6 +1748,17 @@ ConVar snd_music_selection(
 			}
 		}
 
+		ReadMultiplayCvars();
+
+		m_bGameRestart = false;
+
+		m_bSwitchingTeamsAtRoundReset = false;
+
+		m_iNextCTSpawnPoint = 0;
+		m_iNextTerroristSpawnPoint = 0;
+
+		m_iMaxGunGameProgressiveWeaponIndex = 0;
+
 		m_iMapFactionCT = -1;
 		m_iMapFactionT = -1;
 		LoadMapProperties();
@@ -1525,41 +1766,9 @@ ConVar snd_music_selection(
 		m_bWarmupPeriod = mp_do_warmup_period.GetBool();
 		m_fWarmupNextChatNoticeTime = 0;
 		m_fWarmupPeriodStart = gpGlobals->curtime;
-		
-
-		if ( HasHalfTime() )
-			SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
-		else
-			SetPhase( GAMEPHASE_PLAYING_STANDARD );
 
 		m_pLastGrenade.bIsValid = false;
 	}
-
-	void CCSGameRules::SetPhase( GamePhase phase )
-	{
-		if ( ( GetPhase() == GAMEPHASE_HALFTIME ) && mp_halftime_pausematch.GetInt() )
-		{	// when halftime is over, we pause the match if needed
-			if ( !IsMatchWaitingForResume() )
-			{
-				UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Match_Will_Pause" );
-			}
-			SetMatchWaitingForResume( true );
-		}
-
-		m_gamePhase = phase;
-
-		// When going to overtime halftime pause the timer if requested
-		if ( (m_gamePhase == GAMEPHASE_HALFTIME) && m_nOvertimePlaying && mp_overtime_halftime_pausetimer.GetInt() )
-			mp_halftime_pausetimer.SetValue( mp_overtime_halftime_pausetimer.GetInt() );
-		
-		// not in halftime because it will change before player's eyes right as the scoreboard pops up
-		if ( GetPhase() != GAMEPHASE_HALFTIME && GetPhase() != GAMEPHASE_MATCH_ENDED )
-		{
-			// reset phase wins counter
-			m_iNumTerroristWinsThisPhase = m_iNumCTWinsThisPhase = 0;
-			UpdateTeamScores();
-		}
-    }
 
 	void CCSGameRules::LoadMapProperties()
 	{
@@ -1767,7 +1976,7 @@ ConVar snd_music_selection(
 		}
 
 
-		if ( addDefault || pPlayer->m_bIsVIP )
+		if ( addDefault )
 			pPlayer->GiveDefaultItems();
 	}
 
@@ -2473,22 +2682,10 @@ ConVar snd_music_selection(
 			// [tj] Added a check to make sure we don't get money for suicides.
 			if (pCSScorer != pCSVictim)
 			{
-				if ( pCSVictim->IsVIP() )
-				{
-					pCSScorer->HintMessage( "#Hint_reward_for_killing_vip", true );
-					pCSScorer->AddAccount( 2500 );
-
-					char strAmount[8];
-					Q_snprintf( strAmount, sizeof( strAmount ), "%d", abs( 2500 ) );
-					ClientPrint( pCSScorer, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Cash_Award_Kill_Teammate", strAmount );
-				}
+				if ( pWeapon )
+					pCSScorer->AddAccountAward( PlayerCashAward::KILLED_ENEMY, pWeapon->GetKillAward(), pWeapon );
 				else
-				{
-					if ( pWeapon )
-						pCSScorer->AddAccountAward( PlayerCashAward::KILLED_ENEMY, pWeapon->GetKillAward(), pWeapon );
-					else
-						pCSScorer->AddAccountAward( PlayerCashAward::KILLED_ENEMY );
-				}
+					pCSScorer->AddAccountAward( PlayerCashAward::KILLED_ENEMY );
 			}
 		}
 	}
@@ -2655,14 +2852,6 @@ ConVar snd_music_selection(
 	// Called when game rules are destroyed by CWorld
 	void CCSGameRules::LevelShutdown()
 	{
-		int iLevelIndex = GetCSLevelIndex( STRING( gpGlobals->mapname ) );
-
-		if ( iLevelIndex != -1 )
-		{
-			g_iTerroristVictories[iLevelIndex] += m_iNumTerroristWins;
-			g_iCounterTVictories[iLevelIndex] += m_iNumCTWins;
-		}
-
 		BaseClass::LevelShutdown();
 	}
 
@@ -2715,15 +2904,6 @@ ConVar snd_music_selection(
 		bool bNeededPlayers = false;
 		if ( NeededPlayersCheck( bNeededPlayers ) )
 			return false;
-
-		/****************************** ASSASINATION/VIP SCENARIO CHECK *******************************************************/
-		if ( VIPRoundEndCheck( bNeededPlayers ) )
-			return true;
-
-		/****************************** PRISON ESCAPE CHECK *******************************************************/
-		if ( PrisonRoundEndCheck() )
-			return true;
-
 
 		/****************************** BOMB CHECK ********************************************************/
 		if ( BombRoundEndCheck( bNeededPlayers ) )
@@ -2782,59 +2962,54 @@ ConVar snd_music_selection(
 		int &NumDeadCT
 		)
 	{
-		NumAliveTerrorist = NumAliveCT = NumDeadCT = NumDeadTerrorist = 0;
-		m_iNumTerrorist = m_iNumCT = m_iNumSpawnableTerrorist = m_iNumSpawnableCT = 0;
-		m_iHaveEscaped = 0;
+        NumAliveTerrorist = NumAliveCT = NumDeadCT = NumDeadTerrorist = 0;
+        m_iNumTerrorist = m_iNumCT = m_iNumSpawnableTerrorist = m_iNumSpawnableCT = 0;
 
-		// Count how many dead players there are on each team.
-		for ( int iTeam=0; iTeam < GetNumberOfTeams(); iTeam++ )
-		{
-			CTeam *pTeam = GetGlobalTeam( iTeam );
+        // Count how many dead players there are on each team.
+        for ( int iTeam=0; iTeam < GetNumberOfTeams(); iTeam++ )
+        {
+            CTeam *pTeam = GetGlobalTeam( iTeam );
 
-			for ( int iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
-			{
-				CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
-				Assert( pPlayer );
-				if ( !pPlayer )
-					continue;
+            for ( int iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
+            {
+                CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
+                Assert( pPlayer );
+                if ( !pPlayer )
+                    continue;
 
-				Assert( pPlayer->GetTeamNumber() == pTeam->GetTeamNumber() );
+                Assert( pPlayer->GetTeamNumber() == pTeam->GetTeamNumber() );
 
-				switch ( pTeam->GetTeamNumber() )
-				{
-				case TEAM_CT:
-					m_iNumCT++;
+                switch ( pTeam->GetTeamNumber() )
+                {
+                case TEAM_CT:
+                    m_iNumCT++;
 
-					if ( pPlayer->State_Get() != STATE_PICKINGCLASS )
-						m_iNumSpawnableCT++;
+                    if ( pPlayer->State_Get() != STATE_PICKINGCLASS )
+                        m_iNumSpawnableCT++;
 
-					if ( pPlayer->m_lifeState != LIFE_ALIVE )
-						NumDeadCT++;
-					else
-						NumAliveCT++;
+                    if ( pPlayer->m_lifeState != LIFE_ALIVE )
+                        NumDeadCT++;
+                    else
+                        NumAliveCT++;
 
-					break;
+                    break;
 
-				case TEAM_TERRORIST:
-					m_iNumTerrorist++;
+                case TEAM_TERRORIST:
+                    m_iNumTerrorist++;
 
-					if ( pPlayer->State_Get() != STATE_PICKINGCLASS )
-						m_iNumSpawnableTerrorist++;
+                    if ( pPlayer->State_Get() != STATE_PICKINGCLASS )
+                        m_iNumSpawnableTerrorist++;
 
-					if ( pPlayer->m_lifeState != LIFE_ALIVE )
-						NumDeadTerrorist++;
-					else
-						NumAliveTerrorist++;
+                    if ( pPlayer->m_lifeState != LIFE_ALIVE )
+                        NumDeadTerrorist++;
+                    else
+                        NumAliveTerrorist++;
 
-					// Check to see if this guy escaped.
-					if ( pPlayer->m_bEscaped == true )
-						m_iHaveEscaped++;
-
-					break;
-				}
-			}
-		}
-	}
+                    break;
+                }
+            }
+        }
+    }
 
 	void CCSGameRules::AddHostageRescueTime( void )
 	{
@@ -2882,10 +3057,7 @@ ConVar snd_music_selection(
 			{
 				if ( !bNeededPlayers )
 				{
-					m_iNumCTWins++;
-					m_iNumCTWinsThisPhase++;
-					// Update the clients team score
-					UpdateTeamScores();
+					m_match.AddCTWins( 1 );
 				}
 
 				AddTeamAccount( TEAM_CT, TeamCashAward::WIN_BY_HOSTAGE_RESCUE );
@@ -2906,161 +3078,11 @@ ConVar snd_music_selection(
 		return false;
 	}
 
-
-	bool CCSGameRules::PrisonRoundEndCheck()
-	{
-		//MIKETODO: get this working when working on prison escape
-		/*
-		if (m_bMapHasEscapeZone == true)
-		{
-			float flEscapeRatio;
-
-			flEscapeRatio = (float) m_iHaveEscaped / (float) m_iNumEscapers;
-
-			if (flEscapeRatio >= m_flRequiredEscapeRatio)
-			{
-				BroadcastSound( "Event.TERWin" );
-				m_iAccountTerrorist += 3150;
-
-				if ( !bNeededPlayers )
-				{
-					m_iNumTerroristWins ++;
-					m_iNumTerroristWinsThisPhase++;
-					// Update the clients team score
-					UpdateTeamScores();
-				}
-				EndRoundMessage( "#Terrorists_Escaped", Terrorists_Escaped );
-				TerminateRound( mp_round_restart_delay.GetFloat(), WINNER_TER );
-				return;
-			}
-			else if ( NumAliveTerrorist == 0 && flEscapeRatio < m_flRequiredEscapeRatio)
-			{
-				BroadcastSound( "Event.CTWin" );
-				m_iAccountCT += (1 - flEscapeRatio) * 3500; // CTs are rewarded based on how many terrorists have escaped...
-				
-				if ( !bNeededPlayers )
-				{
-					m_iNumCTWins++;
-					m_iNumCTWinsThisPhase++;
-					// Update the clients team score
-					UpdateTeamScores();
-				}
-				EndRoundMessage( "#CTs_PreventEscape", CTs_PreventEscape );
-				TerminateRound( mp_round_restart_delay.GetFloat(), WINNER_CT );
-				return;
-			}
-
-			else if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && m_iNumSpawnableCT > 0 )
-			{
-				BroadcastSound( "Event.CTWin" );
-				m_iAccountCT += (1 - flEscapeRatio) * 3250; // CTs are rewarded based on how many terrorists have escaped...
-				
-				if ( !bNeededPlayers )
-				{
-					m_iNumCTWins++;
-					m_iNumCTWinsThisPhase++;
-					// Update the clients team score
-					UpdateTeamScores();
-				}
-				EndRoundMessage( "#Escaping_Terrorists_Neutralized", Escaping_Terrorists_Neutralized );
-				TerminateRound( mp_round_restart_delay.GetFloat(), WINNER_CT );
-				return;
-			}
-			// else return;    
-		}
-		*/
-
-		return false;
-	}
-
-
-	bool CCSGameRules::VIPRoundEndCheck( bool bNeededPlayers )
-	{
-		if (m_iMapHasVIPSafetyZone != 1)
-			return false;
-
-		if (m_pVIP == NULL)
-			return false;
-
-		if (m_pVIP->m_bEscaped == true)
-		{
-			//m_iAccountCT += 3500;
-
-			if ( !bNeededPlayers )
-			{
-				m_iNumCTWins ++;
-				m_iNumCTWinsThisPhase++;
-				// Update the clients team score
-				UpdateTeamScores();
-			}
-
-			//MIKETODO: get this working when working on VIP scenarios
-			/*
-			MessageBegin( MSG_SPEC, SVC_DIRECTOR );
-				WRITE_BYTE ( 9 );	// command length in bytes
-				WRITE_BYTE ( DRC_CMD_EVENT );	// VIP rescued
-				WRITE_SHORT( ENTINDEX(m_pVIP->edict()) );	// index number of primary entity
-				WRITE_SHORT( 0 );	// index number of secondary entity
-				WRITE_LONG( 15 | DRC_FLAG_FINAL);   // eventflags (priority and flags)
-			MessageEnd();
-			*/
-
-			// tell the bots the VIP got out
-			IGameEvent * event = gameeventmanager->CreateEvent( "vip_escaped" );
-			if ( event )
-			{
-				event->SetInt( "userid", m_pVIP->GetUserID() );
-				event->SetInt( "priority", 9 );
-				gameeventmanager->FireEvent( event );
-			}
-
-			//=============================================================================
-			// HPE_BEGIN:
-			// [menglish] If the VIP has escaped award him an MVP
-			//=============================================================================
-			 
-			m_pVIP->IncrementNumMVPs( CSMVP_UNDEFINED );
-			 
-			//=============================================================================
-			// HPE_END
-			//=============================================================================
-
-			TerminateRound( mp_round_restart_delay.GetFloat(), VIP_Escaped );
-			return true;
-		}
-		else if ( m_pVIP->m_lifeState == LIFE_DEAD )   // The VIP is dead
-		{
-			//m_iAccountTerrorist += 3250;
-
-			if ( !bNeededPlayers )
-			{
-				m_iNumTerroristWins ++;
-				m_iNumTerroristWinsThisPhase++;
-				// Update the clients team score
-				UpdateTeamScores();
-			}
-
-			// tell the bots the VIP was killed
-			IGameEvent * event = gameeventmanager->CreateEvent( "vip_killed" );
-			if ( event )
-			{
-				event->SetInt( "userid", m_pVIP->GetUserID() );
-				event->SetInt( "priority", 9 );
-				gameeventmanager->FireEvent( event );
-			}
-
-			TerminateRound( mp_round_restart_delay.GetFloat(), VIP_Assassinated );
-			return true;
-		}
-
-		return false;
-	}
-
     bool CCSGameRules::GunGameProgressiveEndCheck( void )
 	{
 		bool bDidEnd = false;
 
-		if ( GetPhase() == GAMEPHASE_MATCH_ENDED )
+		if ( m_match.GetPhase() == GAMEPHASE_MATCH_ENDED )
 		{
 			// No need to perform the check if the match has ended
 			return false;
@@ -3109,17 +3131,13 @@ ConVar snd_music_selection(
 					{
 						if ( pTeam->GetTeamNumber() == TEAM_CT )
 						{
-							m_iNumCTWins++;
-							m_iNumCTWinsThisPhase++;
-							// Update the clients team score
-							UpdateTeamScores();
+							m_match.AddCTWins( 1 );
+							m_match.AddCTBonusPoints( mp_ggtr_end_round_kill_bonus.GetInt() );
 						}
 						else if ( pTeam->GetTeamNumber() == TEAM_TERRORIST )
 						{
-							m_iNumTerroristWins++;
-							m_iNumTerroristWinsThisPhase++;
-							// Update the clients team score
-							UpdateTeamScores();
+							m_match.AddTerroristWins( 1 );
+							m_match.AddTerroristBonusPoints( mp_ggtr_end_round_kill_bonus.GetInt() );
 						}
 					}
 
@@ -3129,7 +3147,7 @@ ConVar snd_music_selection(
 
 						bDidEnd = true;
 
-						SetPhase( GAMEPHASE_MATCH_ENDED );
+						m_match.SetPhase( GAMEPHASE_MATCH_ENDED );
 
 						m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
 
@@ -3171,10 +3189,7 @@ ConVar snd_music_selection(
 		{
 			if ( !bNeededPlayers )
 			{
-				m_iNumTerroristWins ++;
-				m_iNumTerroristWinsThisPhase++;
-				// Update the clients team score
-				UpdateTeamScores();
+				m_match.AddTerroristWins( 1 );
 			}
 
 			AddTeamAccount( TEAM_TERRORIST, TeamCashAward::TERRORIST_WIN_BOMB );
@@ -3188,10 +3203,7 @@ ConVar snd_music_selection(
 
 			if ( !bNeededPlayers )
 			{
-				m_iNumCTWins++;
-				m_iNumCTWinsThisPhase++;
-				// Update the clients team score
-				UpdateTeamScores();
+				m_match.AddCTWins( 1 );
 			}
 
 			AddTeamAccount( TEAM_CT, TeamCashAward::WIN_BY_DEFUSING_BOMB );
@@ -3206,7 +3218,7 @@ ConVar snd_music_selection(
 	}
 
     // [dkorus] note, this is the standard "end of round mvp" for the case where a more specific MVP condition has not been met
-    //			examples of more specific conditions:  Planting the bomb, defusing the bomb, rescuing the hostages, escaping as the VIP, etc
+    //			examples of more specific conditions:  Planting the bomb, defusing the bomb, rescuing the hostages, etc
     CCSPlayer * CCSGameRules::CalculateEndOfRoundMVP()
     {
         CCSPlayer* pMVP = NULL;
@@ -3302,20 +3314,14 @@ ConVar snd_music_selection(
 				// last CT alive
 				if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && !bTsRespawn && NumAliveCT == 1 )
 				{
-					m_iNumCTWins++;
-					m_iNumCTWinsThisPhase++;
-					// Update the clients team score
-					UpdateTeamScores();
+					m_match.AddCTWins( 1 );
 					TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
 					return true;
 				}
 
 				if ( NumAliveCT == 0 && NumDeadCT != 0 && !bCTsRespawn && NumAliveTerrorist == 1 )
 				{
-					m_iNumTerroristWins++;
-					m_iNumTerroristWinsThisPhase++;
-					// Update the clients team score
-					UpdateTeamScores();
+					m_match.AddTerroristWins( 1 );
 					TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
 					return true;
 				}
@@ -3343,18 +3349,15 @@ ConVar snd_music_selection(
 
 					if ( !nowin )
 					{
+						if ( !bNeededPlayers )
+						{
+							m_match.AddCTWins( 1 );
+						}
+
 						if ( m_bMapHasBombTarget )
 							AddTeamAccount( TEAM_CT, TeamCashAward::ELIMINATION_BOMB_MAP );
 						else
 							AddTeamAccount( TEAM_CT, TeamCashAward::ELIMINATION_HOSTAGE_MAP_CT );
-
-						if ( !bNeededPlayers )
-						{
-							m_iNumCTWins++;
-							m_iNumCTWinsThisPhase++;
-							// Update the clients team score
-							UpdateTeamScores();
-						}
 
 						TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
 						return true;
@@ -3364,18 +3367,15 @@ ConVar snd_music_selection(
 				// Terrorists WON (if they don't respawn)
 				if ( NumAliveCT == 0 && NumDeadCT != 0 && !bCTsRespawn && m_iNumSpawnableTerrorist > 0 )
 				{
+					if ( !bNeededPlayers )
+					{
+						m_match.AddTerroristWins( 1 );
+					}
+
 					if ( m_bMapHasBombTarget )
 						AddTeamAccount( TEAM_TERRORIST, TeamCashAward::ELIMINATION_BOMB_MAP );
 					else
 						AddTeamAccount( TEAM_TERRORIST, TeamCashAward::ELIMINATION_HOSTAGE_MAP_T );
-
-					if ( !bNeededPlayers )
-					{
-						m_iNumTerroristWins++;
-						m_iNumTerroristWinsThisPhase++;
-						// Update the clients team score
-						UpdateTeamScores();
-					}
 
 					TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
 					return true;
@@ -3389,99 +3389,6 @@ ConVar snd_music_selection(
 		}
 
 		return false;
-	}
-
-
-	void CCSGameRules::PickNextVIP()
-	{
-		// MIKETODO: work on this when getting VIP maps running.
-		/*
-		if (IsVIPQueueEmpty() != true)
-		{
-			// Remove the current VIP from his VIP status and make him a regular CT.
-			if (m_pVIP != NULL)
-				ResetCurrentVIP();
-
-			for (int i = 0; i <= 4; i++)
-			{
-				if (VIPQueue[i] != NULL)
-				{
-					m_pVIP = VIPQueue[i];
-					m_pVIP->MakeVIP();
-
-					VIPQueue[i] = NULL;		// remove this player from the VIP queue
-					StackVIPQueue();		// and re-organize the queue
-					m_iConsecutiveVIP = 0;
-					return;
-				}
-			}
-		}
-		else if (m_iConsecutiveVIP >= 3)	// If it's been the same VIP for 3 rounds already.. then randomly pick a new one
-		{
-			m_iLastPick++;
-
-			if (m_iLastPick > m_iNumCT)
-				m_iLastPick = 1;
-
-			int iCount = 1;
-
-			CBaseEntity* pPlayer = NULL;
-			CBasePlayer* player = NULL;
-			CBasePlayer* pLastPlayer = NULL;
-
-			pPlayer = UTIL_FindEntityByClassname ( pPlayer, "player" );
-			while (		(pPlayer != NULL) && (!FNullEnt(pPlayer->edict()))	)
-			{
-				if (	!(pPlayer->pev->flags & FL_DORMANT)	)
-				{
-					player = GetClassPtr((CBasePlayer *)pPlayer->pev);
-					
-					if (	(player->m_iTeam == CT) && (iCount == m_iLastPick)	)
-					{
-						if (	(player == m_pVIP) && (pLastPlayer != NULL)	)
-							player = pLastPlayer;
-
-						// Remove the current VIP from his VIP status and make him a regular CT.
-						if (m_pVIP != NULL)
-							ResetCurrentVIP();
-
-						player->MakeVIP();
-						m_iConsecutiveVIP = 0;
-
-						return;
-					}
-					else if ( player->m_iTeam == CT )
-						iCount++;
-
-					if ( player->m_iTeam != SPECTATOR )
-						pLastPlayer = player;
-				}
-				pPlayer = UTIL_FindEntityByClassname ( pPlayer, "player" );
-			}
-		}
-		else if (m_pVIP == NULL)  // There is no VIP and there is no one waiting to be the VIP.. therefore just pick the first CT player we can find.
-		{
-			CBaseEntity* pPlayer = NULL;
-			CBasePlayer* player = NULL;
-
-			pPlayer = UTIL_FindEntityByClassname ( pPlayer, "player" );
-			while (		(pPlayer != NULL) && (!FNullEnt(pPlayer->edict()))	)
-			{
-				if ( pPlayer->pev->flags != FL_DORMANT	)
-				{
-					player = GetClassPtr((CBasePlayer *)pPlayer->pev);
-		
-					if ( player->m_iTeam == CT )
-					{
-						player->MakeVIP();
-						m_iConsecutiveVIP = 0;
-						return;
-					}
-				}
-				pPlayer = UTIL_FindEntityByClassname ( pPlayer, "player" );
-			}
-		}
-		*/
 	}
 
 
@@ -3718,23 +3625,20 @@ ConVar snd_music_selection(
 		{
 			ClearGunGameData();
 		}
-		else if ( GetPhase() == GAMEPHASE_HALFTIME )
+		else if ( m_match.GetPhase() == GAMEPHASE_HALFTIME )
 		{
 			if ( GetOvertimePlaying() && ( GetTotalRoundsPlayed() <= ( mp_maxrounds.GetInt() + ( GetOvertimePlaying() - 1 )*mp_overtime_maxrounds.GetInt() ) ) )
 			{
 				// This is the overtime halftime at the end of a tied regulation time or at the end of a previous overtime that
 				// failed to determine the winner, we will not be switching teams at this time and we proceed into first half
 				// of next overtime period
-				SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
+				m_match.SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
 			}
 			else
 			{
 				// Regulation halftime or 1st half of overtime finished, swap the CT and T scores so the scoreboard will be correct
-				int temp = m_iNumCTWins;
-				m_iNumCTWins = m_iNumTerroristWins;
-				m_iNumTerroristWins = temp;
-				UpdateTeamScores();
-				SetPhase( GAMEPHASE_PLAYING_SECOND_HALF );
+				m_match.SwapTeamScores();
+				m_match.SetPhase( GAMEPHASE_PLAYING_SECOND_HALF );
 			}
 
 			if ( IsPlayingGunGameTRBomb() )
@@ -3758,7 +3662,7 @@ ConVar snd_music_selection(
 			}
 		}
 		// Check to see if TR Gun Game match has ended, and player data should be reset
-		else if ( GetPhase() == GAMEPHASE_MATCH_ENDED )
+		else if ( m_match.GetPhase() == GAMEPHASE_MATCH_ENDED )
 		{
 			if ( IsPlayingGunGameTRBomb() )
 			{
@@ -3784,26 +3688,12 @@ ConVar snd_music_selection(
 			m_iTotalRoundsPlayed = 0;
 
 			// Reset score info
-			m_iNumTerroristWins				= 0;
-			m_iNumTerroristWinsThisPhase	= 0;
-			m_iNumCTWins					= 0;
-			m_iNumCTWinsThisPhase			= 0;
+			m_match.Reset();
 			m_iNumConsecutiveTerroristLoses	= mp_starting_losses.GetInt();
 			m_iNumConsecutiveCTLoses		= mp_starting_losses.GetInt();
 
-			if ( HasHalfTime() )
-			{
-				SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
-			}
-			else
-			{
-				SetPhase( GAMEPHASE_PLAYING_STANDARD );
-			}
-
-
-			// Reset team scores
-			UpdateTeamScores();
-
+			//We are starting fresh. So it's like no one has ever won or lost.
+			m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
 
 			// Reset the player stats
 			for ( i = 1; i <= gpGlobals->maxClients; i++ )
@@ -3907,95 +3797,6 @@ ConVar snd_music_selection(
 		else
 			m_bMapHasBuyZone = false;
 
-
-		// GOOSEMAN : See if this map has func_escapezone entities
-		if ( gEntList.FindEntityByClassname( NULL, "func_escapezone" ) )
-		{
-			m_bMapHasEscapeZone = true;
-			m_iHaveEscaped = 0;
-			m_iNumEscapers = 0; // Will increase this later when we count how many Ts are starting
-			if (m_iNumEscapeRounds >= 3)
-			{
-				SwapAllPlayers();
-				m_iNumEscapeRounds = 0;
-			}
-
-			m_iNumEscapeRounds++;  // Increment the number of rounds played... After 8 rounds, the players will do a whole sale switch..
-		}
-		else
-			m_bMapHasEscapeZone = false;
-		/*
-		// Check to see if this map has VIP safety zones
-		if ( gEntList.FindEntityByClassname( NULL, "func_vip_safetyzone" ) )
-		{
-			PickNextVIP();
-			m_iConsecutiveVIP++;
-			m_iMapHasVIPSafetyZone = 1;
-		}
-		else
-			m_iMapHasVIPSafetyZone = 2;
-
-		// Update accounts based on number of hostages remaining.. 
-		int iRescuedHostageBonus = 0;
-
-		for ( int iHostage=0; iHostage < g_Hostages.Count(); iHostage++ )
-		{
-			CHostage *pHostage = g_Hostages[iHostage];
-
-			if( pHostage->IsRescuable() )	//Alive and not rescued
-			{
-				iRescuedHostageBonus += 150;
-			}
-			
-			if ( iRescuedHostageBonus >= 2000 )
-				break;
-		}
-
-		//*******Catch up code by SupraFiend. Scale up the loser bonus when teams fall into losing streaks
-		if (m_iRoundWinStatus == WINNER_TER) // terrorists won
-		{
-			//check to see if they just broke a losing streak
-			if(m_iNumConsecutiveTerroristLoses > 1)
-                m_iLoserBonus = TeamCashAwardValue( LOSER_BONUS );
-
-			m_iNumConsecutiveTerroristLoses = 0;//starting fresh
-			m_iNumConsecutiveCTLoses++;//increment the number of wins the CTs have had
-		}
-		else if (m_iRoundWinStatus == WINNER_CT) // CT Won
-		{
-			//check to see if they just broke a losing streak
-			if(m_iNumConsecutiveCTLoses > 1)
-                m_iLoserBonus = TeamCashAwardValue( LOSER_BONUS );
-
-			m_iNumConsecutiveCTLoses = 0;//starting fresh
-			m_iNumConsecutiveTerroristLoses++;//increment the number of wins the Terrorists have had
-		}
-
-		//check if the losing team is in a losing streak & that the loser bonus hasen't maxed out.
-		if((m_iNumConsecutiveTerroristLoses > 1) && (m_iLoserBonus < 3000))
-            m_iLoserBonus += TeamCashAwardValue( LOSER_BONUS_CONSECUTIVE_ROUNDS );//help out the team in the losing streak
-		else
-		if((m_iNumConsecutiveCTLoses > 1) && (m_iLoserBonus < 3000))
-            m_iLoserBonus += TeamCashAwardValue( LOSER_BONUS_CONSECUTIVE_ROUNDS );//help out the team in the losing streak
-
-		// assign the wining and losing bonuses
-		if (m_iRoundWinStatus == WINNER_TER) // terrorists won
-		{
-			AddTeamAccount( TEAM_TERRORIST, HOSTAGE_ALIVE, iRescuedHostageBonus );
-			AddTeamAccount( TEAM_CT, LOSER_BONUS, m_iLoserBonus );
-		}
-		else if (m_iRoundWinStatus == WINNER_CT) // CT Won
-		{
-			AddTeamAccount( TEAM_CT, HOSTAGE_ALIVE, iRescuedHostageBonus );
-			if (m_bMapHasEscapeZone == false)	// only give them the bonus if this isn't an escape map
-				AddTeamAccount( TEAM_TERRORIST, LOSER_BONUS, m_iLoserBonus );
-		}
-		
-
-		//Update CT account based on number of hostages rescued
-		AddTeamAccount( TEAM_CT, RESCUED_HOSTAGE, m_iHostagesRescued * TeamCashAwardValue( RESCUED_HOSTAGE ) );*/
-
-
 		// Update individual players accounts and respawn players
 
 		//**********new code by SupraFiend
@@ -4014,17 +3815,6 @@ ConVar snd_music_selection(
 		//Adrian - No cash for anyone at first rounds! ( well, only the default. )
         // Get the cash bonus awarded for completing the round
 		int RoundBonus = m_bCompleteReset ? 0 : mp_afterroundmoney.GetInt();
-		if ( m_bCompleteReset )
-		{
-			//We are starting fresh. So it's like no one has ever won or lost.
-			m_iNumTerroristWins				= 0;
-			m_iNumTerroristWinsThisPhase	= 0;
-			m_iNumCTWins					= 0;
-			m_iNumCTWinsThisPhase			= 0;
-			m_iNumConsecutiveTerroristLoses	= mp_starting_losses.GetInt();
-			m_iNumConsecutiveCTLoses		= mp_starting_losses.GetInt();
-			m_iLoserBonus					= TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
-		}
 
 		for ( i = 1; i <= gpGlobals->maxClients; i++ )
 		{
@@ -4456,14 +4246,6 @@ ConVar snd_music_selection(
 			{
 				event->SetString("objective","HOSTAGE RESCUE");
 			}
-			else if ( m_bMapHasEscapeZone )
-			{
-				event->SetString("objective","PRISON ESCAPE");
-			}
-			else if ( m_iMapHasVIPSafetyZone == 1 )
-			{
-				event->SetString("objective","VIP RESCUE");
-			}
 			else if ( m_bMapHasBombTarget || m_bMapHasBombZone )
 			{
 				event->SetString("objective","BOMB TARGET");
@@ -4524,7 +4306,7 @@ ConVar snd_music_selection(
 		{
 			// don't send the final round event if one of the teams just won the round by clinching
 			int iNumWinsToClinch = GetNumWinsToClinch();
-			if ( m_iNumCTWins != iNumWinsToClinch && m_iNumTerroristWins != iNumWinsToClinch )
+			if ( m_match.GetCTScore() != iNumWinsToClinch && m_match.GetTerroristScore() != iNumWinsToClinch )
 			{
 				IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_final" );
 				if ( event )
@@ -4668,7 +4450,7 @@ ConVar snd_music_selection(
 		CGameRules::Think();
 
 		//Update replicated variable for time till next match or half
-		if ( GetPhase() == GAMEPHASE_HALFTIME )
+		if ( m_match.GetPhase() == GAMEPHASE_HALFTIME )
 		{
 			if ( mp_halftime_pausetimer.GetBool() )
 			{
@@ -4676,7 +4458,7 @@ ConVar snd_music_selection(
 				m_flRestartRoundTime += gpGlobals->curtime - m_flLastThinkTime;
 			}
 		}
-		else if ( GetPhase() == GAMEPHASE_MATCH_ENDED )
+		else if ( m_match.GetPhase() == GAMEPHASE_MATCH_ENDED )
 		{
 			if ( m_flRestartRoundTime > 0.0f && ((m_flRestartRoundTime - 3.0) <= gpGlobals->curtime) && !m_bVoiceWonMatchBragFired )
 			{
@@ -4684,8 +4466,7 @@ ConVar snd_music_selection(
 				for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 				{
 					CCSPlayer* pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( i );
-					int iWinningTeam = (m_iNumTerroristWins > m_iNumCTWins) ? TEAM_TERRORIST : TEAM_CT;
-					if ( pPlayer && pPlayer->IsAlive() && pPlayer->GetTeamNumber() == iWinningTeam )
+                    if( pPlayer && pPlayer->IsAlive() && pPlayer->GetTeamNumber() == m_match.GetWinningTeam() )
 					{
 						// have someone on the winning team brag about winning over the radio
 						pPlayer->Radio( "WonRound", "", true );
@@ -4743,7 +4524,7 @@ ConVar snd_music_selection(
 		bool bTeamHasClinchedVictory = false;
 
 		//Check for halftime switching
-		if ( GetPhase() == GAMEPHASE_PLAYING_FIRST_HALF )
+		if ( m_match.GetPhase() == GAMEPHASE_PLAYING_FIRST_HALF )
 		{
 			//The number of rounds before halftime depends on the mode and the associated convar
             int numRoundsBeforeHalftime =
@@ -4756,7 +4537,7 @@ ConVar snd_music_selection(
 			bool bhalftime = false;
 			if ( numRoundsBeforeHalftime > 0 )
 			{
-				if ( GetTotalRoundsPlayed() >= numRoundsBeforeHalftime )
+				if ( m_match.GetRoundsPlayed() >= numRoundsBeforeHalftime )
 				{
 					bhalftime = true;
 				}
@@ -4772,7 +4553,7 @@ ConVar snd_music_selection(
 
 			if ( bhalftime )
 			{
-				SetPhase( GAMEPHASE_HALFTIME );
+				m_match.SetPhase( GAMEPHASE_HALFTIME );
 				m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
 				m_flRestartRoundTime = gpGlobals->curtime + mp_halftime_duration.GetFloat();
 				SwitchTeamsAtRoundReset();
@@ -4781,12 +4562,12 @@ ConVar snd_music_selection(
 		}
 
 		//Check for end of half-time match
-		else if ( GetPhase() == GAMEPHASE_PLAYING_SECOND_HALF )
+		else if ( m_match.GetPhase() == GAMEPHASE_PLAYING_SECOND_HALF )
 		{
 			//Check for clinch
 			if ( iNumWinsToClinch > 0 && HasHalfTime() )
 			{
-				bTeamHasClinchedVictory = (m_iNumCTWins >= iNumWinsToClinch) || (m_iNumTerroristWins >= iNumWinsToClinch);
+                bTeamHasClinchedVictory = ( m_match.GetCTScore() >= iNumWinsToClinch ) || ( m_match.GetTerroristScore() >= iNumWinsToClinch );
 			}
 
 			//Finally, if there have enough rounds played, end the match
@@ -4795,7 +4576,7 @@ ConVar snd_music_selection(
 			int numRoundToEndMatch = mp_maxrounds.GetInt() + GetOvertimePlaying()*mp_overtime_maxrounds.GetInt();
 			if ( numRoundToEndMatch > 0 )
 			{
-				if ( GetTotalRoundsPlayed() >= numRoundToEndMatch || bTeamHasClinchedVictory )
+				if ( m_match.GetRoundsPlayed() >= numRoundToEndMatch || bTeamHasClinchedVictory )
 				{
 					bEndMatch = true;
 				}
@@ -4810,8 +4591,8 @@ ConVar snd_music_selection(
 			{
 				bEndMatch = false;
 
-				SetOvertimePlaying( GetOvertimePlaying() + 1 );
-				SetPhase( GAMEPHASE_HALFTIME );
+				m_match.GoToOvertime( 1 );
+				m_match.SetPhase( GAMEPHASE_HALFTIME );
 				m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
 				m_flRestartRoundTime = gpGlobals->curtime + mp_halftime_duration.GetFloat();
 				// SwitchTeamsAtRoundReset(); -- don't switch teams, only switch at true halftimes
@@ -4823,7 +4604,7 @@ ConVar snd_music_selection(
 				m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
 				GoToIntermission();
 
-				if ( bTeamHasClinchedVictory && GetTotalRoundsPlayed() < numRoundToEndMatch )
+				if ( bTeamHasClinchedVictory && m_match.GetRoundsPlayed() < numRoundToEndMatch )
 				{
 					// Send chat message to let players know why match is ending early
 					CRecipientFilter filter;
@@ -4840,7 +4621,7 @@ ConVar snd_music_selection(
 
 					filter.MakeReliable();
 
-					if ( m_iNumCTWins > m_iNumTerroristWins )
+					if ( m_match.GetCTScore() > m_match.GetTerroristScore() )
 					{
 						// CTs have clinched the match
 						UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#CStrike_TitlesTXT_CTs_Clinched_Match" );
@@ -4855,18 +4636,18 @@ ConVar snd_music_selection(
 		}
 
 		//If playing a non-halftime game, check the max rounds
-		else if ( GetPhase() == GAMEPHASE_PLAYING_STANDARD )
+		else if ( m_match.GetPhase() == GAMEPHASE_PLAYING_STANDARD )
 		{
 			// Check for a clinch
 			if ( mp_maxrounds.GetInt() > 0 && mp_match_can_clinch.GetBool() )
 			{
-				bTeamHasClinchedVictory = (m_iNumCTWins >= iNumWinsToClinch) || (m_iNumTerroristWins >= iNumWinsToClinch);
+                bTeamHasClinchedVictory = ( m_match.GetCTScore() >= iNumWinsToClinch ) || ( m_match.GetTerroristScore() >= iNumWinsToClinch );
 			}
 
 			// End the match if ( ( maxrounds are used ) and ( we've reached maxrounds or clinched the game ) ) or ( we've exceeded timelimit )
 			if ( mp_maxrounds.GetInt() > 0 )
 			{
-				if ( GetTotalRoundsPlayed() >= mp_maxrounds.GetInt() || bTeamHasClinchedVictory )
+				if ( m_match.GetRoundsPlayed() >= mp_maxrounds.GetInt() || bTeamHasClinchedVictory )
 				{
 					m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
 					GoToIntermission();
@@ -4902,7 +4683,7 @@ ConVar snd_music_selection(
 			
 			extern ConVar mp_do_warmup_period;
 
-            if ( UTIL_HumansInGame( true ) > 0 && ( GetWarmupPeriodEndTime() - 5 < gpGlobals->curtime) )
+            if ( UTIL_HumansInGame( true, true ) > 0 && ( GetWarmupPeriodEndTime() - 5 < gpGlobals->curtime) )
             {
 				mp_warmup_pausetimer.SetValue( 0 ); // Timer is unpausable within 5 seconds of its end.
 
@@ -4966,7 +4747,7 @@ ConVar snd_music_selection(
 		
 		if ( m_flRestartRoundTime > 0.0f && m_flRestartRoundTime <= gpGlobals->curtime )
 		{
-			if ( IsWarmupPeriod() && GetPhase() != GAMEPHASE_MATCH_ENDED && GetWarmupPeriodEndTime() <= gpGlobals->curtime && UTIL_HumansInGame( false ) && m_flGameStartTime != 0 )
+			if ( IsWarmupPeriod() && m_match.GetPhase() != GAMEPHASE_MATCH_ENDED && GetWarmupPeriodEndTime() <= gpGlobals->curtime && UTIL_HumansInGame( false, true ) && m_flGameStartTime != 0 )
             {
                 m_bCompleteReset = true;
                 m_flRestartRoundTime = gpGlobals->curtime + 1;
@@ -5010,11 +4791,11 @@ ConVar snd_music_selection(
 					m_bHasTriggeredRoundStartMusic = false;
 
 					// Don't call RoundEnd() before the first round of a match
-					if (m_iTotalRoundsPlayed > 0)
+					if (m_match.GetRoundsPlayed() > 0)
 					{
 						if (IsWarmupPeriod() &&
 							(GetWarmupPeriodEndTime() <= gpGlobals->curtime) &&
-							UTIL_HumansInGame(false))
+							UTIL_HumansInGame(false, true))
 						{
 							m_bCompleteReset = true;
 							m_flRestartRoundTime = gpGlobals->curtime + 1;
@@ -5185,18 +4966,6 @@ ConVar snd_music_selection(
 			break;
 		}
 
-		// More specific radio commands for the new scenarios : Prison & Assasination
-		if (m_bMapHasEscapeZone == TRUE)
-		{
-			Q_strncpy(CT_sentence , "Radio.elim", sizeof( CT_sentence ) );
-			Q_strncpy(T_sentence , "Radio.getout", sizeof( T_sentence ) );
-		}
-		else if (m_iMapHasVIPSafetyZone == 1)
-		{
-			Q_strncpy(CT_sentence , "Radio.vip", sizeof( CT_sentence ) );
-			Q_strncpy(T_sentence , "Radio.locknload", sizeof( T_sentence ) );
-		}
-
 		// Freeze period expired: kill the flag
 		m_bFreezePeriod = false;
 
@@ -5206,14 +4975,14 @@ ConVar snd_music_selection(
 			gameeventmanager->FireEvent( event );
 		}
 
-		if ( GetTotalRoundsPlayed() == 0 && !IsWarmupPeriod() )
+		if ( m_match.GetRoundsPlayed() == 0 && !IsWarmupPeriod() )
 		{
 			IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_match_start" );
 			if ( event )
 				gameeventmanager->FireEvent( event );
 		}
 		
-        if ( !IsPlayingGunGameTRBomb() || ( IsPlayingGunGameTRBomb() && GetPhase() != GAMEPHASE_MATCH_ENDED ) )
+        if ( !IsPlayingGunGameTRBomb() || ( IsPlayingGunGameTRBomb() && m_match.GetPhase() != GAMEPHASE_MATCH_ENDED ) )
         {
 			// Update the timers for all clients and play a sound
 			bool bCTPlayed = false;
@@ -5302,20 +5071,14 @@ ConVar snd_music_selection(
 
 			if ( nTeam == TEAM_CT )
 			{
-				m_iNumCTWins++;
-				m_iNumCTWinsThisPhase++;
-				UpdateTeamScores();
-
+				m_match.AddCTWins( 1 );
 				MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound( TEAM_TERRORIST );
 				AddTeamAccount( TEAM_CT, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_BOMB );
 				TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
 			}
 			else if ( nTeam == TEAM_TERRORIST )
 			{
-				m_iNumTerroristWins++;
-				m_iNumTerroristWinsThisPhase++;
-				UpdateTeamScores();
-
+				m_match.AddTerroristWins( 1 );
 				MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound( TEAM_CT );
 				AddTeamAccount( TEAM_TERRORIST, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_HOSTAGE );
 				TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
@@ -5331,40 +5094,23 @@ ConVar snd_music_selection(
 			//keep going until the bomb explodes or is defused
 			if( !m_bBombPlanted )
 			{
-				MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound(TEAM_TERRORIST);
-				AddTeamAccount( TEAM_CT, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_BOMB );
-				
-				m_iNumCTWins++;
-				m_iNumCTWinsThisPhase++;
-				TerminateRound( mp_round_restart_delay.GetFloat(), Target_Saved );
-				UpdateTeamScores();
+                m_match.AddCTWins( 1 );	
+                MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound(TEAM_TERRORIST);
+                AddTeamAccount( TEAM_CT, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_BOMB );
+                TerminateRound( mp_round_restart_delay.GetFloat(), Target_Saved );
 			}
 		}
 		else if ( m_bMapHasRescueZone )
 		{
 			MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound(TEAM_CT);
-			AddTeamAccount( TEAM_TERRORIST, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_HOSTAGE );
-			
-			m_iNumTerroristWins++;
-			m_iNumTerroristWinsThisPhase++;
-			TerminateRound( mp_round_restart_delay.GetFloat(), Hostages_Not_Rescued );
-			UpdateTeamScores();
+            m_match.AddTerroristWins( 1 );
+            AddTeamAccount( TEAM_TERRORIST, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_HOSTAGE );
+            TerminateRound( mp_round_restart_delay.GetFloat(), Hostages_Not_Rescued );
 		}
-		else if ( m_bMapHasEscapeZone )
+		//If there is no scenario-specific winner when the time runs out, just declare a draw
+		else
 		{
-			m_iNumCTWins++;
-			m_iNumCTWinsThisPhase++;
-			TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Not_Escaped );
-			UpdateTeamScores();
-		}
-		else if ( m_iMapHasVIPSafetyZone == 1 )
-		{
-			//m_iAccountTerrorist += 3250;
-			m_iNumTerroristWins++;
-			m_iNumTerroristWinsThisPhase++;
-
-			TerminateRound( mp_round_restart_delay.GetFloat(), VIP_Not_Escaped );
-			UpdateTeamScores();
+			TerminateRound( mp_round_restart_delay.GetFloat(), Round_Draw );
 		}
 
 #if defined( REPLAY_ENABLED )
@@ -5380,7 +5126,7 @@ ConVar snd_music_selection(
 	{
 		Msg( "Going to intermission...\n" );
 
-		SetPhase( GAMEPHASE_MATCH_ENDED );
+		m_match.SetPhase( GAMEPHASE_MATCH_ENDED );
 
 		IGameEvent *winEvent = gameeventmanager->CreateEvent( "cs_win_panel_match" );
 
@@ -5462,21 +5208,6 @@ ConVar snd_music_selection(
 		{
 			pPlayer->AddContributionScore( contributionscore_bomb_exploded.GetInt() );
 		}*/
-	}
-
-	int PlayerScoreInfoSort( const playerscore_t *p1, const playerscore_t *p2 )
-	{
-		// check frags
-		if ( p1->iScore > p2->iScore )
-			return -1;
-		if ( p2->iScore > p1->iScore )
-			return 1;
-
-		// check index
-		if ( p1->iPlayerIndex < p2->iPlayerIndex )
-			return -1;
-
-		return 1;
 	}
 
 #if defined (_DEBUG)
@@ -6136,9 +5867,9 @@ ConVar snd_music_selection(
 
 			// log the restart
 			UTIL_LogPrintf( "World triggered \"Restart_Round_(%i_%s)\"\n", iRestartDelay, iRestartDelay == 1 ? "second" : "seconds" );
-
-			UTIL_LogPrintf( "Team \"CT\" scored \"%i\" with \"%i\" players\n", m_iNumCTWins, m_iNumCT );
-			UTIL_LogPrintf( "Team \"TERRORIST\" scored \"%i\" with \"%i\" players\n", m_iNumTerroristWins, m_iNumTerrorist );
+			
+            UTIL_LogPrintf( "Team \"CT\" scored \"%i\" with \"%i\" players\n", m_match.GetCTScore(), m_iNumCT );
+            UTIL_LogPrintf( "Team \"TERRORIST\" scored \"%i\" with \"%i\" players\n", m_match.GetTerroristScore(), m_iNumTerrorist );
 
 			// let the players know
 			char strRestartDelay[64];
@@ -6265,46 +5996,19 @@ ConVar snd_music_selection(
 		int iTeamToSwap = TEAM_UNASSIGNED;
 		int iNumToSwap;
 
-		if (m_iMapHasVIPSafetyZone == 1) // The ratio for teams is different for Assasination maps
+		if (m_iNumCT > m_iNumTerrorist)
 		{
-			int iDesiredNumCT, iDesiredNumTerrorist;
-			
-			if ( (m_iNumCT + m_iNumTerrorist)%2 != 0)	// uneven number of players
-				iDesiredNumCT			= (int)((m_iNumCT + m_iNumTerrorist) * 0.55) + 1;
-			else
-				iDesiredNumCT			= (int)((m_iNumCT + m_iNumTerrorist)/2);
-			iDesiredNumTerrorist	= (m_iNumCT + m_iNumTerrorist) - iDesiredNumCT;
-
-			if ( m_iNumCT < iDesiredNumCT )
-			{
-				iTeamToSwap = TEAM_TERRORIST;
-				iNumToSwap = iDesiredNumCT - m_iNumCT;
-			}
-			else if ( m_iNumTerrorist < iDesiredNumTerrorist )
-			{
-				iTeamToSwap = TEAM_CT;
-				iNumToSwap = iDesiredNumTerrorist - m_iNumTerrorist;
-			}
-			else
-				return;
+			iTeamToSwap = TEAM_CT;
+			iNumToSwap = (m_iNumCT - m_iNumTerrorist)/2;
+		}
+		else if (m_iNumTerrorist > m_iNumCT)
+		{
+			iTeamToSwap = TEAM_TERRORIST;
+			iNumToSwap = (m_iNumTerrorist - m_iNumCT)/2;
 		}
 		else
 		{
-			if (m_iNumCT > m_iNumTerrorist)
-			{
-				iTeamToSwap = TEAM_CT;
-				iNumToSwap = (m_iNumCT - m_iNumTerrorist)/2;
-				
-			}
-			else if (m_iNumTerrorist > m_iNumCT)
-			{
-				iTeamToSwap = TEAM_TERRORIST;
-				iNumToSwap = (m_iNumTerrorist - m_iNumCT)/2;
-			}
-			else
-			{
-				return;	// Teams are even.. Get out of here.
-			}
+			return;	// Teams are even.. Get out of here.
 		}
 
 		if (iNumToSwap > 3) // Don't swap more than 3 players at a time.. This is a naive method of avoiding infinite loops.
@@ -6356,7 +6060,6 @@ ConVar snd_music_selection(
 					continue; // don't swap bots - the bot system will handle that
 
 				if ( pPlayer &&
-					 ( m_pVIP != pPlayer ) && 
 					 ( pPlayer->GetTeamNumber() == iTeamToSwap ) && 
 					 ( engine->GetPlayerUserId( pPlayer->edict() ) > iHighestUserID ) &&
 					 ( pPlayer->State_Get() != STATE_PICKINGCLASS ) )
@@ -6379,7 +6082,7 @@ ConVar snd_music_selection(
 			UTIL_ClientPrintFilter( traitors, HUD_PRINTCENTER, "#Player_Balanced" );
 			UTIL_ClientPrintFilter( loyalists, HUD_PRINTCENTER, "#Teams_Balanced" );
 		}
-	}
+    }
     
     // the following two functions cap the number of players on a team to five instead of basing it on the number of spawn points
     int CCSGameRules::MaxNumPlayersOnTerrTeam()
@@ -6493,11 +6196,11 @@ ConVar snd_music_selection(
 			team = TEAM_CT;
 		}
 		// Choose the team that's losing
-		else if ( m_iNumTerroristWins < m_iNumCTWins )
+		else if ( m_match.GetTerroristScore() < m_match.GetCTScore() )
 		{
 			team = TEAM_TERRORIST;
 		}
-		else if ( m_iNumCTWins < m_iNumTerroristWins )
+		else if ( m_match.GetCTScore() < m_match.GetTerroristScore() )
 		{
 			team = TEAM_CT;
 		}
@@ -6672,16 +6375,6 @@ ConVar snd_music_selection(
 				iWinnerTeam = WINNER_TER;
 				break;
 
-			case VIP_Assassinated:
-				text = "#VIP_Assassinated";
-				iWinnerTeam = WINNER_TER;
-				break;
-
-			case Terrorists_Escaped:
-				text = "#Terrorists_Escaped";
-				iWinnerTeam = WINNER_TER;
-				break;
-
 			case Terrorists_Win:
 				text = "#Terrorists_Win";
 				iWinnerTeam = WINNER_TER;
@@ -6691,27 +6384,7 @@ ConVar snd_music_selection(
 				text = "#Hostages_Not_Rescued";
 				iWinnerTeam = WINNER_TER;
 				break;
-
-			case VIP_Not_Escaped:
-				text = "#VIP_Not_Escaped";
-				iWinnerTeam = WINNER_TER;
-				break;
 // CT wins:
-			case VIP_Escaped:
-				text = "#VIP_Escaped";
-				iWinnerTeam = WINNER_CT;
-				break;
-
-			case CTs_PreventEscape:
-				text = "#CTs_PreventEscape";
-				iWinnerTeam = WINNER_CT;
-				break;
-
-			case Escaping_Terrorists_Neutralized:
-				text = "#Escaping_Terrorists_Neutralized";
-				iWinnerTeam = WINNER_CT;
-				break;
-
 			case Bomb_Defused:
 				text = "#Bomb_Defused";
 				iWinnerTeam = WINNER_CT;
@@ -6729,11 +6402,6 @@ ConVar snd_music_selection(
 
 			case Target_Saved:
 				text = "#Target_Saved";
-				iWinnerTeam = WINNER_CT;
-				break;
-
-			case Terrorists_Not_Escaped:
-				text = "#Terrorists_Not_Escaped";
 				iWinnerTeam = WINNER_CT;
 				break;
 // no winners:
@@ -6861,10 +6529,6 @@ ConVar snd_music_selection(
 				GoToIntermission();
 		}
 	}
-
-	//=============================================================================
-	// HPE_BEGIN:	
-	//=============================================================================
 
 	// Helper to determine if all players on a team are playing for the same clan
 	bool CCSGameRules::IsClanTeam( CTeam *pTeam )
@@ -7038,29 +6702,6 @@ ConVar snd_music_selection(
 			}
 		}
 	}
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
-
-	void CCSGameRules::UpdateTeamScores()
-	{
-		CCSTeam *pTerrorists = GetGlobalCSTeam( TEAM_TERRORIST );
-		CCSTeam *pCTs = GetGlobalCSTeam( TEAM_CT );
-
-		Assert( pTerrorists && pCTs );
-
-		if ( pTerrorists )
-		{
-			pTerrorists->SetScore( m_iNumTerroristWins );
-			pTerrorists->SetScoreThisPhase( m_iNumTerroristWinsThisPhase );
-		}
-
-		if ( pCTs )
-		{
-			pCTs->SetScore( m_iNumCTWins );
-			pCTs->SetScoreThisPhase( m_iNumCTWinsThisPhase );
-		}
-	}
 
 
 	void CCSGameRules::CheckMapConditions()
@@ -7102,26 +6743,6 @@ ConVar snd_music_selection(
 		{
 			m_bMapHasRescueZone = false;
 		}
-
-		// GOOSEMAN : See if this map has func_escapezone entities
-		if ( gEntList.FindEntityByClassname( NULL, "func_escapezone" ) )
-		{
-			m_bMapHasEscapeZone = true;
-		}
-		else
-		{
-			m_bMapHasEscapeZone = false;
-		}
-
-		// Check to see if this map has VIP safety zones
-		if ( gEntList.FindEntityByClassname( NULL, "func_vip_safetyzone" ) )
-		{
-			m_iMapHasVIPSafetyZone = 1;
-		}
-		else
-		{
-			m_iMapHasVIPSafetyZone = 2;
-		}
 	}
 
 
@@ -7136,15 +6757,7 @@ ConVar snd_music_selection(
 				pPlayer->SwitchTeam(); */
 		}
 
-		// Swap Team victories
-		int iTemp;
-
-		iTemp = m_iNumCTWins;
-		m_iNumCTWins = m_iNumTerroristWins;
-		m_iNumTerroristWins = iTemp;
-		
-		// Update the clients team score
-		UpdateTeamScores();
+		m_match.SwapTeamScores();
 	}
 
 
@@ -7401,26 +7014,6 @@ ConVar snd_music_selection(
 			CBaseEntity::Create( "cs_gamerules", vec3_origin, vec3_angle );
 		Assert( pEnt );
 	}
-
-#define MY_USHRT_MAX	0xffff
-#define MY_UCHAR_MAX	0xff
-
-bool DataHasChanged( void )
-{
-	for ( int i = 0; i < CS_NUM_LEVELS; i++ )
-	{
-		if ( g_iTerroristVictories[i] != 0 || g_iCounterTVictories[i] != 0 )
-			return true;
-	}
-
-	for ( int i = 0; i < WEAPON_MAX; i++ )
-	{
-		if ( g_iWeaponPurchases[i] != 0 )
-			return true;
-	}
-
-	return false;
-}
 #endif	// CLIENT_DLL
 
 CBaseCombatWeapon *CCSGameRules::GetNextBestWeapon( CBaseCombatCharacter *pPlayer, CBaseCombatWeapon *pCurrentWeapon )
@@ -7681,12 +7274,6 @@ bool CCSGameRules::IsTeammateSolid( void ) const
 bool CCSGameRules::IsEnemySolid( void ) const
 {
 	return mp_solid_enemies.GetBool();
-}
-
-bool CCSGameRules::IsVIPMap() const
-{
-	//MIKETODO: VIP mode
-	return false;
 }
 
 
@@ -8281,12 +7868,12 @@ bool CCSGameRules::IsLastRoundBeforeHalfTime( void )
 	if ( HasHalfTime() )
 	{
 		int numRoundsBeforeHalftime = -1;
-		if ( GetPhase() == GAMEPHASE_PLAYING_FIRST_HALF )
+		if ( m_match.GetPhase() == GAMEPHASE_PLAYING_FIRST_HALF )
 			numRoundsBeforeHalftime = GetOvertimePlaying()
 			? (mp_maxrounds.GetInt() + (2 * GetOvertimePlaying() - 1) * (mp_overtime_maxrounds.GetInt() / 2))
 			: (mp_maxrounds.GetInt() / 2);
-
-		if ( (numRoundsBeforeHalftime > 0) && (GetTotalRoundsPlayed() == (numRoundsBeforeHalftime - 1)) )
+		
+        if ( ( numRoundsBeforeHalftime > 0 ) && ( m_match.GetRoundsPlayed() == (numRoundsBeforeHalftime-1) ) )
 		{
 			return true;
 		}
@@ -8499,7 +8086,7 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 	if ( IsPlayingClassic() )
 	{
 		int iNumWinsToClinch = ( mp_maxrounds.GetInt() / 2 ) + 1 + GetOvertimePlaying() * ( mp_overtime_maxrounds.GetInt() / 2 );
-		bTeamHasClinchedVictory = mp_match_can_clinch.GetBool() && ( m_iNumCTWins >= iNumWinsToClinch ) || ( m_iNumTerroristWins >= iNumWinsToClinch );
+		bTeamHasClinchedVictory = mp_match_can_clinch.GetBool() && ( m_match.GetCTScore() >= iNumWinsToClinch ) || ( m_match.GetTerroristScore() >= iNumWinsToClinch );
 	}
 
 	char strAmount[8];
@@ -8517,16 +8104,16 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 		{
 			pPlayer->AddAccountFromTeam( amount, true, (TeamCashAward::Type)reason );
 
-			if ( !IsLastRoundBeforeHalfTime() && (GetPhase() != GAMEPHASE_HALFTIME) &&
-				 (GetTotalRoundsPlayed() != mp_maxrounds.GetInt() + GetOvertimePlaying() * mp_overtime_maxrounds.GetInt()) && !bTeamHasClinchedVictory )
+			if ( !IsLastRoundBeforeHalfTime() && ( m_match.GetPhase() != GAMEPHASE_HALFTIME ) &&
+				( m_match.GetRoundsPlayed() != mp_maxrounds.GetInt() + GetOvertimePlaying() * mp_overtime_maxrounds.GetInt() ) && !bTeamHasClinchedVictory )
 			{
 				ClientPrint( pPlayer, HUD_PRINTTALK, awardReasonToken, strAmount );
 			}
 		}
 		else
 		{
-			if ( !IsLastRoundBeforeHalfTime() && (GetPhase() != GAMEPHASE_HALFTIME) &&
-				 (GetTotalRoundsPlayed() != mp_maxrounds.GetInt() + GetOvertimePlaying() * mp_overtime_maxrounds.GetInt()) && !bTeamHasClinchedVictory )
+			if ( !IsLastRoundBeforeHalfTime() && ( m_match.GetPhase() != GAMEPHASE_HALFTIME ) &&
+				( m_match.GetRoundsPlayed() != mp_maxrounds.GetInt() + GetOvertimePlaying() * mp_overtime_maxrounds.GetInt() ) && !bTeamHasClinchedVictory )
 			{
 				// TODO: This code assumes on there only being 2 possible reasons for DoesPlayerGetRoundStartMoney returning false: Suicide or Running down the clock as T.
 				// This code should not make that assumption and the awardReasonToken should probably be plumbed to express those properly.
@@ -8611,6 +8198,11 @@ void CCSGameRules::PlayerTookDamage(CCSPlayer* player, const CTakeDamageInfo &da
 			m_firstBloodTime = gpGlobals->curtime - m_fRoundStartTime;
 		}
 	}
+}
+
+CCSMatch* CCSGameRules::GetMatch( void )
+{
+	return &m_match;
 }
 
 void CCSGameRules::FreezePlayers( void )
@@ -8984,11 +8576,11 @@ void CCSGameRules::InitializeGameTypeAndMode( void )
 
         if ( CSGameRules()->HasHalfTime() )
         {
-            SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
+            m_match.SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
         }
         else
         {
-            SetPhase( GAMEPHASE_PLAYING_STANDARD );
+            m_match.SetPhase( GAMEPHASE_PLAYING_STANDARD );
         }
 
         // Set the map convars
@@ -9184,9 +8776,9 @@ bool CCSGameRules::IsMatchPoint() const
 		bMatchPoint = ( pCTs && ( pCTs->Get_Score() == iNumWinsToClinch-1 ) ) || ( pTerrorists && ( pTerrorists->Get_Score() == iNumWinsToClinch-1 ) );
 	}
 #else
-	if ( GetPhase() != GAMEPHASE_PLAYING_FIRST_HALF )
+	if ( m_match.GetPhase() != GAMEPHASE_PLAYING_FIRST_HALF )
 	{
-		bMatchPoint = ( m_iNumCTWins == iNumWinsToClinch-1 || m_iNumTerroristWins == iNumWinsToClinch-1);
+		bMatchPoint = ( m_match.GetCTScore() == iNumWinsToClinch-1 || m_match.GetTerroristScore() == iNumWinsToClinch-1);
 	}
 #endif
 	return bMatchPoint;
@@ -9204,7 +8796,7 @@ bool CCSGameRules::AreTeamsPlayingSwitchedSides() const
 {
 	if ( !GetOvertimePlaying() )
 	{
-		switch ( GetPhase() )
+		switch ( GetGamePhase() )
 		{
 		case GAMEPHASE_PLAYING_SECOND_HALF:
 			return true;
@@ -9216,7 +8808,7 @@ bool CCSGameRules::AreTeamsPlayingSwitchedSides() const
 	}
 	else
 	{
-		switch ( GetPhase() )
+		switch ( GetGamePhase() )
 		{
 		case GAMEPHASE_PLAYING_SECOND_HALF:
 			// Playing 2nd half of 2nd half of every even OT, e.g. second OT, will result in switched teams

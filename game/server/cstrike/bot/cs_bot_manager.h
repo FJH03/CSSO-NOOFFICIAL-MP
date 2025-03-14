@@ -292,6 +292,7 @@ public:
 
 	#define FROM_CONSOLE true
 	bool BotAddCommand( int team, bool isFromConsole = false, const char *profileName = NULL, CSWeaponType weaponType = WEAPONTYPE_UNKNOWN, BotDifficultyType difficulty = NUM_DIFFICULTY_LEVELS );	///< process the "bot_add" console command
+	bool BotPlaceCommand( uint nTeamMask = 0xFFFFFFFF ); //Moves a bot at the location under the cursor.  For perf and lighting testing.
 
 private:
 	enum SkillType { LOW, AVERAGE, HIGH, RANDOM };

@@ -687,6 +687,7 @@ public:
 	int OutnumberedCount( void ) const;							///< return number of enemies we are outnumbered by
 
 	#define ONLY_VISIBLE_ENEMIES true
+	CCSPlayer *GetImportantEnemy( bool checkVisibility = false ) const;	///< return the closest "important" enemy for the given scenario (bomb carrier, hostage escorter)
 
 	void UpdateReactionQueue( void );							///< update our reaction time queue
 	CCSPlayer *GetRecognizedEnemy( void );						///< return the most dangerous threat we are "conscious" of
@@ -1912,7 +1913,7 @@ public:
 		m_route = route;
 
 		float baseDangerFactor = CSGameRules()->IsPlayingGunGameTRBomb() ? 0.25f : 100.0f;
- 		m_dangerFactor = (1.0f - (0.95f * m_bot->GetProfile()->GetAggression())) * baseDangerFactor;
+		m_dangerFactor = (1.0f - (0.95f * m_bot->GetProfile()->GetAggression())) * baseDangerFactor;
 	}
 
 	// HPE_TODO[pmf]: check that these new parameters are okay to be ignored
@@ -2079,4 +2080,3 @@ extern const HidingSpot *FindInitialEncounterSpot( CBaseEntity *me, const Vector
 
 
 #endif	// _CS_BOT_H_
-

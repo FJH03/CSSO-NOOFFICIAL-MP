@@ -21,7 +21,6 @@
 
 IMPLEMENT_CLIENTCLASS_DT(C_CS_PlayerResource, DT_CSPlayerResource, CCSPlayerResource)
 	RecvPropInt( RECVINFO( m_iPlayerC4 ) ),
-	RecvPropInt( RECVINFO( m_iPlayerVIP ) ),
 	RecvPropVector( RECVINFO(m_vecC4) ),
 	RecvPropArray3( RECVINFO_ARRAY(m_bHostageAlive), RecvPropInt( RECVINFO(m_bHostageAlive[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_isHostageFollowingSomeone), RecvPropInt( RECVINFO(m_isHostageFollowingSomeone[0]))),
@@ -68,11 +67,6 @@ C_CS_PlayerResource::C_CS_PlayerResource()
 //-----------------------------------------------------------------------------
 C_CS_PlayerResource::~C_CS_PlayerResource()
 {
-}
-
-bool C_CS_PlayerResource::IsVIP(int iIndex )
-{
-	return m_iPlayerVIP == iIndex;
 }
 
 bool C_CS_PlayerResource::HasC4(int iIndex )

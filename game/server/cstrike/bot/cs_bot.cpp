@@ -120,7 +120,7 @@ int CCSBot::OnTakeDamage( const CTakeDamageInfo &info )
 		
 		bool m_bShouldTalkAboutFF = cv_bot_chatter_friendlyfire_from_bots.GetBool() ? true : !player->IsBot();
 
-		if ( m_bShouldTalkAboutFF && IsOtherSameTeam( player->GetTeamNumber() ) && !IsOtherEnemy( player ) && info.GetDamage() > 0 )
+		if ( m_bShouldTalkAboutFF && IsOtherSameTeam( player->GetTeamNumber() ) && !IsOtherEnemy( player ) )
 		{
 			// Response rules specifically needs to know if this is bullet or knife damage, so no need to do a fully general solution at this time
 			const char *pDmgType = "OTHER";
@@ -642,7 +642,7 @@ int CCSBot::OutnumberedCount( void ) const
 
 //--------------------------------------------------------------------------------------------------------------
 /**
- * Return the closest "important" enemy for the given scenario (bomb carrier, VIP, hostage escorter)
+ * Return the closest "important" enemy for the given scenario (bomb carrier, hostage escorter)
  */
 CCSPlayer *CCSBot::GetImportantEnemy( bool checkVisibility ) const
 {
@@ -1050,8 +1050,6 @@ const char *CCSBot::GetTaskName( void ) const
 		"ESCAPE_FROM_BOMB",
 		"HOLD_POSITION",
 		"FOLLOW",
-		"VIP_ESCAPE",
-		"GUARD_VIP_ESCAPE_ZONE",
 		"COLLECT_HOSTAGES",
 		"RESCUE_HOSTAGES",
 		"GUARD_HOSTAGES",

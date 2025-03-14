@@ -33,7 +33,10 @@ public:
 	// Data Handling
 	virtual char	*Get_Name( void );
 	virtual char	*Get_ClanName( void );
-	virtual int		Get_Score( void );
+	int				Get_Score( void )				{ return m_scoreTotal; }
+ 	int				Get_Score_First_Half( void )	{ return m_scoreFirstHalf; }
+ 	int				Get_Score_Second_Half( void )	{ return m_scoreSecondHalf; }	
+ 	int				Get_Score_Overtime( void )		{ return m_scoreOvertime; }
 	virtual int		Get_Deaths( void );
 	virtual int		Get_Ping( void );
 
@@ -48,8 +51,6 @@ public:
 	virtual int		GetGGLeader( int nTeam );
 
 	int		GetTeamNumber() const;
-
-	int		GetRoundsWon(void) { return m_iRoundsWon; }
 
 	void	RemoveAllPlayers();
 
@@ -66,8 +67,10 @@ public:
 	CUtlVector< int > m_aPlayers;
 	char	m_szTeamname[ MAX_TEAM_NAME_LENGTH ];
 	char	m_szClanTeamname[ MAX_TEAM_NAME_LENGTH ];
-	int		m_iScore;
-	int		m_iRoundsWon;
+	int		m_scoreTotal;
+ 	int		m_scoreFirstHalf;
+ 	int		m_scoreSecondHalf;
+ 	int		m_scoreOvertime;
 	int		m_nGGLeaderEntIndex_CT;
 	int		m_nGGLeaderEntIndex_T;
 

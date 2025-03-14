@@ -34,9 +34,11 @@ void RecvProxyArrayLength_PlayerArray( void *pStruct, int objectID, int currentA
 
 
 IMPLEMENT_CLIENTCLASS_DT_NOBASE(C_Team, DT_Team, CTeam)
-	RecvPropInt( RECVINFO(m_iTeamNum)),
-	RecvPropInt( RECVINFO(m_iScore)),
-	RecvPropInt( RECVINFO(m_iRoundsWon) ),
+	RecvPropInt( RECVINFO( m_iTeamNum ) ),
+	RecvPropInt( RECVINFO( m_scoreTotal ) ),
+	RecvPropInt( RECVINFO( m_scoreFirstHalf ) ),
+	RecvPropInt( RECVINFO( m_scoreSecondHalf) ),
+	RecvPropInt( RECVINFO( m_scoreOvertime ) ),
 	RecvPropString( RECVINFO(m_szTeamname)),
 	RecvPropString( RECVINFO(m_szClanTeamname)),
 
@@ -55,8 +57,10 @@ END_RECV_TABLE()
 BEGIN_PREDICTION_DATA( C_Team )
 	DEFINE_PRED_ARRAY( m_szTeamname, FIELD_CHARACTER, MAX_TEAM_NAME_LENGTH, FTYPEDESC_PRIVATE ),
 	DEFINE_PRED_ARRAY( m_szClanTeamname, FIELD_CHARACTER, MAX_TEAM_NAME_LENGTH, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_FIELD( m_iScore, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_FIELD( m_iRoundsWon, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
+	DEFINE_PRED_FIELD( m_scoreTotal, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
+ 	DEFINE_PRED_FIELD( m_scoreFirstHalf, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
+ 	DEFINE_PRED_FIELD( m_scoreSecondHalf, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
+ 	DEFINE_PRED_FIELD( m_scoreOvertime, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
 	DEFINE_PRED_FIELD( m_iDeaths, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
 	DEFINE_PRED_FIELD( m_iPing, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
 	DEFINE_PRED_FIELD( m_iPacketloss, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
@@ -74,8 +78,10 @@ CUtlVector< C_Team * > g_Teams;
 //-----------------------------------------------------------------------------
 C_Team::C_Team()
 {
-	m_iScore = 0;
-	m_iRoundsWon = 0;
+	m_scoreTotal = 0;
+ 	m_scoreFirstHalf = 0;
+ 	m_scoreSecondHalf = 0;
+ 	m_scoreOvertime = 0;
 	memset( m_szTeamname, 0, sizeof(m_szTeamname) );
 	memset( m_szClanTeamname, 0, sizeof(m_szClanTeamname) );
 
@@ -138,14 +144,6 @@ char *C_Team::Get_Name( void )
 char *C_Team::Get_ClanName( void )
 {
  	return m_szClanTeamname;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-int C_Team::Get_Score( void )
-{
-	return m_iScore;
 }
 
 //-----------------------------------------------------------------------------

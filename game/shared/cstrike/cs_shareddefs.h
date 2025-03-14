@@ -388,7 +388,7 @@ enum e_RoundEndReason
     Round_Draw,
     All_Hostages_Rescued,
     Target_Saved,
-    VIP_Not_Escaped,
+	Hostages_Not_Rescued,
     Game_Commencing,
     RoundEndReason_Count    
 };

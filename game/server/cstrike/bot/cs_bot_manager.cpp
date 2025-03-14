@@ -40,8 +40,8 @@ ConVar bot_show_battlefront( "bot_show_battlefront", "0", FCVAR_GAMEDLL | FCVAR_
 
 int UTIL_CSSBotsInGame( void );
 
-ConVar bot_join_in_warmup( "bot_join_in_warmup", "1", FCVAR_GAMEDLL, "Prevents bots from joining the server while warmup phase is active." );
 ConVar bot_join_delay( "bot_join_delay", "0", FCVAR_GAMEDLL, "Prevents bots from joining the server for this many seconds after a map change." );
+ConVar bot_join_in_warmup( "bot_join_in_warmup", "1", FCVAR_GAMEDLL, "Prevents bots from joining the server while warmup phase is active." );
 
 /**
  * Determine whether bots can be used or not
@@ -137,14 +137,14 @@ void CCSBotManager::RestartRound( void )
 	SetLooseBomb( NULL );
 	m_isBombPlanted = false;
 	if ( CSGameRules()->IsPlayingGunGameTRBomb() )
- 	{
- 		// push to plant the bomb quickly in this game mode
- 		m_earliestBombPlantTimestamp = gpGlobals->curtime + RandomFloat( 0.0f, 10.0f );
- 	}
- 	else
- 	{
- 		m_earliestBombPlantTimestamp = gpGlobals->curtime + RandomFloat( 10.0f, 30.0f ); // 60
- 	}
+	{
+		// push to plant the bomb quickly in this game mode
+		m_earliestBombPlantTimestamp = gpGlobals->curtime + RandomFloat( 0.0f, 10.0f );
+	}
+	else
+	{
+		m_earliestBombPlantTimestamp = gpGlobals->curtime + RandomFloat( 10.0f, 30.0f ); // 60
+	}
 	m_bombDefuser = NULL;
 
 	ResetRadioMessageTimestamps();
@@ -345,7 +345,6 @@ bool CCSBotManager::IsOnDefense( const CCSPlayer *player ) const
 
 		case SCENARIO_RESCUE_HOSTAGES:
 			return (player->GetTeamNumber() == TEAM_TERRORIST);
-
 	}
 
 	return false;
@@ -532,6 +531,28 @@ void BotArgumentsFromArgv( const CCommand &args, const char **name, CSWeaponType
 			Q_strncpy( s_name, token, sizeof( s_name ) );
 		}
 	}
+}
+
+
+//--------------------------------------------------------------------------------------------------------------
+CON_COMMAND_F( bot_place, "bot_place - Places a bot from the map at where the local player is pointing.", FCVAR_GAMEDLL | FCVAR_CHEAT )
+{
+	if ( !UTIL_IsCommandIssuedByServerAdmin() )
+		return;
+
+	uint nTeamMask = 0;
+
+	for ( int i = 1; i < args.ArgC(); ++i )
+	{
+		if ( !V_strcmp( args.Arg( i ), "t" ) )
+			nTeamMask |= 1 << TEAM_TERRORIST;
+		else if ( !V_strcmp( args.Arg( i ), "ct" ) )
+			nTeamMask |= 1 << TEAM_CT;
+	}
+	if ( !nTeamMask )
+		nTeamMask = 0xFFFFFFFF;
+
+	TheCSBots()->BotPlaceCommand(nTeamMask);
 }
 
 
@@ -1055,6 +1076,92 @@ bool CCSBotManager::BotAddCommand( int team, bool isFromConsole, const char *pro
 	return true;
 }
 
+/**
+ * Process the "bot_place" console command
+ */
+bool CCSBotManager::BotPlaceCommand( uint nTeamMask )
+{
+	static int lastBotPlaced = -1;
+
+	int numBots = 0;	
+	//Count the number of bots in the map.
+	for ( int i = 1; i <= gpGlobals->maxClients; ++i )
+	{
+		CCSBot *bot = dynamic_cast<CCSBot *>(UTIL_PlayerByIndex( i ));
+		if ( NULL != bot )
+		{
+			numBots++;
+		}
+	}
+
+	if ( numBots <= 0 )
+	{
+		Msg( "Error: bot_place needs at least one bot already in the map.\n" );
+		return false;
+	}
+
+	// See which bot is the next one to be placed.
+	int nextBotToPlace = (lastBotPlaced+1) % numBots;
+	int botCount = 0;
+	CCSPlayer *botToMove = NULL;
+	for ( int i = 1; i <= gpGlobals->maxClients && botToMove == NULL; ++i )
+	{
+		CCSBot *bot = dynamic_cast<CCSBot *>(UTIL_PlayerByIndex( i ));
+		if ( NULL != bot )
+		{
+			if ( nextBotToPlace == botCount )
+			{
+				if ( nTeamMask & ( 1u << bot->GetTeamNumber() ) )
+				{
+					botToMove = bot;
+				}
+				else
+				{
+					nextBotToPlace = ( nextBotToPlace + 1 ) % numBots;
+				}
+			}
+			botCount++;
+		}
+	}
+	lastBotPlaced = nextBotToPlace;
+
+	CBasePlayer* localPlayer = UTIL_GetCommandClient();
+
+	if ( NULL == localPlayer )
+	{
+		Msg( "Error: BotPlaceCommand() could not find a human player to move a bot to.\n" );
+		return false;
+	}
+	if ( NULL == botToMove )
+	{
+		Msg( "Error: BotPlaceCommand() could not find a bot to move to player's location.\n" );
+		return false;
+	}
+
+	Vector forward;
+	localPlayer->EyeVectors( &forward, NULL, NULL );
+	trace_t tr;
+	UTIL_ClearTrace( tr );
+	// trace forward from the eye
+	Vector vEye = localPlayer->GetAbsOrigin() + localPlayer->GetViewOffset(), vTargetEye = vEye + ( forward * PLAYER_USE_RADIUS );
+	UTIL_TraceLine( vEye, vTargetEye, CONTENTS_SOLID, localPlayer->GetRefEHandle().Get(), COLLISION_GROUP_NONE, &tr );
+	if ( tr.DidHit() )
+		vTargetEye = tr.endpos;
+
+	UTIL_ClearTrace( tr );
+	Vector vTargetOrigin = vTargetEye - localPlayer->GetViewOffset() - Vector( 0, 0, ( 0.03125 ) );
+	UTIL_TraceLine( vTargetEye, vTargetOrigin, CONTENTS_SOLID, localPlayer->GetRefEHandle().Get(), COLLISION_GROUP_NONE, &tr );
+	if ( tr.DidHit() )
+	{
+		vTargetOrigin = tr.endpos;
+		vTargetOrigin.z += ( 0.03125 );
+	}
+
+	botToMove->SetAbsOrigin( vTargetOrigin );
+
+	return true;
+}
+
 int UTIL_CSSBotsInGame()
 {
 	int count = 0;
@@ -1126,6 +1233,7 @@ void CCSBotManager::MaintainBotQuota( void )
 	if (TheNavMesh->IsGenerating())
 		return;
 
+	int totalHumansInGame = UTIL_HumansInGame();
 	int humanPlayersInGame = UTIL_HumansInGame( IGNORE_SPECTATORS, IGNORE_UNASSIGNED );
 	int spectatorPlayersInGame = UTIL_SpectatorsInGame();
 
@@ -1153,7 +1261,8 @@ void CCSBotManager::MaintainBotQuota( void )
 		// unless the round is already in progress, in which case we play with what we've been dealt
 		if ( !isRoundInProgress )
 		{
-			desiredBotCount = MAX( 0, desiredBotCount - humanPlayersInGame + spectatorPlayersInGame );		}
+			desiredBotCount = MAX( 0, desiredBotCount - humanPlayersInGame + spectatorPlayersInGame );
+		}
 		else
 		{
 			desiredBotCount = botsInGame;
@@ -1186,7 +1295,7 @@ void CCSBotManager::MaintainBotQuota( void )
 	{
 		desiredBotCount = 0;
 	}
-	
+
 	// If the match is in warmup phase and we don't want any bots in warmup then don't have
 	// the bots joining the match during warmup
 	if ( !bot_join_in_warmup.GetBool() && CSGameRules()->IsWarmupPeriod() )
@@ -1196,7 +1305,7 @@ void CCSBotManager::MaintainBotQuota( void )
 
 	// if bots will auto-vacate, we need to keep one slot open to allow players to join
 	if (cv_bot_auto_vacate.GetBool())
-		desiredBotCount = MIN( desiredBotCount, gpGlobals->maxClients - humanPlayersInGame + spectatorPlayersInGame );
+		desiredBotCount = MIN( desiredBotCount, gpGlobals->maxClients - (humanPlayersInGame + 1) );
 	else
 		desiredBotCount = MIN( desiredBotCount, gpGlobals->maxClients - humanPlayersInGame + spectatorPlayersInGame );
 
@@ -1249,22 +1358,23 @@ void CCSBotManager::MaintainBotQuota( void )
 		int kickTeam;
 
 		CCSMatch* match = CSGameRules()->GetMatch();
-		// remove from the team that's winning
+
+		// remove from the team that has more players
+		if (CSGameRules()->m_iNumTerrorist > CSGameRules()->m_iNumCT)
+		{
+			kickTeam = TEAM_TERRORIST;
+		}
+		else if (CSGameRules()->m_iNumTerrorist < CSGameRules()->m_iNumCT)
+		{
+			kickTeam = TEAM_CT;
+		}
+
+		// remove from the team that's winning				
 		else if ( match && match->GetWinningTeam() == TEAM_TERRORIST )
 		{
 			kickTeam = TEAM_TERRORIST;
 		}
 		else if ( match && match->GetWinningTeam() == TEAM_CT )
-		{
-			kickTeam = TEAM_CT;
-		}
-
-		// remove from the team that's winning
-		else if (CSGameRules()->m_iNumTerroristWins > CSGameRules()->m_iNumCTWins)
-		{
-			kickTeam = TEAM_TERRORIST;
-		}
-		else if (CSGameRules()->m_iNumCTWins > CSGameRules()->m_iNumTerroristWins)
 		{
 			kickTeam = TEAM_CT;
 		}
@@ -1622,7 +1732,8 @@ void CCSBotManager::OnServerShutdown( IGameEvent *event )
 			"bot_chatter",
 			"bot_prefix",
 			"bot_join_team",
-			"bot_defer_to_human",
+			"bot_defer_to_human_items",
+			"bot_defer_to_human_goals",
 			"bot_join_after_player",
 			"bot_allow_rogues",
 			"bot_allow_pistols",
@@ -1631,7 +1742,8 @@ void CCSBotManager::OnServerShutdown( IGameEvent *event )
 			"bot_allow_machine_guns",
 			"bot_allow_rifles",
 			"bot_allow_snipers",
-			"bot_allow_grenades"
+			"bot_allow_grenades",
+			"bot_controllable"
 		};
 		
 		KeyValues *data = new KeyValues( "ServerConfig" );
@@ -2020,6 +2132,7 @@ void CCSBotManager::OnSmokeGrenadeDetonate( IGameEvent *event )
 	CCSBOTMANAGER_ITERATE_BOTS( OnSmokeGrenadeDetonate, event );
 }
 
+
 //--------------------------------------------------------------------------------------------------------------
 void CCSBotManager::OnMolotovDetonate( IGameEvent *event )
 {
@@ -2039,6 +2152,7 @@ void CCSBotManager::OnDecoyFiring( IGameEvent *event )
 {
 	CCSBOTMANAGER_ITERATE_BOTS( OnDecoyFiring, event );
 }
+
 
 //--------------------------------------------------------------------------------------------------------------
 void CCSBotManager::OnGrenadeBounce( IGameEvent *event )
@@ -2073,7 +2187,7 @@ void CCSBotManager::SetLooseBomb( CBaseEntity *bomb )
 
 //--------------------------------------------------------------------------------------------------------------
 /**
- * Return true if player is important to scenario (VIP, bomb carrier, etc)
+ * Return true if player is important to scenario (bomb carrier, etc)
  */
 bool CCSBotManager::IsImportantPlayer( CCSPlayer *player ) const
 {
@@ -2088,7 +2202,6 @@ bool CCSBotManager::IsImportantPlayer( CCSPlayer *player ) const
 
 			return false;
 		}
-
 
 		case SCENARIO_RESCUE_HOSTAGES:
 		{
@@ -2132,7 +2245,6 @@ unsigned int CCSBotManager::GetPlayerPriority( CBasePlayer *player ) const
 
 			break;
 		}
-
 
 		case SCENARIO_RESCUE_HOSTAGES:
 		{
@@ -2383,7 +2495,6 @@ CON_COMMAND_F( nav_check_connectivity, "Checks to be sure every (or just the mar
 		Msg( "nav_check_connectivity took %2.2f ms\n", time );
 	}
 }
-
 
 
 
