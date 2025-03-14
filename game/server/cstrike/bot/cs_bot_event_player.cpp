@@ -191,6 +191,7 @@ void CCSBot::OnPlayerRadio( IGameEvent *event )
 		{
 			m_lastRadioCommand = radioEvent;
 			m_lastRadioRecievedTimestamp = gpGlobals->curtime;
+			m_lastRadioReceivedLength = event->GetFloat( "length" );
 			m_radioSubject = player;
 			m_radioPosition = GetCentroid( player );
 		}

@@ -1294,6 +1294,7 @@ private:
 	RadioType m_lastRadioCommand;									///< last radio command we recieved
 	float m_lastRadioRecievedTimestamp;								///< time we recieved a radio message
 	float m_lastRadioSentTimestamp;									///< time when we send a radio message
+	float m_lastRadioReceivedLength;								///< length of the last received radio message
 	CHandle< CCSPlayer > m_radioSubject;							///< who issued the radio message
 	Vector m_radioPosition;											///< position referred to in radio message
 	void RespondToRadioCommands( void );

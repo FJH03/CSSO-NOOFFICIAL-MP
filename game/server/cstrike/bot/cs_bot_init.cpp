@@ -308,6 +308,7 @@ void CCSBot::ResetValues( void )
 	m_lastRadioCommand = RADIO_INVALID;
 	m_lastRadioRecievedTimestamp = 0.0f;
 	m_lastRadioSentTimestamp = 0.0f;
+	m_lastRadioReceivedLength = 0.0f;
 	m_radioSubject = NULL;
 	m_voiceEndTimestamp = 0.0f;
 

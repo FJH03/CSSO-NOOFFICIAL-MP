@@ -5584,30 +5584,31 @@ void CCSPlayer::HandleMenu_Radio1( int slot )
 	m_iRadioMessages--;
 	m_flRadioTime = gpGlobals->curtime + 1.5;
 
+	float flLength = 0.0f;
 	switch ( slot )
 	{
 		case RADIO_COVER_ME :
-			Radio( "Radio.CoverMe",   "#Cstrike_TitlesTXT_Cover_me" );
+			Radio( "Radio.CoverMe", "#Cstrike_TitlesTXT_Cover_me", false, &flLength );
 			break;
 
 		case RADIO_YOU_TAKE_THE_POINT :
-			Radio( "Radio.YouTakeThePoint", "#Cstrike_TitlesTXT_You_take_the_point" );
+			Radio( "Radio.YouTakeThePoint", "#Cstrike_TitlesTXT_You_take_the_point", false, &flLength );
 			break;
 
 		case RADIO_HOLD_THIS_POSITION :
-			Radio( "Radio.HoldPosition",  "#Cstrike_TitlesTXT_Hold_this_position" );
+			Radio( "Radio.HoldPosition",  "#Cstrike_TitlesTXT_Hold_this_position", false, &flLength );
 			break;
 
 		case RADIO_REGROUP_TEAM :
-			Radio( "Radio.Regroup",   "#Cstrike_TitlesTXT_Regroup_team" );
+			Radio( "Radio.Regroup",   "#Cstrike_TitlesTXT_Regroup_team", false, &flLength );
 			break;
 
 		case RADIO_FOLLOW_ME :
-			Radio( "Radio.FollowMe",  "#Cstrike_TitlesTXT_Follow_me" );
+			Radio( "Radio.FollowMe",  "#Cstrike_TitlesTXT_Follow_me", false, &flLength );
 			break;
 
 		case RADIO_TAKING_FIRE :
-			Radio( "Radio.TakingFire", "#Cstrike_TitlesTXT_Taking_fire" );
+			Radio( "Radio.TakingFire", "#Cstrike_TitlesTXT_Taking_fire", false, &flLength );
 			break;
 	}
 
@@ -5617,6 +5618,7 @@ void CCSPlayer::HandleMenu_Radio1( int slot )
 	{
 		event->SetInt("userid", GetUserID() );
 		event->SetInt("slot", slot );
+		event->SetFloat( "length", flLength );
 		gameeventmanager->FireEvent( event );
 	}
 }
@@ -5635,31 +5637,31 @@ void CCSPlayer::HandleMenu_Radio2( int slot )
 	switch ( slot )
 	{
 		case RADIO_GO_GO_GO:
-		Radio( "Radio.GoGoGo", "#Cstrike_TitlesTXT_Go_go_go" );
+		Radio( "Radio.GoGoGo", "#Cstrike_TitlesTXT_Go_go_go", false, &flLength );
 		break;
 
 		case RADIO_TEAM_FALL_BACK:
-		Radio( "Radio.TeamFallBack", "#Cstrike_TitlesTXT_Team_fall_back" );
+		Radio( "Radio.TeamFallBack", "#Cstrike_TitlesTXT_Team_fall_back", false, &flLength );
 		break;
 
 		case RADIO_STICK_TOGETHER_TEAM:
-		Radio( "Radio.StickTogether", "#Cstrike_TitlesTXT_Stick_together_team" );
+		Radio( "Radio.StickTogether", "#Cstrike_TitlesTXT_Stick_together_team", false, &flLength );
 		break;
 
 		case RADIO_THANKS:
-		Radio( "Radio.Thanks", "#Cstrike_TitlesTXT_Thanks" );
+		Radio( "Radio.Thanks", "#Cstrike_TitlesTXT_Thanks", false, &flLength );
 		break;
 
 		case RADIO_CHEER:
-		Radio( "Radio.Cheer", "#Cstrike_TitlesTXT_Cheer" );
+		Radio( "Radio.Cheer", "#Cstrike_TitlesTXT_Cheer", false, &flLength );
 		break;
 
 		case RADIO_COMPLIMENT:
-		Radio( "Radio.Compliment", "#Cstrike_TitlesTXT_Compliment" );
+		Radio( "Radio.Compliment", "#Cstrike_TitlesTXT_Compliment", false, &flLength );
 		break;
 
 		case RADIO_REPORT_IN_TEAM:
-		Radio( "Radio.ReportInTeam", "#Cstrike_TitlesTXT_Report_in_team" );
+		Radio( "Radio.ReportInTeam", "#Cstrike_TitlesTXT_Report_in_team", false, &flLength );
 		break;
 	}
 
@@ -5669,6 +5671,7 @@ void CCSPlayer::HandleMenu_Radio2( int slot )
 	{
 		event->SetInt("userid", GetUserID() );
 		event->SetInt("slot", slot );
+		event->SetFloat( "length", flLength );
 		gameeventmanager->FireEvent( event );
 	}
 }
@@ -5684,46 +5687,47 @@ void CCSPlayer::HandleMenu_Radio3( int slot )
 	m_iRadioMessages--;
 	m_flRadioTime = gpGlobals->curtime + 1.5;
 
+	float flLength = 0.0f;
 	switch ( slot )
 	{
 		case RADIO_AFFIRMATIVE:
 		if ( random->RandomInt( 0, 1 ) )
-			Radio( "Radio.Affirmitive", "#Cstrike_TitlesTXT_Affirmative" );
+			Radio( "Radio.Affirmitive", "#Cstrike_TitlesTXT_Affirmative", false, &flLength );
 		else
-			Radio( "Radio.Roger", "#Cstrike_TitlesTXT_Roger_that" );
+			Radio( "Radio.Roger", "#Cstrike_TitlesTXT_Roger_that", false, &flLength );
 
 		break;
 
 		case RADIO_ENEMY_SPOTTED:
-		Radio( "Radio.EnemySpotted", "#Cstrike_TitlesTXT_Enemy_spotted" );
+		Radio( "Radio.EnemySpotted", "#Cstrike_TitlesTXT_Enemy_spotted", false, &flLength );
 		break;
 
 		case RADIO_NEED_BACKUP:
-		Radio( "Radio.NeedBackup", "#Cstrike_TitlesTXT_Need_backup" );
+		Radio( "Radio.NeedBackup", "#Cstrike_TitlesTXT_Need_backup", false, &flLength );
 		break;
 
 		case RADIO_SECTOR_CLEAR:
-		Radio( "Radio.SectorClear", "#Cstrike_TitlesTXT_Sector_clear" );
+		Radio( "Radio.SectorClear", "#Cstrike_TitlesTXT_Sector_clear", false, &flLength );
 		break;
 
 		case RADIO_IN_POSITION:
-		Radio( "Radio.InPosition", "#Cstrike_TitlesTXT_In_position" );
+		Radio( "Radio.InPosition", "#Cstrike_TitlesTXT_In_position", false, &flLength );
 		break;
 
 		case RADIO_REPORTING_IN:
-		Radio( "Radio.ReportingIn", "#Cstrike_TitlesTXT_Reporting_in" );
+		Radio( "Radio.ReportingIn", "#Cstrike_TitlesTXT_Reporting_in", false, &flLength );
 		break;
 
 		case RADIO_GET_OUT_OF_THERE:
-		Radio( "Radio.GetOutOfThere", "#Cstrike_TitlesTXT_Get_out_of_there" );
+		Radio( "Radio.GetOutOfThere", "#Cstrike_TitlesTXT_Get_out_of_there", false, &flLength );
 		break;
 
 		case RADIO_NEGATIVE:
-		Radio( "Radio.Negative", "#Cstrike_TitlesTXT_Negative" );
+		Radio( "Radio.Negative", "#Cstrike_TitlesTXT_Negative", false, &flLength );
 		break;
 
 		case RADIO_ENEMY_DOWN:
-		Radio( "Radio.EnemyDown", "#Cstrike_TitlesTXT_Enemy_down" );
+		Radio( "Radio.EnemyDown", "#Cstrike_TitlesTXT_Enemy_down", false, &flLength );
 		break;
 	}
 
@@ -5733,6 +5737,7 @@ void CCSPlayer::HandleMenu_Radio3( int slot )
 	{
 		event->SetInt("userid", GetUserID() );
 		event->SetInt("slot", slot );
+		event->SetFloat( "length", flLength );
 		gameeventmanager->FireEvent( event );
 	}
 }
@@ -5797,7 +5802,7 @@ void CCSPlayer::ConstructRadioFilter( CRecipientFilter& filter )
 	}
 }
 
-void CCSPlayer::Radio( const char *pszRadioSound, const char *pszRadioText, bool bTriggeredAutomatically )
+void CCSPlayer::Radio( const char *pszRadioSound, const char *pszRadioText, bool bTriggeredAutomatically, float *flLength )
 {
 	if( !IsAlive() )
 		return;
@@ -5828,13 +5833,18 @@ void CCSPlayer::Radio( const char *pszRadioSound, const char *pszRadioText, bool
 
 		AI_CriteriaSet botCriteria; // unused atm
 
-		Speak( concept, &botCriteria, NULL, 0, &filter );
+		if ( Speak( concept, &botCriteria, NULL, 0, &filter ) )
+ 		{
+ 			if ( flLength )
+ 				*flLength = GetExpresser()->GetTimeSpeechComplete() - gpGlobals->curtime;
+ 		}
 	}
 	else
 	{
 		UserMessageBegin ( filter, "SendAudio" );
 			WRITE_STRING( pszRadioSound );
-		MessageEnd();
+		if ( flLength )
+			*flLength = 1.0f;
 	}
 
 	//icon over the head for teammates

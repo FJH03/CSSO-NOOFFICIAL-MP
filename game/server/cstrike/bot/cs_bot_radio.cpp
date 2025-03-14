@@ -74,11 +74,11 @@ void CCSBot::RespondToRadioCommands( void )
 
 	// wait for reaction time before responding
 	// delay needs to be long enough for the radio message we're responding to to finish
-	float respondTime = 1.0f + 2.0f * GetProfile()->GetReactionTime();
+	float respondTime = m_lastRadioReceivedLength + 2.0f * GetProfile()->GetReactionTime();
 	if (IsRogue())
 		respondTime += 2.0f;
 
-	if (gpGlobals->curtime - m_lastRadioRecievedTimestamp < respondTime)
+		if ((gpGlobals->curtime - m_lastRadioRecievedTimestamp < respondTime))
 		return;
 
 	// rogues won't follow commands, unless already following the player
