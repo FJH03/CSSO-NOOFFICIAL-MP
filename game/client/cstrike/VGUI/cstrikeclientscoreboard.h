@@ -123,7 +123,6 @@ private:
     int			m_iImageDominated;
     int			m_iImageNemesis;
     int			m_iImageBomb;
-    int			m_iImageVIP;
     int			m_iImageFriend;
     int         m_iImageNemesisDead;
     int         m_iImageDominationDead;

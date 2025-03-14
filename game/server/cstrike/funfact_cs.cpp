@@ -59,8 +59,6 @@ enum FunFactId
 	FF_USED_MULTIPLE_WEAPONS,
 	FF_T_ACCURACY,
 	FF_CT_ACCURACY,
-	FF_SAME_UNIFORM_TERRORIST,
-	FF_SAME_UNIFORM_CT,
 	FF_BEST_T_ACCURACY,
 	FF_BEST_CT_ACCURACY,
 	FF_KILLS_HEADSHOTS,
@@ -1055,31 +1053,6 @@ bool FFEVAL_CT_ACCURACY( int &iPlayer, int &data1, int &data2, int &data3 )
 	return false;
 }
 
-bool FFEVAL_SAME_UNIFORM( int iTeam, int &iData1, int &iData2, int &iData3 )
-{
-    int numberInUniform = 0;
-	int iUniform = -1;
-
-    for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-    {
-        CCSPlayer *pCSPlayer = ToCSPlayer(UTIL_PlayerByIndex( i ) );
-		if ( pCSPlayer && pCSPlayer->GetTeamNumber() == iTeam && pCSPlayer->State_Get() != STATE_PICKINGCLASS)
-        {		
-            if (iUniform == -1)
-			{
-				iUniform = pCSPlayer->PlayerClass();
-			}
-			else if (pCSPlayer->PlayerClass() != iUniform)
-			{
-				return false;
-			}
-			++numberInUniform;
-        }
-    }
-
-	return numberInUniform >= 3;
-}
-
 bool FFEVAL_BEST_TERRORIST_ACCURACY( int &iPlayer, int &data1, int &data2, int &data3 )
 {
     float fAccuracy = 0.0f, fBestAccuracy = 0.0f;
@@ -1240,8 +1213,5 @@ DECLARE_FUNFACT_EVALFUNC( 	FF_TER_WIN_TIME,			"#funfact_ter_win_time",					0.2f,
 DECLARE_FUNFACT_EVALFUNC( 	FF_PICKUP_BOMB,				"#funfact_pickup_bomb",						0.3f,	FFEVAL_PICKUP_BOMB,							GameFlags::Demolition );
 DECLARE_FUNFACT_EVALFUNC(	FF_BOMB_PLANTED_BEFORE_KILL,"#funfact_bomb_planted_before_kill",		0.3f, 	FFEVAL_BOMB_PLANTED_BEFORE_KILL,			GameFlags::Demolition );
 DECLARE_FUNFACT_EVALFUNC(	FF_FAILED_BOMB_PLANTS,		"#funfact_failed_bomb_plants",				0.3f, 	FFEVAL_FAILED_BOMB_PLANTS,					GameFlags::Demolition );
-
-DECLARE_FUNFACT_TEAMFUNC(	FF_SAME_UNIFORM_TERRORIST,	"#funfact_same_uniform_terrorist",			0.5f,	FFEVAL_SAME_UNIFORM,						TEAM_TERRORIST,	GameFlags::AllModes);
-DECLARE_FUNFACT_TEAMFUNC(	FF_SAME_UNIFORM_CT,			"#funfact_same_uniform_ct",					0.5f,	FFEVAL_SAME_UNIFORM,						TEAM_CT,		GameFlags::AllModes);
 
 DECLARE_FUNFACT_EVALFUNC(	FF_FALLBACK,				"",											0.0f, 	FFEVAL_ALWAYS_TRUE,							GameFlags::AllModes );
