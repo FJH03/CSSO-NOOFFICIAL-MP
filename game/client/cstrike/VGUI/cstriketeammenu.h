@@ -87,6 +87,8 @@ private:
 	CCSTeamMenuAgentImage* m_pAgentModelT;
 	CCSTeamMenuAgentImage* m_pAgentModelCT;
 	Button* m_pCancelButton;
+	Button* m_pSpectateButton;
+	Button* m_pAutoAssignButton;
 
 	IViewPort* m_pViewPort;
 };

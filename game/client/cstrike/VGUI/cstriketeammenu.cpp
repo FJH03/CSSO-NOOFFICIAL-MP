@@ -409,6 +409,8 @@ CCSTeamMenu::CCSTeamMenu( IViewPort* pViewPort ): Frame( NULL, PANEL_TEAM )
 	m_pAgentModelCT = new CCSTeamMenuAgentImage( this, "AgentModelCT", TEAM_CT );
 	m_pAgentModelCT->SetPaintBackgroundEnabled( false );
 	m_pCancelButton = new Button( this, "CancelButton", "#Cstrike_Cancel" );
+	m_pSpectateButton = new Button( this, "SpectateButton", "#Cstrike_Menu_Spectate" );
+	m_pAutoAssignButton = new Button( this, "AutoAssignButton", "#Cstrike_Team_AutoAssign" );
 
 	LoadControlSettings( "Resource/UI/TeamMenu.res" );
 }
@@ -430,6 +432,8 @@ void CCSTeamMenu::ShowPanel( bool bShow )
 		ResetAgentModels();
 		m_pAgentModelT->SetHotkey( '1' );
 		m_pAgentModelCT->SetHotkey( '2' );
+		m_pAutoAssignButton->SetHotkey( '5' );
+		m_pSpectateButton->SetHotkey( '6' );
 
 		m_pCancelButton->SetVisible( pPlayer->GetTeamNumber() != TEAM_UNASSIGNED );
 
