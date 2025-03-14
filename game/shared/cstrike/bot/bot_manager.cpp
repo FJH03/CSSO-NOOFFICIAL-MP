@@ -14,6 +14,7 @@
 #include "nav_area.h"
 #include "bot_util.h"
 #include "basegrenade_shared.h"
+#include "cs_gamerules.h"
 
 #include "cs_bot.h"
 
@@ -230,7 +231,7 @@ void CBotManager::DestroyAllGrenades( void )
 		m_activeGrenadeList.Remove( current );
 		delete ag;
 	}
-	
+
 	m_activeGrenadeList.PurgeAndDeleteElements();
 }
 
@@ -283,98 +284,22 @@ bool CBotManager::IsLineBlockedBySmoke( const Vector &from, const Vector &to, fl
 	float totalSmokedLength = 0.0f;	// distance along line of sight covered by smoke
 
 	// compute unit vector and length of line of sight segment
-	Vector sightDir = to - from;
-	float sightLength = sightDir.NormalizeInPlace();
+	//Vector sightDir = to - from;
+	//float sightLength = sightDir.NormalizeInPlace();
 
 	FOR_EACH_LL( m_activeGrenadeList, it )
 	{
 		ActiveGrenade *ag = m_activeGrenadeList[ it ];
 		const float smokeRadiusSq = ag->GetRadius() * ag->GetRadius() * grenadeBloat * grenadeBloat;
 
-		if (ag->IsSmoke())
+		if ( ag->IsSmoke() && CSGameRules() )
 		{
-			const Vector &smokeOrigin = ag->GetDetonationPosition();
+			float flLengthAdd = CSGameRules()->CheckTotalSmokedLength( smokeRadiusSq, ag->GetDetonationPosition(), from, to );
+			// get the totalSmokedLength and check to see if the line starts or stops in smoke.  If it does this will return -1 and we should just bail early
+			if ( flLengthAdd == -1 )
+				return true;
 
-			Vector toGrenade = smokeOrigin - from;
-
-			float alongDist = DotProduct( toGrenade, sightDir );
-
-			// compute closest point to grenade along line of sight ray
-			Vector close;
-
-			// constrain closest point to line segment
-			if (alongDist < 0.0f)
-				close = from;
-			else if (alongDist >= sightLength)
-				close = to;
-			else
-				close = from + sightDir * alongDist;
-
-			// if closest point is within smoke radius, the line overlaps the smoke cloud
-			Vector toClose = close - smokeOrigin;
-			float lengthSq = toClose.LengthSqr();
-
-			if (lengthSq < smokeRadiusSq)
-			{
-				// some portion of the ray intersects the cloud
-
-				float fromSq = toGrenade.LengthSqr();
-				float toSq = (smokeOrigin - to).LengthSqr();
-
-				if (fromSq < smokeRadiusSq)
-				{
-					if (toSq < smokeRadiusSq)
-					{
-						// both 'from' and 'to' lie within the cloud
-						// entire length is smoked
-						totalSmokedLength += (to - from).Length();
-					}
-					else
-					{
-						// 'from' is inside the cloud, 'to' is outside
-						// compute half of total smoked length as if ray crosses entire cloud chord
-						float halfSmokedLength = (float)sqrt( smokeRadiusSq - lengthSq );
-
-						if (alongDist > 0.0f)
-						{
-							// ray goes thru 'close'
-							totalSmokedLength += halfSmokedLength + (close - from).Length();						
-						}
-						else
-						{
-							// ray starts after 'close'
-							totalSmokedLength += halfSmokedLength - (close - from).Length();						
-						}
-
-					}
-				}
-				else if (toSq < smokeRadiusSq)
-				{
-					// 'from' is outside the cloud, 'to' is inside
-					// compute half of total smoked length as if ray crosses entire cloud chord
-					float halfSmokedLength = (float)sqrt( smokeRadiusSq - lengthSq );
-
-					Vector v = to - smokeOrigin;
-					if (DotProduct( v, sightDir ) > 0.0f)
-					{
-						// ray goes thru 'close'
-						totalSmokedLength += halfSmokedLength + (close - to).Length();					
-					}
-					else
-					{
-						// ray ends before 'close'
-						totalSmokedLength += halfSmokedLength - (close - to).Length();
-					}
-				}
-				else
-				{			
-					// 'from' and 'to' lie outside of the cloud - the line of sight completely crosses it
-					// determine the length of the chord that crosses the cloud
-					float smokedLength = 2.0f * (float)sqrt( smokeRadiusSq - lengthSq );
-
-					totalSmokedLength += smokedLength;
-				}
-			}
+			totalSmokedLength += flLengthAdd;
 		}
 	}
 

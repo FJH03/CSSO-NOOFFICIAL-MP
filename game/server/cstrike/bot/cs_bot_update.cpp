@@ -227,7 +227,7 @@ void CCSBot::Update( void )
 
 	// update travel distance to all players (this is an optimization)
 	// EDIT: actually this is really slow and only used to detect audible events; we're using straight line dist instead
- 	//UpdateTravelDistanceToAllPlayers();
+	//UpdateTravelDistanceToAllPlayers();
 
 	// if our current 'noise' was heard a long time ago, forget it
 	const float rememberNoiseDuration = 20.0f;

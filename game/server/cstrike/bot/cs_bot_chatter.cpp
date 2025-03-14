@@ -1998,9 +1998,7 @@ void BotChatterInterface::ReportingIn( void )
 			m_me->GetChatter()->EscortingHostages();
 			break;
 		}
-
 	}
-
 
 	// what do we see
 	if (m_me->IsAttacking())
