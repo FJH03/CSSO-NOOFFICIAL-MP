@@ -348,7 +348,7 @@ void CCSBot::SpeakAudio( const char *voiceFilename, float duration, int pitch )
 /**
  * Send voice chatter through the response rules system.
  */
-bool CCSBot::SpeakAudioResponseRules( const char *pConcept, AI_CriteriaSet *criteria, bool bDeath )
+bool CCSBot::SpeakAudioResponseRules( const char *pConcept, AI_CriteriaSet *criteria, float duration )
 {
 	if( !IsAlive() )
 		return false;
@@ -366,7 +366,6 @@ bool CCSBot::SpeakAudioResponseRules( const char *pConcept, AI_CriteriaSet *crit
 	AIConcept_t concept( pConcept );
 	if ( Speak( concept, criteria, NULL, 0, &filter ) )
 	{
-		float duration = bDeath ? 0.0f : GetExpresser()->GetTimeSpeechComplete() - gpGlobals->curtime; // deathcries should end instantly
 		GetChatter()->ResetRadioSilenceDuration();
 		m_voiceEndTimestamp = gpGlobals->curtime + duration;
 		return true;
