@@ -181,11 +181,8 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 		switch(iEndEvent)
 		{
 		case Target_Bombed:
-		case VIP_Assassinated:
-		case Terrorists_Escaped:
 		case Terrorists_Win:
 		case Hostages_Not_Rescued:
-		case VIP_Not_Escaped:
 			iTeamID = TEAM_TERRORIST;
 			g_pVGuiLocalize->ConstructString( wszName, sizeof( wszName ), g_pVGuiLocalize->Find( "#winpanel_t_win" ), nullptr );
 			m_pWinLabel->SetFgColor( m_clrT );
@@ -194,14 +191,10 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 			m_pTeamIcon->SetVisible( true );
 			break;
 
-		case VIP_Escaped:
-		case CTs_PreventEscape:
-		case Escaping_Terrorists_Neutralized:
 		case Bomb_Defused:
 		case CTs_Win:
 		case All_Hostages_Rescued:
 		case Target_Saved:
-		case Terrorists_Not_Escaped:
 			iTeamID = TEAM_CT;
 			g_pVGuiLocalize->ConstructString( wszName, sizeof( wszName ), g_pVGuiLocalize->Find( "#winpanel_ct_win" ), nullptr );
 			m_pWinLabel->SetFgColor( m_clrCT );
