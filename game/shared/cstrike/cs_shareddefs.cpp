@@ -93,7 +93,7 @@ CCSAgentInfo g_AgentInfosCT[MAX_AGENTS_CT + 1] =
 	{ "models/player/custom_player/legacy/ctm_swat_varianti.mdl",		NULL,					CS_CLASS_SWAT,			false	},
 	{ "models/player/custom_player/legacy/ctm_swat_variantf.mdl",		"swat_fem",				CS_CLASS_SWAT,			true	},
 	{ "models/player/custom_player/legacy/ctm_st6_variantl.mdl",		NULL,					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_swat_variante.mdl",		"swat_female",			CS_CLASS_SWAT,			true	},
+	{ "models/player/custom_player/legacy/ctm_swat_variante.mdl",		"swat_epic",			CS_CLASS_SWAT,			true	},
 	// Riptide
 	{ "models/player/custom_player/legacy/ctm_diver_varianta.mdl",		"seal_fem",				CS_CLASS_SEAL_TEAM_6,	true	},
 	{ "models/player/custom_player/legacy/ctm_diver_variantb.mdl",		"seal_diver_01",		CS_CLASS_SEAL_TEAM_6,	false	},
