@@ -44,7 +44,9 @@ def build(bld):
 		'../../public/tier1',
 		'../../vgui2/include',
 		'../../vgui2/controls',
-		'../shared'
+		'../shared',
+		'../../thirdparty'
+
 	] + bld.env.INCLUDES_SDL2
 	libs = [
 		'tier0',

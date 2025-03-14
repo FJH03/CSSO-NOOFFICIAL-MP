@@ -156,7 +156,7 @@ void CCSBuyMenuItemButton::Paint()
 {
 	BaseClass::Paint();
 
-	if ( m_wszPrice != '\0' )
+	if ( m_wszPrice[0] != L'\0' )
 	{
 		HFont hMoneyFont = GetFont();
 		int xpos, ypos, wide, tall;
