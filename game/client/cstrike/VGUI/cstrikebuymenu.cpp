@@ -806,8 +806,6 @@ CCSBuyMenuLoadoutPanel::CCSBuyMenuLoadoutPanel( Panel* parent, const char* panel
 {
 	m_pPlayer = NULL;
 	m_pPlayerAvatarImage = new CAvatarImagePanel( this, "PlayerAvatarImage" );
-	m_pPlayerAvatarImage->SetShouldDrawFriendIcon( false );
-	m_pPlayerAvatarImage->SetShouldScaleImage( true );
 	m_pPlayerSkullImage = new VectorImagePanel( this, "PlayerSkullImage" );
 	m_pPlayerSkullImage->ClearSchemeUpdateFlag();
 	m_pPlayerSkullImage->SetFgColor( COLOR_WHITE );
@@ -828,10 +826,13 @@ void CCSBuyMenuLoadoutPanel::ApplySchemeSettings( IScheme* pScheme )
 {
 	BaseClass::ApplySchemeSettings( pScheme );
 
-	int xpos = GetWide() - avatar_xpos;
-	m_pPlayerAvatarImage->SetBounds( xpos, avatar_ypos, avatar_wide, avatar_tall );
-	m_pPlayerSkullImage->SetBounds( xpos, avatar_ypos, avatar_wide, avatar_tall );
+	m_pPlayerAvatarImage->SetBounds( GetWide() - avatar_xpos, avatar_ypos, avatar_wide, avatar_tall );
+	m_pPlayerSkullImage->SetBounds( GetWide() - skull_xpos, skull_ypos, skull_wide, skull_tall );
 	m_pPlayerSkullImage->SetZPos( 2 );
+	m_pPlayerAvatarImage->SetShouldDrawFriendIcon( false );
+	m_pPlayerAvatarImage->SetShouldScaleImage( true );
+	m_pPlayerSkullImage->ClearSchemeUpdateFlag();
+	m_pPlayerSkullImage->SetFgColor( COLOR_WHITE );
 
 	m_ItemIcons[AssaultSuit].SetTexture( "materials/vgui/weapons/svg/armor.svg", 0, armor_icons_size, ITEM_ASSAULTSUIT );
 	m_ItemIcons[Kevlar].SetTexture( "materials/vgui/hud/svg/shield.svg", 0, armor_icons_size, ITEM_KEVLAR );
