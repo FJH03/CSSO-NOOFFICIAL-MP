@@ -287,6 +287,10 @@ private:
 	int		m_hostageRescueIcon;
 	int		m_bombSiteIconA;
 	int		m_bombSiteIconB;
+	int		m_enemyIcon;
+	int		m_enemyIconDead;
+	int		m_enemyIconOffscreen;
+	int		m_enemyIconGhost;
 
 	int m_nRadarMapTextureID;	// texture id for radar version of current overview image
 	int m_nCircleBackgroundTextureID;
