@@ -694,6 +694,7 @@ void CCSMapOverview::Init( void )
 	ListenForGameEvent( "hostage_rescued" );
 	ListenForGameEvent( "bomb_defused" );
 	ListenForGameEvent( "bomb_exploded" );
+	ListenForGameEvent( "bot_takeover" );
 
 	HOOK_HUD_MESSAGE( CCSMapOverview, UpdateRadar );
 }
@@ -2050,6 +2051,38 @@ void CCSMapOverview::FireGameEvent( IGameEvent *event )
 	else if ( Q_strcmp(type,"player_spawn") == 0 )
 	{
 		MapPlayer_t *player = GetPlayerByUserID( event->GetInt("userid") );
+
+		if ( !player )
+			return;
+
+		player->health = 0;
+		Q_memset( player->trail, 0, sizeof(player->trail) ); // clear trails
+
+		CSMapPlayer_t *playerCS = GetCSInfoForPlayer(player);
+
+		if ( !playerCS )
+			return;
+
+		playerCS->isDead = false;
+
+		playerCS->overrideFadeTime = -1;
+		playerCS->overrideExpirationTime = -1;
+		playerCS->overrideIcon = -1;
+		playerCS->overrideIconOffscreen = -1;
+		playerCS->overridePosition = Vector( 0, 0, 0 );
+		playerCS->overrideAngle = QAngle( 0, 0, 0 );
+
+		playerCS->timeLastSeen = -1;
+		playerCS->timeFirstSeen = -1;
+		playerCS->isHostage = false;
+
+		playerCS->flashUntilTime = -1;
+		playerCS->nextFlashPeakTime = -1;
+		playerCS->currentFlashAlpha = 0;
+	}
+	else if ( Q_strcmp(type,"bot_takeover") == 0 )
+	{
+		MapPlayer_t *player = GetPlayerByUserID( event->GetInt("botid") );
 
 		if ( !player )
 			return;
