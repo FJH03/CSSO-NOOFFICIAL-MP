@@ -664,7 +664,7 @@ public:
 	//- radio and chatter--------------------------------------------------------------------------------------------
 	void SendRadioMessage( RadioType event );					///< send a radio message
 	void SpeakAudio( const char *voiceFilename, float duration, int pitch );	///< send voice chatter
-	bool SpeakAudioResponseRules( const char *pConcept, AI_CriteriaSet *criteria, float duration );	///< send voice chatter through response rules system
+	bool SpeakAudioResponseRules( const char *pConcept, AI_CriteriaSet *criteria, bool bDeath );	///< send voice chatter through response rules system
 	BotChatterInterface *GetChatter( void );					///< return an interface to this bot's chatter system
 	bool RespondToHelpRequest( CCSPlayer *player, Place place, float maxRange = -1.0f );	///< decide if we should move to help the player, return true if we will
 	bool IsUsingVoice() const;									///< new-style "voice" chatter gets voice feedback

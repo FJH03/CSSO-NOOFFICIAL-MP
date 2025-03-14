@@ -201,6 +201,7 @@ void CCSPlayerResource::UpdatePlayerData( void )
 //			engine->Con_NPrintf( i, "Dead" );
 			m_bHostageAlive.Set( i, false );
 			m_isHostageFollowingSomeone.Set( i, false );
+			m_iHostageEntityIDs.Set( i, 0 );
 			continue;
 		}
 

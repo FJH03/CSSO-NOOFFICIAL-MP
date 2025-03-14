@@ -1314,7 +1314,7 @@ bool BotStatement::Update( void )
 						// TODO: Need voice pitch as a criteria? 
 						// me->GetProfile()->GetVoicePitch()
 
-						bSpoke = me->SpeakAudioResponseRules( phrase->GetName(), &botCriteria, duration + 1.0f );
+						bSpoke = me->SpeakAudioResponseRules( phrase->GetName(), &botCriteria, false );
 					}
 					else
 					{
@@ -1654,7 +1654,7 @@ void BotChatterInterface::OnDeath( void )
 					if ( bot_chatter_use_rr.GetBool() )
 					{
 						AI_CriteriaSet botCriteria;
-						m_me->SpeakAudioResponseRules( "DeathCry", &botCriteria, 0.0f );
+						m_me->SpeakAudioResponseRules( "DeathCry", &botCriteria, true );
 					}
 					else
 					{
