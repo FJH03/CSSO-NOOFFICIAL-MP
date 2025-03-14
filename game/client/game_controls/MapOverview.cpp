@@ -399,6 +399,9 @@ bool CMapOverview::IsOtherEnemy( int index1, int index2 )
 	{
 		int nTeam = g_PR->GetTeam( index1 );
 		int nOtherTeam = g_PR->GetTeam( index2 );
+		if ( (nTeam != TEAM_CT && nTeam != TEAM_TERRORIST) ||
+			(nOtherTeam != TEAM_CT && nOtherTeam != TEAM_TERRORIST) )
+			return false;
 
 		if ( mp_teammates_are_enemies.GetBool() && nTeam == nOtherTeam )
 		{
