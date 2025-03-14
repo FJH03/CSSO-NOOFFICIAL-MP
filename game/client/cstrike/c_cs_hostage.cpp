@@ -68,9 +68,9 @@ void C_HostageCarriableProp::OnDataChanged( DataUpdateType_t updateType )
 	}
 	
 	// if we don't have an owner for some reason, remove ourselves
-	/*C_BaseEntity *pOwner = GetFollowedEntity();
+	C_BaseEntity *pOwner = GetFollowedEntity();
 	if ( !pOwner )
-		UTIL_Remove( this );*/
+		UTIL_Remove( this );
 }
 
 //-----------------------------------------------------------------------------

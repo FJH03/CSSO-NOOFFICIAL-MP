@@ -391,7 +391,8 @@ int CHostage::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 	// say something
 	if ( hostage_is_silent.GetBool() == false )
 	{
-		EmitSound( "Hostage.Pain" );
+		AIConcept_t concept( "Pain" );
+ 		GetExpresser()->Speak( concept );
 	}
 
 	CCSPlayer *player = ToCSPlayer( info.GetAttacker() );
@@ -1332,11 +1333,11 @@ void CHostage::Follow( CCSPlayer *leader )
 		leader->SetIsRescuing(true);
 
 		// say something
-		/*if ( hostage_is_silent.GetBool() == false )
+		if ( hostage_is_silent.GetBool() == false )
 		{
 			AIConcept_t concept( "StartFollowing" );
 			GetExpresser()->Speak( concept, "leaderteam:CT" );		
-		}*/
+		}
 
 		// emit hostage_follows event
 		IGameEvent *event = gameeventmanager->CreateEvent( "hostage_follows" );
@@ -1523,12 +1524,12 @@ void CHostage::SetHostageStartFollowingPlayer( CCSPlayer *pPlayer )
 	{
 		Idle();
 
-		/*if ( hostage_is_silent.GetBool() == false )
+		if ( hostage_is_silent.GetBool() == false )
 		{
 			// say something
 			AIConcept_t concept( "StopFollowing" );
 			GetExpresser()->Speak( concept, "leaderteam:CT" );
-		}*/
+		}
 	}
 	else
 	{
@@ -1597,11 +1598,11 @@ void CHostage::DropHostage( Vector vecPosition, bool bIsRescued )
 
 		AddSolidFlags( FSOLID_NOT_STANDABLE );
 		// say something
-		/*if ( hostage_is_silent.GetBool() == false )
+		if ( hostage_is_silent.GetBool() == false )
 		{
 			AIConcept_t concept( "StopFollowing" );
 			GetExpresser()->Speak( concept, "leaderteam:CT" );
-		}*/
+		}
 
 		m_nHostageState = k_EHostageStates_GettingDropped;
 		m_flDropStartTime = gpGlobals->curtime;
