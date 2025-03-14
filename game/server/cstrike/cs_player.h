@@ -375,6 +375,7 @@ public:
 	bool IsOtherSameTeam( int nTeam );
 	bool IsOtherEnemy( CCSPlayer *pPlayer );
 	bool IsOtherEnemy( int nEntIndex );
+	bool IsOtherEnemyTeam( int nTeam );
 
 	void SetHealthApproach( int iHealth, int iSpeed );
 

@@ -325,6 +325,7 @@ bool CCSPlayer::IsOtherEnemy( int nEntIndex )
 
 			return nTeam != nOtherTeam;
 		}
+
 #endif
 
 		return false;
@@ -355,6 +356,15 @@ bool CCSPlayer::IsOtherEnemy( CCSPlayer *pPlayer )
 	return nTeam != nOtherTeam;
 }
 
+bool CCSPlayer::IsOtherEnemyTeam( int nTeam )
+{
+	if ( mp_teammates_are_enemies.GetBool() && GetTeamNumber() == nTeam )
+	{
+		return true;
+	}
+
+	return GetTeamNumber() != nTeam;
+}
 
 
 bool CCSPlayer::GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity, CConfigurationForHighPriorityUseEntity_t &cfg )

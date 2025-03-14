@@ -444,6 +444,11 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 
 	m_radarTint = AddIconTexture("sprites/radar_trans");
 
+	m_enemyIcon = AddIconTexture( "sprites/player_enemy_small" );
+	m_enemyIconDead = AddIconTexture( "sprites/player_enemy_dead" );
+	m_enemyIconOffscreen = AddIconTexture( "sprites/player_enemy_offscreen" );
+	m_enemyIconGhost = AddIconTexture( "sprites/player_enemy_ghost" );
+
 }
 
 //-----------------------------------------------------------------------------
@@ -784,10 +789,18 @@ void CCSMapOverview::UpdatePlayers()
 				player->team = pCSPR->GetTeam( i );
 
 				if( player == localMapPlayer )
+				{
 					player->icon = m_TeamIconsSelf[ GetIconNumberFromTeamNumber(player->team) ];
+				}
 				else
-					player->icon = m_TeamIcons[ GetIconNumberFromTeamNumber(player->team) ];
+				{
 
+					if ( localPlayer->IsOtherEnemyTeam(player->team) )
+						player->icon = m_enemyIcon;
+					else
+						player->icon = m_TeamIcons[ GetIconNumberFromTeamNumber(player->team) ];
+
+				}
 				player->color = m_TeamColors[ GetIconNumberFromTeamNumber(player->team) ];
 			}
 		}
@@ -858,11 +871,13 @@ void CCSMapOverview::UpdatePlayers()
 				continue;
 
 			float timeSinceLastSeen = now - playerCS->timeLastSeen;
+			bool bEnemy = IsOtherEnemy( localPlayer->entindex(), player->index+1 );
+
 			if( timeSinceLastSeen < 0.25f )
 				continue;
 			if( player->health <= 0 )
 				continue;// We don't need to spot dead guys, since they always show
-			if ( !IsOtherEnemy( localPlayer->entindex(), player->index+1 ) )
+			if ( !bEnemy )
 				continue;// We don't need to spot our own guys
 
 			// Now that everyone has had a say on people they can see for us, go through and handle baddies that can no longer be seen.
@@ -873,8 +888,16 @@ void CCSMapOverview::UpdatePlayers()
 				// if they are alive.  Death icon is more important, which is why the health check above.
 				if( timeSinceLastSeen < TIME_SPOTS_STAY_SEEN && ( playerCS->timeLastSeen != -1 ) )
 				{
-					playerCS->overrideIcon = m_TeamIconsGhost[ GetIconNumberFromTeamNumber(player->team) ];;
-					playerCS->overrideIconOffscreen = m_TeamIconsOffscreen[ GetIconNumberFromTeamNumber(player->team) ];
+					if ( bEnemy )
+					{
+						playerCS->overrideIcon = m_enemyIconGhost;
+						playerCS->overrideIconOffscreen = m_enemyIconOffscreen;
+					}
+					else
+					{
+						playerCS->overrideIcon = m_TeamIconsGhost[ GetIconNumberFromTeamNumber(player->team) ];
+						playerCS->overrideIconOffscreen = m_TeamIconsOffscreen[ GetIconNumberFromTeamNumber(player->team) ];
+					}
 					playerCS->overridePosition = player->position;
 					playerCS->overrideFadeTime = -1;
 					playerCS->overrideExpirationTime = now + LAST_SEEN_ICON_DURATION;
@@ -1565,6 +1588,8 @@ void CCSMapOverview::DrawMapPlayers()
 
 			float timeSinceLastSeen = gpGlobals->curtime - playerCS->timeLastSeen;
 			int offscreenIcon = m_TeamIconsOffscreen[GetIconNumberFromTeamNumber(player->team)];
+			if ( IsOtherEnemy( localPlayer->entindex(), player->index + 1 ) )
+				offscreenIcon = m_enemyIconOffscreen;
 			DrawIconCS( player->icon, offscreenIcon, player->position, sizeForPlayer, angleForPlayer, alpha, true, name, &player->color, status, &colorGreen );
 			if( !doingLocalPlayer )
 			{
@@ -1994,6 +2019,10 @@ void CCSMapOverview::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp(type,"player_death") == 0 )
 	{
+		C_CSPlayer* pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+		if ( !pLocalPlayer )
+			return;
+
 		MapPlayer_t *player = GetPlayerByUserID( event->GetInt("userid") );
 
 		if ( !player )
@@ -2008,7 +2037,10 @@ void CCSMapOverview::FireGameEvent( IGameEvent *event )
 			return;
 
 		playerCS->isDead = true;
-		playerCS->overrideIcon = m_TeamIconsDead[GetIconNumberFromTeamNumber(player->team)];
+		if ( IsOtherEnemy(pLocalPlayer->entindex(), player->index+1) )
+			playerCS->overrideIcon = m_enemyIconDead;
+		else
+			playerCS->overrideIcon = m_TeamIconsDead[GetIconNumberFromTeamNumber(player->team)];
 		playerCS->overrideIconOffscreen = playerCS->overrideIcon;
 		playerCS->overridePosition = player->position;
 		playerCS->overrideAngle = player->angle;
@@ -2054,7 +2086,7 @@ void CCSMapOverview::FireGameEvent( IGameEvent *event )
 		if ( !player )
 			return;
 
-		CBasePlayer *localPlayer = C_BasePlayer::GetLocalPlayer();
+		C_CSPlayer *localPlayer = C_CSPlayer::GetLocalCSPlayer();
 		if( localPlayer == NULL )
 			return;
 		MapPlayer_t *localMapPlayer = GetPlayerByUserID(localPlayer->GetUserID());
@@ -2062,10 +2094,16 @@ void CCSMapOverview::FireGameEvent( IGameEvent *event )
 		player->team = event->GetInt("team");
 
 		if( player == localMapPlayer )
+		{
 			player->icon = m_TeamIconsSelf[ GetIconNumberFromTeamNumber(player->team) ];
+		}
 		else
-			player->icon = m_TeamIcons[ GetIconNumberFromTeamNumber(player->team) ];
-
+		{
+			if ( localPlayer->IsOtherEnemyTeam(player->team) )
+				player->icon = m_enemyIcon;
+			else
+				player->icon = m_TeamIcons[ GetIconNumberFromTeamNumber(player->team) ];
+		}
 		player->color = m_TeamColors[ GetIconNumberFromTeamNumber(player->team) ];
 	}
 	else

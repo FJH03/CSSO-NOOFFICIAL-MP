@@ -316,6 +316,7 @@ public:
 	bool IsOtherSameTeam( int nTeam );
 	bool IsOtherEnemy( CCSPlayer *pPlayer );
 	bool IsOtherEnemy( int nEntIndex );
+	bool IsOtherEnemyTeam( int nTeam );
 
 	virtual void SetModelPointer( const model_t *pModel );
 
