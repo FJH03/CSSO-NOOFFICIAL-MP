@@ -309,7 +309,7 @@ void CCreateMultiplayerGameServerPage::SetMap(const char *mapName)
 	}
 }
 
-//-----------------------------------------------------------------------------
+/*//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 int CCreateMultiplayerGameServerPage::GetGameModeID()
@@ -323,7 +323,7 @@ int CCreateMultiplayerGameServerPage::GetGameModeID()
 void CCreateMultiplayerGameServerPage::SetGameModeID( int gamemodeid )
 {
 	m_pGameModeList->ActivateItem( gamemodeid );
-}
+}*/
 
 //-----------------------------------------------------------------------------
 // Purpose: 

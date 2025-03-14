@@ -32,8 +32,8 @@ public:
 	bool IsRandomMapSelected();
 	const char *GetMapName();
 
-	int GetGameModeID();
-	void SetGameModeID( int gamemodeid );
+	//int GetGameModeID();
+	//void SetGameModeID( int gamemodeid );
 
 	vgui::ComboBox *GetMapList( void ) { return m_pMapList; }
 

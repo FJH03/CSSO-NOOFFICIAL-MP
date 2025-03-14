@@ -74,7 +74,7 @@ CCreateMultiplayerGameDialog::CCreateMultiplayerGameDialog(vgui::Panel *parent) 
 			m_pServerPage->SetMap(startMap);
 		}
 
-		m_pServerPage->SetGameModeID( m_pSavedData->GetInt( "mp_gamemode_override", 0 ) );
+		//m_pServerPage->SetGameModeID( m_pSavedData->GetInt( "mp_gamemode_override", 0 ) );
 	}
 
 	if ( m_bBotsEnabled )
@@ -118,7 +118,7 @@ bool CCreateMultiplayerGameDialog::OnOK(bool applyOnly)
 
 	// get these values from m_pServerPage and store them temporarily
 	char szMapName[64], szHostName[64], szPassword[64];
-	int iGameModeID = m_pServerPage->GetGameModeID();
+	//int iGameModeID = m_pServerPage->GetGameModeID();
 	Q_strncpy(szMapName, m_pServerPage->GetMapName(), sizeof( szMapName ));
 	Q_strncpy(szHostName, m_pGameplayPage->GetHostName(), sizeof( szHostName ));
 	Q_strncpy(szPassword, m_pGameplayPage->GetPassword(), sizeof( szPassword ));
@@ -136,7 +136,7 @@ bool CCreateMultiplayerGameDialog::OnOK(bool applyOnly)
 			m_pSavedData->SetString("map", szMapName);
 		}
 
-		m_pSavedData->SetInt( "mp_gamemode_override", iGameModeID );
+		//m_pSavedData->SetInt( "mp_gamemode_override", iGameModeID );
 
 		// save config to a file
 		m_pSavedData->SaveToFile( g_pFullFileSystem, "ServerConfig.vdf", "GAME" );
@@ -149,7 +149,7 @@ bool CCreateMultiplayerGameDialog::OnOK(bool applyOnly)
 		m_pGameplayPage->GetMaxPlayers(),
 		szPassword,
 		szHostName,
-		iGameModeID,
+		//iGameModeID,
 		szMapName
 	);
 
