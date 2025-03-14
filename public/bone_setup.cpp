@@ -412,7 +412,7 @@ void CalcBoneQuaternion( int frame, float s,
 
 	if (s > 0.001f)
 	{
-		Quaternion	q1, q2;
+		QuaternionAligned	q1, q2;
 		RadianEuler	angle1, angle2;
 
 		ExtractAnimValue( frame, pValuesPtr->pAnimvalue( 0 ), baseRotScale.x, angle1.x, angle2.x );
@@ -687,12 +687,16 @@ static void CalcLocalHierarchyAnimation(
 	int boneMask
 	)
 {
+#ifdef STAGING_ONLY
+	Assert( iNewParent == -1 || (iNewParent >= 0 && iNewParent < MAXSTUDIOBONES) );
+	Assert( iBone > 0 );
+	Assert( iBone < MAXSTUDIOBONES );
+#endif // STAGING_ONLY
 	Vector localPos;
 	Quaternion localQ;
 
 	// make fake root transform
-	static matrix3x4_t rootXform;
-	SetIdentityMatrix( rootXform );
+	static ALIGN16 matrix3x4_t rootXform ALIGN16_POST ( 1.0f, 0, 0, 0,   0, 1.0f, 0, 0,  0, 0, 1.0f, 0 );
 
 	// FIXME: missing check to see if seq has a weight for this bone
 	float weight = 1.0f;
@@ -1406,7 +1410,7 @@ void WorldSpaceSlerp(
 			MatrixAngles( srcBoneToWorld[i], srcQ, srcPos );
 
 			QuaternionSlerp( destQ, srcQ, s2, targetQ );
-			AngleMatrix( RadianEuler(targetQ), destPos, targetBoneToWorld[i] );
+			AngleMatrix( targetQ, destPos, targetBoneToWorld[i] );
 
 			// back solve
 			if (n == -1)
@@ -1533,7 +1537,7 @@ void SlerpBones(
 		return;
 	}
 
-	Quaternion q3;
+	QuaternionAligned q3;
 	for (i = 0; i < nBoneCount; i++)
 	{
 		s2 = pS2[i];
@@ -1831,21 +1835,7 @@ void InitPose(
 		Assert( sizeof(Quaternion) == sizeof(BoneQuaternion) );
 		memcpy( q, (((byte *)pLinearBones) + pLinearBones->quatindex), sizeof( Quaternion ) * numBones );
 
-		if( sizeof(Vector) == sizeof(Vector) )
-		{
-			memcpy( pos, (((byte *)pLinearBones) + pLinearBones->posindex), sizeof( Vector ) * numBones );
-		}
-		else
-		{
-			Vector *pSrcPos = (Vector *)(((byte *)pLinearBones) + pLinearBones->posindex);
-			for( int i = 0; i < pStudioHdr->numbones(); i++ )
-			{
-				//if( pStudioHdr->boneFlags(  i ) & boneMask ) 
-				{
-					pos[i] = pSrcPos[i];
-				}
-			}
-		}
+		memcpy( pos, (((byte *)pLinearBones) + pLinearBones->posindex), sizeof( Vector ) * numBones );
 	}
 	else
 	{
@@ -4383,9 +4373,9 @@ void CIKContext::SolveDependencies( Vector pos[], Quaternion q[], matrix3x4_t bo
 			//mstudioikchain_t *pchain = m_pStudioHdr->pIKChain( m_target[i].chain );
 			ikchainresult_t *pChainResult = &chainResult[ pTarget->chain ];
 
-			AngleMatrix( RadianEuler(pTarget->offset.q), pTarget->offset.pos, local );
+			AngleMatrix( pTarget->offset.q, pTarget->offset.pos, local );
 
-			AngleMatrix( RadianEuler(pTarget->est.q), pTarget->est.pos, worldFootpad );
+			AngleMatrix( pTarget->est.q, pTarget->est.pos, worldFootpad );
 
 			ConcatTransforms( worldFootpad, local, worldTarget );
 
