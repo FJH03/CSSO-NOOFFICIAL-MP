@@ -161,6 +161,7 @@ protected:	// private structures & types
 		float currentRingAlpha;
 		float maxRingRadius;
 		float ringTravelTime;
+		int carrierIndex;
 	} CSMapBomb_t;
 
 	typedef struct CSMapGoal_s
@@ -267,10 +268,8 @@ private:
 	int		m_TeamIconsDead[MAP_ICON_COUNT];
 	int		m_TeamIconsOffscreen[MAP_ICON_COUNT];
 	int		m_TeamIconsGhost[MAP_ICON_COUNT];
+	int		m_TeamIconsBomb[MAP_ICON_COUNT];
 
-	int		m_bombIconPlanted;
-	int		m_bombIconDropped;
-	int		m_bombIconCarried;
 	int		m_bombRingPlanted;
 	int		m_bombRingDropped;
 	int		m_bombRingCarried;
@@ -291,6 +290,7 @@ private:
 	int		m_enemyIconDead;
 	int		m_enemyIconOffscreen;
 	int		m_enemyIconGhost;
+	int		m_enemyIconBomb;
 
 	int m_nRadarMapTextureID;	// texture id for radar version of current overview image
 	int m_nCircleBackgroundTextureID;

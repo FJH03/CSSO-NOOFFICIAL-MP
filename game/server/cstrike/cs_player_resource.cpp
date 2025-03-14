@@ -172,17 +172,25 @@ void CCSPlayerResource::UpdatePlayerData( void )
 	}
 
 	CBaseEntity *c4 = NULL;
-	if ( m_iPlayerC4 == 0 )
+	if ( g_PlantedC4s.Count() > 0 )
 	{
-		// no player has C4, update C4 position
-		if ( g_C4s.Count() > 0 )
+		c4 = g_PlantedC4s[0];
+		m_vecC4 = c4->GetAbsOrigin();
+	}
+	else
+	{
+		if ( m_iPlayerC4 == 0 )
 		{
-			c4 = g_C4s[0];
-			m_vecC4 = c4->GetAbsOrigin();
-		}
-		else
-		{
-			m_vecC4.Init();
+			// no player has C4, update C4 position
+			if ( g_C4s.Count() > 0 )
+			{
+				c4 = g_C4s[0];
+				m_vecC4 = c4->GetAbsOrigin();
+			}
+			else
+			{
+				m_vecC4.Init();
+			}
 		}
 	}
 

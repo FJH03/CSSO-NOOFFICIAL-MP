@@ -350,6 +350,10 @@ bool CCSPlayer::IsOtherEnemy( CCSPlayer *pPlayer )
 
 bool CCSPlayer::IsOtherEnemyTeam( int nTeam )
 {
+	if ( (nTeam != TEAM_CT && nTeam != TEAM_TERRORIST) ||
+		(GetTeamNumber() != TEAM_CT && GetTeamNumber() != TEAM_TERRORIST) )
+		return false;
+
 	if ( mp_teammates_are_enemies.GetBool() && GetTeamNumber() == nTeam )
 	{
 		return true;

@@ -384,10 +384,10 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 	Q_memset( m_TeamIconsDead, 0, sizeof(m_TeamIconsDead) );
 	Q_memset( m_TeamIconsOffscreen, 0, sizeof(m_TeamIconsOffscreen) );
 	Q_memset( m_TeamIconsGhost, 0, sizeof( m_TeamIconsGhost ) );
+	Q_memset( m_TeamIconsBomb, 0, sizeof( m_TeamIconsBomb ) );
 
-	m_bombIconPlanted = -1;
-	m_bombIconDropped = -1;
-	m_bombIconCarried = -1;
+	m_bombRingPlanted = -1;
+	m_bombRingDropped = -1;
 	m_radioFlash = -1;
 	m_radioFlashOffscreen = -1;
 	m_radarTint = -1;
@@ -409,6 +409,7 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 	m_TeamIconsDead[MAP_ICON_T] = AddIconTexture( "sprites/player_red_dead" );
 	m_TeamIconsOffscreen[MAP_ICON_T] = AddIconTexture( "sprites/player_red_offscreen" );
 	m_TeamIconsGhost[MAP_ICON_T] = AddIconTexture( "sprites/player_red_ghost" );
+	m_TeamIconsBomb[MAP_ICON_T] = AddIconTexture( "sprites/player_red_bomb" );
 
 	// setup team blue
 	m_TeamColors[MAP_ICON_CT] = COLOR_BLUE;
@@ -417,6 +418,7 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 	m_TeamIconsDead[MAP_ICON_CT] = AddIconTexture( "sprites/player_blue_dead" );
 	m_TeamIconsOffscreen[MAP_ICON_CT] = AddIconTexture( "sprites/player_blue_offscreen" );
 	m_TeamIconsGhost[MAP_ICON_CT] = AddIconTexture( "sprites/player_blue_ghost" );
+	m_TeamIconsBomb[MAP_ICON_CT] = AddIconTexture( "sprites/player_blue_bomb" );
 
 	// setup team other
 	m_TeamColors[MAP_ICON_HOSTAGE] = COLOR_GREY;
@@ -425,10 +427,10 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 	m_TeamIconsDead[MAP_ICON_HOSTAGE] = AddIconTexture( "sprites/player_hostage_dead" );
 	m_TeamIconsOffscreen[MAP_ICON_HOSTAGE] = AddIconTexture( "sprites/player_hostage_offscreen" );
 	m_TeamIconsGhost[MAP_ICON_HOSTAGE] = AddIconTexture( "sprites/player_hostage_ghost" );
+	m_TeamIconsBomb[MAP_ICON_HOSTAGE] = -1;
 
-	m_bombIconPlanted = AddIconTexture( "sprites/bomb_planted" );
-	m_bombIconDropped = AddIconTexture( "sprites/bomb_dropped" );
-	m_bombIconCarried = AddIconTexture( "sprites/bomb_carried" );
+	m_bombRingPlanted = AddIconTexture( "sprites/bomb_planted_ring" );
+	m_bombRingDropped = AddIconTexture( "sprites/bomb_dropped_ring" );
 
 	m_hostageFollowing = AddIconTexture( "sprites/hostage_following" );
 	m_hostageFollowingOffscreen = AddIconTexture( "sprites/hostage_following_offscreen" );
@@ -449,6 +451,7 @@ void CCSMapOverview::InitTeamColorsAndIcons()
 	m_enemyIconDead = AddIconTexture( "sprites/player_enemy_dead" );
 	m_enemyIconOffscreen = AddIconTexture( "sprites/player_enemy_offscreen" );
 	m_enemyIconGhost = AddIconTexture( "sprites/player_enemy_ghost" );
+	m_enemyIconBomb = AddIconTexture( "sprites/player_enemy_bomb" );
 
 }
 
@@ -558,7 +561,7 @@ CCSMapOverview::CSMapPlayer_t* CCSMapOverview::GetCSInfoForHostage(MapPlayer_t *
 }
 
 //-----------------------------------------------------------------------------
-#define TIME_SPOTS_STAY_SEEN (0.5f)
+#define TIME_SPOTS_STAY_SEEN (1.0f)
 // rules that define if you can see a player on the overview or not
 bool CCSMapOverview::CanPlayerBeSeen( MapPlayer_t *player )
 {
@@ -791,18 +794,10 @@ void CCSMapOverview::UpdatePlayers()
 				player->team = pCSPR->GetTeam( i );
 
 				if( player == localMapPlayer )
-				{
 					player->icon = m_TeamIconsSelf[ GetIconNumberFromTeamNumber(player->team) ];
-				}
 				else
-				{
+					player->icon = m_TeamIcons[ GetIconNumberFromTeamNumber(player->team) ];
 
-					if ( localPlayer->IsOtherEnemyTeam(player->team) )
-						player->icon = m_enemyIcon;
-					else
-						player->icon = m_TeamIcons[ GetIconNumberFromTeamNumber(player->team) ];
-
-				}
 				player->color = m_TeamColors[ GetIconNumberFromTeamNumber(player->team) ];
 			}
 		}
@@ -974,6 +969,7 @@ void CCSMapOverview::UpdateBomb()
 	if ( !pCSPR )
 		return;
 
+	m_bomb.carrierIndex = -1;
 	float biggestRadius = 0, smallestRadius = 0;
 	if ( g_PlantedC4s.Count() > 0 )
 	{
@@ -984,8 +980,9 @@ void CCSMapOverview::UpdateBomb()
 		{
 			m_bomb.position = pC4->GetAbsOrigin();
 			m_bomb.state = CSMapBomb_t::BOMB_PLANTED;
+			m_bomb.ringTravelTime = 2.0f;
 			smallestRadius = m_flIconSize;
-			biggestRadius = m_flIconSize * 15.0f;
+			biggestRadius = m_flIconSize * 4.0f;
 		}
 		else
 		{
@@ -1002,8 +999,9 @@ void CCSMapOverview::UpdateBomb()
 		{
 			m_bomb.position = pos;
 			m_bomb.state = CSMapBomb_t::BOMB_DROPPED;
+			m_bomb.ringTravelTime = 1.0f;
 			smallestRadius = m_flIconSize;
-			biggestRadius = m_flIconSize * 10.0f;
+			biggestRadius = m_flIconSize * 2.0f;
 		}
 		else
 		{
@@ -1031,11 +1029,25 @@ void CCSMapOverview::UpdateBomb()
 				}
 
 				m_bomb.state = CSMapBomb_t::BOMB_CARRIED;
-				smallestRadius = m_flIconSize * 1.2f;
-				biggestRadius = m_flIconSize * 1.2f;
+				m_bomb.ringTravelTime = 0;
+				m_bomb.carrierIndex = i-1;
 				break;
 			}
 		}
+	}
+	int alpha = GetMasterAlpha();
+
+	if( m_bomb.currentRingRadius == m_bomb.maxRingRadius  ||  m_bomb.ringTravelTime == 0 )
+	{
+		m_bomb.currentRingRadius = smallestRadius;
+		m_bomb.maxRingRadius = biggestRadius;
+		m_bomb.currentRingAlpha = alpha;
+	}
+	else
+	{
+		m_bomb.currentRingRadius += (m_bomb.maxRingRadius - m_flIconSize) * gpGlobals->frametime / m_bomb.ringTravelTime;
+		m_bomb.currentRingRadius = MIN( m_bomb.currentRingRadius, m_bomb.maxRingRadius );
+		m_bomb.currentRingAlpha = (alpha - 55) * ((m_bomb.maxRingRadius - m_bomb.currentRingRadius) / (m_bomb.maxRingRadius - m_flIconSize)) + 55;
 	}
 }
 
@@ -1305,10 +1317,11 @@ void CCSMapOverview::DrawMapTexture()
 
 void CCSMapOverview::DrawBomb()
 {
-    if( m_bomb.state == CSMapBomb_t::BOMB_INVALID )
+	if( m_bomb.state == CSMapBomb_t::BOMB_INVALID ||
+		m_bomb.state == CSMapBomb_t::BOMB_CARRIED )
 		return;
 
-	CBasePlayer *localPlayer = C_BasePlayer::GetLocalPlayer();
+	C_CSPlayer *localPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if( localPlayer == NULL )
 		return;
 	MapPlayer_t *localMapPlayer = GetPlayerByUserID(localPlayer->GetUserID());
@@ -1334,42 +1347,38 @@ void CCSMapOverview::DrawBomb()
 	}
 	// else if you aren't CT you can always see it
 
-	int bombIcon;
-	switch(m_bomb.state) 
+	bool bDrawRing = ((m_bomb.state != CSMapBomb_t::BOMB_GONE) && (m_bomb.state != CSMapBomb_t::BOMB_CARRIED));
+
+	int bombRing;
+	int bombRingOffscreen;
+	if ( m_bomb.state == CSMapBomb_t::BOMB_DROPPED )
 	{
-		case CSMapBomb_t::BOMB_DROPPED:
-		{
-			bombIcon = m_bombIconDropped;
-			break;
-		}
-		case CSMapBomb_t::BOMB_CARRIED:
-		{
-			bombIcon = m_bombIconCarried;
-			break;
-		}
-		case CSMapBomb_t::BOMB_PLANTED:
-		{
-			bombIcon = m_bombIconPlanted;
-			break;
-		}
-		case CSMapBomb_t::BOMB_GONE:
-		{
-			bombIcon = m_bombIconPlanted;
-			break;
-		}
-	default:
-		return;
+		bombRing = m_bombRingDropped;
+		bombRingOffscreen = m_bombRingDropped;
 	}
+	else
+	{
+		bombRing = m_bombRingPlanted;
+		bombRingOffscreen = m_bombRingPlanted;
+	}
+
+	int bombIcon;
+	if ( localPlayer->IsOtherEnemyTeam( TEAM_TERRORIST ) )
+		bombIcon = m_enemyIconBomb;
+	else
+		bombIcon = m_TeamIconsBomb[MAP_ICON_T];
 
 	int alpha = 255;
 
 	if( m_bomb.timeGone != -1  &&  m_bomb.timeFade <= gpGlobals->curtime )
 		alpha *= 1 - ( (float)(gpGlobals->curtime - m_bomb.timeFade) / (float)(m_bomb.timeGone - m_bomb.timeFade) );
+	if( bDrawRing )
+		DrawIconCS(bombRing, bombRingOffscreen, m_bomb.position, m_bomb.currentRingRadius, 0, m_bomb.currentRingAlpha);
 
 	DrawIconCS(bombIcon, bombIcon, m_bomb.position, m_flIconSize, 0, alpha);
 }
 
-#define ICON_SCALE_FACTOR 0.35f
+#define ICON_SCALE_FACTOR 0.4f
 bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector pos, float scale, float angle, int alpha, bool allowRotation, const char *text, Color *textColor, float status, Color *statusColor )
 {
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
@@ -1580,6 +1589,7 @@ void CCSMapOverview::DrawMapPlayers()
 			}
 			
 			bool doingLocalPlayer = GetPlayerByUserID(localPlayer->GetUserID()) == player;
+			bool doingBomb = (m_bomb.state == CSMapBomb_t::BOMB_CARRIED && m_bomb.carrierIndex == player->index);
 			float angleForPlayer = GetViewAngle();
 
 			if( doingLocalPlayer )
@@ -1587,16 +1597,28 @@ void CCSMapOverview::DrawMapPlayers()
 				sizeForPlayer *= 16.0f; // The self icon is really big since it has a camera view cone attached.
 				angleForPlayer = player->angle[YAW];// And, the self icon now rotates, natch.
 			}
+			int icon = player->icon;
+			if ( doingBomb && !doingLocalPlayer )
+			{
+				if ( IsOtherEnemy( localPlayer->entindex(), player->index + 1 ) )
+					icon = m_enemyIconBomb;
+				else
+					icon = m_TeamIconsBomb[GetIconNumberFromTeamNumber( player->team )];
+			}
+			else
+			{
+				if ( IsOtherEnemy( localPlayer->entindex(), player->index + 1 ) )
+					icon = m_enemyIcon;
+			}
 
 			int offscreenIcon = m_TeamIconsOffscreen[GetIconNumberFromTeamNumber(player->team)];
 			if ( IsOtherEnemy( localPlayer->entindex(), player->index + 1 ) )
 				offscreenIcon = m_enemyIconOffscreen;
-			DrawIconCS( player->icon, offscreenIcon, player->position, sizeForPlayer, angleForPlayer, alpha, true, name, &player->color, status, &colorGreen );
-			if( !doingLocalPlayer )
+			DrawIconCS( icon, offscreenIcon, player->position, sizeForPlayer, angleForPlayer, alpha, true, name, &player->color, status, &colorGreen );
+			if( !doingLocalPlayer && player->health > 0 && !doingBomb && bIsTeammate )
 			{
 				// Draw the facing for teammates only.
-				if( player->health > 0 && bIsTeammate )
-					DrawIconCS( m_playerFacing, -1, player->position, sizeForPlayer, player->angle[YAW], alpha, true, name, &player->color, status, &colorGreen );
+				DrawIconCS( m_playerFacing, -1, player->position, sizeForPlayer, player->angle[YAW], alpha, true, name, &player->color, status, &colorGreen );
 			}
 		}
 	}
@@ -1916,6 +1938,11 @@ void CCSMapOverview::ResetRound()
 	m_bomb.timeFade = -1;
 	m_bomb.timeGone = -1;
 
+	m_bomb.currentRingRadius = -1;
+	m_bomb.currentRingAlpha = -1;
+	m_bomb.maxRingRadius = -1;
+	m_bomb.ringTravelTime = -1;
+
 	m_goalIconsLoaded = false;
 }
 
@@ -2127,17 +2154,10 @@ void CCSMapOverview::FireGameEvent( IGameEvent *event )
 		player->team = event->GetInt("team");
 
 		if( player == localMapPlayer )
-		{
 			player->icon = m_TeamIconsSelf[ GetIconNumberFromTeamNumber(player->team) ];
-		}
 		else
-		{
-			if ( localPlayer->IsOtherEnemyTeam(player->team) )
-				player->icon = m_enemyIcon;
-			else
-				player->icon = m_TeamIcons[ GetIconNumberFromTeamNumber(player->team) ];
-		}
-		player->color = m_TeamColors[ GetIconNumberFromTeamNumber(player->team) ];
+			player->icon = m_TeamIcons[ GetIconNumberFromTeamNumber(player->team) ];
+
 	}
 	else
 	{
@@ -2308,6 +2328,7 @@ int CCSMapOverview::GetIconNumberFromTeamNumber( int teamNumber )
 void CCSMapOverview::ClearGoalIcons()
 {
 	m_goalIcons.RemoveAll();
+	m_goalIconsLoaded = false;
 }
 
 //-----------------------------------------------------------------------------
