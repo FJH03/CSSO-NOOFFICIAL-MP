@@ -752,6 +752,13 @@ bool V_GetCurrentDirectory( OUT_Z_CAP(maxLen) char *pOut, int maxLen );
 // Set the working directory thus.
 bool V_SetCurrentDirectory( const char *pDirName );
 
+typedef enum
+{
+	PATTERN_NONE		= 0x00000000,
+	PATTERN_DIRECTORY	= 0x00000001
+} TStringPattern;
+// String matching using wildcards (*) for partial matches.
+bool V_StringMatchesPattern( const char* szString, const char* szPattern, int flags = 0 );
 
 // This function takes a slice out of pStr and stores it in pOut.
 // It follows the Python slice convention:

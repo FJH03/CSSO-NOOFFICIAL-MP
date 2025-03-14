@@ -73,6 +73,7 @@ public: // IServer implementation
 	virtual float	GetTickInterval( void ) const { return m_flTickInterval; }
 	virtual const char *GetName( void ) const;
 	virtual const char *GetMapName( void ) const { return m_szMapname; }
+	virtual const char *GetMapGroupName( void ) const { return m_szMapGroupName; }
 	virtual int		GetSpawnCount( void ) const { return m_nSpawnCount; }
 	virtual int		GetNumClasses( void ) const { return serverclasses; }
 	virtual int		GetClassBits( void ) const { return serverclassbits; }
@@ -201,6 +202,7 @@ public:
 	int				m_nTickCount;	// current server tick
 	bool			m_bSimulatingTicks;		// whether or not the server is currently simulating ticks
 	char			m_szMapname[64];		// map name
+	char			m_szMapGroupName[64];	// map group name
 	char			m_szMapFilename[64];	// map filename, may bear no resemblance to map name
 	char			m_szSkyname[64];		// skybox name
 	char			m_Password[32];		// server password

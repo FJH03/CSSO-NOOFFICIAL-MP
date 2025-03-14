@@ -39,6 +39,10 @@ public:
 
 	// IGameEventListener
 	virtual void FireGameEvent( IGameEvent* event );
+
+	void SetExtendedServerInfo( KeyValues* pExtendedServerInfo );
+	void ResetExtendedServerInfo();
+
 protected:
 	virtual void OnCommand(const char *command);
 	virtual void PerformLayout();
@@ -47,12 +51,11 @@ protected:
 	virtual void OnKeyCodeTyped(vgui::KeyCode code);
 	virtual void OnKeyCodePressed(vgui::KeyCode code);
 	virtual void PaintBackground( void );
-	void SetupControlSettings();
+	
 private:
-	void SetupControlSettings( bool bForceShowProgressText );
+	void SetupControlSettings();
 	void SetupControlSettingsForErrorDisplay( const char *settingsFile );
 	void HideOtherDialogs( bool bHide );
-	void SetMapName( const char* mapname );
 
 	vgui::ProgressBar	*m_pProgress;
 	vgui::ProgressBar	*m_pProgress2;
@@ -73,9 +76,6 @@ private:
 	bool	m_bConsoleStyle;
 	float	m_flProgressFraction;
 
-	char m_szMapName[64];
-	int m_iGameMode;
-	bool m_bMapNameChanged;
 	CPanelAnimationVar( int, m_iAdditionalIndentX, "AdditionalIndentX", "0" );
 	CPanelAnimationVar( int, m_iAdditionalIndentY, "AdditionalIndentY", "0" );
 };

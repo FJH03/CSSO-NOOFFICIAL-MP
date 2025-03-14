@@ -1193,7 +1193,7 @@ bool CSaveRestore::LoadGame( const char *pName )
 
 	bool bIsTransitionSave = ( gameHeader.originMapName[0] != 0 );
 
-	bool retval = Host_NewGame( gameHeader.mapName, true, false, ( bIsTransitionSave ) ? gameHeader.originMapName : NULL, ( bIsTransitionSave ) ? gameHeader.landmark : NULL, bOldSave );
+	bool retval = Host_NewGame( gameHeader.mapName, NULL, true, false, ( bIsTransitionSave ) ? gameHeader.originMapName : NULL, ( bIsTransitionSave ) ? gameHeader.landmark : NULL, bOldSave );
 
 	SetMostRecentElapsedMinutes( iElapsedMinutes );
 	SetMostRecentElapsedSeconds( iElapsedSeconds );
@@ -2966,6 +2966,7 @@ CON_COMMAND_F( save, "Saves current game.", FCVAR_DONTRECORD )
 	}
 
 	g_SaveRestore.SetIsXSave( false );
+	SetLoadLaunchOptions();
 	SaveGame( args );
 }
 
@@ -3193,6 +3194,17 @@ static void LoadSaveGame( const char *savename )
 	HostState_LoadGame( savename, false );
 }
 
+void SetLoadLaunchOptions()
+{
+	if ( g_pLaunchOptions )
+	{
+		g_pLaunchOptions->deleteThis();
+	}
+	g_pLaunchOptions = new KeyValues( "LaunchOptions" );
+	g_pLaunchOptions->SetString( "Arg0", "load" );
+	g_pLaunchOptions->SetString( "Arg1", "reserved" );
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Output : void Host_Loadgame_f
@@ -3222,6 +3234,7 @@ void Host_Loadgame_f( const CCommand &args )
 	}
 
 	g_SaveRestore.SetIsXSave( false );
+	SetLoadLaunchOptions();
 	LoadSaveGame( args[1] );
 }
 

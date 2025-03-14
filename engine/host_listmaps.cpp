@@ -21,6 +21,7 @@
 
 // Imported from other .cpp files
 void Host_Map_f( const CCommand &args );
+void Host_MapGroup_f( const CCommand &args );
 void Host_Map_Background_f( const CCommand &args );
 void Host_Map_Commentary_f( const CCommand &args );
 void Host_Changelevel_f( const CCommand &args );
@@ -706,6 +707,7 @@ static void Host_Maps_f( const CCommand &args )
 #ifndef BENCHMARK
 static ConCommand maps("maps", Host_Maps_f, "Displays list of maps." );
 static ConCommand map("map", Host_Map_f, "Start playing on specified map.", FCVAR_DONTRECORD, Host_Map_f_CompletionFunc );
+static ConCommand mapgroup( "mapgroup", Host_MapGroup_f, "Specify a map group", FCVAR_DONTRECORD );
 static ConCommand map_background("map_background", Host_Map_Background_f, "Runs a map as the background to the main menu.", FCVAR_DONTRECORD, Host_Map_f_CompletionFunc );
 static ConCommand map_commentary("map_commentary", Host_Map_Commentary_f, "Start playing, with commentary, on a specified map.", FCVAR_DONTRECORD, Host_Map_Commentary_f_CompletionFunc );
 static ConCommand changelevel("changelevel", Host_Changelevel_f, "Change server to the specified map", FCVAR_DONTRECORD, Host_Changelevel_f_CompletionFunc );

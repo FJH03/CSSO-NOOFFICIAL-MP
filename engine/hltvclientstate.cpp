@@ -382,6 +382,7 @@ bool CHLTVClientState::ProcessServerInfo(SVC_ServerInfo *msg )
 	host_state.interval_per_tick = msg->m_fTickInterval;
 		
 	Q_strncpy( m_pHLTV->m_szMapname, msg->m_szMapName, sizeof(m_pHLTV->m_szMapname) );
+	Q_strncpy( m_pHLTV->m_szMapGroupName, msg->m_szMapGroupName, sizeof(m_pHLTV->m_szMapGroupName) );
 	Q_strncpy( m_pHLTV->m_szSkyname, msg->m_szSkyName, sizeof(m_pHLTV->m_szSkyname) );
 
 	return true;

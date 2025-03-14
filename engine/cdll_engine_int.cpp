@@ -431,6 +431,7 @@ public:
 	// menu display
 	virtual void GetChapterName( char *pchBuff, int iMaxLength );
 	virtual char const *GetLevelName( void );
+	virtual char const *GetMapGroupName( void );
 	virtual int GetLevelVersion( void );
 	virtual bool IsLevelMainMenuBackground( void );
 	virtual void GetMainMenuBackgroundName( char *dest, int destlen );
@@ -1094,6 +1095,16 @@ char const *CEngineClient::GetLevelName( void )
 	}
 
 	return cl.m_szLevelFileName;
+}
+
+char const *CEngineClient::GetMapGroupName( void )
+{	
+ 	if ( !cl.IsConnected() )
+ 	{
+ 		return "";
+ 	}
+ 
+ 	return cl.m_szMapGroupName;
 }
 
 int CEngineClient::GetLevelVersion( void )

@@ -19,7 +19,7 @@
 
 struct model_t;
 struct AudioState_t;
-
+class KeyValues;
 
 class CCommonHostState
 {
@@ -99,6 +99,7 @@ extern bool			g_bInEditMode;
 extern bool			g_bInCommentaryMode;
 extern bool			g_bAllowSecureServers;
 extern bool			g_bLowViolence;
+extern KeyValues*	g_pLaunchOptions;
 
 // Returns true if host is not single stepping/pausing through code/
 // FIXME:  Remove from final, retail version of code.

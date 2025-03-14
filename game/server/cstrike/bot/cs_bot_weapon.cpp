@@ -630,6 +630,12 @@ bool CCSBot::EquipGrenade( bool noSmoke )
 	if (IsSniper())
 		return false;
 
+	if ( CSGameRules()->IsPlayingOffline() && CSGameRules()->GetCustomBotDifficulty() == CUSTOM_BOT_DIFFICULTY_DUMB )
+	{
+		// For Offline games: Bots in dumb mode should not toss grenades
+		return false;
+	}
+
 	if (IsUsingGrenade())
 		return true;
 

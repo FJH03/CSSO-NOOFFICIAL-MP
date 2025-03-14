@@ -12,6 +12,7 @@
 #include "model_types.h"
 #include "cs_gamerules.h"
 #include "cs_loadout.h"
+#include "c_team.h"
 
 CCSTeamMenuAgentImage::CCSTeamMenuAgentImage( Panel* parent, const char* panelName, int nTeamNumber ): Button( parent, panelName, L"" )
 {
@@ -435,6 +436,16 @@ void CCSTeamMenu::ShowPanel( bool bShow )
 		m_pAutoAssignButton->SetHotkey( '5' );
 		m_pSpectateButton->SetHotkey( '6' );
 
+		bool bAllowSpectate = false;
+		const ConVar* allowSpectators = cvar->FindVar( "mp_allowspectators" );
+		if ( allowSpectators &&
+			 allowSpectators->GetBool() &&
+			 (  GetGlobalTeam( TEAM_SPECTATOR )->GetNumPlayers() < CSGameRules()->GetMaxSpectatorSlots() ) )
+		{
+			bAllowSpectate = true;
+		}
+
+		m_pSpectateButton->SetVisible( bAllowSpectate );
 		m_pCancelButton->SetVisible( pPlayer->GetTeamNumber() != TEAM_UNASSIGNED );
 
 		engine->ClientCmd_Unrestricted( "gameui_preventescapetoshow\n" );

@@ -31,6 +31,9 @@
 #include "engine/IStaticPropMgr.h"
 #include "particle_parse.h"
 #include "globalstate.h"
+#ifdef CSTRIKE_DLL
+#include "gametypes.h"
+#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -525,6 +528,11 @@ void CWorld::Spawn( void )
 	// world model
 	SetModelName( AllocPooledString( modelinfo->GetModelName( GetModel() ) ) );
 	AddFlag( FL_WORLDBRUSH );
+
+#if defined( CSTRIKE_DLL )
+	// reinitialize all of the game type kv file data because we may have new things availible to us in the filesystem mounted from the bsp that we didn't have when the gamemodes.txt was first parsed
+	g_pGameTypes->Initialize( true );
+#endif
 
 	g_EventQueue.Init();
 	Precache( );

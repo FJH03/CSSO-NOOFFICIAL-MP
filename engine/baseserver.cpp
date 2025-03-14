@@ -268,6 +268,7 @@ CBaseServer::CBaseServer()
 	m_nTickCount = 0;
 	
 	m_szMapname[0] = 0;
+	m_szMapGroupName[0] = 0;
 	m_szSkyname[0] = 0;
 	m_Password[0] = 0;
 	V_memset( worldmapMD5.bits, 0, MD5_DIGEST_LENGTH );
@@ -957,6 +958,7 @@ void CBaseServer::FillServerInfo(SVC_ServerInfo &serverinfo)
 	serverinfo.m_fTickInterval	= GetTickInterval();
 	serverinfo.m_szGameDir		= gamedir;
 	serverinfo.m_szMapName		= GetMapName();
+	serverinfo.m_szMapGroupName	= GetMapGroupName();
 	serverinfo.m_szSkyName		= m_szSkyname;
 	serverinfo.m_szHostName		= GetName();
 	serverinfo.m_bIsHLTV		= IsHLTV();
@@ -1618,6 +1620,7 @@ void CBaseServer::Clear( void )
 	m_nTickCount = 0;
 	
 	Q_memset( m_szMapname, 0, sizeof( m_szMapname ) );
+	Q_memset( m_szMapGroupName, 0, sizeof( m_szMapGroupName ) );
 	Q_memset( m_szSkyname, 0, sizeof( m_szSkyname ) );
 
 	V_memset( worldmapMD5.bits, 0, MD5_DIGEST_LENGTH );

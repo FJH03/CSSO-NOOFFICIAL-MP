@@ -493,8 +493,11 @@ void CHostage::CheckForHostageAbuse( CCSPlayer *player )
 		}
 		else if ( player->m_iHostagesKilled >= hostageKillLimit )
 		{
-			Msg( "Kicking client \"%s\" for killing too many hostages\n", player->GetPlayerName() );
-			engine->ServerCommand( UTIL_VarArgs( "kickid_ex %d %d For killing too many hostages\n", player->GetUserID(), 1 ) );
+			if ( !CSGameRules()->IsPlayingOffline() )
+			{
+				Msg( "Kicking client \"%s\" for killing too many hostages\n", player->GetPlayerName() );
+			}
+			engine->ServerCommand( UTIL_VarArgs( "kickid_ex %d %d For killing too many hostages\n", player->GetUserID(), CSGameRules()->IsPlayingOffline() ? 0 : 1 ) );
 		}
 	}
 }

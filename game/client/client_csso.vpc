@@ -116,6 +116,10 @@ $Project "Client (CStrike)"
 			$File	"cstrike\vgui_rootpanel_cs.cpp"
 			$File	"cstrike\ironsight_editor.cpp"
  			$File	"cstrike\ironsight_editor.h"
+
+			$File	"$SRCDIR\public\gametypes\igametypes.h"
+			$File	"$SRCDIR\game\shared\cstrike\gametypes.h"
+			$File	"$SRCDIR\game\shared\cstrike\gametypes.cpp"  
 			
 			$Folder "GameUI - Embedded"
 			{

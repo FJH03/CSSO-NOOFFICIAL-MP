@@ -97,6 +97,7 @@ public:
 	Vector		m_vecLocation;
 	QAngle		m_angLocation;
 	char		m_levelName[256];
+	char		m_mapGroupName[256];
 	char		m_landmarkName[256];
 	char		m_saveName[256];
 	float		m_flShortFrameTime;		// run a few one-tick frames to avoid large timesteps while loading assets
@@ -197,6 +198,16 @@ void HostState_ChangeLevelMP( char const *pNewLevel, char const *pLandmarkName )
 	g_HostState.SetNextState( HS_CHANGE_LEVEL_MP );
 }
 
+// set the mapgroup name
+void HostState_SetMapGroupName( char const *pMapGroupName )
+{
+	if ( pMapGroupName )
+	{
+		V_strncpy( g_HostState.m_mapGroupName, pMapGroupName, sizeof ( g_HostState.m_mapGroupName ) );
+		sv.SetMapGroupName( pMapGroupName );
+	}
+}
+
 // shutdown the game as soon as possible
 void HostState_GameShutdown()
 {
@@ -282,6 +293,7 @@ void CHostState::Init()
 	m_nextState = HS_RUN;
 	m_activeGame = false;
 	m_levelName[0] = 0;
+	m_mapGroupName[0] = 0;
 	m_saveName[0] = 0;
 	m_landmarkName[0] = 0;
 	m_bRememberLocation = 0;
@@ -352,7 +364,7 @@ void CHostState::State_NewGame()
 		}
 		else
 		{
-			if ( Host_NewGame( m_levelName, false, m_bBackgroundLevel ) )
+			if ( Host_NewGame( m_levelName, m_mapGroupName, false, m_bBackgroundLevel ) )
 			{
 				// succesfully started the new game
 				SetState( HS_RUN, true );
@@ -411,7 +423,7 @@ void CHostState::State_ChangeLevelMP()
 		// start progress bar immediately for multiplayer level transitions
 		EngineVGui()->EnabledProgressBarForNextLoad();
 #endif
-		if ( Host_Changelevel( false, m_levelName, m_landmarkName ) )
+	if ( Host_Changelevel( false, m_levelName, m_mapGroupName, m_landmarkName ) )
 		{
 			SetState( HS_RUN, true );
 			return;
@@ -434,7 +446,7 @@ void CHostState::State_ChangeLevelSP()
 {
 	if ( Host_ValidGame() )
 	{
-		Host_Changelevel( true, m_levelName, m_landmarkName );
+		Host_Changelevel( true, m_levelName, m_mapGroupName, m_landmarkName );
 		SetState( HS_RUN, true );
 		return;
 	}

@@ -47,6 +47,10 @@
 #include "tf_gamerules.h"
 #endif
 
+#ifdef CSTRIKE_DLL
+#include "cs_gamerules.h"
+#endif
+
 ConVar	cc_achievement_debug( "achievement_debug", "0", FCVAR_CHEAT | FCVAR_REPLICATED, "Turn on achievement debug msgs." );
 
 #ifdef CSTRIKE_DLL
@@ -889,11 +893,25 @@ void CAchievementMgr::SaveGlobalStateIfDirty( bool bAsync )
 	}
 }
 
+bool CAchievementMgr::IsAchievementAllowedInGame( int iAchievementID )
+{
+#ifdef CSTRIKE_DLL
+	// Offline modes with trivial bots disable ALL achievements
+	if ( CSGameRules() && !CSGameRules()->IsAwardsProgressAllowedForBotDifficulty() )
+		return false;
+#endif
+
+	return true;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: awards specified achievement
 //-----------------------------------------------------------------------------
 void CAchievementMgr::AwardAchievement( int iAchievementID )
 {
+	if ( !IsAchievementAllowedInGame( iAchievementID ) )
+		return;
+	
 	CBaseAchievement *pAchievement = GetAchievementByID( iAchievementID );
 	Assert( pAchievement );
 	if ( !pAchievement )

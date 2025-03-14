@@ -1215,6 +1215,7 @@ bool CBaseClientState::ProcessServerInfo( SVC_ServerInfo *msg )
 	}
 
 	Q_strncpy( m_szLevelBaseName, msg->m_szMapName, sizeof( m_szLevelBaseName ) );
+	Q_strncpy( m_szMapGroupName, msg->m_szMapGroupName, sizeof( m_szMapGroupName ) );
 
 #if !defined(SWDS)
 	audiosourcecache->LevelInit( m_szLevelBaseName );
@@ -1853,6 +1854,16 @@ int CBaseClientState::GetDemoProtocolVersion() const
 
 bool CBaseClientState::ProcessCmdKeyValues( SVC_CmdKeyValues *msg )
 {
+	KeyValues* pkvCmd = msg->GetKeyValues();
+ 	if ( pkvCmd )
+ 	{
+ 		char const* szCmd = pkvCmd->GetName();
+ 		if ( !Q_stricmp( "ExtendedServerInfo", szCmd ) )
+ 		{
+ 			KeyValuesDumpAsDevMsg( pkvCmd, 2, 1 );
+ 			g_ClientDLL->SetAndParseExtendedServerInfo( pkvCmd );
+ 		}
+ 	}
 	return true;
 }
 

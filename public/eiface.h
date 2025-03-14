@@ -102,6 +102,9 @@ public:
 	// Is in Hammer editing mode?
 	virtual int			IsInEditMode( void ) = 0;
 
+	// get arbitrary launch options
+	virtual KeyValues* GetLaunchOptions( void ) = 0;
+
 	// Add to the server/client lookup/precache table, the specified string is given a unique index
 	// NOTE: The indices for PrecacheModel are 1 based
 	//  a 0 returned from those methods indicates the model or sound was not correctly precached
@@ -567,6 +570,9 @@ public:
 
 	// Called after the steam API has been activated post-level startup
 	virtual void			GameServerSteamAPIActivated( void ) = 0;
+
+	// Builds extended server info for new connecting client
+	virtual KeyValues*		GetExtendedServerInfoForNewClient() = 0;
 
 	// Called after the steam API has been shutdown post-level startup
 	virtual void			GameServerSteamAPIShutdown( void ) = 0;

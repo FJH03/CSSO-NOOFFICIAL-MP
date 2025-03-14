@@ -62,7 +62,8 @@ public: // IServer implementation
 
 public: 
 	void	InitMaxClients( void );
-	bool	SpawnServer( const char *szMapName, const char *szMapFile, const char *startspot );
+	bool	SpawnServer( const char *szMapName, const char *szMapFile, const char *szMapGroupName, const char *startspot );
+	void	SetMapGroupName( char const *mapGroupName );
 	void	SetQueryPortFromSteamServer();
 	void	CopyPureServerWhitelistToStringTable();
 	void 	RemoveClientFromGame( CBaseClient *client );

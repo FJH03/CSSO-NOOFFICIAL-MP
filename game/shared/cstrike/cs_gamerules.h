@@ -33,6 +33,15 @@
 #define WINNER_TER		TEAM_TERRORIST
 #define WINNER_CT		TEAM_CT
 
+#define CUSTOM_BOT_DIFFICULTY_NOBOTS	0
+#define CUSTOM_BOT_DIFFICULTY_DUMB		1
+#define CUSTOM_BOT_DIFFICULTY_EASY		2
+#define CUSTOM_BOT_DIFFICULTY_MEDIUM	3
+#define CUSTOM_BOT_DIFFICULTY_HARD		4
+#define CUSTOM_BOT_DIFFICULTY_EXPERT	5
+
+#define CUSTOM_BOT_MIN_DIFFICULTY_FOR_AWARDS_PROGRESS	CUSTOM_BOT_DIFFICULTY_EASY
+
 #define MAX_WEAPON_NAME_POPUP_RANGE 128.0
 
 //=============================================================================
@@ -64,65 +73,6 @@ extern ConVar ammo_grenade_limit_total;
 #endif // !CLIENT_DLL
 
 //--------------------------------------------------------------------------------------------------------------
-struct WeaponProgression
-{
-	CUtlString m_Name;
-	int m_Kills;
-};
-
-static WeaponProgression g_GGProgressiveWeaponProgression[] =
-{
-	{ "bizon",		2 },
-	{ "ump45",		2 },
-	{ "p90",		2 },
-	{ "nova",		2 },
-	{ "mag7",		2 },
-	{ "xm1014",		2 },
-	{ "sawedoff",	2 },
-	{ "galilar",	2 },
-	{ "ak47",		2 },
-	{ "m4a1",		2 },
-	{ "sg556",		2 },
-	{ "aug",		2 },
-	{ "awp",		2 },
-	{ "scar20",		2 },
-	{ "negev",		2 },
-	{ "tec9",		2 },
-	{ "p250",		2 },
-	{ "deagle",		2 },
-	{ "fiveseven",	2 },
-	{ "elite",		2 },
-	{ "knifegg",	1 }
-};
-
-static WeaponProgression g_GGTRWeaponProgressionCT[] =
-{
-	{ "m4a4",		1 },
-	{ "famas",		1 },
-	{ "p90",		1 },
-	{ "mp9",		1 },
-	{ "xm1014",		1 },
-	{ "deagle",		1 },
-	{ "fiveseven",	1 },
-	{ "ssg08",		1 },
-	{ "awp",		1 },
-	{ "scar20",		1 }
-};
-
-static WeaponProgression g_GGTRWeaponProgressionT[] =
-{
-	{ "ak47",		1 },
-	{ "galilar",	1 },
-	{ "p90",		1 },
-	{ "mac10",		1 },
-	{ "xm1014",		1 },
-	{ "deagle",		1 },
-	{ "tec9",		1 },
-	{ "ssg08",		1 },
-	{ "awp",		1 },
-	{ "g3sg1",		1 }
-};
-
 struct GGWeaponAliasName
 {
 	CSWeaponID id;
@@ -294,9 +244,13 @@ public:
 	bool IsSpawnPointValid( CBaseEntity *pSpot, CBasePlayer *pPlayer );
 	bool IsSpawnPointHiddenFromOtherPlayers( CBaseEntity *pSpot, CBasePlayer *pPlayer, int nHideFromTeam = 0 );
 
+	int GetMaxSpectatorSlots( void ) const;
+
 	bool IsBuyTimeElapsed();
 	bool IsMatchWaitingForResume( void );
 	void SetMatchWaitingForResume( bool pause ) { m_bMatchWaitingForResume = pause; };
+
+	bool IsAwardsProgressAllowedForBotDifficulty() const; // returns false if the user is playing offline with trivial bots (no bots, harmless bots)
 
 #ifndef CLIENT_DLL
 	bool IsArmorFree();
@@ -305,6 +259,8 @@ public:
 	bool IsEnemySolid( void ) const;				// returns true if enemies are solid obstacles in the current game mode
 
 	bool HasHalfTime( void ) const;
+
+	int GetCustomBotDifficulty( void ) const;
 
 	int GetCurrentGunGameWeapon( int nCurrentWeaponIndex, int nTeamID );
 	int GetNextGunGameWeapon( int nCurrentWeaponIndex, int nTeamID );
@@ -327,12 +283,15 @@ public:
 
 	void AddHostageRescueTime( void );
 
-	bool IsPlayingClassic( void ) const;
+	bool IsPlayingCustomGametype( void ) const;
 	bool IsPlayingGunGameProgressive( void ) const;
 	bool IsPlayingGunGameDeathmatch( void ) const;
 	bool IsPlayingGunGameTRBomb( void ) const;
 	bool IsPlayingGunGame( void ) const;
+	bool IsPlayingClassic( void ) const;
+	bool IsPlayingOffline( void ) const;
 
+	bool IsPlayingClassicCasual( void ) const;
 	bool IsPlayingAnyCompetitiveStrictRuleset( void ) const;
 
 	int GetTotalRoundsPlayed( void ) const { return m_iNumCTWins + m_iNumTerroristWins; }
@@ -362,6 +321,7 @@ private:
 	CNetworkVar( bool, m_bLogoMap );		 // If there's an info_player_logo entity, then it's a logo map.
 	CNetworkVar( int, m_iNumGunGameProgressiveWeaponsCT );	// total number of CT gun game progressive weapons
 	CNetworkVar( int, m_iNumGunGameProgressiveWeaponsT );	// total number of T gun game progressive weapons
+	CNetworkVar( int,  m_iSpectatorSlotCount );				// max spectator slots available
 	CNetworkArray( int, m_GGProgressiveWeaponOrderCT, 60 );	// CT gun game weapon order and # kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
 	CNetworkArray( int, m_GGProgressiveWeaponOrderT, 60 );	// T gun game weapon order and # kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
 	CNetworkArray( int, m_GGProgressiveWeaponKillUpgradeOrderCT, 60 );	// CT gun game number of kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
@@ -369,8 +329,6 @@ private:
 	
 	CNetworkVar( int, m_iMapFactionCT );
 	CNetworkVar( int, m_iMapFactionT );
-
-	CNetworkVar( int, m_iCurrentGamemode );
 	
 	GamePhase m_gamePhase;
 
@@ -519,6 +477,7 @@ public:
 	bool TeamFull( int team_id );
 	int	 MaxNumPlayersOnTerrTeam();
 	int  MaxNumPlayersOnCTTeam();
+	bool WillTeamHaveRoomForPlayer( CCSPlayer* pPlayer, int newTeam );
 	bool TeamStacked( int newTeam_id, int curTeam_id  );
 	bool FPlayerCanRespawn( CBasePlayer *pPlayer );
 	void UpdateTeamScores();
@@ -585,7 +544,7 @@ public:
 
 	// BOMB MAP FUNCTIONS
 	void GiveC4ToRandomPlayer();
- 	void GiveDefuserToRandomPlayer();
+	void GiveDefuserToRandomPlayer();
 	bool IsThereABomber();
 	bool IsThereABomb();
 
@@ -670,6 +629,9 @@ public:
 
 	int m_iSpawnPointCount_Terrorist;		// Number of Terrorist spawn points
 	int m_iSpawnPointCount_CT;				// Number of CT spawn points
+
+	int m_iMaxNumTerrorists;
+	int m_iMaxNumCTs;
 
 	bool m_bTCantBuy;			// Who can and can't buy.
 	bool m_bCTCantBuy;
@@ -823,6 +785,8 @@ public:
 	float CheckTotalSmokedLength( float flRadius, Vector vecGrenadePos, Vector from, Vector to );
 
 protected:
+	void InitializeGameTypeAndMode( void );
+
 	bool m_bHasTriggeredRoundStartMusic;
 
 private:

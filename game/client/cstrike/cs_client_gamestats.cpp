@@ -4,7 +4,7 @@
 // Desc: 		Manages client side stat storage, accumulation, and access
 // Author: 		Peter Freese <peter@hiddenpath.com>
 // Date: 		2009/09/11
-// Copyright:	© 2009 Hidden Path Entertainment
+// Copyright:	ï¿½ 2009 Hidden Path Entertainment
 //
 // Keywords: 	
 //-------------------------------------------------------------
@@ -559,9 +559,14 @@ void CCSClientGameStats::UpdateStats( const StatsCollection_t &stats )
 		return;
 
 	// Update the accumulated stats
-	m_lifetimeStats.Aggregate(stats);
-	m_matchStats.Aggregate(stats);
-	m_roundStats.Aggregate(stats);
+	// We don't aggregate stats in Offline Games with "Dumb" or No Bots
+	if ( CSGameRules() && CSGameRules()->IsAwardsProgressAllowedForBotDifficulty() )
+	{
+		m_lifetimeStats.Aggregate(stats);
+		m_matchStats.Aggregate(stats);
+		m_roundStats.Aggregate(stats);
+	}
+
 
 	IGameEvent * event = gameeventmanager->CreateEvent( "player_stats_updated" );
 	if ( event )
@@ -728,20 +733,24 @@ void CCSClientGameStats::UpdateLastMatchStats()
 	s += m_matchStats[CSSTAT_DAMAGE];
 	s += m_matchStats[CSSTAT_MONEY_SPENT];
 
-	if ( s == 0 )
-		return;
+	if ( s != 0 && CSGameRules() && CSGameRules()->IsAwardsProgressAllowedForBotDifficulty() )
+	{
+		m_lifetimeStats[CSSTAT_LASTMATCH_T_ROUNDS_WON]	= m_matchStats[CSSTAT_T_ROUNDS_WON];
+		m_lifetimeStats[CSSTAT_LASTMATCH_CT_ROUNDS_WON]	= m_matchStats[CSSTAT_CT_ROUNDS_WON];
+		m_lifetimeStats[CSSTAT_LASTMATCH_ROUNDS_WON]	= m_matchStats[CSSTAT_ROUNDS_WON];
+		m_lifetimeStats[CSSTAT_LASTMATCH_KILLS]			= m_matchStats[CSSTAT_KILLS];
+		m_lifetimeStats[CSSTAT_LASTMATCH_DEATHS]		= m_matchStats[CSSTAT_DEATHS];
+		m_lifetimeStats[CSSTAT_LASTMATCH_MVPS]			= m_matchStats[CSSTAT_MVPS];
+		m_lifetimeStats[CSSTAT_LASTMATCH_DAMAGE]		= m_matchStats[CSSTAT_DAMAGE];
+		m_lifetimeStats[CSSTAT_LASTMATCH_MONEYSPENT]	= m_matchStats[CSSTAT_MONEY_SPENT];
+		m_lifetimeStats[CSSTAT_LASTMATCH_DOMINATIONS]	= m_matchStats[CSSTAT_DOMINATIONS];
+		m_lifetimeStats[CSSTAT_LASTMATCH_REVENGES]		= m_matchStats[CSSTAT_REVENGES];
+		m_lifetimeStats[CSSTAT_LASTMATCH_MAX_PLAYERS]	= m_matchMaxPlayerCount;
 
-	m_lifetimeStats[CSSTAT_LASTMATCH_T_ROUNDS_WON]	= m_matchStats[CSSTAT_T_ROUNDS_WON];
-	m_lifetimeStats[CSSTAT_LASTMATCH_CT_ROUNDS_WON]	= m_matchStats[CSSTAT_CT_ROUNDS_WON];
-	m_lifetimeStats[CSSTAT_LASTMATCH_ROUNDS_WON]	= m_matchStats[CSSTAT_ROUNDS_WON];
-	m_lifetimeStats[CSSTAT_LASTMATCH_KILLS]			= m_matchStats[CSSTAT_KILLS];
-	m_lifetimeStats[CSSTAT_LASTMATCH_DEATHS]		= m_matchStats[CSSTAT_DEATHS];
-	m_lifetimeStats[CSSTAT_LASTMATCH_MVPS]			= m_matchStats[CSSTAT_MVPS];
-	m_lifetimeStats[CSSTAT_LASTMATCH_DAMAGE]		= m_matchStats[CSSTAT_DAMAGE];
-	m_lifetimeStats[CSSTAT_LASTMATCH_MONEYSPENT]	= m_matchStats[CSSTAT_MONEY_SPENT];
-	m_lifetimeStats[CSSTAT_LASTMATCH_DOMINATIONS]	= m_matchStats[CSSTAT_DOMINATIONS];
-	m_lifetimeStats[CSSTAT_LASTMATCH_REVENGES]		= m_matchStats[CSSTAT_REVENGES];
-	m_lifetimeStats[CSSTAT_LASTMATCH_MAX_PLAYERS]	= m_matchMaxPlayerCount;
+		CalculateMatchFavoriteWeapons();
+	}
+
+	ResetMatchStats();
 
 	CalculateMatchFavoriteWeapons();
 }

@@ -542,16 +542,21 @@ const char *CLC_SaveReplay::ToString() const
 // CmdKeyValues message
 //
 
-Base_CmdKeyValues::Base_CmdKeyValues( KeyValues *pKeyValues /* = NULL */ ) :
-	m_pKeyValues( pKeyValues )
+Base_CmdKeyValues::Base_CmdKeyValues( KeyValues *pKeyValues /* = NULL */, bool bDeleteOnDestruct /* = true */ ):
+ 	m_pKeyValues( pKeyValues ),
+ 	m_bDeleteOnDestruct( bDeleteOnDestruct )
 {
 }
 
 Base_CmdKeyValues::~Base_CmdKeyValues()
 {
-	if ( m_pKeyValues )
-		m_pKeyValues->deleteThis();
-	m_pKeyValues = NULL;
+	// PiMoN: added this so that my memory won't leak
+	if ( m_bDeleteOnDestruct )
+	{
+		if ( m_pKeyValues )
+			m_pKeyValues->deleteThis();
+		m_pKeyValues = NULL;
+	}
 }
 
 bool Base_CmdKeyValues::WriteToBuffer( bf_write &buffer )
@@ -619,7 +624,7 @@ const char * Base_CmdKeyValues::ToString(void) const
 	return s_text;
 }
 
-CLC_CmdKeyValues::CLC_CmdKeyValues( KeyValues *pKeyValues /* = NULL */ ) : Base_CmdKeyValues( pKeyValues )
+CLC_CmdKeyValues::CLC_CmdKeyValues( KeyValues *pKeyValues /* = NULL */, bool bDeleteOnDestruct /* = true */ ) : Base_CmdKeyValues( pKeyValues, bDeleteOnDestruct )
 {
 }
 
@@ -638,7 +643,7 @@ const char *CLC_CmdKeyValues::ToString(void) const
 	return Base_CmdKeyValues::ToString();
 }
 
-SVC_CmdKeyValues::SVC_CmdKeyValues( KeyValues *pKeyValues /* = NULL */ ) : Base_CmdKeyValues( pKeyValues )
+SVC_CmdKeyValues::SVC_CmdKeyValues( KeyValues *pKeyValues /* = NULL */, bool bDeleteOnDestruct /* = true */ ) : Base_CmdKeyValues( pKeyValues, bDeleteOnDestruct )
 {
 }
 
@@ -720,6 +725,7 @@ bool SVC_ServerInfo::WriteToBuffer( bf_write &buffer )
 	buffer.WriteChar  ( m_cOS );
 	buffer.WriteString( m_szGameDir );
 	buffer.WriteString( m_szMapName );
+	buffer.WriteString( m_szMapGroupName );
 	buffer.WriteString( m_szSkyName );
 	buffer.WriteString( m_szHostName );
 
@@ -736,6 +742,7 @@ bool SVC_ServerInfo::ReadFromBuffer( bf_read &buffer )
 
 	m_szGameDir = m_szGameDirBuffer;
 	m_szMapName = m_szMapNameBuffer;
+	m_szMapGroupName = m_szMapGroupNameBuffer;
 	m_szSkyName = m_szSkyNameBuffer;
 	m_szHostName = m_szHostNameBuffer;
 
@@ -762,6 +769,7 @@ bool SVC_ServerInfo::ReadFromBuffer( bf_read &buffer )
 	m_cOS			= buffer.ReadChar();
 	buffer.ReadString( m_szGameDirBuffer, sizeof(m_szGameDirBuffer) );
 	buffer.ReadString( m_szMapNameBuffer, sizeof(m_szMapNameBuffer) );
+	buffer.ReadString( m_szMapGroupNameBuffer, sizeof(m_szMapGroupNameBuffer) );
 	buffer.ReadString( m_szSkyNameBuffer, sizeof(m_szSkyNameBuffer) );
 	buffer.ReadString( m_szHostNameBuffer, sizeof(m_szHostNameBuffer) );
 

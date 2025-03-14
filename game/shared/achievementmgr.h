@@ -68,6 +68,7 @@ public:
 	void SaveGlobalState( bool bAsync = false );
 	void LoadGlobalState();
 	void SaveGlobalStateIfDirty( bool bAsync = false );
+	bool IsAchievementAllowedInGame( int iAchievementID );
 	void EnsureGlobalStateLoaded();
 	void AwardAchievement( int iAchievementID );
 	void UpdateAchievement( int iAchievementID, int nData );

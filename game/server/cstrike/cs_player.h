@@ -1069,6 +1069,8 @@ public:
 	void StockPlayerAmmo( CBaseCombatWeapon *pNewWeapon = NULL );
 
 	CUtlLinkedList< CDamageRecord *, int >& GetDamageList() { return m_DamageList; }
+	int GetNumAttackersFromDamageList( void );
+	int GetMostNumHitsDamageRecordFrom( CCSPlayer *pAttacker );
 
 private:
 	//A unified list of recorded damage that includes giver and taker in each entry

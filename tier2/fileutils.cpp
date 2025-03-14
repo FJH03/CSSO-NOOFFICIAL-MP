@@ -222,6 +222,38 @@ bool GenerateFullPath( const char *pFileName, char const *pPathID, char *pBuf, i
 }
 
 //-----------------------------------------------------------------------------
+// Search start directory, recurse into sub directories collecting all files matching the target name.
+//-----------------------------------------------------------------------------
+void RecursiveFindFilesMatchingName( CUtlVector< CUtlString > *outFileList, const char* szStartDirectory, const char* szTargetFileName, const char *pathID )
+{
+	char searchString[MAX_PATH];
+	Q_snprintf( searchString, sizeof( searchString ), "%s/*.*", szStartDirectory );
+	Q_FixSlashes( searchString );
+	
+	FileFindHandle_t handle;
+	const char* curFile = g_pFullFileSystem->FindFirstEx( searchString, pathID, &handle );
+	while ( curFile )
+	{
+		if ( *curFile != '.' && g_pFullFileSystem->FindIsDirectory( handle ) )
+		{	
+			char newSearchPath[MAX_PATH];
+			Q_snprintf( newSearchPath, sizeof( newSearchPath ), "%s/%s", szStartDirectory, curFile );
+			RecursiveFindFilesMatchingName( outFileList, newSearchPath, szTargetFileName, pathID );
+		}
+		else if ( V_StringMatchesPattern( curFile, szTargetFileName ) )
+		{
+			CUtlString outFile;
+			outFile.Format( "%s/%s", szStartDirectory, curFile );
+			Q_FixSlashes( outFile.Get() );
+			outFileList->AddToTail( outFile );
+		}
+
+		curFile = g_pFullFileSystem->FindNext( handle );
+	}
+	g_pFullFileSystem->FindClose( handle );
+}
+
+//-----------------------------------------------------------------------------
 // Builds a list of all files under a directory with a particular extension
 //-----------------------------------------------------------------------------
 void AddFilesToList( CUtlVector< CUtlString > &list, const char *pDirectory, const char *pPathID, const char *pExtension )

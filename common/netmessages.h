@@ -323,7 +323,7 @@ public:
 class Base_CmdKeyValues : public CNetMessage
 {
 protected:
-	explicit Base_CmdKeyValues( KeyValues *pKeyValues = NULL ); // takes ownership
+	explicit Base_CmdKeyValues( KeyValues *pKeyValues = NULL, bool bDeleteOnDestruct = true ); // takes ownership
 	~Base_CmdKeyValues();
 
 public:
@@ -336,6 +336,7 @@ public:
 
 protected:
 	KeyValues *m_pKeyValues;
+	bool m_bDeleteOnDestruct; // PiMoN: added this so that my memory won't leak
 };
 
 class CLC_CmdKeyValues : public Base_CmdKeyValues
@@ -344,7 +345,7 @@ public:
 	DECLARE_CLC_MESSAGE( CmdKeyValues );
 
 public:
-	explicit CLC_CmdKeyValues( KeyValues *pKeyValues = NULL );	// takes ownership
+	explicit CLC_CmdKeyValues( KeyValues *pKeyValues = NULL, bool bDeleteOnDestruct = true );	// takes ownership
 };
 
 class SVC_CmdKeyValues : public Base_CmdKeyValues
@@ -353,7 +354,7 @@ public:
 	DECLARE_SVC_MESSAGE( CmdKeyValues );
 
 public:
-	explicit SVC_CmdKeyValues( KeyValues *pKeyValues = NULL );	// takes ownership
+	explicit SVC_CmdKeyValues( KeyValues *pKeyValues = NULL, bool bDeleteOnDestruct = true );	// takes ownership
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -400,12 +401,14 @@ public:	// member vars are public for faster handling
 	float		m_fTickInterval;// server tick interval
 	const char	*m_szGameDir;	// game directory eg "tf2"
 	const char	*m_szMapName;	// name of current map 
+	const char	*m_szMapGroupName;	// name of current map 
 	const char	*m_szSkyName;	// name of current skybox 
 	const char	*m_szHostName;	// server name
 
 private:
 	char		m_szGameDirBuffer[MAX_OSPATH];// game directory eg "tf2"
 	char		m_szMapNameBuffer[MAX_OSPATH];// name of current map 
+	char		m_szMapGroupNameBuffer[MAX_OSPATH];// name of current map 
 	char		m_szSkyNameBuffer[MAX_OSPATH];// name of current skybox 
 	char		m_szHostNameBuffer[MAX_OSPATH];// name of current skybox 
 };

@@ -2265,7 +2265,8 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 
 	//Only count the drop if it was not friendly fire
 	DropWeapons(true, !friendlyFire);
-	
+
+	m_iNumFollowers = 0;
 
 	// Just in case the progress bar is on screen, kill it.
 	SetProgressBarTime( 0 );
@@ -2692,7 +2693,8 @@ void CCSPlayer::SubtractProgressiveWeaponIndex( void )
 
 void CCSPlayer::GiveWeaponFromID( int nWeaponID )
 {
-	const char *pchClassName = WeaponIdAsString( (CSWeaponID) nWeaponID );
+	CSWeaponID nLoadoutWeaponID = CSLoadout()->GetLoadoutWeaponID( this, GetTeamNumber(), (CSWeaponID)nWeaponID );
+	const char *pchClassName = WeaponIdAsString( nLoadoutWeaponID );
 
 	if ( !pchClassName )
 		return;
@@ -4376,8 +4378,12 @@ void CCSPlayer::RoundRespawn()
 		m_bMadeFinalGunGameProgressiveKill = false;
 		m_iNumGunGameKillsWithCurrentWeapon = 0;
 
-		// Clear out weapons in progressive mode
-		m_iGunGameProgressiveWeaponIndex = 0;
+		// Ensure the player has the proper gun-game progressive weapons
+		if ( CSGameRules()->IsPlayingGunGameProgressive() )
+		{
+			// Clear out weapons in progressive mode
+			m_iGunGameProgressiveWeaponIndex = 0;
+		}
 
 		if ( !CSGameRules()->IsPlayingGunGameTRBomb() )
 		{
@@ -6747,7 +6753,7 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 		}
 	}
 
-	if ( mp->TeamFull( team ) )
+	if ( !mp->WillTeamHaveRoomForPlayer( this, team ) )
 	{
 		// attempt to kick a bot to make room for this player
 		bool madeRoom = false;
@@ -9748,6 +9754,32 @@ void CCSPlayer::RecordDamage( CCSPlayer* damageDealer, CCSPlayer* damageTaker, i
 	CDamageRecord *record = new CDamageRecord( damageDealer, damageTaker, iDamageDealt, s_BulletGroupCounter, iActualHealthRemoved );
 	int k = m_DamageList.AddToTail();
 	m_DamageList[k] = record;
+}
+
+int CCSPlayer::GetNumAttackersFromDamageList( void )
+{
+	//Doesn't distinguish friend or enemy, this will return total friendly and enemy attackers
+	int nTotalAttackers = 0;
+	FOR_EACH_LL( m_DamageList, i )
+	{
+		if ( m_DamageList[i]->GetPlayerDamagerPtr() && m_DamageList[i]->GetPlayerRecipientPtr() == this )
+			nTotalAttackers++;
+	}
+	return nTotalAttackers;
+}
+
+int CCSPlayer::GetMostNumHitsDamageRecordFrom( CCSPlayer *pAttacker )
+{
+	int iNumHits = 0;
+	FOR_EACH_LL( m_DamageList, i )
+	{
+		if ( m_DamageList[i]->GetPlayerDamagerPtr() == pAttacker )
+		{
+			if ( m_DamageList[i]->GetNumHits() >= iNumHits )
+				iNumHits = m_DamageList[i]->GetNumHits();
+		}
+	}
+	return iNumHits;
 }
 
 //=======================================================

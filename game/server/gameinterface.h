@@ -120,6 +120,9 @@ public:
 
 	virtual void			InvalidateMdlCache() OVERRIDE;
 
+	// Builds extended server info for new connecting client
+	virtual KeyValues*		GetExtendedServerInfoForNewClient() OVERRIDE;
+
 	virtual void			SetServerHibernation( bool bHibernating ) OVERRIDE;
 
 	float	m_fAutoSaveDangerousTime;

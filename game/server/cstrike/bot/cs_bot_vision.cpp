@@ -1691,7 +1691,15 @@ void CCSBot::Blind( float holdTime, float fadeTime, float startingAlpha )
 
 
 	// if blinded while in combat - then spray and pray!
-	m_blindFire = IsAttacking();
+	if ( CSGameRules()->IsPlayingOffline() && CSGameRules()->GetCustomBotDifficulty() == CUSTOM_BOT_DIFFICULTY_DUMB )
+	{
+		// For Offline games: Bots in dumb mode should not fire their weapons when flash-banged
+		m_blindFire = false;
+	}
+	else
+	{
+		m_blindFire = IsAttacking();
+	}
 
 	// retreat
 	// do this first, so spot selection happens before IsBlind() is set

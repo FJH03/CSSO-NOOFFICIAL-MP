@@ -201,6 +201,7 @@ public:
 
 	char		m_szLevelFileName[ 128 ];	// for display on solo scoreboard
 	char		m_szLevelBaseName[ 128 ]; // removes maps/ and .bsp extension
+	char		m_szMapGroupName[ 40 ]; //the name of the map group we are currently playing in
 
 	int			m_nMaxClients;		// max clients on server
 

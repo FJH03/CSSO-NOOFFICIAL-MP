@@ -14,6 +14,7 @@
 #include "cs_achievement_constants.h"
 #include "fmtstr.h"
 #include "molotov_projectile.h"
+#include "gametypes.h"
 
 #ifdef CLIENT_DLL
 
@@ -198,6 +199,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropBool( RECVINFO( m_bLogoMap ) ),
 		RecvPropInt( RECVINFO( m_iNumGunGameProgressiveWeaponsCT ) ),
 		RecvPropInt( RECVINFO( m_iNumGunGameProgressiveWeaponsT ) ),
+        RecvPropInt( RECVINFO( m_iSpectatorSlotCount ) ),
 		RecvPropBool( RECVINFO( m_bBombDropped ) ),
 		RecvPropBool( RECVINFO( m_bBombPlanted ) ),
 		RecvPropInt( RECVINFO( m_iRoundWinStatus ) ),
@@ -205,7 +207,6 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponOrderT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponOrderT[0] ) ) ),
 		RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderCT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponKillUpgradeOrderCT[0] ) ) ),
 		RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponKillUpgradeOrderT[0] ) ) ),
-		RecvPropInt( RECVINFO( m_iCurrentGamemode ) ),
 		RecvPropInt( RECVINFO( m_iMapFactionCT ) ),
 		RecvPropInt( RECVINFO( m_iMapFactionT ) ),
 	#else
@@ -230,6 +231,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropBool( SENDINFO( m_bLogoMap ) ),
 		SendPropInt( SENDINFO( m_iNumGunGameProgressiveWeaponsCT ) ),
 		SendPropInt( SENDINFO( m_iNumGunGameProgressiveWeaponsT ) ),
+        SendPropInt( SENDINFO( m_iSpectatorSlotCount ) ),
 		SendPropBool( SENDINFO( m_bBombDropped ) ),
 		SendPropBool( SENDINFO( m_bBombPlanted ) ),
 		SendPropInt( SENDINFO( m_iRoundWinStatus ) ),
@@ -237,7 +239,6 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponOrderT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponOrderT ), 0, SPROP_UNSIGNED ) ),
 		SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponKillUpgradeOrderCT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderCT ), 0, SPROP_UNSIGNED ) ),
 		SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponKillUpgradeOrderT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderT ), 0, SPROP_UNSIGNED ) ),
-		SendPropInt( SENDINFO( m_iCurrentGamemode ) ),
 		SendPropInt( SENDINFO( m_iMapFactionCT ) ),
 		SendPropInt( SENDINFO( m_iMapFactionT ) ),
 	#endif
@@ -309,6 +310,14 @@ extern ConVar mp_hostages_spawn_farthest;
 extern ConVar mp_hostages_spawn_force_positions;
 extern ConVar mp_hostages_spawn_same_every_round;
 
+ConVar mp_spectators_max(
+	"mp_spectators_max",
+	"2",
+	FCVAR_REPLICATED,
+	"How many spectators are allowed in a match.",
+	true, 0,
+	false, 0 );
+
 ConVar mp_buytime( 
 	"mp_buytime", 
 	"1.5",
@@ -332,6 +341,14 @@ ConVar mp_do_warmup_period(
 	"Whether or not to do a warmup period at the start of a match.",
 	true, 0,
 	true, 1 );
+
+ConVar mp_do_warmup_offine( 
+    "mp_do_warmup_offine", 
+    "0",
+    FCVAR_REPLICATED,
+    "Whether or not to do a warmup period at the start of a match in an offline (bot) match.",
+    true, 0,
+    true, 1 );
 
 ConVar mp_maxmoney(
 	"mp_maxmoney",
@@ -732,14 +749,6 @@ ConVar mp_respawn_on_death_ct(
 	"0",
 	FCVAR_REPLICATED,
 	"When set to 1, counter-terrorists will respawn after dying." );
-
-ConVar mp_gamemode_override(
-	"mp_gamemode_override",
-	"0",
-	FCVAR_REPLICATED,
-	"What gamemode are we playing today?",
-	true, 0,
-	true, GameModes::NUM_GAMEMODES - 1 );
 
 ConVar sv_kick_ban_duration(
 	"sv_kick_ban_duration",
@@ -1407,6 +1416,9 @@ ConVar snd_music_selection(
 
 		m_nLastFreezeEndBeep = -1;
 
+		m_iMaxNumTerrorists = 0;
+		m_iMaxNumCTs = 0;
+
 		m_bTCantBuy = false;
 		m_bCTCantBuy = false;
 		m_bMapHasBuyZone = false;
@@ -1463,14 +1475,14 @@ ConVar snd_music_selection(
 		m_iNumGunGameProgressiveWeaponsT = 0;
 		m_bAllowWeaponSwitch = true;
 
+		m_iSpectatorSlotCount = 0;
+
 		m_flNextHostageAnnouncement = gpGlobals->curtime;	// asap.
 
 		m_phaseChangeAnnouncementTime = 0.0f;
 		m_fNextUpdateTeamClanNamesTime = 0.0f;
 
 		m_bHasTriggeredRoundStartMusic = false;
-
-		m_iCurrentGamemode = 0;
 
 		ReadMultiplayCvars();
 
@@ -1492,12 +1504,17 @@ ConVar snd_music_selection(
 			g_Teams.AddToTail( pTeam );
 		}
 
-		if ( filesystem->FileExists( UTIL_VarArgs( "maps/cfg/%s.cfg", STRING(gpGlobals->mapname) ) ) )
+		InitializeGameTypeAndMode();
+
+		if ( const char* szMapNameBase = V_GetFileName( STRING(gpGlobals->mapname) ) )
 		{
-			// Execute a map specific cfg file - as in Day of Defeat
-			// Map names cannot contain quotes or control characters so this is safe but silly that we have to do it.
-			engine->ServerCommand( UTIL_VarArgs( "exec \"%s.cfg\" */maps\n", STRING(gpGlobals->mapname) ) );
-			engine->ServerExecute();
+			if ( (IsPlayingCustomGametype() ) 
+				&& filesystem->FileExists( UTIL_VarArgs( "maps/cfg/%s.cfg", szMapNameBase ) ) )
+			{
+				// Execute a map specific cfg file to define the rules
+				engine->ServerCommand( UTIL_VarArgs( "execwithwhitelist %s.cfg */maps\n", szMapNameBase ) );
+				engine->ServerExecute();
+			}
 		}
 
 		m_iMapFactionCT = -1;
@@ -1507,171 +1524,12 @@ ConVar snd_music_selection(
 		m_bWarmupPeriod = mp_do_warmup_period.GetBool();
 		m_fWarmupNextChatNoticeTime = 0;
 		m_fWarmupPeriodStart = gpGlobals->curtime;
-
-		// Add the gun game weapons.
-		if ( IsPlayingGunGameProgressive() && mp_ggprogressive_use_random_weapons.GetBool() )
-		{
-			// this is where we build the list of GG progressive weapons
-			// collect all of the weapons here
-			CUtlVector< GGWeaponAliasName > pSMGs;
-			for ( int i=GGLIST_SMGS_START; i<(GGLIST_SMGS_LAST+1); i++ )
-				pSMGs.AddToTail(ggWeaponAliasNameList[i]);
-			CUtlVector< GGWeaponAliasName > pShotguns;
-			for ( int i=GGLIST_SGS_START; i<(GGLIST_SGS_LAST+1); i++ )
-				pShotguns.AddToTail(ggWeaponAliasNameList[i]);
-			CUtlVector< GGWeaponAliasName > pRifles;
-			for ( int i=GGLIST_RIFLES_START; i<(GGLIST_RIFLES_LAST+1); i++ )
-				pRifles.AddToTail(ggWeaponAliasNameList[i]);
-			CUtlVector< GGWeaponAliasName > pSnipers;
-			for ( int i=GGLIST_SNIPERS_START; i<(GGLIST_SNIPERS_LAST+1); i++ )
-				pSnipers.AddToTail(ggWeaponAliasNameList[i]);
-			CUtlVector< GGWeaponAliasName > pMGs;
-			for ( int i=GGLIST_MGS_START; i<(GGLIST_MGS_LAST+1); i++ )
-				pMGs.AddToTail(ggWeaponAliasNameList[i]);
-			CUtlVector< GGWeaponAliasName > pPistols;
-			for ( int i=GGLIST_PISTOLS_START; i<(GGLIST_PISTOLS_LAST+1); i++ )
-				pPistols.AddToTail(ggWeaponAliasNameList[i]);
-
-			int nNumSMGs = 3;
-			int nNumRifles = 4;
-			int nNumShotguns = 2;
-			int nNumSnipers = 2;
-			int nNumMGs = 1;
-			int nNumPistols = 4;
-			// this should total 16 weapons
-
-			int nKillsNeeded = MAX( 1, mp_ggprogressive_random_weapon_kills_needed.GetInt() );
-
-			// now pick a random one from the list we created above for each category
-			CUtlVector< GGWeaponAliasName > pWeaponProgression;
-			for ( int i=0; i<nNumSnipers; i++ )
-			{
-				int nPick = RandomInt( 0, pSnipers.Count()-1 );
-				pWeaponProgression.AddToTail(pSnipers[nPick]);
-				pSnipers.FastRemove( nPick );
-			}
-			for ( int i=0; i<nNumRifles; i++ )
-			{
-				int nPick = RandomInt( 0, pRifles.Count()-1 );
-				pWeaponProgression.AddToTail(pRifles[nPick]);
-				pRifles.FastRemove( nPick );
-			}
-			for ( int i=0; i<nNumMGs; i++ )
-			{
-				int nPick = RandomInt( 0, pMGs.Count()-1 );
-				pWeaponProgression.AddToTail(pMGs[nPick]);
-				pMGs.FastRemove( nPick );
-			}
-			for ( int i=0; i<nNumSMGs; i++ )
-			{
-				int nPick = RandomInt( 0, pSMGs.Count()-1 );
-				pWeaponProgression.AddToTail(pSMGs[nPick]);
-				pSMGs.FastRemove( nPick );
-			}
-			for ( int i=0; i<nNumPistols; i++ )
-			{
-				int nPick = RandomInt( 0, pPistols.Count()-1 );
-				pWeaponProgression.AddToTail(pPistols[nPick]);
-				pPistols.FastRemove( nPick );
-			}
-			for ( int i=0; i<nNumShotguns; i++ )
-			{
-				int nPick = RandomInt( 0, pShotguns.Count()-1 );
-				pWeaponProgression.AddToTail(pShotguns[nPick]);
-				pShotguns.FastRemove( nPick );
-			}
-
-			// go through the list we build and add them to the final list that will get used in the game
-			FOR_EACH_VEC( pWeaponProgression, iWeaponProgression )
-			{
-				const GGWeaponAliasName &wp = (pWeaponProgression)[iWeaponProgression];
-				AddGunGameWeapon( wp.aliasName, nKillsNeeded, TEAM_CT );
-				AddGunGameWeapon( wp.aliasName, nKillsNeeded, TEAM_TERRORIST );
-			}
-
-			// add the knife manually			
-			AddGunGameWeapon( "knifegg", 1, TEAM_CT );
-			AddGunGameWeapon( "knifegg", 1, TEAM_TERRORIST );
-		}
-		// Add the gun game weapons.
-		else if ( IsPlayingGunGameProgressive() )
-		{
-			// PiMoN: both CT and T use the same array in current CS:GO
-			for ( int i = 0; i < ARRAYSIZE( g_GGProgressiveWeaponProgression ); i++ )
-			{
-				const WeaponProgression wp = g_GGProgressiveWeaponProgression[i];
-				AddGunGameWeapon( wp.m_Name, wp.m_Kills, TEAM_CT );
-				AddGunGameWeapon( wp.m_Name, wp.m_Kills, TEAM_TERRORIST );
-			}
-		}
-		// Add the gun game weapons.
-		else if ( IsPlayingGunGameTRBomb() )
-		{
-			for ( int i = 0; i < ARRAYSIZE( g_GGTRWeaponProgressionCT ); i++ )
-			{
-				const WeaponProgression wp = g_GGTRWeaponProgressionCT[i];
-				AddGunGameWeapon( wp.m_Name, wp.m_Kills, TEAM_CT );
-			}
-			for ( int i = 0; i < ARRAYSIZE( g_GGTRWeaponProgressionT ); i++ )
-			{
-				const WeaponProgression wp = g_GGTRWeaponProgressionT[i];
-				AddGunGameWeapon( wp.m_Name, wp.m_Kills, TEAM_TERRORIST );
-			}
-		}
 		
 
 		if ( HasHalfTime() )
 			SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
 		else
 			SetPhase( GAMEPHASE_PLAYING_STANDARD );
-
-		switch ( mp_gamemode_override.GetInt() )
-		{
-			default:
-			case GameModes::CUSTOM:
-				// do nothing here
-				break;
-			case GameModes::CASUAL:
-				engine->ServerCommand( "exec gamemode_casual.cfg\n" );
-				engine->ServerExecute();
-				break;
-			case GameModes::COMPETITIVE:
-				engine->ServerCommand( "exec gamemode_competitive.cfg\n" );
-				engine->ServerExecute();
-				break;
-			case GameModes::COMPETITIVE_2V2:
-				engine->ServerCommand( "exec gamemode_competitive2v2.cfg\n" );
-				engine->ServerExecute();
-				break;
-			case GameModes::DEATHMATCH:
-				engine->ServerCommand( "exec gamemode_deathmatch.cfg\n" );
-				engine->ServerExecute();
-				break;
-			case GameModes::DEATHMATCH_SHORT:
-				engine->ServerCommand( "exec gamemode_deathmatch_short.cfg\n" );
-				engine->ServerExecute();
-				break;
-			case GameModes::FLYING_SCOUTSMAN:
-				engine->ServerCommand( "exec gamemode_flying_scoutsman.cfg\n" );
-				engine->ServerExecute();
-				break;
-			case GameModes::ARMS_RACE:
-				engine->ServerCommand( "exec gamemode_armsrace.cfg\n" );
-				engine->ServerExecute();
-				break;
-			case GameModes::HEADSHOTS:
-				engine->ServerCommand( "exec gamemode_headshots.cfg\n" );
-				engine->ServerExecute();
-				break;
-			case GameModes::TRIGGER_DISCIPLINE:
-				engine->ServerCommand( "exec gamemode_trigger_discipline.cfg\n" );
-				engine->ServerExecute();
-				break;
-			case GameModes::DEMOLITION:
-				engine->ServerCommand( "exec gamemode_demolition.cfg\n" );
-				engine->ServerExecute();
-				break;
-		}
 
 		m_pLastGrenade.bIsValid = false;
 	}
@@ -2552,29 +2410,54 @@ ConVar snd_music_selection(
 
 			if ( mp_autokick.GetBool() && sv_tk_count_before_punish.GetInt() > 0 )
 			{
-				char strTeamKills[8];
-				Q_snprintf( strTeamKills, sizeof( strTeamKills ), "%d", (sv_tk_count_before_punish.GetInt() - pCSScorer->m_iTeamKills) );
-				ClientPrint( pCSScorer, HUD_PRINTTALK, "#Game_teammate_kills", strTeamKills );
+				if ( !IsPlayingOffline() )
+				{
+					char strTeamKills[8];
+					Q_snprintf( strTeamKills, sizeof( strTeamKills ), "%d", (sv_tk_count_before_punish.GetInt() - pCSScorer->m_iTeamKills) );
+					ClientPrint( pCSScorer, HUD_PRINTTALK, "#Game_teammate_kills", strTeamKills );
+				}
 
 				if ( pCSScorer->m_iTeamKills >= sv_tk_count_before_punish.GetInt() )
 				{
-					if ( sv_kick_ban_duration.GetInt() > 0 )
+					if ( !IsPlayingOffline() )
 					{
-						ClientPrint( pCSScorer, HUD_PRINTTALK, "#Banned_For_Killing_Teammates" );
-						engine->ServerCommand( UTIL_VarArgs( "banid %d %d\n", sv_kick_ban_duration.GetInt(), pCSScorer->GetUserID() ) );
+						if ( sv_kick_ban_duration.GetInt() > 0 )
+						{
+							ClientPrint( pCSScorer, HUD_PRINTTALK, "#Banned_For_Killing_Teammates" );
+							engine->ServerCommand( UTIL_VarArgs( "banid %d %d\n", sv_kick_ban_duration.GetInt(), pCSScorer->GetUserID() ) );
+						}
 					}
-
-                    engine->ServerCommand( UTIL_VarArgs( "kickid_ex %d %d For killing too many teammates\n", pCSScorer->GetUserID(), 1 ) );
+					
+                    engine->ServerCommand( UTIL_VarArgs( "kickid_ex %d %d For killing too many teammates\n", pCSScorer->GetUserID(), IsPlayingOffline() ? 0 : 1 ) );
 				}
-				else if ( mp_spawnprotectiontime.GetInt() > 0 && GetRoundElapsedTime() < mp_spawnprotectiontime.GetInt() )
+                else if ( ( mp_spawnprotectiontime.GetInt() > 0 ) && ( GetRoundElapsedTime() < mp_spawnprotectiontime.GetInt() ) )
 				{
-					if ( sv_kick_ban_duration.GetInt() > 0 )
-					{
-						ClientPrint( pCSScorer, HUD_PRINTTALK, "#Banned_For_Killing_Teammates" );
-						engine->ServerCommand( UTIL_VarArgs( "banid %d %d\n", sv_kick_ban_duration.GetInt(), pCSScorer->GetUserID() ) );
-					}
+					const CCSWeaponInfo* pWeaponInfo = CCSPlayer::GetWeaponInfoFromDamageInfo( info );
 
-					engine->ServerCommand( UTIL_VarArgs( "kickid_ex %d %d For killing a teammate at round start\n", pCSScorer->GetUserID(), 1 ) );
+					// Special case here: TK at round start using some weapons* only counts towards team damage
+					// and team kills amount, but doesn't instantly ban the player due to common occurrence
+					// of teammates crossing in front of AWP'er on de_dust2
+					// Weapons that will not instantly ban for TK at round start must have zoom levels and
+					// team damage from headshot must kill with a single kill
+					extern ConVar ff_damage_reduction_bullets;
+					if ( !pWeaponInfo || !pWeapon ||
+						( pWeapon->GetCSWpnData().m_iZoomLevels < 2 ) ||	// weapon doesn't have 2 zoom levels, worth the ban
+						( float( pWeapon->GetCSWpnData().m_iDamage ) * 4.0f * ff_damage_reduction_bullets.GetFloat() <= 99.0f ) || // single friendly headshot will not kill, worth the ban
+						!pCSVictim || ( pCSVictim->GetNumAttackersFromDamageList() > 1 ) || // victim already took damage from multiple players, TK should be banned
+						( pCSVictim->GetMostNumHitsDamageRecordFrom(pCSScorer) > 1 ) // TK'er shot the victim multiple times, worth the ban
+						)
+					{
+						if ( !IsPlayingOffline() )
+						{
+							if ( sv_kick_ban_duration.GetInt() > 0 )
+							{
+								ClientPrint( pCSScorer, HUD_PRINTTALK, "#Banned_For_Killing_Teammates" );
+								engine->ServerCommand( UTIL_VarArgs( "banid %d %d\n", sv_kick_ban_duration.GetInt(), pCSScorer->GetUserID() ) );
+							}
+						}
+
+						engine->ServerCommand( UTIL_VarArgs( "kickid_ex %d %d For killing a teammate at round start\n", pCSScorer->GetUserID(), 1 ) );
+					}
 				}
 			}
 
@@ -3620,7 +3503,6 @@ ConVar snd_music_selection(
 		
         m_iRoundTime = IsWarmupPeriod() ? 999 : (int)( flRoundTime * 60 );
 		m_iFreezeTime = IsWarmupPeriod() ? 2 : mp_freezetime.GetInt();
-		m_iCurrentGamemode = mp_gamemode_override.GetInt();
 	}
 
 	static int SpawnPointSortFunction( SpawnPoint* const *left, SpawnPoint* const *right )
@@ -5780,6 +5662,27 @@ ConVar snd_music_selection(
 			m_iSpawnPointCount_Terrorist	= 0;
 			m_iSpawnPointCount_CT			= 0;
 
+            m_iMaxNumTerrorists = 0;
+            m_iMaxNumCTs = 0;
+
+            const char * szMapName = STRING( gpGlobals->mapname );
+            int nNumSlots = 2;
+            if ( szMapName )
+            {
+                g_pGameTypes->GetMapInfo( szMapName );
+            }
+
+            int iGameType = g_pGameTypes->GetCurrentGameType();
+            int iGameMode = g_pGameTypes->GetCurrentGameMode();
+
+            nNumSlots = g_pGameTypes->GetMaxPlayersForTypeAndMode( iGameType, iGameMode );
+
+            // for the training map, our max is 1 CT and 0 T's, diving 1 in half doesn't work for us in this case, so make sure our min is 1
+            m_iMaxNumTerrorists = MAX( nNumSlots / 2, 1 );
+            m_iMaxNumCTs = MAX( nNumSlots / 2, 1 );
+
+            m_iSpectatorSlotCount = mp_spectators_max.GetInt();
+
 			// create the spawn point lists here
 			GenerateSpawnPointListsFirstTime();
 
@@ -6453,22 +6356,110 @@ ConVar snd_music_selection(
 		}
 	}
 
+    void CCSGameRules::HandleScrambleTeams( void )
+    {
+        CCSPlayer *pCSPlayer = NULL;
+        CUtlVector<CCSPlayer *> pListPlayers;
+
+        // add all the players (that are on CT or Terrorist) to our temp list
+        for ( int i = 1 ; i <= gpGlobals->maxClients ; i++ )
+        {
+            pCSPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+            if ( pCSPlayer && ( pCSPlayer->GetTeamNumber() == TEAM_TERRORIST || pCSPlayer->GetTeamNumber() == TEAM_CT ) )
+            {
+                pListPlayers.AddToHead( pCSPlayer );
+            }
+        }
+
+        // sort the list
+        pListPlayers.Sort( ScramblePlayersSort );
+
+        int team = TEAM_INVALID;
+        bool assignToOpposingTeam = false;
+        for ( int i = 0 ; i < pListPlayers.Count() ; i++ )
+        {
+            pCSPlayer = pListPlayers[i];
+
+            if ( pCSPlayer )
+            {
+                //First assignment goes to random team
+                //Second assignment goes to the opposite
+                //Keep alternating until out of players.
+                if ( !assignToOpposingTeam )
+                {
+                    team = ( rand() % 2 ) ? TEAM_TERRORIST : TEAM_CT;
+                }
+                else
+                {
+                    team = ( team == TEAM_TERRORIST ) ? TEAM_CT : TEAM_TERRORIST;
+                }
+
+                pCSPlayer->SwitchTeam( team );
+                assignToOpposingTeam = !assignToOpposingTeam;
+            }
+        }	
+    }
+
+    void CCSGameRules::HandleSwapTeams( void )
+    {
+        CCSPlayer *pCSPlayer = NULL;
+        CUtlVector<CCSPlayer *> pListPlayers;
+
+        // add all the players (that are on CT or Terrorist) to our temp list
+        for ( int i = 1 ; i <= gpGlobals->maxClients ; i++ )
+        {
+            pCSPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+			if ( pCSPlayer && ( pCSPlayer->GetTeamNumber() == TEAM_TERRORIST || pCSPlayer->GetTeamNumber() == TEAM_CT ) )
+            {
+                pListPlayers.AddToHead( pCSPlayer );
+            }
+        }
+        
+        for ( int i = 0 ; i < pListPlayers.Count() ; i++ )
+        {
+            pCSPlayer = pListPlayers[i];
+
+            if ( pCSPlayer )
+            {
+				int currentTeam = pCSPlayer->GetTeamNumber();
+                int newTeam = ( currentTeam == TEAM_TERRORIST ) ? TEAM_CT : TEAM_TERRORIST;
+                pCSPlayer->SwitchTeam( newTeam );				
+			}
+        }
+
+		//
+		// Flip the timeouts as well
+		//
+		bool bTemp;
+		bTemp = m_bTerroristTimeOutActive;
+		m_bTerroristTimeOutActive = m_bCTTimeOutActive;
+		m_bCTTimeOutActive = bTemp;
+
+		float flTemp;
+		flTemp = m_flTerroristTimeOutRemaining;
+		m_flTerroristTimeOutRemaining = m_flCTTimeOutRemaining;
+		m_flCTTimeOutRemaining = flTemp;
+
+		int nTemp = m_nTerroristTimeOuts;
+		m_nTerroristTimeOuts = m_nCTTimeOuts;
+		m_nCTTimeOuts = nTemp;
+    }
     
     // the following two functions cap the number of players on a team to five instead of basing it on the number of spawn points
     int CCSGameRules::MaxNumPlayersOnTerrTeam()
     {
 		bool bRandomTSpawn = mp_randomspawn.GetInt() == 1 || mp_randomspawn.GetInt() == TEAM_TERRORIST;
-        return bRandomTSpawn ? MAX_PLAYERS : m_iSpawnPointCount_Terrorist;
+        return MIN(m_iMaxNumTerrorists, bRandomTSpawn ? MAX_PLAYERS : m_iSpawnPointCount_Terrorist);
     }
 
     int CCSGameRules::MaxNumPlayersOnCTTeam()
     {
 		bool bRandomCTSpawn = mp_randomspawn.GetInt() == 1 || mp_randomspawn.GetInt() == TEAM_CT;
-        return bRandomCTSpawn ? MAX_PLAYERS : m_iSpawnPointCount_CT;
+        return MIN(m_iMaxNumCTs, bRandomCTSpawn ? MAX_PLAYERS : m_iSpawnPointCount_CT);
     }
 
-	bool CCSGameRules::TeamFull( int team_id )
-	{
+    bool CCSGameRules::TeamFull( int team_id )
+    {
         CheckLevelInitialized();
 
         switch ( team_id )
@@ -6478,9 +6469,47 @@ ConVar snd_music_selection(
 
         case TEAM_CT:
             return m_iNumCT >= MaxNumPlayersOnCTTeam();
+
+        case TEAM_SPECTATOR:
+            return GetGlobalTeam( TEAM_SPECTATOR )->GetNumPlayers() >= m_iSpectatorSlotCount;
         }
 
         return false;
+    }
+
+    bool CCSGameRules::WillTeamHaveRoomForPlayer( CCSPlayer* pThePlayer, int newTeam )
+    {
+        int teamSize = 0;
+
+        for ( int clientIndex = 1; clientIndex <= gpGlobals->maxClients; clientIndex++ )
+        {
+            CCSPlayer *pPlayer = ( CCSPlayer* )UTIL_PlayerByIndex( clientIndex );
+            if ( pPlayer && ( pPlayer != pThePlayer ) )
+            {
+                    if ( pPlayer->GetTeamNumber() == newTeam )
+                        teamSize++;
+            }
+        }
+
+        bool result = false;
+
+        switch( newTeam )
+        {
+            case TEAM_TERRORIST:
+                result = ( teamSize < MaxNumPlayersOnTerrTeam() );
+                break;
+
+            case TEAM_CT:
+                result = ( teamSize < MaxNumPlayersOnCTTeam() );
+                break;
+
+            case TEAM_SPECTATOR:
+                result = ( teamSize < m_iSpectatorSlotCount );
+                break;
+        }
+
+        return result;
+
     }
 	
 	int CCSGameRules::GetHumanTeam()
@@ -7606,6 +7635,9 @@ bool CCSGameRules::IsFreezePeriod()
 
 bool CCSGameRules::IsWarmupPeriod() const
 {
+	if ( IsPlayingOffline() && !mp_do_warmup_offine.GetBool() )
+		return false;
+
 	return m_bWarmupPeriod;
 }
 
@@ -7986,43 +8018,68 @@ CAmmoDef* GetAmmoDef()
 	return &ammoDef;
 }
 
-bool CCSGameRules::IsPlayingClassic( void ) const
-{
-	if ( m_iCurrentGamemode < GameModes::CLASSIC_GAMEMODES )
-		return true;
-
-	return false;
-}
-
 bool CCSGameRules::IsPlayingGunGameProgressive( void ) const
 {
-	if ( m_iCurrentGamemode == GameModes::ARMS_RACE )
-		return true;
-
-	return false;
+    return ( IsPlayingGunGame() &&
+             g_pGameTypes->GetCurrentGameMode() == CS_GameMode::GunGame_Progressive );
 }
 
 bool CCSGameRules::IsPlayingGunGameDeathmatch( void ) const
 {
-	if ( m_iCurrentGamemode == GameModes::DEATHMATCH ||
-		 m_iCurrentGamemode == GameModes::DEATHMATCH_SHORT ||
-		 m_iCurrentGamemode == GameModes::HEADSHOTS ) // headshots only is also DM
-		return true;
-
-	return false;
+	return ( IsPlayingGunGame() &&
+		g_pGameTypes->GetCurrentGameMode() == CS_GameMode::GunGame_Deathmatch );
 }
 
 bool CCSGameRules::IsPlayingGunGameTRBomb( void ) const
 {
-	if ( m_iCurrentGamemode == GameModes::DEMOLITION )
-		return true;
+    return ( IsPlayingGunGame() &&
+             g_pGameTypes->GetCurrentGameMode() == CS_GameMode::GunGame_Bomb );
+}
 
-	return false;
+bool CCSGameRules::IsPlayingClassicCasual( void ) const
+{
+    return ( IsPlayingClassic() &&
+        g_pGameTypes->GetCurrentGameMode() == CS_GameMode::Classic_Casual);
+}
+
+bool CCSGameRules::IsPlayingAnyCompetitiveStrictRuleset( void ) const
+{
+	return (IsPlayingClassic() && ((g_pGameTypes->GetCurrentGameMode() == CS_GameMode::Classic_Competitive)));
+}
+
+bool CCSGameRules::IsPlayingOffline( void ) const
+{
+#ifndef CLIENT_DLL
+	if ( engine->IsDedicatedServer() )
+		return false;
+#endif
+	extern ConVar game_online;
+	return !game_online.GetBool();
+}
+
+bool CCSGameRules::IsAwardsProgressAllowedForBotDifficulty( void ) const
+{
+    return ( !IsPlayingOffline() || ( GetCustomBotDifficulty() >= CUSTOM_BOT_MIN_DIFFICULTY_FOR_AWARDS_PROGRESS ) );
+}
+
+bool CCSGameRules::IsPlayingCustomGametype( void ) const
+{
+	return ( g_pGameTypes->GetCurrentGameType() == CS_GameType_Custom );
+}
+
+bool CCSGameRules::IsPlayingClassic( void ) const
+{
+    return ( g_pGameTypes->GetCurrentGameType() == CS_GameType_Classic );
 }
 
 bool CCSGameRules::IsPlayingGunGame( void ) const
 {
-	return (IsPlayingGunGameProgressive() || IsPlayingGunGameDeathmatch() || IsPlayingGunGameTRBomb());
+    return ( g_pGameTypes->GetCurrentGameType() == CS_GameType_GunGame );
+}
+
+int	CCSGameRules::GetCustomBotDifficulty( void ) const
+{
+    return ( g_pGameTypes->GetCustomBotDifficulty() );
 }
 
 #ifndef CLIENT_DLL
@@ -8833,6 +8890,185 @@ void CCSGameRules::AddGunGameWeapon( const char* pWeaponName, int nNumKillsToUpg
     }
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Set up the convars and data associated with the current game type and mode
+//-----------------------------------------------------------------------------
+void CCSGameRules::InitializeGameTypeAndMode( void )
+{
+#if !defined( CLIENT_DLL )
+    bool isMultiplayer = !IsPlayingOffline();
+
+	const char* szMapNameFull = STRING(gpGlobals->mapname);
+
+	
+	/////////////  load kv values from map sidecar file ( map.kv )
+	////////
+
+	char filename[ MAX_PATH ];
+	V_StripExtension( V_UnqualifiedFileName( STRING( gpGlobals->mapname ) ), filename, MAX_PATH );
+
+	if ( !g_pGameTypes->GetMapInfo( filename ) )
+	{
+		
+		char kvFilename[ MAX_PATH ];
+	
+		bool bLoadSideCar = true;
+
+		V_snprintf( kvFilename, sizeof( kvFilename ), "maps/%s.kv", filename );
+
+		if ( !g_pFullFileSystem->FileExists( kvFilename ) ) 
+			bLoadSideCar = false;
+
+		// Load the Map sidecar entry
+
+		if ( bLoadSideCar )
+		{
+			KeyValues *pkvMap = new KeyValues( "Map" );
+			KeyValues::AutoDelete autodelete_kvMap( pkvMap );
+
+			if ( pkvMap->LoadFromFile( g_pFullFileSystem, kvFilename ) )
+			{
+				g_pGameTypes->LoadMapEntry( pkvMap );
+			}
+			else
+			{
+				Warning( "Failed to load %s\n", kvFilename );
+			}
+		}
+	}
+	/////
+	///////////////////
+
+	g_pGameTypes->CheckShouldSetDefaultGameModeAndType( szMapNameFull );
+
+    // Set the mode convars
+    if ( g_pGameTypes->ApplyConvarsForCurrentMode( isMultiplayer ) )
+    {
+		// Add the gun game weapons.
+		if ( IsPlayingGunGameProgressive() && mp_ggprogressive_use_random_weapons.GetBool() )
+		{
+			// this is where we build the list of GG progressive weapons
+			// collect all of the weapons here
+			CUtlVector< GGWeaponAliasName > pSMGs;
+			for ( int i=GGLIST_SMGS_START; i<(GGLIST_SMGS_LAST+1); i++ )
+				pSMGs.AddToTail(ggWeaponAliasNameList[i]);
+			CUtlVector< GGWeaponAliasName > pShotguns;
+			for ( int i=GGLIST_SGS_START; i<(GGLIST_SGS_LAST+1); i++ )
+				pShotguns.AddToTail(ggWeaponAliasNameList[i]);
+			CUtlVector< GGWeaponAliasName > pRifles;
+			for ( int i=GGLIST_RIFLES_START; i<(GGLIST_RIFLES_LAST+1); i++ )
+				pRifles.AddToTail(ggWeaponAliasNameList[i]);
+			CUtlVector< GGWeaponAliasName > pSnipers;
+			for ( int i=GGLIST_SNIPERS_START; i<(GGLIST_SNIPERS_LAST+1); i++ )
+				pSnipers.AddToTail(ggWeaponAliasNameList[i]);
+			CUtlVector< GGWeaponAliasName > pMGs;
+			for ( int i=GGLIST_MGS_START; i<(GGLIST_MGS_LAST+1); i++ )
+				pMGs.AddToTail(ggWeaponAliasNameList[i]);
+			CUtlVector< GGWeaponAliasName > pPistols;
+			for ( int i=GGLIST_PISTOLS_START; i<(GGLIST_PISTOLS_LAST+1); i++ )
+				pPistols.AddToTail(ggWeaponAliasNameList[i]);
+
+			int nNumSMGs = 3;
+			int nNumRifles = 4;
+			int nNumShotguns = 2;
+			int nNumSnipers = 2;
+			int nNumMGs = 1;
+			int nNumPistols = 4;
+			// this should total 16 weapons
+
+			int nKillsNeeded = MAX( 1, mp_ggprogressive_random_weapon_kills_needed.GetInt() );
+
+			// now pick a random one from the list we created above for each category
+			CUtlVector< GGWeaponAliasName > pWeaponProgression;
+			for ( int i=0; i<nNumSMGs; i++ )
+			{
+				int nPick = RandomInt( 0, pSMGs.Count()-1 );
+				pWeaponProgression.AddToTail(pSMGs[nPick]);
+				pSMGs.FastRemove( nPick );
+			}
+			for ( int i=0; i<nNumRifles; i++ )
+			{
+				int nPick = RandomInt( 0, pRifles.Count()-1 );
+				pWeaponProgression.AddToTail(pRifles[nPick]);
+				pRifles.FastRemove( nPick );
+			}
+			for ( int i=0; i<nNumShotguns; i++ )
+			{
+				int nPick = RandomInt( 0, pShotguns.Count()-1 );
+				pWeaponProgression.AddToTail(pShotguns[nPick]);
+				pShotguns.FastRemove( nPick );
+			}
+			for ( int i=0; i<nNumSnipers; i++ )
+			{
+				int nPick = RandomInt( 0, pSnipers.Count()-1 );
+				pWeaponProgression.AddToTail(pSnipers[nPick]);
+				pSnipers.FastRemove( nPick );
+			}
+			for ( int i=0; i<nNumMGs; i++ )
+			{
+				int nPick = RandomInt( 0, pMGs.Count()-1 );
+				pWeaponProgression.AddToTail(pMGs[nPick]);
+				pMGs.FastRemove( nPick );
+			}
+			for ( int i=0; i<nNumPistols; i++ )
+			{
+				int nPick = RandomInt( 0, pPistols.Count()-1 );
+				pWeaponProgression.AddToTail(pPistols[nPick]);
+				pPistols.FastRemove( nPick );
+			}
+
+			// go through the list we build and add them to the final list that will get used in the game
+			FOR_EACH_VEC( pWeaponProgression, iWeaponProgression )
+			{
+				const GGWeaponAliasName &wp = (pWeaponProgression)[iWeaponProgression];
+				AddGunGameWeapon( wp.aliasName, nKillsNeeded, TEAM_CT );
+				AddGunGameWeapon( wp.aliasName, nKillsNeeded, TEAM_TERRORIST );
+			}
+
+			// add the knife manually			
+			AddGunGameWeapon( "knifegg", 1, TEAM_CT );
+			AddGunGameWeapon( "knifegg", 1, TEAM_TERRORIST );
+		}
+		// Add the gun game weapons.
+        else if ( IsPlayingGunGameTRBomb() || IsPlayingGunGameProgressive() )
+        {
+            const CUtlVector< IGameTypes::WeaponProgression > *pWeaponProgressionCT = g_pGameTypes->GetWeaponProgressionForCurrentModeCT();
+            if ( pWeaponProgressionCT )
+            {
+                FOR_EACH_VEC( *pWeaponProgressionCT, iWeaponProgression )
+                {
+                    const IGameTypes::WeaponProgression &wp = (*pWeaponProgressionCT)[iWeaponProgression];
+                    AddGunGameWeapon( wp.m_Name, wp.m_Kills, TEAM_CT );
+                }
+            }
+
+            const CUtlVector< IGameTypes::WeaponProgression > *pWeaponProgressionT = g_pGameTypes->GetWeaponProgressionForCurrentModeT();
+            if ( pWeaponProgressionT )
+            {
+                FOR_EACH_VEC( * pWeaponProgressionT, iWeaponProgression )
+                {
+                    const IGameTypes::WeaponProgression &wp = (* pWeaponProgressionT )[iWeaponProgression];
+                    AddGunGameWeapon( wp.m_Name, wp.m_Kills, TEAM_TERRORIST );
+                }
+            }
+        }
+
+        if ( CSGameRules()->HasHalfTime() )
+        {
+            SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
+        }
+        else
+        {
+            SetPhase( GAMEPHASE_PLAYING_STANDARD );
+        }
+
+        // Set the map convars
+        ConVarRef host_map( "host_map" );
+        g_pGameTypes->ApplyConvarsForMap( host_map.GetString(), engine->IsDedicatedServer() || isMultiplayer );
+    }
+#endif
+}
+
 int CCSGameRules::GetNumProgressiveGunGameWeapons( int nTeamID ) const
 {
 	if ( nTeamID == TEAM_CT )
@@ -8869,11 +9105,6 @@ int CCSGameRules::GetGunGameTRBonusGrenade( CCSPlayer *pPlayer )
     }
 
     return 0;
-}
-
-bool CCSGameRules::IsPlayingAnyCompetitiveStrictRuleset( void ) const
-{
-	return (m_iCurrentGamemode == GameModes::COMPETITIVE) || (m_iCurrentGamemode == GameModes::COMPETITIVE_2V2); // TODO: check if 2v2 actually belongs here
 }
 
 bool CCSGameRules::IsConnectedUserInfoChangeAllowed( CBasePlayer *pPlayer )
@@ -8992,6 +9223,11 @@ bool CCSGameRules::IsIntermission( void ) const
 #endif
 
     return false;
+}
+
+int CCSGameRules::GetMaxSpectatorSlots( void ) const
+{
+    return m_iSpectatorSlotCount;
 }
 
 #ifndef CLIENT_DLL

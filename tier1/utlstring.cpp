@@ -101,6 +101,15 @@ const char *CUtlString::Get( ) const
 	return m_pString;
 }
 
+char *CUtlString::Get( )
+{
+	if (!m_pString)
+	{
+		return "";
+	}
+	return m_pString;
+}
+
 char *CUtlString::GetForModify()
 {
 	if ( !m_pString )
@@ -282,77 +291,8 @@ bool CUtlString::MatchesPattern( const CUtlString &Pattern, int nFlags ) const
 {
 	const char *pszSource = String();
 	const char *pszPattern = Pattern.String();
-	bool	bExact = true;
 
-	while( 1 )
-	{
-		if ( ( *pszPattern ) == 0 )
-		{
-			return ( (*pszSource ) == 0 );
-		}
-
-		if ( ( *pszPattern ) == '*' )
-		{
-			pszPattern++;
-
-			if ( ( *pszPattern ) == 0 )
-			{
-				return true;
-			}
-
-			bExact = false;
-			continue;
-		}
-
-		int nLength = 0;
-
-		while( ( *pszPattern ) != '*' && ( *pszPattern ) != 0 )
-		{
-			nLength++;
-			pszPattern++;
-		}
-
-		while( 1 )
-		{
-			const char *pszStartPattern = pszPattern - nLength;
-			const char *pszSearch = pszSource;
-
-			for( int i = 0; i < nLength; i++, pszSearch++, pszStartPattern++ )
-			{
-				if ( ( *pszSearch ) == 0 )
-				{
-					return false;
-				}
-
-				if ( ( *pszSearch ) != ( *pszStartPattern ) )
-				{
-					break;
-				}
-			}
-
-			if ( pszSearch - pszSource == nLength )
-			{
-				break;
-			}
-
-			if ( bExact == true )
-			{
-				return false;
-			}
-
-			if ( ( nFlags & PATTERN_DIRECTORY ) != 0 )
-			{
-				if ( ( *pszPattern ) != '/' && ( *pszSource ) == '/' )
-				{
-					return false;
-				}
-			}
-
-			pszSource++;
-		}
-
-		pszSource += nLength;
-	}
+	return V_StringMatchesPattern( pszSource, pszPattern, nFlags );
 }
 
 

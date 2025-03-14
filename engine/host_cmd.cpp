@@ -100,6 +100,7 @@ extern IXboxSystem *g_pXboxSystem;
 bool g_bInEditMode = false;
 bool g_bInCommentaryMode = false;
 #endif
+KeyValues* g_pLaunchOptions = NULL;
 
 static void host_name_changed_f( IConVar *var, const char *pOldValue, float flOldValue )
 {
@@ -264,6 +265,21 @@ CON_COMMAND( quit_x360, "" )
 	}
 }
 #endif
+
+// store arbitrary launch arguments in KeyValues to avoid having to add code for every new
+//   launch parameter (like edit mode, commentary mode, background, etc. do)
+void SetLaunchOptions( const CCommand &args )
+{
+ 	if ( g_pLaunchOptions )
+ 	{
+ 		g_pLaunchOptions->deleteThis();
+ 	}
+ 	g_pLaunchOptions = new KeyValues( "LaunchOptions" );
+ 	for ( int i = 0 ; i < args.ArgC() ; i++ )
+ 	{
+ 		g_pLaunchOptions->SetString( va("Arg%d", i), args[i] );
+ 	}
+}
 
 /*
 ==================
@@ -810,6 +826,7 @@ void Host_Map_Helper( const CCommand &args, bool bEditmode, bool bBackground, bo
 	g_bInCommentaryMode = bCommentary;
 #endif
 
+	SetLaunchOptions( args );
 	if ( !CL_HL2Demo_MapCheck( szMapName ) )
 	{
 		Warning( "map load failed: %s not found or invalid\n", szMapName );
@@ -871,6 +888,19 @@ void Host_Map_f( const CCommand &args )
 	Host_Map_Helper( args, false, false, false );
 }
 
+// Handle a map group command from the console
+void Host_MapGroup_f( const CCommand &args )
+{
+	if ( args.ArgC() < 2 )
+	{
+		Warning( "Host_MapGroup_f: No mapgroup specified\n" );
+		return;
+	}
+
+	Msg( "Setting mapgroup to '%s'\n", args[1] );
+
+	HostState_SetMapGroupName( args[1] );
+}
 
 //-----------------------------------------------------------------------------
 // handle a map_edit <servername> command from the console. 
@@ -1058,6 +1088,8 @@ void Host_Changelevel_f( const CCommand &args )
 		return;
 	}
 
+	SetLaunchOptions( args );
+
 	HostState_ChangeLevelMP( szName, args[2] );
 }
 
@@ -1122,6 +1154,8 @@ void Host_Changelevel2_f( const CCommand &args )
 		Warning( "changelevel failed: %s not found\n", szName );
 		return;	
 	}
+
+	SetLaunchOptions( args );
 
 	HostState_ChangeLevelSP( szName, args[2] );
 }

@@ -698,6 +698,20 @@ bool CBaseClient::SendServerInfo( void )
 		printMsg.WriteToBuffer( msg );
 	}
 
+	// write additional server payload
+	if ( KeyValues *kvExtendedServerInfo = serverGameDLL->GetExtendedServerInfoForNewClient() )
+	{
+		// This field must be always set when sending the packet to client,
+		// because kvExtendedServerInfo describes the game and is cached in server.dll,
+		// but the clients can connect on SERVER port or on GOTV port and must
+		// receive appropriate server info for the port that they are using
+		kvExtendedServerInfo->SetInt( "sourcetv", m_Server->IsHLTV() );
+
+		SVC_CmdKeyValues cmdExtendedServerInfo( kvExtendedServerInfo, false );
+
+		cmdExtendedServerInfo.WriteToBuffer( msg );
+	}
+
 	SVC_ServerInfo serverinfo;	// create serverinfo message
 
 	serverinfo.m_nPlayerSlot = m_nClientSlot; // own slot number

@@ -2380,6 +2380,15 @@ void CGameServer::ReloadWhitelist( const char *pMapName )
 
 }
 
+void CGameServer::SetMapGroupName( char const *mapGroupName )
+{
+    if ( mapGroupName && mapGroupName[0] )
+    {
+        V_strncpy( m_szMapGroupName, mapGroupName, sizeof( m_szMapGroupName ) );
+    }
+
+    g_ServerGlobalVariables.mapGroupName = MAKE_STRING( m_szMapGroupName );
+}
 
 /*
 ================
@@ -2388,7 +2397,7 @@ SV_SpawnServer
 This is called at the start of each level
 ================
 */
-bool CGameServer::SpawnServer( const char *szMapName, const char *szMapFile, const char *startspot )
+bool CGameServer::SpawnServer( const char *szMapName, const char *szMapFile, const char *szMapGroupName, const char *startspot )
 {
 	int		i;
 
@@ -2484,9 +2493,14 @@ bool CGameServer::SpawnServer( const char *szMapName, const char *szMapFile, con
 	// the snapshot manager
 	framesnapshotmanager->LevelChanged();
 
-	// set map name
+	// set map name and mapgroup name
 	Q_strncpy( m_szMapname, szMapName, sizeof( m_szMapname ) );
 	Q_strncpy( m_szMapFilename, szMapFile, sizeof( m_szMapFilename ) );
+
+	if ( szMapGroupName && szMapGroupName[0] )
+    {
+        Q_strncpy( m_szMapGroupName, szMapGroupName, sizeof( m_szMapGroupName ) );
+    }
 
 	// set startspot
 	if (startspot)
@@ -2693,6 +2707,7 @@ bool CGameServer::SpawnServer( const char *szMapName, const char *szMapFile, con
 
 	g_ServerGlobalVariables.mapname   = MAKE_STRING( m_szMapname );
 	g_ServerGlobalVariables.startspot = MAKE_STRING( m_szStartspot );
+	g_ServerGlobalVariables.mapGroupName = MAKE_STRING( m_szMapGroupName );
 
 	GetTestScriptMgr()->CheckPoint( "map_load" );
 

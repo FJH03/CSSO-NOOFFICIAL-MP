@@ -20,6 +20,7 @@ void	HostState_NewGame( char const *pMapName, bool remember_location, bool backg
 void	HostState_LoadGame( char const *pSaveFileName, bool remember_location );
 void	HostState_ChangeLevelSP( char const *pNewLevel, char const *pLandmarkName );
 void	HostState_ChangeLevelMP( char const *pNewLevel, char const *pLandmarkName );
+void	HostState_SetMapGroupName( char const *pMapGroupName );
 void	HostState_GameShutdown();
 void	HostState_Shutdown();
 void	HostState_Restart();

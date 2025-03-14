@@ -336,6 +336,11 @@ public:
 		return g_bInCommentaryMode;
 #endif
 	}
+
+	virtual KeyValues* GetLaunchOptions( void )
+	{
+		return g_pLaunchOptions;
+	}
 	
 	virtual void NotifyEdictFlagsChange( int iEdict )
 	{

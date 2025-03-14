@@ -89,7 +89,9 @@
 #include "tier3/tier3.h"
 #include "serverbenchmark_base.h"
 #include "querycache.h"
-
+#if defined( CSTRIKE_DLL )
+#include "gametypes.h"
+#endif
 
 #ifdef TF_DLL
 #include "gc_clientsystem.h"
@@ -739,6 +741,11 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 
 	// init the gamestatsupload connection
 	gamestatsuploader->InitConnection();
+#endif
+
+#if defined( CSTRIKE_DLL )
+	// Load the game types.
+	g_pGameTypes->Initialize();
 #endif
 
 	return true;
@@ -1853,6 +1860,56 @@ void CServerGameDLL::InvalidateMdlCache()
 			pAnimating->InvalidateMdlCache();
 		}
 	}
+}
+
+KeyValues* CServerGameDLL::GetExtendedServerInfoForNewClient()
+{
+	static KeyValues *s_pExtendedServerInfo = NULL;
+	static char s_szExtendedHashKey[256] = {0};
+
+	int iGameType = g_pGameTypes->GetCurrentGameType();
+	int iGameMode = g_pGameTypes->GetCurrentGameMode();
+	int nNumSlots = g_pGameTypes->GetMaxPlayersForTypeAndMode( iGameType, iGameMode );
+	uint32 uiOfficialReservationGameType = 0;
+
+	char szHashKey[256] = {0};
+	V_snprintf( szHashKey, sizeof( szHashKey ), "%u:%d:%d:%d:%s", uiOfficialReservationGameType, iGameType, iGameMode, nNumSlots, gpGlobals->mapname.ToCStr() );
+
+	if ( Q_strcmp( s_szExtendedHashKey, szHashKey ) )
+	{
+		V_strncpy( s_szExtendedHashKey, szHashKey, ARRAYSIZE( s_szExtendedHashKey ) );
+		if ( s_pExtendedServerInfo )
+			s_pExtendedServerInfo->deleteThis();
+		
+		s_pExtendedServerInfo = new KeyValues( "ExtendedServerInfo" );
+
+		const char* mapGroupName = gpGlobals->mapGroupName.ToCStr();
+		s_pExtendedServerInfo->SetString( "map", gpGlobals->mapname.ToCStr() );
+		s_pExtendedServerInfo->SetString( "mapgroup", mapGroupName );
+
+		s_pExtendedServerInfo->SetInt( "numSlots", nNumSlots );
+		s_pExtendedServerInfo->SetInt( "c_game_type", iGameType );
+		s_pExtendedServerInfo->SetInt( "c_game_mode", iGameMode );
+		s_pExtendedServerInfo->SetInt( "default_game_type", g_pGameTypes->GetDefaultGameTypeForMap( gpGlobals->mapname.ToCStr() ) );
+		s_pExtendedServerInfo->SetInt( "default_game_mode", g_pGameTypes->GetDefaultGameModeForMap( gpGlobals->mapname.ToCStr() ) );
+		
+		if ( const CUtlStringList* mapsInGroup = g_pGameTypes->GetMapGroupMapList( mapGroupName ) )
+		{
+			FOR_EACH_VEC( *mapsInGroup, i )
+			{
+				const char *sz = (*mapsInGroup)[i];
+				if ( sz )
+				{
+					KeyValues *val = new KeyValues( "" );
+					val->SetString( NULL, sz );
+					s_pExtendedServerInfo->FindKey( "maplist", true )->AddSubKey( val );
+				}
+			}
+		}
+
+		KeyValuesDumpAsDevMsg( s_pExtendedServerInfo, 1, 1 );
+	}
+	return s_pExtendedServerInfo;
 }
 
 // interface to the new GC based lobby system

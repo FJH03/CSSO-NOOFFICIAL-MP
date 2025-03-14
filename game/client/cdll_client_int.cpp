@@ -125,6 +125,8 @@
 #include "client_virtualreality.h"
 #include "mumble.h"
 
+#include "gametypes.h"
+
 // NVNT includes
 #include "hud_macros.h"
 #include "haptics/ihaptics.h"
@@ -722,6 +724,8 @@ public:
 	virtual const char* TranslateEffectForVisionFilter( const char *pchEffectType, const char *pchEffectName );
 	
 	virtual void			ClientAdjustStartSoundParams( struct StartSoundParams_t& params );
+
+	virtual void SetAndParseExtendedServerInfo( KeyValues *pExtendedServerInfo );
 	
 	// Returns true if the disconnect command has been handled by the client
 	virtual bool DisconnectAttempt( void );
@@ -1080,6 +1084,11 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 	ClientWorldFactoryInit();
 
 	C_BaseAnimating::InitBoneSetupThreadPool();
+
+#if defined( CSTRIKE_DLL )
+	// Load the game types.
+	g_pGameTypes->Initialize();
+#endif
 
 #if defined( WIN32 ) && !defined( _X360 )
 	// NVNT connect haptics sytem
@@ -2593,6 +2602,11 @@ void CHLClient::ClientAdjustStartSoundParams( StartSoundParams_t& params )
 		}
 	}
 #endif
+}
+
+void CHLClient::SetAndParseExtendedServerInfo( KeyValues* pExtendedServerInfo )
+{
+	g_pGameTypes->SetAndParseExtendedServerInfo( pExtendedServerInfo );
 }
 
 const char* CHLClient::TranslateEffectForVisionFilter( const char *pchEffectType, const char *pchEffectName )

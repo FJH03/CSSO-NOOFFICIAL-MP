@@ -94,6 +94,7 @@ public:
 	~CUtlString();
 
 	const char	*Get( ) const;
+	char		*Get();
 	void		Set( const char *pValue );
 	operator const char*() const;
 

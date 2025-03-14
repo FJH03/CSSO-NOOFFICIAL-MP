@@ -2737,6 +2737,80 @@ char *V_AddBackSlashesToSpecialChars( char const *pSrc )
 	return pRet;
 }
 
+bool V_StringMatchesPattern( const char* pszSource, const char* pszPattern, int nFlags /*= 0 */ )
+{
+	bool bExact = true;
+	while( 1 )
+	{
+		if ( ( *pszPattern ) == 0 )
+		{
+			return ( (*pszSource ) == 0 );
+		}
+
+		if ( ( *pszPattern ) == '*' )
+		{
+			pszPattern++;
+
+			if ( ( *pszPattern ) == 0 )
+			{
+				return true;
+			}
+
+			bExact = false;
+			continue;
+		}
+
+		int nLength = 0;
+
+		while( ( *pszPattern ) != '*' && ( *pszPattern ) != 0 )
+		{
+			nLength++;
+			pszPattern++;
+		}
+
+		while( 1 )
+		{
+			const char *pszStartPattern = pszPattern - nLength;
+			const char *pszSearch = pszSource;
+
+			for( int i = 0; i < nLength; i++, pszSearch++, pszStartPattern++ )
+			{
+				if ( ( *pszSearch ) == 0 )
+				{
+					return false;
+				}
+
+				if ( ( *pszSearch ) != ( *pszStartPattern ) )
+				{
+					break;
+				}
+			}
+
+			if ( pszSearch - pszSource == nLength )
+			{
+				break;
+			}
+
+			if ( bExact == true )
+			{
+				return false;
+			}
+
+			if ( ( nFlags & PATTERN_DIRECTORY ) != 0 )
+			{
+				if ( ( *pszPattern ) != '/' && ( *pszSource ) == '/' )
+				{
+					return false;
+				}
+			}
+
+			pszSource++;
+		}
+
+		pszSource += nLength;
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Helper for converting a numeric value to a hex digit, value should be 0-15.
 //-----------------------------------------------------------------------------

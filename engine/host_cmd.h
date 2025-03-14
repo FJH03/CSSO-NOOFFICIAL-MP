@@ -27,8 +27,8 @@ void Host_Init( bool bIsDedicated );
 void Host_Shutdown(void);
 int  Host_Frame (float time, int iState );
 void Host_ShutdownServer(void);
-bool Host_NewGame( char *mapName, bool loadGame, bool bBackgroundLevel, const char *pszOldMap = NULL, const char *pszLandmark = NULL, bool bOldSave = false );
-bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, const char *start );
+bool Host_NewGame( char *mapName, char *mapGroupName, bool loadGame, bool bBackgroundLevel, const char *pszOldMap = NULL, const char *pszLandmark = NULL, bool bOldSave = false );
+bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGroupName, const char *start );
 void Disconnect();
 
 extern ConVar host_name;

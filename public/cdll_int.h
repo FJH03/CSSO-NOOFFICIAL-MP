@@ -354,6 +354,7 @@ public:
 	// Get the name of the current map
 	virtual void GetChapterName( char *pchBuff, int iMaxLength ) = 0;
 	virtual char const	*GetLevelName( void ) = 0;
+	virtual char const	*GetMapGroupName( void ) = 0;
 	virtual int	GetLevelVersion( void ) = 0;
 #if !defined( NO_VOICE )
 	// Obtain access to the voice tweaking API
@@ -792,6 +793,8 @@ public:
 	virtual bool DisconnectAttempt( void ) = 0;
 
 	virtual bool IsConnectedUserInfoChangeAllowed( IConVar *pCvar ) = 0;
+
+	virtual void SetAndParseExtendedServerInfo( KeyValues *pExtendedServerInfo ) = 0;
 
 	virtual void IN_TouchEvent( int type, int fingerId, int x, int y ) = 0;
 };

@@ -4406,7 +4406,7 @@ void AddTransitionResources( CSaveRestoreData *pSaveData, const char *pLevelName
 	}
 }
 
-bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, const char *start )
+bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGroupName, const char *start )
 {
 	char			_startspot[MAX_QPATH];
 	char			*startspot;
@@ -4498,6 +4498,7 @@ bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, const char *
 	}
 
 	Warning( "---- Host_Changelevel ----\n" );
+	host_map.SetValue( szMapName );
 	CheckForFlushMemory( sv.GetMapName(), szMapName );
 
 #if !defined( SWDS )
@@ -4576,7 +4577,8 @@ bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, const char *
 
 	DownloadListGenerator().OnLevelLoadStart( szMapName );
 
-	if ( !sv.SpawnServer( szMapName, szMapFile, startspot ) )
+	Msg( "*** Map Load: %s: Map Group %s", szMapName, mapGroupName );
+ 	if ( !sv.SpawnServer( szMapName, szMapFile, mapGroupName, startspot ) )
 	{
 #ifndef SWDS
 		SCR_EndLoadingPlaque();
@@ -4636,7 +4638,7 @@ SERVER TRANSITIONS
 
 ===============================================================================
 */
-bool Host_NewGame( char *mapName, bool loadGame, bool bBackgroundLevel, const char *pszOldMap, const char *pszLandmark, bool bOldSave )
+bool Host_NewGame( char *mapName, char *mapGroupName, bool loadGame, bool bBackgroundLevel, const char *pszOldMap, const char *pszLandmark, bool bOldSave )
 {
 	VPROF( "Host_NewGame" );
 	COM_TimestampedLog( "Host_NewGame" );
@@ -4708,7 +4710,8 @@ bool Host_NewGame( char *mapName, bool loadGame, bool bBackgroundLevel, const ch
 		host_name.SetValue( serverGameDLL->GetGameDescription() );
 	}
 
-	if ( !sv.SpawnServer ( szMapName, szMapFile, NULL ) )
+	COM_TimestampedLog( "*** Map Load: %s Map %s Group", mapName, mapGroupName );
+ 	if ( !sv.SpawnServer ( szMapName, szMapFile, mapGroupName, NULL ) )
 	{
 		return false;
 	}
