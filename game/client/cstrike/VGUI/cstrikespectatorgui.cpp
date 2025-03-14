@@ -69,6 +69,7 @@ ConVar cl_radar_scale( "cl_radar_scale", "0.7", FCVAR_ARCHIVE, "Sets the radar s
 #define DEATH_ICON_FADE (7.5f)
 #define DEATH_ICON_DURATION (10.0f)
 #define LAST_SEEN_ICON_DURATION (4.0f)
+#define LAST_SEEN_ICON_FADE (2.0f)
 
 // To make your own green radar file from the map overview file, turn this on, and include vtf.lib
 #define no_GENERATE_RADAR_FILE
@@ -902,6 +903,7 @@ void CCSMapOverview::UpdatePlayers()
 					playerCS->overridePosition = player->position;
 					playerCS->overrideFadeTime = -1;
 					playerCS->overrideExpirationTime = now + LAST_SEEN_ICON_DURATION;
+					playerCS->overrideFadeTime = now + LAST_SEEN_ICON_FADE;
 					playerCS->overrideAngle = player->angle;
 					playerCS->timeLastSeen = -1;
 					playerCS->timeFirstSeen = -1;
@@ -1549,7 +1551,6 @@ void CCSMapOverview::DrawMapPlayers()
 		if( playerCS->overrideExpirationTime > gpGlobals->curtime )// If dead, an X, if alive, an alpha'd normal icon
 		{
 			int alphaToUse = alpha;
-			float timeSinceLastSeen = gpGlobals->curtime - playerCS->timeLastSeen;
 			if( playerCS->overrideFadeTime != -1 && playerCS->overrideFadeTime <= gpGlobals->curtime )
 			{
 				// Fade linearly from fade start to disappear
@@ -1557,7 +1558,7 @@ void CCSMapOverview::DrawMapPlayers()
 			}
 
 			DrawIconCS( playerCS->overrideIcon, playerCS->overrideIconOffscreen, playerCS->overridePosition, m_flIconSize * 1.1f, GetViewAngle(), alphaToUse, true, name, &player->color, -1, &colorGreen );
-			if( player->health > 0 && (bIsTeammate || (timeSinceLastSeen < TIME_SPOTS_STAY_SEEN && ( playerCS->timeLastSeen != -1 ))) )
+			if( player->health > 0 && bIsTeammate )
 				DrawIconCS( m_playerFacing, -1, playerCS->overridePosition, m_flIconSize * 1.1f, playerCS->overrideAngle[YAW], alphaToUse, true, name, &player->color, status, &colorGreen );
 		}
 		else
@@ -1587,15 +1588,14 @@ void CCSMapOverview::DrawMapPlayers()
 				angleForPlayer = player->angle[YAW];// And, the self icon now rotates, natch.
 			}
 
-			float timeSinceLastSeen = gpGlobals->curtime - playerCS->timeLastSeen;
 			int offscreenIcon = m_TeamIconsOffscreen[GetIconNumberFromTeamNumber(player->team)];
 			if ( IsOtherEnemy( localPlayer->entindex(), player->index + 1 ) )
 				offscreenIcon = m_enemyIconOffscreen;
 			DrawIconCS( player->icon, offscreenIcon, player->position, sizeForPlayer, angleForPlayer, alpha, true, name, &player->color, status, &colorGreen );
 			if( !doingLocalPlayer )
 			{
-				// Draw the facing for everyone but the local player.
-				if( player->health > 0 && (bIsTeammate || (timeSinceLastSeen < TIME_SPOTS_STAY_SEEN && ( playerCS->timeLastSeen != -1 ))) )
+				// Draw the facing for teammates only.
+				if( player->health > 0 && bIsTeammate )
 					DrawIconCS( m_playerFacing, -1, player->position, sizeForPlayer, player->angle[YAW], alpha, true, name, &player->color, status, &colorGreen );
 			}
 		}
