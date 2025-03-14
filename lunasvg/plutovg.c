@@ -180,20 +180,20 @@ void plutovg_restore(plutovg_t* pluto)
 
 plutovg_color_t* plutovg_set_rgb(plutovg_t* pluto, double r, double g, double b)
 {
-    return plutovg_set_rgba(pluto, b, g, r, 1.0);
+    return plutovg_set_rgba(pluto, r, g, b, 1.0);
 }
 
 plutovg_color_t* plutovg_set_rgba(plutovg_t* pluto, double r, double g, double b, double a)
 {
     plutovg_paint_t* paint = &pluto->state->paint;
     paint->type = plutovg_paint_type_color;
-    plutovg_color_init_rgba(&paint->color, b, g, r, a);
+    plutovg_color_init_rgba(&paint->color, r, g, b, a);
     return &paint->color;
 }
 
 plutovg_color_t* plutovg_set_color(plutovg_t* pluto, const plutovg_color_t* color)
 {
-    return plutovg_set_rgba(pluto, color->b, color->g , color->r, color->a);
+    return plutovg_set_rgba(pluto, color->r, color->g , color->b, color->a);
 }
 
 plutovg_gradient_t* plutovg_set_linear_gradient(plutovg_t* pluto, double x1, double y1, double x2, double y2)
