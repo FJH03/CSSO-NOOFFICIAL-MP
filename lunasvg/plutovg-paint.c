@@ -7,9 +7,9 @@ void plutovg_color_init_rgb(plutovg_color_t* color, double r, double g, double b
 
 void plutovg_color_init_rgba(plutovg_color_t* color, double r, double g, double b, double a)
 {
-    color->r = plutovg_clamp(r, 0.0, 1.0);
+    color->b = plutovg_clamp(r, 0.0, 1.0);
     color->g = plutovg_clamp(g, 0.0, 1.0);
-    color->b = plutovg_clamp(b, 0.0, 1.0);
+    color->r = plutovg_clamp(b, 0.0, 1.0);
     color->a = plutovg_clamp(a, 0.0, 1.0);
 }
 
