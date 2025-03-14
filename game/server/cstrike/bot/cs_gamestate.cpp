@@ -342,6 +342,10 @@ void CSGameState::UpdatePlantedBomb( const Vector &pos )
 	}
 
 	m_plantedBombPos = pos;
+
+	// add an epsilon to handle bomb origin slightly embedded in a model/world
+	m_plantedBombPos.z += 1.0f;
+ 
 	m_isPlantedBombPosKnown = true;
 	SetBombState( PLANTED );
 }
