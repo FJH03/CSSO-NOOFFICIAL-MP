@@ -602,6 +602,7 @@ CCSPlayer::CCSPlayer()
 	m_firstKillBlindStartTime = -1;
 	m_killsWhileBlind = 0;
 	m_bombCarrierkills = 0;
+	m_knifeKillBombPlacer = false;
 	m_bSurvivedHeadshotDueToHelmet = false;
 	m_pGooseChaseDistractingPlayer = NULL;
 	m_gooseChaseStep = GC_NONE;
@@ -10152,6 +10153,7 @@ void CCSPlayer::ResetRoundBasedAchievementVariables()
 
 	m_killsWhileBlind = 0;
 	m_bombCarrierkills = 0;
+	m_knifeKillBombPlacer = false;
 
 	m_bSurvivedHeadshotDueToHelmet = false;
 

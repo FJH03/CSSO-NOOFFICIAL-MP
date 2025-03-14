@@ -941,10 +941,10 @@ int FFEVAL_KNIFE_WITHOUT_AMMO( CCSPlayer* pPlayer )
 	return pPlayer->GetKnifeKillsWhenOutOfAmmo();
 }
 
-/*int FFEVAL_KNIFE_BOMB_PLANTER( CCSPlayer* pPlayer )
+int FFEVAL_KNIFE_BOMB_PLANTER( CCSPlayer* pPlayer )
 {
 	return pPlayer->GetKnifeLevelKilledBombPlacer();
-}*/
+}
 
 int FFEVAL_BOMB_CARRIERS( CCSPlayer* pPlayer )
 {
@@ -1171,7 +1171,7 @@ DECLARE_FUNFACT_PLAYERFUNC(	FF_MULTIPLE_ATTACKS_LIVED,	"#funfact_survived_multip
 DECLARE_FUNFACT_PLAYERFUNC(	FF_MULTIPLE_ATTACKS_DIED,	"#funfact_died_from_multiple_attackers",	0.3f,	FFEVAL_MULTIPLE_ATTACKER_COUNT,		3,		GameFlags::NotGunGame,							PlayerFlags::HighestOnly | PlayerFlags::Dead );
 DECLARE_FUNFACT_PLAYERFUNC(	FF_DAMAGE_MULTIPLE_ENEMIES,	"#funfact_damage_multiple_enemies",			0.2f,	FFEVAL_DAMAGE_MULTIPLE_ENEMIES,		3,		GameFlags::NotGunGame,							PlayerFlags::HighestOnly );
 DECLARE_FUNFACT_PLAYERFUNC(	FF_BOMB_CARRIERS,			"#funfact_bomb_carriers",					0.3f, 	FFEVAL_BOMB_CARRIERS,				2,		GameFlags::NotGunGame,							PlayerFlags::HighestOnly );
-//DECLARE_FUNFACT_PLAYERFUNC(	FF_KNIFE_BOMB_PLANTER,		"#funfact_knife_bomb_planter",				0.8f, 	FFEVAL_KNIFE_BOMB_PLANTER,			1,		GameFlags::NotGunGame,							PlayerFlags::HighestOnly | PlayerFlags::Alive );
+DECLARE_FUNFACT_PLAYERFUNC(	FF_KNIFE_BOMB_PLANTER,		"#funfact_knife_bomb_planter",				0.8f, 	FFEVAL_KNIFE_BOMB_PLANTER,			1,		GameFlags::NotGunGame,							PlayerFlags::HighestOnly | PlayerFlags::Alive );
 DECLARE_FUNFACT_PLAYERFUNC(	FF_KNIFE_WITHOUT_AMMO,		"#funfact_knife_without_ammo",				0.3f, 	FFEVAL_KNIFE_WITHOUT_AMMO,			2,		GameFlags::NotGunGame,							PlayerFlags::HighestOnly );
 DECLARE_FUNFACT_PLAYERFUNC(	FF_KILL_DEFUSER,			"#funfact_kill_defuser",					0.5f, 	FFEVAL_KILLED_DEFUSER,				1,		GameFlags::NotGunGame,							PlayerFlags::TeamTerrorist | PlayerFlags::WinningTeam );
 DECLARE_FUNFACT_PLAYERFUNC( FF_KILL_RESCUER,			"#funfact_kill_rescuer",					0.5f, 	FFEVAL_KILLED_RESCUER,				1,		GameFlags::Classic,								PlayerFlags::TeamTerrorist );

@@ -477,6 +477,18 @@ void CCSGameStats::Event_PlayerKilled_PreWeaponDrop( CBasePlayer *pPlayer, const
 				IncrementStat(pAttacker, CSSTAT_KILLS_KNIFE_FIGHT, 1);
 			}
 		}
+
+		if ( CSGameRules()->IsPlayingGunGame() )
+		{
+			int nWeapon = CSGameRules()->GetCurrentGunGameWeapon( pAttacker->m_iGunGameProgressiveWeaponIndex, pAttacker->GetTeamNumber() );
+			if ( nWeapon == WEAPON_KNIFE &&
+					CSGameRules()->IsPlayingGunGameTRBomb() )
+			{
+				// just got a knife kill in a TR game
+				if ( pCSPlayer->PlacedBombThisRound() )
+					pAttacker->SetKnifeLevelKilledBombPlacer();
+			}
+		}
 	}
 }
 

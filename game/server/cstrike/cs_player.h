@@ -1129,6 +1129,7 @@ public:
     bool m_bInjuredAHostage;    // tracks whether this player injured a hostage
     int  m_iNumFollowers;       // Number of hostages following this player
 	bool m_bSurvivedHeadshotDueToHelmet;
+	bool m_knifeKillBombPlacer;
 	bool m_attemptedBombPlace;
 	int m_knifeKillsWhenOutOfAmmo;
 	bool m_triggerPulled;
@@ -1146,12 +1147,15 @@ public:
     bool IsRescuing() { return m_bIsRescuing; }
     void SetInjuredAHostage(bool in_bInjured) { m_bInjuredAHostage = in_bInjured; }
     bool InjuredAHostage() { return m_bInjuredAHostage; }
+	bool PlacedBombThisRound() { return (GetBombPlacedTime() >= 0.0f); }
 	float GetBombPickuptime() { return m_bombPickupTime; }
 	float GetBombPlacedTime() { return m_bombPlacedTime; }
 	float GetBombDroppedTime() { return m_bombDroppedTime; }
 	void SetBombPickupTime( float time ) { m_bombPickupTime = time; }
 	void SetBombPlacedTime( float time ) { m_bombPlacedTime = time; }
 	void SetBombDroppedTime( float time ) { m_bombDroppedTime = time; }
+	void SetKnifeLevelKilledBombPlacer( void ) { m_knifeKillBombPlacer = true; }
+ 	bool GetKnifeLevelKilledBombPlacer() { return m_knifeKillBombPlacer; }
     CCSPlayer* GetLastFlashbangAttacker() { return m_lastFlashBangAttacker; }
     void SetLastFlashbangAttacker(CCSPlayer* attacker) { m_lastFlashBangAttacker = attacker; }
 	float GetKilledTime( void ) { return m_killedTime; }
