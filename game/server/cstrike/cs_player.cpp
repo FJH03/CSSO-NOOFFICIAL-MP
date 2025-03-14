@@ -10373,6 +10373,8 @@ void CCSPlayer::PlayerUsedGrenade( int nWeaponID )
 // [dwenger] adding tracking for weapon used fun fact
 void CCSPlayer::PlayerUsedFirearm( CBaseCombatWeapon* pBaseWeapon )
 {
+	// Player immunity in gun game is cleared upon weapon use
+	ClearImmunity();
 	if ( pBaseWeapon )
 	{
 		CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* >( pBaseWeapon );
