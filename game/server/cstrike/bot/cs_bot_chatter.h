@@ -219,6 +219,7 @@ public:
 	void ClearCriteria( void ) const;
 	void SetPlaceCriteria( PlaceCriteria place ) const;	///< all returned phrases must have this place criteria
 	void SetCountCriteria( CountCriteria count ) const;	///< all returned phrases must have this count criteria
+	void SetCriteriaSet( AI_CriteriaSet &criteria ) const;
 
 	const char *GetName( void ) const					{ return m_name; }
 	const unsigned int GetPlace( void ) const		{ return m_place; }
@@ -228,6 +229,10 @@ public:
 	bool IsPlace( void ) const								{ return m_isPlace; }
 
 	void Randomize( void );									///< randomly shuffle the speakable order
+
+	PlaceCriteria GetPlaceCriteria( void ) const { return m_placeCriteria; }
+	CountCriteria GetCountCriteria( void ) const { return m_countCriteria; }
+	AI_CriteriaSet &GetCriteriaSet( void ) const { return m_contexts; }
 
 private:
 	friend class BotPhraseManager;
@@ -248,6 +253,7 @@ private:
 
 	mutable PlaceCriteria m_placeCriteria;
 	mutable CountCriteria m_countCriteria;
+	mutable AI_CriteriaSet m_contexts;
 };
 typedef CUtlVector<BotPhrase *> BotPhraseList;
 
@@ -265,6 +271,12 @@ inline void BotPhrase::SetPlaceCriteria( PlaceCriteria place ) const
 inline void BotPhrase::SetCountCriteria( CountCriteria count ) const
 {
 	m_countCriteria = count;
+}
+
+inline void BotPhrase::SetCriteriaSet( AI_CriteriaSet &criteria ) const
+{
+	m_contexts.Reset();
+	m_contexts.Merge( &criteria );
 }
 
 enum BotChatterOutputType
@@ -332,8 +344,9 @@ inline int BotPhraseManager::FindPlaceIndex( Place where ) const
 	// no such place - allocate it
 	if (m_placeCount < MAX_PLACES_PER_MAP)
 	{
-		m_placeStatementHistory[ ++m_placeCount ].placeID = where;
-		m_placeStatementHistory[ ++m_placeCount ].timer.Invalidate();
+		m_placeStatementHistory[ m_placeCount ].placeID = where;
+		m_placeStatementHistory[ m_placeCount ].timer.Invalidate();
+		++m_placeCount;
 		return m_placeCount-1;
 	}
 
@@ -572,7 +585,7 @@ public:
 	void Encourage( const char *phraseName, float repeatInterval = 10.0f, float lifetime = 3.0f );	///< "encourage" the player to do the scenario
 
 	void KilledFriend( void );
-	void FriendlyFire( void );
+	void FriendlyFire( const char *pDmgType );
 
 	bool SeesAtLeastOneEnemy( void ) const { return m_seeAtLeastOneEnemy; }
 

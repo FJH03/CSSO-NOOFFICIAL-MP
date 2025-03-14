@@ -17,7 +17,7 @@ using namespace vgui;
 #include "tier1/convar.h"
 #include "EngineInterface.h"
 #include "CvarToggleCheckButton.h"
-#include "gametypes.h"
+#include "cs_shareddefs.h"
 
 #include "ModInfo.h"
 
@@ -32,40 +32,30 @@ using namespace vgui;
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
-CCreateMultiplayerGameServerPage::CCreateMultiplayerGameServerPage(vgui::Panel *parent, const char *name, int nGameType, int nGameMode, bool bAllMaps) : PropertyPage(parent, name)
+CCreateMultiplayerGameServerPage::CCreateMultiplayerGameServerPage(vgui::Panel *parent, const char *name) : PropertyPage(parent, name)
 {
 	m_pSavedData = NULL;
 
 	// we can use this if we decide we want to put "listen server" at the end of the game name
 	m_pMapList = new ComboBox(this, "MapList", 12, false);
 
-	m_pAllMapsCheck = new CheckButton( this, "AllMapsCheck", "" );
-	m_pAllMapsCheck->SetSelected( bAllMaps );
+	m_pEnableBotsCheck = new CheckButton( this, "EnableBotsCheck", "" );
+	m_pEnableBotsCheck->SetVisible( false );
+	m_pEnableBotsCheck->SetEnabled( false );
 
-	m_pGameTypeList = new ComboBox( this, "GameTypeList", 5, false );
-	m_pGameModeList = new ComboBox( this, "GameModeList", 5, false );
-	m_pBotSkillList = new ComboBox( this, "BotSkillList", 5, false );
-
-	int iGameTypeCount = g_pGameTypes->GetGameTypesCount();
-	for ( int i = 0; i < iGameTypeCount; i++ )
+	/*m_pGameModeList = new ComboBox( this, "GameModeList", 5, false );
+	for ( int i = 0; i < GameModes::NUM_GAMEMODES; i++ )
 	{
-		const char* pszGameTypeNameID = g_pGameTypes->GetGameTypeNameID( i );
-		if ( pszGameTypeNameID )
-			m_pGameTypeList->AddItem( pszGameTypeNameID, new KeyValues( "data", "game_type", i ) );
+		char label[64];
+		Q_snprintf( label, sizeof( label ), "#GameUI_GameMode_%d", i );
+		m_pGameModeList->AddItem( label, new KeyValues( "data", "mp_gamemode_override", i ) ); // PiMoN: I wish I could get rid of this frecking KeyValues, its useless!
 	}
-	m_pGameTypeList->SetEnabled( iGameTypeCount > 1 );
 
-	int iBotDifficultyCount = g_pGameTypes->GetCustomBotDifficultyCount();
-	for ( int i = 0; i < iBotDifficultyCount; i++ )
-	{
-		const char* pszBotDifficultyNameID = g_pGameTypes->GetCustomBotDifficultyNameID( i );
-		if ( pszBotDifficultyNameID )
-			m_pBotSkillList->AddItem( pszBotDifficultyNameID, new KeyValues( "data", "custom_bot_difficulty", i ) );
-	}
-	m_pBotSkillList->SetEnabled( iBotDifficultyCount > 1 );
+	m_pGameModeList->ActivateItem( 0 );*/
 
 	LoadControlSettings("Resource/CreateMultiplayerGameServerPage.res");
 
+	LoadMapList();
 	m_szMapName[0]  = 0;
 
 	// initialize hostname
@@ -78,10 +68,6 @@ CCreateMultiplayerGameServerPage::CCreateMultiplayerGameServerPage(vgui::Panel *
 	{
 		SetControlString("PasswordEdit", var.GetString() );
 	}
-	
-	SetGameTypeID( nGameType );
-	SetGameModeID( nGameMode );
-	SetAllMaps( bAllMaps );
 }
 
 //-----------------------------------------------------------------------------
@@ -121,31 +107,6 @@ void CCreateMultiplayerGameServerPage::OnKeyCodePressed( vgui::KeyCode code )
 	}
 }
 
-void CCreateMultiplayerGameServerPage::OnThink()
-{
-	bool bReloadGameModes = false;
-	bool bReloadMaps = false;
-	if ( GetGameTypeID() != m_nGameTypeID )
-		bReloadGameModes = true;
-	if ( GetGameModeID() != m_nGameModeID || IsAllMaps() != m_bAllMaps )
-		bReloadMaps = true;
-
-	if ( bReloadGameModes )
-	{
-		m_nGameTypeID = GetGameTypeID();
-
-		LoadGameModesList();
-	}
-
-	if ( bReloadGameModes || bReloadMaps )
-	{
-		m_nGameModeID = GetGameModeID();
-		m_bAllMaps = IsAllMaps();
-
-		LoadMapList();
-	}
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -155,12 +116,19 @@ void CCreateMultiplayerGameServerPage::EnableBots( KeyValues *data )
 
 	int quota = data->GetInt( "bot_quota", 0 );
 	SetControlInt( "BotQuotaCombo", quota );
+	m_pEnableBotsCheck->SetSelected( (quota > 0) );
 
-	int difficulty = data->GetInt( "custom_bot_difficulty", 0 );
+	int difficulty = data->GetInt( "bot_difficulty", 0 );
 	difficulty = max( difficulty, 0 );
-	difficulty = min( g_pGameTypes->GetCustomBotDifficultyCount(), difficulty );
+	difficulty = min( 3, difficulty );
 
-	m_pBotSkillList->ActivateItem( difficulty );
+	char buttonName[64];
+	Q_snprintf( buttonName, sizeof( buttonName ), "SkillLevel%d", difficulty );
+	vgui::RadioButton *button = dynamic_cast< vgui::RadioButton * >(FindChildByName( buttonName ));
+	if ( button )
+	{
+		button->SetSelected( true );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -174,13 +142,32 @@ void CCreateMultiplayerGameServerPage::OnApplyChanges()
 	if ( m_pSavedData )
 	{
 		int quota = GetControlInt( "BotQuotaCombo", 0 );
+		if ( !m_pEnableBotsCheck->IsSelected() )
+		{
+			quota = 0;
+		}
 		m_pSavedData->SetInt( "bot_quota", quota );
 		ConVarRef bot_quota( "bot_quota" );
 		bot_quota.SetValue( quota );
 
-		int difficulty = m_pBotSkillList->GetActiveItem();
-		m_pSavedData->SetInt( "custom_bot_difficulty", difficulty );
-		g_pGameTypes->SetCustomBotDifficulty( difficulty );
+		int difficulty = 0;
+		for ( int i=0; i<4; ++i )
+		{
+			char buttonName[64];
+			Q_snprintf( buttonName, sizeof( buttonName ), "SkillLevel%d", i );
+			vgui::RadioButton *button = dynamic_cast< vgui::RadioButton * >(FindChildByName( buttonName ));
+			if ( button )
+			{
+				if ( button->IsSelected() )
+				{
+					difficulty = i;
+					break;
+				}
+			}
+		}
+		m_pSavedData->SetInt( "bot_difficulty", difficulty );
+		ConVarRef bot_difficulty( "bot_difficulty" );
+		bot_difficulty.SetValue( difficulty );
 	}
 }
 
@@ -240,19 +227,8 @@ void CCreateMultiplayerGameServerPage::LoadMaps( const char *pszPathID )
 			}
 		}
 
-		const char* pszGameType = g_pGameTypes->GetGameTypeFromInt( m_nGameTypeID );
-		const char* pszGameMode = g_pGameTypes->GetGameModeFromInt( m_nGameTypeID, m_nGameModeID );
-		if ( !m_pAllMapsCheck->IsSelected() && !g_pGameTypes->IsValidMapForTypeAndMode(mapname, pszGameType, pszGameMode) )
-		{
-			goto nextFile;
-		}
-
 		// add to the map list
-		const char* pszUIName = g_pGameTypes->GetMapNameID( mapname );
-		if ( pszUIName )
-			m_pMapList->AddItem( pszUIName, new KeyValues( "data", "mapname", mapname ) );
-		else
-			m_pMapList->AddItem( mapname, new KeyValues( "data", "mapname", mapname ) );
+		m_pMapList->AddItem( mapname, new KeyValues( "data", "mapname", mapname ) );
 
 		// get the next file
 	nextFile:
@@ -268,14 +244,6 @@ void CCreateMultiplayerGameServerPage::LoadMaps( const char *pszPathID )
 //-----------------------------------------------------------------------------
 void CCreateMultiplayerGameServerPage::LoadMapList()
 {
-	char szOldMapName[64];
-	bool bOldMap = false;
-	if ( GetMapName(false) )
-	{
-		bOldMap = true;
-		V_strcpy( szOldMapName, GetMapName(false) );
-	}
-
 	// clear the current list (if any)
 	m_pMapList->DeleteAllItems();
 
@@ -285,30 +253,8 @@ void CCreateMultiplayerGameServerPage::LoadMapList()
 	// Load the GameDir maps
 	LoadMaps( "GAME" ); 
 
-	if ( bOldMap )
-		SetMap( szOldMapName );
-	else
-		m_pMapList->ActivateItem( 0 );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: loads the list of available game modes into the game modes list
-//-----------------------------------------------------------------------------
-void CCreateMultiplayerGameServerPage::LoadGameModesList()
-{
-	m_pGameModeList->DeleteAllItems();
-
-	m_pAllMapsCheck->SetEnabled( m_nGameTypeID != CS_GameType_Custom );
-
-	int iGameModeCount = g_pGameTypes->GetGameModesCount( m_nGameTypeID );
-	for ( int i = 0; i < iGameModeCount; i++ )
-	{
-		const char* pszGameModeNameID = g_pGameTypes->GetGameModeNameID( m_nGameTypeID, i );
-		if ( pszGameModeNameID )
-			m_pGameModeList->AddItem( pszGameModeNameID, new KeyValues( "data", "game_mode", i ) );
-	}
-	m_pGameModeList->ActivateItem( 0 );
-	m_pGameModeList->SetEnabled( iGameModeCount > 1 );
+	// set the first item to be selected
+	m_pMapList->ActivateItem( 0 );
 }
 
 //-----------------------------------------------------------------------------
@@ -327,7 +273,7 @@ bool CCreateMultiplayerGameServerPage::IsRandomMapSelected()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-const char *CCreateMultiplayerGameServerPage::GetMapName(bool bAllowRandom)
+const char *CCreateMultiplayerGameServerPage::GetMapName()
 {
 	int count = m_pMapList->GetItemCount();
 
@@ -338,9 +284,6 @@ const char *CCreateMultiplayerGameServerPage::GetMapName(bool bAllowRandom)
 	const char *mapname = m_pMapList->GetActiveItemUserData()->GetString("mapname");
 	if (!strcmp( mapname, RANDOM_MAP ))
 	{
-		if ( !bAllowRandom )
-			return NULL;
-
 		int which = RandomInt( 1, count - 1 );
 		mapname = m_pMapList->GetItemUserData( which )->GetString("mapname");
 	}
@@ -361,27 +304,9 @@ void CCreateMultiplayerGameServerPage::SetMap(const char *mapName)
 		if (!stricmp(m_pMapList->GetItemUserData(i)->GetString("mapname"), mapName))
 		{
 			m_pMapList->ActivateItem(i);
-			return;
+			break;
 		}
 	}
-
-	// just select the first one if mapName isn't in the list
-	m_pMapList->ActivateItem( 0 );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-int CCreateMultiplayerGameServerPage::GetGameTypeID()
-{
-	return m_pGameTypeList->GetActiveItem();
-}
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CCreateMultiplayerGameServerPage::SetGameTypeID( int gametypeid )
-{
-	m_pGameTypeList->ActivateItem( gametypeid );
 }
 
 //-----------------------------------------------------------------------------
@@ -391,6 +316,7 @@ int CCreateMultiplayerGameServerPage::GetGameModeID()
 {
 	return m_pGameModeList->GetActiveItem();
 }
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -402,27 +328,13 @@ void CCreateMultiplayerGameServerPage::SetGameModeID( int gamemodeid )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CCreateMultiplayerGameServerPage::IsAllMaps()
+void CCreateMultiplayerGameServerPage::OnCheckButtonChecked()
 {
-	return m_pAllMapsCheck->IsSelected();
-}
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CCreateMultiplayerGameServerPage::SetAllMaps( bool bState )
-{
-	m_pAllMapsCheck->SetSelected( bState );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CCreateMultiplayerGameServerPage::OnTextChanged( Panel *panel )
-{
-	if ( panel == m_pBotSkillList )
-	{
-		SetControlEnabled( "BotQuotaCombo", m_pBotSkillList->GetActiveItem() != 0 );
-		SetControlEnabled( "BotQuotaLabel", m_pBotSkillList->GetActiveItem() != 0 );
-		SetControlEnabled( "BotDifficultyLabel", m_pBotSkillList->GetActiveItem() != 0 );
-	}
+	SetControlEnabled("SkillLevel0", m_pEnableBotsCheck->IsSelected());
+	SetControlEnabled("SkillLevel1", m_pEnableBotsCheck->IsSelected());
+	SetControlEnabled("SkillLevel2", m_pEnableBotsCheck->IsSelected());
+	SetControlEnabled("SkillLevel3", m_pEnableBotsCheck->IsSelected());
+	SetControlEnabled("BotQuotaCombo", m_pEnableBotsCheck->IsSelected());
+	SetControlEnabled("BotQuotaLabel", m_pEnableBotsCheck->IsSelected());
+	SetControlEnabled("BotDifficultyLabel", m_pEnableBotsCheck->IsSelected());
 }

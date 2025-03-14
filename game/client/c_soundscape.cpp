@@ -41,7 +41,7 @@ struct loopingsound_t
 
 ConVar soundscape_fadetime( "soundscape_fadetime", "3.0", FCVAR_CHEAT, "Time to crossfade sound effects between soundscapes" );
 
-#include "interval.h"
+#include "tier2/interval.h"
 
 struct randomsound_t
 {

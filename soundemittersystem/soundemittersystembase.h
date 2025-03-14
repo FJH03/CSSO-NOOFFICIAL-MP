@@ -13,7 +13,7 @@
 
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "soundflags.h"
-#include "interval.h"
+#include "tier2/interval.h"
 #include "UtlSortVector.h"
 #include <tier1/utlstring.h>
 #include <tier1/utlhashtable.h>

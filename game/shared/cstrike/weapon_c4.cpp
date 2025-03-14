@@ -1251,9 +1251,7 @@ void CC4::PrimaryAttack()
 
 			if ( pPlayer && !pPlayer->IsBot() && pPlayer->m_flC4PlantTalkTimer < gpGlobals->curtime && pPlayer->GetTeamNumber() == TEAM_TERRORIST )
 			{
-				// for console, we don't want to show the chat text because it almost always overlaps 
-				// with the bomb planted alert text in the center of the screen
-				pPlayer->Radio( "Radio.PlantingBomb", "#Cstrike_TitlesTXT_Planting_Bomb", true );
+				pPlayer->Radio( "PlantingBomb", "#Cstrike_TitlesTXT_Planting_Bomb", true );
 				pPlayer->m_flC4PlantTalkTimer = gpGlobals->curtime + 10.0f;
 		}
 #endif

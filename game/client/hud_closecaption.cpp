@@ -2509,7 +2509,7 @@ void CHudCloseCaption::MsgFunc_CloseCaption(bf_read &msg)
 		wchar_t *pcheck = g_pVGuiLocalize->Find( tokenname );
 		if ( !pcheck )
 		{
-			Warning( "No caption found for '%s'\n", tokenname );
+			DevWarning( "No caption found for '%s'\n", tokenname );
 		}
 	}
 

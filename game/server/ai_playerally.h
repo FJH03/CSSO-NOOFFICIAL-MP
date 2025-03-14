@@ -248,8 +248,28 @@ enum AISpeechTargetSearchFlags_t
 
 struct AISpeechSelection_t
 {
-	std::string		concept;
-	AI_Response		Response;
+	AISpeechSelection_t()
+	 :	response()
+	{
+	}
+	
+	void Set( AIConcept_t newConcept, AI_Response &nuResponse, CBaseEntity *pTarget = NULL )
+	{
+		response = nuResponse;
+		concept = newConcept;
+		hSpeechTarget = pTarget;
+	}
+
+	// Use in a specific case where the response has already been set.
+	void Set( AIConcept_t newConcept, CBaseEntity *pTarget  )
+	{
+		Assert( !response.IsEmpty() );
+		concept = newConcept;
+		hSpeechTarget = pTarget;
+	}
+	
+	std::string 		concept;
+	AI_Response 		response;
 	EHANDLE			hSpeechTarget;
 };
 
@@ -335,7 +355,7 @@ public:
 	//---------------------------------
 
 	bool 		SelectSpeechResponse( AIConcept_t concept, const char *pszModifiers, CBaseEntity *pTarget, AISpeechSelection_t *pSelection );
-	void		SetPendingSpeech( AIConcept_t concept, AI_Response &Response );
+	void		SetPendingSpeech( AIConcept_t concept, AI_Response *pResponse );
 	void 		ClearPendingSpeech();
 	bool		HasPendingSpeech()	{ return !m_PendingConcept.empty(); }
 

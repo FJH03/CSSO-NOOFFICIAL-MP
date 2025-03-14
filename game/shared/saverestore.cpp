@@ -20,7 +20,7 @@
 #include "saverestore_utlvector.h"
 #include "model_types.h"
 #include "igamesystem.h"
-#include "interval.h"
+#include "tier2/interval.h"
 #include "vphysics/object_hash.h"
 #include "datacache/imdlcache.h"
 #include "tier0/vprof.h"

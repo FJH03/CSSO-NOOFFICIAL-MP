@@ -1,0 +1,56 @@
+#! /usr/bin/env python
+# encoding: utf-8
+
+from waflib import Utils
+import os
+
+top = '.'
+PROJECT_NAME = 'responserules_runtime'
+
+def options(opt):
+	# stub
+	return
+
+def configure(conf):
+	return
+
+def build(bld):
+	source = [
+		'criteriaset.cpp',
+		'response_system.cpp',
+		'response_types.cpp',
+		'response_types_internal.cpp',
+		'rr_response.cpp',
+		'rr_speechconcept.cpp',
+		'rrrlib.cpp'
+	]
+	
+	if bld.env.DEST_OS == 'win32':
+		source += [
+		]
+
+	includes = [
+		'.',
+		'../public',
+		'../public/tier0',
+		'../public/tier1',
+		'../public/tier2',
+		'../thirdparty/stb'
+	]
+
+	defines = ['RAD_TELEMETRY_DISABLED']
+
+	libs = []
+	
+	bld.stlib(
+		source   = source,
+		target   = PROJECT_NAME,
+		name     = PROJECT_NAME,
+		features = 'c cxx',
+		includes = includes,
+		defines  = defines,
+		use      = libs,
+		subsystem = bld.env.MSVC_SUBSYSTEM,
+		idx      = bld.get_taskgen_count()
+	)
+

@@ -302,17 +302,17 @@ void CCSBot::SendRadioMessage( RadioType event )
 	char slot[2];
 	slot[1] = '\000';
 
-	if (event > RADIO_START_1 && event < RADIO_START_2)
+	if ( event > RADIO_START_1 && event < RADIO_START_2 )
 	{
-		HandleMenu_Radio1( event - RADIO_START_1 );
+		HandleMenu_Radio1( event );
 	}
-	else if (event > RADIO_START_2 && event < RADIO_START_3)
+	else if ( event > RADIO_START_2 && event < RADIO_START_3 )
 	{
-		HandleMenu_Radio2( event - RADIO_START_2 );
+		HandleMenu_Radio2( event );
 	}
 	else
 	{
-		HandleMenu_Radio3( event - RADIO_START_3 );
+		HandleMenu_Radio3( event );
 	}
 }
 
@@ -342,5 +342,35 @@ void CCSBot::SpeakAudio( const char *voiceFilename, float duration, int pitch )
 	GetChatter()->ResetRadioSilenceDuration();
 
 	m_voiceEndTimestamp = gpGlobals->curtime + duration;
+}
+
+//--------------------------------------------------------------------------------------------------------------
+/**
+ * Send voice chatter through the response rules system.
+ */
+bool CCSBot::SpeakAudioResponseRules( const char *pConcept, AI_CriteriaSet *criteria, float duration )
+{
+	if( !IsAlive() )
+		return false;
+
+	if ( IsObserver() )
+		return false;
+
+	CRecipientFilter filter;
+	ConstructRadioFilter( filter );
+
+	AI_CriteriaSet local;
+	if ( !criteria )
+		criteria = &local;
+
+	AIConcept_t concept( pConcept );
+	if ( Speak( concept, criteria, NULL, 0, &filter ) )
+	{
+		GetChatter()->ResetRadioSilenceDuration();
+		m_voiceEndTimestamp = gpGlobals->curtime + duration;
+		return true;
+	}
+
+	return false;
 }
 

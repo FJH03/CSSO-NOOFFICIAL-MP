@@ -26,8 +26,15 @@ class CDmgAccumulator;
 
 struct CSoundParameters;
 
-class AI_CriteriaSet;
-class IResponseSystem;
+#ifndef AI_CriteriaSet
+#define AI_CriteriaSet ResponseRules::CriteriaSet 
+#endif
+namespace ResponseRules
+{
+	class CriteriaSet;
+	class IResponseSystem;
+};
+using ResponseRules::IResponseSystem;
 class IEntitySaveUtils;
 class CRecipientFilter;
 class CStudioHdr;
@@ -848,13 +855,16 @@ protected:
 #endif
 
 	void RemoveExpiredConcepts( void );
-	int	GetContextCount() const;						// Call RemoveExpiredConcepts to clean out expired concepts
+	bool ContextExpired( int index ) const;
+public:
+	void		AddContext( const char *nameandvalue ); ///< when name and value are catenated together into one string like name:value
+	void		AddContext( const char *pName, const char *pValue, float duration );
+	int			GetContextCount() const;						// Call RemoveExpiredConcepts to clean out expired concepts
+	int 		FindContextByName( const char *name ) const;
 	const char *GetContextName( int index ) const;		// note: context may be expired
 	const char *GetContextValue( int index ) const; 	// note: context may be expired
-	bool ContextExpired( int index ) const;
-	int FindContextByName( const char *name ) const;
-public:
-	void	AddContext( const char *nameandvalue );
+	inline const ResponseContext_t	*GetContextData( int index ) const; // note: context may be expired
+	void		ClearAllContexts( void );
 
 protected:
 	CUtlVector< ResponseContext_t > m_ResponseContexts;
@@ -883,7 +893,7 @@ public:
 	virtual CBaseAnimating*	GetBaseAnimating() { return 0; }
 	virtual CBaseAnimatingOverlay *GetBaseAnimatingOverlay() { return NULL; }
 
-	virtual IResponseSystem *GetResponseSystem();
+	virtual ResponseRules::IResponseSystem *GetResponseSystem();
 	virtual void	DispatchResponse( const char *conceptName );
 
 // Classify - returns the type of group (i.e, "houndeye", or "human military" so that NPCs with different classnames
@@ -1132,6 +1142,10 @@ public:
 #endif // _DEBUG
 
 	virtual void	ModifyOrAppendCriteria( AI_CriteriaSet& set );
+	// this computes criteria that depend on the other criteria having been set. 
+	// needs to be done in a second pass because we may have multiple overrids for
+	// a context before it all settles out.
+	virtual void	ModifyOrAppendDerivedCriteria( AI_CriteriaSet& set ) {};
 	void			AppendContextToCriteria( AI_CriteriaSet& set, const char *prefix = "" );
 	void			DumpResponseCriteria( void );
 

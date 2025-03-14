@@ -481,14 +481,6 @@ enum CSMvpReason_t
 #define CS_MUZZLEFLASH_NORM	0
 #define CS_MUZZLEFLASH_X	1
 
-struct CCSClassInfo
-{
-	const char		*m_szClassName;
-	const char		*m_szRadioPrefix;
-};
-
-const CCSClassInfo* GetCSClassInfo( int i );
-
 #define MAX_AGENTS_CT 39
 #define MAX_AGENTS_T 42
 

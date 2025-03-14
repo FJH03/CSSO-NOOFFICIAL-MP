@@ -19,7 +19,6 @@ def configure(conf):
 
 def build(bld):
 	source = [
-		'../game/shared/interval.cpp',
 		'soundemittersystembase.cpp',
 		'../public/SoundParametersInternal.cpp',
 		'../public/tier0/memoverride.cpp'
@@ -30,12 +29,13 @@ def build(bld):
 		'../public',
 		'../public/tier0',
 		'../public/tier1',
+		'../public/tier2',
 		'../game/shared'
 	]
 
 	defines = []
 
-	libs = ['tier0','tier1','vstdlib']
+	libs = ['tier0','tier1','tier2','vstdlib']
 
 	install_path = bld.env.LIBDIR
 

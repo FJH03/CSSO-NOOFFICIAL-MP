@@ -1881,7 +1881,7 @@ BEGIN_DATADESC_NO_BASE( CBaseEntity )
 	DEFINE_FIELD( m_vecOrigin, FIELD_VECTOR ),			// NOTE: MUST BE IN LOCAL SPACE, NOT POSITION_VECTOR!!! (see CBaseEntity::Restore)
 	DEFINE_FIELD( m_angRotation, FIELD_VECTOR ),
 	DEFINE_FIELD( m_bClientSideRagdoll, FIELD_BOOLEAN ),
-	
+
 	DEFINE_KEYFIELD( m_vecViewOffset, FIELD_VECTOR, "view_ofs" ),
 
 	DEFINE_FIELD( m_fFlags, FIELD_INTEGER ),
@@ -6553,29 +6553,83 @@ void CBaseEntity::AddContext( const char *contextName )
 	char key[ 128 ];
 	char value[ 128 ];
 	float duration;
+#ifdef TERROR  // from changelist 729204 . Ifdef'd out because not tested outside L4D yet.
+	CWorld * const world = assert_cast< CWorld * >( CBaseEntity::Instance( INDEXENT( 0 ) ) );
+#endif
 
 	const char *p = contextName;
 	while ( p )
 	{
 		duration = 0.0f;
-		p = SplitContext( p, key, sizeof( key ), value, sizeof( value ), &duration );
+		p = SplitContext( p, key, sizeof( key ), value, sizeof( value ), &duration, contextName );
 		if ( duration )
 		{
 			duration += gpGlobals->curtime;
 		}
 
-		int iIndex = FindContextByName( key );
-		if ( iIndex != -1 )
+#ifdef TERROR 
+		// Egregious last-minute hack. If a specific context is prefixed with a '$', then 
+		// apply it to the World instead of to this character. The proper way to fix this
+		// would be to do away with this insane mechanism of writing contexts out into a 
+		// string and then parsing it back apart again after calling a member function
+		// on the receiving character; but that's way too big to deal with at this stage
+		// of L4D2.  ( this hack dated 9/4/09 )
+		if ( key[0] == AI_CriteriaSet::kAPPLYTOWORLDPREFIX && world && world != this )
 		{
-			// Set the existing context to the new value
-			m_ResponseContexts[iIndex].m_iszValue = AllocPooledString( value );
-			m_ResponseContexts[iIndex].m_fExpirationTime = duration;
-			continue;
+			world->AddContext( key+1, value, duration );
+		}
+		else
+		{
+			AddContext( key, value, duration );
+		}
+#else
+		AddContext( key, value, duration );
+#endif
+	}
+}
+
+#include "ai_speech.h"
+//-----------------------------------------------------------------------------
+// Purpose: add exactly one context key,value pair to this object
+// Input  : inputdata - 
+//-----------------------------------------------------------------------------
+void CBaseEntity::AddContext( const char *pKey, const char *pValue, float duration )
+{
+	int iIndex = FindContextByName( pKey );
+	if ( iIndex != -1 )
+	{
+		// Set the existing context to the new value
+		char buf[64];
+		if ( RR::CApplyContextOperator::FindOperator( pValue )->Apply( 
+			m_ResponseContexts[iIndex].m_iszValue.ToCStr(), pValue, buf, sizeof(buf) ) )
+		{
+			m_ResponseContexts[iIndex].m_iszValue = AllocPooledString( buf );
+		}
+		else
+		{
+			Warning( "RR: could not apply operator %s to prior value %s\n", 
+				pValue, m_ResponseContexts[iIndex].m_iszValue.ToCStr() );
+		m_ResponseContexts[iIndex].m_iszValue = AllocPooledString( pValue );
 		}
 
+		m_ResponseContexts[iIndex].m_fExpirationTime = duration;
+	}
+	else
+	{
 		ResponseContext_t newContext;
-		newContext.m_iszName = AllocPooledString( key );
-		newContext.m_iszValue = AllocPooledString( value );
+		newContext.m_iszName = AllocPooledString( pKey );
+
+		// Create a new context with the appropriate value ( some operators assume 0 on nonexistent prior )
+		char buf[64];
+		if ( RR::CApplyContextOperator::FindOperator( pValue )->Apply( 
+			NULL, pValue, buf, sizeof(buf) ) )
+		{
+			newContext.m_iszValue = AllocPooledString( buf );
+		}
+		else
+		{
+		newContext.m_iszValue = AllocPooledString( pValue );
+		}
 		newContext.m_fExpirationTime = duration;
 
 		m_ResponseContexts.AddToTail( newContext );
@@ -6704,19 +6758,23 @@ void CBaseEntity::DispatchResponse( const char *conceptName )
 	AI_Response result;
 	bool found = rs->FindBestResponse( set, result );
 	if ( !found )
+	{
 		return;
+	}
 
 	// Handle the response here...
-	const char *szResponse = result.GetResponsePtr();
+	char response[ 256 ];
+	result.GetResponse( response, sizeof( response ) );
 	switch ( result.GetType() )
 	{
-	case RESPONSE_SPEAK:
-		EmitSound( szResponse );
-		break;
-
-	case RESPONSE_SENTENCE:
+	case ResponseRules::RESPONSE_SPEAK:
 		{
-			int sentenceIndex = SENTENCEG_Lookup( szResponse );
+			EmitSound( response );
+		}
+		break;
+	case ResponseRules::RESPONSE_SENTENCE:
+		{
+			int sentenceIndex = SENTENCEG_Lookup( response );
 			if( sentenceIndex == -1 )
 			{
 				// sentence not found
@@ -6728,14 +6786,22 @@ void CBaseEntity::DispatchResponse( const char *conceptName )
 			CBaseEntity::EmitSentenceByIndex( filter, entindex(), CHAN_VOICE, sentenceIndex, 1, result.GetSoundLevel(), 0, PITCH_NORM );
 		}
 		break;
-
-	case RESPONSE_SCENE:
-		// Try to fire scene w/o an actor
-		InstancedScriptedScene( NULL, szResponse );
+	case ResponseRules::RESPONSE_SCENE:
+		{
+			// Try to fire scene w/o an actor
+			InstancedScriptedScene( NULL, response );
+		}
 		break;
+	case ResponseRules::RESPONSE_PRINT:
+		{
 
-	case RESPONSE_PRINT:
+		}
 		break;
+	case ResponseRules::RESPONSE_ENTITYIO:
+		{
+			CAI_Expresser::FireEntIOFromResponse( response, this );
+			break;
+		}
 	default:
 		// Don't know how to handle .vcds!!!
 		break;
@@ -7308,6 +7374,7 @@ bool CBaseEntity::ShouldLagCompensate() const
 {
 	return m_bLagCompensate;
 }
+
 
 //------------------------------------------------------------------------------
 void CBaseEntity::IncrementInterpolationFrame()

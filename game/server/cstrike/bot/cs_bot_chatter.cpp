@@ -22,6 +22,9 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+// Use to toggle between old bot chatter system and response rules
+extern ConVar bot_chatter_use_rr;
+
 
 /**
  * @todo Fix this
@@ -762,16 +765,22 @@ bool BotPhraseManager::Initialize( const char *filename, int bankIndex )
 				Q_FixSlashes( speak->m_phrase );
 				Q_strlower( speak->m_phrase );
 #endif
-
-				speak->m_duration = enginesound->GetSoundDuration( speak->m_phrase );
-
-				if (speak->m_duration <= 0.0f)
+				if ( bot_chatter_use_rr.GetBool() )
 				{
-					if ( !engine->IsDedicatedServer() )
-					{
-						DevMsg( "Warning: Couldn't get duration of phrase '%s'\n", speak->m_phrase );
-					}
 					speak->m_duration = 1.0f;
+				}
+				else
+				{
+					speak->m_duration = enginesound->GetSoundDuration( speak->m_phrase );
+
+					if (speak->m_duration <= 0.0f)
+					{
+						if ( !engine->IsDedicatedServer() )
+						{
+							DevMsg( "Warning: Couldn't get duration of phrase '%s'\n", speak->m_phrase );
+						}
+						speak->m_duration = 1.0f;
+					}
 				}
 
 				BotSpeakableVector * speakables = phrase->m_voiceBank[ bankIndex ];
@@ -1265,9 +1274,6 @@ bool BotStatement::Update( void )
 				// set place criteria
 				phrase->SetPlaceCriteria( m_place );
 
-				const char *filename = phrase->GetSpeakable( me->GetProfile()->GetVoiceBank(), &duration );
-				// CONSOLE_ECHO( "%s: Radio( '%s' )\n", STRING( me->pev->netname ), filename );
-
 				bool sayIt = true;
 
 				if (phrase->IsPlace())
@@ -1287,7 +1293,41 @@ bool BotStatement::Update( void )
 
 				if (sayIt)
 				{
-					if ( !filename )
+					bool bSpoke = false;
+					if ( bot_chatter_use_rr.GetBool() )
+					{
+						// Pipe the bot chatter through the response rules system
+						int nPlace = phrase->IsPlace() ? phrase->GetPlace() : phrase->GetPlaceCriteria();
+						const char *place = TheNavMesh->PlaceToName( nPlace );
+						CountCriteria count = phrase->GetCountCriteria();
+
+						AI_CriteriaSet &botCriteria = phrase->GetCriteriaSet();
+						if ( count != UNDEFINED_COUNT )
+						{
+							botCriteria.AppendCriteria( "count", count );
+						}
+						if ( place )
+						{
+							botCriteria.AppendCriteria( "place", place );
+						}
+
+						// TODO: Need voice pitch as a criteria? 
+						// me->GetProfile()->GetVoicePitch()
+
+						bSpoke = me->SpeakAudioResponseRules( phrase->GetName(), &botCriteria, duration + 1.0f );
+					}
+					else
+					{
+						const char *filename = phrase->GetSpeakable( me->GetProfile()->GetVoiceBank(), &duration );
+						// CONSOLE_ECHO( "%s: Radio( '%s' )\n", STRING( me->pev->netname ), filename );
+						if ( filename )
+						{
+							me->SpeakAudio( filename, duration + 1.0f, me->GetProfile()->GetVoicePitch() );
+							bSpoke = true;
+						}
+					}
+
+					if ( !bSpoke )
 					{
 						RadioType radioEvent = phrase->GetRadioEquivalent();
 						if (radioEvent == RADIO_INVALID)
@@ -1310,10 +1350,6 @@ bool BotStatement::Update( void )
 						g_engfuncs.pfnPlayClientVoice( me->entindex() - 1, filename );
 					}
 					*/
-					else
-					{
-						me->SpeakAudio( filename, duration + 1.0f, me->GetProfile()->GetVoicePitch() );
-					}
 				}
 			}
 
@@ -1615,7 +1651,15 @@ void BotChatterInterface::OnDeath( void )
 				else
 				*/
 				{
-					m_me->SpeakAudio( pain->GetSpeakable( m_me->GetProfile()->GetVoiceBank() ), 0.0f, m_me->GetProfile()->GetVoicePitch() );
+					if ( bot_chatter_use_rr.GetBool() )
+					{
+						AI_CriteriaSet botCriteria;
+						m_me->SpeakAudioResponseRules( "DeathCry", &botCriteria, 0.0f );
+					}
+					else
+					{
+						m_me->SpeakAudio( pain->GetSpeakable( m_me->GetProfile()->GetVoiceBank() ), 0.0f, m_me->GetProfile()->GetVoicePitch() );
+					}
 				}
 			}
 		}
@@ -2574,18 +2618,28 @@ void BotChatterInterface::KilledFriend( void )
 }
 
 //---------------------------------------------------------------------------------------------------------------
-void BotChatterInterface::FriendlyFire( void )
+void BotChatterInterface::FriendlyFire( const char *pDmgType )
 {
 	if ( !friendlyfire.GetBool() )
 		return;
 
 	BotStatement *say = new BotStatement( this, REPORT_FRIENDLY_FIRE, 1.0f );
 
-	say->AppendPhrase( TheBotPhrases->GetPhrase( "FriendlyFire" ) );
+	AI_CriteriaSet botCriteria;
+	if ( pDmgType )
+	{
+		botCriteria.AppendCriteria( "damagetype", pDmgType );
+	}
+
+	const BotPhrase *pPhrase = TheBotPhrases->GetPhrase( "FriendlyFire" );
+	pPhrase->SetCriteriaSet( botCriteria );
+
+	say->AppendPhrase( pPhrase );
 
 	// give them time to react
 	say->SetStartTime( gpGlobals->curtime + RandomFloat( 0.3f, 0.5f ) );
 
 	AddStatement( say );
 }
+
 

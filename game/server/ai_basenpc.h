@@ -30,7 +30,6 @@
 #include "utlvector.h"
 #include "activitylist.h"
 #include "bitstring.h"
-#include "ai_basenpc.h"
 #include "ai_navgoaltype.h" //GoalType_t enum
 #include "eventlist.h"
 #include "soundent.h"
@@ -64,7 +63,7 @@ class CBaseGrenade;
 class CBaseDoor;
 class CBasePropDoor;
 struct AI_Waypoint_t;
-class AI_Response;
+//class AI_Response;
 class CBaseFilter;
 
 typedef CBitVec<MAX_CONDITIONS> CAI_ScheduleBits;

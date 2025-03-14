@@ -2966,7 +2966,6 @@ CON_COMMAND_F( save, "Saves current game.", FCVAR_DONTRECORD )
 	}
 
 	g_SaveRestore.SetIsXSave( false );
-	SetLoadLaunchOptions();
 	SaveGame( args );
 }
 
@@ -3256,6 +3255,7 @@ CON_COMMAND( xload, "Load a saved game from a 360 storage device." )
 	}
 
 	g_SaveRestore.SetIsXSave( IsX360() );
+	SetLoadLaunchOptions();
 	LoadSaveGame( args[1] );
 }
 

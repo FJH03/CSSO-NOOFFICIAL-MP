@@ -26,7 +26,7 @@
 #include "soundinfo.h"
 #include "mathlib/vmatrix.h"
 #include "isaverestore.h"
-#include "interval.h"
+#include "tier2/interval.h"
 #include "engine/ivdebugoverlay.h"
 #include "c_ai_basenpc.h"
 #include "apparent_velocity_helper.h"

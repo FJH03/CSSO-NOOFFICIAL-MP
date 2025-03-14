@@ -47,6 +47,7 @@ projects={
 	'game': [
 		'appframework',
 		'bitmap',
+		'responserules_runtime',
 		'choreoobjects',
 		'datacache',
 		'datamodel',
@@ -118,6 +119,7 @@ projects={
 	'dedicated': [
 		'appframework',
 		'bitmap',
+		'responserules_runtime',
 		'choreoobjects',
 		'datacache',
 		'dedicated',

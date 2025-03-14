@@ -121,7 +121,19 @@ int CCSBot::OnTakeDamage( const CTakeDamageInfo &info )
 		bool m_bShouldTalkAboutFF = cv_bot_chatter_friendlyfire_from_bots.GetBool() ? true : !player->IsBot();
 
 		if ( m_bShouldTalkAboutFF && IsOtherSameTeam( player->GetTeamNumber() ) && !IsOtherEnemy( player ) && info.GetDamage() > 0 )
-			GetChatter()->FriendlyFire();
+		{
+			// Response rules specifically needs to know if this is bullet or knife damage, so no need to do a fully general solution at this time
+			const char *pDmgType = "OTHER";
+			if ( info.GetDamageType() & DMG_BULLET )
+			{
+				pDmgType = "DMG_BULLET";
+			}
+			else if ( info.GetDamageType() & DMG_SLASH )
+			{
+				pDmgType = "DMG_SLASH";
+			}
+			GetChatter()->FriendlyFire( pDmgType );
+		}
 	}
 
 	if (attacker->IsPlayer() && IsEnemy( attacker ))

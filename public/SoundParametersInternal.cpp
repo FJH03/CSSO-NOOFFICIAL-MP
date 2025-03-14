@@ -11,7 +11,7 @@
 #if !defined(_STATIC_LINKED) || defined(SOUNDEMITTERSYSTEM_DLL)
 
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "interval.h"
+#include "tier2/interval.h"
 #include "soundchars.h"
 
 // memdbgon must be the last include file in a .cpp file!!!

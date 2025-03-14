@@ -141,6 +141,14 @@ T Max( T const &val1, T const &val2 )
 #define TRUE (!FALSE)
 #endif
 
+//-----------------------------------------------------------------------------
+// fsel
+//-----------------------------------------------------------------------------
+
+// integer conditional move
+// if a >= 0, return x, else y
+#define isel(a,x,y) ( ((a) >= 0) ? (x) : (y) )
+
 
 #ifndef DONT_DEFINE_BOOL // Needed for Cocoa stuff to compile.
 typedef int BOOL;

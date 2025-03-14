@@ -21,33 +21,6 @@ const float CS_PLAYER_SPEED_CLIMB_MODIFIER	= 0.34f;
 const float CS_PLAYER_DUCK_SPEED_IDEAL = 8.0f;
 
 
-CCSClassInfo g_ClassInfos[] =
-{
-	{ "None", "" },
-
-	{ "Phoenix",		"Phoenix"		},
-	{ "Leet Crew",		"Leet"			},
-	{ "Separatist",		"Separatist"	},
-	{ "Balkan",			"Balkan"		},
-	{ "Professional",	"Professional"	},
-	{ "Anarchist",		"Anarchist"		},
-	{ "Pirate",			"Pirate"		},
-
-	{ "Seal Team 6",	"ST6"			},
-	{ "GSG-9",			"GSG9"			},
-	{ "SAS",			"SAS"			},
-	{ "GIGN",			"GIGN"			},
-	{ "FBI",			"FBI"			},
-	{ "IDF",			"IDF"			},
-	{ "SWAT",			"SWAT"			}
-};
-
-const CCSClassInfo* GetCSClassInfo( int i )
-{
-	Assert( i >= 0 && i < ARRAYSIZE( g_ClassInfos ) );
-	return &g_ClassInfos[i];
-}
-
 static PlayerGloves s_playerGloves[MAX_GLOVES+1] =
 {
 	{ NULL, NULL },
@@ -98,49 +71,49 @@ CCSAgentInfo g_AgentInfosCT[MAX_AGENTS_CT + 1] =
 {
 	{ "", "", 0, 0 },
 	// Shattered Web
-	{ "models/player/custom_player/legacy/ctm_fbi_variantf.mdl",		"FBI",					CS_CLASS_FBI,			false	},
-	{ "models/player/custom_player/legacy/ctm_fbi_variantf_legacy.mdl",	"FBI",					CS_CLASS_FBI,			false	},
-	{ "models/player/custom_player/legacy/ctm_fbi_variantg.mdl",		"FBI",					CS_CLASS_FBI,			false	},
-	{ "models/player/custom_player/legacy/ctm_fbi_varianth.mdl",		"FBI",					CS_CLASS_FBI,			false	},
-	{ "models/player/custom_player/legacy/ctm_fbi_variantb.mdl",		"FBI_Epic",				CS_CLASS_FBI,			true	},
-	{ "models/player/custom_player/legacy/ctm_sas_variantf.mdl",		"SAS",					CS_CLASS_SAS,			false	},
-	{ "models/player/custom_player/legacy/ctm_st6_variantk.mdl",		"GSG9",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_st6_variantk_legacy.mdl",	"GSG9",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_st6_variante.mdl",		"ST6",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_st6_variante_legacy.mdl",	"ST6",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_st6_variantg.mdl",		"ST6",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_st6_variantm.mdl",		"ST6",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_st6_variantm_legacy.mdl",	"ST6",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_st6_varianti.mdl",		"ST6_Epic",				CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_st6_varianti_legacy.mdl",	"ST6_Epic",				CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_fbi_variantf.mdl",		NULL,					CS_CLASS_FBI,			false	},
+	{ "models/player/custom_player/legacy/ctm_fbi_variantf_legacy.mdl",	NULL,					CS_CLASS_FBI,			false	},
+	{ "models/player/custom_player/legacy/ctm_fbi_variantg.mdl",		NULL,					CS_CLASS_FBI,			false	},
+	{ "models/player/custom_player/legacy/ctm_fbi_varianth.mdl",		NULL,					CS_CLASS_FBI,			false	},
+	{ "models/player/custom_player/legacy/ctm_fbi_variantb.mdl",		"fbihrt_epic",			CS_CLASS_FBI,			true	},
+	{ "models/player/custom_player/legacy/ctm_sas_variantf.mdl",		NULL,					CS_CLASS_SAS,			false	},
+	{ "models/player/custom_player/legacy/ctm_st6_variantk.mdl",		"ctm_gsg9",				CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_st6_variantk_legacy.mdl",	"ctm_gsg9",				CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_st6_variante.mdl",		NULL,					CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_st6_variante_legacy.mdl",	NULL,					CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_st6_variantg.mdl",		NULL,					CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_st6_variantm.mdl",		NULL,					CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_st6_variantm_legacy.mdl",	NULL,					CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_st6_varianti.mdl",		"seal_epic",			CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_st6_varianti_legacy.mdl",	"seal_epic",			CS_CLASS_SEAL_TEAM_6,	false	},
 	// Broken Fang
-	{ "models/player/custom_player/legacy/ctm_swat_variantj.mdl",		"SWAT",					CS_CLASS_SWAT,			false	},
-	{ "models/player/custom_player/legacy/ctm_swat_varianth.mdl",		"SWAT",					CS_CLASS_SWAT,			false	},
-	{ "models/player/custom_player/legacy/ctm_st6_variantj.mdl",		"ST6",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_swat_variantg.mdl",		"SWAT",					CS_CLASS_SWAT,			false	},
-	{ "models/player/custom_player/legacy/ctm_swat_varianti.mdl",		"SWAT",					CS_CLASS_SWAT,			false	},
-	{ "models/player/custom_player/legacy/ctm_swat_variantf.mdl",		"SWAT_Fem",				CS_CLASS_SWAT,			true	},
-	{ "models/player/custom_player/legacy/ctm_st6_variantl.mdl",		"ST6",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_swat_variante.mdl",		"SWAT_Epic",			CS_CLASS_SWAT,			true	},
+	{ "models/player/custom_player/legacy/ctm_swat_variantj.mdl",		NULL,					CS_CLASS_SWAT,			false	},
+	{ "models/player/custom_player/legacy/ctm_swat_varianth.mdl",		NULL,					CS_CLASS_SWAT,			false	},
+	{ "models/player/custom_player/legacy/ctm_st6_variantj.mdl",		NULL,					CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_swat_variantg.mdl",		NULL,					CS_CLASS_SWAT,			false	},
+	{ "models/player/custom_player/legacy/ctm_swat_varianti.mdl",		NULL,					CS_CLASS_SWAT,			false	},
+	{ "models/player/custom_player/legacy/ctm_swat_variantf.mdl",		"swat_fem",				CS_CLASS_SWAT,			true	},
+	{ "models/player/custom_player/legacy/ctm_st6_variantl.mdl",		NULL,					CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_swat_variante.mdl",		"swat_female",			CS_CLASS_SWAT,			true	},
 	// Riptide
-	{ "models/player/custom_player/legacy/ctm_diver_varianta.mdl",		"Seal_Fem",				CS_CLASS_SEAL_TEAM_6,	true	},
-	{ "models/player/custom_player/legacy/ctm_diver_variantb.mdl",		"Seal_Diver_01",		CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_diver_variantc.mdl",		"Seal_Diver_02",		CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_gendarmerie_varianta.mdl","Gendarmerie_Male",		CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_gendarmerie_variantb.mdl","Gendarmerie_Male",		CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_gendarmerie_variantc.mdl","Gendarmerie_Fem_Epic",	CS_CLASS_SEAL_TEAM_6,	true	},
-	{ "models/player/custom_player/legacy/ctm_gendarmerie_variantd.mdl","Gendarmerie_Male",		CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_gendarmerie_variante.mdl","Gendarmerie_Male",		CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_sas_variantg.mdl",		"SAS",					CS_CLASS_SAS,			false	},
-	{ "models/player/custom_player/legacy/ctm_st6_variantn.mdl",		"ST6",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_swat_variantk.mdl",		"SWAT_Fem",				CS_CLASS_SWAT,			true	},
+	{ "models/player/custom_player/legacy/ctm_diver_varianta.mdl",		"seal_fem",				CS_CLASS_SEAL_TEAM_6,	true	},
+	{ "models/player/custom_player/legacy/ctm_diver_variantb.mdl",		"seal_diver_01",		CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_diver_variantc.mdl",		"seal_diver_02",		CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_gendarmerie_varianta.mdl","gendarmerie_male",		CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_gendarmerie_variantb.mdl","gendarmerie_male",		CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_gendarmerie_variantc.mdl","gendarmerie_fem_epic",	CS_CLASS_SEAL_TEAM_6,	true	},
+	{ "models/player/custom_player/legacy/ctm_gendarmerie_variantd.mdl","gendarmerie_male",		CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_gendarmerie_variante.mdl","gendarmerie_male",		CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_sas_variantg.mdl",		NULL,					CS_CLASS_SAS,			false	},
+	{ "models/player/custom_player/legacy/ctm_st6_variantn.mdl",		NULL,					CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_swat_variantk.mdl",		"swat_fem",				CS_CLASS_SWAT,			true	},
 	// what?
-	{ "models/player/custom_player/legacy/ctm_sas_old.mdl",				"SAS",					CS_CLASS_SAS,			false	},
-	{ "models/player/custom_player/legacy/ctm_fbi_old.mdl",				"FBI",					CS_CLASS_FBI,			false	},
-	// kill me (let's pretend that they're all ST6 guys just because its the irst class for CTs)
-	{ "models/player/custom_player/legacy/ctm_jumpsuit_varianta.mdl",	"Leet",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_fplayer/legacy/ctm_jumpsuit_variantb.mdl",	"Leet",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_jumpsuit_variantc.mdl",	"Leet",					CS_CLASS_SEAL_TEAM_6,	false	}
+	{ "models/player/custom_player/legacy/ctm_sas_old.mdl",				NULL,					CS_CLASS_SAS,			false	},
+	{ "models/player/custom_player/legacy/ctm_fbi_old.mdl",				NULL,					CS_CLASS_FBI,			false	},
+	// kill me (let's pretend that they're all ST6 guys just because its the first class for CTs)
+	{ "models/player/custom_player/legacy/ctm_jumpsuit_varianta.mdl",	"leet",					CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_jumpsuit_variantb.mdl",	"leet",					CS_CLASS_SEAL_TEAM_6,	false	},
+	{ "models/player/custom_player/legacy/ctm_jumpsuit_variantc.mdl",	"leet",					CS_CLASS_SEAL_TEAM_6,	false	}
 };
 
 const CCSAgentInfo* GetCSAgentInfoCT( int i )
@@ -153,52 +126,52 @@ CCSAgentInfo g_AgentInfosT[MAX_AGENTS_T + 1] =
 {
 	{ "", "", 0, 0 },
 	// Shattered Web
-	{ "models/player/custom_player/legacy/tm_leet_variantg.mdl",			"Leet",				CS_CLASS_L337_KREW,				false	},
-	{ "models/player/custom_player/legacy/tm_leet_variantg_legacy.mdl",		"Leet",				CS_CLASS_L337_KREW,				false	},
-	{ "models/player/custom_player/legacy/tm_leet_varianth.mdl",			"Leet",				CS_CLASS_L337_KREW,				false	},
-	{ "models/player/custom_player/legacy/tm_leet_varianti.mdl",			"Leet",				CS_CLASS_L337_KREW,				false	},
-	{ "models/player/custom_player/legacy/tm_leet_varianti_legacy.mdl",		"Leet",				CS_CLASS_L337_KREW,				false	},
-	{ "models/player/custom_player/legacy/tm_leet_variantf.mdl",			"Leet_Epic",		CS_CLASS_L337_KREW,				false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_varianth.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_variantf.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_variantf_legacy.mdl",	"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_variantg.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	false	},
-	{ "models/player/custom_player/legacy/tm_balkan_variantf.mdl",			"Balkan",			CS_CLASS_BALKAN,				false	},
-	{ "models/player/custom_player/legacy/tm_balkan_varianti.mdl",			"Balkan",			CS_CLASS_BALKAN,				false	},
-	{ "models/player/custom_player/legacy/tm_balkan_variantg.mdl",			"Balkan",			CS_CLASS_BALKAN,				false	},
-	{ "models/player/custom_player/legacy/tm_balkan_variantj.mdl",			"Balkan",			CS_CLASS_BALKAN,				false	},
-	{ "models/player/custom_player/legacy/tm_balkan_varianth.mdl",			"Balkan_Epic",		CS_CLASS_BALKAN,				false	},
+	{ "models/player/custom_player/legacy/tm_leet_variantg.mdl",			NULL,				CS_CLASS_L337_KREW,				false	},
+	{ "models/player/custom_player/legacy/tm_leet_variantg_legacy.mdl",		NULL,				CS_CLASS_L337_KREW,				false	},
+	{ "models/player/custom_player/legacy/tm_leet_varianth.mdl",			NULL,				CS_CLASS_L337_KREW,				false	},
+	{ "models/player/custom_player/legacy/tm_leet_varianti.mdl",			NULL,				CS_CLASS_L337_KREW,				false	},
+	{ "models/player/custom_player/legacy/tm_leet_varianti_legacy.mdl",		NULL,				CS_CLASS_L337_KREW,				false	},
+	{ "models/player/custom_player/legacy/tm_leet_variantf.mdl",			"leet_epic",		CS_CLASS_L337_KREW,				false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_varianth.mdl",			NULL,				CS_CLASS_PHOENIX_CONNNECTION,	false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_variantf.mdl",			NULL,				CS_CLASS_PHOENIX_CONNNECTION,	false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_variantf_legacy.mdl",	NULL,				CS_CLASS_PHOENIX_CONNNECTION,	false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_variantg.mdl",			NULL,				CS_CLASS_PHOENIX_CONNNECTION,	false	},
+	{ "models/player/custom_player/legacy/tm_balkan_variantf.mdl",			NULL,				CS_CLASS_BALKAN,				false	},
+	{ "models/player/custom_player/legacy/tm_balkan_varianti.mdl",			NULL,				CS_CLASS_BALKAN,				false	},
+	{ "models/player/custom_player/legacy/tm_balkan_variantg.mdl",			NULL,				CS_CLASS_BALKAN,				false	},
+	{ "models/player/custom_player/legacy/tm_balkan_variantj.mdl",			NULL,				CS_CLASS_BALKAN,				false	},
+	{ "models/player/custom_player/legacy/tm_balkan_varianth.mdl",			"balkan_epic",		CS_CLASS_BALKAN,				false	},
 	// Broken Fang
-	{ "models/player/custom_player/legacy/tm_balkan_variantl.mdl",			"Balkan",			CS_CLASS_BALKAN,				false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_varianti.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	false	},
-	{ "models/player/custom_player/legacy/tm_professional_varj.mdl",		"Professional_Fem",	CS_CLASS_PROFESSIONAL,			true	},
-	{ "models/player/custom_player/legacy/tm_professional_varh.mdl",		"Professional",		CS_CLASS_PROFESSIONAL,			false	},
-	{ "models/player/custom_player/legacy/tm_balkan_variantk.mdl",			"Balkan",			CS_CLASS_BALKAN,				false	},
-	{ "models/player/custom_player/legacy/tm_professional_varg.mdl",		"Professional_Fem",	CS_CLASS_PROFESSIONAL,			true	},
-	{ "models/player/custom_player/legacy/tm_professional_vari.mdl",		"Professional",		CS_CLASS_PROFESSIONAL,			false	},
-	{ "models/player/custom_player/legacy/tm_professional_varf.mdl",		"Professional_Epic",CS_CLASS_PROFESSIONAL,			false	},
-	{ "models/player/custom_player/legacy/tm_professional_varf1.mdl",		"Professional_Epic",CS_CLASS_PROFESSIONAL,			false	},
-	{ "models/player/custom_player/legacy/tm_professional_varf2.mdl",		"Professional_Epic",CS_CLASS_PROFESSIONAL,			false	},
-	{ "models/player/custom_player/legacy/tm_professional_varf3.mdl",		"Professional_Epic",CS_CLASS_PROFESSIONAL,			false	},
-	{ "models/player/custom_player/legacy/tm_professional_varf4.mdl",		"Professional_Epic",CS_CLASS_PROFESSIONAL,			false	},
+	{ "models/player/custom_player/legacy/tm_balkan_variantl.mdl",			NULL,				CS_CLASS_BALKAN,				false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_varianti.mdl",			NULL,				CS_CLASS_PHOENIX_CONNNECTION,	false	},
+	{ "models/player/custom_player/legacy/tm_professional_varj.mdl",		"professional_fem",	CS_CLASS_PROFESSIONAL,			true	},
+	{ "models/player/custom_player/legacy/tm_professional_varh.mdl",		NULL,				CS_CLASS_PROFESSIONAL,			false	},
+	{ "models/player/custom_player/legacy/tm_balkan_variantk.mdl",			NULL,				CS_CLASS_BALKAN,				false	},
+	{ "models/player/custom_player/legacy/tm_professional_varg.mdl",		"professional_fem",	CS_CLASS_PROFESSIONAL,			true	},
+	{ "models/player/custom_player/legacy/tm_professional_vari.mdl",		NULL,				CS_CLASS_PROFESSIONAL,			false	},
+	{ "models/player/custom_player/legacy/tm_professional_varf.mdl",		"professional_epic",CS_CLASS_PROFESSIONAL,			false	},
+	{ "models/player/custom_player/legacy/tm_professional_varf1.mdl",		"professional_epic",CS_CLASS_PROFESSIONAL,			false	},
+	{ "models/player/custom_player/legacy/tm_professional_varf2.mdl",		"professional_epic",CS_CLASS_PROFESSIONAL,			false	},
+	{ "models/player/custom_player/legacy/tm_professional_varf3.mdl",		"professional_epic",CS_CLASS_PROFESSIONAL,			false	},
+	{ "models/player/custom_player/legacy/tm_professional_varf4.mdl",		"professional_epic",CS_CLASS_PROFESSIONAL,			false	},
 	// Riptide
-	{ "models/player/custom_player/legacy/tm_jungle_raider_varianta.mdl",	"Jungle_Male",		CS_CLASS_PHOENIX_CONNNECTION,	false	},
-	{ "models/player/custom_player/legacy/tm_jungle_raider_variantb.mdl",	"Jungle_Male_Epic",	CS_CLASS_PHOENIX_CONNNECTION,	false	},
-	{ "models/player/custom_player/legacy/tm_jungle_raider_variantb2.mdl",	"Jungle_Male_Epic",	CS_CLASS_PHOENIX_CONNNECTION,	false	},
-	{ "models/player/custom_player/legacy/tm_jungle_raider_variantc.mdl",	"Jungle_Male",		CS_CLASS_PHOENIX_CONNNECTION,	false	},
-	{ "models/player/custom_player/legacy/tm_jungle_raider_variantd.mdl",	"Jungle_Male",		CS_CLASS_PHOENIX_CONNNECTION,	false	},
-	{ "models/player/custom_player/legacy/tm_jungle_raider_variante.mdl",	"Jungle_Fem_Epic",	CS_CLASS_PHOENIX_CONNNECTION,	true	},
-	{ "models/player/custom_player/legacy/tm_jungle_raider_variantf.mdl",	"Jungle_Fem",		CS_CLASS_PHOENIX_CONNNECTION,	true	},
-	{ "models/player/custom_player/legacy/tm_jungle_raider_variantf2.mdl",	"Jungle_Fem",		CS_CLASS_PHOENIX_CONNNECTION,	true	},
-	{ "models/player/custom_player/legacy/tm_leet_variantj.mdl",			"Leet",				CS_CLASS_L337_KREW,				false	},
-	{ "models/player/custom_player/legacy/tm_professional_varf5.mdl",		"Professional_Epic",CS_CLASS_PROFESSIONAL,			false	},
+	{ "models/player/custom_player/legacy/tm_jungle_raider_varianta.mdl",	"jungle_male",		CS_CLASS_PHOENIX_CONNNECTION,	false	},
+	{ "models/player/custom_player/legacy/tm_jungle_raider_variantb.mdl",	"jungle_male_epic",	CS_CLASS_PHOENIX_CONNNECTION,	false	},
+	{ "models/player/custom_player/legacy/tm_jungle_raider_variantb2.mdl",	"jungle_male_epic",	CS_CLASS_PHOENIX_CONNNECTION,	false	},
+	{ "models/player/custom_player/legacy/tm_jungle_raider_variantc.mdl",	"jungle_male",		CS_CLASS_PHOENIX_CONNNECTION,	false	},
+	{ "models/player/custom_player/legacy/tm_jungle_raider_variantd.mdl",	"jungle_male",		CS_CLASS_PHOENIX_CONNNECTION,	false	},
+	{ "models/player/custom_player/legacy/tm_jungle_raider_variante.mdl",	"jungle_fem_epic",	CS_CLASS_PHOENIX_CONNNECTION,	true	},
+	{ "models/player/custom_player/legacy/tm_jungle_raider_variantf.mdl",	"jungle_fem",		CS_CLASS_PHOENIX_CONNNECTION,	true	},
+	{ "models/player/custom_player/legacy/tm_jungle_raider_variantf2.mdl",	"jungle_fem",		CS_CLASS_PHOENIX_CONNNECTION,	true	},
+	{ "models/player/custom_player/legacy/tm_leet_variantj.mdl",			NULL,				CS_CLASS_L337_KREW,				false	},
+	{ "models/player/custom_player/legacy/tm_professional_varf5.mdl",		"professional_epic",CS_CLASS_PROFESSIONAL,			false	},
 	// what?
-	{ "models/player/custom_player/legacy/tm_phoenix_old.mdl",				"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	false	},
-	{ "models/player/custom_player/legacy/tm_leet_old.mdl",					"Leet",				CS_CLASS_L337_KREW,				false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_old.mdl",				NULL,				CS_CLASS_PHOENIX_CONNNECTION,	false	},
+	{ "models/player/custom_player/legacy/tm_leet_old.mdl",					NULL,				CS_CLASS_L337_KREW,				false	},
 	// kill me
-	{ "models/player/custom_player/legacy/tm_jumpsuit_varianta.mdl",		"Leet",				CS_CLASS_L337_KREW,				false	},
-	{ "models/player/custom_player/legacy/tm_jumpsuit_variantb.mdl",		"Leet",				CS_CLASS_L337_KREW,				false	},
-	{ "models/player/custom_player/legacy/tm_jumpsuit_variantc.mdl",		"Leet",				CS_CLASS_L337_KREW,				false	}
+	{ "models/player/custom_player/legacy/tm_jumpsuit_varianta.mdl",		"leet",				CS_CLASS_L337_KREW,				false	},
+	{ "models/player/custom_player/legacy/tm_jumpsuit_variantb.mdl",		"leet",				CS_CLASS_L337_KREW,				false	},
+	{ "models/player/custom_player/legacy/tm_jumpsuit_variantc.mdl",		"leet",				CS_CLASS_L337_KREW,				false	}
 };
 
 const CCSAgentInfo* GetCSAgentInfoT( int i )

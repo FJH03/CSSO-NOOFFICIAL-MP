@@ -570,6 +570,7 @@ public:
 	void ChangeTeam( int iTeamNum );
 	void SwitchTeam( int iTeamNum );	// Changes teams without penalty - used for auto team balancing
 
+	virtual void ModifyOrAppendCriteria( AI_CriteriaSet& set );
 	void ModifyOrAppendPlayerCriteria( AI_CriteriaSet& set );
 
 	virtual void OnDamagedByExplosion( const CTakeDamageInfo &info );

@@ -67,7 +67,7 @@ void CBaseMultiplayerPlayer::ModifyOrAppendCriteria( AI_CriteriaSet& criteriaSet
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CBaseMultiplayerPlayer::SpeakIfAllowed( AIConcept_t concept, const char *modifiers, char *pszOutResponseChosen, size_t bufsize, IRecipientFilter *filter ) 
+bool CBaseMultiplayerPlayer::SpeakIfAllowed( AIConcept_t concept, SpeechPriorityType priority, const char *modifiers, char *pszOutResponseChosen, size_t bufsize, IRecipientFilter *filter ) 
 { 
 	if ( !IsAlive() )
 		return false;
@@ -77,23 +77,13 @@ bool CBaseMultiplayerPlayer::SpeakIfAllowed( AIConcept_t concept, const char *mo
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose: Fill out given response with the appropriate one for this concept
 //-----------------------------------------------------------------------------
-IResponseSystem *CBaseMultiplayerPlayer::GetResponseSystem()
+void CBaseMultiplayerPlayer::SpeakConcept( AI_Response &outResponse, int iConcept )
 {
-	return BaseClass::GetResponseSystem();
-	// NOTE: This is where you would hook your custom responses.
-//	return <*>GameRules()->m_ResponseRules[iIndex].m_ResponseSystems[m_iCurrentConcept];
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Doesn't actually speak the concept. Just finds a response in the system. You then have to play it yourself.
-//-----------------------------------------------------------------------------
-bool CBaseMultiplayerPlayer::SpeakConcept( AI_Response &response, int iConcept )
-{
-	// Save the current concept.
 	m_iCurrentConcept = iConcept;
-	return SpeakFindResponse( response, g_pszMPConcepts[iConcept] );
+	AIConcept_t concept( g_pszMPConcepts[iConcept] );
+	FindResponse( outResponse, concept );
 }
 
 //-----------------------------------------------------------------------------
@@ -103,7 +93,7 @@ bool CBaseMultiplayerPlayer::SpeakConceptIfAllowed( int iConcept, const char *mo
 {
 	// Save the current concept.
 	m_iCurrentConcept = iConcept;
-	return SpeakIfAllowed( g_pszMPConcepts[iConcept], modifiers, pszOutResponseChosen, bufsize, filter );
+	return SpeakIfAllowed( g_pszMPConcepts[iConcept], SPEECH_PRIORITY_NORMAL, modifiers, pszOutResponseChosen, bufsize, filter );
 }
 
 //-----------------------------------------------------------------------------

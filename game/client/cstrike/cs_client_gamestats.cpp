@@ -20,6 +20,7 @@
 #include "vgui/ILocalize.h"
 #include "c_team.h"
 #include "../shared/steamworks_gamestats.h"
+#include "cs_gamerules.h"
 
 CCSClientGameStats g_CSClientGameStats;
 

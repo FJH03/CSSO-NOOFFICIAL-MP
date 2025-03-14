@@ -13,7 +13,7 @@
 #endif
 
 #include "gametypes/igametypes.h"
-#include "tier1/keyvalues.h"
+#include "tier1/KeyValues.h"
 #include "const.h"
 
 

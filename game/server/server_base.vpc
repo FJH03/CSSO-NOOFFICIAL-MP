@@ -195,8 +195,13 @@ $Project
 		$File	"ai_sentence.h"
 		$File	"ai_speech.cpp"
 		$File	"ai_speech.h"
+		$File	"ai_speechqueue.cpp"
+		$File	"ai_speechqueue.h"
+		$File	"ai_expresserfollowup.cpp"
 		$File	"ai_speechfilter.cpp"
 		$File	"ai_speechfilter.h"
+		$File	"ai_speechconcept.cpp"
+		$File	"ai_speechconcept.h"
 		$File	"ai_squad.cpp"
 		$File	"ai_squad.h"
 		$File	"ai_squadslot.cpp"
@@ -356,6 +361,7 @@ $Project
 		$File	"fire_smoke.h"
 		$File	"fish.cpp"
 		$File	"fish.h"
+		$File	"flex_expresser.cpp"
 		$File	"fogcontroller.cpp"
 		$File	"fourwheelvehiclephysics.cpp"
 		$File	"fourwheelvehiclephysics.h"
@@ -425,7 +431,7 @@ $Project
 		$File	"init_factory.h"
 		$File	"intermission.cpp"
 		$File	"$SRCDIR\public\interpolatortypes.h"
-		$File	"$SRCDIR\game\shared\interval.h"
+		$File	"$SRCDIR\public\tier2\interval.h"
 		$File	"$SRCDIR\public\iregistry.h"
 		$File	"$SRCDIR\game\shared\iscenetokenprocessor.h"
 		$File	"iservervehicle.h"
@@ -679,7 +685,6 @@ $Project
 				"h_export.cpp"										\
 				"init_factory.cpp"									\
 				"$SRCDIR\public\interpolatortypes.cpp"				\
-				"$SRCDIR\game\shared\interval.cpp"					\
 				"$SRCDIR\public\keyframe\keyframe.cpp"				\
 				"$SRCDIR\common\language.cpp"						\
 				"$SRCDIR\public\map_utils.cpp"						\
@@ -1015,6 +1020,7 @@ $Project
 		$Lib	particles
 		$Lib	tier2
 		$Lib	tier3
+		$Lib    responserules_runtime
 		$ImpLibexternal steam_api
 	}
 }

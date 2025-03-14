@@ -33,6 +33,7 @@ def build(bld):
 		'util_init.cpp',
 		'utlstreambuffer.cpp',
 		'vconfig.cpp',
+		'interval.cpp',
 		'keyvaluesmacros.cpp'
 	]
 

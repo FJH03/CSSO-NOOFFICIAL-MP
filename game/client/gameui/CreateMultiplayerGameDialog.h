@@ -31,12 +31,13 @@ public:
 protected:
 	virtual bool OnOK(bool applyOnly);
 	virtual void OnKeyCodePressed( vgui::KeyCode code );
-	MESSAGE_FUNC_PTR( OnTextChanged, "TextChanged", panel );
 
 private:
 	CCreateMultiplayerGameServerPage *m_pServerPage;
 	CCreateMultiplayerGameGameplayPage *m_pGameplayPage;
 	CCreateMultiplayerGameBotPage *m_pBotPage;
+
+	bool m_bBotsEnabled;
 
 	// for loading/saving game config
 	KeyValues *m_pSavedData;

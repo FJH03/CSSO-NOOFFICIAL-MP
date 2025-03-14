@@ -8,7 +8,7 @@
 #include <KeyValues.h>
 #include "filesystem.h"
 #include "utldict.h"
-#include "interval.h"
+#include "tier2/interval.h"
 #include "engine/IEngineSound.h"
 #include "soundemittersystembase.h"
 #include "utlbuffer.h"

@@ -1422,6 +1422,7 @@ ConVar snd_music_selection(
 		m_bTCantBuy = false;
 		m_bCTCantBuy = false;
 		m_bMapHasBuyZone = false;
+		m_bVoiceWonMatchBragFired = false;
 		m_pfnCalculateEndOfRoundMVPHook = NULL;
 
 		m_iLoserBonus = 0;
@@ -4675,6 +4676,30 @@ ConVar snd_music_selection(
 				m_flRestartRoundTime += gpGlobals->curtime - m_flLastThinkTime;
 			}
 		}
+		else if ( GetPhase() == GAMEPHASE_MATCH_ENDED )
+		{
+			if ( m_flRestartRoundTime > 0.0f && ((m_flRestartRoundTime - 3.0) <= gpGlobals->curtime) && !m_bVoiceWonMatchBragFired )
+			{
+				// [tj] Inform players that the round is over
+				for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+				{
+					CCSPlayer* pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( i );
+					int iWinningTeam = (m_iNumTerroristWins > m_iNumCTWins) ? TEAM_TERRORIST : TEAM_CT;
+					if ( pPlayer && pPlayer->IsAlive() && pPlayer->GetTeamNumber() == iWinningTeam )
+					{
+						// have someone on the winning team brag about winning over the radio
+						pPlayer->Radio( "WonRound", "", true );
+						break;
+					}
+				}
+
+				m_bVoiceWonMatchBragFired = true;
+			}
+		}
+		else
+		{
+			m_bVoiceWonMatchBragFired = false;
+		}
 
 		//Check if it is time to make the phase change announcement
 		if ( m_phaseChangeAnnouncementTime > 0 && gpGlobals->curtime > m_phaseChangeAnnouncementTime )
@@ -6355,95 +6380,6 @@ ConVar snd_music_selection(
 			UTIL_ClientPrintFilter( loyalists, HUD_PRINTCENTER, "#Teams_Balanced" );
 		}
 	}
-
-    void CCSGameRules::HandleScrambleTeams( void )
-    {
-        CCSPlayer *pCSPlayer = NULL;
-        CUtlVector<CCSPlayer *> pListPlayers;
-
-        // add all the players (that are on CT or Terrorist) to our temp list
-        for ( int i = 1 ; i <= gpGlobals->maxClients ; i++ )
-        {
-            pCSPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
-            if ( pCSPlayer && ( pCSPlayer->GetTeamNumber() == TEAM_TERRORIST || pCSPlayer->GetTeamNumber() == TEAM_CT ) )
-            {
-                pListPlayers.AddToHead( pCSPlayer );
-            }
-        }
-
-        // sort the list
-        pListPlayers.Sort( ScramblePlayersSort );
-
-        int team = TEAM_INVALID;
-        bool assignToOpposingTeam = false;
-        for ( int i = 0 ; i < pListPlayers.Count() ; i++ )
-        {
-            pCSPlayer = pListPlayers[i];
-
-            if ( pCSPlayer )
-            {
-                //First assignment goes to random team
-                //Second assignment goes to the opposite
-                //Keep alternating until out of players.
-                if ( !assignToOpposingTeam )
-                {
-                    team = ( rand() % 2 ) ? TEAM_TERRORIST : TEAM_CT;
-                }
-                else
-                {
-                    team = ( team == TEAM_TERRORIST ) ? TEAM_CT : TEAM_TERRORIST;
-                }
-
-                pCSPlayer->SwitchTeam( team );
-                assignToOpposingTeam = !assignToOpposingTeam;
-            }
-        }	
-    }
-
-    void CCSGameRules::HandleSwapTeams( void )
-    {
-        CCSPlayer *pCSPlayer = NULL;
-        CUtlVector<CCSPlayer *> pListPlayers;
-
-        // add all the players (that are on CT or Terrorist) to our temp list
-        for ( int i = 1 ; i <= gpGlobals->maxClients ; i++ )
-        {
-            pCSPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
-			if ( pCSPlayer && ( pCSPlayer->GetTeamNumber() == TEAM_TERRORIST || pCSPlayer->GetTeamNumber() == TEAM_CT ) )
-            {
-                pListPlayers.AddToHead( pCSPlayer );
-            }
-        }
-        
-        for ( int i = 0 ; i < pListPlayers.Count() ; i++ )
-        {
-            pCSPlayer = pListPlayers[i];
-
-            if ( pCSPlayer )
-            {
-				int currentTeam = pCSPlayer->GetTeamNumber();
-                int newTeam = ( currentTeam == TEAM_TERRORIST ) ? TEAM_CT : TEAM_TERRORIST;
-                pCSPlayer->SwitchTeam( newTeam );				
-			}
-        }
-
-		//
-		// Flip the timeouts as well
-		//
-		bool bTemp;
-		bTemp = m_bTerroristTimeOutActive;
-		m_bTerroristTimeOutActive = m_bCTTimeOutActive;
-		m_bCTTimeOutActive = bTemp;
-
-		float flTemp;
-		flTemp = m_flTerroristTimeOutRemaining;
-		m_flTerroristTimeOutRemaining = m_flCTTimeOutRemaining;
-		m_flCTTimeOutRemaining = flTemp;
-
-		int nTemp = m_nTerroristTimeOuts;
-		m_nTerroristTimeOuts = m_nCTTimeOuts;
-		m_nCTTimeOuts = nTemp;
-    }
     
     // the following two functions cap the number of players on a team to five instead of basing it on the number of spawn points
     int CCSGameRules::MaxNumPlayersOnTerrTeam()
@@ -6856,10 +6792,6 @@ ConVar snd_music_selection(
             }
         }
 
-		//=============================================================================
-		// HPE_BEGIN:		
-		//=============================================================================
-
 		// [tj] Check for any non-player-specific achievements.
 		ProcessEndOfRoundAchievements(iWinnerTeam, iReason);
 
@@ -6902,9 +6834,6 @@ ConVar snd_music_selection(
 				pPlayer->OnRoundEnd(iWinnerTeam, iReason);
 			}
 		}
-		//=============================================================================
-		// HPE_END
-		//=============================================================================
 
 		IGameEvent * event = gameeventmanager->CreateEvent( "round_end" );
 		if ( event )

@@ -640,6 +640,8 @@ public:
 	int m_iLoserBonus;			// SupraFiend: the amount of money the losing team gets. This scales up as they lose more rounds in a row
 	float m_tmNextPeriodicThink;
 
+	bool m_bVoiceWonMatchBragFired;
+
 	float m_fWarmupNextChatNoticeTime;
 
 

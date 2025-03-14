@@ -14,7 +14,7 @@
 
 #include "utlvector.h"
 #include "utlstring.h"
-#include "tier1/keyvalues.h"
+#include "tier1/KeyValues.h"
 
 abstract_class IGameTypes
 {

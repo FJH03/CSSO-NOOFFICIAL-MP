@@ -8,6 +8,14 @@
 #include "player.h"
 #include "ai_speech.h"
 
+enum SpeechPriorityType
+{
+	SPEECH_PRIORITY_LOW,
+	SPEECH_PRIORITY_NORMAL,
+	SPEECH_PRIORITY_MANUAL,
+	SPEECH_PRIORITY_UNINTERRUPTABLE,
+};
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -26,10 +34,9 @@ public:
 	virtual void		PostConstructor( const char *szClassname );
 	virtual void		ModifyOrAppendCriteria( AI_CriteriaSet& criteriaSet );
 
-	virtual bool			SpeakIfAllowed( AIConcept_t concept, const char *modifiers = NULL, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
-	virtual IResponseSystem *GetResponseSystem();
-	bool					SpeakConcept( AI_Response& response, int iConcept );
-	virtual bool			SpeakConceptIfAllowed( int iConcept, const char *modifiers = NULL, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
+	virtual bool		SpeakIfAllowed( AIConcept_t concept, SpeechPriorityType priority, const char *modifiers = NULL, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
+	void				SpeakConcept( AI_Response &outresponse, int iConcept );
+	virtual bool		SpeakConceptIfAllowed( int iConcept, const char *modifiers = NULL, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
 
 	virtual bool		CanHearAndReadChatFrom( CBasePlayer *pPlayer );
 	virtual bool		CanSpeak( void ) { return true; }

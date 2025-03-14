@@ -123,6 +123,7 @@ ConVar sv_nowinpanel( "sv_nowinpanel", "0", FCVAR_REPLICATED, "Turn on/off win p
 ConVar bot_freeze( "bot_freeze", "0", FCVAR_CHEAT );
 ConVar bot_crouch( "bot_crouch", "0", FCVAR_CHEAT );
 ConVar bot_mimic_yaw_offset( "bot_mimic_yaw_offset", "180", FCVAR_CHEAT );
+ConVar bot_chatter_use_rr( "bot_chatter_use_rr", "1", FCVAR_REPLICATED, "0 = Use old bot chatter system, 1 = Use response rules" );
 
 ConVar gg_knife_kill_demotes( "gg_knife_kill_demotes", "1", FCVAR_REPLICATED, "0 = knife kill in gungame has no effect on player level, 1 = knife kill demotes player by one level" );
 
@@ -5894,28 +5895,20 @@ void CCSPlayer::Radio( const char *pszRadioSound, const char *pszRadioText, bool
 		}
 	}
 
-	if ( ( strncmp( pszRadioSound, "Radio.", 6 ) == 0 ) )
+	if ( bot_chatter_use_rr.GetBool() )
 	{
-		pszRadioSound += 6;
-	}
+		AIConcept_t concept( pszRadioSound );
 
-	// god damm this looks like a 3 year old's code
-	char strRadioSound[256];
+		AI_CriteriaSet botCriteria; // unused atm
 
-	// special case for agents
-	if ( CSLoadout()->HasAgentSet( this, GetTeamNumber() ) && !IsBotOrControllingBot() )
-	{
-		if ( GetTeamNumber() == TEAM_CT )
-			Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s.%s", GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer( this, GetTeamNumber() ) )->m_szRadioPrefix, pszRadioSound );
-		if ( GetTeamNumber() == TEAM_TERRORIST )
-			Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s.%s", GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer( this, GetTeamNumber() ) )->m_szRadioPrefix, pszRadioSound );
+		Speak( concept, &botCriteria, NULL, 0, &filter );
 	}
 	else
-		Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s.%s", GetCSClassInfo( m_iClass )->m_szRadioPrefix, pszRadioSound );
-
-	UserMessageBegin ( filter, "SendAudio" );
-		WRITE_STRING( strRadioSound );
-	MessageEnd();
+	{
+		UserMessageBegin ( filter, "SendAudio" );
+			WRITE_STRING( pszRadioSound );
+		MessageEnd();
+	}
 
 	//icon over the head for teammates
 	TE_RadioIcon( filter, 0.0, this );
@@ -6562,6 +6555,17 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 	else if ( FStrEq( pcmd, "-lookatweapon" ) )
 	{
 		m_bIsHoldingLookAtWeapon = false;
+
+		return true;
+	}
+	else if ( FStrEq( pcmd, "playerradio" ) )
+	{
+		if ( args.ArgC() >= 2 )
+		{
+			const char* pszSound = args.Arg( 1 );
+			const char* pszCaption = (args.ArgC() > 2) ? args.Arg( 2 ) : NULL;
+			Radio( pszSound, pszCaption );
+		}
 
 		return true;
 	}
@@ -9573,6 +9577,38 @@ void CCSPlayer::ChangeTeam( int iTeamNum )
 	CSGameRules()->InitializePlayerCounts( NumAliveTerrorist, NumAliveCT, NumDeadTerrorist, NumDeadCT );
 }
 
+void CCSPlayer::ModifyOrAppendCriteria( AI_CriteriaSet& set )
+{
+	BaseClass::ModifyOrAppendCriteria( set );
+
+	char modelName[MAX_PATH];
+
+	int nTeamNumber = GetTeamNumber();
+	if ( CSLoadout()->HasAgentSet( this, nTeamNumber ) )
+	{
+		if ( GetTeamNumber() == TEAM_TERRORIST )
+			V_strcpy( modelName, GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer( this, TEAM_TERRORIST ) )->m_szRadioPrefix );
+		else if ( GetTeamNumber() == TEAM_CT )
+			V_strcpy( modelName, GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer( this, TEAM_CT ) )->m_szRadioPrefix );
+	}
+	else
+	{
+		// Fix up the model name for rule matching
+		V_FileBase( STRING( GetModelName() ), modelName, sizeof( modelName ) );
+		char *pEnd = V_stristr( modelName, "_var" );
+		if ( pEnd )
+			*pEnd = 0;
+	}
+	
+	int myteam = GetTeamNumber();
+	int otherTeam = ( myteam == TEAM_CT ) ? TEAM_TERRORIST : TEAM_CT;
+
+	set.AppendCriteria( "team", myteam );
+	set.AppendCriteria( "model", modelName );
+	set.AppendCriteria( "liveallies", GetTeam()->GetAliveMembers() );
+	set.AppendCriteria( "liveenemies", GetGlobalTeam( otherTeam )->GetAliveMembers() );
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Put the player in the specified team without penalty
 //-----------------------------------------------------------------------------
@@ -11086,7 +11122,7 @@ void CCSPlayer::OnStartedDefuse()
 
 	if ( !IsBot() && m_flDefusingTalkTimer < gpGlobals->curtime )
 	{
-		Radio( "Radio.DefusingBomb", "#Cstrike_TitlesTXT_Defusing_Bomb" );
+		Radio( "DefusingBomb", "#Cstrike_TitlesTXT_Defusing_Bomb" );
 		m_flDefusingTalkTimer = gpGlobals->curtime + 6.0f;
 	}
 }

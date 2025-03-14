@@ -38,6 +38,7 @@ $Project "tier2"
 		$File	"utlstreambuffer.cpp"
 		$File	"vconfig.cpp"
 		$File	"keyvaluesmacros.cpp"
+		$File	"interval.cpp"
 	}
 
 	$Folder	"Public Header Files"
@@ -54,5 +55,6 @@ $Project "tier2"
 		$File	"$SRCDIR\public\tier2\utlstreambuffer.h"
 		$File	"$SRCDIR\public\tier2\vconfig.h"
 		$File	"$SRCDIR\public\tier2\keyvaluesmacros.h"
+		$File	"$SRCDIR\public\tier2\interval.h"
 	}
 }

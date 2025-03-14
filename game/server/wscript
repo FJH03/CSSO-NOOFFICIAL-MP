@@ -51,12 +51,13 @@ def build(bld):
 		'../../common',
 		'../../public/tier0',
 		'../../public/tier1',
-		'../../public'
+		'../../public',
+		'../../public/responserules'
 	]
 
 	defines = []
 
-	libs = ['tier0','particles','dmxloader','tier1','tier2','tier3','mathlib','vstdlib','choreoobjects','steam_api']
+	libs = ['tier0','responserules_runtime','particles','dmxloader','tier1','tier2','tier3','mathlib','vstdlib','choreoobjects','steam_api']
 	if bld.env.DEST_OS == 'win32':
 		libs += ['USER32']
 

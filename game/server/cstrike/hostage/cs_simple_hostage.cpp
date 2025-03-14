@@ -1506,7 +1506,7 @@ void CHostage::SetHostageStartFollowingPlayer( CCSPlayer *pPlayer )
 
 		if ( pPlayer && !pPlayer->IsBot() && pPlayer->m_flGotHostageTalkTimer < gpGlobals->curtime )
 		{
-			//pPlayer->Radio( "Radio.EscortingHostages", "#Cstrike_TitlesTXT_Got_Hostages", true );
+			pPlayer->Radio( "EscortingHostages", "#Cstrike_TitlesTXT_Got_Hostages", true );
 			pPlayer->m_flGotHostageTalkTimer = gpGlobals->curtime + 10.0f;
 		}
 

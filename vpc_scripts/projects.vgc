@@ -830,6 +830,16 @@ $Project "SDKLauncher"
 	"sdklauncher\SDKLauncher.vpc" [$WIN32]
 }
 
+$Project "responserules_runtime"
+{
+	"responserules/runtime/responserules_runtime.vpc" [$WINDOWS||$WIN64||$X360||$OSX32||$OSX64||$LINUX||$PS3]
+}
+
+$Project "scenefilecache"
+{
+	"scenefilecache\scenefilecache.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
 $Project "ServerBrowser"
 {
 	"serverbrowser\ServerBrowser.vpc" [$WINDOWS||$X360||$POSIX]
