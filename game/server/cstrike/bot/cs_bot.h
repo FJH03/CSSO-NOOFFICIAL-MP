@@ -596,8 +596,6 @@ public:
 		ESCAPE_FROM_BOMB,
 		HOLD_POSITION,
 		FOLLOW,
-		VIP_ESCAPE,
-		GUARD_VIP_ESCAPE_ZONE,
 		COLLECT_HOSTAGES,
 		RESCUE_HOSTAGES,
 		GUARD_HOSTAGES,
@@ -689,7 +687,6 @@ public:
 	int OutnumberedCount( void ) const;							///< return number of enemies we are outnumbered by
 
 	#define ONLY_VISIBLE_ENEMIES true
-	CCSPlayer *GetImportantEnemy( bool checkVisibility = false ) const;	///< return the closest "important" enemy for the given scenario (bomb carrier, VIP, hostage escorter)
 
 	void UpdateReactionQueue( void );							///< update our reaction time queue
 	CCSPlayer *GetRecognizedEnemy( void );						///< return the most dangerous threat we are "conscious" of

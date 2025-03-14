@@ -8,7 +8,6 @@
 #include "cs_shareddefs.h"
 
 const float CS_PLAYER_SPEED_RUN			= 260.0f;
-const float CS_PLAYER_SPEED_VIP			= 227.0f;
 //const float CS_PLAYER_SPEED_WALK		= 100.0f;
 const float CS_PLAYER_SPEED_STOPPED		=   1.0f;
 const float CS_PLAYER_SPEED_HAS_HOSTAGE	= 200.0f;

@@ -19,7 +19,6 @@ extern ConVar mp_teammates_are_enemies;
 // Datatable
 IMPLEMENT_SERVERCLASS_ST(CCSPlayerResource, DT_CSPlayerResource)
 	SendPropInt( SENDINFO( m_iPlayerC4 ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_iPlayerVIP ), 8, SPROP_UNSIGNED ),
 	SendPropVector( SENDINFO(m_vecC4), -1, SPROP_COORD),
 	SendPropArray3( SENDINFO_ARRAY3(m_bHostageAlive), SendPropInt( SENDINFO_ARRAY(m_bHostageAlive), 1, SPROP_UNSIGNED ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_isHostageFollowingSomeone), SendPropInt( SENDINFO_ARRAY(m_isHostageFollowingSomeone), 1, SPROP_UNSIGNED ) ),
@@ -144,7 +143,6 @@ void CCSPlayerResource::UpdatePlayerData( void )
 	int i;
 
 	m_iPlayerC4 = 0;
-	m_iPlayerVIP = 0;
 
 	for ( i = 1; i <= gpGlobals->maxClients; i++ )
 	{
@@ -152,12 +150,6 @@ void CCSPlayerResource::UpdatePlayerData( void )
 		
 		if ( pPlayer && pPlayer->IsConnected() )
 		{
-			if ( pPlayer->IsVIP() )
-			{
-				// we should only have one VIP
-				Assert( m_iPlayerVIP == 0 );
-				m_iPlayerVIP = i;
-			}
 
 			if ( pPlayer->HasC4() )
 			{
@@ -349,7 +341,6 @@ void CCSPlayerResource::Spawn( void )
 {
 	m_vecC4.Init();
 	m_iPlayerC4 = 0;
-	m_iPlayerVIP = 0;
 	m_bombsiteCenterA.Init();
 	m_bombsiteCenterB.Init();
 	m_foundGoalPositions = false;

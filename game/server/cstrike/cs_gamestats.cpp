@@ -29,20 +29,6 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-float	g_flGameStatsUpdateTime = 0.0f;
-short	g_iTerroristVictories[CS_NUM_LEVELS];
-short	g_iCounterTVictories[CS_NUM_LEVELS];
-short	g_iWeaponPurchases[WEAPON_MAX];
-
-short	g_iAutoBuyPurchases = 0;
-short	g_iReBuyPurchases = 0;
-short	g_iAutoBuyM4A1Purchases = 0;
-short	g_iAutoBuyAK47Purchases = 0;
-short	g_iAutoBuyFamasPurchases = 0;
-short	g_iAutoBuyGalilPurchases = 0;
-short	g_iAutoBuyVestHelmPurchases = 0;
-short	g_iAutoBuyVestPurchases = 0;
-
 struct PropModelStats_t
 {
 	const char* szPropModelName;

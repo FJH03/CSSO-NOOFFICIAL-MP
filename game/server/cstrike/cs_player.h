@@ -360,11 +360,8 @@ public:
 	void OnLand( float fVelocity );
 
 	bool HasC4() const;	// Is this player carrying a C4 bomb?
-	bool IsVIP() const;
 
 	int GetClass( void ) const;
-
-	void MakeVIP( bool isVIP );
 
 	virtual void SetAnimation( PLAYER_ANIM playerAnim );
 
@@ -757,10 +754,7 @@ public:
 	void ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
 
 	CNetworkVar( bool, m_bHasHelmet );				// Does the player have helmet armor
-	bool m_bEscaped;			// Has this terrorist escaped yet?
-
 	// Other variables.
-	bool m_bIsVIP;				// Are we the VIP?
 	int m_iNumSpawns;			// Number of times player has spawned this round
 	int m_iOldTeam;				// Keep what team they were last on so we can allow joining spec and switching back to their real team
 	bool m_bTeamChanged;		// Just allow one team change per round
@@ -1081,8 +1075,6 @@ private:
 protected:
 	float m_applyDeafnessTime;
 	int m_currentDeafnessFilter;
-
-	bool m_isVIP;
 
 // Command rate limiting.
 private:

@@ -36,8 +36,6 @@ void CCSHLTVDirector::SetHLTVServer( IHLTVServer *hltv )
 		ListenForGameEvent( "bomb_exploded" );
 		ListenForGameEvent( "bomb_defused" );
 		ListenForGameEvent( "bomb_planted" );
-		ListenForGameEvent( "vip_escaped" );
-		ListenForGameEvent( "vip_killed" );
 	}
 }
 

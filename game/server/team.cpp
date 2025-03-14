@@ -39,10 +39,12 @@ int SendProxyArrayLength_PlayerArray( const void *pStruct, int objectID )
 // Datatable
 IMPLEMENT_SERVERCLASS_ST_NOBASE(CTeam, DT_Team)
 	SendPropInt( SENDINFO(m_iTeamNum), 5 ),
-	SendPropInt( SENDINFO(m_iScore), 0 ),
-	SendPropInt( SENDINFO(m_iRoundsWon), 8 ),
 	SendPropString( SENDINFO( m_szTeamname ) ),
 	SendPropString( SENDINFO( m_szClanTeamname ) ),
+	SendPropInt( SENDINFO(m_scoreTotal), 0 ),
+	SendPropInt( SENDINFO(m_scoreFirstHalf), 0 ),
+	SendPropInt( SENDINFO(m_scoreSecondHalf), 0 ),
+	SendPropInt( SENDINFO(m_scoreOvertime), 0 ),
 
 	SendPropInt( SENDINFO( m_nGGLeaderEntIndex_CT ), 0 ),
 	SendPropInt( SENDINFO( m_nGGLeaderEntIndex_T ), 0 ),
@@ -242,7 +244,10 @@ void CTeam::Init( const char *pName, int iNumber )
 	InitializePlayers();
 	ResetTeamLeaders();
 
-	m_iScore = 0;
+	m_scoreTotal = 0;
+	m_scoreFirstHalf = 0;
+	m_scoreSecondHalf = 0;
+	m_scoreOvertime = 0;
 
 	Q_strncpy( m_szTeamname.GetForModify(), pName, MAX_TEAM_NAME_LENGTH );
 	m_iTeamNum = iNumber;
@@ -409,30 +414,20 @@ CBasePlayer *CTeam::GetPlayer( int iIndex )
 //-----------------------------------------------------------------------------
 // Purpose: Add / Remove score for this team
 //-----------------------------------------------------------------------------
-void CTeam::AddScore( int iScore )
-{
-	m_iScore += iScore;
-}
-
-void CTeam::SetScore( int iScore )
-{
-	m_iScore = iScore;
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: Get this team's score
 //-----------------------------------------------------------------------------
-int CTeam::GetScore( void )
-{
-	return m_iScore;
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void CTeam::ResetScores( void )
 {
-	SetScore(0);
+	m_scoreTotal = 0;
+	m_scoreFirstHalf = 0;
+	m_scoreSecondHalf = 0;
+	m_scoreOvertime = 0;
 }
 
 //-----------------------------------------------------------------------------

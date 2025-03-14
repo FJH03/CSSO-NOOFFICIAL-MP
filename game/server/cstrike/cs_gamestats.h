@@ -57,20 +57,6 @@ typedef struct
 
 } cs_gamestats_t;
 
-extern short	g_iWeaponPurchases[WEAPON_MAX];
-extern float	g_flGameStatsUpdateTime;
-extern short	g_iTerroristVictories[CS_NUM_LEVELS];
-extern short	g_iCounterTVictories[CS_NUM_LEVELS];
-
-extern short	g_iAutoBuyPurchases;
-extern short	g_iReBuyPurchases;
-extern short	g_iAutoBuyM4A1Purchases;
-extern short	g_iAutoBuyAK47Purchases;
-extern short	g_iAutoBuyFamasPurchases;
-extern short	g_iAutoBuyGalilPurchases;
-extern short	g_iAutoBuyVestHelmPurchases;
-extern short	g_iAutoBuyVestPurchases;
-
 
 struct sHappyCamperSnipePosition
 {

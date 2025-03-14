@@ -1999,11 +1999,6 @@ void BotChatterInterface::ReportingIn( void )
 			break;
 		}
 
-		case CCSBot::GUARD_VIP_ESCAPE_ZONE:
-		{
-			break;
-		}
-
 	}
 
 

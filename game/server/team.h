@@ -70,16 +70,23 @@ public:
 	//-----------------------------------------------------------------------------
 	// Scoring
 	//-----------------------------------------------------------------------------
-	virtual void AddScore( int iScore );
-	virtual void SetScore( int iScore );
-	virtual int  GetScore( void );
+	virtual void AddScore( int score )					{ m_scoreTotal += score; }
+	virtual void AddScoreFirstHalf( int score )			{ m_scoreFirstHalf += score; }
+	virtual void AddScoreSecondHalf( int score )		{ m_scoreSecondHalf += score; }
+	virtual void AddScoreOvertime( int score )			{ m_scoreOvertime += score; }
+
+	virtual void SetScore( int score )					{ m_scoreTotal = score; }
+	virtual void SetScoreFirstHalf( int score )			{ m_scoreFirstHalf = score; }
+	virtual void SetScoreSecondHalf( int score )		{ m_scoreSecondHalf = score; }
+	virtual void SetScoreOvertime( int score )			{ m_scoreOvertime = score; }
+
+	virtual int  GetScore( void )						{ return m_scoreTotal; }
+	virtual int  GetScoreFirstHalf( void )				{ return m_scoreFirstHalf; }
+	virtual int  GetScoreSecondHalf( void )				{ return m_scoreSecondHalf; }
+	virtual int  GetScoreOvertime( void )				{ return m_scoreOvertime; }
+
 	virtual void ResetScores( void );
 	virtual void ResetTeamLeaders( void );
-
-	// Round scoring
-	virtual int GetRoundsWon( void ) { return m_iRoundsWon; }
-	virtual void SetRoundsWon( int iRounds ) { m_iRoundsWon = iRounds; }
-	virtual void IncrementRoundsWon( void ) { m_iRoundsWon++; }
 
 	void AwardAchievement( int iAchievement );
 
@@ -99,8 +106,10 @@ public:
 	// Data
 	CNetworkString( m_szTeamname, MAX_TEAM_NAME_LENGTH );
 	CNetworkString( m_szClanTeamname, MAX_TEAM_NAME_LENGTH );
-	CNetworkVar( int, m_iScore );
-	CNetworkVar( int, m_iRoundsWon );
+	CNetworkVar( int, m_scoreTotal );
+	CNetworkVar( int, m_scoreFirstHalf );
+	CNetworkVar( int, m_scoreSecondHalf );
+	CNetworkVar( int, m_scoreOvertime );
 	int		m_iDeaths;
 
 	CNetworkVar( int, m_nGGLeaderEntIndex_CT );

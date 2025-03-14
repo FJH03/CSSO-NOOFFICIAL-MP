@@ -133,7 +133,7 @@ public:
 	virtual void StartFrame( void );						///< (EXTEND) called each frame
 
 	virtual unsigned int GetPlayerPriority( CBasePlayer *player ) const;	///< return priority of player (0 = max pri)
-	virtual bool IsImportantPlayer( CCSPlayer *player ) const;				///< return true if player is important to scenario (VIP, bomb carrier, etc)
+	virtual bool IsImportantPlayer( CCSPlayer *player ) const;				///< return true if player is important to scenario (bomb carrier, etc)
 
 	void ExtractScenarioData( void );							///< search the map entities to determine the game scenario and define important zones
 
@@ -155,8 +155,7 @@ public:
 	{
 		SCENARIO_DEATHMATCH,
 		SCENARIO_DEFUSE_BOMB,
-		SCENARIO_RESCUE_HOSTAGES,
-		SCENARIO_ESCORT_VIP
+		SCENARIO_RESCUE_HOSTAGES
 	};
 	GameScenarioType GetScenario( void ) const		{ return m_gameScenario; }
 

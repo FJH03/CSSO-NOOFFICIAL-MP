@@ -223,7 +223,7 @@ bool CCSPlayer::IsAbleToInstantRespawn( void )
 {
 	if ( CSGameRules() )
 	{
-		switch ( CSGameRules()->GetPhase() )
+		switch( CSGameRules()->GetGamePhase() )
 		{
 			case GAMEPHASE_MATCH_ENDED:
 			case GAMEPHASE_HALFTIME:
@@ -261,19 +261,11 @@ float CCSPlayer::GetPlayerMaxSpeed()
 
 	float speed = BaseClass::GetPlayerMaxSpeed();
 
-	if ( IsVIP() == true )  // VIP is slow due to the armour he's wearing
-	{
-		speed = MIN(speed, CS_PLAYER_SPEED_VIP);
-	}
-	else
+	CWeaponCSBase *pWeapon = dynamic_cast<CWeaponCSBase*>( GetActiveWeapon() );
+	if ( pWeapon )
 	{
 
-		CWeaponCSBase *pWeapon = dynamic_cast<CWeaponCSBase*>( GetActiveWeapon() );
-
-		if ( pWeapon )
-		{
-			speed = MIN(speed, pWeapon->GetMaxSpeed());
-		}
+		speed = MIN(speed, pWeapon->GetMaxSpeed());
 	}
 
 	if ( m_hCarriedHostage != NULL )

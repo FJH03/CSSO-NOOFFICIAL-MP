@@ -26,7 +26,6 @@ public:
 protected:
 
 	CNetworkVar( int, m_iPlayerC4 );  // entity index of C4 carrier or 0
-	CNetworkVar( int, m_iPlayerVIP ); // entity index of VIP player or 0
 	CNetworkVector( m_vecC4 );  // position of C4
 	CNetworkArray( bool, m_bHostageAlive, MAX_HOSTAGES );
 	CNetworkArray( bool, m_isHostageFollowingSomeone, MAX_HOSTAGES );

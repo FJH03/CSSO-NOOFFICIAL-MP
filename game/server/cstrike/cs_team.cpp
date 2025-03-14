@@ -14,7 +14,6 @@
 
 // Datatable
 IMPLEMENT_SERVERCLASS_ST(CCSTeam, DT_CSTeam)
-	SendPropInt( SENDINFO(m_iScoreThisPhase), 0 ),
 END_SEND_TABLE()
 
 LINK_ENTITY_TO_CLASS( cs_team_manager, CCSTeam );
@@ -37,8 +36,6 @@ void CCSTeam::Init( const char *pName, int iNumber )
 
 	// Only detect changes every half-second.
 	NetworkProp()->SetUpdateInterval( 0.75f );
-
-	m_iScoreThisPhase = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -87,11 +84,6 @@ void CCSTeam::RemovePlayer( CBasePlayer *pPlayer )
 //-----------------------------------------------------------------------------
 // Purpose: Set score for this team in current game phase
 //-----------------------------------------------------------------------------
-void CCSTeam::SetScoreThisPhase( int iScore )
-{
-	m_iScoreThisPhase = iScore;
-}
-
 //------------------------------------------------------------------------------------------------------------------
 // UTILITY FUNCS
 //-----------------------------------------------------------------------------

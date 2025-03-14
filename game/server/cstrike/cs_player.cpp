@@ -528,10 +528,8 @@ CCSPlayer::CCSPlayer()
 
 	m_iLastWeaponFireUsercmd = 0;
 	m_iAddonBits = 0;
-	m_bEscaped = false;
 	m_iAccount = 0;
 
-	m_bIsVIP = false;
 	m_iClass = (int)CS_CLASS_NONE;
 	m_iSkin = 0;
 	m_angEyeAngles.Init();
@@ -558,7 +556,6 @@ CCSPlayer::CCSPlayer()
 	m_iDirection = 0;
 	m_receivesMoneyNextRound = true;
 	m_bIsBeingGivenItem = false;
-	m_isVIP = false;
 
 	m_nLastKillerIndex = 0;
 
@@ -1497,10 +1494,6 @@ void CCSPlayer::Spawn()
 		m_szNewName[0] = 0;
 	}
 
-	if ( m_bIsVIP )
-	{
-		HintMessage( "#Hint_you_are_the_vip", true, true );
-	}
 
 	m_bIsInAutoBuy = false;
 	m_bIsInRebuy = false;
@@ -1531,7 +1524,8 @@ void CCSPlayer::Spawn()
 	if ( flImmuneTime > 0 || CSGameRules()->IsWarmupPeriod() )
 	{
 		//Make sure we can't move if we respawn in gun game after the rounds ends
-		if ( CSGameRules()->GetPhase() == GAMEPHASE_MATCH_ENDED )
+		CCSMatch* pMatch = CSGameRules()->GetMatch();
+		if ( pMatch && pMatch->GetPhase() == GAMEPHASE_MATCH_ENDED )
 		{
 			AddFlag( FL_FROZEN );
 		}
@@ -4397,7 +4391,7 @@ void CCSPlayer::RoundRespawn()
 			if ( m_bShouldProgressGunGameTRBombModeWeapon )
 			{
 				ResetTRBombModeWeaponProgressFlag();
-				if ( CSGameRules()->GetTotalRoundsPlayed() > 0 )
+				if ( CSGameRules()->GetRoundsPlayed() > 0 )
 					IncrementGunGameProgressiveWeapon( 1 );
 			}
 		}
@@ -4578,57 +4572,6 @@ void CCSPlayer::MoveToNextIntroCamera()
 	m_fIntroCamTime = gpGlobals->curtime + 6;
 }
 
-class NotVIP
-{
-public:
-	bool operator()( CBasePlayer *player )
-	{
-		CCSPlayer *csPlayer = static_cast< CCSPlayer * >(player);
-		csPlayer->MakeVIP( false );
-
-		return true;
-	}
-};
-
-// Expose the VIP selection to plugins, since we don't have an official VIP mode.  This
-// allows plugins to access the (limited) VIP functionality already present (scoreboard
-// identification and radar color).
-CON_COMMAND( cs_make_vip, "Marks a player as the VIP" )
-{
-	if ( !UTIL_IsCommandIssuedByServerAdmin() )
-		return;
-
-	if ( args.ArgC() != 2 )
-	{
-		return;
-	}
-
-	CCSPlayer *player = static_cast< CCSPlayer * >(UTIL_PlayerByIndex( atoi( args[1] ) ));
-	if ( !player )
-	{
-		// Invalid value clears out VIP
-		NotVIP notVIP;
-		ForEachPlayer( notVIP );
-		return;
-	}
-
-	player->MakeVIP( true );
-}
-
-void CCSPlayer::MakeVIP( bool isVIP )
-{
-	if ( isVIP )
-	{
-		NotVIP notVIP;
-		ForEachPlayer( notVIP );
-	}
-	m_isVIP = isVIP;
-}
-
-bool CCSPlayer::IsVIP() const
-{
-	return m_isVIP;
-}
 
 bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bThrowForward )
 {
@@ -5122,13 +5065,6 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 		return false;
 	}
 
-	if ( m_bIsVIP )
-	{
-		if ( display == true )
-			ClientPrint( this, HUD_PRINTCENTER, "#VIP_cant_buy" );
-
-		return false;
-	}
 
 	return true;
 }
@@ -6530,17 +6466,6 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 		}
 		return true;
 	}
-	else if ( FStrEq( pcmd, "become_vip" ) )
-	{
-		//MIKETODO: VIP mode
-		/*
-		if ( ( CSGameRules()->m_iMapHasVIPSafetyZone == 1 ) && ( m_iTeam == TEAM_CT ) )
-		{
-			mp->AddToVIPQueue( this );
-		}
-		*/
-		return true;
-	}
 	else if ( FStrEq( pcmd, "+lookatweapon" ) )
 	{
 		m_bIsHoldingLookAtWeapon = true;
@@ -6643,44 +6568,6 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 		DevWarning( "HandleCommand_JoinTeam( %d ) - invalid team index.\n", team );
 		return false;
 	}
-
-	// If this player is a VIP, don't allow him to switch teams/appearances unless the following conditions are met :
-	// a) There is another TEAM_CT player who is in the queue to be a VIP
-	// b) This player is dead
-
-	//MIKETODO: handle this when doing VIP mode
-	/*
-	if ( m_bIsVIP == true )
-	{
-		if ( !IsDead() )
-		{
-			ClientPrint( this, HUD_PRINTCENTER, "#Cannot_Switch_From_VIP" );
-			MenuReset();
-			return true;
-		}
-		else if ( mp->IsVIPQueueEmpty() == true )
-		{
-			ClientPrint( this, HUD_PRINTCENTER, "#Cannot_Switch_From_VIP" );
-			MenuReset();
-			return true;
-		}
-	}
-
-	//MIKETODO: VIP mode
-
-	case 3:
-		if ( ( mp->m_iMapHasVIPSafetyZone == 1 ) && ( m_iTeam == TEAM_CT ) )
-		{
-			mp->AddToVIPQueue( player );
-			MenuReset();
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-		break;
-	*/
 
 	// If we already died and changed teams once, deny
 	if( m_bTeamChanged && team != m_iOldTeam && team != TEAM_SPECTATOR )
@@ -6968,15 +6855,6 @@ void CCSPlayer::GetIntoGame()
 
 	CCSGameRules *MPRules = CSGameRules();
 
-/*	//MIKETODO: Escape gameplay ?
-	if ( ( MPRules->m_bMapHasEscapeZone == true ) && ( m_iTeam == TEAM_CT ) )
-	{
-		m_iAccount = 0;
-
-		CheckStartMoney();
-		AddAccount( (int)startmoney.value, true );
-	}
-	*/
 
 
 	//****************New Code by SupraFiend************
@@ -7024,10 +6902,6 @@ void CCSPlayer::GetIntoGame()
  				MPRules->GiveC4ToRandomPlayer(); //Checks for terrorists.
  			}
 		}
-
-		// If a new terrorist is entering the fray, then up the # of potential escapers.
-		if ( GetTeamNumber() == TEAM_TERRORIST )
-			MPRules->m_iNumEscapers++;
 
 		//=============================================================================
 		// HPE_BEGIN:
@@ -8254,10 +8128,6 @@ void CCSPlayer::ParseAutoBuyString(const char *string, bool &boughtPrimary, bool
 	else if ( overallResult == BUY_ALREADY_HAVE )
 	{
 		EmitPrivateSound( "BuyPreset.AlreadyBought" );
-	}
-	else if ( overallResult == BUY_BOUGHT )
-	{
-		g_iAutoBuyPurchases++;
 	}
 }
 
