@@ -197,6 +197,11 @@ private:
 	CPanelAnimationVarAliasType( int, armor_icons_size, "armor_icons_size", "20", "proportional_height" );
 	CPanelAnimationVarAliasType( int, icons_xpos, "icons_xpos", "152", "proportional_xpos" );
 	CPanelAnimationVarAliasType( int, icons_margin, "icons_margin", "w8", "proportional_width" );
+	CPanelAnimationVarAliasType( int, skull_xpos, "skull_xpos", "w32", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, skull_ypos, "skull_ypos", "6", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, skull_wide, "skull_wide", "24", "proportional_width" );
+	CPanelAnimationVarAliasType( int, skull_tall, "skull_tall", "24", "proportional_height" );
+
 	CPanelAnimationVar( Color, m_clrMoney, "money_color", "204 204 204 255" );
 	CPanelAnimationVar( HFont, m_hMoneyFont, "money_font", "BuyMenuLoadoutMoneyFont" );
 };
