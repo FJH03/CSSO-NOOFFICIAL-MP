@@ -8,7 +8,6 @@
 #include "cbase.h"
 #include "cs_shareddefs.h"
 
-#if IRONSIGHT
 #include "weapon_csbase.h"
 #include "weapon_ironsightcontroller.h"
 
@@ -470,5 +469,3 @@ bool CIronSightController::Init( CWeaponCSBase *pWeaponToMonitor )
 	
 	return false;
 }
-
-#endif //IRONSIGHT

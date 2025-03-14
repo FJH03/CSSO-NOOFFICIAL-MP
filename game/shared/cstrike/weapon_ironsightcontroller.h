@@ -13,9 +13,6 @@
 
 #include "cs_shareddefs.h"
 
-#if IRONSIGHT
-
-
 #ifdef CLIENT_DLL
 	#define IRONSIGHT_ANGLE_AVERAGE_SIZE 8
 	#define IRONSIGHT_ANGLE_AVERAGE_DIVIDE ( 1.0f / IRONSIGHT_ANGLE_AVERAGE_SIZE )
@@ -108,9 +105,5 @@ private:
 #endif
 
 };
-
-
-
-#endif //IRONSIGHT
 
 #endif // WEAPON_IRONSIGHTCONTROLLER_H

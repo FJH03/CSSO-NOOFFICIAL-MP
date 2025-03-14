@@ -2087,13 +2087,11 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 			pRenderContext.SafeRelease();
 		}
 
-#if IRONSIGHT
 		if ( r_drawothermodels.GetInt() == 1 )
 		{
 			//apply the finished blur effect over the screen, while masking out the scope lens
 			ApplyIronSightScopeEffect( viewRender.x, viewRender.y, viewRender.width, viewRender.height, &m_CurrentView );
 		}
-#endif
 
 		// And here are the screen-space effects
 

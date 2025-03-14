@@ -237,9 +237,7 @@ void CPredictedViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& e
 		BaseClass::CalcViewModelView( owner, vecNewOrigin, vecNewAngles );
 	}
 
-#if IRONSIGHT
 	CalcIronsightView( eyePosition, eyeAngles );
-#endif
 
 #ifdef CLIENT_DLL
 	// bias the position of the viewmodel during observer camera interpolation
@@ -264,7 +262,6 @@ void CPredictedViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& e
 #endif //CLIENT_DLL
 }
 
-#if IRONSIGHT
 void CPredictedViewModel::CalcIronsightView( const Vector& eyePosition, const QAngle& eyeAngles )
 {
 	CWeaponCSBase* pWeapon = ( CWeaponCSBase* ) GetOwningWeapon();
@@ -294,4 +291,3 @@ void CPredictedViewModel::CalcIronsightView( const Vector& eyePosition, const QA
 		}
 	}
 }
-#endif

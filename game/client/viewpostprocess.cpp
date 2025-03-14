@@ -1685,7 +1685,6 @@ static void CenterScaleQuadUVs( Vector4D & quadUVs, const Vector2D & uvScale )
 	quadUVs.w		= uvMid.y + uvScale.y*uvRange.y;
 }
 
-#if IRONSIGHT
 void ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSetup )
 {
 	//the preparation stage returns true if following steps like rendering the scope stencil shape are necessary.
@@ -1702,7 +1701,6 @@ void ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSet
 		}
 	}
 }
-#endif
 
 typedef struct SPyroSide
 {

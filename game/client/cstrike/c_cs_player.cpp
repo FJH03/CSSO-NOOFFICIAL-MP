@@ -2098,7 +2098,6 @@ void C_CSPlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, f
 		}
 	}*/
 
-#if IRONSIGHT
 	CWeaponCSBase *pWeapon = GetActiveCSWeapon();
 	if (pWeapon)
 	{
@@ -2109,7 +2108,6 @@ void C_CSPlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, f
 			fov = pIronSightController->GetIronSightFOV(GetDefaultFOV(), true);
 		}
 	}
-#endif //IRONSIGHT
 }
 
 void C_CSPlayer::UpdateHostageCarryModels()
@@ -4475,7 +4473,6 @@ float C_CSPlayer::GetFOV( void )
 		}
 	}
 
-#if IRONSIGHT
 	CWeaponCSBase *pWeapon = GetActiveCSWeapon();
 	if ( pWeapon )
 	{
@@ -4486,7 +4483,6 @@ float C_CSPlayer::GetFOV( void )
 			flCurFOV = pIronSightController->GetIronSightFOV( GetDefaultFOV(), true );
 		}
 	}
-#endif //IRONSIGHT
 
 	if ( GetObserverInterpState() == OBSERVER_INTERP_TRAVELING )
 		flCurFOV = GetDefaultFOV();

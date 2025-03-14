@@ -172,9 +172,7 @@ SendPropTime( SENDINFO( m_flDoneSwitchingSilencer ) ),
 SendPropTime( SENDINFO( m_flPostponeFireReadyTime ) ),
 SendPropBool( SENDINFO( m_bStatTrak ) ),
 SendPropInt( SENDINFO( m_nOriginalOwnerIndex ) ),
-#if IRONSIGHT
 SendPropInt( SENDINFO( m_iIronSightMode ), 2, SPROP_UNSIGNED ),
-#endif //IRONSIGHT
 #else
 RecvPropInt( RECVINFO( m_weaponMode ) ),
 RecvPropFloat( RECVINFO( m_fAccuracyPenalty ) ),
@@ -188,9 +186,7 @@ RecvPropTime( RECVINFO( m_flDoneSwitchingSilencer ) ),
 RecvPropTime( RECVINFO( m_flPostponeFireReadyTime ) ),
 RecvPropBool( RECVINFO( m_bStatTrak ) ),
 RecvPropInt( RECVINFO( m_nOriginalOwnerIndex ) ),
-#if IRONSIGHT
 RecvPropInt( RECVINFO( m_iIronSightMode ) ),
-#endif //IRONSIGHT
 #endif
 END_NETWORK_TABLE()
 
@@ -204,9 +200,7 @@ BEGIN_PREDICTION_DATA( CWeaponCSBase )
 	DEFINE_PRED_FIELD( m_fLastShotTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flRecoilIndex, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flPostponeFireReadyTime, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
-#if IRONSIGHT
 	DEFINE_PRED_FIELD( m_iIronSightMode, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-#endif
 END_PREDICTION_DATA()
 #endif
 
@@ -342,11 +336,8 @@ CWeaponCSBase::CWeaponCSBase()
 
 CWeaponCSBase::~CWeaponCSBase()
 {
-
-#if IRONSIGHT
 	delete m_IronSightController;
 	m_IronSightController = NULL;
-#endif //IRONSIGHT
 }
 
 void CWeaponCSBase::ResetGunHeat()
@@ -836,13 +827,11 @@ void CWeaponCSBase::ItemPostFrame_ProcessIdleNoAction( CCSPlayer *pPlayer )
 		return;
 	}
 
-#if IRONSIGHT
 	UpdateIronSightController();
 	if ( m_iIronSightMode == IronSight_viewmodel_is_deploying && GetActivity() != GetDeployActivity() )
 	{
 		m_iIronSightMode = IronSight_should_approach_unsighted;
 	}
-#endif
 
 	WeaponIdle();
 }
@@ -1036,7 +1025,6 @@ void CWeaponCSBase::Precache( void )
 	// so moving it here from construct is actually a good solution, all
 	// those players with not working ironsights just had different problems...
 	// lost a week to understand that I was fixing what was working as intended >-<
-#if IRONSIGHT
 	m_iIronSightMode = IronSight_should_approach_unsighted;
 	m_IronSightController = NULL;
 	UpdateIronSightController();
@@ -1047,7 +1035,6 @@ void CWeaponCSBase::Precache( void )
 	if ( !IsErrorMaterial( dotMaterial ) )
 		dotMaterial->IncrementReferenceCount();
 #endif
-#endif //IRONSIGHT
 
 	extern void GenerateWeaponRecoilPattern( CSWeaponID id );
 	GenerateWeaponRecoilPattern( GetCSWeaponID() );
@@ -1088,9 +1075,7 @@ bool CWeaponCSBase::DefaultDeploy( char *szViewModel, char *szWeaponModel, int i
 
 	SetWeaponModelIndex( szWeaponModel );
 
-#if IRONSIGHT
 	m_iIronSightMode = IronSight_viewmodel_is_deploying;
-#endif //IRONSIGHT
 
 	// Note: only arms race (gun game) knives change their bodygroup to indicate their team.
 	if ( GetCSWeaponID() == WEAPON_KNIFE_GG )
@@ -1157,10 +1142,8 @@ bool CWeaponCSBase::Holster( CBaseCombatWeapon *pSwitchingTo )
 
 bool CWeaponCSBase::Deploy()
 {
-#if IRONSIGHT
 	if ( GetIronSightController() )
 		GetIronSightController()->SetState( IronSight_viewmodel_is_deploying );
-#endif //IRONSIGHT
 
 	CCSPlayer *pPlayer = GetPlayerOwner();
 
@@ -1343,11 +1326,8 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 
 	m_bReloadVisuallyComplete = false;
 
-#if IRONSIGHT
 	if ( GetIronSightController() )
 		GetIronSightController()->SetState( IronSight_weapon_is_dropped );
-#endif
-
 #endif
 }
 
@@ -1763,9 +1743,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 
 		BaseClass::OnDataChanged( type );
 
-#if IRONSIGHT
 		UpdateIronSightController();
-#endif //IRONSIGHT
 
 		if ( GetPredictable() && !ShouldPredict() )
 			ShutdownPredictable();
@@ -2461,9 +2439,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 		m_bSilencerOn = HasSilencer() ? true : false;
  		m_weaponMode = HasSilencer() ? Secondary_Mode : Primary_Mode;
 
-#if IRONSIGHT
 		UpdateIronSightController();
-#endif //IRONSIGHT
 
 #ifndef CLIENT_DLL
 		if ( mp_death_drop_gun.GetInt() == 0 && !IsA( WEAPON_C4 ) )
@@ -3012,9 +2988,7 @@ void CWeaponCSBase::OnPickedUp( CBaseCombatCharacter *pNewOwner )
 	SetRemoveable( false );
 #endif
 
-#if IRONSIGHT
 	UpdateIronSightController();
-#endif //IRONSIGHT
 }
 
 
@@ -3188,7 +3162,6 @@ void CWeaponCSBase::Recoil( CSWeaponMode weaponMode )
 	//lwss end
 }
 
-#if IRONSIGHT
 CIronSightController *CWeaponCSBase::GetIronSightController( void )
 {
 	if ( m_IronSightController && m_IronSightController->IsInitializedAndAvailable() )
@@ -3206,7 +3179,6 @@ void CWeaponCSBase::UpdateIronSightController()
 	if (m_IronSightController)
 		m_IronSightController->Init(this);
 }
-#endif
 
 int CWeaponCSBase::GetZoomFOV( int nZoomLevel ) const
  {

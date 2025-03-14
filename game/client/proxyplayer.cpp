@@ -435,7 +435,6 @@ void CStatTrakDigitProxy::OnBind( void *pC_BaseEntity )
 
 EXPOSE_INTERFACE( CStatTrakDigitProxy, IMaterialProxy, "StatTrakDigit" IMATERIAL_PROXY_INTERFACE_VERSION );
 
-#if IRONSIGHT
 //-----------------------------------------------------------------------------
 // IronSightAmount proxy
 //-----------------------------------------------------------------------------
@@ -496,7 +495,6 @@ void CIronSightAmountProxy::OnBind(void *pC_BaseEntity)
 }
 
 EXPOSE_INTERFACE( CIronSightAmountProxy, IMaterialProxy, "IronSightAmount" IMATERIAL_PROXY_INTERFACE_VERSION );
-#endif //IRONSIGHT
 
 //-----------------------------------------------------------------------------
 // StatTrakIllum proxy

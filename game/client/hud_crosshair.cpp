@@ -17,6 +17,8 @@
 #include "VGuiMatSurface/IMatSystemSurface.h"
 #include "client_virtualreality.h"
 #include "sourcevr/isourcevirtualreality.h"
+#include "weapon_csbase.h"
+#include "c_cs_player.h"
 
 #ifdef SIXENSE
 #include "sixense/in_sixense.h"
@@ -92,8 +94,7 @@ bool CHudCrosshair::ShouldDraw( void )
 	C_BaseCombatWeapon *pWeapon = pPlayer->GetActiveWeapon();
 	if ( pWeapon && !pWeapon->ShouldDrawCrosshair() )
 		return false;
-
-#if IRONSIGHT
+	
 	C_CSPlayer* pCSPlayer = C_CSPlayer::GetLocalCSPlayer();
 	CWeaponCSBase* pCSWeapon = pCSPlayer->GetActiveCSWeapon();
 	if ( pCSWeapon && pCSWeapon->GetIronSightController() )
@@ -101,7 +102,6 @@ bool CHudCrosshair::ShouldDraw( void )
 		if ( pCSWeapon->GetIronSightController()->ShouldHideCrossHair() )
 			return false;
 	}
-#endif
 
 #ifdef PORTAL
 	C_Portal_Player *portalPlayer = ToPortalPlayer(pPlayer);
@@ -268,15 +268,7 @@ void CHudCrosshair::Paint( void )
 		pWeapon->GetWeaponCrosshairScale( flWeaponScale );
 	}
 
-	int iScreenDiv = 1600;
-	if ( IsSteamDeck() )
-		iScreenDiv = 1440;
-
-	float flPlayerScale;
-	if ( !m_pCrosshair->bRenderUsingFont )
-		flPlayerScale = (ScreenHeight() / iScreenDiv) + 1;
-	else
-		flPlayerScale = 1.0f;
+	float flPlayerScale = 1.0f;
 #ifdef TF_CLIENT_DLL
 	Color clr( cl_crosshair_red.GetInt(), cl_crosshair_green.GetInt(), cl_crosshair_blue.GetInt(), 255 );
 	flPlayerScale = cl_crosshair_scale.GetFloat() / 32.0f;  // the player can change the scale in the options/multiplayer tab

@@ -14,9 +14,7 @@
 #include "cs_weapon_parse.h"
 #include "cs_shareddefs.h"
 
-#if IRONSIGHT
 #include "weapon_ironsightcontroller.h"
-#endif //IRONSIGHT
 
 
 #if defined( CLIENT_DLL )
@@ -378,12 +376,10 @@ private:
 
 public:
 
-#if IRONSIGHT
 	CIronSightController *GetIronSightController( void );
 	void				 UpdateIronSightController( void );
 	CIronSightController *m_IronSightController;
 	CNetworkVar( int, m_iIronSightMode );
-#endif //IRONSIGHT
 };
 
 extern ConVar weapon_accuracy_model;

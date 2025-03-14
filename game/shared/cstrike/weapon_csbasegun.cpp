@@ -577,14 +577,12 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 	}
 	else
 	{
-#if IRONSIGHT
 		CIronSightController* pIronSightController = GetIronSightController();
 		if ( pIronSightController )
 			// hacky but for some reason IsInIronSight() returns false server-side resulting in a wrong anim
 			//SendWeaponAnim( pIronSightController->IsInIronSight() ? ACT_VM_SECONDARYATTACK : ACT_VM_PRIMARYATTACK );
 			SendWeaponAnim( (weaponMode == Secondary_Mode) ? ACT_VM_SECONDARYATTACK : ACT_VM_PRIMARYATTACK );
 		else
-#endif
 			SendWeaponAnim( ACT_VM_PRIMARYATTACK );
 	}
 
@@ -608,13 +606,11 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 
 	DoFireEffects();
 
-#if IRONSIGHT
 #ifdef CLIENT_DLL
 	if ( GetIronSightController() )
 	{
 		GetIronSightController()->IncreaseDotBlur( RandomFloat( 0.22f, 0.28f ) );
 	}
-#endif
 #endif
 
 	SetWeaponIdleTime( gpGlobals->curtime + GetCSWpnData().m_flTimeToIdleAfterFire );
@@ -666,9 +662,7 @@ bool CWeaponCSBaseGun::Reload()
 	if ( !iResult )
 		return false;
 
-#if IRONSIGHT
 	m_iIronSightMode = IronSight_should_approach_unsighted;
-#endif //IRONSIGHT
 
 	pPlayer->SetAnimation( PLAYER_RELOAD );
 

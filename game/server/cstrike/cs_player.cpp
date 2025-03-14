@@ -6511,10 +6511,8 @@ void CCSPlayer::LookAtHeldWeapon( void )
 		return;
 	}
 
-#if IRONSIGHT
 	if ( pActiveWeapon->m_iIronSightMode == IronSight_should_approach_sighted )
 		return;
-#endif
 
 	CBaseViewModel *pViewModel = GetViewModel();
 	if ( pViewModel )
