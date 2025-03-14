@@ -1314,7 +1314,11 @@ void CCSBot::FeelerReflexAdjustment( Vector *goalPosition )
 	Vector from = feet + feelerOffset * lat;
 	Vector to = from + feelerLength * dir;
 
-	bool leftClear = IsWalkableTraceLineClear( from, to, WALK_THRU_DOORS | WALK_THRU_BREAKABLES );
+	const float hullSize = 10.0f;
+ 	Vector mins( -hullSize, -hullSize, 0.0f );
+ 	Vector maxs( hullSize, hullSize, HalfHumanHeight - feelerHeight );
+ 
+ 	bool leftClear = IsWalkableTraceHullClear( from, to, mins, maxs, WALK_THRU_DOORS | WALK_THRU_BREAKABLES );
 
 	// avoid ledges, too
 	// use 'from' so it doesn't interfere with legitimate gap jumping (its at our feet)
@@ -1331,15 +1335,15 @@ void CCSBot::FeelerReflexAdjustment( Vector *goalPosition )
 	if ( ( cv_bot_traceview.GetInt() == 1 && IsLocalPlayerWatchingMe() ) || cv_bot_traceview.GetInt() == 10 )
 	{
 		if (leftClear)
-			UTIL_DrawBeamPoints( from, to, 1, 0, 255, 0 );
+			NDebugOverlay::SweptBox( from, to, mins, maxs, vec3_angle, 0, 255, 0, 255, 0.1f );
 		else
-			UTIL_DrawBeamPoints( from, to, 1, 255, 0, 0 );
+			NDebugOverlay::SweptBox( from, to, mins, maxs, vec3_angle, 255, 0, 0, 255, 0.1f );
 	}
 
 	from = feet - feelerOffset * lat;
 	to = from + feelerLength * dir;
 
-	bool rightClear = IsWalkableTraceLineClear( from, to, WALK_THRU_DOORS | WALK_THRU_BREAKABLES );
+	bool rightClear = IsWalkableTraceHullClear( from, to, mins, maxs, WALK_THRU_DOORS | WALK_THRU_BREAKABLES );
 
 /*
 	// avoid ledges, too
@@ -1353,9 +1357,9 @@ void CCSBot::FeelerReflexAdjustment( Vector *goalPosition )
 	if ( ( cv_bot_traceview.GetInt() == 1 && IsLocalPlayerWatchingMe() ) || cv_bot_traceview.GetInt() == 10 )
 	{
 		if (rightClear)
-			UTIL_DrawBeamPoints( from, to, 1, 0, 255, 0 );
+			NDebugOverlay::SweptBox( from, to, mins, maxs, vec3_angle, 0, 255, 0, 255, 0.1f );
 		else
-			UTIL_DrawBeamPoints( from, to, 1, 255, 0, 0 );
+			NDebugOverlay::SweptBox( from, to, mins, maxs, vec3_angle, 255, 0, 0, 255, 0.1f );
 	}
 
 	const float avoidRange = (IsCrouching()) ? 150.0f : 300.0f;		// 50, 300
@@ -1937,6 +1941,8 @@ bool CCSBot::ComputePath( const Vector &goal, RouteType route )
 		BuildTrivialPath( pathEndPosition );
 		return true;
 	}
+
+	TheCSBots()->OnExpensiveBotOperation();
 
 	//
 	// Compute shortest path to goal

@@ -648,10 +648,8 @@ bool CCSPlayer::IsBotOrControllingBot()
 {
 	if ( IsBot() )
 		return true;
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( IsControllingBot() )
 		return true;
-#endif
 
 	return false;
 }

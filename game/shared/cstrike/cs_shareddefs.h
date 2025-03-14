@@ -47,9 +47,6 @@
 
 #define MAX_MODEL_STRING_SIZE 256
 
-// controllable bots functionality
-#define CS_CONTROLLABLE_BOTS_ENABLED 1
-
 // ironsight functionality
 #define IRONSIGHT 1
 

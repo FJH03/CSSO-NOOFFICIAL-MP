@@ -52,11 +52,9 @@ public:
 	int				GetNumMVPs( int iIndex );
 	bool			HasDefuser( int iIndex );
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	bool			IsControllingBot( int index );
 	int				GetControlledPlayer( int index );
 	int				GetControlledByPlayer( int index );
-#endif
 
 	const wchar_t*		GetDecoratedPlayerName( int name, OUT_Z_BYTECAP(bufflen) wchar_t* buffer, int bufflen, EDecoratedPlayerNameFlag_t flags );
 
@@ -88,11 +86,9 @@ protected:
 	int		m_iMVPs[ MAX_PLAYERS + 1 ];	 
 	bool	m_bHasDefuser[ MAX_PLAYERS + 1 ];
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	bool	m_bControllingBot[MAX_PLAYERS + 1];
 	int		m_iControlledPlayer[MAX_PLAYERS + 1];
 	int		m_iControlledByPlayer[MAX_PLAYERS + 1];
-#endif
 };
 
 C_CS_PlayerResource *GetCSResources( void );

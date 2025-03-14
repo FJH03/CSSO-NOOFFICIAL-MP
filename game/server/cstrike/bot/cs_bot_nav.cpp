@@ -231,6 +231,9 @@ void CCSBot::PushawayTouch( CBaseEntity *pOther )
  */
 void CCSBot::BreakablesCheck( void )
 {
+	if ( !TheCSBots()->AllowedToDoExpensiveBotOperationThisFrame() )
+ 		return;
+	
 #if DEBUG_BREAKABLES
 	/*
 	// Debug code to visually mark all breakables near us
@@ -369,6 +372,9 @@ void CCSBot::BreakablesCheck( void )
  */
 void CCSBot::DoorCheck( void )
 {
+	if ( !TheCSBots()->AllowedToDoExpensiveBotOperationThisFrame() )
+ 		return;
+
 	if ( IsAttacking() && !IsUsingKnife() )
 	{
 		// If we're attacking with a gun or nade, don't bother with doors.  If we're trying to
@@ -585,7 +591,7 @@ void CCSBot::MoveTowardsPosition( const Vector &pos )
 	// NOTE: We need to do this frequently to catch edges at the right time
 	// @todo Look ahead *along path* instead of straight line 
 	//
-	if ((m_lastKnownArea == NULL || !(m_lastKnownArea->GetAttributes() & NAV_MESH_NO_JUMP)) &&
+	if ((m_lastKnownArea == NULL || !(m_lastKnownArea->GetAttributes() & (NAV_MESH_NO_JUMP | NAV_MESH_STAIRS))) &&
 		!IsOnLadder())
 	{
 		float ground;

@@ -102,7 +102,8 @@ void CCSBot::OnAudibleEvent( IGameEvent *event, CBasePlayer *player, float range
 		m_noisePosition.y = newNoisePosition->y + RandomFloat( -errorRadius, errorRadius );
 
 		// note the *travel distance* to the noise
-		m_noiseTravelDistance = GetTravelDistanceToPlayer( (CCSPlayer *)player );
+		// EDIT: use straight line distance for now; the A* calc is really expensive
+		m_noiseTravelDistance = EyePosition().DistTo( player->EyePosition() );
 
 		// make sure noise position remains in the same area
 		m_noiseArea->GetClosestPointOnArea( m_noisePosition, &m_noisePosition );
@@ -164,6 +165,7 @@ void CCSBot::OnSmokeGrenadeDetonate( IGameEvent *event )
 	OnAudibleEvent( event, player, 1000.0f, PRIORITY_LOW, true ); // smokegrenade_detonate
 }
 
+
 //--------------------------------------------------------------------------------------------------------------
 void CCSBot::OnMolotovDetonate( IGameEvent *event )
 {
@@ -178,6 +180,7 @@ void CCSBot::OnMolotovDetonate( IGameEvent *event )
 	OnAudibleEvent( event, player, 99999.0f, PRIORITY_HIGH, true ); // molotov_detonate
 }
 
+
 //--------------------------------------------------------------------------------------------------------------
 void CCSBot::OnDecoyDetonate( IGameEvent *event )
 {
@@ -191,6 +194,7 @@ void CCSBot::OnDecoyDetonate( IGameEvent *event )
 
 	OnAudibleEvent( event, player, 99999.0f, PRIORITY_HIGH, true ); // decoy_detonate
 }
+
 
 //--------------------------------------------------------------------------------------------------------------
 void CCSBot::OnDecoyFiring( IGameEvent *event )
@@ -207,6 +211,7 @@ void CCSBot::OnDecoyFiring( IGameEvent *event )
 
 	OnAudibleEvent( event, thrower, 99999.0f, PRIORITY_HIGH, true, false, &decoySpot );
 }
+
 
 //--------------------------------------------------------------------------------------------------------------
 void CCSBot::OnGrenadeBounce( IGameEvent *event )

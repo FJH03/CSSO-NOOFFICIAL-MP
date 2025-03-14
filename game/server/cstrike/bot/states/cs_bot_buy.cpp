@@ -10,6 +10,7 @@
 #include "cbase.h"
 #include "cs_gamerules.h"
 #include "cs_bot.h"
+#include "fmtstr.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -18,6 +19,44 @@
 //--------------------------------------------------------------------------------------------------------------
 ConVar bot_loadout( "bot_loadout", "", FCVAR_CHEAT, "bots are given these items at round start" );
 ConVar bot_randombuy( "bot_randombuy", "0", FCVAR_CHEAT, "should bots ignore their prefered weapons and just buy weapons at random?" );
+ConVar sv_bot_buy_grenade_chance( "sv_bot_buy_grenade_chance", "33", FCVAR_GAMEDLL, "Chance bots will buy a grenade with leftover money (after prim, sec and armor). Input as percent (0-100.0)", true, 0.0f, true, 100.0f );
+
+ConVar sv_bot_buy_smoke_weight		( "sv_bot_buy_smoke_weight", "1", FCVAR_GAMEDLL, "Given a bot will buy a grenade, controls the odds of the grenade type. Proportional to all other sv_bot_buy_*_weight convars.", true, 0.0f, false, 0.0f );
+ConVar sv_bot_buy_flash_weight		( "sv_bot_buy_flash_weight", "1", FCVAR_GAMEDLL, "Given a bot will buy a grenade, controls the odds of the grenade type. Proportional to all other sv_bot_buy_*_weight convars.", true, 0.0f, false, 0.0f );
+ConVar sv_bot_buy_decoy_weight		( "sv_bot_buy_decoy_weight", "1", FCVAR_GAMEDLL, "Given a bot will buy a grenade, controls the odds of the grenade type. Proportional to all other sv_bot_buy_*_weight convars.", true, 0.0f, false, 0.0f );
+ConVar sv_bot_buy_molotov_weight	( "sv_bot_buy_molotov_weight", "1", FCVAR_GAMEDLL, "Given a bot will buy a grenade, controls the odds of the grenade type. Proportional to all other sv_bot_buy_*_weight convars.", true, 0.0f, false, 0.0f );
+ConVar sv_bot_buy_hegrenade_weight	( "sv_bot_buy_hegrenade_weight", "6", FCVAR_GAMEDLL, "Given a bot will buy a grenade, controls the odds of the grenade type. Proportional to all other sv_bot_buy_*_weight convars.", true, 0.0f, false, 0.0f );
+
+struct { const ConVar *cv; const char* szName; } g_GrenadeWeights[] =
+{
+	{ &sv_bot_buy_smoke_weight, "smokegrenade" },
+	{ &sv_bot_buy_flash_weight, "flashbang" },
+	{ &sv_bot_buy_decoy_weight, "decoy" },
+	{ &sv_bot_buy_molotov_weight, "molotov" },
+	{ &sv_bot_buy_hegrenade_weight, "hegrenade" },
+};
+
+// Pick a grenade for bots to buy based on set weights
+const char* Helper_PickBotGrenade()
+{
+	int iNumGrenades = ARRAYSIZE( g_GrenadeWeights );
+	float flGrenadeWeight = 0.0f;
+	for ( int i = 0; i < iNumGrenades; ++i )
+		flGrenadeWeight += g_GrenadeWeights[ i ].cv->GetFloat();
+
+	float flRand = RandomFloat( 0.0f + FLT_EPSILON , flGrenadeWeight );
+	float flAccumulator = 0.0f;
+	for ( int i = 0; i < iNumGrenades; ++i )
+	{
+		flAccumulator += g_GrenadeWeights[ i ].cv->GetFloat();
+		if ( flRand <= flAccumulator )
+		{
+			return  g_GrenadeWeights[ i ].szName;
+		}
+	}
+	
+	return NULL;
+}
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -112,7 +151,7 @@ void BuyState::OnEnter( CCSBot *me )
 
 	m_buyDefuseKit = false;
 
-	if (me->GetTeamNumber() == TEAM_CT)
+	if (me->GetTeamNumber() == TEAM_CT && !me->HasDefuser())
 	{
 		if (TheCSBots()->GetScenario() == CCSBotManager::SCENARIO_DEFUSE_BOMB)
 		{
@@ -130,7 +169,7 @@ void BuyState::OnEnter( CCSBot *me )
 
 	if (TheCSBots()->AllowGrenades())
 	{
-		m_buyGrenade = (RandomFloat( 0.0f, 100.0f ) < 33.3f) ? true : false;
+		m_buyGrenade = (RandomFloat( 0.0f, 100.0f ) < sv_bot_buy_grenade_chance.GetFloat() ) ? true : false;
 	}
 	else
 	{
@@ -591,66 +630,41 @@ void BuyState::OnUpdate( CCSBot *me )
 			// buy a grenade if we wish, and we don't already have one
 			if (m_buyGrenade && !me->HasGrenade())
 			{
-				float rnd = RandomFloat( 0, 100 );
+				const char *szGrenade = Helper_PickBotGrenade();
+				if ( szGrenade )
+					args.Tokenize( CFmtStr( "buy %s", szGrenade ).Access() );
 
-				if (UTIL_IsTeamAllBots( me->GetTeamNumber() ))
+				/*
+				if (rnd < 10)//10% chance
+				{
+					args.Tokenize( "buy smokegrenade" );
+				}
+				else if (rnd < 20)//10% chance
 				{
 					// only allow Flashbangs if everyone on the team is a bot (dont want to blind our friendly humans)
-					if (rnd < 10)
-					{
-						args.Tokenize( "buy smokegrenade" );
-						me->ClientCommand( args );	// smoke grenade
-					}
-					else if (rnd < 35)
+					if (UTIL_IsTeamAllBots( me->GetTeamNumber() ))
 					{
 						args.Tokenize( "buy flashbang" );
-						me->ClientCommand( args );	// flashbang
-					}
-					else if (rnd < 45)
-					{
-						args.Tokenize( "buy decoy" );
-						me->ClientCommand( args );	// decoy
-					}
-					else if (rnd < 65)
-					{
-						if ( me->GetTeamNumber() == TEAM_TERRORIST )
-							args.Tokenize( "buy molotov" );
-						else
-							args.Tokenize( "buy incgrenade" );
-						me->ClientCommand( args );	// molotov
 					}
 					else
 					{
 						args.Tokenize( "buy hegrenade" );
-						me->ClientCommand( args );	// he grenade
 					}
 				}
-				else
+				else if (rnd < 30)//10% chance
 				{
-					if (rnd < 10)
-					{
-						args.Tokenize( "buy smokegrenade" );	// smoke grenade
-						me->ClientCommand( args );
-					}
-					else if (rnd < 20)
-					{
-						args.Tokenize( "buy decoy" );	// decoy
-						me->ClientCommand( args );
-					}
-					else if ( rnd < 40 )
-					{
-						if ( me->GetTeamNumber() == TEAM_TERRORIST )
-							args.Tokenize( "buy molotov" );
-						else
-							args.Tokenize( "buy incgrenade" );
-						me->ClientCommand( args );	// molotov
-					}
-					else
-					{
-						args.Tokenize( "buy hegrenade" );	// he grenade
-						me->ClientCommand( args );
-					}
+					args.Tokenize( "buy decoy" );
 				}
+				else if (rnd < 40)//10% chance
+				{
+					args.Tokenize( "buy molotov" );
+				}
+				else//60%-70% chance (because of the flashbang case for full team of bots).
+				{
+					args.Tokenize( "buy hegrenade" );
+				}
+				*/
+				me->ClientCommand( args );
 			}
 
 			if (m_buyDefuseKit)

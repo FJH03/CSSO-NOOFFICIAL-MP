@@ -47,11 +47,9 @@ protected:
 	CNetworkArray( int, m_iMVPs, MAX_PLAYERS + 1 );
 	CNetworkArray( bool, m_bHasDefuser, MAX_PLAYERS + 1);
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	CNetworkArray( int, m_bControllingBot, MAX_PLAYERS + 1 );
 	CNetworkArray( int, m_iControlledPlayer, MAX_PLAYERS + 1 );
 	CNetworkArray( int, m_iControlledByPlayer, MAX_PLAYERS + 1 );
-#endif
 
 private:
 	bool m_foundGoalPositions;

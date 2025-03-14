@@ -156,6 +156,9 @@ void HuntState::OnUpdate( CCSBot *me )
 	// look around
 	me->UpdateLookAround();
 
+	if ( !TheCSBots()->AllowedToDoExpensiveBotOperationThisFrame() )
+ 		return;
+
 	// if we have reached our destination area, pick a new one
 	// if our path fails, pick a new one
 	if (me->GetLastKnownArea() == m_huntArea || me->UpdatePathMovement() != CCSBot::PROGRESSING)

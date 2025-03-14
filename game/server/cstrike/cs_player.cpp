@@ -449,12 +449,10 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropEHandle( SENDINFO( m_hRagdoll ) ),
 	SendPropInt( SENDINFO( m_cycleLatch ), 4, SPROP_UNSIGNED ),
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	SendPropBool( SENDINFO( m_bIsControllingBot ) ),
 	SendPropBool( SENDINFO( m_bHasControlledBotThisRound ) ),
 	SendPropBool( SENDINFO( m_bCanControlObservedBot ) ),
 	SendPropInt( SENDINFO( m_iControlledBotEntIndex ) ),
-#endif
 
 	SendPropInt( SENDINFO( m_nLastKillerIndex ), 8, SPROP_UNSIGNED ),
 
@@ -661,11 +659,9 @@ CCSPlayer::CCSPlayer()
 
 	m_fNextMolotovDamageSoundTime = 0.0f;
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	m_bIsControllingBot = false;
 	m_bCanControlObservedBot = false;
 	m_iControlledBotEntIndex = -1;
-#endif
 	m_botsControlled = 0;
 	m_iFootsteps = 0;
 	m_iMediumHealthKills = 0;
@@ -1640,10 +1636,8 @@ void CCSPlayer::GiveDefaultItems()
 	if ( State_Get() != STATE_ACTIVE )
 		return;
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( m_bIsControllingBot )
 		return;
-#endif
 
 	if ( CSGameRules()->IsBombDefuseMap() && mp_defuser_allocation.GetInt() == DefuserAllocation::All && GetTeamNumber() == TEAM_CT )
 	{
@@ -2371,12 +2365,10 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 		HintMessage( "#Hint_cannot_play_because_tk", true, true );
 	}
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( IsControllingBot() )	// Should this be here, or at the top?
 	{
 		ReleaseControlOfBot();
 	}
-#endif
 }
 
 // [menglish, tj] Update and check any one-off achievements based on the kill
@@ -4060,11 +4052,9 @@ void CCSPlayer::HintMessage( const char *pMessage, bool bDisplayIfDead, bool bOv
 
 void CCSPlayer::AddAccountAward( int reason )
 {
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	// we don't want to award a bot money that is being controlled by a player because the player is currently storing the bots money
 	if ( IsBot() && HasControlledByPlayer() )
 		return;
-#endif
 
 	AddAccountAward( reason, CSGameRules()->PlayerCashAwardValue( reason ) );
 }
@@ -6557,10 +6547,8 @@ void CCSPlayer::LookAtHeldWeapon( void )
 // can be closed...false if the menu should be displayed again
 bool CCSPlayer::HandleCommand_JoinTeam( int team )
 {
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( IsControllingBot() )
 		return false;
-#endif
 
 	CCSGameRules *mp = CSGameRules();
 
@@ -6761,10 +6749,8 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 
 bool CCSPlayer::HandleCommand_JoinClass( int iClass )
 {
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( IsControllingBot() )
 		return false;
-#endif
 
 	if( iClass == CS_CLASS_NONE )
 	{
@@ -7508,9 +7494,7 @@ void CCSPlayer::State_Enter_OBSERVER_MODE()
 
 void CCSPlayer::State_Leave_OBSERVER_MODE()
 {
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	m_bCanControlObservedBot = false;
-#endif
 }
 
 void CCSPlayer::State_PreThink_OBSERVER_MODE()
@@ -7525,7 +7509,6 @@ void CCSPlayer::State_PreThink_OBSERVER_MODE()
 	Assert( m_lifeState == LIFE_DEAD );
 	Assert( pl.deadflag );
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	m_bCanControlObservedBot = false;
 	if ( GetObserverMode() >= OBS_MODE_IN_EYE )
 	{
@@ -7535,7 +7518,6 @@ void CCSPlayer::State_PreThink_OBSERVER_MODE()
 			m_bCanControlObservedBot = true;
 		}
 	}
-#endif
 }
 
 void CCSPlayer::State_Enter_RESPAWN()
@@ -9866,7 +9848,6 @@ bool CCSPlayer::HasC4() const
 
 int CCSPlayer::GetNextObserverSearchStartPoint( bool bReverse )
 {
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	// Brock H. - TR - 05/05/09
 	// If the server is set up to allow controllable bots, 
 	// and if we don't already have a target, 
@@ -9885,7 +9866,6 @@ int CCSPlayer::GetNextObserverSearchStartPoint( bool bReverse )
 			}
 		}
 	}
-#endif
 
 	// If we are currently watching someone who is dead, they must have died while we were watching (since
 	// a dead guy is not a valid pick to start watching).  He was given his killer as an observer target
@@ -11325,7 +11305,6 @@ void CCSPlayer::ResetTRBombModeData( void )
 	m_bMadeFinalGunGameProgressiveKill = false;
 }
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 void CCSPlayer::SavePreControlData()
 {
 	m_PreControlData.m_iClass	= GetClass();
@@ -11719,7 +11698,6 @@ CCSBot* CCSPlayer::FindNearestControllableBot( bool bMustBeValidObserverTarget )
 
 	return pNearestBot;
 }
-#endif // CS_CONTROLLABLE_BOTS_ENABLED
 
 bool CCSPlayer::CanHearAndReadChatFrom( CBasePlayer *pPlayer )
 {
@@ -11743,7 +11721,6 @@ void CCSPlayer::ObserverUse( bool bIsPressed )
 	if ( !bIsPressed )
 		return;
 	
-#if CS_CONTROLLABLE_BOTS_ENABLED
  	CBasePlayer * target = ToBasePlayer( GetObserverTarget() );
  
  	if ( target && target->IsBot() )
@@ -11781,7 +11758,6 @@ void CCSPlayer::ObserverUse( bool bIsPressed )
  			return;
  		}
  	}
-#endif
 	
 	BaseClass::ObserverUse( bIsPressed );
 
@@ -11789,7 +11765,6 @@ void CCSPlayer::ObserverUse( bool bIsPressed )
 
 void CCSPlayer::IncrementFragCount( int nCount )
 {
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	// calculate frag count properly for a bot-controlled player
 	if ( IsControllingBot() )
 	{
@@ -11800,7 +11775,6 @@ void CCSPlayer::IncrementFragCount( int nCount )
 		}
 		return;
 	}
-#endif
 
 	if ( nCount == -1 )
 	{
@@ -11813,7 +11787,6 @@ void CCSPlayer::IncrementFragCount( int nCount )
 
 void CCSPlayer::IncrementDeathCount( int nCount )
 {
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	// calculate death count properly for a bot-controlled player
 	if ( IsControllingBot() )
 	{
@@ -11824,7 +11797,6 @@ void CCSPlayer::IncrementDeathCount( int nCount )
 		}
 		return;
 	}
-#endif
 
 	m_iDeaths += nCount;
 	pl.deaths = m_iDeaths;
@@ -11832,7 +11804,6 @@ void CCSPlayer::IncrementDeathCount( int nCount )
 
 void CCSPlayer::IncrementAssistsCount( int nCount )
 {
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	// calculate assist count properly for a bot-controlled player
 	if ( IsControllingBot() )
 	{
@@ -11843,7 +11814,6 @@ void CCSPlayer::IncrementAssistsCount( int nCount )
 		}
 		return;
 	}
-#endif
 
 	m_iAssists += nCount;
 	//pl.assists = m_iAssists;

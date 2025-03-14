@@ -1574,17 +1574,13 @@ void CCSGameStats::TrackKillStats( CCSPlayer *pAttacker, CCSPlayer *pVictim )
     PlayerStats_t &statsAttacker = m_aPlayerStats[iPlayerIndexAttacker];
 	PlayerStats_t &statsVictim = m_aPlayerStats[iPlayerIndexVictim];
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( !pVictim->IsControllingBot() )
-#endif
 	{
 	   statsVictim.statsKills.iNumKilledBy[iPlayerIndexAttacker]++;
 		statsVictim.statsKills.iNumKilledByUnanswered[iPlayerIndexAttacker]++;
 	}
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( !pAttacker->IsControllingBot() )
-#endif
 	{
 		statsAttacker.statsKills.iNumKilled[iPlayerIndexVictim]++;
 		statsAttacker.statsKills.iNumKilledByUnanswered[iPlayerIndexVictim] = 0;
@@ -1629,31 +1625,19 @@ void CCSGameStats::CalcDominationAndRevenge( CCSPlayer *pAttacker, CCSPlayer *pV
 		// this is the Nth unanswered kill between killer and victim, killer is now dominating victim
 		*piDeathFlags |= ( CS_DEATH_DOMINATION );
 	}
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	else if ( pVictim->IsPlayerDominated( pAttacker->entindex() ) && !pAttacker->IsControllingBot() )
-#else
-	else if ( pVictim->IsPlayerDominated( pAttacker->entindex() ) )
-#endif
 	{
 		// the killer killed someone who was dominating him, gains revenge
 		*piDeathFlags |= ( CS_DEATH_REVENGE );
 	}
 
     //Check the overkill on 1 player achievement
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( !pAttacker->IsControllingBot() && iKillsUnanswered == CS_KILLS_FOR_DOMINATION + AchievementConsts::ExtendedDomination_AdditionalKills )
-#else
-	if ( iKillsUnanswered == CS_KILLS_FOR_DOMINATION + AchievementConsts::ExtendedDomination_AdditionalKills )
-#endif
     {
         pAttacker->AwardAchievement(CSExtendedDomination);
     }
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( !pAttacker->IsControllingBot() && iKillsUnanswered == CS_KILLS_FOR_DOMINATION )
-#else
-	if ( iKillsUnanswered == CS_KILLS_FOR_DOMINATION )
-#endif
     {			
         //this is the Nth unanswered kill between killer and victim, killer is now dominating victim        
         //set victim to be dominated by killer
@@ -1678,11 +1662,7 @@ void CCSGameStats::CalcDominationAndRevenge( CCSPlayer *pAttacker, CCSPlayer *pV
         // record stats
         Event_PlayerDominatedOther( pAttacker, pVictim );
     }
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	else if ( pVictim->IsPlayerDominated( pAttacker->entindex() ) && !pAttacker->IsControllingBot() )
-#else
-	else if ( pVictim->IsPlayerDominated( pAttacker->entindex() ) )
-#endif
     {
         // the killer killed someone who was dominating him, gains revenge        
         // set victim to no longer be dominating the killer

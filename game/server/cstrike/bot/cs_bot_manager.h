@@ -19,6 +19,7 @@
 #include "cs_player.h"
 
 extern ConVar friendlyfire;
+extern ConVar throttle_expensive_ai;
 
 class CBasePlayerWeapon;
 
@@ -294,6 +295,11 @@ public:
 	bool BotAddCommand( int team, bool isFromConsole = false, const char *profileName = NULL, CSWeaponType weaponType = WEAPONTYPE_UNKNOWN, BotDifficultyType difficulty = NUM_DIFFICULTY_LEVELS );	///< process the "bot_add" console command
 	bool BotPlaceCommand( uint nTeamMask = 0xFFFFFFFF ); //Moves a bot at the location under the cursor.  For perf and lighting testing.
 
+	// Called to mark that an expensive operation has happened this frame, used for budgeting/throttling AI
+	void OnExpensiveBotOperation() { m_nNumExpensiveOperationsThisFrame++; }
+	// Query to see if we have exceeded our per-frame budget for "expensive" AI operations
+	bool AllowedToDoExpensiveBotOperationThisFrame() { return !throttle_expensive_ai.GetBool() || m_nNumExpensiveOperationsThisFrame < 1; }
+
 private:
 	enum SkillType { LOW, AVERAGE, HIGH, RANDOM };
 
@@ -324,6 +330,8 @@ private:
 	float m_roundStartTimestamp;							///< the time when the current round began
 
 	bool m_isDefenseRushing;								///< whether defensive team is rushing this round or not
+
+	int m_nNumExpensiveOperationsThisFrame;
 
 	// Event Handlers --------------------------------------------------------------------------------------------
 	DECLARE_CSBOTMANAGER_EVENT_LISTENER( PlayerFootstep,		player_footstep )

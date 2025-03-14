@@ -695,7 +695,6 @@ public:
 
 	bool	IsBotOrControllingBot();
 	
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	bool IsControllingBot()							const { return m_bIsControllingBot; }
 	bool CanControlObservedBot()					const { return m_bCanControlObservedBot; }
 
@@ -708,7 +707,6 @@ private:
 	int			m_iControlledBotEntIndex;
 
 	CNetworkVar( bool, m_bHasControlledBotThisRound );
-#endif
 public:
 	Vector m_vecLastAliveLocalVelocity;
 

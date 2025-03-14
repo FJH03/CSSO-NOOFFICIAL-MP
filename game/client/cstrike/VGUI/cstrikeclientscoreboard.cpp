@@ -839,11 +839,9 @@ void CCSClientScoreBoardDialog::UpdateTeamPlayerDisplay( TeamDisplayInfo& teamDi
 		return;
 	int iLocalPlayerIndex = GetLocalPlayerIndex();
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	C_CSPlayer* pLocalPlayer = ToCSPlayer( UTIL_PlayerByIndex( iLocalPlayerIndex ) );
 	if ( pLocalPlayer->IsControllingBot() )
 		iLocalPlayerIndex = pLocalPlayer->GetControlledBotIndex();
-#endif
 
 	int maxTeamSize = MAX(m_teamDisplayT.playerScores.Count(), m_teamDisplayCT.playerScores.Count());
 
@@ -883,12 +881,12 @@ void CCSClientScoreBoardDialog::UpdateTeamPlayerDisplay( TeamDisplayInfo& teamDi
 // 			UTIL_MakeSafeName( oldName, newName, bufsize );
 
 			bool isAlive = cs_PR->IsAlive( playerIndex );
-#if CS_CONTROLLABLE_BOTS_ENABLED
+
 			if ( cs_PR->GetControlledByPlayer( playerIndex ) > 0 )
 				isAlive = true;
 			if ( cs_PR->GetControlledPlayer( playerIndex ) > 0 )
 				isAlive = false;
-#endif
+
 			Color fgColor = ( isAlive ? teamDisplay.playerDataColor : m_DeadPlayerDataColor );
 			Color fgClanColor = ( isAlive ? teamDisplay.playerClanColor : m_DeadPlayerClanColor );
 
@@ -1434,12 +1432,11 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, PlayerScore
 
 	bool isAlive = g_PR->IsAlive( playerIndex );
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( cs_PR->GetControlledByPlayer( playerIndex ) > 0 )
 		isAlive = true;
 	if ( cs_PR->GetControlledPlayer( playerIndex ) > 0 )
 		isAlive = false;
-#endif
+
 	if ( !isAlive )
 	{
 		playerScoreInfo.szStatus = "../hud/scoreboard_dead";
@@ -1458,12 +1455,11 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, PlayerScore
 	{
 		bool isAlive = g_PR->IsAlive( playerIndex );
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 		if ( cs_PR->GetControlledByPlayer( playerIndex ) > 0 )
 			isAlive = true;
 		if ( cs_PR->GetControlledPlayer( playerIndex ) > 0 )
 			isAlive = false;
-#endif
+
 		if ( isAlive )
 		{
 			playerScoreInfo.szStatus = "../hud/scoreboard_nemesis";
@@ -1478,12 +1474,11 @@ bool CCSClientScoreBoardDialog::GetPlayerScoreInfo( int playerIndex, PlayerScore
 	{
 		bool isAlive = g_PR->IsAlive( playerIndex );
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 		if ( cs_PR->GetControlledByPlayer( playerIndex ) > 0 )
 			isAlive = true;
 		if ( cs_PR->GetControlledPlayer( playerIndex ) > 0 )
 			isAlive = false;
-#endif
+
 		if ( isAlive )
 		{
 			playerScoreInfo.szStatus = "../hud/scoreboard_dominated";
@@ -1638,11 +1633,9 @@ void CCSClientScoreBoardDialog::OnThink()
 bool CCSClientScoreBoardDialog::ForceLocalPlayerVisible( TeamDisplayInfo& teamDisplay )
 {
 	int iLocalPlayerIndex = GetLocalPlayerIndex();
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	C_CSPlayer* pLocalPlayer = ToCSPlayer( UTIL_PlayerByIndex( iLocalPlayerIndex ) );
 	if ( pLocalPlayer->IsControllingBot() )
 		iLocalPlayerIndex = pLocalPlayer->GetControlledBotIndex();
-#endif
 
 	// Look for the local player in the non-visible portion of the member list
 	for (int i = teamDisplay.maxPlayersVisible; i < teamDisplay.playerScores.Count(); ++i)

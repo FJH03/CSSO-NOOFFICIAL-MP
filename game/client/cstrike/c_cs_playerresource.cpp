@@ -37,11 +37,9 @@ IMPLEMENT_CLIENTCLASS_DT(C_CS_PlayerResource, DT_CSPlayerResource, CCSPlayerReso
 	RecvPropArray3( RECVINFO_ARRAY(m_bPlayerSpotted), RecvPropInt( RECVINFO(m_bPlayerSpotted[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_iMVPs), RecvPropInt( RECVINFO(m_iMVPs[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_bHasDefuser), RecvPropInt( RECVINFO(m_bHasDefuser[0]))),
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	RecvPropArray3( RECVINFO_ARRAY(m_bControllingBot), RecvPropInt( RECVINFO(m_bControllingBot[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_iControlledPlayer), RecvPropInt( RECVINFO(m_iControlledPlayer[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_iControlledByPlayer), RecvPropInt( RECVINFO(m_iControlledByPlayer[0]))),
-#endif
 	RecvPropArray3( RECVINFO_ARRAY(m_szClan), RecvPropString( RECVINFO(m_szClan[0]))),
 END_RECV_TABLE()
  
@@ -71,7 +69,6 @@ C_CS_PlayerResource::~C_CS_PlayerResource()
 
 bool C_CS_PlayerResource::HasC4(int iIndex )
 {
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( GetControlledByPlayer( iIndex ) > 0 )
 	{
 		return m_iPlayerC4 == GetControlledByPlayer( iIndex );
@@ -81,7 +78,7 @@ bool C_CS_PlayerResource::HasC4(int iIndex )
 	{
 		return false;
 	}
-#endif
+
 	return m_iPlayerC4 == iIndex;
 }
 
@@ -205,7 +202,6 @@ const char *C_CS_PlayerResource::GetClanTag( int iIndex )
 	return m_szClan[iIndex];
 }
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 bool C_CS_PlayerResource::IsControllingBot( int index )
 {
 	return m_bControllingBot[index];
@@ -220,7 +216,6 @@ int C_CS_PlayerResource::GetControlledByPlayer( int index )
 {
 	return m_iControlledByPlayer[index];
 }
-#endif
 
 ConVar cl_add_bot_prefix( "cl_add_bot_prefix", "1", FCVAR_ARCHIVE, "Whether to add a BOT prefix to bot names or not.", true, 0, true, 1 );
 const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* buffer, int buffsize, EDecoratedPlayerNameFlag_t flags )
@@ -321,7 +316,6 @@ bool C_CS_PlayerResource::HasDefuser( int iIndex )
 	if ( !IsConnected( iIndex ) )
 		return false;
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( GetControlledByPlayer( iIndex ) > 0 )
 	{
 		return m_bHasDefuser[GetControlledByPlayer( iIndex )];
@@ -331,7 +325,6 @@ bool C_CS_PlayerResource::HasDefuser( int iIndex )
 	{
 		return false;
 	}
-#endif
 
 	return m_bHasDefuser[iIndex];
 } 

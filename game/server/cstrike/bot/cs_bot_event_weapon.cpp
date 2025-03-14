@@ -29,7 +29,7 @@ void CCSBot::OnWeaponFire( IGameEvent *event )
 
 	// for knife fighting - if our victim is attacking or reloading, rush him
 	/// @todo Propagate events into active state
-	if (GetEnemy() == player && IsUsingKnife())
+	if (GetBotEnemy() == player && IsUsingKnife())
 	{
 		ForceRun( 5.0f );
 	}
@@ -41,12 +41,19 @@ void CCSBot::OnWeaponFire( IGameEvent *event )
 
 	/// @todo Check weapon type (knives are pretty quiet)
 	/// @todo Use actual volume, account for silencers, etc.
-	CWeaponCSBase *weapon = (CWeaponCSBase *)((player)?player->GetActiveWeapon():NULL);
 
-	if (weapon == NULL)
+	// [mlowrance] use the weapon as posted in the event message
+	int iWeaponID = -1;
+	const char *weaponName = event->GetString( "weapon" );
+	if ( weaponName )
+	{
+		iWeaponID = AliasToWeaponID( weaponName );
+	}
+
+	if ( iWeaponID == -1 )
 		return;
 
-	switch( weapon->GetWeaponID() )
+	switch ( iWeaponID )
 	{
 		// silent "firing"
 		case WEAPON_HEGRENADE:
@@ -62,37 +69,8 @@ void CCSBot::OnWeaponFire( IGameEvent *event )
 		case WEAPON_KNIFE:
 		case WEAPON_KNIFE_T:
 		case WEAPON_KNIFE_GG:
-		case WEAPON_MP5SD:
 			range = ShortRange;
 			break;
-
-		// M4A1 - check for silencer
-		case WEAPON_M4A1:
-		{					
-			if (weapon->IsSilenced())
-			{
-				range = ShortRange;
-			}
-			else
-			{
-				range = NormalRange;
-			}
-			break;
-		}
-
-		// USP - check for silencer
-		case WEAPON_USP:
-		{
-			if (weapon->IsSilenced())
-			{
-				range = ShortRange;
-			}
-			else
-			{
-				range = NormalRange;
-			}
-			break;
-		}
 
 		// loud
 		case WEAPON_AWP:
@@ -101,7 +79,14 @@ void CCSBot::OnWeaponFire( IGameEvent *event )
 
 		// normal
 		default:
-			range = NormalRange;
+			if ( event->GetBool( "silenced" ) )
+			{
+				range = ShortRange;
+			}
+			else
+			{
+				range = NormalRange;
+			}
 			break;
 	}
 
@@ -122,7 +107,7 @@ void CCSBot::OnWeaponFireOnEmpty( IGameEvent *event )
 
 	// for knife fighting - if our victim is attacking or reloading, rush him
 	/// @todo Propagate events into active state
-	if (GetEnemy() == player && IsUsingKnife())
+	if (GetBotEnemy() == player && IsUsingKnife())
 	{
 		ForceRun( 5.0f );
 	}
@@ -144,7 +129,7 @@ void CCSBot::OnWeaponReload( IGameEvent *event )
 
 	// for knife fighting - if our victim is attacking or reloading, rush him
 	/// @todo Propagate events into active state
-	if (GetEnemy() == player && IsUsingKnife())
+	if (GetBotEnemy() == player && IsUsingKnife())
 	{
 		ForceRun( 5.0f );
 	}
@@ -166,6 +151,5 @@ void CCSBot::OnWeaponZoom( IGameEvent *event )
 
 	OnAudibleEvent( event, player, 1100.0f, PRIORITY_LOW, false ); // weapon_zoom
 }
-
 
 

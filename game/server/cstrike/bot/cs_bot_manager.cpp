@@ -43,6 +43,8 @@ int UTIL_CSSBotsInGame( void );
 ConVar bot_join_delay( "bot_join_delay", "0", FCVAR_GAMEDLL, "Prevents bots from joining the server for this many seconds after a map change." );
 ConVar bot_join_in_warmup( "bot_join_in_warmup", "1", FCVAR_GAMEDLL, "Prevents bots from joining the server while warmup phase is active." );
 
+ConVar throttle_expensive_ai( "throttle_expensive_ai", IsGameConsole() ? "1" : "0" );
+
 /**
  * Determine whether bots can be used or not
  */
@@ -123,6 +125,8 @@ CCSBotManager::CCSBotManager()
 
 	TheBotPhrases = new BotPhraseManager;
 	TheBotProfiles = new BotProfileManager;
+
+	m_nNumExpensiveOperationsThisFrame = 0;
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -248,6 +252,11 @@ void CCSBotManager::EnableEventListeners( bool enable )
  */
 void CCSBotManager::StartFrame( void )
 {
+	m_nNumExpensiveOperationsThisFrame = 0;
+
+	if ( engine->IsPaused() )
+		return;
+
 	if ( !AreBotsAllowed() )
 	{
 		EnableEventListeners( false );
@@ -257,7 +266,11 @@ void CCSBotManager::StartFrame( void )
 	// EXTEND
 	CBotManager::StartFrame();
 
-	MaintainBotQuota();
+	if ( !CSGameRules()->IsSwitchingTeamsAtRoundReset() )
+	{
+		// Maintain the bot quota only if the game is not currently switching teams at halftime
+		MaintainBotQuota();
+	}
 	EnableEventListeners( UTIL_CSSBotsInGame() > 0 );
 
 	// debug zone extent visualization
@@ -692,7 +705,7 @@ private:
 };
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_kill, "bot_kill <all> <t|ct> <type> <difficulty> <name> - Kills a specific bot, or all bots, matching the given criteria.", FCVAR_GAMEDLL )
+CON_COMMAND_F( bot_kill, "bot_kill <all> <t|ct> <type> <difficulty> <name> - Kills a specific bot, or all bots, matching the given criteria.", FCVAR_GAMEDLL | FCVAR_CHEAT )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -752,7 +765,7 @@ CON_COMMAND_F( bot_kick, "bot_kick <all> <t|ct> <type> <difficulty> <name> - Kic
 	for ( int i=0; i<collector.m_bots.Count(); ++i )
 	{
 		CCSBot *bot = collector.m_bots[i];
-		engine->ServerCommand( UTIL_VarArgs( "kick \"%s\"\n", bot->GetPlayerName() ) );
+		engine->ServerCommand( UTIL_VarArgs( "kickid %d\n", engine->GetPlayerUserId( bot->edict() ) ) );
 		if ( !all )
 		{
 			// adjust bot quota so kicked bot is not immediately added back in
@@ -838,39 +851,52 @@ CON_COMMAND_F( bot_all_weapons, "Allows the bots to use all weapons", FCVAR_GAME
 	cv_bot_allow_snipers.SetValue( 1 );
 }
 
+//--------------------------------------------------------------------------------------------------------------
+static void BotGotoArea( CNavArea *pArea )
+{
+	if ( !pArea )
+		return;
+
+	for ( int i = 1; i <= gpGlobals->maxClients; ++i )
+	{
+		CBasePlayer *player = static_cast<CBasePlayer *>( UTIL_PlayerByIndex( i ) );
+
+		if (player == NULL)
+			continue;
+
+		if (player->IsBot())
+		{
+			CCSBot *bot = dynamic_cast<CCSBot *>( player );
+
+			if ( bot )
+			{
+				bot->MoveTo( pArea->GetCenter(), FASTEST_ROUTE );
+			}
+
+			break;
+		}
+	}
+}
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_goto_mark, "Sends a bot to the selected nav area (useful for testing navigation meshes)", FCVAR_GAMEDLL | FCVAR_CHEAT )
+CON_COMMAND_F( bot_goto_mark, "Sends a bot to the marked nav area (useful for testing navigation meshes)", FCVAR_GAMEDLL | FCVAR_CHEAT )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
 
 	// tell the first bot we find to go to our marked area
-	CNavArea *area = TheNavMesh->GetMarkedArea();
-	if (area)
-	{
-		for ( int i = 1; i <= gpGlobals->maxClients; ++i )
-		{
-			CBasePlayer *player = static_cast<CBasePlayer *>( UTIL_PlayerByIndex( i ) );
-
-			if (player == NULL)
-				continue;
-	
-			if (player->IsBot())
-			{
-				CCSBot *bot = dynamic_cast<CCSBot *>( player );
-
-				if ( bot )
-				{
-					bot->MoveTo( area->GetCenter(), FASTEST_ROUTE );
-				}
-
-				break;
-			}
-		}
-	}
+	BotGotoArea( TheNavMesh->GetMarkedArea() );
 }
 
+//--------------------------------------------------------------------------------------------------------------
+CON_COMMAND_F( bot_goto_selected, "Sends a bot to the selected nav area (useful for testing navigation meshes)", FCVAR_GAMEDLL | FCVAR_CHEAT )
+{
+	if ( !UTIL_IsCommandIssuedByServerAdmin() )
+		return;
+
+	// tell the first bot we find to go to our selected area
+	BotGotoArea( TheNavMesh->GetSelectedArea() );
+}
 
 //--------------------------------------------------------------------------------------------------------------
 #if 0
@@ -1194,7 +1220,7 @@ bool UTIL_CSSKickBotFromTeam( int kickTeam )
 		if (!player->IsAlive() && player->GetTeamNumber() == kickTeam)
 		{
 			// its a bot on the right team - kick it
-			engine->ServerCommand( UTIL_VarArgs( "kick \"%s\"\n", player->GetPlayerName() ) );
+			engine->ServerCommand( UTIL_VarArgs( "kickid %d\n", engine->GetPlayerUserId( player->edict() ) ) );
 
 			return true;
 		}
@@ -1211,7 +1237,7 @@ bool UTIL_CSSKickBotFromTeam( int kickTeam )
 		if (player->GetTeamNumber() == kickTeam)
 		{
 			// its a bot on the right team - kick it
-			engine->ServerCommand( UTIL_VarArgs( "kick \"%s\"\n", player->GetPlayerName() ) );
+			engine->ServerCommand( UTIL_VarArgs( "kickid %d\n", engine->GetPlayerUserId( player->edict() ) ) );
 
 			return true;
 		}

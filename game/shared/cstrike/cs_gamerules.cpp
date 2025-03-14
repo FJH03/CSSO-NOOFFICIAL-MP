@@ -1374,7 +1374,6 @@ ConVar snd_music_selection(
 		return iCount;
 	}
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	// DK TODO: Make a similar method run AFTER all loops of this to look for orphaned bots that think they are still player controlled
     class RevertBotsFunctor
     {
@@ -1394,7 +1393,6 @@ ConVar snd_music_selection(
             return true;
         }
     };
-#endif
 
     CCSMatch::CCSMatch()
     {
@@ -3545,10 +3543,8 @@ ConVar snd_music_selection(
 		m_iNextCTSpawnPoint = 0;
 		m_iNextTerroristSpawnPoint = 0;
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 		RevertBotsFunctor revertBots;
 		ForEachPlayer( revertBots );
-#endif
 
 		// [tj] Notify players that the round is about to be reset
         for ( int clientIndex = 1; clientIndex <= gpGlobals->maxClients; clientIndex++ )

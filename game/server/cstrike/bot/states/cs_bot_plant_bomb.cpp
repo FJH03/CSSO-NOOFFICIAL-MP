@@ -9,6 +9,7 @@
 
 #include "cbase.h"
 #include "cs_bot.h"
+#include "weapon_c4.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -39,6 +40,9 @@ void PlantBombState::OnEnter( CCSBot *me )
  */
 void PlantBombState::OnUpdate( CCSBot *me )
 {
+	// can't be stuck while planting
+	me->ResetStuckMonitor();
+
 	CBaseCombatWeapon *gun = me->GetActiveWeapon();
 	bool holdingC4 = false;
 	if (gun)
@@ -49,9 +53,21 @@ void PlantBombState::OnUpdate( CCSBot *me )
 
 	// if we aren't holding the C4, grab it, otherwise plant it
 	if (holdingC4)
+	{
 		me->PrimaryAttack();
+
+		CC4 *pC4 = dynamic_cast< CC4 * >( gun );
+		if ( pC4 && !pC4->m_bStartedArming && gpGlobals->curtime - me->GetStateTimestamp() > 2.0f )
+		{
+			// can't plant here for some reason - try another spot
+			me->Idle();
+			return;
+		}
+	}
 	else
+	{
 		me->SelectItem( "weapon_c4" );
+	}
 
 	// if we no longer have the C4, we've successfully planted
 	if (!me->HasC4())
@@ -64,7 +80,10 @@ void PlantBombState::OnUpdate( CCSBot *me )
 	// if we time out, it's because we slipped into a non-plantable area
 	const float timeout = 5.0f;
 	if (gpGlobals->curtime - me->GetStateTimestamp() > timeout)
+	{
+		// find a new spot
 		me->Idle();
+	}
 }
 
 //--------------------------------------------------------------------------------------------------------------

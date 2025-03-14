@@ -78,9 +78,7 @@ ConVar cv_bot_dont_shoot( "bot_dont_shoot", "0", FCVAR_REPLICATED | FCVAR_CHEAT,
 ConVar cv_bot_eco_limit( "bot_eco_limit", "2000", FCVAR_REPLICATED, "If nonzero, bots will not buy if their money falls below this amount." );
 ConVar cv_bot_auto_follow( "bot_auto_follow", "0", FCVAR_REPLICATED, "If nonzero, bots with high co-op may automatically follow a nearby human player." );
 ConVar cv_bot_flipout( "bot_flipout", "0", FCVAR_REPLICATED | FCVAR_CHEAT, "If nonzero, bots use no CPU for AI. Instead, they run around randomly." );
-#if CS_CONTROLLABLE_BOTS_ENABLED
 ConVar cv_bot_controllable( "bot_controllable", "1", FCVAR_REPLICATED, "Determines whether bots can be controlled by players" );
-#endif
 ConVar cv_bot_faction_t( "bot_faction_t", "", FCVAR_REPLICATED, "Determines which faction bots playing as Ts use. Leave blank for random faction.\n 1 - phoenix\n 2 - leet\n 3 - separatist\n 4 - balkan\n 5 - professional\n 6 - anarchist\n 7 - pirate", true, 0, true, 7 );
 ConVar cv_bot_faction_ct( "bot_faction_ct", "", FCVAR_REPLICATED, "Determines which faction bots playing as CTs use. Leave blank for random faction.\n 1 - st6\n 2 - gsg9\n 3 - sas\n 4 - gign\n 5 - fbi\n 6 - idf\n 7 - swat", true, 0, true, 7 );
 ConVar cv_bot_chatter_friendlyfire_from_bots( "bot_chatter_friendlyfire_from_bots", "1", FCVAR_REPLICATED, "Determines whetever the bots will say anything about other bots team-killing or shooting friends." );
@@ -243,18 +241,6 @@ void CCSBot::ResetValues( void )
 	m_nearbyFriendCount = 0;
 	m_closestVisibleFriend = NULL;
 	m_closestVisibleHumanFriend = NULL;
-
-	for( int w=0; w<MAX_PLAYERS; ++w )
-	{
-		m_watchInfo[w].timestamp = 0.0f;
-		m_watchInfo[w].isEnemy = false;
-
-		m_playerTravelDistance[ w ] = -1.0f;
-	}
-
-	// randomly offset each bot's timer to spread computation out
-	m_updateTravelDistanceTimer.Start( RandomFloat( 0.0f, 0.9f ) );
-	m_travelDistancePhase = 0;
 
 	m_isEnemyVisible = false;
 	m_visibleEnemyParts = NONE;

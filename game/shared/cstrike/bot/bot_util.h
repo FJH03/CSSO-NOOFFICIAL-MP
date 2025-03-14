@@ -49,9 +49,7 @@ extern ConVar cv_bot_dont_shoot;
 extern ConVar cv_bot_eco_limit;
 extern ConVar cv_bot_auto_follow;
 extern ConVar cv_bot_flipout;
-#if CS_CONTROLLABLE_BOTS_ENABLED
 extern ConVar cv_bot_controllable;
-#endif
 extern ConVar cv_bot_faction_ct;
 extern ConVar cv_bot_faction_t;
 extern ConVar cv_bot_chatter_friendlyfire_from_bots;

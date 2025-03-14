@@ -1269,7 +1269,6 @@ private:
 	bool m_bGunGameTRModeHasMolotov;
 	bool m_bGunGameTRModeHasIncendiary;
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 public:
 	bool IsAbleToInstantRespawn( void );
 
@@ -1327,9 +1326,6 @@ private:
 	bool UpdateLayerWeaponDispatch( CAnimationLayer *pLayer, int iSequence );
 public:
 	virtual float	GetLayerSequenceCycleRate( CAnimationLayer *pLayer, int iSequence );
-
-#endif // #if CS_CONTROLLABLE_BOTS_ENABLED
-
 };
 
 

@@ -162,19 +162,8 @@ void IdleState::OnUpdate( CCSBot *me )
 				}
 				else if (me->HasC4())
 				{
-					// if we're at a bomb site, plant the bomb
-					if (me->IsAtBombsite())
-					{
-						// plant it
-						me->SetTask( CCSBot::PLANT_BOMB );
-						me->PlantBomb();
-
-						// radio to the team
-						me->GetChatter()->PlantingTheBomb( me->GetPlace() );
-
-						return;
-					}
-					else if (TheCSBots()->IsTimeToPlantBomb())
+					// always pick a random spot to plant in case the spot we'd picked is inaccessible
+					if (TheCSBots()->IsTimeToPlantBomb())
 					{
 						// move to the closest bomb site
 						const CCSBotManager::Zone *zone = TheCSBots()->GetClosestZone( me->GetLastKnownArea(), PathCost( me ) );
@@ -761,6 +750,23 @@ void IdleState::OnUpdate( CCSBot *me )
 
 		default:	// deathmatch
 		{
+			// if we just spawned, cheat and make us aware of other players so players can't spawncamp us effectively
+			if ( me->m_spawnedTime - gpGlobals->curtime < 1.0f )
+			{
+				CUtlVector< CCSPlayer * > playerVector;
+				CollectPlayers( &playerVector, TEAM_ANY, COLLECT_ONLY_LIVING_PLAYERS );
+
+				for( int i=0; i<playerVector.Count(); ++i )
+				{
+					if ( me->entindex() == playerVector[i]->entindex() )
+					{
+						continue;
+					}
+
+					me->OnAudibleEvent( NULL, playerVector[i], 9999999.9f, PRIORITY_HIGH, true );
+				}
+			}
+
 			// sniping check
 			if (me->GetFriendsRemaining() && me->IsSniper() && RandomFloat( 0, 100.0f ) < offenseSniperCampChance)
 			{
@@ -777,4 +783,3 @@ void IdleState::OnUpdate( CCSBot *me )
 	// if we have nothing special to do, go hunting for enemies
 	me->Hunt();
 }
-

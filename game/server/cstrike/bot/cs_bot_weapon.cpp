@@ -400,7 +400,7 @@ bool CCSBot::IsUsing( CSWeaponID weaponID ) const
 /**
  * Returns true if we are using a weapon with a removable silencer
  */
-bool CCSBot::DoesActiveWeaponHaveSilencer( void ) const
+bool CCSBot::DoesActiveWeaponHaveRemoveableSilencer( void ) const
 {
 	CWeaponCSBase *weapon = GetActiveCSWeapon();
 
@@ -1309,8 +1309,7 @@ void CCSBot::SilencerCheck( void )
 	if (IsDefusingBomb() || IsReloading() || IsAttacking())
 		return;
 
-	// M4A1 and USP are the only weapons with removable silencers
-	if (!DoesActiveWeaponHaveSilencer())
+	if (!DoesActiveWeaponHaveRemoveableSilencer())
 		return;
 
 	if (GetTimeSinceLastSawEnemy() < safeSilencerWaitTime)

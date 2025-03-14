@@ -226,7 +226,8 @@ void CCSBot::Update( void )
 	DoorCheck();
 
 	// update travel distance to all players (this is an optimization)
-	UpdateTravelDistanceToAllPlayers();
+	// EDIT: actually this is really slow and only used to detect audible events; we're using straight line dist instead
+ 	//UpdateTravelDistanceToAllPlayers();
 
 	// if our current 'noise' was heard a long time ago, forget it
 	const float rememberNoiseDuration = 20.0f;
@@ -782,12 +783,6 @@ public:
 	{
 		if (player->IsAlive() && !m_me->InSameTeam( player ))
 		{
-			CFmtStr msg;
-			player->EntityText(	0,
-								msg.sprintf( "%3.0f", m_me->GetTravelDistanceToPlayer( (CCSPlayer *)player ) ),
-								0.1f );
-
-
 			if (m_me->DidPlayerJustFireWeapon( ToCSPlayer( player ) ))
 			{
 				player->EntityText( 1, "BANG!", 0.1f );
@@ -1083,74 +1078,6 @@ void CCSBot::DebugDisplay( void ) const
 			NDebugOverlay::Cross3D( GetPartPosition( enemy, FEET ), crossSize, 0, 255, 0, true, 0.1f );
 			NDebugOverlay::Cross3D( GetPartPosition( enemy, LEFT_SIDE ), crossSize, 0, 255, 0, true, 0.1f );
 			NDebugOverlay::Cross3D( GetPartPosition( enemy, RIGHT_SIDE ), crossSize, 0, 255, 0, true, 0.1f );
-		}
-	}
-}
-
-
-//--------------------------------------------------------------------------------------------------------------
-/**
- * Periodically compute shortest path distance to each player.
- * NOTE: Travel distance is NOT symmetric between players A and B.  Each much be computed separately.
- */
-void CCSBot::UpdateTravelDistanceToAllPlayers( void )
-{
-	const unsigned char numPhases = 3;
-
-	if (m_updateTravelDistanceTimer.IsElapsed())
-	{
-		ShortestPathCost pathCost;
-
-		for( int i=1; i<=gpGlobals->maxClients; ++i )
-		{
-			CCSPlayer *player = static_cast< CCSPlayer * >( UTIL_PlayerByIndex( i ) );
-
-			if (player == NULL)
-				continue;
-
-			if (FNullEnt( player->edict() ))
-				continue;
-
-			if (!player->IsPlayer())
-				continue;
-			
-			if (!player->IsAlive())
-				continue;
-
-			// skip friends for efficiency
-			if ( !IsOtherEnemy( player ) )
-				continue;
-
-			int which = player->entindex() % MAX_PLAYERS;
-
-			// if player is very far away, update every third time (on phase 0)
-			const float veryFarAway = 4000.0f;
-			if (m_playerTravelDistance[ which ] < 0.0f || m_playerTravelDistance[ which ] > veryFarAway)
-			{
-				if (m_travelDistancePhase != 0)
-					continue;
-			}
-			else
-			{
-				// if player is far away, update two out of three times (on phases 1 and 2)
-				const float farAway = 2000.0f;
-				if (m_playerTravelDistance[ which ] > farAway && m_travelDistancePhase == 0)
-					continue;
-			}
-
-			// if player is fairly close, update often
-			m_playerTravelDistance[ which ] = NavAreaTravelDistance( EyePosition(), player->EyePosition(), pathCost );
-		}
-
-		// throttle the computation frequency
-		const float checkInterval = 1.0f;
-		m_updateTravelDistanceTimer.Start( checkInterval );
-
-		// round-robin the phases
-		++m_travelDistancePhase;
-		if (m_travelDistancePhase >= numPhases)
-		{
-			m_travelDistancePhase = 0;
 		}
 	}
 }

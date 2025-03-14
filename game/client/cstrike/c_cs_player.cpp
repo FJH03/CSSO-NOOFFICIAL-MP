@@ -1058,12 +1058,10 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropEHandle( RECVINFO( m_hRagdoll ) ),
 	RecvPropInt( RECVINFO( m_cycleLatch ), 0, &C_CSPlayer::RecvProxy_CycleLatch ),
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	RecvPropBool( RECVINFO( m_bIsControllingBot ) ),
 	RecvPropBool( RECVINFO( m_bHasControlledBotThisRound ) ),
 	RecvPropBool( RECVINFO( m_bCanControlObservedBot ) ),
 	RecvPropInt( RECVINFO( m_iControlledBotEntIndex ) ),
-#endif
 
 	RecvPropInt( RECVINFO( m_nLastKillerIndex ) ),
 

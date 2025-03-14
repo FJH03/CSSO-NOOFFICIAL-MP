@@ -712,7 +712,6 @@ public:
 	bool CanSeeSniper( void ) const;							///< return true if we can see an enemy sniper
 	bool HasSeenSniperRecently( void ) const;					///< return true if we have seen a sniper recently
 
-	float GetTravelDistanceToPlayer( CCSPlayer *player ) const;	///< return shortest path travel distance to this player	
 	bool DidPlayerJustFireWeapon( const CCSPlayer *player ) const;	///< return true if the given player just fired their weapon
 
 	//- navigation --------------------------------------------------------------------------------------------------
@@ -853,7 +852,7 @@ public:
 	bool HasGrenade( void ) const;									///< return true if we have a grenade in our inventory
 	void AvoidEnemyGrenades( void );								///< react to enemy grenades we see
 	bool IsAvoidingGrenade( void ) const;							///< return true if we are in the act of avoiding a grenade
-	bool DoesActiveWeaponHaveSilencer( void ) const;				///< returns true if we are using a weapon with a removable silencer
+	bool DoesActiveWeaponHaveRemoveableSilencer( void ) const;		///< returns true if we are using a weapon with a removable silencer
 	bool CanActiveWeaponFire( void ) const;							///< returns true if our current weapon can attack
 	CWeaponCSBase *GetActiveCSWeapon( void ) const;					///< get our current Counter-Strike weapon
 
@@ -1083,11 +1082,6 @@ private:
 
 	CountdownTimer m_mustRunTimer;									///< if nonzero, bot cannot walk
 	CountdownTimer m_waitTimer;										///< if nonzero, we are waiting where we are
-
-	void UpdateTravelDistanceToAllPlayers( void );					///< periodically compute shortest path distance to each player
-	CountdownTimer m_updateTravelDistanceTimer;						///< for throttling travel distance computations
-	float m_playerTravelDistance[ MAX_PLAYERS ];					///< current distance from this bot to each player
-	unsigned char m_travelDistancePhase;							///< a counter for optimizing when to compute travel distance
 
 	//- game scenario mechanisms -------------------------------------------------------------------------------------
 	CSGameState m_gameState;										///< our current knowledge about the state of the scenario
@@ -1485,6 +1479,12 @@ inline void CCSBot::SetTask( TaskType task, CBaseEntity *entity )
 {
 	m_task = task;
 	m_taskEntity = entity;
+
+	if ( task == CCSBot::PLANT_BOMB )
+ 	{
+ 		// don't stop to attack - get the bomb there
+ 		SetDisposition( CCSBot::SELF_DEFENSE );
+ 	}
 }
 
 inline CCSBot::TaskType CCSBot::GetTask( void ) const
@@ -1638,17 +1638,6 @@ inline bool CCSBot::CanSeeSniper( void ) const
 inline bool CCSBot::HasSeenSniperRecently( void ) const
 {
 	return !m_sawEnemySniperTimer.IsElapsed();
-}
-
-inline float CCSBot::GetTravelDistanceToPlayer( CCSPlayer *player ) const
-{
-	if (player == NULL)
-		return -1.0f;
-
-	if (!player->IsAlive())
-		return -1.0f;
-
-	return m_playerTravelDistance[ player->entindex() % MAX_PLAYERS ];
 }
 
 inline bool CCSBot::HasPath( void ) const
@@ -2022,6 +2011,13 @@ public:
 			}
 
 			// if this is an area to avoid, add penalty
+			if ( area->IsDamaging() )
+			{
+				const float damagingPenalty = 100.0f;
+				cost += damagingPenalty * dist;
+			}
+
+			// if this is an area to avoid, add penalty
 			if (area->GetAttributes() & NAV_MESH_AVOID)
 			{
 				const float avoidPenalty = 20.0f;
@@ -2030,9 +2026,18 @@ public:
 
 			if (m_route == SAFEST_ROUTE)
 			{
-				// add in the danger of this path - danger is per unit length travelled
-				cost += dist * dangerFactor * area->GetDanger( m_bot->GetTeamNumber() );
+				// add in the danger of this path - danger is per unit length traveled
+				cost += dist + ( dist * dangerFactor * area->GetDanger( m_bot->GetTeamNumber() ) );
 			}
+
+			// this term causes the same bot to choose different routes over time,
+ 			// but keep the same route for a period in case of repaths
+ 			int timeMod = (int)( gpGlobals->curtime / 10.0f ) + 1;
+ 			
+ 			int uniqueID = ((size_t)area) >> 7; // areas are 128-byte aligned, so shift address over
+ 			// We just need a unique number approximately between 1 and 300, so take the mod 293 because it's prime
+ 			unsigned int nRandomCost = ( unsigned int )( m_bot->entindex() * uniqueID * timeMod ) % 293;
+ 			cost += 1.0f + (float)nRandomCost;
 
 			if (!m_bot->IsAttacking())
 			{
