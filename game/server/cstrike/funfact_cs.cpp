@@ -126,10 +126,7 @@ namespace GameFlags
 
 bool GameQualifies( e_RoundEndReason roundResult, int gameFlags )
 {
-	// well... it returns false for no reason
-	return true;
-
-	/*if ( gameFlags & GameFlags::Elimination )
+	if ( gameFlags & GameFlags::Elimination )
 	{
 		if ( roundResult != CTs_Win && roundResult != Terrorists_Win )
 			return false;
@@ -143,7 +140,7 @@ bool GameQualifies( e_RoundEndReason roundResult, int gameFlags )
 	if ( (gameFlags & GameFlags::GunGame) && CSGameRules()->IsPlayingGunGameProgressive() )
 		return true;
 
-	return false;*/
+	return false;
 }
 
 

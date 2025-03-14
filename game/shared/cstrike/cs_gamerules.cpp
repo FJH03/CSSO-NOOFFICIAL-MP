@@ -7508,7 +7508,8 @@ bool CCSGameRules::IsPlayingCustomGametype( void ) const
 
 bool CCSGameRules::IsPlayingClassic( void ) const
 {
-    return ( g_pGameTypes->GetCurrentGameType() == CS_GameType_Classic );
+	// PiMoN: Custom gametype in CS:SO is the same as classic but with customizeable server settings
+	return ( IsPlayingCustomGametype() || g_pGameTypes->GetCurrentGameType() == CS_GameType_Classic );
 }
 
 bool CCSGameRules::IsPlayingGunGame( void ) const
