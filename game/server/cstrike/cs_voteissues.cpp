@@ -23,7 +23,6 @@
 #include "tier0/memdbgon.h"
 
 extern ConVar mp_maxrounds;
-extern ConVar mp_winlimit;
 
 static bool VotableMap( const char *pszMapName )
 {
@@ -715,11 +714,6 @@ void CNextLevelIssue::ExecuteCommand( void )
 		{
 			engine->ServerCommand( CFmtStr( "mp_maxrounds %d;", mp_maxrounds.GetInt() + 2 ) );
 		}
-		
-		if ( mp_winlimit.GetInt() > 0 )
-		{
-			engine->ServerCommand( CFmtStr( "mp_winlimit %d;", mp_winlimit.GetInt() + 2 ) );
-		}
 	}
 	else
 	{
@@ -960,7 +954,7 @@ void CScrambleTeams::ListIssueDetails( CBasePlayer *pForWhom )
 //-----------------------------------------------------------------------------
 // Purpose: Pause Match
 //-----------------------------------------------------------------------------
-ConVar sv_vote_issue_pause_match_allowed( "sv_vote_issue_pause_match_allowed", "1", 0, "Can people hold votes to pause/unpause the match?" );
+ConVar sv_vote_issue_pause_match_allowed( "sv_vote_issue_pause_match_allowed", "0", 0, "Can people hold votes to pause/unpause the match?" );
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1110,6 +1104,139 @@ const char *CUnpauseMatchIssue::GetVotePassedString( void )
 // Purpose: 
 //-----------------------------------------------------------------------------
 void CUnpauseMatchIssue::ListIssueDetails( CBasePlayer *pForWhom )
+{
+	if ( !sv_vote_issue_pause_match_allowed.GetBool() )
+		return;
+
+	ListStandardNoArgCommand( pForWhom, GetTypeString() );
+}
+
+
+
+
+//-----------------------------------------------------------------------------
+// Purpose: TimeOut
+//-----------------------------------------------------------------------------
+ConVar sv_vote_issue_timeout_allowed( "sv_vote_issue_timeout_allowed", "1", 0, "Can people hold votes to time out?" );
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CStartTimeOutIssue::ExecuteCommand( void )
+{
+	CBaseEntity *pVoteHolder = UTIL_EntityByIndex( g_voteController->GetCallingEntity( ) );
+	if ( !pVoteHolder )
+		return;
+
+	if ( pVoteHolder->GetTeamNumber() == TEAM_CT )
+	{
+		engine->ServerCommand( CFmtStr( "timeout_ct_start;" ) );
+	}
+	else if ( pVoteHolder->GetTeamNumber() == TEAM_TERRORIST )
+	{
+		engine->ServerCommand( CFmtStr( "timeout_terrorist_start;" ) );
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CStartTimeOutIssue::IsEnabled( void )
+{
+	return CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() && sv_vote_issue_timeout_allowed.GetBool();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CStartTimeOutIssue::CanCallVote( int iEntIndex, const char *pszDetails, vote_create_failed_t &nFailCode, int &nTime )
+{
+	if ( !CBaseCSIssue::CanCallVote( iEntIndex, pszDetails, nFailCode, nTime ) )
+		return false;
+
+	if ( !IsEnabled() )
+	{
+		nFailCode = VOTE_FAILED_ISSUE_DISABLED;
+		return false;
+	}
+
+	if ( CSGameRules() && CSGameRules()->IsTimeOutActive() )
+	{
+		nFailCode = VOTE_FAILED_TIMEOUT_ACTIVE;
+		return false;
+	}
+
+	if ( CSGameRules() && CSGameRules()->IsMatchWaitingForResume() )
+	{
+		nFailCode = VOTE_FAILED_MATCH_PAUSED;
+		return false;
+	}
+
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CStartTimeOutIssue::CanTeamCallVote(int iTeam ) const
+{
+	if ( !CSGameRules() )
+		return false;
+
+	if ( CSGameRules()->IsTimeOutActive() )
+		return false;
+
+	if ( iTeam == TEAM_CT )
+	{
+		return ( CSGameRules()->GetCTTimeOuts() > 0 );
+	}
+	else if ( iTeam == TEAM_TERRORIST )
+	{
+		return ( CSGameRules()->GetTerroristTimeOuts() > 0 );
+	}
+
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+const char *CStartTimeOutIssue::GetDisplayString( void )
+{
+	return "#CStrike_vote_start_timeout";
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+const char *CStartTimeOutIssue::GetVotePassedString( void )
+{
+	return "#CStrike_vote_passed_timeout";
+}
+
+vote_create_failed_t CStartTimeOutIssue::MakeVoteFailErrorCodeForClients( vote_create_failed_t eDefaultFailCode )
+{
+	switch ( eDefaultFailCode )
+	{
+	case VOTE_FAILED_TEAM_CANT_CALL:
+	{
+		if ( CSGameRules( ) && CSGameRules( )->IsTimeOutActive( ) )
+			return VOTE_FAILED_TIMEOUT_ACTIVE;
+		else if ( CSGameRules() && CSGameRules()->IsMatchWaitingForResume() )
+			return VOTE_FAILED_MATCH_PAUSED;
+		else
+			return VOTE_FAILED_TIMEOUT_EXHAUSTED;
+	}
+
+	default:
+		return eDefaultFailCode;
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CStartTimeOutIssue::ListIssueDetails( CBasePlayer *pForWhom )
 {
 	if ( !sv_vote_issue_pause_match_allowed.GetBool() )
 		return;

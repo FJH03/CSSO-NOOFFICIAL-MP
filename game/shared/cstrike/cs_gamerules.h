@@ -264,6 +264,21 @@ public:
 	float GetWarmupPeriodStartTime( void )	{ return m_fWarmupPeriodStart; }
 	float GetWarmupRemainingTime();
 
+	bool IsTimeOutActive() const { return ( IsTerroristTimeOutActive() || IsCTTimeOutActive() ); }
+	bool IsTerroristTimeOutActive() const { return m_bTerroristTimeOutActive; }
+	bool IsCTTimeOutActive() const { return m_bCTTimeOutActive; }
+
+	void StartTerroristTimeOut( void );
+	void StartCTTimeOut( void );
+	void EndTerroristTimeOut( void );
+	void EndCTTimeOut( void );
+
+	float GetCTTimeOutRemaining() const { return m_flCTTimeOutRemaining; }
+	float GetTerroristTimeOutRemaining() const { return m_flTerroristTimeOutRemaining; }
+
+	int GetCTTimeOuts( ) const { return m_nCTTimeOuts; }
+	int GetTerroristTimeOuts( ) const { return m_nTerroristTimeOuts; }
+
 	void StartWarmup( void );
 	void EndWarmup( void );
 
@@ -362,6 +377,14 @@ private:
 	CNetworkVar( bool, m_bFreezePeriod );	 // TRUE at beginning of round, set to FALSE when the period expires
 	CNetworkVar( bool, m_bWarmupPeriod );	 // 
 	CNetworkVar( float, m_fWarmupPeriodStart );
+
+	CNetworkVar( bool, m_bTerroristTimeOutActive );
+	CNetworkVar( bool, m_bCTTimeOutActive );
+	CNetworkVar( float, m_flTerroristTimeOutRemaining );
+	CNetworkVar( float, m_flCTTimeOutRemaining );
+	CNetworkVar( int, m_nTerroristTimeOuts );
+	CNetworkVar( int, m_nCTTimeOuts );
+
 	CNetworkVar( bool, m_bMatchWaitingForResume ); // When mp_pause_match is called, this state becomes true and will prevent the next freezetime from ending.
 	CNetworkVar( int, m_iRoundTime );		 // (From mp_roundtime) - How many seconds long this round is.
 	CNetworkVar( float, m_fRoundStartTime ); // time round has started
@@ -675,7 +698,7 @@ public:
 	bool m_bCompleteReset;		// Set to TRUE to have the scores reset next time round restarts
 	bool m_bScrambleTeamsOnRestart;
 	bool m_bSwapTeamsOnRestart;
-	
+
 	class ICalculateEndOfRoundMVPHook_t
 	{
 	public:

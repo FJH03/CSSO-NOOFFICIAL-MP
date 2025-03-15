@@ -90,6 +90,9 @@ ConVar sv_disable_observer_interpolation( "sv_disable_observer_interpolation", "
 ConVar sv_buy_status_override( "sv_buy_status_override", "-1", FCVAR_GAMEDLL | FCVAR_REPLICATED, "Override for buy status map info. 0 = everyone can buy, 1 = ct only, 2 = t only 3 = nobody" );
 #endif
 
+ConVar mp_team_timeout_time( "mp_team_timeout_time", "60", FCVAR_GAMEDLL | FCVAR_REPLICATED, "Duration of each timeout." );
+ConVar mp_team_timeout_max( "mp_team_timeout_max", "1", FCVAR_GAMEDLL | FCVAR_REPLICATED, "Number of timeouts each team gets per match." );
+
 /**
  * Player hull & eye position for standing, ducking, etc.  This version has a taller
  * player height, but goldsrc-compatible collision bounds.
@@ -187,6 +190,13 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
         RecvPropBool( RECVINFO( m_bWarmupPeriod ) ),
         RecvPropFloat( RECVINFO( m_fWarmupPeriodStart ) ),	
 
+		RecvPropBool( RECVINFO( m_bTerroristTimeOutActive ) ),
+		RecvPropBool( RECVINFO( m_bCTTimeOutActive ) ),
+		RecvPropFloat( RECVINFO( m_flTerroristTimeOutRemaining ) ),
+		RecvPropFloat( RECVINFO( m_flCTTimeOutRemaining ) ),
+		RecvPropInt( RECVINFO( m_nTerroristTimeOuts ) ),
+		RecvPropInt( RECVINFO( m_nCTTimeOuts ) ),
+
 		RecvPropInt( RECVINFO( m_iRoundTime ) ),
         RecvPropInt( RECVINFO( m_gamePhase ) ),
         RecvPropInt( RECVINFO( m_totalRoundsPlayed ) ),
@@ -217,6 +227,13 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropBool( SENDINFO( m_bMatchWaitingForResume ) ),
         SendPropBool( SENDINFO( m_bWarmupPeriod ) ),
         SendPropFloat( SENDINFO( m_fWarmupPeriodStart ) ),	
+
+		SendPropBool( SENDINFO( m_bTerroristTimeOutActive ) ),
+		SendPropBool( SENDINFO( m_bCTTimeOutActive ) ),
+		SendPropFloat( SENDINFO( m_flTerroristTimeOutRemaining ) ),
+		SendPropFloat( SENDINFO( m_flCTTimeOutRemaining ) ),
+		SendPropInt( SENDINFO( m_nTerroristTimeOuts ) ),
+		SendPropInt( SENDINFO( m_nCTTimeOuts ) ),
 
 		SendPropInt( SENDINFO( m_iRoundTime ), 16 ),
         SendPropInt( SENDINFO( m_gamePhase ), 4, SPROP_UNSIGNED ),
@@ -619,6 +636,21 @@ ConVar sv_disable_radar(
 	"0: regular radar; 1: always disabled; 2: disabled in warmup" );
 
 #ifndef CLIENT_DLL
+CON_COMMAND( timeout_terrorist_start, "" )
+{
+	if ( !UTIL_IsCommandIssuedByServerAdmin() )
+		return;
+
+	CSGameRules()->StartTerroristTimeOut();
+}
+
+CON_COMMAND( timeout_ct_start, "" )
+{
+	if ( !UTIL_IsCommandIssuedByServerAdmin() )
+		return;
+
+	CSGameRules()->StartCTTimeOut();
+}
 CON_COMMAND( mp_warmup_start, "Start warmup." )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
@@ -1444,7 +1476,7 @@ ConVar snd_music_selection(
 		{	// when halftime is over, we pause the match if needed
 			if ( !pRules->IsMatchWaitingForResume() )
 			{
-				UTIL_ClientPrintAll( HUD_PRINTCENTER, "#SFUI_Notice_Match_Will_Pause" );
+				UTIL_ClientPrintAll( HUD_PRINTCENTER, "#CStrike_TitlesTXT_Match_Will_Pause" );
 			}
 			pRules->SetMatchWaitingForResume( true );
 		}
@@ -1648,6 +1680,16 @@ ConVar snd_music_selection(
 		m_fRoundStartTime = 0;
 		m_bFreezePeriod = true;
 		m_bMatchWaitingForResume = false;
+
+		m_nTerroristTimeOuts = mp_team_timeout_max.GetInt();
+		m_nCTTimeOuts = mp_team_timeout_max.GetInt();
+
+		m_flTerroristTimeOutRemaining = mp_team_timeout_time.GetInt();
+		m_flCTTimeOutRemaining = mp_team_timeout_time.GetInt();
+
+		m_bTerroristTimeOutActive = false;
+		m_bCTTimeOutActive = false;
+
 		m_iNumTerrorist = m_iNumCT = 0;	// number of players per team
 		m_flRestartRoundTime = 0.0f; // restart first round as soon as possible
 		m_iNumSpawnableTerrorist = m_iNumSpawnableCT = 0;
@@ -2040,21 +2082,22 @@ ConVar snd_music_selection(
 		
 		bool addDefault = true;
 
-		CBaseEntity	*pWeaponEntity = NULL;
-		while ( ( pWeaponEntity = gEntList.FindEntityByClassname( pWeaponEntity, "game_player_equip" )) != NULL )
-		{
+        CBaseEntity	*pWeaponEntity = NULL;
+        while ( ( pWeaponEntity = gEntList.FindEntityByClassname( pWeaponEntity, "game_player_equip" )) != NULL )
+        {
 			CGamePlayerEquip *pEquip = dynamic_cast<CGamePlayerEquip*>( pWeaponEntity );
 			if ( pEquip && !pEquip->UseOnly() )
 			{
 				if ( addDefault && pEquip->StripFirst() )
-			{
-				// remove all our weapons and armor before touching the first game_player_equip
-				pPlayer->RemoveAllItems( true );
+				{
+					// remove all our weapons and armor before touching the first game_player_equip
+					pPlayer->RemoveAllItems( true );
+				}
+				pWeaponEntity->Touch( pPlayer );
+				addDefault = false;
 			}
-			pWeaponEntity->Touch( pPlayer );
-			addDefault = false;
-			}
-		}
+        }
+
 
 		if ( addDefault )
 			pPlayer->GiveDefaultItems();
@@ -3750,6 +3793,16 @@ ConVar snd_music_selection(
 
 		if ( m_bCompleteReset )
 		{
+			// reset timeouts
+			EndTerroristTimeOut();
+			EndCTTimeOut();
+
+			m_nTerroristTimeOuts = mp_team_timeout_max.GetInt();
+			m_nCTTimeOuts = mp_team_timeout_max.GetInt();
+
+			m_flTerroristTimeOutRemaining = mp_team_timeout_time.GetInt();
+			m_flCTTimeOutRemaining = mp_team_timeout_time.GetInt();
+
 			// bounds check
 			if ( mp_timelimit.GetInt() < 0 )
 			{
@@ -3760,6 +3813,11 @@ ConVar snd_music_selection(
 			{
 				HandleScrambleTeams();
 				m_bScrambleTeamsOnRestart = false;
+
+				if ( IsPlayingGunGameTRBomb() )
+				{
+					ClearGunGameData();
+				}
 			}
 
 			if ( m_bSwapTeamsOnRestart )
@@ -4143,7 +4201,7 @@ ConVar snd_music_selection(
 			}
 
 			if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST && pPlayer->PlayerClass() >= FIRST_T_CLASS && pPlayer->PlayerClass() <= LAST_T_CLASS )
-			{     
+			{
 				pPlayer->RoundRespawn();
 			}
 			else
@@ -4948,6 +5006,30 @@ ConVar snd_music_selection(
 			if ( IsMatchWaitingForResume() )
 			{
 				m_fRoundStartTime = gpGlobals->curtime + m_iFreezeTime;
+			}
+
+			// TIMEOUTS
+			if ( m_bTerroristTimeOutActive )
+			{
+				m_fRoundStartTime = gpGlobals->curtime + m_iFreezeTime;
+
+				m_flTerroristTimeOutRemaining -= ( gpGlobals->curtime - m_flLastThinkTime );
+
+				if ( m_flTerroristTimeOutRemaining <= 0 )
+				{
+					EndTerroristTimeOut();
+				}
+			}
+			else if ( m_bCTTimeOutActive )
+			{
+				m_fRoundStartTime = gpGlobals->curtime + m_iFreezeTime;
+
+				m_flCTTimeOutRemaining -= ( gpGlobals->curtime - m_flLastThinkTime );
+
+				if ( m_flCTTimeOutRemaining <= 0 )
+				{
+					EndCTTimeOut();
+				}
 			}
 #ifndef CLIENT_DLL
 			else 
@@ -6162,9 +6244,9 @@ ConVar snd_music_selection(
 			UTIL_ClientPrintFilter( traitors, HUD_PRINTCENTER, "#Player_Balanced" );
 			UTIL_ClientPrintFilter( loyalists, HUD_PRINTCENTER, "#Teams_Balanced" );
 		}
-    }
+	}
 
-	void CCSGameRules::HandleScrambleTeams( void )
+    void CCSGameRules::HandleScrambleTeams( void )
     {
         CCSPlayer *pCSPlayer = NULL;
         CUtlVector<CCSPlayer *> pListPlayers;
@@ -6221,7 +6303,6 @@ ConVar snd_music_selection(
             {
                 pListPlayers.AddToHead( pCSPlayer );
             }
-
         }
         
         for ( int i = 0 ; i < pListPlayers.Count() ; i++ )
@@ -6235,6 +6316,23 @@ ConVar snd_music_selection(
                 pCSPlayer->SwitchTeam( newTeam );				
 			}
         }
+
+		//
+		// Flip the timeouts as well
+		//
+		bool bTemp;
+		bTemp = m_bTerroristTimeOutActive;
+		m_bTerroristTimeOutActive = m_bCTTimeOutActive;
+		m_bCTTimeOutActive = bTemp;
+
+		float flTemp;
+		flTemp = m_flTerroristTimeOutRemaining;
+		m_flTerroristTimeOutRemaining = m_flCTTimeOutRemaining;
+		m_flCTTimeOutRemaining = flTemp;
+
+		int nTemp = m_nTerroristTimeOuts;
+		m_nTerroristTimeOuts = m_nCTTimeOuts;
+		m_nCTTimeOuts = nTemp;
     }
     
     // the following two functions cap the number of players on a team to five instead of basing it on the number of spawn points
@@ -7174,13 +7272,19 @@ ConVar snd_music_selection(
 		new CRestartGameIssue;
 		new CChangeLevelIssue;
 		new CNextLevelIssue;
-		new CScrambleTeams;
-		new CSwapTeams;
-		new CPauseMatchIssue;
-		new CUnpauseMatchIssue;
-		// PiMoN TODO: think about implementing it
-		/*new CStartTimeOutIssue;
-		new CSurrender;*/
+		if ( IsPlayingAnyCompetitiveStrictRuleset() )
+		{
+			new CStartTimeOutIssue;
+			new CPauseMatchIssue;
+			new CUnpauseMatchIssue;
+			// PiMoN TODO: think about implementing it
+			//new CSurrender;
+		}
+		else
+		{
+			new CScrambleTeams;
+			new CSwapTeams;
+		}
 	}
 #endif	// CLIENT_DLL
 
@@ -7422,8 +7526,58 @@ void CCSGameRules::EndWarmup( void )
 		
 	RestartRound();
 }
-#endif
 
+void CCSGameRules::StartTerroristTimeOut( void )
+{
+	if ( m_bTerroristTimeOutActive || m_bCTTimeOutActive )
+		return;
+
+	if ( m_nTerroristTimeOuts <= 0 )
+		return;
+
+	m_bTerroristTimeOutActive = true;
+	m_flTerroristTimeOutRemaining = mp_team_timeout_time.GetInt();
+	m_nTerroristTimeOuts--;
+	m_bMatchWaitingForResume = true;
+
+	UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Match_Will_Pause" );
+}
+
+void CCSGameRules::EndTerroristTimeOut( void )
+{
+	if ( !m_bTerroristTimeOutActive )
+		return;
+
+	m_bTerroristTimeOutActive = false;
+	m_bMatchWaitingForResume = false;
+}
+
+void CCSGameRules::StartCTTimeOut( void )
+{
+	if ( m_bCTTimeOutActive || m_bTerroristTimeOutActive )
+		return;
+
+	if ( m_nCTTimeOuts <= 0 )
+		return;
+
+	m_bCTTimeOutActive = true;
+	m_flCTTimeOutRemaining = mp_team_timeout_time.GetInt();
+	m_nCTTimeOuts--;
+	m_bMatchWaitingForResume = true;
+
+
+	UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Match_Will_Pause" );
+}
+
+void CCSGameRules::EndCTTimeOut( void )
+{
+	if ( !m_bCTTimeOutActive )
+		return;
+
+	m_bCTTimeOutActive = false;
+	m_bMatchWaitingForResume = false;
+}
+#endif
 
 ConVar mp_solid_teammates("mp_solid_teammates", "1", FCVAR_REPLICATED, "Determines whether teammates are solid or not." );
 ConVar mp_solid_enemies("mp_solid_enemies", "1", FCVAR_REPLICATED, "Determines whether enemies are solid or not." );
@@ -7729,7 +7883,7 @@ bool CCSGameRules::IsPlayingClassicCasual( void ) const
 bool CCSGameRules::IsPlayingAnyCompetitiveStrictRuleset( void ) const
 {
 	return (IsPlayingClassic() && ( (g_pGameTypes->GetCurrentGameMode() == CS_GameMode::Classic_Competitive) ||
- 									(g_pGameTypes->GetCurrentGameMode() == CS_GameMode::Classic_Competitive_2v2) ));
+									(g_pGameTypes->GetCurrentGameMode() == CS_GameMode::Classic_Competitive_2v2) ));
 }
 
 bool CCSGameRules::IsPlayingOffline( void ) const
@@ -7755,7 +7909,7 @@ bool CCSGameRules::IsPlayingCustomGametype( void ) const
 bool CCSGameRules::IsPlayingClassic( void ) const
 {
 	// PiMoN: Custom gametype in CS:SO is the same as classic but with customizable server settings
-	return ( IsPlayingCustomGametype() || g_pGameTypes->GetCurrentGameType() == CS_GameType_Classic );
+    return ( IsPlayingCustomGametype() || g_pGameTypes->GetCurrentGameType() == CS_GameType_Classic );
 }
 
 bool CCSGameRules::IsPlayingGunGame( void ) const

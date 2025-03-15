@@ -57,7 +57,7 @@ private:
 	bool m_bIsAtTheBottom;
 
 	CPanelAnimationVar( Color, m_clrC4Planted, "C4PlantedColor", "White" );
- 	CPanelAnimationVar( Color, m_clrC4Defused, "C4DefusedColor", "White" );
+	CPanelAnimationVar( Color, m_clrC4Defused, "C4DefusedColor", "White" );
 };
 
 DECLARE_HUDELEMENT( CHudTeamCounter );
@@ -85,11 +85,11 @@ CHudTeamCounter::CHudTeamCounter( const char *pElementName ): CHudElement( pElem
 
 void CHudTeamCounter::OnScreenSizeChanged( int iOldWide, int iOldTall )
 {
- 	// reload the .res file so items are rescaled
- 	LoadControlSettings( "resource/hud/teamcounter.res" );
- 
- 	// force recalculation of some stuff
- 	m_bIsAtTheBottom = false;
+	// reload the .res file so items are rescaled
+	LoadControlSettings( "resource/hud/teamcounter.res" );
+
+	// force recalculation of some stuff
+	m_bIsAtTheBottom = false;
 }
 
 void CHudTeamCounter::Init( void )
@@ -120,7 +120,7 @@ bool CHudTeamCounter::ShouldDraw()
 	if ( pPlayer->IsObserver() )
 		return false;
 
-		return CHudElement::ShouldDraw();
+	return CHudElement::ShouldDraw();
 }
 
 void CHudTeamCounter::OnThink()
@@ -179,17 +179,17 @@ void CHudTeamCounter::OnThink()
 		m_pTAliveCounterLabel->SetText( unicode );
 
 		C_CSTeam *team = GetGlobalCSTeam( TEAM_CT );
- 		if ( team )
- 		{
- 			V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", team->Get_Score() );
- 			m_pCTWinCounterLabel->SetText( unicode );
- 		}
- 		team = GetGlobalCSTeam( TEAM_TERRORIST );
- 		if ( team )
- 		{
- 			V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", team->Get_Score() );
- 			m_pTWinCounterLabel->SetText( unicode );
- 		}
+		if ( team )
+		{
+			V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", team->Get_Score() );
+			m_pCTWinCounterLabel->SetText( unicode );
+		}
+		team = GetGlobalCSTeam( TEAM_TERRORIST );
+		if ( team )
+		{
+			V_snwprintf( unicode, ARRAYSIZE( unicode ), L"%d", team->Get_Score() );
+			m_pTWinCounterLabel->SetText( unicode );
+		}
 
 		m_pCTAliveCounterLabel->SetVisible( iCTCounter > 0 );
 		m_pCTAliveTextLabel->SetVisible( iCTCounter > 0 );
@@ -209,26 +209,26 @@ void CHudTeamCounter::OnThink()
 		C_PlantedC4 *pC4 = g_PlantedC4s[0];
 
 		if ( pC4->m_bBombDefused )
- 		{
- 			m_pBombIcon->SetAlpha( 255 );
- 			m_pBombIcon->SetFgColor( m_clrC4Defused );
- 			m_pBombIcon->SetVisible( true );
- 		}
- 		else
- 		{
- 			int alpha = 255;
- 			if ( gpGlobals->curtime + 0.1f >= pC4->m_flNextGlow )
- 				alpha = 128;
+		{
+			m_pBombIcon->SetAlpha( 255 );
+			m_pBombIcon->SetFgColor( m_clrC4Defused );
+			m_pBombIcon->SetVisible( true );
+		}
+		else
+		{
+			int alpha = 255;
+			if ( gpGlobals->curtime + 0.1f >= pC4->m_flNextGlow )
+				alpha = 128;
 
-				 m_pBombIcon->SetAlpha( alpha );
-				 m_pBombIcon->SetFgColor( m_clrC4Planted );
-				 m_pBombIcon->SetVisible( !pC4->m_bExplodeWarning );
+			m_pBombIcon->SetAlpha( alpha );
+			m_pBombIcon->SetFgColor( m_clrC4Planted );
+			m_pBombIcon->SetVisible( !pC4->m_bExplodeWarning );
 		}
 	}
 	else
 		m_pBombIcon->SetVisible( false );
 
-	if ( bBombPlanted || pRules->IsWarmupPeriod() )
+	if ( bBombPlanted || pRules->IsTimeOutActive() || pRules->IsWarmupPeriod() )
 		m_pRoundTimerLabel->SetText( L" " );
 	else
 	{
