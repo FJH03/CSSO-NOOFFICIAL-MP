@@ -53,6 +53,8 @@
 	#include "player_resource.h"
 	#include "cs_player_resource.h"
 	#include "cs_loadout.h"
+	#include "vote_controller.h"
+	#include "cs_voteissues.h"
 	#include "flashbang_projectile.h"
 	#include "decoy_projectile.h"
 	#include "hegrenade_projectile.h"
@@ -892,6 +894,7 @@ ConVar snd_music_selection(
 		"predicted_viewmodel",
 		"worldspawn",
 		"point_devshot_camera",
+		"vote_controller",
 		"", // END Marker
 	};
 
@@ -1650,6 +1653,8 @@ ConVar snd_music_selection(
 		m_iNumSpawnableTerrorist = m_iNumSpawnableCT = 0;
 		m_bFirstConnected = false;
 		m_bCompleteReset = false;
+		m_bScrambleTeamsOnRestart = false;
+		m_bSwapTeamsOnRestart = false;
 		m_iNumConsecutiveCTLoses = 0;
 		m_iNumConsecutiveTerroristLoses = 0;
 		m_bTargetBombed = false;
@@ -3750,6 +3755,19 @@ ConVar snd_music_selection(
 			{
 				mp_timelimit.SetValue( 0 );
 			}
+
+			if ( m_bScrambleTeamsOnRestart )
+			{
+				HandleScrambleTeams();
+				m_bScrambleTeamsOnRestart = false;
+			}
+
+			if ( m_bSwapTeamsOnRestart )
+			{
+				HandleSwapTeams();
+				m_bSwapTeamsOnRestart = false;
+			}
+
 			m_flGameStartTime = gpGlobals->curtime;
 			if ( !IsFinite( m_flGameStartTime.Get() ) )
 			{
@@ -5895,6 +5913,55 @@ ConVar snd_music_selection(
 			m_bGameRestart = true;
 			mp_restartgame.SetValue( 0 );
 		}
+	}
+
+    void cc_ScrambleTeams( const CCommand& args )
+    {
+        if ( UTIL_IsCommandIssuedByServerAdmin() )
+        {
+            CCSGameRules *pRules = dynamic_cast<CCSGameRules*>( GameRules() );
+
+            if ( pRules )
+            {
+                pRules->SetScrambleTeamsOnRestart( true );
+                mp_restartgame.SetValue( 1 );
+            }
+        }
+    }
+
+    static ConCommand mp_scrambleteams( "mp_scrambleteams", cc_ScrambleTeams, "Scramble the teams and restart the game" );
+
+    void cc_SwapTeams( const CCommand& args )
+    {
+        if ( UTIL_IsCommandIssuedByServerAdmin() )
+        {
+            CCSGameRules *pRules = dynamic_cast<CCSGameRules*>( GameRules() );
+
+            if ( pRules )
+            {
+                pRules->SetSwapTeamsOnRestart( true );
+                mp_restartgame.SetValue( 1 );
+            }
+        }
+    }
+
+    static ConCommand mp_swapteams( "mp_swapteams", cc_SwapTeams, "Swap the teams and restart the game" );
+
+	// sort function for the list of players that we're going to use to scramble the teams
+    int ScramblePlayersSort( CCSPlayer* const *p1, CCSPlayer* const *p2 )
+    {
+        CCSPlayerResource *pResource = dynamic_cast< CCSPlayerResource * >( g_pPlayerResource );
+
+        if ( pResource )
+        {
+            // check the priority
+            if ( p1 && p2 && (*p1) && (*p2) && (*p1)->GetFrags() > (*p2)->GetFrags()  ) 
+            {
+                return 1;
+            }
+        }
+
+        return -1;
     }
 
 	//////// PAUSE
@@ -6095,6 +6162,81 @@ ConVar snd_music_selection(
 			UTIL_ClientPrintFilter( traitors, HUD_PRINTCENTER, "#Player_Balanced" );
 			UTIL_ClientPrintFilter( loyalists, HUD_PRINTCENTER, "#Teams_Balanced" );
 		}
+    }
+
+	void CCSGameRules::HandleScrambleTeams( void )
+    {
+        CCSPlayer *pCSPlayer = NULL;
+        CUtlVector<CCSPlayer *> pListPlayers;
+
+        // add all the players (that are on CT or Terrorist) to our temp list
+        for ( int i = 1 ; i <= gpGlobals->maxClients ; i++ )
+        {
+            pCSPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+            if ( pCSPlayer && ( pCSPlayer->GetTeamNumber() == TEAM_TERRORIST || pCSPlayer->GetTeamNumber() == TEAM_CT ) )
+            {
+                pListPlayers.AddToHead( pCSPlayer );
+            }
+        }
+
+        // sort the list
+        pListPlayers.Sort( ScramblePlayersSort );
+
+        int team = TEAM_INVALID;
+        bool assignToOpposingTeam = false;
+        for ( int i = 0 ; i < pListPlayers.Count() ; i++ )
+        {
+            pCSPlayer = pListPlayers[i];
+
+            if ( pCSPlayer )
+            {
+                //First assignment goes to random team
+                //Second assignment goes to the opposite
+                //Keep alternating until out of players.
+                if ( !assignToOpposingTeam )
+                {
+                    team = ( rand() % 2 ) ? TEAM_TERRORIST : TEAM_CT;
+                }
+                else
+                {
+                    team = ( team == TEAM_TERRORIST ) ? TEAM_CT : TEAM_TERRORIST;
+                }
+
+                pCSPlayer->SwitchTeam( team );
+                assignToOpposingTeam = !assignToOpposingTeam;
+            }
+        }	
+    }
+
+    void CCSGameRules::HandleSwapTeams( void )
+    {
+        CCSPlayer *pCSPlayer = NULL;
+        CUtlVector<CCSPlayer *> pListPlayers;
+
+        // add all the players (that are on CT or Terrorist) to our temp list
+        for ( int i = 1 ; i <= gpGlobals->maxClients ; i++ )
+        {
+            pCSPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+			if ( pCSPlayer && ( pCSPlayer->GetTeamNumber() == TEAM_TERRORIST || pCSPlayer->GetTeamNumber() == TEAM_CT ) )
+            {
+                pListPlayers.AddToHead( pCSPlayer );
+            }
+
+        }
+        
+        for ( int i = 0 ; i < pListPlayers.Count() ; i++ )
+        {
+            pCSPlayer = pListPlayers[i];
+
+            if ( pCSPlayer )
+            {
+				int currentTeam = pCSPlayer->GetTeamNumber();
+                int newTeam = ( currentTeam == TEAM_TERRORIST ) ? TEAM_CT : TEAM_TERRORIST;
+                pCSPlayer->SwitchTeam( newTeam );				
+			}
+        }
+
+		g_voteController->EndVoteImmediately();
     }
     
     // the following two functions cap the number of players on a team to five instead of basing it on the number of spawn points
@@ -7026,6 +7168,20 @@ ConVar snd_music_selection(
 #endif
 			CBaseEntity::Create( "cs_gamerules", vec3_origin, vec3_angle );
 		Assert( pEnt );
+
+		CBaseEntity::Create( "vote_controller", vec3_origin, vec3_angle );
+		// Vote Issue classes are handled/cleaned-up by g_voteController
+		new CRestartGameIssue;
+		new CKickIssue;
+		new CChangeLevelIssue;
+		new CNextLevelIssue;
+		new CScrambleTeams;
+		new CSwapTeams;
+		new CPauseMatchIssue;
+		new CUnpauseMatchIssue;
+		// PiMoN TODO: think about implementing it
+		/*new CStartTimeOutIssue;
+		new CSurrender;*/
 	}
 #endif	// CLIENT_DLL
 

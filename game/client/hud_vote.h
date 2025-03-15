@@ -17,6 +17,7 @@
 #include <vgui_controls/Frame.h>
 #include <vgui_controls/Button.h>
 #include <networkstringtabledefs.h>
+#include "vgui_avatarimage.h"
 
 extern INetworkStringTable *g_pStringTableServerMapCycle;
 
@@ -25,11 +26,20 @@ extern INetworkStringTable *g_pStringTableServerPopFiles;
 extern INetworkStringTable *g_pStringTableServerMapCycleMvM;
 #endif
 
+static const int k_MAX_VOTE_NAME_LENGTH = 256;
+
 namespace vgui
 {
 	class SectionedListPanel;
 	class ComboBox;
 	class ImageList;
+};
+
+struct VoteIssue_t
+{
+	char szName[k_MAX_VOTE_NAME_LENGTH];
+	char szNameString[k_MAX_VOTE_NAME_LENGTH];
+	bool bIsActive;
 };
 
 class VoteBarPanel : public vgui::Panel, public CGameEventListener
@@ -69,8 +79,9 @@ public:
 	virtual void	PostApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void	ApplySettings(KeyValues *inResourceData);
 
+	void			InitializeIssueList( void );
 	void			UpdateCurrentMap( void );
-	void			AddVoteIssues( CUtlStringList &m_VoteSetupIssues );
+	void			AddVoteIssues( CUtlVector< VoteIssue_t > &m_VoteSetupIssues );
 	void			AddVoteIssueParams_MapCycle( CUtlStringList &m_VoteSetupMapCycle );
 
 #ifdef TF_CLIENT_DLL
@@ -94,7 +105,7 @@ private:
 	vgui::Button				*m_pCallVoteButton;
 	vgui::ImageList				*m_pImageList;
 
-	CUtlVector<const char*>	m_VoteIssues;
+	CUtlVector< VoteIssue_t >	m_VoteIssues;
 	CUtlVector<const char*>	m_VoteIssuesMapCycle;
 
 #ifdef TF_CLIENT_DLL
@@ -119,15 +130,13 @@ class CHudVote : public vgui::EditablePanel, public CHudElement
 {
 	DECLARE_CLASS_SIMPLE( CHudVote, vgui::EditablePanel );
 
-public:
-	DECLARE_MULTIPLY_INHERITED();
-
 	CHudVote( const char *pElementName );
 
 	virtual void	LevelInit( void );
 	virtual void	Init( void );
 	virtual bool	ShouldDraw( void );
 	virtual void	ApplySchemeSettings( vgui::IScheme *pScheme );
+	virtual void	PerformLayout();
 	virtual void	FireGameEvent( IGameEvent *event );
 	virtual void	OnThink();
 	virtual int		KeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding );
@@ -140,22 +149,27 @@ public:
 	void			MsgFunc_VoteSetup( bf_read &msg );
 
 	void			PropagateOptionParameters( void );
-	void			ShowVoteUI( void );
+	void			ShowVoteUI( bool bShow ) { m_bShowVoteActivePanel = bShow; }
 	bool			IsVoteUIActive( void );
+	bool			IsVoteSystemActive( void ) { return m_bVoteSystemActive; }
 
 private:
 	bool			IsPlayingDemo() const;
-	void			SetVoteActive( bool bActive );
 
 	EditablePanel		*m_pVoteActive;
+	vgui::Label			*m_pVoteActiveIssueLabel;
+	CAvatarImagePanel	*m_pVoteActiveTargetAvatar;
 	VoteBarPanel		*m_voteBar;
 	EditablePanel		*m_pVoteFailed;
 	EditablePanel		*m_pVotePassed;
 	EditablePanel		*m_pCallVoteFailed;
 	CVoteSetupDialog	*m_pVoteSetupDialog;
 
-	CUtlStringList		m_VoteSetupIssues;
+	CUtlVector< VoteIssue_t > m_VoteSetupIssues;
 	CUtlStringList		m_VoteSetupMapCycle;
+
+	int					m_nVoteActiveIssueLabelX;
+	int					m_nVoteActiveIssueLabelY;
 	
 #ifdef TF_CLIENT_DLL
 	CUtlStringList		m_VoteSetupPopFiles;
@@ -163,7 +177,8 @@ private:
 
 	CUtlStringList		m_VoteSetupChoices;
 
-	bool				m_bVoteActive;
+	bool				m_bVotingActive;
+	bool				m_bVoteSystemActive;
 	float				m_flVoteResultCycleTime;	// what time will we cycle to the result
 	float				m_flHideTime;				// what time will we hide
 	bool				m_bVotePassed;				// what mode are we going to cycle to
@@ -175,6 +190,7 @@ private:
 	float				m_flPostVotedHideTime;
 	bool				m_bShowVoteActivePanel;
 	int					m_iVoteCallerIdx;
+	int					m_nVoteTeamIndex;			// If defined, only players on this team will see/vote on the issue
 };
 
 #endif // HUD_VOTE_H
