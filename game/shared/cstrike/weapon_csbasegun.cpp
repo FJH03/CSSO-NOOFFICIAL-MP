@@ -375,17 +375,6 @@ void CWeaponCSBaseGun::SecondaryAttack()
 					gameeventmanager->FireEvent( event );
 				}
 			}
-			else
-			{
-				// exists for the game instructor to let it know when the player zoomed in with a regular rifle
-				// different from the above weapon_zoom because we don't use this event to notify bots
-				IGameEvent * event = gameeventmanager->CreateEvent( "weapon_zoom_rifle" );
-				if ( event )
-				{
-					event->SetInt( "userid", pPlayer->GetUserID() );
-					gameeventmanager->FireEvent( event );
-				}
-			}
 		}
 
 #endif
