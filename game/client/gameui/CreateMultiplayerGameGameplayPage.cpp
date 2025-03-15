@@ -19,6 +19,7 @@ using namespace vgui;
 #include <vgui_controls/CheckButton.h>
 #include <vgui_controls/Label.h>
 #include <vgui_controls/TextEntry.h>
+#include <vgui_controls/PropertySheet.h>
 
 #include "filesystem.h"
 #include "PanelListPanel.h"
@@ -73,30 +74,6 @@ CCreateMultiplayerGameGameplayPage::~CCreateMultiplayerGameGameplayPage()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CCreateMultiplayerGameGameplayPage::GetMaxPlayers()
-{
-	return atoi(GetValue("maxplayers", "32"));
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-const char *CCreateMultiplayerGameGameplayPage::GetPassword()
-{
-	return GetValue("sv_password", "");
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-const char *CCreateMultiplayerGameGameplayPage::GetHostName()
-{
-	return GetValue("hostname", "Half-Life");	
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 const char *CCreateMultiplayerGameGameplayPage::GetValue(const char *cvarName, const char *defaultValue)
 {
 	for (mpcontrol_t *mp = m_pList; mp != NULL; mp = mp->next)
@@ -134,6 +111,10 @@ const char *CCreateMultiplayerGameGameplayPage::GetValue(const char *cvarName, c
 //-----------------------------------------------------------------------------
 void CCreateMultiplayerGameGameplayPage::OnApplyChanges()
 {
+	PropertySheet* pParent = dynamic_cast<PropertySheet*>(GetParent());
+ 	if ( pParent && !pParent->IsPageEnabled( "GameplayPage" ) )
+ 		return;
+	
 	// Get the values from the controls
 	GatherCurrentValues();
 

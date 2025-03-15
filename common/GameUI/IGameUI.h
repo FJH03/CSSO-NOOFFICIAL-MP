@@ -63,7 +63,7 @@ public:
 	virtual void OLD_OnConnectToServer(const char *game, int IP, int port) = 0; 
 	
 	virtual void OnDisconnectFromServer_OLD( uint8 eSteamLoginFailure, const char *username ) = 0;
-	virtual void OnLevelLoadingStarted(bool bShowProgressDialog) = 0;
+	virtual void OnLevelLoadingStarted(char const *levelName, bool bLocalServer) = 0;
 	virtual void OnLevelLoadingFinished(bool bError, const char *failureReason, const char *extendedReason) = 0;
 
 	// level loading progress, returns true if the screen needs updating

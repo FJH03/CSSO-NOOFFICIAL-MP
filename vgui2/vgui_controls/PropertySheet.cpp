@@ -1119,13 +1119,34 @@ void PropertySheet::EnablePage(const char *title)
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: returns whether the page is enabled or not
+//-----------------------------------------------------------------------------
+bool PropertySheet::IsPageEnabled(const char *title) 
+{
+ 	if (!_showTabs)
+ 		return true;
+ 
+ 	for (int i = 0; i < m_PageTabs.Count(); i++)
+ 	{
+ 		char tmp[50];
+ 		m_PageTabs[i]->GetText(tmp,50);
+ 		if (!strnicmp(title,tmp,strlen(tmp)))
+ 		{	
+ 			return m_PageTabs[i]->IsEnabled();
+ 		}
+ 	}
+ 
+ 	return false;
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: enabled or disables page by name
 //-----------------------------------------------------------------------------
 void PropertySheet::SetPageEnabled(const char *title, bool state) 
 {
-	for (int i = 0; i < m_PageTabs.Count(); i++)
+	if (_showTabs)
 	{
-		if (_showTabs)
+		for (int i = 0; i < m_PageTabs.Count(); i++)
 		{
 			char tmp[50];
 			m_PageTabs[i]->GetText(tmp,50);

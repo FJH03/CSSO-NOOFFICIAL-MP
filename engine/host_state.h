@@ -29,5 +29,6 @@ bool	HostState_IsShuttingDown();
 void	HostState_OnClientConnected();
 void	HostState_OnClientDisconnected();
 void	HostState_SetSpawnPoint(Vector &position, QAngle &angle);
+bool	HostState_IsTransitioningToLoad();
 
 #endif // HOST_STATE_H

@@ -670,7 +670,7 @@ void CGameUI::RunFrame()
 {
 	if ( IsX360() && m_bOpenProgressOnStart )
 	{
-		StartProgressBar();
+		StartProgressBar(NULL, true);
 		m_bOpenProgressOnStart = false;
 	}
 
@@ -811,17 +811,14 @@ void CGameUI::OnDisconnectFromServer( uint8 eSteamLoginFailure )
 //-----------------------------------------------------------------------------
 // Purpose: activates the loading dialog on level load start
 //-----------------------------------------------------------------------------
-void CGameUI::OnLevelLoadingStarted( bool bShowProgressDialog )
+void CGameUI::OnLevelLoadingStarted( char const *levelName, bool bLocalServer )
 {
 	g_VModuleLoader.PostMessageToAllModules( new KeyValues( "LoadingStarted" ) );
 
 	// notify
 	BasePanel()->OnLevelLoadingStarted();
 
-	if ( bShowProgressDialog )
-	{
-		StartProgressBar();
-	}
+	StartProgressBar( levelName, bLocalServer );
 
 	// Don't play the start game sound if this happens before we get to the first frame
 	m_iPlayGameStartupSound = 0;
@@ -870,7 +867,7 @@ bool CGameUI::UpdateProgressBar(float progress, const char *statusText)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CGameUI::StartProgressBar()
+void CGameUI::StartProgressBar(char const *levelName, bool bLocalServer)
 {
 	if ( !g_hLoadingDialog.Get() )
 	{
@@ -880,6 +877,17 @@ void CGameUI::StartProgressBar()
 	// open a loading dialog
 	m_szPreviousStatusText[0] = 0;
 	g_hLoadingDialog->SetProgressPoint(0.0f);
+
+	if ( levelName && bLocalServer )
+ 	{
+ 		KeyValues* pExtendedServerInfo = new KeyValues( "ExtendedServerInfo" );
+ 		pExtendedServerInfo->SetString( "map", levelName );
+ 
+ 		g_hLoadingDialog->SetExtendedServerInfo( pExtendedServerInfo );
+ 
+ 		pExtendedServerInfo->deleteThis();
+ 	}
+	
 	g_hLoadingDialog->Open();
 }
 

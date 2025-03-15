@@ -847,11 +847,8 @@ void CL_Connect( const char *address, const char *pszSourceTag )
 		Host_Disconnect(false);	
 
 		// allow remote
-		NET_SetMutiplayer( true );		
-
-		// start progress bar immediately for remote connection
-		EngineVGui()->EnabledProgressBarForNextLoad();
-
+		NET_SetMutiplayer( true );
+		
 		SCR_BeginLoadingPlaque();
 
 		EngineVGui()->UpdateProgressBar(PROGRESS_BEGINCONNECT);

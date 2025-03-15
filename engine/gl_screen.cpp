@@ -39,6 +39,7 @@
 extern bool V_CheckGamma( void );
 extern void	V_RenderView( void );
 extern void V_RenderVGuiOnly( void );
+extern bool HostState_IsTransitioningToLoad();
 
 bool		scr_initialized;		// ready to draw
 bool		scr_disabled_for_loading;
@@ -64,7 +65,7 @@ void SCR_Shutdown( void )
 //-----------------------------------------------------------------------------
 // Purpose: starts loading
 //-----------------------------------------------------------------------------
-void SCR_BeginLoadingPlaque( void )
+void SCR_BeginLoadingPlaque( const char *levelName /*= NULL*/ )
 {
 	if ( !scr_drawloading )
 	{
@@ -93,7 +94,7 @@ void SCR_BeginLoadingPlaque( void )
 		}
 
 		// let the UI know we're starting loading
-		EngineVGui()->OnLevelLoadingStarted();
+		EngineVGui()->OnLevelLoadingStarted(levelName, HostState_IsTransitioningToLoad());
 
 		// Don't run any more simulation on the client!!!
 		g_ClientGlobalVariables.frametime = 0.0f;

@@ -4429,7 +4429,7 @@ bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGro
 #endif
 
 #ifndef SWDS
-	SCR_BeginLoadingPlaque();
+	SCR_BeginLoadingPlaque( mapname );
 
 	// stop sounds (especially looping!)
 	S_StopAllSounds(true);
@@ -4454,7 +4454,7 @@ bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGro
 	if ( !modelloader->Map_IsValid( szMapFile ) )
 	{
 #ifndef SWDS
-		SCR_EndLoadingPlaque();
+	SCR_BeginLoadingPlaque( mapname );
 #endif
 		// We have already inactivated clients at this point due to PrepareLevelResources being blocking, false alarm,
 		// tell them to reconnect (which doesn't mean full reconnect, just start rejoining the map)

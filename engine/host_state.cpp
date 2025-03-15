@@ -276,6 +276,19 @@ void HostState_SetSpawnPoint(Vector &position, QAngle &angle)
 	g_HostState.m_bRememberLocation = true;
 }
 
+bool HostState_IsTransitioningToLoad()
+{
+ 	if ( g_HostState.m_nextState == HS_NEW_GAME ||
+ 		g_HostState.m_nextState == HS_LOAD_GAME ||
+ 		g_HostState.m_nextState == HS_CHANGE_LEVEL_SP ||
+ 		g_HostState.m_nextState == HS_CHANGE_LEVEL_MP )
+ 	{
+ 		return true;
+ 	}
+ 
+ 	return false;
+}
+
 //-----------------------------------------------------------------------------
 static void WatchDogHandler()
 {
@@ -419,10 +432,6 @@ void CHostState::State_ChangeLevelMP()
 	{
 		Steam3Server().NotifyOfLevelChange();
 
-#ifndef SWDS
-		// start progress bar immediately for multiplayer level transitions
-		EngineVGui()->EnabledProgressBarForNextLoad();
-#endif
 	if ( Host_Changelevel( false, m_levelName, m_mapGroupName, m_landmarkName ) )
 		{
 			SetState( HS_RUN, true );
@@ -529,7 +538,7 @@ void CHostState::State_Run( float frameTime )
 	case HS_LOAD_GAME:
 	case HS_NEW_GAME:
 #if !defined( SWDS )
-		SCR_BeginLoadingPlaque();
+	SCR_BeginLoadingPlaque( m_levelName );
 #endif
 		// FALL THROUGH INTENTIONALLY TO SHUTDOWN
 

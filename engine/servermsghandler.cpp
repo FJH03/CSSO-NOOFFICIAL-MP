@@ -240,16 +240,7 @@ void CClientState::Disconnect( const char *pszReason, bool bShowMainMenu )
 	S_StopAllSounds( true );
 	
 	R_DecalTermAll();
-
-	if ( m_nMaxClients > 1 )
-	{
-		if ( EngineVGui()->IsConsoleVisible() == false )
-		{
-			// start progress bar immediately for multiplayer level transitions
-			EngineVGui()->EnabledProgressBarForNextLoad();
-		}
-	}
-
+	
 	CL_ClearState();
 
 #ifndef _XBOX

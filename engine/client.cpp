@@ -342,11 +342,6 @@ bool CClientState::SetSignonState ( int state, int count )
 
 		case SIGNONSTATE_CHANGELEVEL:	
 			m_NetChannel->SetTimeout( SIGNON_TIME_OUT );  // allow 5 minutes timeout
-			if ( m_nMaxClients > 1 )
-			{
-				// start progress bar immediately for multiplayer level transitions
-				EngineVGui()->EnabledProgressBarForNextLoad();
-			}
 			SCR_BeginLoadingPlaque();
 			if ( m_nMaxClients > 1 )
 			{

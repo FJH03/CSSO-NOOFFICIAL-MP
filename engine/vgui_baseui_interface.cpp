@@ -182,15 +182,6 @@ CON_COMMAND( gameui_allowescape, "Escape key allowed to hide game UI" )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Console command to enable progress bar for next load
-//-----------------------------------------------------------------------------
-void BaseUI_ProgressEnabled_f()
-{
-	EngineVGui()->EnabledProgressBarForNextLoad();
-}
-static ConCommand progress_enable("progress_enable", &BaseUI_ProgressEnabled_f );
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 class CEnginePanel : public vgui::EditablePanel
@@ -310,7 +301,7 @@ public:
 	virtual void ClearConsole();
 
 	// level loading
-	virtual void OnLevelLoadingStarted();
+	virtual void OnLevelLoadingStarted(char const *levelName, bool bLocalServer);
 	virtual void OnLevelLoadingFinished();
 	virtual void NotifyOfServerConnect(const char *game, int IP, int connectionPort, int queryPort);
 	virtual void NotifyOfServerDisconnect();
@@ -318,11 +309,6 @@ public:
 	virtual void UpdateCustomProgressBar( float progress, const wchar_t *desc );
 	virtual void StartCustomProgress();
 	virtual void FinishCustomProgress();
-
-	virtual void EnabledProgressBarForNextLoad()
-	{
-		m_bShowProgressDialog = true;
-	}
 
 	// Should pause?
 	virtual bool ShouldPause();
@@ -417,7 +403,6 @@ private:
 #endif
 
 	// progress bar
-	bool m_bShowProgressDialog;
 	LevelLoadingProgress_e m_eLastProgressPoint;
 
 	// progress bar debugging
@@ -530,7 +515,6 @@ CEngineVGui::CEngineVGui()
 	m_pVProfPanel = NULL;
 #endif
 
-	m_bShowProgressDialog = false;
 	m_bSaveProgress = false;
 	m_bNoShaderAPI = false;
 	m_bNotAllowedToHideGameUI = false;
@@ -1269,7 +1253,7 @@ LoadingProgressDescription_t &GetProgressDescription(int eProgress)
 //-----------------------------------------------------------------------------
 // Purpose: transition handler
 //-----------------------------------------------------------------------------
-void CEngineVGui::OnLevelLoadingStarted()
+void CEngineVGui::OnLevelLoadingStarted(char const *levelName, bool bLocalServer)
 {
 	if (!staticGameUIFuncs)
 		return;
@@ -1284,15 +1268,9 @@ void CEngineVGui::OnLevelLoadingStarted()
 			pSyncReportConVar->SetValue( 0 );
 		}
 	}
-	
-	if ( IsX360() || IsSteamDeck() )
-	{
-		// TCR requirement, always!!!
-		m_bShowProgressDialog = true;
-	}
 
 	// we've starting loading a level/connecting to a server
-	staticGameUIFuncs->OnLevelLoadingStarted( m_bShowProgressDialog );
+	staticGameUIFuncs->OnLevelLoadingStarted( levelName, bLocalServer );
 
 	// reset progress bar timers
 	m_flLoadingStartTime = Plat_FloatTime();
@@ -1302,7 +1280,7 @@ void CEngineVGui::OnLevelLoadingStarted()
 	m_ProgressBias = 0;
 
 	// choose which progress bar to use
-	if (NET_IsMultiplayer())
+	if ( !bLocalServer )
 	{
 		// we're connecting
 		g_pLoadingProgressDescriptions = g_RemoteConnectLoadingProgressDescriptions;
@@ -1312,12 +1290,7 @@ void CEngineVGui::OnLevelLoadingStarted()
 		g_pLoadingProgressDescriptions = g_ListenServerLoadingProgressDescriptions;
 	}
 
-	if ( m_bShowProgressDialog )
-	{
-		ActivateGameUI();
-	}
-
-	m_bShowProgressDialog = false;
+	ActivateGameUI();
 }
 
 //-----------------------------------------------------------------------------
@@ -1509,7 +1482,7 @@ void CEngineVGui::StartCustomProgress()
 		return;
 
 	// we've starting loading a level/connecting to a server
-	staticGameUIFuncs->OnLevelLoadingStarted(true);
+	staticGameUIFuncs->OnLevelLoadingStarted( NULL, true );
 	m_bSaveProgress = staticGameUIFuncs->SetShowProgressText( true );
 }
 

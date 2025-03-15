@@ -22,7 +22,7 @@ void SCR_Shutdown( void );
 void SCR_UpdateScreen( void );
 void SCR_CenterPrint( char *str );
 void SCR_CenterStringOff( void );
-void SCR_BeginLoadingPlaque( void );
+void SCR_BeginLoadingPlaque( const char *levelName = 0 );
 void SCR_EndLoadingPlaque( void );
 void SCR_FatalDiskError( void );
 

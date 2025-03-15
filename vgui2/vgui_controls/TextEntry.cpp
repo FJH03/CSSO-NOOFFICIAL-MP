@@ -3751,6 +3751,27 @@ void TextEntry::ApplySettings( KeyValues *inResourceData )
 	SetAllowNumericInputOnly(inResourceData->GetInt("NumericInputOnly", 0));
 	SetAllowNonAsciiCharacters(inResourceData->GetInt("unicode", 0));
 	SelectAllOnFirstFocus(inResourceData->GetInt("selectallonfirstfocus", 0));
+
+	// label settings
+	const char *labelText =	inResourceData->GetString( "labelText", NULL );
+	if ( labelText )
+	{
+		if (labelText[0] == '%' && labelText[strlen(labelText) - 1] == '%')
+		{
+			// it's a variable, set it to be a special variable localized string
+			wchar_t unicodeVar[256];
+			g_pVGuiLocalize->ConvertANSIToUnicode(labelText, unicodeVar, sizeof(unicodeVar));
+
+			char var[256];
+			_snprintf(var, sizeof(var), "#var_%s", labelText);
+			g_pVGuiLocalize->AddString(var + 1, unicodeVar, "");
+			SetText(var);
+		}
+		else
+		{
+			SetText(labelText);
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------

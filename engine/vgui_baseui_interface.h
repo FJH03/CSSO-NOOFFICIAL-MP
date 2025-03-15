@@ -98,11 +98,10 @@ public:
 	virtual void HideDebugSystem() = 0;
 
 	// level loading
-	virtual void OnLevelLoadingStarted() = 0;
+	virtual void OnLevelLoadingStarted(const char *levelName, bool bLocalServer) = 0;
 	virtual void OnLevelLoadingFinished() = 0;
 	virtual void NotifyOfServerConnect(const char *game, int IP, int connectionPort, int queryPort) = 0;
 	virtual void NotifyOfServerDisconnect() = 0;
-	virtual void EnabledProgressBarForNextLoad() = 0;
 	virtual void UpdateProgressBar(LevelLoadingProgress_e progress) = 0;
 	virtual void UpdateCustomProgressBar( float progress, const wchar_t *desc ) = 0;
 	virtual void StartCustomProgress() = 0;

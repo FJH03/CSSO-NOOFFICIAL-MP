@@ -3179,12 +3179,6 @@ static void LoadSaveGame( const char *savename )
 
 	GetTestScriptMgr()->SetWaitCheckPoint( "load_game" );
 
-	// if we're not currently in a game, show progress
-	if ( !sv.IsActive() || sv.IsLevelMainMenuBackground() )
-	{
-		EngineVGui()->EnabledProgressBarForNextLoad();
-	}
-
 	// Put up loading plaque
 	SCR_BeginLoadingPlaque();
 

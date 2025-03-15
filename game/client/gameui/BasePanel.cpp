@@ -116,14 +116,15 @@ CON_COMMAND( vgui_previewres, "Load and preview a .res file." )
 	if ( !g_pBasePanel )
 		return;
 
-	if ( args.ArgC() != 3 )
+	if ( args.ArgC() != 4 )
 	{
-		ConMsg( "Usage: vgui_previewres <path_to_file> <panel_name>\n" );
+		ConMsg( "Usage: vgui_previewres <path_to_file> <panel_name> <proportional 1/0>\n" );
 		return;
 	}
 
 	const char* pszFileName = args[1];
 	const char* pszPanelName = args[2];
+	bool bProportional = (atoi( args[3] ) > 0);
 
 	if ( g_pVGuiPreviewPanel )
 	{
@@ -132,6 +133,7 @@ CON_COMMAND( vgui_previewres, "Load and preview a .res file." )
 	}
 
 	g_pVGuiPreviewPanel = new Frame( g_pBasePanel, pszPanelName );
+	g_pVGuiPreviewPanel->SetProportional( bProportional );
 	g_pVGuiPreviewPanel->LoadControlSettings( pszFileName );
 	g_pVGuiPreviewPanel->MoveToCenterOfScreen();
 	g_pVGuiPreviewPanel->SetMinimizeButtonVisible( false );

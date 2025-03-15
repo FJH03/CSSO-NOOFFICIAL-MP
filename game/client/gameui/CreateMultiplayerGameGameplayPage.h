@@ -26,11 +26,6 @@ public:
 	CCreateMultiplayerGameGameplayPage(vgui::Panel *parent, const char *name);
 	~CCreateMultiplayerGameGameplayPage();
 
-	// returns currently entered information about the server
-	int GetMaxPlayers();
-	const char *GetPassword();
-	const char *GetHostName();
-
 protected:
 	virtual void OnApplyChanges();
 

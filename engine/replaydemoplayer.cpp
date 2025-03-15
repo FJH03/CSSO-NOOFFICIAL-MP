@@ -210,9 +210,6 @@ bool CReplayDemoPlayer::StartPlayback( const char *pFilename, bool bAsTimeDemo )
 	if ( !pPlaybackInfo )
 		return false;
 
-	// always display progress bar to ensure load screen background is redraw
-	EngineVGui()->EnabledProgressBarForNextLoad();
-
 	if ( !BaseClass::StartPlayback( pFilename, bAsTimeDemo ) )
 	{
 		DisplayFailedToPlayMsg( pPlaybackInfo->m_iPerformance );

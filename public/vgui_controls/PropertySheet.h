@@ -99,6 +99,9 @@ public:
 	// enable the page with title "title" 
 	virtual void EnablePage(const char *title);
 
+	// returns whether the page is enabled or not
+	virtual bool IsPageEnabled(const char *title);
+
 	virtual void SetSmallTabs( bool state );
 	virtual bool IsSmallTabs() const;
 

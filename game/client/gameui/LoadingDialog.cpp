@@ -147,7 +147,11 @@ void CLoadingDialog::SetExtendedServerInfo( KeyValues* pExtendedServerInfo )
 	if ( szMapName && *szMapName )
 	{
 		m_pMapNameLabel->SetVisible( true );
-		m_pMapNameLabel->SetText( szMapName );
+		const char* pszUIMapName = g_pGameTypes->GetMapNameID( szMapName );
+ 		if ( pszUIMapName )
+ 			m_pMapNameLabel->SetText( pszUIMapName );
+ 		else
+ 			m_pMapNameLabel->SetText( szMapName );
 
 		KeyValues* kvMapData = new KeyValues( szMapName );
 		char tempfile[MAX_PATH];
@@ -656,6 +660,8 @@ void CLoadingDialog::OnCommand(const char *command)
 	{
 		// disconnect from the server
 		engine->ClientCmd_Unrestricted("disconnect\n");
+
+		ResetExtendedServerInfo();
 
 		// close
 		Close();
