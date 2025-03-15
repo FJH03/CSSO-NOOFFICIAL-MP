@@ -270,7 +270,20 @@ void CHudUniqueAlerts::ShowWarmupAlertPanel( void )
 		}
 		else
 		{
-			g_pVGuiLocalize->ConstructString( szNotice, sizeof( szNotice ), g_pVGuiLocalize->Find( "#Cstrike_Alert_Warmup_Period" ), 1, wzTime );
+			// client-side UTIL_HumansInGame
+			int nTotalPlayers = 0;
+			for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+			{
+				CCSPlayer* pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( i );
+				if ( pPlayer && pPlayer->GetTeamNumber() != TEAM_SPECTATOR && !pPlayer->IsBot() )
+					nTotalPlayers++;
+			}
+			int nNumHumansNeeded = CSGameRules() ? CSGameRules()->GetMinPlayers() : 0;
+
+			if ( nTotalPlayers < nNumHumansNeeded )
+				g_pVGuiLocalize->ConstructString( szNotice, sizeof( szNotice ), g_pVGuiLocalize->Find( "#Cstrike_Alert_Waiting_For_Players" ), 1, wzTime );
+			else
+				g_pVGuiLocalize->ConstructString( szNotice, sizeof( szNotice ), g_pVGuiLocalize->Find( "#Cstrike_Alert_Warmup_Period" ), 1, wzTime );
 
 			ShowAlertText( szNotice );
 		}

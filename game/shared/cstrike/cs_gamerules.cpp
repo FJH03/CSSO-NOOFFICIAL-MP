@@ -4796,7 +4796,7 @@ ConVar snd_music_selection(
 			if ( IsPlayingAnyCompetitiveStrictRuleset() )
 			{
 				// if all humans are present and warmup time left is greater than mp_warmuptime_all_players_connected, reduce warmup time to mp_warmuptime_all_players_connected
-				if ( ( UTIL_HumansInGame( true, false ) == GetMaxPlayers() )
+				if ( ( UTIL_HumansInGame( true, false ) >= GetMinPlayers() )
 					&& ( mp_warmuptime_all_players_connected.GetFloat() > 0 ) && ( GetWarmupPeriodEndTime() - mp_warmuptime_all_players_connected.GetFloat() >= gpGlobals->curtime ) )
 				{
 					m_fWarmupPeriodStart = gpGlobals->curtime;
@@ -9168,7 +9168,7 @@ int CCSGameRules::GetMaxSpectatorSlots( void ) const
     return m_iSpectatorSlotCount;
 }
 
-int CCSGameRules::GetMaxPlayers()
+int CCSGameRules::GetMinPlayers()
 {
 #ifdef CLIENT_DLL
 	if ( engine->IsPlayingDemo() || !engine->IsConnected() )

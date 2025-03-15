@@ -421,7 +421,7 @@ public:
 
 	virtual const unsigned char *GetEncryptionKey( void ) { return (unsigned char *)"d7NSuLq2"; } // both the client and server need this key
 
-	static int GetMaxPlayers(); // always available
+	static int GetMinPlayers(); // always available
 
 #ifdef CLIENT_DLL
 
