@@ -250,9 +250,6 @@ void CCSBot::PickNewAimSpot()
 				}
 			}
 
-			// temp test
-			m_targetSpot = GetPartPosition( GetBotEnemy(), GUT );
-
 			m_targetSpotVelocity = m_enemy->GetAbsVelocity();
 			m_targetSpotTime = gpGlobals->curtime;
 		}
