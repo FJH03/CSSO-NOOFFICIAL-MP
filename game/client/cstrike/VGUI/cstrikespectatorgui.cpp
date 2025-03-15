@@ -235,6 +235,7 @@ void CCSSpectatorGUI::UpdateTimer()
 	// these could be NULL if players modified the UI
 	if ( !ControlsPresent() )
 		return;
+
 	bool bBombPlanted = (g_PlantedC4s.Count() > 0);
 	if ( bBombPlanted )
 	{
@@ -303,6 +304,7 @@ void CCSSpectatorGUI::Update()
 				m_pPlayerPanelAvatar->SetDefaultAvatar( GetDefaultAvatarImage( pSpecTarget ) );
 				m_pPlayerPanelAvatar->SetPlayer( pSpecTarget, k_EAvatarSize64x64 );
 				m_pPlayerPanelAvatar->SetVisible( true );
+				m_pPlayerPanelAvatarBkg->SetVisible( true );
 
 				wchar_t wszSpecTargetName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 				wszSpecTargetName[0] = '\0';
@@ -622,14 +624,23 @@ bool CCSMapOverview::CanHostageBeSeen( MapPlayer_t *hostage )
 	if ( !localPlayer || !hostage )
 		return false;
 
+	C_CS_PlayerResource *pCSPR = (C_CS_PlayerResource*)GameResources();
+	if ( !pCSPR )
+		return false;
 
 	CSMapPlayer_t *csHostage = GetCSInfoForHostage(hostage);
 
 	if ( !csHostage )
 		return false;
 
+	if ( hostage->index < 1 )
+		return false;
+
 	if( GetMode() == MAP_MODE_RADAR )
 	{
+		// This level will be for all the RadarMode thinking.  Base class will be the old way for the other modes.
+		float now = gpGlobals->curtime;
+
 		if( hostage->position == Vector(0,0,0) )
 			return false; // Invalid guy.
 
@@ -641,10 +652,21 @@ bool CCSMapOverview::CanHostageBeSeen( MapPlayer_t *hostage )
 		if( hostage->health <= 0 )
 			return false;
 
-		if( localPlayer->GetTeamNumber() == hostage->team )
-			return true;// always yes for teammates.
+		if ( localPlayer->GetTeamNumber() == TEAM_TERRORIST )
+		{
+			if ( csHostage->hasHostageBeenCarried )
+			{
+				// a carried hostage needs to have been seen recently, and have been for a while
+				if ( csHostage->timeLastSeen != -1
+					 && (now - csHostage->timeLastSeen < TIME_SPOTS_STAY_SEEN)
+					 )
+					return true;
+				else
+					return false;
+			}
+		}
 
-		return false;
+		return true;
 	}
 	else if( hostage->health <= 0 )
 	{
@@ -669,8 +691,6 @@ CCSMapOverview::CCSMapOverview( const char *pElementName ) : BaseClass( pElement
 	m_vecRadarVerticalSections.RemoveAll();
 
 	m_bRoundRadar = true;
-
-	RegisterForRenderGroup( "hide_for_buymenu" );
 }
 
 void CCSMapOverview::Init( void )
@@ -696,6 +716,7 @@ void CCSMapOverview::Init( void )
 	// register for events as client listener
 	ListenForGameEvent( "hostage_killed" );
 	ListenForGameEvent( "hostage_rescued" );
+	ListenForGameEvent( "hostage_follows" );
 	ListenForGameEvent( "bomb_defused" );
 	ListenForGameEvent( "bomb_exploded" );
 	ListenForGameEvent( "bot_takeover" );
@@ -739,7 +760,10 @@ void CCSMapOverview::UpdateFollowEntity()
 	}
 	else
 	{
-		SetCenter( Vector2D( OVERVIEW_MAP_SIZE / 2, OVERVIEW_MAP_SIZE / 2 ) );
+		if ( m_nMapTextureID > 0 || m_nRadarMapTextureID > 0 )
+			SetCenter( Vector2D( OVERVIEW_MAP_SIZE / 2, OVERVIEW_MAP_SIZE / 2 ) );
+		else
+			SetCenter( vec3_origin.AsVector2D() ); // if there's no radar texture, set center at 0 0 so that the radar shows up correctly
 		SetAngle( 0 );
 	}
 }
@@ -869,7 +893,6 @@ void CCSMapOverview::UpdatePlayers()
 
 			float timeSinceLastSeen = now - playerCS->timeLastSeen;
 			bool bEnemy = IsOtherEnemy( localPlayer->entindex(), player->index+1 );
-
 			if( timeSinceLastSeen < 0.25f )
 				continue;
 			if( player->health <= 0 )
@@ -914,40 +937,106 @@ void CCSMapOverview::UpdateHostages()
 	if ( !pCSPR )
 		return;
 
+	float now = gpGlobals->curtime;
+
+	C_CSPlayer* localPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( localPlayer == NULL )
+		return;
+
 	for( int i=0; i < MAX_HOSTAGES; i++ )
 	{
-		if( pCSPR->IsHostageAlive( i ) )
+		if ( pCSPR->GetHostageEntityID( i ) > 0 )
 		{
-			MapPlayer_t *hostage = GetHostageByEntityID( pCSPR->GetHostageEntityID(i) );
-			if( hostage == NULL )
-				hostage = &m_Hostages[i];// Don't have entry yet, so need one.  This'll only happen once, at start of map
-
-			CSMapPlayer_t *hostageCS = GetCSInfoForHostage(hostage);
-
-			if ( !hostageCS )
-				return;
-
-			if( !hostageCS->isDead )
+			if ( pCSPR->IsHostageAlive( i ) )
 			{
-				hostage->index = pCSPR->GetHostageEntityID(i);
-				hostage->position = pCSPR->GetHostagePosition( i );
-				hostage->health = 100; // Hostages don't have health available from pCSPR.
-				hostage->angle = QAngle(0, 0, 0); // No facing, like no health
-				hostage->team = TEAM_CT; // CT in terms of who sees them
-				hostage->icon = m_TeamIcons[ MAP_ICON_HOSTAGE ]; // But hostage for icon.
-				hostage->color = m_TeamColors[ MAP_ICON_HOSTAGE ];
-				hostageCS->isHostage = true;
+				MapPlayer_t *hostage = GetHostageByEntityID( pCSPR->GetHostageEntityID(i) );
+				if( hostage == NULL )
+					hostage = &m_Hostages[i];// Don't have entry yet, so need one.  This'll only happen once, at start of map
 
-//				engine->Con_NPrintf( i + 15, "ID:%d Pos:(%.0f,%.0f,%.0f)", hostage->index, hostage->position.x, hostage->position.y, hostage->position.z );
+				CSMapPlayer_t *hostageCS = GetCSInfoForHostage(hostage);
+
+				if ( !hostageCS )
+					return;
+
+				bool bSpotted = pCSPR->IsHostageSpotted( i );
+				if ( bSpotted )
+					SetHostageSeen( hostageCS );
+
+				if( !hostageCS->isDead )
+				{
+					if ( bSpotted )
+					{
+						hostageCS->overrideIcon = -1;
+						hostageCS->overrideIconOffscreen = -1;
+						hostageCS->overridePosition = Vector( 0, 0, 0 );
+						hostageCS->overrideAngle = QAngle( 0, 0, 0 );
+						hostageCS->overrideFadeTime = -1;
+						hostageCS->overrideExpirationTime = -1;
+					}
+					hostage->index = pCSPR->GetHostageEntityID(i);
+					hostage->position = pCSPR->GetHostagePosition( i );
+					hostage->health = 100; // Hostages don't have health available from pCSPR.
+					hostage->angle = QAngle(0, 0, 0); // No facing, like no health
+					hostage->team = TEAM_CT; // CT in terms of who sees them
+					hostage->icon = m_TeamIcons[ MAP_ICON_HOSTAGE ]; // But hostage for icon.
+					hostage->color = m_TeamColors[ MAP_ICON_HOSTAGE ];
+					hostageCS->isHostage = true;
+
+	//				engine->Con_NPrintf( i + 15, "ID:%d Pos:(%.0f,%.0f,%.0f)", hostage->index, hostage->position.x, hostage->position.y, hostage->position.z );
+				}
+				else
+				{
+	//				engine->Con_NPrintf( i + 15, "Mostly Dead" );
+				}
 			}
 			else
 			{
-//				engine->Con_NPrintf( i + 15, "Mostly Dead" );
+	//			engine->Con_NPrintf( i + 15, "Dead" );
 			}
 		}
-		else
+	}
+
+	for ( int i = 0; i < MAX_HOSTAGES; i++ )
+	{
+		if ( pCSPR->GetHostageEntityID( i ) > 0 )
 		{
-//			engine->Con_NPrintf( i + 15, "Dead" );
+			MapPlayer_t* hostage = GetHostageByEntityID( pCSPR->GetHostageEntityID( i ) );
+			CSMapPlayer_t* hostageCS = GetCSInfoForHostage( hostage );
+
+			if ( !hostage || !hostageCS )
+				continue;
+
+			float timeSinceLastSeen = now - hostageCS->timeLastSeen;
+			if ( timeSinceLastSeen < 0.25f )
+				continue;
+			if ( hostageCS->isDead )
+				continue;// We don't need to spot dead guys, since they always show
+			if ( !hostageCS->hasHostageBeenCarried )
+				continue;// We don't need to spot those that are always showed
+			if ( pCSPR->IsHostageFollowingSomeone( i ) )
+				continue;// Don't draw a ghost icon for hostages that are carried
+			if ( localPlayer->GetTeamNumber() != TEAM_TERRORIST )
+				continue;// We don't need to spot our own guys
+
+			// Now that everyone has had a say on people they can see for us, go through and handle baddies that can no longer be seen.
+			if ( hostageCS->timeLastSeen != now && hostage->health > 0 )
+			{
+				// We are not seen now, but if we were seen recently (and for long enough),
+				// put up a "last known" icon and clear timelastseen
+				// if they are alive.  Death icon is more important, which is why the health check above.
+				if ( timeSinceLastSeen < TIME_SPOTS_STAY_SEEN && (hostageCS->timeLastSeen != -1) )
+				{
+					hostageCS->overrideIcon = m_TeamIconsGhost[MAP_ICON_HOSTAGE];
+					hostageCS->overrideIconOffscreen = m_TeamIconsOffscreen[MAP_ICON_HOSTAGE];
+					hostageCS->overridePosition = hostage->position;
+					hostageCS->overrideFadeTime = -1;
+					hostageCS->overrideExpirationTime = now + LAST_SEEN_ICON_DURATION;
+					hostageCS->overrideFadeTime = now + LAST_SEEN_ICON_FADE;
+					hostageCS->overrideAngle = hostage->angle;
+					hostageCS->timeLastSeen = -1;
+					hostageCS->timeFirstSeen = -1;
+				}
+			}
 		}
 	}
 }
@@ -1035,6 +1124,7 @@ void CCSMapOverview::UpdateBomb()
 			}
 		}
 	}
+
 	int alpha = GetMasterAlpha();
 
 	if( m_bomb.currentRingRadius == m_bomb.maxRingRadius  ||  m_bomb.ringTravelTime == 0 )
@@ -1062,7 +1152,7 @@ bool CCSMapOverview::ShouldDraw( void )
 	{
 		return false;
 	}
-	
+
 	return BaseClass::ShouldDraw();
 }
 
@@ -1317,7 +1407,7 @@ void CCSMapOverview::DrawMapTexture()
 
 void CCSMapOverview::DrawBomb()
 {
-	if( m_bomb.state == CSMapBomb_t::BOMB_INVALID ||
+    if( m_bomb.state == CSMapBomb_t::BOMB_INVALID ||
 		m_bomb.state == CSMapBomb_t::BOMB_CARRIED )
 		return;
 
@@ -1372,9 +1462,9 @@ void CCSMapOverview::DrawBomb()
 
 	if( m_bomb.timeGone != -1  &&  m_bomb.timeFade <= gpGlobals->curtime )
 		alpha *= 1 - ( (float)(gpGlobals->curtime - m_bomb.timeFade) / (float)(m_bomb.timeGone - m_bomb.timeFade) );
+	
 	if( bDrawRing )
 		DrawIconCS(bombRing, bombRingOffscreen, m_bomb.position, m_bomb.currentRingRadius, 0, m_bomb.currentRingAlpha);
-
 	DrawIconCS(bombIcon, bombIcon, m_bomb.position, m_flIconSize, 0, alpha);
 }
 
@@ -1526,7 +1616,6 @@ bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector p
 void CCSMapOverview::DrawMapPlayers()
 {
 	DrawGoalIcons();
-	DrawHostages();
 
 	C_CS_PlayerResource *pCSPR = (C_CS_PlayerResource*)GameResources();
 	surface()->DrawSetTextFont( m_hIconFont );
@@ -1597,6 +1686,7 @@ void CCSMapOverview::DrawMapPlayers()
 				sizeForPlayer *= 16.0f; // The self icon is really big since it has a camera view cone attached.
 				angleForPlayer = player->angle[YAW];// And, the self icon now rotates, natch.
 			}
+
 			int icon = player->icon;
 			if ( doingBomb && !doingLocalPlayer )
 			{
@@ -1614,6 +1704,7 @@ void CCSMapOverview::DrawMapPlayers()
 			int offscreenIcon = m_TeamIconsOffscreen[GetIconNumberFromTeamNumber(player->team)];
 			if ( IsOtherEnemy( localPlayer->entindex(), player->index + 1 ) )
 				offscreenIcon = m_enemyIconOffscreen;
+
 			DrawIconCS( icon, offscreenIcon, player->position, sizeForPlayer, angleForPlayer, alpha, true, name, &player->color, status, &colorGreen );
 			if( !doingLocalPlayer && player->health > 0 && !doingBomb && bIsTeammate )
 			{
@@ -1623,7 +1714,9 @@ void CCSMapOverview::DrawMapPlayers()
 		}
 	}
 
-	DrawBomb();// After players so it can draw on top
+	// After players so it can draw on top
+	DrawHostages();
+	DrawBomb();
 }
 
 void CCSMapOverview::DrawHostages()
@@ -1679,17 +1772,15 @@ void CCSMapOverview::DrawHostages()
 			}
 
 //			engine->Con_NPrintf( i + 30, "ID:%d Pos:(%.0f,%.0f,%.0f)", hostage->index, hostage->position.x, hostage->position.y, hostage->position.z );
-			int normalIcon, offscreenIcon;
-			float sizeForHostage = m_flIconSize;
-
-			normalIcon = hostage->icon;
-			offscreenIcon = m_TeamIconsOffscreen[ MAP_ICON_HOSTAGE ];
-			DrawIconCS( normalIcon, offscreenIcon, hostage->position, sizeForHostage, GetViewAngle(), alpha, true, name, &hostage->color, status, &colorGreen );
 
 			if( pCSPR->IsHostageFollowingSomeone( i ) )
 			{
 				// If they are following a CT, then give them a little extra symbol to show it.
-				DrawIconCS( m_hostageFollowing, m_hostageFollowingOffscreen, hostage->position, sizeForHostage, hostage->angle[YAW], alpha );
+				DrawIconCS( m_hostageFollowing, m_hostageFollowingOffscreen, hostage->position, m_flIconSize, hostage->angle[YAW], alpha );
+			}
+			else
+			{
+				DrawIconCS( hostage->icon, m_TeamIconsOffscreen[MAP_ICON_HOSTAGE], hostage->position, m_flIconSize, GetViewAngle(), alpha, true, name, &hostage->color, status, &colorGreen );
 			}
 		}
 	}
@@ -1897,6 +1988,7 @@ void CCSMapOverview::ResetRound()
 		p->timeLastSeen = -1;
 		p->timeFirstSeen = -1;
 		p->isHostage = false;
+		p->hasHostageBeenCarried = false;
 
 		p->flashUntilTime = -1;
 		p->nextFlashPeakTime = -1;
@@ -1925,6 +2017,7 @@ void CCSMapOverview::ResetRound()
 		p->timeLastSeen = -1;
 		p->timeFirstSeen = -1;
 		p->isHostage = false;
+		p->hasHostageBeenCarried = false;
 
 		p->flashUntilTime = -1;
 		p->nextFlashPeakTime = -1;
@@ -1943,7 +2036,7 @@ void CCSMapOverview::ResetRound()
 	m_bomb.maxRingRadius = -1;
 	m_bomb.ringTravelTime = -1;
 
-	m_goalIconsLoaded = false;
+	ClearGoalIcons();
 }
 
 void CCSMapOverview::DrawCamera()
@@ -2033,6 +2126,22 @@ void CCSMapOverview::FireGameEvent( IGameEvent *event )
 		hostageCS->overrideFadeTime = gpGlobals->curtime;
 		hostageCS->overrideExpirationTime = gpGlobals->curtime + HOSTAGE_RESCUE_DURATION;
 	}
+	else if ( Q_strcmp(type,"hostage_follows") == 0 )
+	{
+		MapPlayer_t *hostage = GetHostageByEntityID( event->GetInt("hostage") );
+
+//		DevMsg("Hostage id %d just got rescued.\n", event->GetInt("hostage"));
+
+		if ( !hostage )
+			return;
+
+		CSMapPlayer_t *hostageCS = GetCSInfoForHostage(hostage);
+
+		if ( !hostageCS )
+			return;
+
+		hostageCS->hasHostageBeenCarried = true;
+	}
 	else if ( Q_strcmp(type,"bomb_defused") == 0 )
 	{
 		m_bomb.state = CSMapBomb_t::BOMB_GONE;
@@ -2102,6 +2211,7 @@ void CCSMapOverview::FireGameEvent( IGameEvent *event )
 		playerCS->timeLastSeen = -1;
 		playerCS->timeFirstSeen = -1;
 		playerCS->isHostage = false;
+		playerCS->hasHostageBeenCarried = false;
 
 		playerCS->flashUntilTime = -1;
 		playerCS->nextFlashPeakTime = -1;
@@ -2134,6 +2244,7 @@ void CCSMapOverview::FireGameEvent( IGameEvent *event )
 		playerCS->timeLastSeen = -1;
 		playerCS->timeFirstSeen = -1;
 		playerCS->isHostage = false;
+		playerCS->hasHostageBeenCarried = false;
 
 		playerCS->flashUntilTime = -1;
 		playerCS->nextFlashPeakTime = -1;
@@ -2158,6 +2269,7 @@ void CCSMapOverview::FireGameEvent( IGameEvent *event )
 		else
 			player->icon = m_TeamIcons[ GetIconNumberFromTeamNumber(player->team) ];
 
+		player->color = m_TeamColors[ GetIconNumberFromTeamNumber(player->team) ];
 	}
 	else
 	{
@@ -2240,6 +2352,19 @@ void CCSMapOverview::SetPlayerSeen( int index )
 			pCS->timeFirstSeen = now;
 
 		pCS->timeLastSeen = now;
+	}
+}
+
+void CCSMapOverview::SetHostageSeen( CSMapPlayer_t *hostage )
+{
+	float now = gpGlobals->curtime;
+
+	if( hostage )
+	{
+		if( hostage->timeLastSeen == -1 )
+			hostage->timeFirstSeen = now;
+
+		hostage->timeLastSeen = now;
 	}
 }
 

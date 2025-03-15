@@ -630,10 +630,10 @@ CCSPlayer::CCSPlayer()
 	m_flDefusingTalkTimer = 0;
 	m_flC4PlantTalkTimer = 0;
 	m_flFlinchStack = 1.0;
- 
- 	// setting this to the current time prevents late-joining players from getting prioritized for receiving the defuser/bomb
- 	m_fLastGivenDefuserTime = gpGlobals->curtime;
- 	m_fLastGivenBombTime = gpGlobals->curtime;
+
+	// setting this to the current time prevents late-joining players from getting prioritized for receiving the defuser/bomb
+	m_fLastGivenDefuserTime = gpGlobals->curtime;
+	m_fLastGivenBombTime = gpGlobals->curtime;
 
 	m_vLastHitLocationObjectSpace = Vector(0,0,0);
 
@@ -1490,7 +1490,6 @@ void CCSPlayer::Spawn()
 		ChangeName( m_szNewName );
 		m_szNewName[0] = 0;
 	}
-
 
 	m_bIsInAutoBuy = false;
 	m_bIsInRebuy = false;
@@ -4229,11 +4228,11 @@ void CCSPlayer::GiveDefuser(bool bPickedUp /* = false */)
 	m_bHasDefuser = true;
 
 	if ( !bPickedUp )
- 	{
- 		m_fLastGivenDefuserTime = gpGlobals->curtime;
- 	}
- 
- 	// [dwenger] Added for fun-fact support
+	{
+		m_fLastGivenDefuserTime = gpGlobals->curtime;
+	}
+
+	// [dwenger] Added for fun-fact support
 	m_bPickedUpDefuser = bPickedUp;
 }
 
@@ -4562,7 +4561,6 @@ void CCSPlayer::MoveToNextIntroCamera()
 	SnapEyeAngles( CamAngles );
 	m_fIntroCamTime = gpGlobals->curtime + 6;
 }
-
 
 bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bThrowForward )
 {
@@ -5055,7 +5053,6 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 
 		return false;
 	}
-
 
 	return true;
 }
@@ -5634,6 +5631,7 @@ void CCSPlayer::HandleMenu_Radio2( int slot )
 	m_iRadioMessages--;
 	m_flRadioTime = gpGlobals->curtime + 1.5;
 
+	float flLength = 0.0f;
 	switch ( slot )
 	{
 		case RADIO_GO_GO_GO:
@@ -5834,15 +5832,17 @@ void CCSPlayer::Radio( const char *pszRadioSound, const char *pszRadioText, bool
 		AI_CriteriaSet botCriteria; // unused atm
 
 		if ( Speak( concept, &botCriteria, NULL, 0, &filter ) )
- 		{
- 			if ( flLength )
- 				*flLength = GetExpresser()->GetTimeSpeechComplete() - gpGlobals->curtime;
- 		}
+		{
+			if ( flLength )
+				*flLength = GetExpresser()->GetTimeSpeechComplete() - gpGlobals->curtime;
+		}
 	}
 	else
 	{
 		UserMessageBegin ( filter, "SendAudio" );
 			WRITE_STRING( pszRadioSound );
+		MessageEnd();
+
 		if ( flLength )
 			*flLength = 1.0f;
 	}
@@ -6850,8 +6850,6 @@ void CCSPlayer::GetIntoGame()
 
 	CCSGameRules *MPRules = CSGameRules();
 
-
-
 	//****************New Code by SupraFiend************
 	if ( !MPRules->FPlayerCanRespawn( this ) )
 	{
@@ -6876,39 +6874,22 @@ void CCSPlayer::GetIntoGame()
 
 		MPRules->CheckWinConditions();
 
-		//=============================================================================
-		// HPE_BEGIN:
 		// [menglish] Have the rules update anything related to a player spawning in late
-		//=============================================================================
-
 		MPRules->SpawningLatePlayer(this);
-
-		//=============================================================================
-		// HPE_END
-		//=============================================================================
 
 		if ( MPRules->GetRoundRestartTime() == 0.0f )
 		{
 			//Bomb target, no bomber and no bomb lying around.
 			if( !MPRules->IsPlayingGunGameProgressive() && !MPRules->IsPlayingGunGameDeathmatch() &&
- 				!MPRules->IsWarmupPeriod() && 
- 				MPRules->IsBombDefuseMap() && !MPRules->IsThereABomber() && !MPRules->IsThereABomb() )
- 			{
- 				MPRules->GiveC4ToRandomPlayer(); //Checks for terrorists.
- 			}
+				!MPRules->IsWarmupPeriod() && 
+				MPRules->IsBombDefuseMap() && !MPRules->IsThereABomber() && !MPRules->IsThereABomb() )
+			{
+				MPRules->GiveC4ToRandomPlayer(); //Checks for terrorists.
+			}
 		}
 
-		//=============================================================================
-		// HPE_BEGIN:
 		// [menglish] Reset Round Based Achievement Variables
-		//=============================================================================
-
 		ResetRoundBasedAchievementVariables();
-
-		//=============================================================================
-		// HPE_END
-		//=============================================================================
-
 	}
 }
 
@@ -9438,38 +9419,6 @@ void CCSPlayer::ChangeTeam( int iTeamNum )
 	CSGameRules()->InitializePlayerCounts( NumAliveTerrorist, NumAliveCT, NumDeadTerrorist, NumDeadCT );
 }
 
-void CCSPlayer::ModifyOrAppendCriteria( AI_CriteriaSet& set )
-{
-	BaseClass::ModifyOrAppendCriteria( set );
-
-	char modelName[MAX_PATH];
-
-	int nTeamNumber = GetTeamNumber();
-	if ( CSLoadout()->HasAgentSet( this, nTeamNumber ) )
-	{
-		if ( GetTeamNumber() == TEAM_TERRORIST )
-			V_strcpy( modelName, GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer( this, TEAM_TERRORIST ) )->m_szRadioPrefix );
-		else if ( GetTeamNumber() == TEAM_CT )
-			V_strcpy( modelName, GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer( this, TEAM_CT ) )->m_szRadioPrefix );
-	}
-	else
-	{
-		// Fix up the model name for rule matching
-		V_FileBase( STRING( GetModelName() ), modelName, sizeof( modelName ) );
-		char *pEnd = V_stristr( modelName, "_var" );
-		if ( pEnd )
-			*pEnd = 0;
-	}
-	
-	int myteam = GetTeamNumber();
-	int otherTeam = ( myteam == TEAM_CT ) ? TEAM_TERRORIST : TEAM_CT;
-
-	set.AppendCriteria( "team", myteam );
-	set.AppendCriteria( "model", modelName );
-	set.AppendCriteria( "liveallies", GetTeam()->GetAliveMembers() );
-	set.AppendCriteria( "liveenemies", GetGlobalTeam( otherTeam )->GetAliveMembers() );
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: Put the player in the specified team without penalty
 //-----------------------------------------------------------------------------
@@ -9568,6 +9517,38 @@ void CCSPlayer::SwitchTeam( int iTeamNum )
 	// Initialize the player counts now that a player has switched teams
 	int NumDeadCT, NumDeadTerrorist, NumAliveTerrorist, NumAliveCT;
 	CSGameRules()->InitializePlayerCounts( NumAliveTerrorist, NumAliveCT, NumDeadTerrorist, NumDeadCT );
+}
+
+void CCSPlayer::ModifyOrAppendCriteria( AI_CriteriaSet& set )
+{
+	BaseClass::ModifyOrAppendCriteria( set );
+
+	char modelName[MAX_PATH];
+
+	int nTeamNumber = GetTeamNumber();
+	if ( CSLoadout()->HasAgentSet( this, nTeamNumber ) )
+	{
+		if ( GetTeamNumber() == TEAM_TERRORIST )
+			V_strcpy( modelName, GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer( this, TEAM_TERRORIST ) )->m_szRadioPrefix );
+		else if ( GetTeamNumber() == TEAM_CT )
+			V_strcpy( modelName, GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer( this, TEAM_CT ) )->m_szRadioPrefix );
+	}
+	else
+	{
+		// Fix up the model name for rule matching
+		V_FileBase( STRING( GetModelName() ), modelName, sizeof( modelName ) );
+		char *pEnd = V_stristr( modelName, "_var" );
+		if ( pEnd )
+			*pEnd = 0;
+	}
+	
+	int myteam = GetTeamNumber();
+	int otherTeam = ( myteam == TEAM_CT ) ? TEAM_TERRORIST : TEAM_CT;
+
+	set.AppendCriteria( "team", myteam );
+	set.AppendCriteria( "model", modelName );
+	set.AppendCriteria( "liveallies", GetTeam()->GetAliveMembers() );
+	set.AppendCriteria( "liveenemies", GetGlobalTeam( otherTeam )->GetAliveMembers() );
 }
 
 void CCSPlayer::ModifyOrAppendPlayerCriteria( AI_CriteriaSet& set )
@@ -10303,6 +10284,7 @@ void CCSPlayer::PlayerUsedFirearm( CBaseCombatWeapon* pBaseWeapon )
 {
 	// Player immunity in gun game is cleared upon weapon use
 	ClearImmunity();
+
 	if ( pBaseWeapon )
 	{
 		CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* >( pBaseWeapon );
@@ -11874,3 +11856,4 @@ void UTIL_AwardMoneyToTeam( int iAmount, int iTeam, CBaseEntity *pIgnore )
 		pPlayer->AddAccount( iAmount );
 	}
 }
+

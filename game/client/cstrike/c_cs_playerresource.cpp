@@ -35,6 +35,7 @@ IMPLEMENT_CLIENTCLASS_DT(C_CS_PlayerResource, DT_CSPlayerResource, CCSPlayerReso
 	RecvPropArray3( RECVINFO_ARRAY(m_hostageRescueZ), RecvPropInt( RECVINFO(m_hostageRescueZ[0]))),
 	RecvPropInt( RECVINFO( m_bBombSpotted ) ),
 	RecvPropArray3( RECVINFO_ARRAY(m_bPlayerSpotted), RecvPropInt( RECVINFO(m_bPlayerSpotted[0]))),
+	RecvPropArray3( RECVINFO_ARRAY(m_bHostageSpotted), RecvPropInt( RECVINFO(m_bHostageSpotted[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_iMVPs), RecvPropInt( RECVINFO(m_iMVPs[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_bHasDefuser), RecvPropInt( RECVINFO(m_bHasDefuser[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_bControllingBot), RecvPropInt( RECVINFO(m_bControllingBot[0]))),
@@ -53,7 +54,7 @@ END_RECV_TABLE()
 C_CS_PlayerResource::C_CS_PlayerResource()
 {
 	vgui::IScheme *pClientScheme = vgui::scheme()->GetIScheme( vgui::scheme()->GetScheme( "ClientScheme" ) );
- 
+
 	m_Colors[TEAM_TERRORIST] = pClientScheme->GetColor( "TeamT", COLOR_BLUE );
 	m_Colors[TEAM_CT] = pClientScheme->GetColor( "TeamCT", COLOR_RED );
 	memset( m_iMVPs, 0, sizeof( m_iMVPs ) );
@@ -78,7 +79,6 @@ bool C_CS_PlayerResource::HasC4(int iIndex )
 	{
 		return false;
 	}
-
 	return m_iPlayerC4 == iIndex;
 }
 
@@ -177,7 +177,6 @@ bool C_CS_PlayerResource::IsBombSpotted( void ) const
 	return m_bBombSpotted;
 }
 
-
 //--------------------------------------------------------------------------------------------------------
 bool C_CS_PlayerResource::IsPlayerSpotted( int iIndex )
 {
@@ -185,6 +184,12 @@ bool C_CS_PlayerResource::IsPlayerSpotted( int iIndex )
 		return false;
 
 	return m_bPlayerSpotted[iIndex];
+}
+
+//--------------------------------------------------------------------------------------------------------
+bool C_CS_PlayerResource::IsHostageSpotted( int iIndex )
+{
+	return m_bHostageSpotted[iIndex];
 }
 
 //-----------------------------------------------------------------------------
@@ -289,10 +294,11 @@ const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* 
 			g_pVGuiLocalize->ConstructString( buffer, buffsize, g_pVGuiLocalize->Find( translationID ), 1, wide_name );
 		}
 	}
-	else 
+	else
 	{
 		*buffer = L'\0';
 	}
+
 	return buffer;
 }
 
@@ -327,4 +333,5 @@ bool C_CS_PlayerResource::HasDefuser( int iIndex )
 	}
 
 	return m_bHasDefuser[iIndex];
-} 
+}
+

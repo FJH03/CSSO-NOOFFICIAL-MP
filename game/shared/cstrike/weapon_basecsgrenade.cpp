@@ -471,13 +471,12 @@ void CBaseCSGrenade::ItemPostFrame()
 	{
 		CCSPlayer *pPlayer = ToCSPlayer( GetPlayerOwner() );
 		if ( !pPlayer || m_flNextPrimaryAttack > gpGlobals->curtime || m_flNextSecondaryAttack > gpGlobals->curtime )
- 			return false;
+			return false;
 
 		int iAmount = pPlayer->GetAmmoCount( GetPrimaryAmmoType() );
 		if ( iAmount <= 1 )
 		{
 			return pPlayer->CSWeaponDrop( this, true );
-			return;
 		}
 		else
 		{

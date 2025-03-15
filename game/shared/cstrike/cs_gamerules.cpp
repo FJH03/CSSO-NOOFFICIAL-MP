@@ -4191,6 +4191,8 @@ ConVar snd_music_selection(
 		// create its factory, it removes itself in any case.
 		// CreateWeaponManager( "weapon_*", gpGlobals->maxClients * 2 );
 
+		g_pPlayerResource->UpdatePlayerData();
+
 		if ( bClearAccountsAfterHalftime && HasHalfTime() )
 		{
 			// Loop through all players and give them only the starting money

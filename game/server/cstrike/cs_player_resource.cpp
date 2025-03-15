@@ -33,6 +33,7 @@ IMPLEMENT_SERVERCLASS_ST(CCSPlayerResource, DT_CSPlayerResource)
 	SendPropArray3( SENDINFO_ARRAY3(m_hostageRescueZ), SendPropInt( SENDINFO_ARRAY(m_hostageRescueZ), COORD_INTEGER_BITS+1, 0 ) ),
 	SendPropBool( SENDINFO( m_bBombSpotted ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_bPlayerSpotted), SendPropInt( SENDINFO_ARRAY(m_bPlayerSpotted), 1, SPROP_UNSIGNED ) ),
+	SendPropArray3( SENDINFO_ARRAY3(m_bHostageSpotted), SendPropInt( SENDINFO_ARRAY(m_bHostageSpotted), 1, SPROP_UNSIGNED ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_iMVPs), SendPropInt( SENDINFO_ARRAY(m_iMVPs), COORD_INTEGER_BITS+1, SPROP_UNSIGNED ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_bHasDefuser), SendPropInt( SENDINFO_ARRAY(m_bHasDefuser), 1, SPROP_UNSIGNED ) ),
 
@@ -202,6 +203,7 @@ void CCSPlayerResource::UpdatePlayerData( void )
 			m_bHostageAlive.Set( i, false );
 			m_isHostageFollowingSomeone.Set( i, false );
 			m_iHostageEntityIDs.Set( i, 0 );
+			m_bHostageSpotted.Set( i, false );
 			continue;
 		}
 
@@ -211,6 +213,9 @@ void CCSPlayerResource::UpdatePlayerData( void )
 
 		if ( pHostage->IsValid() )
 		{
+			Spotter spotter( pHostage, pHostage->GetAbsOrigin(), TEAM_TERRORIST );
+ 			ForEachPlayer( spotter );
+ 			m_bHostageSpotted.Set( i, spotter.Spotted() );
 			m_iHostageX.Set( i, (int) pHostage->GetAbsOrigin().x );	
 			m_iHostageY.Set( i, (int) pHostage->GetAbsOrigin().y );	
 			m_iHostageZ.Set( i, (int) pHostage->GetAbsOrigin().z );	
@@ -355,6 +360,7 @@ void CCSPlayerResource::Spawn( void )
 		m_bHostageAlive.Set( i, 0 );
 		m_isHostageFollowingSomeone.Set( i, 0 );
 		m_iHostageEntityIDs.Set(i, 0);
+		m_bHostageSpotted.Set(i, 0);
 	}
 
 	for ( int i=0; i < MAX_HOSTAGE_RESCUES; i++ )

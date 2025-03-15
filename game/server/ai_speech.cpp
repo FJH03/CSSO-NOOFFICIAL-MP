@@ -536,7 +536,10 @@ bool CAI_Expresser::FindResponse( AI_Response &outResponse, AIConcept_t &concept
 				char response[ 256 ];
 				outResponse.GetResponse( response, sizeof( response ) );
 
-				Warning( "RESPONSERULES: %s spoke '%s'. Found response '%s'.\n", pszName, (const char*)concept, response );
+				if ( response[0] )
+ 					Warning( "RESPONSERULES: %s spoke '%s'. Found response '%s'.\n", pszName, (const char*)concept, response );
+ 				else
+ 					Warning( "RESPONSERULES: %s spoke '%s'. Found a response, but no scenes loaded within a response.\n", pszName, (const char*)concept );
 			}
 			else
 			{

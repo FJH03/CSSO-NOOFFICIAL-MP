@@ -77,11 +77,10 @@ protected:
 	CAvatarImagePanel *m_pPlayerPanelAvatar;
 	vgui::VectorImagePanel *m_pBombIcon;
 
+	CPanelAnimationVar( Color, m_pCTStripColor, "CTStripColor", "White" );
+	CPanelAnimationVar( Color, m_pTStripColor, "TStripColor", "White" );
 	CPanelAnimationVar( Color, m_clrC4Planted, "C4PlantedColor", "White" );
 	CPanelAnimationVar( Color, m_clrC4Defused, "C4DefusedColor", "White" );
-
-	CPanelAnimationVar( Color, m_pCTStripColor, "CTStripColor", "White" );
- 	CPanelAnimationVar( Color, m_pTStripColor, "TStripColor", "White" );
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -133,6 +132,7 @@ protected:	// private structures & types
 		float	timeLastSeen; // curtime that we last saw this guy.
 		float	timeFirstSeen; // curtime that we started seeing this guy
 		bool	isHostage;	// Not a full player, a hostage.  Special icon, different death event
+		bool	hasHostageBeenCarried; // Has this hostage ever been carried? If so, they won't appear on T's radars.
 		float	flashUntilTime;
 		float	nextFlashPeakTime;
 		int		currentFlashAlpha;
@@ -161,6 +161,7 @@ protected:	// private structures & types
 		float currentRingAlpha;
 		float maxRingRadius;
 		float ringTravelTime;
+
 		int carrierIndex;
 	} CSMapBomb_t;
 
@@ -188,6 +189,7 @@ public: // IViewPortPanel interface:
 
 	// Player settings:
 	void SetPlayerSeen( int index );
+	void SetHostageSeen( CSMapPlayer_t *hostage );
 	void SetBombSeen( bool seen );
 
 	// general settings:
@@ -272,8 +274,6 @@ private:
 
 	int		m_bombRingPlanted;
 	int		m_bombRingDropped;
-	int		m_bombRingCarried;
-	int		m_bombRingCarriedOffscreen;
 	int		m_radioFlash;
 	int		m_radioFlashOffscreen;
 	int		m_radarTint;

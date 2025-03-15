@@ -41,6 +41,7 @@ protected:
 
 	CNetworkVar( bool, m_bBombSpotted );
 	CNetworkArray( bool, m_bPlayerSpotted, MAX_PLAYERS+1 );
+	CNetworkArray( bool, m_bHostageSpotted, MAX_HOSTAGES+1 );
 
 	CNetworkArray( string_t, m_szClan, MAX_PLAYERS+1 );
 

@@ -24,6 +24,7 @@ enum EDecoratedPlayerNameFlag_t
 	k_EDecoratedPlayerNameFlag_DontShowClanName = ( 1 << 2 ),
 };
 
+
 class C_CS_PlayerResource : public C_PlayerResource
 {
 	DECLARE_CLASS( C_CS_PlayerResource, C_PlayerResource );
@@ -46,6 +47,7 @@ public:
 
 	bool			IsBombSpotted( void ) const;
 	bool			IsPlayerSpotted( int iIndex );
+	bool			IsHostageSpotted( int iIndex );
 
 	const char		*GetClanTag( int index );
 
@@ -61,7 +63,6 @@ public:
 protected:
 
 	int		m_iPlayerC4;	// entity index of C4 carrier or 0
-	int		m_iPlayerVIP;	// entity index of VIP player or 0
 	Vector	m_vecC4;		// position of C4
 	Vector	m_bombsiteCenterA;	
 	Vector	m_bombsiteCenterB;	
@@ -79,6 +80,7 @@ protected:
 
 	bool	m_bBombSpotted;
 	bool	m_bPlayerSpotted[ MAX_PLAYERS + 1 ];
+	bool	m_bHostageSpotted[ MAX_HOSTAGES + 1 ];
 	int		m_iPlayerClasses[ MAX_PLAYERS + 1 ];
 
 	char	m_szClan[MAX_PLAYERS+1][MAX_CLAN_TAG_LENGTH];

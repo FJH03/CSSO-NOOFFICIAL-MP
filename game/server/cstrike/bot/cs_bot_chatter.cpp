@@ -1301,7 +1301,7 @@ bool BotStatement::Update( void )
 						const char *place = TheNavMesh->PlaceToName( nPlace );
 						CountCriteria count = phrase->GetCountCriteria();
 
-						AI_CriteriaSet &botCriteria = phrase->GetCriteriaSet();
+						AI_CriteriaSet botCriteria = phrase->GetCriteriaSet();
 						if ( count != UNDEFINED_COUNT )
 						{
 							botCriteria.AppendCriteria( "count", count );

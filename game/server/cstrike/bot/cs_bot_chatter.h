@@ -232,7 +232,7 @@ public:
 
 	PlaceCriteria GetPlaceCriteria( void ) const { return m_placeCriteria; }
 	CountCriteria GetCountCriteria( void ) const { return m_countCriteria; }
-	AI_CriteriaSet &GetCriteriaSet( void ) const { return m_contexts; }
+	AI_CriteriaSet GetCriteriaSet( void ) const { return m_contexts; }
 
 private:
 	friend class BotPhraseManager;
