@@ -1293,7 +1293,10 @@ void GameTypes::SetAndParseExtendedServerInfo( KeyValues *pExtendedServerInfo )
 		{
 			SetGameTypeAndMode( m_pExtendedServerInfo->GetInt( "c_game_type" ), m_pExtendedServerInfo->GetInt( "c_game_mode" ) );
 
-			g_hLoadingDialog->SetExtendedServerInfo( m_pExtendedServerInfo );
+			if ( g_hLoadingDialog.Get() )
+ 			{
+ 				g_hLoadingDialog->SetExtendedServerInfo( m_pExtendedServerInfo );
+ 			}
 		}
 	}
 #endif
