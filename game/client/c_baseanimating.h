@@ -457,6 +457,7 @@ public:
 	inline float					SequenceDuration( int iSequence ) { return SequenceDuration(GetModelPtr(), iSequence); }
 	int								FindTransitionSequence( int iCurrentSequence, int iGoalSequence, int *piDir );
 	void							SetSequenceOnEnd( void );
+	void							SetSequenceTransitionFadeOverride( float flValue ) { m_SequenceTransitioner.m_flFadeOutOverride = flValue; }
 
 	void							RagdollMoved( void );
 

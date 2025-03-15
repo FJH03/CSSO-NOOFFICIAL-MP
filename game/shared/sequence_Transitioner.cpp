@@ -14,6 +14,11 @@
 // CSequenceTransitioner implementation.
 // -----------------------------------------------------------------------------
 
+CSequenceTransitioner::CSequenceTransitioner()
+{
+ 	m_flFadeOutOverride = -1.0f;
+}
+
 void CSequenceTransitioner::CheckForSequenceChange( 
 	CStudioHdr *hdr,
 	int nCurSequence, 
@@ -57,8 +62,16 @@ void CSequenceTransitioner::CheckForSequenceChange(
 			}
 			else
 			{
-				mstudioseqdesc_t &prevseqdesc = hdr->pSeqdesc( currentblend->GetSequence() );
-				currentblend->m_flLayerFadeOuttime = MIN( prevseqdesc.fadeouttime, seqdesc.fadeintime );
+				if ( m_flFadeOutOverride >= 0.0f )
+ 				{
+ 					// PiMoN: poor hack to hardcore team selection menu sequence fade values because Valve's Panorama is ruthless
+ 					currentblend->m_flLayerFadeOuttime = m_flFadeOutOverride;
+ 				}
+ 				else
+ 				{
+ 					mstudioseqdesc_t &prevseqdesc = hdr->pSeqdesc( currentblend->GetSequence() );
+ 					currentblend->m_flLayerFadeOuttime = MIN( prevseqdesc.fadeouttime, seqdesc.fadeintime );
+ 				}
 				/*
 				// clip blends to time remaining
 				if ( !IsSequenceLooping(hdr, currentblend->m_nSequence) )

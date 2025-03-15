@@ -34,7 +34,7 @@ public:
 	void SetPlayerModel( const char* pszModel );
 	void SetWeaponModel( const char* pszModel );
 	void SetGlovesModel( const char* pszModel );
-	void SetSequence( const char* pszSequence );
+	void SetSequence( const char* pszSequence, float flSequenceFade );
 
 	bool DoesModelSupportGloves( const char* pszGlovesViewModelName, const char* pszDefaultViewModelName );
 

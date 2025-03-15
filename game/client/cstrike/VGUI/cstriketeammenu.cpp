@@ -78,10 +78,10 @@ void CCSTeamMenuAgentImage::OnCursorEntered()
 	switch ( m_nTeamNumber )
 	{
 		case TEAM_TERRORIST:
-			SetSequence( "t_teamselect_confirm01" );
+			SetSequence( "t_teamselect_confirm01", 0.2f );
 			break;
 		case TEAM_CT:
-			SetSequence( "ct_teamselect_confirm01" );
+			SetSequence( "ct_teamselect_confirm01", 0.2f );
 			break;
 	}
 }
@@ -99,7 +99,7 @@ void CCSTeamMenuAgentImage::OnCursorExited()
 		CCSWeaponInfo* pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
 		if ( pWeaponInfo )
 		{
-			SetSequence( (m_nTeamNumber == TEAM_CT) ? pWeaponInfo->m_szClassMenuAnim : pWeaponInfo->m_szClassMenuAnimT );
+			SetSequence( (m_nTeamNumber == TEAM_CT) ? pWeaponInfo->m_szClassMenuAnim : pWeaponInfo->m_szClassMenuAnimT, 2.0f );
 		}
 	}
 }
@@ -304,13 +304,14 @@ void CCSTeamMenuAgentImage::SetGlovesModel( const char* pszModel )
 	}
 }
 
-void CCSTeamMenuAgentImage::SetSequence( const char* pszSequence )
+void CCSTeamMenuAgentImage::SetSequence( const char* pszSequence, float flSequenceFade )
 {
 	if ( m_hPlayerModel.Get() )
 	{
 		int sequence = m_hPlayerModel->LookupSequence( pszSequence );
 		if ( sequence != ACT_INVALID )
 		{
+			m_hPlayerModel->SetSequenceTransitionFadeOverride( flSequenceFade );
 			m_hPlayerModel->ResetSequence( sequence );
 			m_hPlayerModel->SetCycle( 0 );
 		}
@@ -560,7 +561,7 @@ void CCSTeamMenu::ResetAgentModels()
 			if ( pWeaponInfo )
 			{
 				m_pAgentModelT->SetWeaponModel( pWeaponInfo->szWorldModel );
-				m_pAgentModelT->SetSequence( pWeaponInfo->m_szClassMenuAnimT );
+				m_pAgentModelT->SetSequence( pWeaponInfo->m_szClassMenuAnimT, 0.0f );
 			}
 		}
 
@@ -643,7 +644,7 @@ void CCSTeamMenu::ResetAgentModels()
 			if ( pWeaponInfo )
 			{
 				m_pAgentModelCT->SetWeaponModel( pWeaponInfo->szWorldModel );
-				m_pAgentModelCT->SetSequence( pWeaponInfo->m_szClassMenuAnim );
+				m_pAgentModelCT->SetSequence( pWeaponInfo->m_szClassMenuAnim, 0.0f );
 			}
 		}
 

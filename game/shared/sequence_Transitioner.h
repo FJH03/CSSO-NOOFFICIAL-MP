@@ -17,6 +17,8 @@
 class CSequenceTransitioner
 {
 public:
+	CSequenceTransitioner();
+
 	void CheckForSequenceChange( 
 		// Describe the current animation state with these parameters.
 		CStudioHdr *hdr,
@@ -43,6 +45,7 @@ public:
 
 public:
 	CUtlVector< CAnimationLayer >	m_animationQueue;
+	float							m_flFadeOutOverride; // PiMoN: poor hack to be able to compete with valve's panorama ;(
 };
 
 #endif // SEQUENCE_TRANSITIONER_H

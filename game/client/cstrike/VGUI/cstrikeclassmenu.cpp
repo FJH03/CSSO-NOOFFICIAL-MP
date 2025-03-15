@@ -180,7 +180,7 @@ void CCSClassMenu_TER::ResetAgentModels()
 			if ( pWeaponInfo )
 			{
 				m_pAgentModels[i]->SetWeaponModel( pWeaponInfo->szWorldModel );
-				m_pAgentModels[i]->SetSequence( pWeaponInfo->m_szClassMenuAnimT );
+				m_pAgentModels[i]->SetSequence( pWeaponInfo->m_szClassMenuAnimT, 0.0f );
 			}
 		}
 
@@ -287,7 +287,7 @@ void CCSClassMenu_CT::ResetAgentModels()
 			if ( pWeaponInfo )
 			{
 				m_pAgentModels[i]->SetWeaponModel( pWeaponInfo->szWorldModel );
-				m_pAgentModels[i]->SetSequence( pWeaponInfo->m_szClassMenuAnim );
+				m_pAgentModels[i]->SetSequence( pWeaponInfo->m_szClassMenuAnim, 0.0f );
 			}
 		}
 
