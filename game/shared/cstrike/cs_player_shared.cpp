@@ -1120,8 +1120,8 @@ void CCSPlayer::FireBullet(
 		if( bDoEffects )
 		{
 			// See if the bullet ended up underwater + started out of the water
-			if ( enginetrace->GetPointContents( tr.endpos ) & (CONTENTS_WATER|CONTENTS_SLIME) )
-			{	
+			if ( enginetrace->GetPointContents( tr.endpos, MASK_WATER ) & (CONTENTS_WATER|CONTENTS_SLIME) )
+			{
 				trace_t waterTrace;
 				UTIL_TraceLine( vecSrc, tr.endpos, (MASK_SHOT|CONTENTS_WATER|CONTENTS_SLIME), this, COLLISION_GROUP_NONE, &waterTrace );
 				
@@ -1271,7 +1271,7 @@ void CCSPlayer::FireBullet(
 			}
 			else
 			{
-				DispatchEffect( "impact_wallbang_heavy", data );
+				DispatchEffect( "impact_wallbang_light", data );
 			}
 
 			//debugoverlay->AddLineOverlay( vecWallBangHitStart, vecWallBangHitEnd, 0, 255, 0, false, 3 );
