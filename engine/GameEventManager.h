@@ -65,12 +65,15 @@ public:
 	bool  GetBool( const char *keyName = NULL, bool defaultValue = false );
 	int   GetInt( const char *keyName = NULL, int defaultValue = 0 );
 	float GetFloat( const char *keyName = NULL, float defaultValue = 0.0f );
-	const char *GetString( const char *keyName = NULL, const char *defaultValue = "" );
+	const char *GetString( const char *keyName = NULL, const char *defaultValue = "" );;
+	virtual const void *GetPtr( const char *keyName = NULL );
 
 	void SetBool( const char *keyName, bool value );
 	void SetInt( const char *keyName, int value );
 	void SetFloat( const char *keyName, float value );
 	void SetString( const char *keyName, const char *value );
+
+	virtual bool ForEventData( IGameEventVisitor2* visitor );
 	
 	CGameEventDescriptor	*m_pDescriptor;
 	KeyValues				*m_pDataKeys;

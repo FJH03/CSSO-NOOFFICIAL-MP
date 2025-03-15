@@ -73,6 +73,12 @@ const char *CGameEvent::GetString( const char *keyName, const char *defaultValue
 	return m_pDataKeys->GetString( keyName, defaultValue );
 }
 
+const void *CGameEvent::GetPtr( const char *keyName )
+{
+	Assert( IsLocal() );
+	return m_pDataKeys->GetPtr( keyName );
+}
+
 void CGameEvent::SetBool( const char *keyName, bool value )
 {
 	m_pDataKeys->SetInt( keyName, value?1:0 );
@@ -111,6 +117,33 @@ bool CGameEvent::IsLocal() const
 bool CGameEvent::IsReliable() const
 {
 	return m_pDescriptor->reliable;
+}
+
+bool CGameEvent::ForEventData( IGameEventVisitor2* visitor )
+{
+	CGameEventDescriptor *descriptor = m_pDescriptor;
+
+	bool iterate = true;
+	for ( KeyValues* key = descriptor->keys->GetFirstSubKey(); key && iterate; key = key->GetNextKey() )
+	{
+		const char * keyName = key->GetName();
+
+		int type = key->GetInt();
+
+		// see s_GameEventTypesMap for index
+		switch ( type )
+		{
+		case CGameEventManager::TYPE_LOCAL: iterate = visitor->VisitLocal( keyName, GetPtr( keyName ) ); break;
+		case CGameEventManager::TYPE_STRING: iterate = visitor->VisitString( keyName, GetString( keyName, "" ) ); break;
+		case CGameEventManager::TYPE_FLOAT: iterate = visitor->VisitFloat( keyName, GetFloat( keyName, 0.0f ) ); break;
+		case CGameEventManager::TYPE_LONG: iterate = visitor->VisitInt( keyName, GetInt( keyName, 0 ) ); break;
+		case CGameEventManager::TYPE_SHORT: iterate = visitor->VisitInt( keyName, GetInt( keyName, 0 ) ); break;
+		case CGameEventManager::TYPE_BYTE: iterate = visitor->VisitInt( keyName, GetInt( keyName, 0 ) ); break;
+		case CGameEventManager::TYPE_BOOL: iterate = visitor->VisitBool( keyName, GetBool( keyName, false ) ); break;
+		}
+	}
+
+	return iterate;
 }
 
 CGameEventManager::CGameEventManager()
