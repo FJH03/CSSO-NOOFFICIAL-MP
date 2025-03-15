@@ -384,6 +384,7 @@ void Studio_MovementRate( const CStudioHdr *pStudioHdr, int iSequence, const flo
 //float Studio_FindAnimDistance( mstudioanimdesc_t *panim, float flDist );
 bool Studio_AnimMovement( mstudioanimdesc_t *panim, float flCycleFrom, float flCycleTo, Vector &deltaPos, QAngle &deltaAngle );
 bool Studio_SeqMovement( const CStudioHdr *pStudioHdr, int iSequence, float flCycleFrom, float flCycleTo, const float poseParameter[], Vector &deltaMovement, QAngle &deltaAngle );
+float Studio_SeqMovementAndDuration( const CStudioHdr *pStudioHdr, int iSequence, float flCycleFrom, float flCycleTo, const float poseParameter[], Vector &deltaPos );
 bool Studio_SeqVelocity( const CStudioHdr *pStudioHdr, int iSequence, float flCycle, const float poseParameter[], Vector &vecVelocity );
 float Studio_FindSeqDistance( const CStudioHdr *pStudioHdr, int iSequence, const float poseParameter[], float flDist );
 float Studio_FindSeqVelocity( const CStudioHdr *pStudioHdr, int iSequence, const float poseParameter[], float flVelocity );

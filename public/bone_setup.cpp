@@ -6424,6 +6424,43 @@ bool Studio_SeqMovement( const CStudioHdr *pStudioHdr, int iSequence, float flCy
 	return found;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: calculate changes in position and angle between two points in a sequences cycle
+// Output:	updated position and angle, relative to CycleFrom being at the origin
+//			returns false if sequence is not a movement sequence
+//-----------------------------------------------------------------------------
+float Studio_SeqMovementAndDuration( const CStudioHdr *pStudioHdr, int iSequence, float flCycleFrom, float flCycleTo, const float poseParameter[], Vector &deltaPos )
+{
+ 	mstudioanimdesc_t *panim[4];
+ 	float	weight[4];
+ 
+ 	mstudioseqdesc_t &seqdesc = ((CStudioHdr *)pStudioHdr)->pSeqdesc( iSequence );
+ 
+ 	Studio_SeqAnims( pStudioHdr, seqdesc, iSequence, poseParameter, panim, weight );
+ 
+ 	deltaPos.Init( );
+ 
+ 	Vector localPos;
+ 	QAngle localAngles;
+ 
+ 	float t = 0;
+ 	for ( int i = 0; i < 4; i++ )
+ 	{
+ 		if ( weight[i] == 0.0f )
+ 			continue;
+ 
+ 		if ( panim[i]->numframes > 1 )
+ 		{
+ 			t += ( panim[i]->fps / ( panim[i]->numframes - 1 ) ) * weight[i];
+ 		}
+ 
+ 		if ( Studio_AnimMovement( panim[i], flCycleFrom, flCycleTo, localPos, localAngles ) )
+ 		{
+ 			VectorMA( deltaPos, weight[i], localPos, deltaPos );
+ 		}
+ 	}
+ 	return ( t != 0.0f ) ? 1.0f / t : 0.0f;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: calculate instantaneous velocity in ips at a given point in the sequence's cycle

@@ -5433,27 +5433,28 @@ void C_BaseAnimating::GetSequenceLinearMotion( int iSequence, Vector *pVec )
 	::GetSequenceLinearMotion( GetModelPtr(), iSequence, m_flPoseParameter, pVec );
 }
 
+float C_BaseAnimating::GetSequenceLinearMotionAndDuration( int iSequence, Vector *pVec )
+{
+ 	return ::GetSequenceLinearMotionAndDuration( GetModelPtr(), iSequence, m_flPoseParameter, pVec );
+}
+
 void C_BaseAnimating::GetBlendedLinearVelocity( Vector *pVec )
 {
 	Vector vecDist;
-	float flDuration;
-
-	GetSequenceLinearMotion( GetSequence(), &vecDist );
-	flDuration = SequenceDuration( GetSequence() );
-
+	float flDuration = GetSequenceLinearMotionAndDuration( GetSequence(), &vecDist );
 	VectorScale( vecDist, 1.0 / flDuration, *pVec );
 
 	Vector tmp;
 	for (int i = m_SequenceTransitioner.m_animationQueue.Count() - 2; i >= 0; i--)
 	{
-		C_AnimationLayer *blend = &m_SequenceTransitioner.m_animationQueue[i];
-	
-		GetSequenceLinearMotion( blend->GetSequence(), &vecDist );
-		flDuration = SequenceDuration( blend->GetSequence() );
+		CAnimationLayer *blend = &m_SequenceTransitioner.m_animationQueue[i];
+ 		float flWeight = blend->GetFadeout( gpGlobals->curtime );
+ 		if ( flWeight == 0.0f )
+ 			continue;
 
+		flDuration = GetSequenceLinearMotionAndDuration( blend->GetSequence(), &vecDist );
 		VectorScale( vecDist, 1.0 / flDuration, tmp );
 
-		float flWeight = blend->GetFadeout( gpGlobals->curtime );
 		*pVec = Lerp( flWeight, *pVec, tmp );
 	}
 }

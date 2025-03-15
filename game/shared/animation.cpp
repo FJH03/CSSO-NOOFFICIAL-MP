@@ -571,6 +571,35 @@ void GetSequenceLinearMotion( CStudioHdr *pstudiohdr, int iSequence, const float
 	QAngle vecAngles;
 	Studio_SeqMovement( pstudiohdr, iSequence, 0, 1.0, poseParameter, (*pVec), vecAngles );
 }
+
+float GetSequenceLinearMotionAndDuration( CStudioHdr *pstudiohdr, int iSequence, const float poseParameter[], Vector *pVec )
+{
+ 	pVec->Init();
+ 	if ( !pstudiohdr )
+ 	{
+ 		Msg( "Bad pstudiohdr in GetSequenceLinearMotion()!\n" );
+ 		return 0.0f;
+ 	}
+ 
+ 	if ( !pstudiohdr->SequencesAvailable() )
+ 		return 0.0f;
+ 
+ 	if ( iSequence < 0 || iSequence >= pstudiohdr->GetNumSeq() )
+ 	{
+ 		// Don't spam on bogus model
+ 		if ( pstudiohdr->GetNumSeq() > 0 )
+ 		{
+ 			static int msgCount = 0;
+ 			while ( ++msgCount < 10 )
+ 			{
+ 				DevMsg( "Bad sequence (%i out of %i max) in GetSequenceLinearMotion() for model '%s'!\n", iSequence, pstudiohdr->GetNumSeq(), pstudiohdr->pszName() );
+ 			}
+ 		}
+ 		return 0.0f;
+ 	}
+ 
+ 	return Studio_SeqMovementAndDuration( pstudiohdr, iSequence, 0, 1.0, poseParameter, (*pVec) );
+}
 #endif
 
 const char *GetSequenceName( CStudioHdr *pstudiohdr, int iSequence )

@@ -335,6 +335,7 @@ public:
 	inline bool						IsSequenceLooping( int iSequence ) { return IsSequenceLooping(GetModelPtr(),iSequence); }
 	float							GetSequenceMoveDist( CStudioHdr *pStudioHdr, int iSequence );
 	void							GetSequenceLinearMotion( int iSequence, Vector *pVec );
+	float							GetSequenceLinearMotionAndDuration( int iSequence, Vector *pVec );
 	void							GetBlendedLinearVelocity( Vector *pVec );
 	int								LookupSequence ( const char *label );
 	int								LookupActivity( const char *label );

@@ -33,6 +33,7 @@ int LookupSequence( CStudioHdr *pstudiohdr, const char *label );
 
 #define NOMOTION 99999
 void GetSequenceLinearMotion( CStudioHdr *pstudiohdr, int iSequence, const float poseParameter[], Vector *pVec );
+float GetSequenceLinearMotionAndDuration( CStudioHdr *pstudiohdr, int iSequence, const float poseParameter[], Vector *pVec );
 
 const char *GetSequenceName( CStudioHdr *pstudiohdr, int sequence );
 const char *GetSequenceActivityName( CStudioHdr *pstudiohdr, int iSequence );
