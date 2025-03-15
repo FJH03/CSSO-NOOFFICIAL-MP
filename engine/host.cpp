@@ -4572,7 +4572,6 @@ bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGro
 
 	DownloadListGenerator().OnLevelLoadStart( szMapName );
 
-	Msg( "*** Map Load: %s: Map Group %s", szMapName, mapGroupName );
  	if ( !sv.SpawnServer( szMapName, szMapFile, mapGroupName, startspot ) )
 	{
 #ifndef SWDS
