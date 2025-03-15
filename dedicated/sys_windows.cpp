@@ -35,6 +35,7 @@
 #include "filesystem.h"
 #include "steam/steam_api.h"
 #include "filesystem/IQueuedLoader.h"
+#include "vscript/ivscript.h"
 
 extern CTextConsoleWin32 console;
 extern bool g_bVGui;
@@ -273,6 +274,7 @@ bool CSys::LoadModules( CDedicatedAppSystemGroup *pAppSystemGroup )
 		{ "datacache.dll",			MDLCACHE_INTERFACE_VERSION },
 		{ "datacache.dll",			STUDIO_DATA_CACHE_INTERFACE_VERSION },
 		{ "vgui2.dll",				VGUI_IVGUI_INTERFACE_VERSION },
+		{ "vscript.dll",			VSCRIPT_INTERFACE_VERSION },
 		{ "engine.dll",				VENGINE_HLDS_API_VERSION },
 		{ "dedicated.dll",			QUEUEDLOADER_INTERFACE_VERSION },
 		{ "", "" }	// Required to terminate the list

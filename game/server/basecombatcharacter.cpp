@@ -2370,6 +2370,18 @@ void CBaseCombatCharacter::RemoveAllWeapons()
 	}
 }
 
+void CBaseCombatCharacter::RemoveWeaponOnPlayer( CBaseCombatWeapon *pWeapon )
+{
+	ClearActiveWeapon();
+	for (int i = 0; i < MAX_WEAPONS; i++)
+	{
+		if ( m_hMyWeapons[i].Get() == pWeapon )
+		{
+			m_hMyWeapons[i]->Delete( );
+			m_hMyWeapons.Set( i, 0 );
+		}
+	}
+}
 
 // take health
 int CBaseCombatCharacter::TakeHealth (float flHealth, int bitsDamageType)

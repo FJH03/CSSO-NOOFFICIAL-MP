@@ -68,6 +68,7 @@ projects={
 		'launcher',
 		'launcher_main',
 		'materialsystem',
+		'vscript',
 #		'materialsystem/shaderapiempty',
 		'materialsystem/shaderapidx9',
 		'materialsystem/shaderlib',
@@ -149,6 +150,7 @@ projects={
 		'vpklib',
 		'vstdlib',
 		'vtf',
+		'vscript',
 		'stub_steam'
 	]
 }

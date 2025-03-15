@@ -23,6 +23,7 @@
 
 extern bool	IsPrimaryWeapon( CSWeaponID id );
 extern bool IsSecondaryWeapon( CSWeaponID  id );
+extern bool IsGrenadeWeapon( CSWeaponID id );
 extern int GetShellForAmmoType( const char *ammoname );
 extern bool IsGunWeapon( CSWeaponType weaponType );
 

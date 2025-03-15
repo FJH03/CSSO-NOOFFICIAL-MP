@@ -1,0 +1,249 @@
+//-----------------------------------------------------------------------------
+//	VSCRIPT.VPC
+//
+//	Project Script
+//-----------------------------------------------------------------------------
+
+$macro SRCDIR		".."
+$Macro OUTBINDIR	"$SRCDIR\..\game\bin"
+$Include "$SRCDIR\vpc_scripts\source_dll_base.vpc"
+
+
+$Configuration
+{
+	$Compiler [!$PS3]
+	{
+		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT;LUA_MOD_CASE_INSENSITIVE" 
+		$PreprocessorDefinitions		"$BASE;MSVC" [$WINDOWS||$X360]
+		$AdditionalIncludeDirectories	"$BASE;.\squirrel\include;.\squirrel\sqplus" [$OSXALL||$POSIX]
+
+	}
+ 
+	$Compiler [$PS3]
+	{
+		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT;LUA_MOD_CASE_INSENSITIVE" 
+		$C++ExceptionsandRTTIUsage		"Using Exceptions and RTTI"
+	}
+
+	$Linker [$OSXALL]
+	{
+		$SystemLibraries                    "iconv"
+	}
+
+}
+
+$Configuration "Release"
+{
+	$General [!$PS3]
+	{
+		$WholeProgramOptimization		"Use Link Time Code Generation"			[!$PROFILE]
+	}
+}
+
+$Project "vscript"
+{
+	$Folder	"Source Files"
+	{
+		$File	"vscript.cpp"
+		$File	".\squirrel\vsquirrel\vsquirrel.cpp"
+		{
+			$Configuration
+			{
+				$Compiler
+				{
+					$AdditionalIncludeDirectories	"$BASE;.\squirrel\include;.\squirrel\sqplus"
+				}
+			}
+		}
+
+
+		$Folder "Script Files"
+		{
+			$File	".\squirrel\vsquirrel\init.nut"
+			{
+				$Configuration
+				{
+					$CustomBuildStep
+					{
+						$CommandLine	"$SRCDIR\devtools\srcsrv\perl\bin\perl.exe $SRCDIR\devtools\bin\texttoarray.pl $(InputPath) g_Script_$(InputName)> $(InputDir)$(InputName)_nut.h" [$WINDOWS]
+						$CommandLine	"perl $SRCDIR\devtools\bin\texttoarray.pl $(InputPath) g_Script_$(InputName)> $(InputDir)$(InputName)_nut.h" [$POSIX]
+						$Description	"$(InputFileName) produces $(InputName)_nut.h"
+						$Outputs		"$(InputDir)$(InputName)_nut.h"
+					}
+				}
+			}
+		}
+	}
+
+	$Folder	"Header Files"
+	{
+		$File	".\squirrel\vsquirrel\vsquirrel.h"
+	}
+
+	$Folder	"Interface"
+	{
+		$File	"$SRCDIR\public\vscript\ivscript.h"
+		$File	"$SRCDIR\public\vscript\vscript_templates.h"
+	}
+
+	$Folder "Squirrel"
+	{
+		$Folder "Header Files"
+		{
+			$File 	".\squirrel\include\sqdbgserver.h"
+			$File 	".\squirrel\include\sqrdbg.h"
+			$File 	".\squirrel\include\sqstdaux.h"
+			$File 	".\squirrel\include\sqstdblob.h"
+			$File 	".\squirrel\include\sqstdio.h"
+			$File 	".\squirrel\include\sqstdmath.h"
+			$File 	".\squirrel\include\sqstdstring.h"
+			$File 	".\squirrel\include\sqstdsystem.h"
+			$File 	".\squirrel\include\squirrel.h"
+		}
+		
+		$Folder "squirrel"
+		{
+			$Folder	"Source Files"
+			{
+				$File 	".\squirrel\squirrel\sqapi.cpp" \
+						".\squirrel\squirrel\sqbaselib.cpp" \
+						".\squirrel\squirrel\sqclass.cpp" \
+						".\squirrel\squirrel\sqcompiler.cpp" \
+						".\squirrel\squirrel\sqdebug.cpp" \
+						".\squirrel\squirrel\sqfuncstate.cpp" \
+						".\squirrel\squirrel\sqlexer.cpp" \
+						".\squirrel\squirrel\sqmem.cpp" \
+						".\squirrel\squirrel\sqobject.cpp" \
+						".\squirrel\squirrel\sqstate.cpp" \
+						".\squirrel\squirrel\sqtable.cpp" \
+						".\squirrel\squirrel\sqvm.cpp" \
+						".\squirrel\sqdbg\sqrdbg.cpp" \
+						".\squirrel\sqdbg\sqdbgserver.cpp"
+				{
+					$Configuration
+					{
+						$Compiler [!$PS3]
+						{
+							$WarningLevel						"Level 3 (/W3)"
+//							$Detect64bitPortabilityIssues		"No"	[$WIN32||$LINUX]
+						}
+
+						$Compiler
+{	
+							$AdditionalIncludeDirectories		"$BASE;.\squirrel\include;.\squirrel\sqplus"
+							$PreprocessorDefinitions			"$BASE;PROTECTED_THINGS_DISABLE;VSCRIPT_DLL_EXPORT"
+						}
+					}
+				}
+			}
+
+			$Folder	"Header Files"
+			{
+				$File 	".\squirrel\squirrel\sqarray.h" \
+						".\squirrel\squirrel\sqclass.h" \
+						".\squirrel\squirrel\sqclosure.h" \
+						".\squirrel\squirrel\sqcompiler.h" \
+						".\squirrel\squirrel\sqfuncproto.h" \
+						".\squirrel\squirrel\sqfuncstate.h" \
+						".\squirrel\squirrel\sqlexer.h" \
+						".\squirrel\squirrel\sqobject.h" \
+						".\squirrel\squirrel\sqopcodes.h" \
+						".\squirrel\squirrel\sqpcheader.h" \
+						".\squirrel\squirrel\sqstate.h" \
+						".\squirrel\squirrel\sqstring.h" \
+						".\squirrel\squirrel\sqtable.h" \
+						".\squirrel\squirrel\squserdata.h" \
+						".\squirrel\squirrel\squtils.h" \
+						".\squirrel\squirrel\sqvm.h"
+			}
+		}
+		$Folder "sqstdlib"
+		{
+			$Folder	"Source Files"
+			{
+				$File 	".\squirrel\sqstdlib\sqstdaux.cpp"\
+						".\squirrel\sqstdlib\sqstdblob.cpp" \
+						".\squirrel\sqstdlib\sqstdmath.cpp" \
+						".\squirrel\sqstdlib\sqstdrex.cpp" \
+						".\squirrel\sqstdlib\sqstdstream.cpp" \
+						".\squirrel\sqstdlib\sqstdstring.cpp"
+				{
+					$Configuration
+					{
+						$Compiler [!$PS3]
+						{
+							$WarningLevel						"Level 3 (/W3)"
+//							$Detect64bitPortabilityIssues		"No"	[$WIN32||$LINUX]
+						}
+						
+						$Compiler
+						{
+							$AdditionalIncludeDirectories		"$BASE;.\squirrel\include;.\squirrel\sqplus"
+							$PreprocessorDefinitions			"$BASE;PROTECTED_THINGS_DISABLE;VSCRIPT_DLL_EXPORT"
+						}
+					}
+				}
+			}
+		}
+		$Folder "sqplus"
+		{
+			$Folder	"Source Files"
+			{
+				$File ".\squirrel\sqplus\SquirrelBindingsUtilsWin32.cpp" [!$PS3&&!$POSIX]
+				{
+					$Configuration
+					{
+						$Compiler
+						{
+							$AdditionalIncludeDirectories		"$BASE,.\squirrel3\include"
+							$WarningLevel						"Level 3 (/W3)"
+//							$Detect64bitPortabilityIssues		"No"	[$WIN32||$LINUX]
+							 // "SQPlus" need exceptions. If commit to squirrel, look into removing that
+							$AdditionalOptions					"$BASE /EHsc"
+							$AdditionalIncludeDirectories		"$BASE;.\squirrel\include;.\squirrel\sqplus"
+							$PreprocessorDefinitions			"$BASE;PROTECTED_THINGS_DISABLE;VSCRIPT_DLL_EXPORT"
+						}
+					}
+				}
+
+				$File	".\squirrel\sqplus\SqPlus.cpp" \
+						".\squirrel\sqplus\SquirrelBindingsUtils.cpp" \
+						".\squirrel\sqplus\SquirrelObject.cpp" \
+						".\squirrel\sqplus\SquirrelVM.cpp"
+				{
+					$Configuration
+					{
+						$Compiler [!$PS3]
+						{
+							$WarningLevel						"Level 3 (/W3)"
+//							$Detect64bitPortabilityIssues		"No"	[$WIN32||$LINUX]
+							 // "SQPlus" need exceptions. If commit to squirrel, look into removing that
+							$AdditionalOptions					"$BASE /EHsc"
+						}
+						
+						$Compiler
+						{
+							$AdditionalIncludeDirectories		"$BASE;.\squirrel\include;.\squirrel\sqplus"
+							$PreprocessorDefinitions			"$BASE;PROTECTED_THINGS_DISABLE;VSCRIPT_DLL_EXPORT"
+						}
+					}
+				}
+			}
+			$Folder	"Header Files"
+			{
+				$File	".\squirrel\sqplus\sqplus.h" \
+						".\squirrel\sqplus\SqPlusConst.h" \
+						".\squirrel\sqplus\sqplusWin32.h" \
+						".\squirrel\sqplus\SquirrelBindingsUtils.h" \
+						".\squirrel\sqplus\SquirrelBindingsUtilsWin32.h" \
+						".\squirrel\sqplus\SquirrelObject.h" \
+						".\squirrel\sqplus\SquirrelVM.h"
+			}
+		}
+	}
+	
+	$Folder	"Link Libraries"
+	{
+		$Lib	mathlib
+	}
+}

@@ -434,6 +434,7 @@ public:
 
 	void UpdateTeamClanNames( int nTeam );
 
+	virtual void RegisterScriptFunctions( void );
 	virtual bool ClientCommand( CBaseEntity *pEdict, const CCommand &args );
 	virtual void PlayerSpawn( CBasePlayer *pPlayer );
 			void ShowSpawnPoints();

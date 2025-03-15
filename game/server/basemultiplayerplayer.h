@@ -23,7 +23,8 @@ class CBaseMultiplayerPlayer : public CAI_ExpresserHost<CBasePlayer>
 {
 
 	DECLARE_CLASS( CBaseMultiplayerPlayer, CAI_ExpresserHost<CBasePlayer> );
-
+	DECLARE_ENT_SCRIPTDESC();
+	
 public:
 
 	CBaseMultiplayerPlayer();

@@ -16,35 +16,17 @@
 #include "cs_player.h"
 #include "cs_shareddefs.h"
 #include "cs_loadout.h"
+#include "cs_gamerules.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
-
-class CRuleEntity : public CBaseEntity
-{
-public:
-	DECLARE_CLASS( CRuleEntity, CBaseEntity );
-
-	void	Spawn( void );
-
-	DECLARE_DATADESC();
-
-	void	SetMaster( string_t iszMaster ) { m_iszMaster = iszMaster; }
-
-protected:
-	bool	CanFireForActivator( CBaseEntity *pActivator );
-
-private:
-	string_t	m_iszMaster;
-};
 
 BEGIN_DATADESC( CRuleEntity )
 
 	DEFINE_KEYFIELD( m_iszMaster, FIELD_STRING, "master" ),
 
 END_DATADESC()
-
 
 
 void CRuleEntity::Spawn( void )
@@ -68,18 +50,7 @@ bool CRuleEntity::CanFireForActivator( CBaseEntity *pActivator )
 	return true;
 }
 
-// 
-// CRulePointEntity -- base class for all rule "point" entities (not brushes)
-//
-class CRulePointEntity : public CRuleEntity
-{
-public:
-	DECLARE_DATADESC();
-	DECLARE_CLASS( CRulePointEntity, CRuleEntity );
 
-	int		m_Score;
-	void		Spawn( void );
-};
 
 //---------------------------------------------------------
 // Save/Restore
@@ -144,6 +115,10 @@ public:
 	inline	void	SetPoints( int points ) { m_Score = points; }
 
 	void InputApplyScore( inputdata_t &inputdata );
+#if defined( CSTRIKE_DLL )
+	void InputAddScoreTerrorist( inputdata_t &inputdata );
+	void InputAddScoreCT( inputdata_t &inputdata );
+#endif
 
 private:
 };
@@ -153,6 +128,10 @@ LINK_ENTITY_TO_CLASS( game_score, CGameScore );
 BEGIN_DATADESC( CGameScore )
 	// Inputs
 	DEFINE_INPUTFUNC( FIELD_VOID, "ApplyScore", InputApplyScore ),
+#if defined( CSTRIKE_DLL )
+	DEFINE_INPUTFUNC( FIELD_VOID, "AddScoreTerrorist", InputAddScoreTerrorist ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "AddScoreCT", InputAddScoreCT ),
+#endif
 END_DATADESC()
 
 void CGameScore::Spawn( void )
@@ -198,6 +177,27 @@ void CGameScore::InputApplyScore( inputdata_t &inputdata )
 		}
 	}
 }
+
+#if defined( CSTRIKE_DLL )
+void CGameScore::InputAddScoreTerrorist( inputdata_t &inputdata )
+{
+	CCSMatch* match = CSGameRules()->GetMatch();
+	if ( match )
+	{
+		match->AddTerroristScore( Points() );
+	}
+}
+
+void CGameScore::InputAddScoreCT( inputdata_t &inputdata )
+{
+	CCSMatch* match = CSGameRules()->GetMatch();
+	if ( match )
+	{
+		match->AddCTScore( Points() );
+	}
+}
+
+#endif
 
 void CGameScore::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
@@ -576,30 +576,6 @@ void CGamePlayerHurt::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 // CGamePlayerEquip / game_playerequip	-- Sets the default player equipment
 // Flag: USE Only
 
-#define SF_PLAYEREQUIP_USEONLY			0x0001
-#define MAX_EQUIP		32
-
-class CGamePlayerEquip : public CRulePointEntity
-{
-	DECLARE_DATADESC();
-
-public:
-	DECLARE_CLASS( CGamePlayerEquip, CRulePointEntity );
-
-	bool		KeyValue( const char *szKeyName, const char *szValue );
-	void		Touch( CBaseEntity *pOther );
-	void		Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-
-	inline bool	UseOnly( void ) { return (m_spawnflags & SF_PLAYEREQUIP_USEONLY) ? true : false; }
-
-private:
-
-	void		EquipPlayer( CBaseEntity *pPlayer );
-
-	string_t	m_weaponNames[MAX_EQUIP];
-	int			m_weaponCount[MAX_EQUIP];
-};
-
 LINK_ENTITY_TO_CLASS( game_player_equip, CGamePlayerEquip );
 
 //---------------------------------------------------------
@@ -610,10 +586,24 @@ BEGIN_DATADESC( CGamePlayerEquip )
 	DEFINE_AUTO_ARRAY( m_weaponNames,		FIELD_STRING ),
 	DEFINE_AUTO_ARRAY( m_weaponCount,		FIELD_INTEGER ),
 
+	// Inputs
+	DEFINE_INPUTFUNC(FIELD_VOID, "TriggerForAllPlayers", InputTriggerForAllPlayers),
+	DEFINE_INPUTFUNC(FIELD_STRING, "TriggerForActivatedPlayer", InputTriggerForActivatedPlayer),
+
 END_DATADESC()
 
 
+void CGamePlayerEquip::InputTriggerForAllPlayers( inputdata_t &inputdata )
+{
+	TriggerForAllPlayers();
+}
 
+void CGamePlayerEquip::InputTriggerForActivatedPlayer( inputdata_t &inputdata )
+{
+	CBasePlayer *pPlayer = dynamic_cast<CBasePlayer*>( inputdata.pActivator );
+	if ( pPlayer )
+		TriggerForActivatedPlayer( pPlayer, inputdata.value.String() );
+}
 
 bool CGamePlayerEquip::KeyValue( const char *szKeyName, const char *szValue )
 {
@@ -624,12 +614,11 @@ bool CGamePlayerEquip::KeyValue( const char *szKeyName, const char *szValue )
 			if ( !m_weaponNames[i] )
 			{
 				char tmp[128];
-
 				UTIL_StripToken( szKeyName, tmp );
 
 				m_weaponNames[i] = AllocPooledString(tmp);
 				m_weaponCount[i] = atoi(szValue);
-				m_weaponCount[i] = MAX(1,m_weaponCount[i]);
+				m_weaponCount[i] = MAX(0,m_weaponCount[i]);
 				return true;
 			}
 		}
@@ -638,6 +627,31 @@ bool CGamePlayerEquip::KeyValue( const char *szKeyName, const char *szValue )
 	return false;
 }
 
+void CGamePlayerEquip::TriggerForAllPlayers( void )
+{
+	for( int i = 1; i <= gpGlobals->maxClients; ++i )
+	{
+		CBasePlayer *pToPlayer = UTIL_PlayerByIndex( i );
+		if ( pToPlayer )
+		{
+			if ( CanFireForActivator( pToPlayer ) )
+			{
+				EquipPlayer( pToPlayer );
+			}
+		}
+	}
+}
+
+void CGamePlayerEquip::TriggerForActivatedPlayer( CBasePlayer *pPlayer, const char *szWeapon )
+{
+	if ( pPlayer )
+	{
+		if ( CanFireForActivator( pPlayer ) )
+		{
+			EquipPlayer( pPlayer, szWeapon );
+		}
+	}
+}
 
 void CGamePlayerEquip::Touch( CBaseEntity *pOther )
 {
@@ -650,30 +664,98 @@ void CGamePlayerEquip::Touch( CBaseEntity *pOther )
 	EquipPlayer( pOther );
 }
 
-void CGamePlayerEquip::EquipPlayer( CBaseEntity *pEntity )
+void CGamePlayerEquip::EquipPlayer( CBaseEntity *pEntity, const char *szWeapon )
 {
-#ifdef CSTRIKE_DLL
-	CCSPlayer *pPlayer = ToCSPlayer(pEntity);
-#else
-	CBasePlayer *pPlayer = ToBasePlayer(pEntity);
-#endif
+	if ( !pEntity )
+		return;
+
+	CBasePlayer *pPlayer = NULL;
+
+	if ( pEntity->IsPlayer() )
+	{
+		pPlayer = (CBasePlayer *)pEntity;
+	}
 
 	if ( !pPlayer )
 		return;
 
+	if ( StripFirst() )
+	{
+		// remove all our weapons and armor
+		pPlayer->RemoveAllItems( true );
+	}
+
+	const char *weaponName = szWeapon;
+
+	int nMaxLoop = MAX_EQUIP;
+	if ( szWeapon != NULL )
+		nMaxLoop = 1;
+
 	for ( int i = 0; i < MAX_EQUIP; i++ )
 	{
-		if ( !m_weaponNames[i] )
+		if ( szWeapon == NULL && !m_weaponNames[i] )
 			break;
-		for ( int j = 0; j < m_weaponCount[i]; j++ )
+
+		if ( szWeapon == NULL )
+			weaponName = STRING( m_weaponNames[i] );
+
+		CSWeaponID weaponID = CSLoadout()->GetLoadoutWeaponID( pPlayer, pPlayer->GetTeamNumber(), WeaponIdFromString( weaponName ) );
+
+		CCSPlayer *pCSPlayer = static_cast<CCSPlayer*>( pPlayer );	
+
+		// if it's a grenade and we don't have it, give it
+		// if we do have it, don't do anything because you can only carry one of each grenade
+		// TODO: if we change how many grenades you can carry, this code needs to cover that, this is poor code otherwise
+		if ( pCSPlayer && IsGrenadeWeapon( weaponID ) )
 		{
-#ifdef CSTRIKE_DLL
-			// PiMoN: bruh... if its a knife, give the correct one from loadout
-			if ( !Q_strcmp( "weapon_knife", STRING( m_weaponNames[i] ) ) && CSLoadout()->HasKnifeSet(pPlayer, pPlayer->GetTeamNumber()) )
-				pPlayer->GiveNamedItem( KnivesEntitiesStrings[CSLoadout()->GetKnifeForPlayer( pPlayer, pPlayer->GetTeamNumber() )] );
-			else
-#endif
- 				pPlayer->GiveNamedItem( STRING(m_weaponNames[i]) );
+			if ( !pCSPlayer->Weapon_OwnsThisType( weaponName ) )
+			{
+				AcquireResult::Type acquireResult = pCSPlayer->CanAcquire( weaponID, AcquireMethod::PickUp );
+				if ( acquireResult == AcquireResult::Allowed )
+					pCSPlayer->GiveNamedItem( weaponName );
+			}
+		}
+		else
+		{
+			if ( OnlyStripSameWeaponType() )
+			{
+				if ( weaponID == WEAPON_NONE )
+				{
+					for ( int i = GGLIST_PISTOLS_START; i < ( GGLIST_SNIPERS_LAST ); i++ )
+					{
+						const char *item_name = weaponName;
+						if ( IsWeaponClassname( item_name ) )
+						{
+							item_name += 7;
+						}
+
+						if ( V_strcmp( ggWeaponAliasNameList[i].aliasName, item_name ) == 0 )
+						{
+							weaponID = ggWeaponAliasNameList[i].id;
+							break;
+						}
+					}
+				}
+
+				if ( IsPrimaryWeapon( weaponID ) )
+				{
+					CBaseCombatWeapon *pPrimary = pPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE );
+					if ( pPrimary )
+						pPlayer->RemoveWeaponOnPlayer( pPrimary );
+				}
+				else if ( IsSecondaryWeapon( weaponID ) )
+				{
+					CBaseCombatWeapon *pSecondary = pPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL );
+					if ( pSecondary )
+						pPlayer->RemoveWeaponOnPlayer( pSecondary );
+				}
+			}
+
+			pPlayer->GiveNamedItem( weaponName );
+			if ( const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponID ) )
+			{
+				pPlayer->GiveAmmo( m_weaponCount[ i ], pWeaponInfo->iAmmoType );
+			}
 		}
 	}
 }
@@ -681,7 +763,7 @@ void CGamePlayerEquip::EquipPlayer( CBaseEntity *pEntity )
 
 void CGamePlayerEquip::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	EquipPlayer( pActivator );
+	EquipPlayer( pActivator ); // note: pActivator may sometimes be NULL
 }
 
 

@@ -46,6 +46,7 @@
 	#include "fmtstr.h"
 	#include "teamplayroundbased_gamerules.h"
 	#include "gameweaponmanager.h"
+	#include "maprules.h"
 
 	#include "cs_gamestats.h"
 	#include "networkstringtable_gamedll.h"
@@ -1824,6 +1825,73 @@ ConVar snd_music_selection(
 	{
 	}
 
+	void ScriptPrintMessageCenterAll( const char *pszMessage )
+	{
+		UTIL_ClientPrintAll( HUD_PRINTCENTER, pszMessage );
+	}
+
+	void ScriptPrintMessageChatAll( const char *pszMessage )
+	{
+		UTIL_ClientPrintAll( HUD_PRINTTALK, pszMessage );
+	}
+
+	void ScriptPrintMessageCenterTeam( int nTeamNumber, const char *pszMessage )
+	{
+		CRecipientFilter filter;
+		filter.MakeReliable();
+		filter.AddRecipientsByTeam( GetGlobalTeam(nTeamNumber) );
+		UTIL_ClientPrintFilter( filter, HUD_PRINTCENTER, pszMessage );
+	}
+
+	void ScriptPrintMessageChatTeam( int nTeamNumber, const char *pszMessage )
+	{
+		CRecipientFilter filter;
+		filter.MakeReliable();
+		filter.AddRecipientsByTeam( GetGlobalTeam(nTeamNumber) );
+		UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, pszMessage );
+	}
+
+	int ScriptGetGameMode( void )
+	{
+		return g_pGameTypes->GetCurrentGameMode();
+	}
+
+	int ScriptGetGameType( void )
+	{
+		return g_pGameTypes->GetCurrentGameType();
+	}
+
+	int ScriptGetRoundsPlayed( void )
+	{
+		CCSGameRules *pRules = CSGameRules();
+		if ( !pRules )
+			return false;
+
+		return pRules->GetRoundsPlayed();
+	}
+
+	bool ScriptIsWarmupPeriod( void )
+	{
+		CCSGameRules *pRules = CSGameRules();
+		if ( !pRules )
+			return false;
+
+		return pRules->IsWarmupPeriod();
+	}
+
+	void CCSGameRules::RegisterScriptFunctions( void )
+	{
+		ScriptRegisterFunction( g_pScriptVM, ScriptPrintMessageCenterAll, "Prints an alert message in the center print method to all players." );
+		ScriptRegisterFunction( g_pScriptVM, ScriptPrintMessageChatAll, "Prints a message in chat to all players." );
+		ScriptRegisterFunction( g_pScriptVM, ScriptPrintMessageCenterTeam, "Prints an alert message in the center print method to the specified team." );
+		ScriptRegisterFunction( g_pScriptVM, ScriptPrintMessageChatTeam, "Prints a message in chat to the specified team." );
+
+		ScriptRegisterFunction( g_pScriptVM, ScriptGetGameMode, "Gets the current game mode." );
+		ScriptRegisterFunction( g_pScriptVM, ScriptGetGameType, "Gets the current game type." );
+		ScriptRegisterFunction( g_pScriptVM, ScriptGetRoundsPlayed, "Get the number of rounds played so far." );
+		ScriptRegisterFunction( g_pScriptVM, ScriptIsWarmupPeriod, "Is it warmup or not." );
+	}
+
 	//-----------------------------------------------------------------------------
 	// Purpose: TF2 Specific Client Commands
 	// Input  :
@@ -1970,15 +2038,18 @@ ConVar snd_music_selection(
 		CBaseEntity	*pWeaponEntity = NULL;
 		while ( ( pWeaponEntity = gEntList.FindEntityByClassname( pWeaponEntity, "game_player_equip" )) != NULL )
 		{
-			if ( addDefault )
+			CGamePlayerEquip *pEquip = dynamic_cast<CGamePlayerEquip*>( pWeaponEntity );
+			if ( pEquip && !pEquip->UseOnly() )
+			{
+				if ( addDefault && pEquip->StripFirst() )
 			{
 				// remove all our weapons and armor before touching the first game_player_equip
 				pPlayer->RemoveAllItems( true );
 			}
 			pWeaponEntity->Touch( pPlayer );
 			addDefault = false;
+			}
 		}
-
 
 		if ( addDefault )
 			pPlayer->GiveDefaultItems();
@@ -4590,10 +4661,10 @@ ConVar snd_music_selection(
 		if ( IsWarmupPeriod() )
         {
 #ifdef GAME_DLL
-			if ( IsPlayingAnyCompetitiveStrictRuleset() )
+			/*if ( IsPlayingAnyCompetitiveStrictRuleset() )
 			{
 				// if all humans are present and warmup time left is greater than mp_warmuptime_all_players_connected, reduce warmup time to mp_warmuptime_all_players_connected
-				if ( ( UTIL_HumansInGame( true, false ) == GetMaxPlayers() )
+				if ( ( UTIL_HumansInGame( true, false ) == GetMinPlayers() )
 					&& ( mp_warmuptime_all_players_connected.GetFloat() > 0 ) && ( GetWarmupPeriodEndTime() - mp_warmuptime_all_players_connected.GetFloat() >= gpGlobals->curtime ) )
 				{
 					m_fWarmupPeriodStart = gpGlobals->curtime;
@@ -4603,7 +4674,7 @@ ConVar snd_music_selection(
 					CBroadcastRecipientFilter filter;
 					UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#CStrike_TitlesTXT_All_Players_Connected", mp_warmuptime_all_players_connected.GetString() );
 				}
-			}
+			}*/
 
 			if ( IsWarmupPeriodPaused() && ( GetWarmupPeriodEndTime() - 6 >= gpGlobals->curtime) ) // Ignore warmup pause if within 6s of end.
 			{

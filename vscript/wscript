@@ -1,0 +1,164 @@
+#! /usr/bin/env python
+# encoding: utf-8
+
+from waflib import Utils
+import os
+
+top = '.'
+PROJECT_NAME = 'vscript'
+
+def options(opt):
+	return
+
+def configure(conf):
+	conf.define( "VSCRIPT_DLL_EXPORT", 1 )
+	conf.define( "LUA_MOD_CASE_INSENSITIVE", 1 )
+	# vscript is only squirrel in VALVE builds
+#	conf.define( "PROTECTED_THINGS_DISABLE", 1 ) # see gaymonkey part in VPC
+#	if conf.env.DEST_OS == "win32":
+#		conf.define( "VGM_ENABLED", 1 ) # gaymonkey support
+#		# VPYTHON_ENABLED - only for SOB, uses precompiled paiton 2.5 blob
+#		conf.define( "MSVC", 1 ) # lolwtf # !PS3 [ WINDOWS || X360 ]
+#	if conf.env.DEST_OS == "linux":
+#		conf.define( "LUA_USE_LINUX", 1 )
+
+	return
+
+def build(bld):
+	# TODO paiton from STARS_OF_BLOOD( SOB ) support
+
+	gaymonkey_source = [ # WINDOWS
+		# gm
+		"gm/src/gm/gmArraySimple.cpp",
+		"gm/src/gm/gmByteCode.cpp",
+		"gm/src/gm/gmByteCodeGen.cpp",
+		"gm/src/gm/gmCodeGen.cpp",
+		"gm/src/gm/gmCodeGenHooks.cpp",
+		"gm/src/gm/gmCodeTree.cpp",
+		"gm/src/gm/gmCrc.cpp",
+		"gm/src/gm/gmDebug.cpp",
+		"gm/src/gm/gmFunctionObject.cpp",
+		"gm/src/gm/gmHash.cpp",
+		"gm/src/gm/gmIncGC.cpp",
+		"gm/src/gm/gmLibHooks.cpp",
+		"gm/src/gm/gmListDouble.cpp",
+		"gm/src/gm/gmLog.cpp",
+		"gm/src/gm/gmMachine.cpp",
+		"gm/src/gm/gmMachineLib.cpp",
+		"gm/src/gm/gmMem.cpp",
+		"gm/src/gm/gmMemChain.cpp",
+		"gm/src/gm/gmMemFixed.cpp",
+		"gm/src/gm/gmMemFixedSet.cpp",
+		"gm/src/gm/gmOperators.cpp",
+		"gm/src/gm/gmParser.cpp",
+		"gm/src/gm/gmScanner.cpp",
+		"gm/src/gm/gmStream.cpp",
+		"gm/src/gm/gmStreamBuffer.cpp",
+		"gm/src/gm/gmStringObject.cpp",
+		"gm/src/gm/gmTableObject.cpp",
+		"gm/src/gm/gmThread.cpp",
+		"gm/src/gm/gmUserObject.cpp",
+		"gm/src/gm/gmUtil.cpp",
+		"gm/src/gm/gmVariable.cpp",
+
+		# binds
+		"gm/src/binds/gmArrayLib.cpp",
+		"gm/src/binds/gmCall.cpp",
+		"gm/src/binds/gmGCRoot.cpp",
+		"gm/src/binds/gmGCRootUtil.cpp",
+		"gm/src/binds/gmHelpers.cpp",
+		"gm/src/binds/gmMathLib.cpp",
+		"gm/src/binds/gmStringLib.cpp",
+		"gm/src/binds/gmSystemLib.cpp",
+		"gm/src/binds/gmVector3Lib.cpp",
+
+		"gm/vgm/vgm.cpp"
+	]
+
+	lua_source = [ # !X360 && !PS3 && !LINUX
+		# lua-5.1.4
+		#'lua/vlua/vec3.cpp',
+		#'lua/vlua/vlua.cpp',
+	]
+
+	squirrel_source = [
+		# squirrel
+		'squirrel/squirrel/sqapi.cpp',
+		'squirrel/squirrel/sqbaselib.cpp',
+		'squirrel/squirrel/sqclass.cpp',
+		'squirrel/squirrel/sqcompiler.cpp',
+		'squirrel/squirrel/sqdebug.cpp',
+		'squirrel/squirrel/sqfuncstate.cpp',
+		'squirrel/squirrel/sqlexer.cpp',
+		'squirrel/squirrel/sqmem.cpp',
+		'squirrel/squirrel/sqobject.cpp',
+		'squirrel/squirrel/sqtable.cpp',
+		'squirrel/squirrel/sqstate.cpp',
+		'squirrel/squirrel/sqvm.cpp',
+		#'squirrel/sqdbg/sqdbgserver.cpp',
+		#'squirrel/sqdbg/sqrdbg.cpp',
+
+		# sqstdlib
+		'squirrel/sqstdlib/sqstdaux.cpp',
+		'squirrel/sqstdlib/sqstdblob.cpp',
+		'squirrel/sqstdlib/sqstdmath.cpp',
+		'squirrel/sqstdlib/sqstdrex.cpp',
+		'squirrel/sqstdlib/sqstdstream.cpp',
+		'squirrel/sqstdlib/sqstdstring.cpp',
+
+		# sqplus
+		'squirrel/sqplus/SquirrelBindingsUtils.cpp',
+		'squirrel/sqplus/SqPlus.cpp',
+		'squirrel/sqplus/SquirrelObject.cpp',
+		'squirrel/sqplus/SquirrelVM.cpp',
+
+		'squirrel/vsquirrel/vsquirrel.cpp',
+	]
+
+	source = squirrel_source
+	if bld.env.DEST_OS == "win32":
+		source += lua_source
+#		source += gaymonkey_source
+	source += [
+		'vscript.cpp',
+		'../public/tier0/memoverride.cpp'
+	]
+
+	includes = [
+		'.',
+		'../public',
+		'../public/tier0',
+		'../public/tier1',
+		'../common',
+		'gm/src/gm',
+		'gm/src/binds',
+		'gm/src/platform/win32msvc',
+		'lua/lua-5.1.4/src',
+		'squirrel/include',
+		'squirrel/sqplus',
+		'squirrel/vsquirrel',
+		'../thirdparty',
+	]
+
+	defines = ['FRAME_POINTER_OMISSION_DISABLED']
+
+	libs = ['tier0','tier1','vstdlib','mathlib']
+
+	if bld.env.DEST_OS == 'android':
+		libs += ['ANDROID_SUPPORT']
+
+	install_path = bld.env.LIBDIR
+
+	bld.shlib(
+		source   = source,
+		target   = PROJECT_NAME,
+		name     = PROJECT_NAME,
+		features = 'c cxx',
+		includes = includes,
+		defines  = defines,
+		use      = libs,
+		install_path = install_path,
+		subsystem = bld.env.MSVC_SUBSYSTEM,
+		idx      = bld.get_taskgen_count()
+	)
+

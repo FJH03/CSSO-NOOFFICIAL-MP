@@ -36,6 +36,9 @@
 #include "toolframework/itoolentity.h"
 #include "tier0/threadtools.h"
 
+#include "vscript/ivscript.h"
+#include "vscript_shared.h"
+
 class C_Team;
 class IPhysicsObject;
 class IClientVehicle;
@@ -185,6 +188,8 @@ public:
 	DECLARE_DATADESC();
 	DECLARE_CLIENTCLASS();
 	DECLARE_PREDICTABLE();
+	// script description
+	DECLARE_ENT_SCRIPTDESC();
 
 									C_BaseEntity();
 
@@ -263,6 +268,11 @@ public:
 	virtual void					SetClassname( const char *className );
 
 	string_t						m_iClassname;
+
+	HSCRIPT GetScriptInstance();
+
+	HSCRIPT			m_hScriptInstance;
+	string_t		m_iszScriptId;
 
 // IClientUnknown overrides.
 public:
@@ -1126,6 +1136,10 @@ public:
 	bool				IsFollowingEntity();
 	CBaseEntity			*GetFollowedEntity();
 
+	const Vector &ScriptGetForward( void ) { static Vector vecForward; GetVectors( &vecForward, NULL, NULL ); return vecForward; }
+	const Vector &ScriptGetLeft( void ) { static Vector vecLeft; GetVectors( NULL, &vecLeft, NULL ); return vecLeft; }
+	const Vector &ScriptGetUp( void ) { static Vector vecUp; GetVectors( NULL, NULL, &vecUp ); return vecUp; }
+
 	// For shadows rendering the correct body + sequence...
 	virtual int GetBody() { return 0; }
 	virtual int GetSkin() { return 0; }
@@ -1283,6 +1297,8 @@ public:
 	void SetRenderColorG( byte g );
 	void SetRenderColorB( byte b );
 	void SetRenderColorA( byte a );
+
+	const char	*GetEntityName();
 
 	void SetRenderMode( RenderMode_t nRenderMode, bool bForceUpdate = false );
 	RenderMode_t GetRenderMode() const;
@@ -1608,6 +1624,7 @@ private:
 	EHANDLE							m_hGroundEntity;
 	float							m_flGroundChangeTime;
 
+	char							m_iName[MAX_PATH];
 
 	// Friction.
 	float							m_flFriction;       
@@ -1782,6 +1799,11 @@ inline bool C_BaseEntity::IsServerEntity( void )
 //-----------------------------------------------------------------------------
 // Inline methods
 //-----------------------------------------------------------------------------
+inline const char *C_BaseEntity::GetEntityName() 
+{ 
+	return m_iName; 
+}
+
 inline matrix3x4_t &C_BaseEntity::EntityToWorldTransform()
 { 
 	Assert( s_bAbsQueriesValid );

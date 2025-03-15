@@ -95,6 +95,10 @@ void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const voi
 
 Vector DropToGround( CBaseEntity *pMainEnt, const Vector &vPos, const Vector &vMins, const Vector &vMaxs );
 
+BEGIN_ENT_SCRIPTDESC( CHostage, CBaseEntity, "hostage_carriable_prop" )
+	DEFINE_SCRIPTFUNC_NAMED( IsBeingCarried, "IsBeingCarried", "Get whether the hostage is currently being carried or not" )
+END_SCRIPTDESC()
+
 //-----------------------------------------------------------------------------------------------------
 LINK_ENTITY_TO_CLASS( info_hostage_spawn, CHostage );
 LINK_ENTITY_TO_CLASS( hostage_entity, CHostage );

@@ -100,6 +100,7 @@ public:
 	DECLARE_CLIENTCLASS();
 	DECLARE_PREDICTABLE();
 	DECLARE_INTERPOLATION();
+	DECLARE_ENT_SCRIPTDESC();
 
 	enum
 	{
@@ -470,6 +471,8 @@ public:
 	virtual bool					IsViewModel() const;
 	virtual bool					ShouldFlipModel( void ) { return false; }
 	virtual void					UpdateOnRemove( void );
+
+	void							ScriptSetPoseParameter( const char *szName, float fValue );
 
 protected:
 	// View models scale their attachment positions to account for FOV. To get the unmodified

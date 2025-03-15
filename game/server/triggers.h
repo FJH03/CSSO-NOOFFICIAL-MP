@@ -223,6 +223,97 @@ public:
 	CUtlVector<EHANDLE>	m_hurtEntities;
 };
 
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+class CTriggerCamera : public CBaseEntity
+{
+public:
+	DECLARE_CLASS( CTriggerCamera, CBaseEntity );
+	// script description
+	DECLARE_ENT_SCRIPTDESC();
+
+
+	CTriggerCamera();
+	void Spawn( void );
+	bool KeyValue( const char *szKeyName, const char *szValue );
+	void Enable( void );
+	void Disable( void );
+	void SetPlayer( CBaseEntity *pPlayer );
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void FindAttachment( void );
+	void FollowTarget( void );
+	void ReturnToEyes( void );
+	void MoveViewTo( QAngle vecGoalView );
+	void Move( void );
+	void StartCameraShot( const char *pszShotType, CBaseEntity *pSceneEntity, CBaseEntity *pActor1, CBaseEntity *pActor2, float duration );
+	int ScriptGetFov( void );
+	void ScriptSetFov( int iFOV, float rate );
+
+	// Always transmit to clients so they know where to move the view to
+	virtual int UpdateTransmitState();
+
+	DECLARE_DATADESC();
+
+	// Input handlers
+	void InputEnable( inputdata_t &inputdata );
+	void InputDisable( inputdata_t &inputdata );
+
+	void InputSetTarget( inputdata_t &inputdata );
+	void InputSetTargetAttachment( inputdata_t &inputdata );
+
+	void InputReturnToEyes( inputdata_t &inputdata );
+	void InputTeleportToView( inputdata_t &inputdata );
+	
+
+	void InputSetTrackSpeed( inputdata_t &inputdata );
+
+	void InputSetPath( inputdata_t &inputdata );
+
+private:
+	EHANDLE m_hPlayer;
+	EHANDLE m_hTarget;
+
+	// used for moving the camera along a path (rail rides)
+	CBaseEntity *m_pPath;
+	string_t m_sPath;
+	float m_flWait;
+	float m_flReturnTime;
+	float m_flStopTime;
+	float m_moveDistance;
+	float m_targetSpeed;
+	float m_initialSpeed;
+	float m_acceleration;
+	float m_deceleration;
+	int	  m_state;
+	Vector m_vecMoveDir;
+
+	float m_fov;
+	float m_fovSpeed;
+	float m_trackSpeed;
+
+	string_t m_iszTargetAttachment;
+	int	  m_iAttachmentIndex;
+	bool  m_bSnapToGoal;
+
+#if HL2_EPISODIC
+	bool  m_bInterpolatePosition;
+
+	// these are interpolation vars used for interpolating the camera over time
+	Vector m_vStartPos, m_vEndPos;
+	float m_flInterpStartTime;
+
+	const static float kflPosInterpTime; // seconds
+#endif
+
+	int   m_nPlayerButtons;
+	int m_nOldTakeDamage;
+
+private:
+	COutputEvent m_OnEndFollow;
+};
+
 bool IsTakingTriggerHurtDamageAtPoint( const Vector &vecPoint );
 
 #endif // TRIGGERS_H

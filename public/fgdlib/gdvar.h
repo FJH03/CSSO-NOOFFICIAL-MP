@@ -46,6 +46,8 @@ enum GDIV_TYPE
 	ivAxis,			// The axis of rotation for a rotating entity, in the form "x0 y0 z0, x1 y1 z1".
 	ivPointEntityClass,
 	ivNodeDest,
+	ivScript,
+	ivScriptList,
 	ivInstanceFile,			// used for hammer to know this field should display a browse button to find map files
 	ivAngleNegativePitch,	// used for instance rotating when just a pitch value is present
 	ivInstanceVariable,		// used for instance variables for easy hammer editing

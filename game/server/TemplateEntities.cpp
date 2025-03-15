@@ -22,6 +22,7 @@
 #include "eventqueue.h"
 #include "TemplateEntities.h"
 #include "utldict.h"
+#include "entitydefs.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -224,8 +225,16 @@ void Templates_ReconnectIOForGroup( CPointTemplate *pGroup )
 
 				// Entity I/O values are stored as "Targetname,<data>", so we need to see if there's a ',' in the string
 				char *sValue = value;
+				
 				// FIXME: This is very brittle. Any key with a , will not be found.
-				char *s = strchr( value, ',' );
+				char delimiter = VMF_IOPARAM_STRING_DELIMITER;
+				if( strchr( value, delimiter ) == NULL )
+				{
+					delimiter = ',';
+				}
+
+				char *s = strchr( value, delimiter );
+				if ( s )
 				if ( s )
 				{
 					// Grab just the targetname of the receiver

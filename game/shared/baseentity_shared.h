@@ -56,6 +56,9 @@ extern ConVar hl2_episodic;
 
 #endif
 
+#include "vscript/ivscript.h"
+#include "vscript_shared.h"
+
 #if !defined( NO_ENTITY_PREDICTION )
 // CBaseEntity inlines
 inline bool CBaseEntity::IsPlayerSimulated( void ) const
@@ -237,6 +240,18 @@ inline void CBaseEntity::ClearEffects( void )
 inline bool CBaseEntity::IsEffectActive( int nEffects ) const
 { 
 	return (m_fEffects & nEffects) != 0; 
+}
+
+inline HSCRIPT ToHScript( CBaseEntity *pEnt )
+{
+	return ( pEnt ) ? pEnt->GetScriptInstance() : NULL;
+}
+
+template <> ScriptClassDesc_t *GetScriptDesc<CBaseEntity>( CBaseEntity * );
+inline CBaseEntity *ToEnt( HSCRIPT hScript )
+{
+
+	return ( hScript ) ? (CBaseEntity *)g_pScriptVM->GetInstanceValue( hScript, GetScriptDescForClass(CBaseEntity) ) : NULL;
 }
 
 // Shared EntityMessage between game and client .dlls

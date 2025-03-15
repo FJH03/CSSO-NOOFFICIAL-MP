@@ -221,16 +221,11 @@ IReplaySystem *g_pReplay = NULL;
 
 IHaptics* haptics = NULL;// NVNT haptics system interface singleton
 
-//=============================================================================
-// HPE_BEGIN
 // [dwenger] Necessary for stats display
-//=============================================================================
 
 AchievementsAndStatsInterface* g_pAchievementsAndStatsInterface = NULL;
 
-//=============================================================================
-// HPE_END
-//=============================================================================
+IScriptManager *scriptmanager = NULL;
 
 IGameSystem *SoundEmitterSystem();
 IGameSystem *ToolFrameworkClientSystem();
@@ -935,6 +930,12 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 	if ( ( gamestatsuploader = (IUploadGameStats *)appSystemFactory( INTERFACEVERSION_UPLOADGAMESTATS, NULL )) == NULL )
 		return false;
 #endif
+
+if ( !CommandLine()->CheckParm( "-noscripting" ) )
+	{
+		if ( (scriptmanager = (IScriptManager*) appSystemFactory( VSCRIPT_INTERFACE_VERSION, NULL )) == NULL )
+			return false;
+	}
 
 #if defined( REPLAY_ENABLED )
 	if ( IsPC() && (g_pEngineReplay = (IEngineReplay *)appSystemFactory( ENGINE_REPLAY_INTERFACE_VERSION, NULL )) == NULL )

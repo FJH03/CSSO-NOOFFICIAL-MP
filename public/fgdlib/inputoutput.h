@@ -10,7 +10,7 @@
 
 
 #include <utlvector.h>
-#include "fgdlib/EntityDefs.h"
+#include "entitydefs.h"
 
 
 enum InputOutputType_t
@@ -24,6 +24,7 @@ enum InputOutputType_t
 	iotVector,
 	iotEHandle,
 	iotColor,
+	iotScript,
 };
 
 

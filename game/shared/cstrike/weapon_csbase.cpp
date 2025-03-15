@@ -107,6 +107,21 @@ bool IsSecondaryWeapon( CSWeaponID id )
 	return false;
 }
 
+//--------------------------------------------------------------------------------------------------------
+//
+// Return true if given weapon ID is a grenade weapon
+//
+bool IsGrenadeWeapon( CSWeaponID id )
+{
+	const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( id );
+	if ( pWeaponInfo )
+	{
+		return pWeaponInfo->iSlot == WEAPON_SLOT_GRENADES;
+	}
+
+	return false;
+}
+
 #ifdef CLIENT_DLL
 int GetShellForAmmoType( const char *ammoname )
 {

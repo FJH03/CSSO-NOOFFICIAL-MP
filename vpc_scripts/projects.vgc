@@ -1426,6 +1426,12 @@ $Project "vrad_launcher"
 	"utils\vrad_launcher\vrad_launcher.vpc" [$WIN32]
 }
 
+$Project "vscript"
+{
+	"vscript/vscript.vpc"		[($WINDOWS || $X360 || $PS3 || $POSIX) && !$SOB]
+	"vscript/vscript_sob.vpc"	[($WINDOWS) && $SOB]
+}
+
 $Project "coroutine_osx"
 {
 	"vstdlib\coroutine_osx.vpc"						[$OSXALL]
