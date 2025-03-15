@@ -9424,7 +9424,7 @@ void CCSPlayer::ChangeTeam( int iTeamNum )
 //-----------------------------------------------------------------------------
 // Purpose: Put the player in the specified team without penalty
 //-----------------------------------------------------------------------------
-void CCSPlayer::SwitchTeam( int iTeamNum )
+void CCSPlayer::SwitchTeam( int iTeamNum, bool bSilent )
 {
 	if ( !GetGlobalTeam( iTeamNum ) || (iTeamNum != TEAM_CT && iTeamNum != TEAM_TERRORIST) )
 	{
@@ -9445,7 +9445,7 @@ void CCSPlayer::SwitchTeam( int iTeamNum )
 	m_bTeamChanged = true;
 
 	// do the team change:
-	BaseClass::ChangeTeam( iTeamNum );
+	BaseClass::ChangeTeam( iTeamNum, false, bSilent );
 
 	if( HasDefuser() )
 	{
@@ -10919,11 +10919,11 @@ void CCSPlayer::OnPreResetRound()
 		m_switchTeamsOnNextRoundReset = false;
 		if ( GetTeamNumber() == TEAM_TERRORIST )
 		{
-			SwitchTeam( TEAM_CT );
+			SwitchTeam( TEAM_CT, true );
 		}
 		else if ( GetTeamNumber() == TEAM_CT )
 		{			
-			SwitchTeam( TEAM_TERRORIST );
+			SwitchTeam( TEAM_TERRORIST, true );
 		}
 
 		// Remove all weapons
