@@ -42,8 +42,7 @@ public:
 	virtual void Reset( void );
 	virtual void OnThink();
 	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
-	virtual void SetPaintEnabled( bool state );
-
+	
 private:
 	CHandle<C_WeaponCSBase>	m_pActiveWeapon;
 
@@ -288,16 +287,4 @@ void CHudAmmo::OnThink()
 	{
 		m_pStatTrakCounter->SetVisible( false );
 	}
-}
-
-void CHudAmmo::SetPaintEnabled( bool state )
-{
- 	BaseClass::SetPaintEnabled( state );
- 
- 	m_pPrimaryAmmoLabel->SetVisible( state );
- 	m_pPrimaryReserveAmmoLabel->SetVisible( state );
- 	m_pStatTrakCounter->SetVisible( state );
- 	m_pBulletIcon->SetVisible( state );
- 	m_pExhaustibleWeaponIcon->SetVisible( state );
- 	m_pBurstIcon->SetVisible( state );
 }
