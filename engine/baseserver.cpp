@@ -739,6 +739,20 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 					}
 				}
 
+				if ( !V_stricmp( GetCurrentMod(), "csso" ) )
+ 				{
+ 					char cssoModVersion[32];
+ 					msg.ReadString( cssoModVersion, sizeof( cssoModVersion ) );
+ 
+ 					ConVarRef mod_version( "mod_version" );
+ 
+ 					if ( V_strcmp( cssoModVersion, mod_version.GetString() ) )
+ 					{
+ 						RejectConnection( packet->from, clientChallenge, "#GameUI_ServerRejectModDifferentVersion" );
+ 						break;
+ 					}
+ 				}
+
 // 				if ( Steam3Server().BSecure() && bClientPlugins )
 // 				{
 // 					RejectConnection( packet->from, "Cannot connect to a secure server while plug-ins are\nloaded on your client\n" );
