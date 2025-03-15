@@ -22,9 +22,10 @@ class CBaseCSIssue : public CBaseIssue
 {
 	// Overrides to BaseIssue standard to this mod.
 public:
-	CBaseCSIssue( const char *typeString ) : CBaseIssue( typeString )
+	CBaseCSIssue( const char *typeString, CVoteController *pVoteController ) : CBaseIssue( typeString, pVoteController )
 	{
 	}
+	virtual const char *GetOtherTeamDisplayString() { return "#CStrike_otherteam_vote_unimplemented"; }
 };
 
 //-----------------------------------------------------------------------------
@@ -33,7 +34,7 @@ public:
 class CRestartGameIssue : public CBaseCSIssue
 {
 public:
-	CRestartGameIssue() : CBaseCSIssue( "RestartGame" )
+	CRestartGameIssue( CVoteController* pVoteController ) : CBaseCSIssue( "RestartGame", pVoteController )
 	{
 	}
 	virtual void		ExecuteCommand( void );
@@ -51,7 +52,7 @@ public:
 class CKickIssue : public CBaseCSIssue
 {
 public:
-	CKickIssue() : CBaseCSIssue( "Kick" ), m_bPlayerCrashed( false )
+	CKickIssue( CVoteController* pVoteController ) : CBaseCSIssue( "Kick", pVoteController ), m_bPlayerCrashed( false )
 	{
 	}
 
@@ -65,6 +66,7 @@ public:
 	virtual void		OnVoteFailed( int iEntityHoldingVote );
 	virtual void		OnVoteStarted( void );
 	virtual const char *GetDetailsString( void );
+	virtual const char *GetOtherTeamDisplayString() { return "#CStrike_otherteam_vote_kick_player"; }
 
 private:
 	void				ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSubject );
@@ -79,7 +81,7 @@ private:
 class CBanIssue : public CBaseCSIssue
 {
 public:
-	CBanIssue() : CBaseCSIssue( "Ban" )
+	CBanIssue( CVoteController* pVoteController ) : CBaseCSIssue( "Ban", pVoteController )
 	{
 	}
 
@@ -106,7 +108,7 @@ private:
 class CChangeLevelIssue : public CBaseCSIssue
 {
 public:
-	CChangeLevelIssue() : CBaseCSIssue( "ChangeLevel" )
+	CChangeLevelIssue( CVoteController* pVoteController ) : CBaseCSIssue( "ChangeLevel", pVoteController )
 	{
 	}
 	virtual void		ExecuteCommand( void );
@@ -127,7 +129,7 @@ public:
 class CNextLevelIssue : public CBaseCSIssue
 {
 public:
-	CNextLevelIssue() : CBaseCSIssue( "NextLevel" )
+	CNextLevelIssue( CVoteController* pVoteController ) : CBaseCSIssue( "NextLevel", pVoteController )
 	{
 	}
 	virtual void		ExecuteCommand( void );
@@ -152,7 +154,7 @@ private:
 class CScrambleTeams : public CBaseCSIssue
 {
 public:
-	CScrambleTeams() : CBaseCSIssue( "ScrambleTeams" )
+	CScrambleTeams( CVoteController* pVoteController ) : CBaseCSIssue( "ScrambleTeams", pVoteController )
 	{
 	}
 	virtual void		ExecuteCommand( void );
@@ -170,7 +172,7 @@ public:
 class CSwapTeams : public CBaseCSIssue
 {
 public:
-	CSwapTeams() : CBaseCSIssue( "SwapTeams" )
+	CSwapTeams( CVoteController* pVoteController ) : CBaseCSIssue( "SwapTeams", pVoteController )
 	{
 	}
 	virtual void		ExecuteCommand( void );
@@ -188,13 +190,14 @@ public:
 class CPauseMatchIssue : public CBaseCSIssue
 {
 public:
-	CPauseMatchIssue() : CBaseCSIssue( "PauseMatch" )
+	CPauseMatchIssue( CVoteController* pVoteController ) : CBaseCSIssue( "PauseMatch", pVoteController )
 	{
 	}
 	virtual void		ExecuteCommand( void );
 	virtual bool		IsEnabled( void );
 	virtual bool		CanCallVote( int nEntIndex, const char *pszDetails, vote_create_failed_t &nFailCode, int &nTime );
 	virtual const char *GetDisplayString( void );
+	virtual bool		ShouldIgnoreCreationTimer( void ) { return true; }
 	virtual void		ListIssueDetails( CBasePlayer *pForWhom );
 	virtual int			GetVotesRequiredToPass( void ){ return 1; }
 	virtual const char *GetVotePassedString( void );
@@ -210,7 +213,7 @@ public:
 class CUnpauseMatchIssue : public CBaseCSIssue
 {
 public:
-	CUnpauseMatchIssue() : CBaseCSIssue( "UnpauseMatch" )
+	CUnpauseMatchIssue( CVoteController* pVoteController ) : CBaseCSIssue( "UnpauseMatch", pVoteController )
 	{
 	}
 	virtual void		ExecuteCommand( void );
@@ -218,6 +221,7 @@ public:
 	virtual bool		CanCallVote( int nEntIndex, const char *pszDetails, vote_create_failed_t &nFailCode, int &nTime );
 	virtual const char *GetDisplayString( void );
 	virtual void		ListIssueDetails( CBasePlayer *pForWhom );
+	virtual bool		ShouldIgnoreCreationTimer( void ) { return true; }
 	virtual bool		IsUnanimousVoteToPass( void ) { return true; }	// Requires all potential voters to pass
 	virtual bool		IsEnabledDuringWarmup( void )	{ return true; } // Can this vote be called during warmup?
 	virtual const char *GetVotePassedString( void );
@@ -227,7 +231,7 @@ public:
 class CStartTimeOutIssue : public CBaseCSIssue
 {
 public:
-	CStartTimeOutIssue() : CBaseCSIssue( "StartTimeOut" )
+	CStartTimeOutIssue( CVoteController* pVoteController ) : CBaseCSIssue( "StartTimeOut", pVoteController )
 	{
 	}
 	virtual void		ExecuteCommand( void );
@@ -238,17 +242,17 @@ public:
 	virtual void		ListIssueDetails( CBasePlayer *pForWhom );
 	virtual bool		IsTeamRestrictedVote( void ) { return true; }
 	virtual const char *GetVotePassedString( void );
+	virtual const char *GetOtherTeamDisplayString() { return "#CStrike_otherteam_vote_timeout"; }
 	virtual vote_create_failed_t MakeVoteFailErrorCodeForClients( vote_create_failed_t eDefaultFailCode );
 };
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-// PiMoN TODO: think about implementing it
-/*class CSurrender : public CBaseCSIssue
+class CSurrender : public CBaseCSIssue
 {
 public:
-	CSurrender() : CBaseCSIssue( "Surrender" )
+	CSurrender( CVoteController* pVoteController ) : CBaseCSIssue( "Surrender", pVoteController )
 	{
 	}
 	virtual void		ExecuteCommand( void );
@@ -256,6 +260,7 @@ public:
 	virtual bool		CanCallVote( int nEntIndex, const char *pszDetails, vote_create_failed_t &nFailCode, int &nTime );
 	virtual bool		CanTeamCallVote( int iTeam ) const;
 	virtual const char *GetDisplayString( void );
+	virtual const char *GetOtherTeamDisplayString() { return "#CStrike_otherteam_vote_surrender"; }
 	virtual void		ListIssueDetails( CBasePlayer *pForWhom );
 	virtual bool		IsTeamRestrictedVote( void ){ return true; }
 	virtual const char *GetVotePassedString( void );
@@ -272,5 +277,5 @@ public:
 		}
 	}
 };
-*/
+
 #endif // CS_VOTEISSUES_H

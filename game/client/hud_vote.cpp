@@ -17,6 +17,7 @@
 #include "con_nprint.h"
 #include "hud_vote.h"
 #include "menu.h"
+#include "cs_hud_chat.h"
 
 #include <vgui/IScheme.h>
 #include <vgui/ISurface.h>
@@ -1121,12 +1122,20 @@ void CHudVote::MsgFunc_CallVoteFailed( bf_read &msg )
 			m_pCallVoteFailed->SetControlString( "FailedReason", "#GameUI_vote_failed_nextlevel_set" );
 			break;
 
+		case VOTE_FAILED_TOO_EARLY_SURRENDER:
+			m_pCallVoteFailed->SetControlString( "FailedReason", "#GameUI_vote_failed_surrender_too_early" );
+			break;
+
 		case VOTE_FAILED_MATCH_PAUSED:
 			m_pCallVoteFailed->SetControlString( "FailedReason", "#GameUI_vote_failed_paused" );
 			break;
 
 		case VOTE_FAILED_MATCH_NOT_PAUSED:
 			m_pCallVoteFailed->SetControlString( "FailedReason", "#GameUI_vote_failed_not_paused" );
+			break;
+
+		case VOTE_FAILED_CANT_ROUND_END:
+			m_pCallVoteFailed->SetControlString( "FailedReason", "#GameUI_vote_failed_cant_round_end" );
 			break;
 
 		case VOTE_FAILED_CANNOT_KICK_FOR_TIME:
@@ -1139,10 +1148,6 @@ void CHudVote::MsgFunc_CallVoteFailed( bf_read &msg )
 
 		case VOTE_FAILED_CANNOT_KICK_DURING_ROUND:
 			m_pCallVoteFailed->SetControlString( "FailedReason", "#GameUI_vote_failed_round_active" );
-			break;
-
-		case VOTE_FAILED_MODIFICATION_ALREADY_ACTIVE:
-			m_pCallVoteFailed->SetControlString( "FailedReason", "#GameUI_vote_failed_event_already_active" );
 			break;
 
 		case VOTE_FAILED_VOTE_IN_PROGRESS:
@@ -1227,8 +1232,9 @@ void CHudVote::MsgFunc_VoteStart( bf_read &msg )
 
 	// Is this a team-only vote?
 	m_nVoteTeamIndex = msg.ReadByte();
+	bool bShowingOtherTeam = false;
 	if ( m_nVoteTeamIndex >= FIRST_GAME_TEAM && m_nVoteTeamIndex != pLocalPlayer->GetTeamNumber() )
-		return;
+		bShowingOtherTeam = true;
 
 	// Entity calling the vote
 	const char *pszCallerName = "Server";
@@ -1255,50 +1261,57 @@ void CHudVote::MsgFunc_VoteStart( bf_read &msg )
 	char szParam1[k_MAX_VOTE_NAME_LENGTH] = { 0 };
 	msg.ReadString( szParam1, sizeof(szParam1) );
 
-	m_bIsYesNoVote = msg.ReadByte();
+	// OtherTeamString
+	char szOtherTeam[k_MAX_VOTE_NAME_LENGTH] = { 0 };
+	msg.ReadString( szOtherTeam, sizeof(szOtherTeam) );
+
 	int iTargetEntIndex = msg.ReadByte();
+	if ( !bShowingOtherTeam )
+	{
+		m_bIsYesNoVote = msg.ReadByte();
 
-	m_flVoteResultCycleTime = -1.f;
-	m_bVotingActive = true;
-	m_pVoteFailed->SetVisible( false );
-	m_pVotePassed->SetVisible( false );
-	m_pCallVoteFailed->SetVisible( false );
-	m_pVoteSetupDialog->SetVisible( false );
-	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( m_pVoteActive, "HideVoteBackgrounds" );
+		m_flVoteResultCycleTime = -1.f;
+		m_bVotingActive = true;
+		m_pVoteFailed->SetVisible( false );
+		m_pVotePassed->SetVisible( false );
+		m_pCallVoteFailed->SetVisible( false );
+		m_pVoteSetupDialog->SetVisible( false );
+		g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( m_pVoteActive, "HideVoteBackgrounds" );
 
-	m_voteBar->SetVisible( m_bIsYesNoVote );
+		m_voteBar->SetVisible( m_bIsYesNoVote );
 
-	// There will always be at least two choices...
-	m_pVoteActive->SetControlVisible( "LabelOption1", true );
-	m_pVoteActive->SetControlVisible( "LabelOption2", true );
+		// There will always be at least two choices...
+		m_pVoteActive->SetControlVisible( "LabelOption1", true );
+		m_pVoteActive->SetControlVisible( "LabelOption2", true );
 
-	// ...sometimes more
-	m_pVoteActive->SetControlVisible( "LabelOption3", m_VoteSetupChoices.Count() > 2 ? true : false );
-	m_pVoteActive->SetControlVisible( "Option3Background_Selected", m_VoteSetupChoices.Count() > 2 ? true : false );
-	m_pVoteActive->SetControlVisible( "LabelOption4", m_VoteSetupChoices.Count() > 3 ? true : false );
-	m_pVoteActive->SetControlVisible( "Option4Background_Selected", m_VoteSetupChoices.Count() > 3 ? true : false );
-	m_pVoteActive->SetControlVisible( "LabelOption5", m_VoteSetupChoices.Count() > 4 ? true : false );
-	m_pVoteActive->SetControlVisible( "Option5Background_Selected", m_VoteSetupChoices.Count() > 4 ? true : false );
+		// ...sometimes more
+		m_pVoteActive->SetControlVisible( "LabelOption3", m_VoteSetupChoices.Count() > 2 ? true : false );
+		m_pVoteActive->SetControlVisible( "Option3Background_Selected", m_VoteSetupChoices.Count() > 2 ? true : false );
+		m_pVoteActive->SetControlVisible( "LabelOption4", m_VoteSetupChoices.Count() > 3 ? true : false );
+		m_pVoteActive->SetControlVisible( "Option4Background_Selected", m_VoteSetupChoices.Count() > 3 ? true : false );
+		m_pVoteActive->SetControlVisible( "LabelOption5", m_VoteSetupChoices.Count() > 4 ? true : false );
+		m_pVoteActive->SetControlVisible( "Option5Background_Selected", m_VoteSetupChoices.Count() > 4 ? true : false );
 
-	m_pVoteActive->SetControlVisible( "VoteCountLabel", m_bIsYesNoVote );
-	m_pVoteActive->SetControlVisible( "Option1CountLabel", m_bIsYesNoVote );
-	m_pVoteActive->SetControlVisible( "Option2CountLabel", m_bIsYesNoVote );
-	m_pVoteActive->SetControlVisible( "Divider1", m_bIsYesNoVote );
-	m_pVoteActive->SetControlVisible( "Divider2", m_bIsYesNoVote );
+		m_pVoteActive->SetControlVisible( "VoteCountLabel", m_bIsYesNoVote );
+		m_pVoteActive->SetControlVisible( "Option1CountLabel", m_bIsYesNoVote );
+		m_pVoteActive->SetControlVisible( "Option2CountLabel", m_bIsYesNoVote );
+		m_pVoteActive->SetControlVisible( "Divider1", m_bIsYesNoVote );
+		m_pVoteActive->SetControlVisible( "Divider2", m_bIsYesNoVote );
 
-	// Display vote caller's name
-	wchar_t wszCallerName[MAX_PLAYER_NAME_LENGTH];
+		// Display vote caller's name
+		wchar_t wszCallerName[MAX_PLAYER_NAME_LENGTH];
 	
-	wchar_t wszHeaderString[k_MAX_VOTE_NAME_LENGTH];
+		wchar_t wszHeaderString[k_MAX_VOTE_NAME_LENGTH];
 
-	// Player
-	g_pVGuiLocalize->ConvertANSIToUnicode( pszCallerName, wszCallerName, sizeof( wszCallerName ) );
+		// Player
+		g_pVGuiLocalize->ConvertANSIToUnicode( pszCallerName, wszCallerName, sizeof( wszCallerName ) );
 
-	// String
-	g_pVGuiLocalize->ConstructString( wszHeaderString, sizeof( wszHeaderString ), g_pVGuiLocalize->Find( "#GameUI_vote_header" ), 1, wszCallerName );
+		// String
+		g_pVGuiLocalize->ConstructString( wszHeaderString, sizeof( wszHeaderString ), g_pVGuiLocalize->Find( "#GameUI_vote_header" ), 1, wszCallerName );
 
-	// Final
-	m_pVoteActive->SetDialogVariable( "header", wszHeaderString );
+		// Final
+		m_pVoteActive->SetDialogVariable( "header", wszHeaderString );
+	}
 
 	// Display the Issue
 	wchar_t *pwcParam;
@@ -1321,14 +1334,35 @@ void CHudVote::MsgFunc_VoteStart( bf_read &msg )
 			pwcParam = wcParam;
 		}
 
-		g_pVGuiLocalize->ConstructString( wcIssue, sizeof(wcIssue), g_pVGuiLocalize->Find( szIssue ), 1, pwcParam );
+		if ( bShowingOtherTeam )
+			g_pVGuiLocalize->ConstructString( wcIssue, sizeof(wcIssue), g_pVGuiLocalize->Find( szOtherTeam ), 1, pwcParam );
+		else
+			g_pVGuiLocalize->ConstructString( wcIssue, sizeof(wcIssue), g_pVGuiLocalize->Find( szIssue ), 1, pwcParam );
 		pwcIssue = wcIssue;
 	}
 	else
 	{
 		// no param, just localize the issue
-		pwcIssue = g_pVGuiLocalize->Find( szIssue );
+		if ( bShowingOtherTeam )
+			pwcIssue = g_pVGuiLocalize->Find( szOtherTeam );
+		else
+			pwcIssue = g_pVGuiLocalize->Find( szIssue );
 	}
+	
+	// if the vote is called by the other team, just show a chat message here informing this team
+	if ( bShowingOtherTeam )
+	{
+		CBaseHudChat *hudChat = (CBaseHudChat *)GET_HUDELEMENT( CHudChat );
+		if ( pwcIssue[0] )
+		{
+			char szIssue[k_MAX_VOTE_NAME_LENGTH];
+			g_pVGuiLocalize->ConvertUnicodeToANSI( pwcIssue, szIssue, sizeof( szIssue ) );
+			hudChat->ChatPrintf( pLocalPlayer->entindex(), CHAT_FILTER_SERVERMSG, szIssue );
+		}
+
+		return;
+	}
+
 	m_pVoteActive->SetDialogVariable( "voteissue", pwcIssue );
 
 	// Figure out which UI
@@ -1825,4 +1859,3 @@ bool CHudVote::IsVoteUIActive( void )
 {
 	return m_bShowVoteActivePanel;
 }
-

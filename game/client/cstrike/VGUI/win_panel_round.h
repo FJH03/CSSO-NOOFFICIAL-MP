@@ -48,12 +48,12 @@ private:
 	Label* m_pMVPText;
 	ImagePanel* m_pMainBackground;
 	ImagePanel* m_pTeamIcon;
+	ImagePanel* m_pMVPAvatarBkg;
 	CAvatarImagePanel* m_pMVPAvatar;
 	VectorImagePanel* m_pGGTRNextWeaponIcon;
- 	VectorImagePanel* m_pGGTRBonusGrenadeIcon;
- 	Label* m_pGGTRNextWeaponLabel;
- 	Panel* m_pGGTRNextWeaponBackground;
-	ImagePanel* m_pMVPAvatarBkg;
+	VectorImagePanel* m_pGGTRBonusGrenadeIcon;
+	Label* m_pGGTRNextWeaponLabel;
+	Panel* m_pGGTRNextWeaponBackground;
 
 	Color m_clrCT;
 	Color m_clrT;

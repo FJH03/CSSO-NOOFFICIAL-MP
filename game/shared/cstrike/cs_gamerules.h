@@ -421,6 +421,8 @@ public:
 
 	virtual const unsigned char *GetEncryptionKey( void ) { return (unsigned char *)"d7NSuLq2"; } // both the client and server need this key
 
+	static int GetMaxPlayers(); // always available
+
 #ifdef CLIENT_DLL
 
 	DECLARE_CLIENTCLASS_NOBASE(); // This makes datatables able to access our private vars.
@@ -545,6 +547,7 @@ public:
 	//		PostRestartRound() is called immediately after RestartRound() has completed
 	void PreRestartRound( void );
 	void RestartRound( void );
+	void PostRestartRound( void );
 	void RoundWin( void );
 	int	 GetRoundsPlayed( void ) const { return m_match.GetRoundsPlayed(); }
 
@@ -607,6 +610,8 @@ public:
 
 	void ReadMultiplayCvars();
 	void SwapAllPlayers();
+
+	void OnTeamsSwappedAtRoundReset();
 
 	void BroadcastSound( const char *sound, int team = -1 );
 

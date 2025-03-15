@@ -106,6 +106,7 @@ public:
 	// Data
 	CNetworkString( m_szTeamname, MAX_TEAM_NAME_LENGTH );
 	CNetworkString( m_szClanTeamname, MAX_TEAM_NAME_LENGTH );
+	CNetworkVar( bool, m_bSurrendered );
 	CNetworkVar( int, m_scoreTotal );
 	CNetworkVar( int, m_scoreFirstHalf );
 	CNetworkVar( int, m_scoreSecondHalf );

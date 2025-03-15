@@ -14,6 +14,7 @@
 #include "cs_gamerules.h"
 #include "inetchannelinfo.h"
 #include "cs_gamestats.h"
+#include "gametypes.h"
 
 #ifdef CLIENT_DLL
 #include "gc_clientsystem.h"
@@ -23,27 +24,7 @@
 #include "tier0/memdbgon.h"
 
 extern ConVar mp_maxrounds;
-
-static bool VotableMap( const char *pszMapName )
-{
-	char szCanonName[64] = { 0 };
-	V_strncpy( szCanonName, pszMapName, sizeof( szCanonName ) );
-	IVEngineServer::eFindMapResult eResult = engine->FindMap( szCanonName, sizeof( szCanonName ) );
-
-	switch ( eResult )
-	{
-		case IVEngineServer::eFindMap_Found:
-		case IVEngineServer::eFindMap_NonCanonical:
-		case IVEngineServer::eFindMap_PossiblyAvailable:
-		case IVEngineServer::eFindMap_FuzzyMatch:
-			return true;
-		case IVEngineServer::eFindMap_NotFound:
-			return false;
-	}
-
-	AssertMsg( false, "Unhandled engine->FindMap return value\n" );
-	return false;
-}
+extern ConVar mp_winlimit;
 
 //-----------------------------------------------------------------------------
 // Purpose: Base CS Issue
@@ -53,7 +34,7 @@ static bool VotableMap( const char *pszMapName )
 // Purpose: Restart Round Issue
 //-----------------------------------------------------------------------------
 ConVar sv_vote_issue_restart_game_allowed( "sv_vote_issue_restart_game_allowed", "1", 0, "Can people hold votes to restart the game?" );
-// ConVar sv_arms_race_vote_to_restart_disallowed_after( "sv_arms_race_vote_to_restart_disallowed_after", "0", FCVAR_REPLICATED, "Arms Race gun level after which vote to restart is disallowed" ); -- gungame!
+ConVar sv_arms_race_vote_to_restart_disallowed_after( "sv_arms_race_vote_to_restart_disallowed_after", "0", FCVAR_REPLICATED, "Arms Race gun level after which vote to restart is disallowed" );
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -70,7 +51,6 @@ bool CRestartGameIssue::IsEnabled( void )
 {
 	if ( sv_vote_issue_restart_game_allowed.GetBool() )
 	{
-		/* -- gungame!
 		// Vote to restart is allowed
 		if ( sv_arms_race_vote_to_restart_disallowed_after.GetInt() > 0 )
 		{
@@ -85,7 +65,7 @@ bool CRestartGameIssue::IsEnabled( void )
 				// A player has surpassed the maximum weapon progression, so disable vote to restart
 				return false;
 			}
-		}*/
+		}
 
 		// No maximum weapon progression value is defined, so enable vote to restart
 		return true;
@@ -145,6 +125,7 @@ void CRestartGameIssue::ListIssueDetails( CBasePlayer *pForWhom )
 //-----------------------------------------------------------------------------
 ConVar sv_vote_issue_kick_allowed( "sv_vote_issue_kick_allowed", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Can people hold votes to kick players from the server?" );
 ConVar sv_vote_kick_ban_duration( "sv_vote_kick_ban_duration", "15", FCVAR_REPLICATED | FCVAR_NOTIFY, "How long should a kick vote ban someone from the server? (in minutes)" );
+ConVar sv_vote_kick_allow_other_team( "sv_vote_kick_allow_other_team", "0", FCVAR_REPLICATED | FCVAR_NOTIFY, "Can people kick players from other teams?" );
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -222,7 +203,7 @@ bool CKickIssue::CanCallVote( int iEntIndex, const char *pszDetails, vote_create
 			int voterTeam = pPlayer->GetTeamNumber();
 			int nSubjectTeam = pSubject->GetTeamNumber();
 
-			if ( CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
+			if ( !sv_vote_kick_allow_other_team.GetBool() || CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
 				bCanKickVote = (voterTeam == TEAM_TERRORIST || voterTeam == TEAM_CT) && (voterTeam == nSubjectTeam || nSubjectTeam == TEAM_SPECTATOR);
 			else
 				bCanKickVote = true;
@@ -288,9 +269,9 @@ void CKickIssue::OnVoteStarted( void )
 	// input messages, making it impossible to know if the player is moving his
 	// joystick or not. Being on TEAM_SPECTATOR, however, means you're idling,
 	// so we don't want to autovote NO if they are on team spectator
-	if ( g_voteController && pSubject && ( pSubject->GetTeamNumber( ) != TEAM_SPECTATOR ) && !pSubject->IsBot( ) )
+	if ( m_pVoteController && pSubject && ( pSubject->GetTeamNumber( ) != TEAM_SPECTATOR ) && !pSubject->IsBot( ) )
 	{
-		g_voteController->TryCastVote( pSubject->entindex( ), "Option2" );
+		m_pVoteController->TryCastVote( pSubject->entindex( ), "Option2" );
 	}
 
 	// Also when the vote starts, figure out if the player should not be banned
@@ -492,11 +473,17 @@ void CBanIssue::OnVoteStarted( void )
 {
 	CCSPlayer *pSubject = NULL;
 	ExtractDataFromDetails( m_szDetailsString, &pSubject );
-
-	// Auto vote 'No' for the person being banned
-	if ( g_voteController && pSubject && (pSubject->GetTeamNumber() != TEAM_SPECTATOR) && !pSubject->IsBot() )
+	
+	// Auto vote 'No' for the person being banned unless they are idle
+	// NOTE: Subtle. There's a problem with IsAwayFromKeyboard where if a player
+	// has idled and is taken over by a bot, IsAwayFromKeyboard will return false
+	// because the camera controller that takes over when idling will spoof 
+	// input messages, making it impossible to know if the player is moving his
+	// joystick or not. Being on TEAM_SPECTATOR, however, means you're idling,
+	// so we don't want to autovote NO if they are on team spectator
+	if ( m_pVoteController && pSubject && (pSubject->GetTeamNumber() != TEAM_SPECTATOR) && !pSubject->IsBot() )
 	{
-		g_voteController->TryCastVote( pSubject->entindex(), "Option2" );
+		m_pVoteController->TryCastVote( pSubject->entindex(), "Option2" );
 	}
 
 	if ( pSubject )
@@ -628,20 +615,35 @@ bool CChangeLevelIssue::CanCallVote( int iEntIndex, const char *pszDetails, vote
 	}
 	else
 	{
-		if ( !VotableMap( pszDetails ) )
+		if ( !engine->IsMapValid( pszDetails ) )
 		{
 			nFailCode = VOTE_FAILED_MAP_NOT_FOUND;
 			return false;
 		}
-
-		if ( MultiplayRules() && !MultiplayRules()->IsMapInMapCycle( pszDetails ) )
+	}
+	
+	bool mapIsInGroup = false;
+	if ( gpGlobals )
+	{	
+		const char* groupName = gpGlobals->mapGroupName.ToCStr();
+		const CUtlStringList* mapsInGroup = g_pGameTypes->GetMapGroupMapList( groupName );
+		if ( mapsInGroup )
 		{
-			nFailCode = VOTE_FAILED_MAP_NOT_VALID;
-			return false;
+			int numMaps = mapsInGroup->Count();
+
+			for( int i = 0 ; i < numMaps ; ++i )
+			{
+				const char* internalMapName = ( *mapsInGroup )[i];
+				if ( !V_strcmp( pszDetails, internalMapName ) )
+				{
+					mapIsInGroup = true;
+					break;
+				}
+			}
 		}
 	}
 
-	return true;
+	return mapIsInGroup;
 }
 
 //-----------------------------------------------------------------------------
@@ -714,10 +716,15 @@ void CNextLevelIssue::ExecuteCommand( void )
 		{
 			engine->ServerCommand( CFmtStr( "mp_maxrounds %d;", mp_maxrounds.GetInt() + 2 ) );
 		}
+		
+		if ( mp_winlimit.GetInt() > 0 )
+		{
+			engine->ServerCommand( CFmtStr( "mp_winlimit %d;", mp_winlimit.GetInt() + 2 ) );
+		}
 	}
 	else
 	{
-		nextlevel.SetValue( m_szDetailsString );
+		engine->ServerCommand( CFmtStr( "nextlevel %s;", m_szDetailsString ) );
 	}
 }
 
@@ -770,29 +777,44 @@ bool CNextLevelIssue::CanCallVote( int iEntIndex, const char *pszDetails, vote_c
 	}
 	else
 	{
-		if ( !VotableMap( pszDetails ) )
+		if ( !engine->IsMapValid( pszDetails ) )
 		{
 			nFailCode = VOTE_FAILED_MAP_NOT_FOUND;
-			return false;
-		}
-
-		if ( MultiplayRules() && !MultiplayRules()->IsMapInMapCycle( pszDetails ) )
-		{
-			nFailCode = VOTE_FAILED_MAP_NOT_VALID;
 			return false;
 		}
 	}
 
 	if ( sv_vote_issue_nextlevel_prevent_change.GetBool() )
 	{
-		if ( nextlevel.GetString() && *nextlevel.GetString() )
+		if ( nextlevel.GetString() && *nextlevel.GetString() && engine->IsMapValid( nextlevel.GetString() ) )
 		{
 			nFailCode = VOTE_FAILED_NEXTLEVEL_SET;
 			return false;
 		}
 	}
+	
+	bool mapIsInGroup = false;
+	if ( gpGlobals )
+	{	
+		const char* groupName = gpGlobals->mapGroupName.ToCStr();
+		const CUtlStringList* mapsInGroup = g_pGameTypes->GetMapGroupMapList( groupName );
+		if ( mapsInGroup )
+		{
+			int numMaps = mapsInGroup->Count();
 
-	return true;
+			for( int i = 0 ; i < numMaps ; ++i )
+			{
+				const char* internalMapName = ( *mapsInGroup )[i];
+				if ( !V_strcmp( pszDetails, internalMapName ) )
+				{
+					mapIsInGroup = true;
+					break;
+				}
+			}
+		}
+	}
+
+	return mapIsInGroup;
 }
 
 //-----------------------------------------------------------------------------
@@ -954,7 +976,7 @@ void CScrambleTeams::ListIssueDetails( CBasePlayer *pForWhom )
 //-----------------------------------------------------------------------------
 // Purpose: Pause Match
 //-----------------------------------------------------------------------------
-ConVar sv_vote_issue_pause_match_allowed( "sv_vote_issue_pause_match_allowed", "0", 0, "Can people hold votes to pause/unpause the match?" );
+ConVar sv_vote_issue_pause_match_allowed( "sv_vote_issue_pause_match_allowed", "1", 0, "Can people hold votes to pause/unpause the match?" );
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -963,7 +985,7 @@ void CPauseMatchIssue::ExecuteCommand( void )
 {
 	engine->ServerCommand( CFmtStr( "mp_pause_match;" ) );
 
-	CBaseEntity *pVoteCaller = UTIL_EntityByIndex( g_voteController->GetCallingEntity( ) );
+	CBaseEntity *pVoteCaller = UTIL_EntityByIndex( m_pVoteController->GetCallingEntity( ) );
 	if ( !pVoteCaller )
 		return;
 
@@ -971,7 +993,10 @@ void CPauseMatchIssue::ExecuteCommand( void )
 	if ( !pPlayer )
 		return;
 
-	UTIL_ClientPrintAll( HUD_PRINTTALK, "#CStrike_vote_passed_pause_match_chat", pPlayer->GetPlayerName() );
+	CFmtStr fmtEntName;
+	if ( pPlayer )
+		fmtEntName.AppendFormat( "#ENTNAME[%d]%s", pPlayer->entindex(), pPlayer->GetPlayerName() );
+	UTIL_ClientPrintAll( HUD_PRINTTALK, "#CStrike_vote_passed_pause_match_chat", fmtEntName.Access() );
 }
 
 //-----------------------------------------------------------------------------
@@ -1124,7 +1149,7 @@ ConVar sv_vote_issue_timeout_allowed( "sv_vote_issue_timeout_allowed", "1", 0, "
 //-----------------------------------------------------------------------------
 void CStartTimeOutIssue::ExecuteCommand( void )
 {
-	CBaseEntity *pVoteHolder = UTIL_EntityByIndex( g_voteController->GetCallingEntity( ) );
+	CBaseEntity *pVoteHolder = UTIL_EntityByIndex( m_pVoteController->GetCallingEntity( ) );
 	if ( !pVoteHolder )
 		return;
 
@@ -1315,6 +1340,135 @@ const char *CSwapTeams::GetVotePassedString( void )
 void CSwapTeams::ListIssueDetails( CBasePlayer *pForWhom )
 {
 	if ( !sv_vote_issue_swap_teams_allowed.GetBool() )
+		return;
+
+	ListStandardNoArgCommand( pForWhom, GetTypeString() );
+}
+
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Surrender Issue
+//-----------------------------------------------------------------------------
+ConVar sv_vote_issue_surrender_allowed( "sv_vote_issue_surrrender_allowed", "1", 0, "Can people hold votes to surrender?" );
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CSurrender::ExecuteCommand( void )
+{
+	CBaseEntity *pVoteHolder = UTIL_EntityByIndex( m_pVoteController->GetCallingEntity( ) );
+	if ( !pVoteHolder )
+		return;
+
+	if ( CSGameRules() && CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
+	{
+		if ( CSGameRules()->m_iRoundWinStatus != WINNER_NONE || CSGameRules()->GetGamePhase() == GAMEPHASE_HALFTIME )
+		{
+			// if the vote succeeds at the round end, just cancel it because we don't handle this in the gamerules round logic
+			CBasePlayer *pVoteCaller = dynamic_cast< CBasePlayer* >( pVoteHolder );
+			if ( pVoteCaller )
+				m_pVoteController->SendVoteFailedToPassMessage( VOTE_FAILED_CANT_ROUND_END );
+		}
+		else
+		{
+			if ( pVoteHolder->GetTeamNumber() == TEAM_TERRORIST )
+			{
+				CSGameRules()->GetMatch()->AddCTWins( 1 );
+				CSGameRules()->TerminateRound( 0, Terrorists_Surrender );
+			}
+			if ( pVoteHolder->GetTeamNumber() == TEAM_CT )
+			{
+				CSGameRules()->GetMatch()->AddTerroristWins( 1 );
+				CSGameRules()->TerminateRound( 0, CTs_Surrender );
+			}
+		}
+	}
+	else
+	{
+		if ( pVoteHolder->GetTeamNumber() == TEAM_TERRORIST )
+		{
+			CSGameRules()->TerminateRound( 0, Terrorists_Surrender );
+		}
+		if ( pVoteHolder->GetTeamNumber() == TEAM_CT )
+		{
+			CSGameRules()->TerminateRound( 0, CTs_Surrender );
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CSurrender::IsEnabled( void )
+{
+	return sv_vote_issue_surrender_allowed.GetBool();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CSurrender::CanCallVote( int iEntIndex, const char *pszDetails, vote_create_failed_t &nFailCode, int &nTime )
+{
+	if ( !CBaseCSIssue::CanCallVote( iEntIndex, pszDetails, nFailCode, nTime ) )
+		return false;
+
+	if ( CSGameRules() && CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
+	{
+		if ( CSGameRules()->GetGamePhase() == GAMEPHASE_MATCH_ENDED || CSGameRules()->GetGamePhase() == GAMEPHASE_HALFTIME ||
+			 CSGameRules()->IsLastRoundBeforeHalfTime() )
+		{
+			nFailCode = VOTE_FAILED_ISSUE_DISABLED;
+			return false;
+		}
+
+		if ( CSGameRules()->GetRoundsPlayed() < 1 )
+		{	// Cannot surrender unless at least one round was played
+			nFailCode = VOTE_FAILED_WAITINGFORPLAYERS;
+			return false;
+		}
+	}
+
+	if ( !IsEnabled() )
+	{
+		nFailCode = VOTE_FAILED_ISSUE_DISABLED;
+		return false;
+	}
+
+	return true;
+}
+
+bool CSurrender::CanTeamCallVote( int iTeam ) const
+{
+	if ( !CSGameRules() || !CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
+		return false;
+
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+const char *CSurrender::GetDisplayString( void )
+{
+	return "#CStrike_vote_surrender";
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+const char *CSurrender::GetVotePassedString( void )
+{
+	return "#CStrike_vote_passed_surrender";
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CSurrender::ListIssueDetails( CBasePlayer *pForWhom )
+{
+	if ( !sv_vote_issue_surrender_allowed.GetBool() )
 		return;
 
 	ListStandardNoArgCommand( pForWhom, GetTypeString() );

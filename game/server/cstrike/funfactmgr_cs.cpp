@@ -112,10 +112,10 @@ bool CCSFunFactMgr::GetRoundEndFunFact( int iWinningTeam, e_RoundEndReason iRoun
 {
 
 	//No fun fact for surrender
-	/*if ( iRoundResult == CTs_Surrender || iRoundResult == Terrorists_Surrender )
+	if ( iRoundResult == CTs_Surrender || iRoundResult == Terrorists_Surrender )
 	{
 		return false;
-	}*/
+	}
 
 	FunFactVector validFunFacts;
 

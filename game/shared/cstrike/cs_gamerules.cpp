@@ -132,6 +132,19 @@ LINK_ENTITY_TO_CLASS( info_deathmatch_spawn, SpawnPoint );
 LINK_ENTITY_TO_CLASS( info_armsrace_counterterrorist, SpawnPoint );
 LINK_ENTITY_TO_CLASS( info_armsrace_terrorist, SpawnPoint );
 
+template< typename TIssue >
+void NewTeamIssue()
+{
+	new TIssue( g_voteControllerT );
+	new TIssue( g_voteControllerCT );
+}
+
+template< typename TIssue >
+void NewGlobalIssue()
+{
+	new TIssue( g_voteControllerGlobal );
+}
+
 SpawnPoint::SpawnPoint() : m_bEnabled( true ), m_nType( 0 )
 {
 }
@@ -1620,7 +1633,7 @@ ConVar snd_music_selection(
 
     int CCSMatch::GetWinningTeam( void )
     {
-		/*CTeam* pTerrorists = GetGlobalTeam(TEAM_TERRORIST);
+		CTeam* pTerrorists = GetGlobalTeam(TEAM_TERRORIST);
 		CTeam *pCTs = GetGlobalTeam( TEAM_CT );
 
 		if ( pTerrorists && pTerrorists->m_bSurrendered )
@@ -1631,7 +1644,7 @@ ConVar snd_music_selection(
 		{
 			 return TEAM_TERRORIST;
 		}
-        else */if ( m_terroristScoreTotal > m_ctScoreTotal )
+        else if ( m_terroristScoreTotal > m_ctScoreTotal )
         {
             return TEAM_TERRORIST;
         }
@@ -4364,11 +4377,6 @@ ConVar snd_music_selection(
 			m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
 		}
 
-		m_bSwitchingTeamsAtRoundReset = false;
-
-		// Unfreeze all players now that the round is starting
-		UnfreezeAllPlayers();
-
 		// should we show an announcement to declare that this round might be the last round?
 		if ( IsLastRoundBeforeHalfTime() )
 		{
@@ -4393,6 +4401,54 @@ ConVar snd_music_selection(
 			if ( event )
 				gameeventmanager->FireEvent( event );
 		}
+
+		// if a team voted to surrender and it passed at the end of a round and we went into halftime,
+		// switch the teams that need to surrender
+		if ( m_bSwitchingTeamsAtRoundReset )
+		{
+			OnTeamsSwappedAtRoundReset();
+		}
+
+        m_bSwitchingTeamsAtRoundReset = false;
+
+		// Unfreeze all players now that the round is starting
+		UnfreezeAllPlayers();
+
+		// Perform round-related processing at the point when the next round has just restarted
+		// (This line should be last in this function)
+		PostRestartRound();
+	}
+
+    // Perform round-related processing at the point when the next round has just restarted
+    void CCSGameRules::PostRestartRound( void )
+    {
+        if ( m_match.GetRoundsPlayed() < 1 )
+        {
+            // Ensure all spectating players are in correct mode at the beginning of the match
+            for ( int i = 1; i <= MAX_PLAYERS; i++ )
+            {
+                CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+                if ( pPlayer && pPlayer->IsObserver() )
+                {
+                    // Only process players in observer mode
+                    int nMode = pPlayer->GetObserverMode();
+        
+                    if ( nMode != OBS_MODE_CHASE && nMode != OBS_MODE_IN_EYE )
+                    {
+                        // If the player is not in the chase or in-eye mode then force them to chase mode
+                        nMode = OBS_MODE_CHASE;
+                    }
+
+                    // Build and send the command to ensure player is in a valid observer mode
+                    char szCommand[ 32 ];
+                    V_snprintf( szCommand, sizeof( szCommand ), "spec_mode %i", nMode );
+
+                    CCommand cmd;
+                    cmd.Tokenize( szCommand );
+                    ClientCommand( pPlayer, cmd );
+                }
+            }
+        }
 	}
 
 	static int BombSortPredicate(CCSPlayer * const *left, CCSPlayer * const *right) 
@@ -4737,10 +4793,10 @@ ConVar snd_music_selection(
 		if ( IsWarmupPeriod() )
         {
 #ifdef GAME_DLL
-			/*if ( IsPlayingAnyCompetitiveStrictRuleset() )
+			if ( IsPlayingAnyCompetitiveStrictRuleset() )
 			{
 				// if all humans are present and warmup time left is greater than mp_warmuptime_all_players_connected, reduce warmup time to mp_warmuptime_all_players_connected
-				if ( ( UTIL_HumansInGame( true, false ) == GetMinPlayers() )
+				if ( ( UTIL_HumansInGame( true, false ) == GetMaxPlayers() )
 					&& ( mp_warmuptime_all_players_connected.GetFloat() > 0 ) && ( GetWarmupPeriodEndTime() - mp_warmuptime_all_players_connected.GetFloat() >= gpGlobals->curtime ) )
 				{
 					m_fWarmupPeriodStart = gpGlobals->curtime;
@@ -4750,7 +4806,7 @@ ConVar snd_music_selection(
 					CBroadcastRecipientFilter filter;
 					UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#CStrike_TitlesTXT_All_Players_Connected", mp_warmuptime_all_players_connected.GetString() );
 				}
-			}*/
+			}
 
 			if ( IsWarmupPeriodPaused() && ( GetWarmupPeriodEndTime() - 6 >= gpGlobals->curtime) ) // Ignore warmup pause if within 6s of end.
 			{
@@ -6287,8 +6343,31 @@ ConVar snd_music_selection(
                 pCSPlayer->SwitchTeam( team );
                 assignToOpposingTeam = !assignToOpposingTeam;
             }
-        }	
+        }
     }
+
+	void CCSGameRules::OnTeamsSwappedAtRoundReset()
+	{
+		//
+		// Flip the timeouts as well
+		//
+		bool bTemp;
+		bTemp = m_bTerroristTimeOutActive;
+		m_bTerroristTimeOutActive = m_bCTTimeOutActive;
+		m_bCTTimeOutActive = bTemp;
+
+		float flTemp;
+		flTemp = m_flTerroristTimeOutRemaining;
+		m_flTerroristTimeOutRemaining = m_flCTTimeOutRemaining;
+		m_flCTTimeOutRemaining = flTemp;
+
+		int nTemp = m_nTerroristTimeOuts;
+		m_nTerroristTimeOuts = m_nCTTimeOuts;
+		m_nCTTimeOuts = nTemp;
+
+		g_voteControllerT->EndVoteImmediately();
+		g_voteControllerCT->EndVoteImmediately();
+	}
 
     void CCSGameRules::HandleSwapTeams( void )
     {
@@ -6318,21 +6397,15 @@ ConVar snd_music_selection(
         }
 
 		//
-		// Flip the timeouts as well
+		// Flip the convars for custom team names as well
 		//
-		bool bTemp;
-		bTemp = m_bTerroristTimeOutActive;
-		m_bTerroristTimeOutActive = m_bCTTimeOutActive;
-		m_bCTTimeOutActive = bTemp;
 
-		float flTemp;
-		flTemp = m_flTerroristTimeOutRemaining;
-		m_flTerroristTimeOutRemaining = m_flCTTimeOutRemaining;
-		m_flCTTimeOutRemaining = flTemp;
+		CUtlString sTemp;
+		sTemp = mp_teamname_1.GetString();
+		mp_teamname_1.SetValue( mp_teamname_2.GetString() );
+		mp_teamname_2.SetValue( sTemp.Get() );
 
-		int nTemp = m_nTerroristTimeOuts;
-		m_nTerroristTimeOuts = m_nCTTimeOuts;
-		m_nCTTimeOuts = nTemp;
+		OnTeamsSwappedAtRoundReset();
     }
     
     // the following two functions cap the number of players on a team to five instead of basing it on the number of spawn points
@@ -6666,6 +6739,16 @@ ConVar snd_music_selection(
 				iWinnerTeam = WINNER_DRAW;
 				break;
 
+			case Terrorists_Surrender:
+				text = "#Terrorists_Surrender";
+				iWinnerTeam = WINNER_CT;
+				break;
+
+			case CTs_Surrender:
+				text = "#CTs_Surrender";
+				iWinnerTeam = WINNER_TER;
+				break;
+
 			default:
 				DevMsg("TerminateRound: unknown round end ID %i\n", iReason );
 				break;
@@ -6763,6 +6846,12 @@ ConVar snd_music_selection(
 			event->SetInt( "priority", 6 ); // HLTV event priority, not transmitted
 			gameeventmanager->FireEvent( event );
 		}
+
+        if ( ( iReason == CTs_Surrender || iReason == Terrorists_Surrender ) )
+        {
+            m_phaseChangeAnnouncementTime = gpGlobals->curtime + mp_win_panel_display_time.GetInt();
+            GoToIntermission();
+        }
 
 		if ( GetMapRemainingTime() == 0.0f )
 		{
@@ -7265,25 +7354,29 @@ ConVar snd_music_selection(
 			CBaseEntity::Create( "cs_gamerules", vec3_origin, vec3_angle );
 		Assert( pEnt );
 
-		CBaseEntity::Create( "vote_controller", vec3_origin, vec3_angle );
+		g_voteControllerGlobal =	static_cast< CVoteController *>( CBaseEntity::Create("vote_controller", vec3_origin, vec3_angle) );
+		g_voteControllerCT =		static_cast< CVoteController *>( CBaseEntity::Create("vote_controller", vec3_origin, vec3_angle) );
+		g_voteControllerT =			static_cast< CVoteController *>( CBaseEntity::Create("vote_controller", vec3_origin, vec3_angle) );	
 		// Vote Issue classes are handled/cleaned-up by g_voteController
-		new CKickIssue;
-		new CBanIssue;
-		new CRestartGameIssue;
-		new CChangeLevelIssue;
-		new CNextLevelIssue;
+
+		NewTeamIssue< CKickIssue >();
+		NewTeamIssue< CBanIssue >();
+		NewGlobalIssue< CRestartGameIssue >();
+		NewGlobalIssue< CChangeLevelIssue >();
+		NewGlobalIssue< CNextLevelIssue >();
+
 		if ( IsPlayingAnyCompetitiveStrictRuleset() )
 		{
-			new CStartTimeOutIssue;
-			new CPauseMatchIssue;
-			new CUnpauseMatchIssue;
-			// PiMoN TODO: think about implementing it
-			//new CSurrender;
+			NewTeamIssue< CStartTimeOutIssue >();
+			NewTeamIssue< CSurrender >();
+			NewGlobalIssue< CPauseMatchIssue >();
+			NewGlobalIssue< CUnpauseMatchIssue >();
 		}
 		else
 		{
-			new CScrambleTeams;
-			new CSwapTeams;
+			NewGlobalIssue< CScrambleTeams >();
+			NewGlobalIssue< CSwapTeams >();
+			// new CSurrender;
 		}
 	}
 #endif	// CLIENT_DLL
@@ -9073,6 +9166,18 @@ bool CCSGameRules::IsIntermission( void ) const
 int CCSGameRules::GetMaxSpectatorSlots( void ) const
 {
     return m_iSpectatorSlotCount;
+}
+
+int CCSGameRules::GetMaxPlayers()
+{
+#ifdef CLIENT_DLL
+	if ( engine->IsPlayingDemo() || !engine->IsConnected() )
+	{
+		return 0;
+	}
+#endif
+
+	return MIN( g_pGameTypes->GetCurrentServerNumSlots(), 10 );
 }
 
 #ifndef CLIENT_DLL

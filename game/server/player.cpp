@@ -8920,9 +8920,25 @@ bool CBasePlayer::HasAnyAmmoOfType( int nAmmoIndex )
 	return false;
 }
 
+CVoteController* CBasePlayer::GetTeamVoteController()
+{
+ 	switch ( GetTeamNumber( ) )
+ 	{
+ 	case TEAM_CT:
+ 		return g_voteControllerCT;
+ 
+ 	case TEAM_TERRORIST:
+ 		return g_voteControllerT;
+ 
+ 	// SPECTATOR or other
+ 	default:
+ 		return g_voteControllerGlobal;
+ 	}
+}
+
 bool CBasePlayer::HandleVoteCommands( const CCommand &args )
 {
-	if( g_voteController == NULL )
+	if ( !g_voteControllerGlobal && !GetTeamVoteController() )
 		return false;
 
 	if(  FStrEq( args[0], "Vote" ) )
@@ -8933,7 +8949,29 @@ bool CBasePlayer::HandleVoteCommands( const CCommand &args )
 		const char *arg2 = args[1];
 		char szResultString[MAX_COMMAND_LENGTH];
 
-		CVoteController::TryCastVoteResult nTryResult = g_voteController->TryCastVote( entindex(), arg2 );
+		CVoteController *pVoteController = NULL;
+ 
+ 		// is there a global or team vote to participate in and if so, which?
+ 		if ( g_voteControllerGlobal && g_voteControllerGlobal->IsVoteActive( ) )
+ 		{
+ 			pVoteController = g_voteControllerGlobal;
+ 		}
+ 		else if ( GetTeamVoteController( ) && GetTeamVoteController( )->IsVoteActive( ) )
+ 		{
+ 			pVoteController = GetTeamVoteController( );
+ 		}
+ 		else
+ 		{
+ 			Q_snprintf( szResultString, MAX_COMMAND_LENGTH, "Vote failed: no vote in progress.\n" );
+ 			DevMsg( "%s", szResultString );
+ 
+ 			return true;
+ 		}
+ 
+ 		if ( !pVoteController )
+ 			return true;
+ 
+ 		CVoteController::TryCastVoteResult nTryResult = pVoteController->TryCastVote( entindex(), arg2 );
 		switch( nTryResult )
 		{
 		case CVoteController::CAST_OK:

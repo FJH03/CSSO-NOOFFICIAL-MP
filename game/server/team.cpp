@@ -39,6 +39,7 @@ int SendProxyArrayLength_PlayerArray( const void *pStruct, int objectID )
 // Datatable
 IMPLEMENT_SERVERCLASS_ST_NOBASE(CTeam, DT_Team)
 	SendPropInt( SENDINFO(m_iTeamNum), 5 ),
+	SendPropBool( SENDINFO(m_bSurrendered) ),
 	SendPropString( SENDINFO( m_szTeamname ) ),
 	SendPropString( SENDINFO( m_szClanTeamname ) ),
 	SendPropInt( SENDINFO(m_scoreTotal), 0 ),
@@ -244,6 +245,7 @@ void CTeam::Init( const char *pName, int iNumber )
 	InitializePlayers();
 	ResetTeamLeaders();
 
+	m_bSurrendered = false;
 	m_scoreTotal = 0;
 	m_scoreFirstHalf = 0;
 	m_scoreSecondHalf = 0;
@@ -424,6 +426,7 @@ CBasePlayer *CTeam::GetPlayer( int iIndex )
 //-----------------------------------------------------------------------------
 void CTeam::ResetScores( void )
 {
+	m_bSurrendered = false;
 	m_scoreTotal = 0;
 	m_scoreFirstHalf = 0;
 	m_scoreSecondHalf = 0;

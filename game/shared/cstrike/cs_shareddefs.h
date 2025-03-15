@@ -377,17 +377,19 @@ enum CSPlayerState
 
 enum e_RoundEndReason
 {
-    Invalid_Round_End_Reason = -1,
-    Target_Bombed,
-    Bomb_Defused,
-    CTs_Win,
-    Terrorists_Win,
-    Round_Draw,
-    All_Hostages_Rescued,
-    Target_Saved,
+	Invalid_Round_End_Reason = -1,
+	Target_Bombed,
+	Bomb_Defused,
+	CTs_Win,
+	Terrorists_Win,
+	Round_Draw,
+	All_Hostages_Rescued,
+	Target_Saved,
 	Hostages_Not_Rescued,
-    Game_Commencing,
-    RoundEndReason_Count    
+	Game_Commencing,
+	Terrorists_Surrender,
+	CTs_Surrender,
+	RoundEndReason_Count    
 };
 
 enum GamePhase

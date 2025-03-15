@@ -183,6 +183,7 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 		case Target_Bombed:
 		case Terrorists_Win:
 		case Hostages_Not_Rescued:
+		case CTs_Surrender:
 			iTeamID = TEAM_TERRORIST;
 			V_wcsncpy( wszName, g_pVGuiLocalize->Find( "#winpanel_t_win" ), sizeof( wszName ) );
 			m_pWinLabel->SetFgColor( m_clrT );
@@ -195,6 +196,7 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 		case CTs_Win:
 		case All_Hostages_Rescued:
 		case Target_Saved:
+		case Terrorists_Surrender:
 			iTeamID = TEAM_CT;
 			V_wcsncpy( wszName, g_pVGuiLocalize->Find( "#winpanel_ct_win" ), sizeof( wszName ) );
 			m_pWinLabel->SetFgColor( m_clrCT );

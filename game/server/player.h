@@ -18,6 +18,7 @@
 #include "hintsystem.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "util_shared.h"
+#include "vote_controller.h"
 
 #if defined USES_ECON_ITEMS
 #include "game_item_schema.h"
@@ -474,6 +475,9 @@ public:
 	bool					IsSinglePlayerGameEnding() { return m_bSinglePlayerGameEnding == true; }
 
 	bool					HandleVoteCommands( const CCommand &args );
+	IntervalTimer &			GetLastHeldVoteTimer(){ return m_lastHeldVoteTimer; }
+ 
+ 	CVoteController *		GetTeamVoteController( void );	// returns one of the two team vote controllers, g_voteControllerT or g_voteControllerCT
 	
 	// Observer functions
 	virtual bool			StartObserverMode(int mode); // true, if successful
@@ -1027,6 +1031,9 @@ private:
 	int						m_iTargetVolume;// ideal sound volume. 
 	
 	int						m_rgItems[MAX_ITEMS];
+	
+	// Voting info
+	IntervalTimer 			m_lastHeldVoteTimer;	///< How long since we last created a vote.  Prevents vote spam.
 
 	// these are time-sensitive things that we keep track of
 	float					m_flSwimTime;		// how long player has been underwater
