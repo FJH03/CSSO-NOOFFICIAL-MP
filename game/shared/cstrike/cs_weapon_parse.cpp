@@ -334,6 +334,7 @@ CCSWeaponInfo::CCSWeaponInfo()
 	ZeroObject(m_fRecoilMagnitude);
 	ZeroObject(m_fRecoilMagnitudeVariance);
 	m_iRecoilSeed = 0;
+	m_szDescription[0] = 0;
 }
 
 int	CCSWeaponInfo::GetKillAward( void ) const
@@ -570,6 +571,9 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	// Read the class menu animation.
 	Q_strncpy( m_szClassMenuAnim, pKeyValuesData->GetString( "ClassMenuAnim" ), sizeof( m_szClassMenuAnim ) );
 	Q_strncpy( m_szClassMenuAnimT, pKeyValuesData->GetString( "ClassMenuAnimT", m_szClassMenuAnim ), sizeof( m_szClassMenuAnimT ) );
+
+	// Read the item description
+	Q_strncpy( m_szDescription, pKeyValuesData->GetString( "description" ), sizeof( m_szDescription ) );
 
 #ifndef CLIENT_DLL
 	// Enforce consistency for the weapon here, since that way we don't need to save off the model bounds

@@ -137,6 +137,8 @@ void CCSBuyMenuCategoryButton::Paint()
 CCSBuyMenuItemButton::CCSBuyMenuItemButton( Panel* parent, const char* panelName ):
 	CCSBuyMenuCategoryButton( parent, panelName )
 {
+	m_pszItemName = NULL;
+	m_pszItemDescription = NULL;
 	m_iPrice = -1;
 	m_wszPrice[0] = '\0';
 	m_nItemID = WEAPON_NONE;
@@ -156,7 +158,7 @@ void CCSBuyMenuItemButton::Paint()
 {
 	BaseClass::Paint();
 
-	if ( m_wszPrice[0] != L'\0' )
+	if ( m_wszPrice != '\0' )
 	{
 		HFont hMoneyFont = GetFont();
 		int xpos, ypos, wide, tall;
@@ -224,35 +226,38 @@ void CCSBuyMenuItemButton::OnCursorEntered()
 	if ( !pPlayer )
 		return;
 
-	const char* pszWeaponModel = NULL;
-	const char* pszWeaponSequence = NULL;
+	const char* pszItemModel = NULL;
+	const char* pszItemSequence = NULL;
+	const char* pszItemName = m_pszItemName;
+	const char* pszItemDescription = m_pszItemDescription;
 	if ( m_pWeaponInfo )
 	{
-		pszWeaponModel = m_pWeaponInfo->szWorldModel;
+		pszItemDescription = m_pWeaponInfo->m_szDescription;
+		pszItemModel = m_pWeaponInfo->szWorldModel;
 		if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST )
-			pszWeaponSequence = m_pWeaponInfo->m_szBuyMenuAnimT;
+			pszItemSequence = m_pWeaponInfo->m_szBuyMenuAnimT;
 		else
-			pszWeaponSequence = m_pWeaponInfo->m_szBuyMenuAnim;
+			pszItemSequence = m_pWeaponInfo->m_szBuyMenuAnim;
 	}
 	else
 	{
 		switch ( m_nItemID )
 		{
 			case ITEM_DEFUSER:
-				pszWeaponModel = "models/weapons/w_defuser.mdl";
-				pszWeaponSequence = "t_buymenu_defuser";
+				pszItemModel = "models/weapons/w_defuser.mdl";
+				pszItemSequence = "t_buymenu_defuser";
 				break;
 			case ITEM_KEVLAR:
-				pszWeaponModel = "models/weapons/w_eq_armor.mdl";
-				pszWeaponSequence = "t_buymenu_armor_helmet";
+				pszItemModel = "models/weapons/w_eq_armor.mdl";
+				pszItemSequence = "t_buymenu_armor_helmet";
 				break;
 			case ITEM_ASSAULTSUIT:
-				pszWeaponModel = "models/weapons/w_eq_armor_helmet.mdl";
-				pszWeaponSequence = "t_buymenu_armor_helmet";
+				pszItemModel = "models/weapons/w_eq_armor_helmet.mdl";
+				pszItemSequence = "t_buymenu_armor_helmet";
 				break;
 			case ITEM_NVGS:
-				pszWeaponModel = "models/weapons/w_eq_nvgs.mdl";
-				pszWeaponSequence = "ct_buymenu_nvgs";
+				pszItemModel = "models/weapons/w_eq_nvgs.mdl";
+				pszItemSequence = "t_buymenu_nvgs";
 				break;
 			default:
 				DevWarning( "Invalid buy menu weapon!\n" );
@@ -263,7 +268,8 @@ void CCSBuyMenuItemButton::OnCursorEntered()
 	CCSBuyMenu* pParent = dynamic_cast<CCSBuyMenu*>(GetParent());
 	if ( pParent )
 	{
-		pParent->SetPlayerImageWeapon( pszWeaponModel, pszWeaponSequence );
+		pParent->SetPlayerImageWeapon( pszItemModel, pszItemSequence );
+		pParent->SetItemNameAndDescription( pszItemName, pszItemDescription );
 
 		AcquireMethod::Type nAcquireMethod = AcquireMethod::Buy;
 		if ( m_bDropBuy )
@@ -272,12 +278,12 @@ void CCSBuyMenuItemButton::OnCursorEntered()
 		{
 			case AcquireResult::AlreadyOwned:
 			{
-				pParent->ShowSpecialMessage( "#BuyMenu_AlreadyCarrying", PerWeaponMessage );
+				pParent->ShowSpecialMessage( "#CStrike_BuyMenu_AlreadyCarrying", PerWeaponMessage );
 				break;
 			}
 			case AcquireResult::AlreadyPurchased:
 			{
-				pParent->ShowSpecialMessage( "#BuyMenu_AlreadyPurchased", PerWeaponMessage );
+				pParent->ShowSpecialMessage( "#CStrike_BuyMenu_AlreadyPurchased", PerWeaponMessage );
 				break;
 			}
 			case AcquireResult::ReachedGrenadeTypeLimit:
@@ -286,7 +292,7 @@ void CCSBuyMenuItemButton::OnCursorEntered()
 				V_snwprintf( wszCarryLimit, sizeof( wszCarryLimit ), L"%d", GetAmmoDef()->MaxCarry( m_pWeaponInfo->iAmmoType, pPlayer ) );
 
 				wchar_t wszMessage[256];
-				g_pVGuiLocalize->ConstructString( wszMessage, sizeof( wszMessage ), g_pVGuiLocalize->Find( "#BuyMenu_MaxItemsOfType" ), 1, wszCarryLimit );
+				g_pVGuiLocalize->ConstructString( wszMessage, sizeof( wszMessage ), g_pVGuiLocalize->Find( "#CStrike_BuyMenu_MaxItemsOfType" ), 1, wszCarryLimit );
 
 				pParent->ShowSpecialMessage( wszMessage, PerWeaponMessage );
 				break;
@@ -297,29 +303,29 @@ void CCSBuyMenuItemButton::OnCursorEntered()
 				V_snwprintf( wszCarryLimit, sizeof( wszCarryLimit ), L"%d", ammo_grenade_limit_total.GetInt() );
 
 				wchar_t wszMessage[256];
-				g_pVGuiLocalize->ConstructString( wszMessage, sizeof( wszMessage ), g_pVGuiLocalize->Find( "#BuyMenu_CanOnlyCarryXGrenades" ), 1, wszCarryLimit );
+				g_pVGuiLocalize->ConstructString( wszMessage, sizeof( wszMessage ), g_pVGuiLocalize->Find( "#CStrike_BuyMenu_CanOnlyCarryXGrenades" ), 1, wszCarryLimit );
 
 				pParent->ShowSpecialMessage( wszMessage, PerWeaponMessage );
 				break;
 			}
 			case AcquireResult::NotAllowedByTeam:
 			{
-				pParent->ShowSpecialMessage( "#BuyMenu_NotAllowedByTeam", PerWeaponMessage );
+				pParent->ShowSpecialMessage( "#CStrike_BuyMenu_NotAllowedByTeam", PerWeaponMessage );
 				break;
 			}
 			case AcquireResult::NotAllowedByMap:
 			{
-				pParent->ShowSpecialMessage( "#BuyMenu_NotAllowedByMap", PerWeaponMessage );
+				pParent->ShowSpecialMessage( "#CStrike_BuyMenu_NotAllowedByMap", PerWeaponMessage );
 				break;
 			}
 			case AcquireResult::NotAllowedByMode:
 			{
-				pParent->ShowSpecialMessage( "#BuyMenu_NotAllowedByMode", PerWeaponMessage );
+				pParent->ShowSpecialMessage( "#CStrike_BuyMenu_NotAllowedByMode", PerWeaponMessage );
 				break;
 			}
 			case AcquireResult::NotAllowedForPurchase:
 			{
-				pParent->ShowSpecialMessage( "#BuyMenu_NotAllowedForPurchase", PerWeaponMessage );
+				pParent->ShowSpecialMessage( "#CStrike_BuyMenu_NotAllowedForPurchase", PerWeaponMessage );
 				break;
 			}
 			default:
@@ -335,6 +341,17 @@ void CCSBuyMenuItemButton::OnCursorExited()
 	CCSBuyMenu* pParent = dynamic_cast<CCSBuyMenu*>(GetParent());
 	if ( pParent )
 		pParent->HideSpecialMessage( PerWeaponMessage );
+}
+
+void CCSBuyMenuItemButton::SetName( const char* pszName )
+{
+	m_pszItemName = pszName;
+	SetText( m_pszItemName );
+}
+
+void CCSBuyMenuItemButton::SetDescription( const char* pszDescription )
+{
+	m_pszItemDescription = pszDescription;
 }
 
 void CCSBuyMenuItemButton::SetPrice( int iPrice )
@@ -807,8 +824,6 @@ CCSBuyMenuLoadoutPanel::CCSBuyMenuLoadoutPanel( Panel* parent, const char* panel
 	m_pPlayer = NULL;
 	m_pPlayerAvatarImage = new CAvatarImagePanel( this, "PlayerAvatarImage" );
 	m_pPlayerSkullImage = new VectorImagePanel( this, "PlayerSkullImage" );
-	m_pPlayerSkullImage->ClearSchemeUpdateFlag();
-	m_pPlayerSkullImage->SetFgColor( COLOR_WHITE );
 	m_pPlayerSkullImage->SetTexture( "materials/vgui/hud/svg/elimination.svg" );
 }
 
@@ -827,10 +842,10 @@ void CCSBuyMenuLoadoutPanel::ApplySchemeSettings( IScheme* pScheme )
 	BaseClass::ApplySchemeSettings( pScheme );
 
 	m_pPlayerAvatarImage->SetBounds( GetWide() - avatar_xpos, avatar_ypos, avatar_wide, avatar_tall );
-	m_pPlayerSkullImage->SetBounds( GetWide() - skull_xpos, skull_ypos, skull_wide, skull_tall );
-	m_pPlayerSkullImage->SetZPos( 2 );
 	m_pPlayerAvatarImage->SetShouldDrawFriendIcon( false );
 	m_pPlayerAvatarImage->SetShouldScaleImage( true );
+	m_pPlayerSkullImage->SetBounds( GetWide() - skull_xpos, skull_ypos, skull_wide, skull_tall );
+	m_pPlayerSkullImage->SetZPos( 2 );
 	m_pPlayerSkullImage->ClearSchemeUpdateFlag();
 	m_pPlayerSkullImage->SetFgColor( COLOR_WHITE );
 
@@ -992,6 +1007,8 @@ CCSBuyMenu::CCSBuyMenu( IViewPort* pViewPort ): Frame( NULL, PANEL_BUY )
 	m_pMoneyLabel = new Label( this, "MoneyLabel", L"" );
 	m_pSpecialMessageLabel = new Label( this, "SpecialMessageLabel", L"" );
 	m_pBuyTimeLeftLabel = new Label( this, "BuyTimeLeftLabel", L"" );
+	m_pItemNameLabel = new Label( this, "ItemNameLabel", L"" );
+	m_pItemDescriptionLabel = new Label( this, "ItemDescriptionLabel", L"" );
 	m_pBuyItemsBackground = new Panel( this, "BuyItemsBackground" );
 	m_pPlayerModel = new CCSBuyMenuPlayerImage( this, "PlayerModel" );
 	m_kvBuyMenuConfig = new KeyValues( "BuyMenuConfig" );
@@ -1039,6 +1056,8 @@ void CCSBuyMenu::ShowPanel( bool bShow )
 		}
 		m_pPlayerModel->ResetRotation(); // reset the mouse state so it wont rotate the player when you get back in
 		ResetWeapon();
+		m_pItemNameLabel->SetVisible( false );
+		m_pItemDescriptionLabel->SetVisible( false );
 
 		int iPanel = 1;
 		while ( true )
@@ -1254,7 +1273,7 @@ void CCSBuyMenu::OnKeyCodePressed( KeyCode code )
 	if ( code == KEY_LCONTROL )
 	{
 		m_bDropBuy = true;
-		ShowSpecialMessage( "#BuyMenu_BuyForTeammate_Hint", GlobalMessage );
+		ShowSpecialMessage( "#CStrike_BuyMenu_BuyForTeammate_Hint", GlobalMessage );
 
 		int i = 1;
 		while ( true )
@@ -1328,7 +1347,8 @@ void CCSBuyMenu::ShowCategory( KeyValues* kvCategory )
 	int i = 1;
 	for ( KeyValues* pkvItem = kvCategory->GetFirstSubKey(); pkvItem; pkvItem = pkvItem->GetNextKey() )
 	{
-		const char* pszName = pkvItem->GetString( "name" );
+		const char* pszName = pkvItem->GetString( "name", NULL );
+		const char* pszDescription = pkvItem->GetString( "description", NULL );
 		const char* pszWeapon = pkvItem->GetName();
 		const char* pszIcon = pkvItem->GetString( "icon" );
 		int iPrice = pkvItem->GetInt( "price" );
@@ -1354,7 +1374,8 @@ void CCSBuyMenu::ShowCategory( KeyValues* kvCategory )
 				pszName = "#CStrike_WPNHUD_Cutters";
 			}
 
-			pButton->SetText( pszName );
+			pButton->SetName( pszName );
+			pButton->SetDescription( pszDescription );
 			pButton->SetHotkey( szHotkey[0] );
 			pButton->SetPrice( iPrice );
 			pButton->SetIcon( pszIcon );
@@ -1449,6 +1470,8 @@ void CCSBuyMenu::HideCategory()
 	m_pSpecialMessageLabel->SetVisible( false );
 	m_bShowingCategory = false;
 	ResetWeapon();
+	m_pItemNameLabel->SetVisible( false );
+	m_pItemDescriptionLabel->SetVisible( false );
 	HideSpecialMessage( GlobalMessage );
 }
 
@@ -1456,6 +1479,29 @@ void CCSBuyMenu::SetPlayerImageWeapon( const char* pszWeaponModel, const char* p
 {
 	m_pPlayerModel->SetWeaponModel( pszWeaponModel );
 	m_pPlayerModel->SetSequence( pszWeaponSequence );
+}
+
+void CCSBuyMenu::SetItemNameAndDescription( const char* pszName, const char* pszDescription )
+{
+	if ( pszName )
+	{
+		m_pItemNameLabel->SetVisible( true );
+		m_pItemNameLabel->SetText( pszName );
+	}
+	else
+	{
+		m_pItemNameLabel->SetVisible( false );
+	}
+
+	if ( pszDescription )
+	{
+		m_pItemDescriptionLabel->SetVisible( true );
+		m_pItemDescriptionLabel->SetText( pszDescription );
+	}
+	else
+	{
+		m_pItemDescriptionLabel->SetVisible( false );
+	}
 }
 
 void CCSBuyMenu::ResetWeapon()

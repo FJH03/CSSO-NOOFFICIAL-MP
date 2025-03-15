@@ -227,6 +227,8 @@ public:
 	char m_szClassMenuAnim[MAX_WEAPON_STRING];
 	char m_szClassMenuAnimT[MAX_WEAPON_STRING];
 
+	char m_szDescription[MAX_WEAPON_STRING];
+
 	float m_flAddonScale;
 
 	// grenade throw parameters

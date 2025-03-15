@@ -96,6 +96,8 @@ public:
 	virtual void OnCursorEntered();
 	virtual void OnCursorExited();
 
+	void SetName( const char* pszName );
+	void SetDescription( const char* pszDescription );
 	void SetPrice( int iPrice );
 	void SetWeaponID( CSWeaponID nWeaponID );
 	void SetDisabled( bool bDisabled ) { m_bDisabled = bDisabled; }
@@ -113,6 +115,8 @@ private:
 	CPanelAnimationVarAliasType( int, icon_wide, "icon_wide", "0", "proportional_width" );
 	CPanelAnimationVarAliasType( int, icon_tall, "icon_tall", "24", "proportional_height" );
 
+	const char* m_pszItemName;
+	const char* m_pszItemDescription;
 	int m_iPrice;
 	BuyMenuItemIcon m_ItemIcon;
 	wchar_t m_wszPrice[8];
@@ -190,6 +194,10 @@ private:
 	CPanelAnimationVarAliasType( int, avatar_ypos, "avatar_ypos", "2", "proportional_ypos" );
 	CPanelAnimationVarAliasType( int, avatar_wide, "avatar_wide", "32", "proportional_width" );
 	CPanelAnimationVarAliasType( int, avatar_tall, "avatar_tall", "32", "proportional_height" );
+	CPanelAnimationVarAliasType( int, skull_xpos, "skull_xpos", "w32", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, skull_ypos, "skull_ypos", "6", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, skull_wide, "skull_wide", "24", "proportional_width" );
+	CPanelAnimationVarAliasType( int, skull_tall, "skull_tall", "24", "proportional_height" );
 	CPanelAnimationVarAliasType( int, money_xpos, "money_xpos", "w8", "proportional_xpos" );
 	CPanelAnimationVarAliasType( int, money_ypos, "money_ypos", "12", "proportional_ypos" );
 	CPanelAnimationVarAliasType( int, icons_wide, "icons_wide", "24", "proportional_width" );
@@ -197,11 +205,6 @@ private:
 	CPanelAnimationVarAliasType( int, armor_icons_size, "armor_icons_size", "20", "proportional_height" );
 	CPanelAnimationVarAliasType( int, icons_xpos, "icons_xpos", "152", "proportional_xpos" );
 	CPanelAnimationVarAliasType( int, icons_margin, "icons_margin", "w8", "proportional_width" );
-	CPanelAnimationVarAliasType( int, skull_xpos, "skull_xpos", "w32", "proportional_xpos" );
-	CPanelAnimationVarAliasType( int, skull_ypos, "skull_ypos", "6", "proportional_ypos" );
-	CPanelAnimationVarAliasType( int, skull_wide, "skull_wide", "24", "proportional_width" );
-	CPanelAnimationVarAliasType( int, skull_tall, "skull_tall", "24", "proportional_height" );
-
 	CPanelAnimationVar( Color, m_clrMoney, "money_color", "204 204 204 255" );
 	CPanelAnimationVar( HFont, m_hMoneyFont, "money_font", "BuyMenuLoadoutMoneyFont" );
 };
@@ -235,6 +238,7 @@ public:
 	void ShowCategory( KeyValues* kvCategory );
 	void HideCategory();
 	void SetPlayerImageWeapon( const char* pszWeaponModel, const char* pszWeaponSequence );
+	void SetItemNameAndDescription( const char* pszName, const char* pszDescription );
 	void ResetWeapon();
 	void ShowSpecialMessage( const char* pszText, BuyMenuSpecialMessageType_t nMessageType );
 	void ShowSpecialMessage( const wchar_t* pwszText, BuyMenuSpecialMessageType_t nMessageType );
@@ -244,6 +248,8 @@ private:
 	Label* m_pMoneyLabel;
 	Label* m_pSpecialMessageLabel;
 	Label* m_pBuyTimeLeftLabel;
+	Label* m_pItemNameLabel;
+	Label* m_pItemDescriptionLabel;
 	Panel* m_pBuyItemsBackground;
 	CCSBuyMenuPlayerImage* m_pPlayerModel;
 

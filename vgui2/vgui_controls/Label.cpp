@@ -1284,6 +1284,7 @@ void Label::ApplySettings( KeyValues *inResourceData )
 		g_pMatSystemSurface->OverrideProportionalBase( m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1] );
  
 		inset_x = scheme()->GetProportionalScaledValueEx( GetScheme(), inset_x );
+		inset_y = scheme()->GetProportionalScaledValueEx( GetScheme(), inset_y );
 
 		// Restore original proportional base so other panels are not affected
 		g_pMatSystemSurface->RestoreProportionalBase();
