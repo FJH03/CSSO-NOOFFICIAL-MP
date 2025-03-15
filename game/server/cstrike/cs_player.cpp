@@ -67,6 +67,7 @@
 #include "molotov_projectile.h"
 #include "cs_loadout.h"
 #include "item_healthshot.h"
+#include "game.h"
 
 #define REPORT_PLAYER_DAMAGE 0
 
@@ -497,7 +498,7 @@ void cc_CreatePredictionError_f( const CCommand &args )
 {
 	float distance = 32;
 
-	if ( args.ArgC() >= 2 )
+	if ( args.ArgC() >= 2 && g_pDeveloper->GetInt() > 0 )
 	{
 		distance = atof(args[1]);
 	}
