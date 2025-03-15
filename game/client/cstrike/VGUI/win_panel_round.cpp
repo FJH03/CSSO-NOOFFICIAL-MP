@@ -184,7 +184,7 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 		case Terrorists_Win:
 		case Hostages_Not_Rescued:
 			iTeamID = TEAM_TERRORIST;
-			g_pVGuiLocalize->ConstructString( wszName, sizeof( wszName ), g_pVGuiLocalize->Find( "#winpanel_t_win" ), nullptr );
+			V_wcsncpy( wszName, g_pVGuiLocalize->Find( "#winpanel_t_win" ), sizeof( wszName ) );
 			m_pWinLabel->SetFgColor( m_clrT );
 			m_pMainBackground->SetImage( "hud/winpanel_t_background" );
 			m_pTeamIcon->SetImage( "hud/t_patch" );
@@ -196,7 +196,7 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 		case All_Hostages_Rescued:
 		case Target_Saved:
 			iTeamID = TEAM_CT;
-			g_pVGuiLocalize->ConstructString( wszName, sizeof( wszName ), g_pVGuiLocalize->Find( "#winpanel_ct_win" ), nullptr );
+			V_wcsncpy( wszName, g_pVGuiLocalize->Find( "#winpanel_ct_win" ), sizeof( wszName ) );
 			m_pWinLabel->SetFgColor( m_clrCT );
 			m_pMainBackground->SetImage( "hud/winpanel_ct_background" );
 			m_pTeamIcon->SetImage( "hud/ct_patch" );
@@ -204,7 +204,7 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 			break;
 
 		case Round_Draw:
-			g_pVGuiLocalize->ConstructString( wszName, sizeof( wszName ), g_pVGuiLocalize->Find( "#winpanel_draw" ), nullptr );
+			V_wcsncpy( wszName, g_pVGuiLocalize->Find( "#winpanel_draw" ), sizeof( wszName ) );
 			m_pMainBackground->SetImage( "hud/winpanel_draw_background" );
 			m_pWinLabel->SetFgColor( COLOR_WHITE );
 			m_pTeamIcon->SetVisible( false );
