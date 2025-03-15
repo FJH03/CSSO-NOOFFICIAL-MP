@@ -417,18 +417,6 @@ void CWeaponCSBaseGun::SecondaryAttack()
 		if ( m_bSilencerOn )
 		{
 			SendWeaponAnim( ACT_VM_DETACH_SILENCER );
-
-#ifndef CLIENT_DLL
-			pPlayer->DoAnimationEvent( PLAYERANIMEVENT_SILENCER_DETACH );
-
-			IGameEvent * event = gameeventmanager->CreateEvent( "silencer_detach" );
-			if ( event )
-			{
-				event->SetInt( "userid", pPlayer->GetUserID() );
-				gameeventmanager->FireEvent( event );
-			}
-
-#endif
 		}
 		else
 		{
