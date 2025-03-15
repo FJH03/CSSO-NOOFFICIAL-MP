@@ -842,6 +842,7 @@ public:
 	bool IsUsingPistol( void ) const;								///< returns true if we have pistol equipped
 	bool IsUsingGrenade( void ) const;								///< returns true if we have grenade equipped
 	bool IsUsingSniperRifle( void ) const;							///< returns true if using a "sniper" rifle
+	bool IsUsingWeaponWithScope( void ) const;						///< returns true if using a weapon with scope (sniper rifles, ironsights)
 	bool IsUsing( CSWeaponID weapon ) const;						///< returns true if using the specific weapon
 	bool IsSniper( void ) const;									///< return true if we have a sniper rifle in our inventory
 	bool IsSniping( void ) const;									///< return true if we are actively sniping (moving to sniper spot or settled in)

@@ -729,7 +729,7 @@ void CCSBot::UpdateLookAround( bool updateNow )
 		}
 
 		// if we're sniping, zoom in to watch our approach points
-		if (IsUsingSniperRifle())
+		if (IsUsingWeaponWithScope())
 		{
 			// low skill bots don't pre-zoom
 			if (GetProfile()->GetSkill() > 0.4f)
@@ -755,7 +755,7 @@ void CCSBot::UpdateLookAround( bool updateNow )
 			return;
 
 		// if we're sniping, switch look-at spots less often
-		if (IsUsingSniperRifle())
+		if (IsUsingWeaponWithScope())
 			m_lookAroundStateTimestamp = gpGlobals->curtime + RandomFloat( 5.0f, 10.0f );
 		else
 			m_lookAroundStateTimestamp = gpGlobals->curtime + RandomFloat( 1.0f, 2.0f );	// 0.5, 1.0

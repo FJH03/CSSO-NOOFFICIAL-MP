@@ -515,7 +515,7 @@ void CCSBot::Update( void )
 	}
 
 	// if we're using a sniper rifle and are no longer attacking, stop looking thru scope
-	if (!IsAtHidingSpot() && !IsAttacking() && IsUsingSniperRifle() && IsUsingScope())
+	if (!IsAtHidingSpot() && !IsAttacking() && IsUsingWeaponWithScope() && IsUsingScope())
 	{
 		SecondaryAttack();
 	}

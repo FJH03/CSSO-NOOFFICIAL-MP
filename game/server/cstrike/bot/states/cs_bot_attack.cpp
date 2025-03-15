@@ -87,7 +87,7 @@ void AttackState::OnEnter( CCSBot *me )
 				float crouchChance;
 				
 				// more likely to crouch if using sniper rifle or if enemy is far away
-				if (me->IsUsingSniperRifle())
+				if (me->IsUsingWeaponWithScope())
 					crouchChance = 50.0f;
 				else if ((GetCentroid( me ) - GetCentroid( enemy )).IsLengthGreaterThan( crouchFarRange ))
 					crouchChance = 50.0f;

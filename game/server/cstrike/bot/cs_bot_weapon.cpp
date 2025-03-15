@@ -326,10 +326,10 @@ void CCSBot::UpdateAimPrediction( void )
 bool CCSBot::AdjustZoom( float range )
 {
 	bool adjustZoom = false;
-
+	
+	const float sniperZoomRange = 150.0f;	// NOTE: This must be less than sniperMinRange in AttackState
 	if (IsUsingSniperRifle())
 	{
-		const float sniperZoomRange = 150.0f;	// NOTE: This must be less than sniperMinRange in AttackState
 		const float sniperFarZoomRange = 1500.0f;
 
 		// if range is too close, don't zoom
@@ -353,6 +353,26 @@ bool CCSBot::AdjustZoom( float range )
 		{
 			// maintain high zoom
 			if (GetZoomLevel() != HIGH_ZOOM)
+			{
+				adjustZoom = true;
+			}
+		}
+	}
+	else if (IsUsingWeaponWithScope())
+	{
+		// if range is too close, don't zoom
+		if (range <= sniperZoomRange)
+		{
+			// zoom out
+			if (GetZoomLevel() != NO_ZOOM)
+			{
+				adjustZoom = true;
+			}
+		}
+		else
+		{
+			// maintain zoom
+			if (GetZoomLevel() != LOW_ZOOM)
 			{
 				adjustZoom = true;
 			}
@@ -422,6 +442,20 @@ bool CCSBot::IsUsingSniperRifle( void ) const
 	CWeaponCSBase *weapon = GetActiveCSWeapon();
 
 	if (weapon && IsSniperRifle( weapon ))
+		return true;
+
+	return false;
+}
+
+//--------------------------------------------------------------------------------------------------------------
+/**
+ * Returns true if using a weapon with scope (sniper rifles, ironsights
+ */
+bool CCSBot::IsUsingWeaponWithScope( void ) const
+{
+	CWeaponCSBase *weapon = GetActiveCSWeapon();
+
+	if (weapon && weapon->HasZoom())
 		return true;
 
 	return false;
@@ -1447,4 +1481,3 @@ bool CCSBot::DidPlayerJustFireWeapon( const CCSPlayer *player ) const
 	CWeaponCSBase *weapon = player->GetActiveCSWeapon();
 	return (weapon && !weapon->IsSilenced() && weapon->m_flNextPrimaryAttack > gpGlobals->curtime);
 }
-
