@@ -4590,6 +4590,21 @@ ConVar snd_music_selection(
 		if ( IsWarmupPeriod() )
         {
 #ifdef GAME_DLL
+			if ( IsPlayingAnyCompetitiveStrictRuleset() )
+			{
+				// if all humans are present and warmup time left is greater than mp_warmuptime_all_players_connected, reduce warmup time to mp_warmuptime_all_players_connected
+				if ( ( UTIL_HumansInGame( true, false ) == GetMaxPlayers() )
+					&& ( mp_warmuptime_all_players_connected.GetFloat() > 0 ) && ( GetWarmupPeriodEndTime() - mp_warmuptime_all_players_connected.GetFloat() >= gpGlobals->curtime ) )
+				{
+					m_fWarmupPeriodStart = gpGlobals->curtime;
+					mp_warmuptime.SetValue( mp_warmuptime_all_players_connected.GetFloat() );
+
+					// notify players
+					CBroadcastRecipientFilter filter;
+					UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#CStrike_TitlesTXT_All_Players_Connected", mp_warmuptime_all_players_connected.GetString() );
+				}
+			}
+
 			if ( IsWarmupPeriodPaused() && ( GetWarmupPeriodEndTime() - 6 >= gpGlobals->curtime) ) // Ignore warmup pause if within 6s of end.
 			{
 				// push out the timers indefinitely.
