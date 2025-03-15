@@ -52,6 +52,7 @@ void Radar_FlashPlayer( int iPlayer )
 	g_pMapOverview->FlashEntity(iPlayer);
 }
 
+extern ConVar sv_disable_radar;
 extern ConVar mp_maxrounds;
 extern ConVar mp_overtime_maxrounds;
 extern ConVar overview_health;
@@ -1151,6 +1152,16 @@ bool CCSMapOverview::ShouldDraw( void )
 	if ( IsInFreezeCam() )
 	{
 		return false;
+	}
+	
+	if ( sv_disable_radar.GetInt() == 1 )
+	{
+		return false;
+	}
+	else if ( sv_disable_radar.GetInt() == 2 )
+	{
+		if ( CSGameRules() && CSGameRules()->IsWarmupPeriod() )
+			return false;
 	}
 
 	return BaseClass::ShouldDraw();
