@@ -225,6 +225,7 @@ static inline Vector& EngineGetVecRenderOrigin()
 #endif
 }
 
+#ifndef CSTRIKE_DLL
 static inline float& EngineGetSmokeFogOverlayAlpha()
 {
 #if defined(PARTICLEPROTOTYPE_APP)
@@ -234,6 +235,7 @@ static inline float& EngineGetSmokeFogOverlayAlpha()
 	return g_SmokeFogOverlayAlpha;
 #endif
 }
+#endif
 
 static inline C_BaseEntity* ParticleGetEntity( int index )
 {

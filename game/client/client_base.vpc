@@ -627,7 +627,6 @@ $Project
 			$File	"fx_line.cpp"
 			$File	"fx_sparks.cpp"
 			$File	"particlesphererenderer.cpp"
-			$File	"smoke_fog_overlay.cpp"
 		}
 
 		$Folder	"game_controls"
@@ -836,7 +835,6 @@ $Project
 		$File	"rendertexture.h"
 		$File	"ScreenSpaceEffects.h"
 		$File	"simple_keys.h"
-		$File	"smoke_fog_overlay.h"
 		$File	"splinepatch.h"
 		$File	"$SRCDIR\public\steam\steam_api.h"
 		$File	"TeamBitmapImage.h"
@@ -1183,7 +1181,6 @@ $Project
 		$File	"$SRCDIR\game\shared\shot_manipulator.h"
 		$File	"$SRCDIR\game\shared\simtimer.h"
 		$File	"$SRCDIR\game\shared\singleplay_gamerules.h"
-		$File	"$SRCDIR\game\shared\smoke_fog_overlay_shared.h"
 		$File	"$SRCDIR\game\shared\solidsetdefaults.h"
 		$File	"$SRCDIR\game\shared\soundenvelope.h"
 		$File	"$SRCDIR\game\shared\Sprite.h"

@@ -13,11 +13,31 @@
 
 #include "basecsgrenade_projectile.h"
 
+#if defined( CLIENT_DLL )
 
+class C_SmokeGrenadeProjectile : public C_BaseCSGrenadeProjectile
+{
+	public:
+	DECLARE_CLASS( C_SmokeGrenadeProjectile, C_BaseCSGrenadeProjectile );
+	DECLARE_NETWORKCLASS();
+
+	C_SmokeGrenadeProjectile();
+	virtual ~C_SmokeGrenadeProjectile();
+
+	virtual void PostDataUpdate( DataUpdateType_t updateType ) OVERRIDE;
+	virtual void OnDataChanged( DataUpdateType_t updateType ) OVERRIDE;
+
+	CNetworkVar( bool, m_bDidSmokeEffect );
+
+	bool m_bSmokeEffectSpawned;
+};
+
+#else // GAME_DLL
 class CSmokeGrenadeProjectile : public CBaseCSGrenadeProjectile
 {
 public:
 	DECLARE_CLASS( CSmokeGrenadeProjectile, CBaseCSGrenadeProjectile );
+	DECLARE_NETWORKCLASS();
 	DECLARE_DATADESC();
 
 // Overrides.
@@ -26,12 +46,17 @@ public:
 	virtual void Spawn();
 	virtual void Precache();
 	virtual void Detonate();
+	virtual void OnBounced( void );
 	virtual void BounceSound( void );
 
 	void Think_Detonate();
 	void Think_Fade();
 	void Think_Remove();
 
+	void SmokeDetonate( void );
+	void RemoveGrenadeFromLists( void );
+
+	virtual int UpdateTransmitState() { return SetTransmitState( FL_EDICT_ALWAYS ); }
 
 // Grenade stuff.
 public:
@@ -46,8 +71,9 @@ public:
 	void SetTimer( float timer );
 
 	EHANDLE m_hSmokeEffect;
-	bool m_bDidSmokeEffect;
+	CNetworkVar( bool, m_bDidSmokeEffect );
+	float m_flLastBounce;
 };
-
+#endif // GAME_DLL
 
 #endif // SMOKEGRENADE_PROJECTILE_H

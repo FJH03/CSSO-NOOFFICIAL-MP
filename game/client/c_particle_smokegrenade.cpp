@@ -95,8 +95,9 @@ public:
 	virtual void	SimulateParticles( CParticleSimulateIterator *pIterator );
 	virtual void	NotifyRemove();
 	virtual void	GetParticlePosition( Particle *pParticle, Vector& worldpos );
+#ifndef CSTRIKE_DLL
 	virtual void	ClientThink();
-
+#endif
 
 // Proxies.
 public:
@@ -272,6 +273,7 @@ static inline const Vector& EngineGetVecRenderOrigin()
 	#endif
 }
 
+#ifndef CSTRIKE_DLL
 static inline float& EngineGetSmokeFogOverlayAlpha()
 {
 	#if defined(PARTICLEPROTOTYPE_APP)
@@ -281,6 +283,7 @@ static inline float& EngineGetSmokeFogOverlayAlpha()
 		return g_SmokeFogOverlayAlpha;
 	#endif
 }
+#endif
 
 static inline C_BaseEntity* ParticleGetEntity(int index)
 {
@@ -378,7 +381,9 @@ void C_ParticleSmokeGrenade::Start(CParticleMgr *pParticleMgr, IPrototypeArgAcce
 	}
 
 	m_bStarted = true;
+#ifndef CSTRIKE_DLL
 	SetNextClientThink( CLIENT_THINK_ALWAYS );
+#endif
 
 #if CSTRIKE_DLL
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
@@ -391,6 +396,7 @@ void C_ParticleSmokeGrenade::Start(CParticleMgr *pParticleMgr, IPrototypeArgAcce
 		 
 }
 
+#ifndef CSTRIKE_DLL
 void C_ParticleSmokeGrenade::ClientThink()
 {
 	if ( m_CurrentStage == 1 )
@@ -417,7 +423,7 @@ void C_ParticleSmokeGrenade::ClientThink()
 		}	
 	}
 }
-
+#endif
 
 void C_ParticleSmokeGrenade::UpdateSmokeTrail( float fTimeDelta )
 {

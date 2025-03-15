@@ -153,6 +153,33 @@ CAddonInfo g_AddonInfo[] =
 	{ "grenade4",	"weapon_decoy",			0, 0 },
 };
 
+CUtlVector<EHANDLE> g_SmokeGrenadeHandles;
+
+void AddSmokeGrenadeHandle( EHANDLE hGrenade )
+{
+ 	for ( int i = 0; i < g_SmokeGrenadeHandles.Count(); i++ )
+ 	{
+ 		if ( g_SmokeGrenadeHandles[i] && g_SmokeGrenadeHandles[i] == hGrenade )
+ 		{
+ 			return;
+ 		}
+ 	}
+ 
+ 	g_SmokeGrenadeHandles.AddToTail( hGrenade );
+ }
+ 
+void RemoveSmokeGrenadeHandle( EHANDLE hGrenade )
+{
+ 	for ( int i = 0; i < g_SmokeGrenadeHandles.Count(); i++ )
+ 	{
+ 		if ( g_SmokeGrenadeHandles[i] && g_SmokeGrenadeHandles[i] == hGrenade )
+ 		{
+ 			g_SmokeGrenadeHandles.FastRemove( i );
+ 			break;
+ 		}
+ 	}
+}
+
 bool LineGoesThroughSmoke( Vector from, Vector to, bool grenadeBloat )
 {
 	float totalSmokedLength = 0.0f;	// distance along line of sight covered by smoke

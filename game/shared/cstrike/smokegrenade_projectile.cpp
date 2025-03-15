@@ -6,19 +6,59 @@
 
 #include "cbase.h"
 #include "smokegrenade_projectile.h"
+#ifdef CLIENT_DLL
+#include "c_cs_player.h"
+#else
 #include "sendproxy.h"
 #include "particle_smokegrenade.h"
 #include "cs_player.h"
 #include "KeyValues.h"
 #include "bot_manager.h"
 #include "weapon_csbase.h"
+#include "effects/inferno.h"
 #include "cs_gamerules.h"
+#endif
 
 #define GRENADE_MODEL "models/Weapons/w_eq_smokegrenade_thrown.mdl"
 
 
+#if defined( CLIENT_DLL )
+
+IMPLEMENT_CLIENTCLASS_DT( C_SmokeGrenadeProjectile, DT_SmokeGrenadeProjectile, CSmokeGrenadeProjectile )
+RecvPropBool( RECVINFO( m_bDidSmokeEffect ) )
+END_RECV_TABLE()
+
+C_SmokeGrenadeProjectile::C_SmokeGrenadeProjectile()
+{
+	m_bSmokeEffectSpawned = false;
+}
+
+C_SmokeGrenadeProjectile::~C_SmokeGrenadeProjectile()
+{
+	RemoveSmokeGrenadeHandle( this );
+}
+
+void C_SmokeGrenadeProjectile::PostDataUpdate( DataUpdateType_t type )
+{
+	BaseClass::PostDataUpdate( type );	
+}
+
+void C_SmokeGrenadeProjectile::OnDataChanged( DataUpdateType_t updateType ) 
+{ 
+	if ( m_bDidSmokeEffect && !m_bSmokeEffectSpawned )
+	{
+		m_bSmokeEffectSpawned = true;
+		// And the smoke grenade particle began! - every call but the first is extraneous here
+		AddSmokeGrenadeHandle( this );
+	}
+}
+#else
 LINK_ENTITY_TO_CLASS( smokegrenade_projectile, CSmokeGrenadeProjectile );
 PRECACHE_WEAPON_REGISTER( smokegrenade_projectile );
+
+IMPLEMENT_SERVERCLASS_ST( CSmokeGrenadeProjectile, DT_SmokeGrenadeProjectile )
+SendPropBool( SENDINFO( m_bDidSmokeEffect ) )
+END_SEND_TABLE()
 
 BEGIN_DATADESC( CSmokeGrenadeProjectile )
 	DEFINE_THINKFUNC( Think_Detonate ),
@@ -36,7 +76,7 @@ CSmokeGrenadeProjectile* CSmokeGrenadeProjectile::Create(
 {
 	if ( CSGameRules() )
 		CSGameRules()->RecordGrenadeThrow( position, angles, velocity, angVelocity, pOwner, WEAPON_SMOKEGRENADE );
-	
+
 	CSmokeGrenadeProjectile *pGrenade = (CSmokeGrenadeProjectile*)CBaseEntity::Create( "smokegrenade_projectile", position, angles, pOwner );
 	
 	// Set the timer for 1 second less than requested. We're going to issue a SOUND_DANGER
@@ -56,6 +96,7 @@ CSmokeGrenadeProjectile* CSmokeGrenadeProjectile::Create(
 	pGrenade->SetFriction( BaseClass::GetGrenadeFriction() );
 	pGrenade->SetElasticity( BaseClass::GetGrenadeElasticity() );
 	pGrenade->m_bDidSmokeEffect = false;
+	pGrenade->m_flLastBounce = 0;
 
 	pGrenade->m_pWeaponInfo = GetWeaponInfo( WEAPON_SMOKEGRENADE );
 
@@ -80,6 +121,11 @@ void CSmokeGrenadeProjectile::Think_Detonate()
 		return;
 	}
 
+	SmokeDetonate();
+}
+
+void CSmokeGrenadeProjectile::SmokeDetonate( void )
+{
 	TheBots->SetGrenadeRadius( this, SmokeGrenadeRadius );
 
 	// Ok, we've stopped rolling or whatever. Now detonate.
@@ -109,6 +155,7 @@ void CSmokeGrenadeProjectile::Think_Detonate()
 			if ( event )
 			{
 				event->SetInt( "userid", player->GetUserID() );
+				event->SetInt( "entityid", this->entindex() );
 				event->SetFloat( "x", GetAbsOrigin().x );
 				event->SetFloat( "y", GetAbsOrigin().y );
 				event->SetFloat( "z", GetAbsOrigin().z );
@@ -123,42 +170,57 @@ void CSmokeGrenadeProjectile::Think_Detonate()
 	EmitSound( "BaseSmokeEffect.Sound" );
 
 	m_nRenderMode = kRenderTransColor;
-	SetNextThink( gpGlobals->curtime + 5 );
+	SetNextThink( gpGlobals->curtime + 12.5f );
 	SetThink( &CSmokeGrenadeProjectile::Think_Fade );
+
+	SetSolid( SOLID_NONE );
 }
 
+void CSmokeGrenadeProjectile::RemoveGrenadeFromLists( void )
+{
+	TheBots->RemoveGrenade( this );
+	SetModelName( NULL_STRING );//invisible
+	SetSolid( SOLID_NONE );
+
+	CCSPlayer *player = ToCSPlayer(GetThrower());
+	if ( player )
+	{
+		IGameEvent * event = gameeventmanager->CreateEvent( "smokegrenade_expired" );
+		if ( event )
+		{
+			event->SetInt( "userid", player->GetUserID() );
+			event->SetInt( "entityid", this->entindex() );
+			event->SetFloat( "x", GetAbsOrigin().x );
+			event->SetFloat( "y", GetAbsOrigin().y );
+			event->SetFloat( "z", GetAbsOrigin().z );
+			gameeventmanager->FireEvent( event );
+		}
+	}
+}
 
 // Fade the projectile out over time before making it disappear
 void CSmokeGrenadeProjectile::Think_Fade()
 {
 	SetNextThink( gpGlobals->curtime );
 
-	color32 c = GetRenderColor();
-	c.a -= 1;
-	SetRenderColor( c.r, c.b, c.g, c.a );
+	byte a = GetRenderColor().a;
+	a -= 1;
+	SetRenderColorA( a );
 
-	if ( !c.a )
+	if ( !a )
 	{
-		TheBots->RemoveGrenade( this );
-
-		SetModelName( NULL_STRING );//invisible
-		SetNextThink( gpGlobals->curtime + 20 );
+		//RemoveGrenadeFromLists();
+		SetNextThink( gpGlobals->curtime + 1.0 );
 		SetThink( &CSmokeGrenadeProjectile::Think_Remove );	// Spit out smoke for 10 seconds.
-		SetSolid( SOLID_NONE );
 	}
 }
 
 
 void CSmokeGrenadeProjectile::Think_Remove()
 {
-	if ( m_hSmokeEffect.Get() )
-		UTIL_Remove( m_hSmokeEffect );
-
-	TheBots->RemoveGrenade( this );
-
-	SetModelName( NULL_STRING );//invisible
-	SetSolid( SOLID_NONE );
+	RemoveGrenadeFromLists();
 	SetMoveType( MOVETYPE_NONE );
+	UTIL_Remove( this );
 }
 
 //Implement this so we never call the base class,
@@ -186,6 +248,58 @@ void CSmokeGrenadeProjectile::Precache()
 	BaseClass::Precache();
 }
 
+
+void CSmokeGrenadeProjectile::OnBounced( void )
+{
+	if ( m_flLastBounce >= ( gpGlobals->curtime - 3*gpGlobals->interval_per_tick ) )
+		return;
+
+	m_flLastBounce = gpGlobals->curtime;
+
+	//
+	// if the smoke grenade is above ground, trace down to the ground and see where it would end up?
+	//
+	Vector posDropSmoke = GetAbsOrigin();
+	trace_t trSmokeTrace;
+	UTIL_TraceLine( posDropSmoke, posDropSmoke - Vector( 0, 0, SmokeGrenadeRadius ), ( MASK_PLAYERSOLID & ~CONTENTS_PLAYERCLIP ),
+		this, COLLISION_GROUP_PROJECTILE, &trSmokeTrace );
+	if ( !trSmokeTrace.startsolid )
+	{
+		if ( trSmokeTrace.fraction >= 1.0f )
+			return;	// this smoke cannot drop enough to cause extinguish
+
+		if ( trSmokeTrace.fraction > 0.001f )
+			posDropSmoke = trSmokeTrace.endpos;
+	}
+
+	//
+	// See if it touches any inferno?
+	//
+	const int maxEnts = 64;
+	CBaseEntity *list[ maxEnts ];
+	int count = UTIL_EntitiesInSphere( list, maxEnts, GetAbsOrigin(), 512, FL_ONFIRE );
+	for( int i=0; i<count; ++i )
+	{
+		if (list[i] == NULL || list[i] == this)
+			continue;
+
+		CInferno* pInferno = dynamic_cast<CInferno*>( list[i] );
+
+		if ( pInferno && pInferno->BShouldExtinguishSmokeGrenadeBounce( this, posDropSmoke ) )
+		{
+			if ( posDropSmoke != GetAbsOrigin() )
+			{
+				const QAngle qAngOriginZero = vec3_angle;
+				const Vector vVelocityZero = vec3_origin;
+				Teleport( &posDropSmoke, &qAngOriginZero, &vVelocityZero );
+			}
+
+			SmokeDetonate();
+			break;
+		}
+	}
+}
+
 void CSmokeGrenadeProjectile::BounceSound( void )
 {
 	if ( !m_bDidSmokeEffect )
@@ -193,3 +307,4 @@ void CSmokeGrenadeProjectile::BounceSound( void )
 		EmitSound( "SmokeGrenade.Bounce" );
 	}
 }
+#endif

@@ -319,6 +319,8 @@ void ClientModeCSNormal::Init()
 	ListenForGameEvent( "round_mvp" );
 	ListenForGameEvent( "bot_takeover" );
 	ListenForGameEvent( "server_spawn" );
+	ListenForGameEvent( "smokegrenade_detonate" );
+ 	ListenForGameEvent( "smokegrenade_expired" );
 
 	usermessages->HookMessage( "KillCam", MsgFunc_KillCam );
 
@@ -1024,6 +1026,20 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			internalCenterPrint->HintPrint( wszLocalized );
 		}
 	}
+	else if ( V_strcmp( "smokegrenade_detonate", eventname ) == 0 )
+ 	{
+ 		int index = event->GetInt( "entityid" );
+ 		C_BaseEntity* pEnt = ClientEntityList().GetBaseEntity( index );
+ 		if ( pEnt )
+ 			AddSmokeGrenadeHandle( pEnt );
+ 	}
+ 	else if ( V_strcmp( "smokegrenade_expired", eventname ) == 0 )
+ 	{
+ 		int index = event->GetInt( "entityid" );
+ 		C_BaseEntity* pEnt = ClientEntityList().GetBaseEntity( index );
+ 		if ( pEnt )
+ 			RemoveSmokeGrenadeHandle( pEnt );
+ 	}
 	else
 	{
 		BaseClass::FireGameEvent( event );

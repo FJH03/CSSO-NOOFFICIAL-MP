@@ -364,7 +364,7 @@ public:
 	virtual void	RenderPlayerSprites();
 	virtual void	Render2DEffectsPreHUD( const CViewSetup &view );
 	virtual void	Render2DEffectsPostHUD( const CViewSetup &view );
-
+	virtual void	RenderSmokeOverlay( bool bPreViewModel = true ) {};
 
 	void			DisableFog( void );
 

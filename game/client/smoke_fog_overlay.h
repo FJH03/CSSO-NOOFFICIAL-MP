@@ -28,7 +28,7 @@
 #define SMOKEPARTICLE_SIZE			80
 #define NUM_MATERIAL_HANDLES		1
 
-
+#ifndef CSTRIKE_DLL
 void InitSmokeFogOverlay();
 void TermSmokeFogOverlay();
 void DrawSmokeFogOverlay();
@@ -37,7 +37,7 @@ void DrawSmokeFogOverlay();
 // Set these before calling DrawSmokeFogOverlay.
 extern float	g_SmokeFogOverlayAlpha;
 extern Vector	g_SmokeFogOverlayColor;
-
+#endif
 
 #endif
 

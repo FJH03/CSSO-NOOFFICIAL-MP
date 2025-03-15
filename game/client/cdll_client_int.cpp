@@ -1061,7 +1061,9 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 
 	VGui_CreateGlobalPanels();
 
+#ifndef CSTRIKE_DLL
 	InitSmokeFogOverlay();
+#endif
 
 	// Register user messages..
 	CUserMessageRegister::RegisterAll();
@@ -1199,7 +1201,9 @@ void CHLClient::Shutdown( void )
 
 	input->Shutdown_All();
 	C_BaseTempEntity::ClearDynamicTempEnts();
+#ifndef CSTRIKE_DLL
 	TermSmokeFogOverlay();
+#endif
 	view->Shutdown();
 	g_pParticleSystemMgr->UncacheAllParticleSystems();
 	UncacheAllMaterials();
@@ -2168,8 +2172,10 @@ void OnRenderStart()
 	// Process OnDataChanged events.
 	ProcessOnDataChangedEvents();
 
+#ifndef CSTRIKE_DLL
 	// Reset the overlay alpha. Entities can change the state of this in their think functions.
 	g_SmokeFogOverlayAlpha = 0;	
+#endif
 
 	// This must occur prior to SimulatEntities,
 	// which is where the client thinks for c_colorcorrection + c_colorcorrectionvolumes

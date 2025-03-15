@@ -658,6 +658,7 @@ CON_COMMAND_F( r_screenoverlay, "Draw specified material as an overlay", FCVAR_C
 // Used to verify frame syncing.
 void CDebugViewRender::GenerateOverdrawForTesting()
 {
+#ifndef CSTRIKE_DLL
 	if ( IsX360() )
 		return;
 
@@ -670,6 +671,7 @@ void CDebugViewRender::GenerateOverdrawForTesting()
 		DrawSmokeFogOverlay();
 	}
 	g_SmokeFogOverlayAlpha = 0;
+#endif
 }
 
 

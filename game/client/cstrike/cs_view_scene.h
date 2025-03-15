@@ -28,6 +28,7 @@ public:
 	virtual void Render2DEffectsPreHUD( const CViewSetup &view );
 	virtual void Render2DEffectsPostHUD( const CViewSetup &view );
 	virtual void RenderPlayerSprites( void );
+	virtual void RenderSmokeOverlay( bool bPreViewModel = true );
 
 private:
 
@@ -35,6 +36,8 @@ private:
 	void PerformNightVisionEffect( const CViewSetup &view );
 	
 	ITexture *m_pFlashTexture;
+
+	float m_flSmokeOverlayAmount;
 };
 
 #endif //CS_VIEW_SCENE_H
