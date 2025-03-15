@@ -7870,7 +7870,7 @@ void CCSGameRules::RethrowLastGrenade()
 
 bool CCSGameRules::FAllowNPCs( void )
 {
-	return false;
+	return true;
 }
 
 bool CCSGameRules::IsFriendlyFireOn( void )
