@@ -783,11 +783,7 @@ CLIENTEFFECT_REGISTER_BEGIN( PrecachePostProcessingEffects )
 	CLIENTEFFECT_MATERIAL( "dev/blurfiltery_nohdr" )
 	CLIENTEFFECT_MATERIAL( "dev/bloomadd" )
 	CLIENTEFFECT_MATERIAL( "dev/downsample" )
-	#ifdef CSTRIKE_DLL
-		CLIENTEFFECT_MATERIAL( "dev/downsample_non_hdr_cstrike" )
-	#else
-		CLIENTEFFECT_MATERIAL( "dev/downsample_non_hdr" )
-	#endif
+	CLIENTEFFECT_MATERIAL( "dev/downsample_non_hdr" )
 	CLIENTEFFECT_MATERIAL( "dev/no_pixel_write" )
 	CLIENTEFFECT_MATERIAL( "dev/lumcompare" )
 	CLIENTEFFECT_MATERIAL( "dev/floattoscreen_combine" )
@@ -796,6 +792,7 @@ CLIENTEFFECT_REGISTER_BEGIN( PrecachePostProcessingEffects )
 	CLIENTEFFECT_MATERIAL( "dev/engine_post" )
 	CLIENTEFFECT_MATERIAL( "dev/motion_blur" )
 	CLIENTEFFECT_MATERIAL( "dev/upscale" )
+	CLIENTEFFECT_MATERIAL( "dev/fade_blur" )
 
 #ifdef TF_CLIENT_DLL
 	CLIENTEFFECT_MATERIAL( "dev/pyro_blur_filter_y" )
@@ -2045,8 +2042,6 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 			}
 		}
 
-		GetClientModeNormal()->DoPostScreenSpaceEffects( &viewRender );
-
 		RenderSmokeOverlay( true );
 		// Now actually draw the viewmodel
 		DrawViewModels( viewRender, whatToDraw & RENDERVIEW_DRAWVIEWMODEL );
@@ -2117,6 +2112,8 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 		}
 
 		CleanupMain3DView( viewRender );
+
+		g_pClientMode->DoPostScreenSpaceEffects( &viewRender );
 
 		if ( m_rbTakeFreezeFrame[viewRender.m_eStereoEye ] )
 		{

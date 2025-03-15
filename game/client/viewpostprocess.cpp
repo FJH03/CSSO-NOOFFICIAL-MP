@@ -91,6 +91,11 @@ ConVar mat_tonemap_percent_bright_pixels( "mat_tonemap_percent_bright_pixels", "
 ConVar mat_tonemap_min_avglum( "mat_tonemap_min_avglum", "3.0", FCVAR_CHEAT );
 ConVar mat_fullbright( "mat_fullbright", "0", FCVAR_CHEAT );
 
+ConVar mat_blur_r( "mat_blur_r", "1.0" );
+ConVar mat_blur_g( "mat_blur_g", "1.0" );
+ConVar mat_blur_b( "mat_blur_b", "1.0" );
+ConVar mat_blur_fade_bloom( "mat_blur_fade_bloom", "1.0" );
+
 extern ConVar localplayer_visionflags;
 
 enum PostProcessingCondition {
@@ -1536,12 +1541,7 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext, float f
 	int nSrcWidth = pSrc->GetActualWidth();
 	int nSrcHeight = pSrc->GetActualHeight(); //,dest_height;
 
-	// Counter-Strike: Source uses a different downsample algorithm than other games
-	#ifdef CSTRIKE_DLL
-		IMaterial *downsample_mat = materials->FindMaterial( "dev/downsample_non_hdr_cstrike", TEXTURE_GROUP_OTHER, true);
-	#else
-		IMaterial *downsample_mat = materials->FindMaterial( "dev/downsample_non_hdr", TEXTURE_GROUP_OTHER, true);
-	#endif
+	IMaterial *downsample_mat = materials->FindMaterial( "dev/downsample_non_hdr", TEXTURE_GROUP_OTHER, true);
 
 	IMaterial *xblur_mat = materials->FindMaterial( "dev/blurfilterx_nohdr", TEXTURE_GROUP_OTHER, true );
 	IMaterial *yblur_mat = materials->FindMaterial( "dev/blurfiltery_nohdr", TEXTURE_GROUP_OTHER, true );
@@ -2653,6 +2653,56 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 #if defined( _X360 )
 	pRenderContext->PopVertexShaderGPRAllocation();
 #endif
+}
+
+void DoBlurFade( int x, int y, int w, int h )
+{
+ 	if ( engine->GetDXSupportLevel() < 90 )
+ 	{
+ 		return;
+ 	}
+ 
+ 	UpdateScreenEffectTexture();
+ 
+ 	CMatRenderContextPtr pRenderContext( materials );
+ 	Generate8BitBloomTexture( pRenderContext, mat_blur_fade_bloom.GetFloat(), x, y, w, h );
+ 
+ 	int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
+ 	pRenderContext->GetViewport( nViewportX, nViewportY, nViewportWidth, nViewportHeight );
+ 
+ 	int nRtWidth, nRtHeight;
+ 	pRenderContext->GetRenderTargetDimensions( nRtWidth, nRtHeight );
+ 
+ 	IMaterial* pMat = materials->FindMaterial( "dev/fade_blur", TEXTURE_GROUP_OTHER, true );
+ 	bool bFound = false;
+ 	// Color fade
+ 	IMaterialVar* pVar = pMat->FindVar( "$c0_x", &bFound );
+ 	if ( pVar && bFound )
+ 	{
+ 		pVar->SetFloatValue( mat_blur_r.GetFloat() );
+ 	}
+ 
+ 	pVar = pMat->FindVar( "$c0_y", &bFound );
+ 	if ( pVar && bFound )
+ 	{
+ 		pVar->SetFloatValue( mat_blur_g.GetFloat() );
+ 	}
+ 
+ 	pVar = pMat->FindVar( "$c0_z", &bFound );
+ 	if ( pVar && bFound )
+ 	{
+ 		pVar->SetFloatValue( mat_blur_b.GetFloat() );
+ 	}
+ 
+ 	// Draw
+ 	pRenderContext->DrawScreenSpaceRectangle(	pMat, 0, 0, nViewportWidth, nViewportHeight,
+ 												nViewportX, nViewportY,
+ 												nViewportX + nViewportWidth - 1, nViewportY + nViewportHeight - 1,
+ 												nRtWidth, nRtHeight );
+ 	if ( g_bDumpRenderTargets )
+ 	{
+ 		DumpTGAofRenderTarget( nViewportWidth, nViewportHeight, "BlurFade" );
+ 	}
 }
 
 // Motion Blur Material Proxy =========================================================================================
