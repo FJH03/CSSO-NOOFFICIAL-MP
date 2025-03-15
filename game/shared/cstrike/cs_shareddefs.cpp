@@ -110,9 +110,9 @@ CCSAgentInfo g_AgentInfosCT[MAX_AGENTS_CT + 1] =
 	{ "models/player/custom_player/legacy/ctm_sas_old.mdl",				NULL,					CS_CLASS_SAS,			false	},
 	{ "models/player/custom_player/legacy/ctm_fbi_old.mdl",				NULL,					CS_CLASS_FBI,			false	},
 	// kill me (let's pretend that they're all ST6 guys just because its the first class for CTs)
-	{ "models/player/custom_player/legacy/ctm_jumpsuit_varianta.mdl",	"leet",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_jumpsuit_variantb.mdl",	"leet",					CS_CLASS_SEAL_TEAM_6,	false	},
-	{ "models/player/custom_player/legacy/ctm_jumpsuit_variantc.mdl",	"leet",					CS_CLASS_SEAL_TEAM_6,	false	}
+	{ "models/player/custom_player/legacy/ctm_jumpsuit_varianta.mdl",	"tm_leet",				CS_CLASS_SEAL_TEAM_6,	false	},
+ 	{ "models/player/custom_player/legacy/ctm_jumpsuit_variantb.mdl",	"tm_leet",				CS_CLASS_SEAL_TEAM_6,	false	},
+ 	{ "models/player/custom_player/legacy/ctm_jumpsuit_variantc.mdl",	"tm_leet",				CS_CLASS_SEAL_TEAM_6,	false	}
 };
 
 const CCSAgentInfo* GetCSAgentInfoCT( int i )
@@ -168,9 +168,9 @@ CCSAgentInfo g_AgentInfosT[MAX_AGENTS_T + 1] =
 	{ "models/player/custom_player/legacy/tm_phoenix_old.mdl",				NULL,				CS_CLASS_PHOENIX_CONNNECTION,	false	},
 	{ "models/player/custom_player/legacy/tm_leet_old.mdl",					NULL,				CS_CLASS_L337_KREW,				false	},
 	// kill me
-	{ "models/player/custom_player/legacy/tm_jumpsuit_varianta.mdl",		"leet",				CS_CLASS_L337_KREW,				false	},
-	{ "models/player/custom_player/legacy/tm_jumpsuit_variantb.mdl",		"leet",				CS_CLASS_L337_KREW,				false	},
-	{ "models/player/custom_player/legacy/tm_jumpsuit_variantc.mdl",		"leet",				CS_CLASS_L337_KREW,				false	}
+	{ "models/player/custom_player/legacy/tm_jumpsuit_varianta.mdl",		"tm_leet",			CS_CLASS_L337_KREW,				false	},
+ 	{ "models/player/custom_player/legacy/tm_jumpsuit_variantb.mdl",		"tm_leet",			CS_CLASS_L337_KREW,				false	},
+ 	{ "models/player/custom_player/legacy/tm_jumpsuit_variantc.mdl",		"tm_leet",			CS_CLASS_L337_KREW,				false	}
 };
 
 const CCSAgentInfo* GetCSAgentInfoT( int i )

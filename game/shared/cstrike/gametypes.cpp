@@ -2346,10 +2346,14 @@ bool GameTypes::GetGameModeAndTypeFromStrings( const char* szGameType, const cha
 
 int GameTypes::GetCurrentServerNumSlots( void )
 {
-	// This is only valid if we are connected to a server and received the extended info blob
-	Assert ( GameTypes_IsOnClient() );
-
-	return m_iCurrentServerNumSlots;
+	if ( GameTypes_IsOnClient() )
+ 	{
+ 		return m_iCurrentServerNumSlots;
+ 	}
+ 	else
+ 	{
+ 		return GetMaxPlayersForTypeAndMode( GetCurrentGameType(), GetCurrentGameMode() );
+ 	}
 }
 
 int GameTypes::GetCurrentServerSettingInt( const char *szSetting, int iDefaultValue )

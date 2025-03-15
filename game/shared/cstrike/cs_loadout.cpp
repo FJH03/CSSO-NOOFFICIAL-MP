@@ -30,6 +30,9 @@ ConVar loadout_slot_gloves_ct( "loadout_slot_gloves_ct", "0", FCVAR_ARCHIVE | FC
 ConVar loadout_slot_gloves_t( "loadout_slot_gloves_t", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "Which gloves to use for Ts.", true, 0, true, MAX_GLOVES );
 ConVar loadout_stattrak( "loadout_stattrak", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "Enable or disable StatTrak on weapons.", true, 0, true, 1 );
 #endif
+ConVar bot_loadout_random_knives( "bot_loadout_random_knives", "0", FCVAR_REPLICATED, "Whether or not the bots will have random knives." );
+ConVar bot_loadout_random_gloves( "bot_loadout_random_gloves", "0", FCVAR_REPLICATED, "Whether or not the bots will have random gloves." );
+ConVar bot_loadout_random_agents( "bot_loadout_random_agents", "0", FCVAR_REPLICATED, "Whether or not the bots will have random agents." );
 
 CCSLoadout*	g_pCSLoadout = NULL;
 CCSLoadout::CCSLoadout()
@@ -81,10 +84,15 @@ LoadoutSlot_t CCSLoadout::GetSlotFromWeapon( int team, const char* weaponName )
 	return slot;
 }
 
-const char* CCSLoadout::GetWeaponFromSlot( CBasePlayer* pPlayer, LoadoutSlot_t slot )
+const char* CCSLoadout::GetWeaponFromSlot( CCSPlayer* pPlayer, LoadoutSlot_t slot )
 {
 	if ( slot >= 0 && slot < SLOT_MAX )
 	{
+		if ( pPlayer->IsBotOrControllingBot() )
+		{
+			return WeaponLoadout[slot].m_szFirstWeapon;
+		}
+
 		int value = 0;
 #ifdef CLIENT_DLL
 		ConVarRef convar( WeaponLoadout[slot].m_szCommand );
@@ -99,8 +107,11 @@ const char* CCSLoadout::GetWeaponFromSlot( CBasePlayer* pPlayer, LoadoutSlot_t s
 	return NULL;
 }
 
-CSWeaponID CCSLoadout::GetLoadoutWeaponID( CBasePlayer* pPlayer, int iTeamNumber, CSWeaponID iWeaponID )
+CSWeaponID CCSLoadout::GetLoadoutWeaponID( CCSPlayer* pPlayer, int iTeamNumber, CSWeaponID iWeaponID )
 {
+	if ( pPlayer->IsBotOrControllingBot() )
+		return iWeaponID;
+
 	LoadoutSlot_t iSlot = SLOT_NONE;
 
 	for ( int i = 0; i < ARRAYSIZE( WeaponLoadout ); i++ )
@@ -138,8 +149,11 @@ CSWeaponID CCSLoadout::GetLoadoutWeaponID( CBasePlayer* pPlayer, int iTeamNumber
 	return iWeaponID;
 }
 
-const char* CCSLoadout::GetLoadoutWeapon( CBasePlayer* pPlayer, const char* pszWeaponName )
+const char* CCSLoadout::GetLoadoutWeapon( CCSPlayer* pPlayer, const char* pszWeaponName )
 {
+	if ( pPlayer->IsBotOrControllingBot() )
+		return pszWeaponName;
+
 	LoadoutSlot_t iSlot = GetSlotFromWeapon( pPlayer->GetTeamNumber(), pszWeaponName );
 
 	if ( iSlot != SLOT_NONE )
@@ -163,8 +177,21 @@ bool CCSLoadout::HasGlovesSet( CCSPlayer* pPlayer, int team )
 	if ( !pPlayer )
 		return false;
 
-	if ( pPlayer->IsBotOrControllingBot() )
+	if ( pPlayer->IsBotOrControllingBot() && !bot_loadout_random_gloves.GetBool() )
+	{
 		return false;
+	}
+
+	if ( pPlayer->IsControllingBot() )
+	{
+#ifdef CLIENT_DLL
+		pPlayer = ToCSPlayer( UTIL_PlayerByIndex( pPlayer->GetControlledBotIndex() ) );
+#else
+		pPlayer = pPlayer->GetControlledBot();
+#endif
+		if ( !pPlayer )
+			return false;
+	}
 
 	int value = 0;
 	switch ( team )
@@ -187,8 +214,21 @@ int CCSLoadout::GetGlovesForPlayer( CCSPlayer* pPlayer, int team )
 	if ( !pPlayer )
 		return 0;
 
-	if ( pPlayer->IsBotOrControllingBot() )
+	if ( pPlayer->IsBotOrControllingBot() && !bot_loadout_random_gloves.GetBool() )
+	{
 		return 0;
+	}
+
+	if ( pPlayer->IsControllingBot() )
+	{
+#ifdef CLIENT_DLL
+		pPlayer = ToCSPlayer( UTIL_PlayerByIndex( pPlayer->GetControlledBotIndex() ) );
+#else
+		pPlayer = pPlayer->GetControlledBot();
+#endif
+		if ( !pPlayer )
+			return 0;
+	}
 
 	int value = 0;
 	switch ( team )
@@ -211,8 +251,21 @@ bool CCSLoadout::HasKnifeSet( CCSPlayer* pPlayer, int team )
 	if ( !pPlayer )
 		return false;
 
-	if ( pPlayer->IsBotOrControllingBot() )
+	if ( pPlayer->IsBotOrControllingBot() && !bot_loadout_random_knives.GetBool() )
+	{
 		return false;
+	}
+
+	if ( pPlayer->IsControllingBot() )
+	{
+#ifdef CLIENT_DLL
+		pPlayer = ToCSPlayer( UTIL_PlayerByIndex( pPlayer->GetControlledBotIndex() ) );
+#else
+		pPlayer = pPlayer->GetControlledBot();
+#endif
+		if ( !pPlayer )
+			return false;
+	}
 
 	int value = 0;
 	switch ( team )
@@ -235,8 +288,21 @@ int CCSLoadout::GetKnifeForPlayer( CCSPlayer* pPlayer, int team )
 	if ( !pPlayer )
 		return 0;
 
-	if ( pPlayer->IsBotOrControllingBot() )
+	if ( pPlayer->IsBotOrControllingBot() && !bot_loadout_random_knives.GetBool() )
+	{
 		return 0;
+	}
+
+	if ( pPlayer->IsControllingBot() )
+	{
+#ifdef CLIENT_DLL
+		pPlayer = ToCSPlayer( UTIL_PlayerByIndex( pPlayer->GetControlledBotIndex() ) );
+#else
+		pPlayer = pPlayer->GetControlledBot();
+#endif
+		if ( !pPlayer )
+			return 0;
+	}
 
 	int value = 0;
 	switch ( team )
@@ -259,8 +325,21 @@ bool CCSLoadout::HasAgentSet( CCSPlayer* pPlayer, int team )
 	if ( !pPlayer )
 		return false;
 
-	if ( pPlayer->IsBotOrControllingBot() )
+	if ( pPlayer->IsBotOrControllingBot() && !bot_loadout_random_agents.GetBool() )
+	{
 		return false;
+	}
+
+	if ( pPlayer->IsControllingBot() )
+	{
+#ifdef CLIENT_DLL
+		pPlayer = ToCSPlayer( UTIL_PlayerByIndex( pPlayer->GetControlledBotIndex() ) );
+#else
+		pPlayer = pPlayer->GetControlledBot();
+#endif
+		if ( !pPlayer )
+			return false;
+	}
 
 	int value = 0;
 	switch ( team )
@@ -283,8 +362,21 @@ int CCSLoadout::GetAgentForPlayer( CCSPlayer* pPlayer, int team )
 	if ( !pPlayer )
 		return 0;
 
-	if ( pPlayer->IsBotOrControllingBot() )
+	if ( pPlayer->IsBotOrControllingBot() && !bot_loadout_random_agents.GetBool() )
+	{
 		return 0;
+	}
+
+	if ( pPlayer->IsControllingBot() )
+	{
+#ifdef CLIENT_DLL
+		pPlayer = ToCSPlayer( UTIL_PlayerByIndex( pPlayer->GetControlledBotIndex() ) );
+#else
+		pPlayer = pPlayer->GetControlledBot();
+#endif
+		if ( !pPlayer )
+			return 0;
+	}
 
 	int value = 0;
 	switch ( team )

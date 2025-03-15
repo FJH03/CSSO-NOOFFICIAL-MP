@@ -52,7 +52,6 @@
 	#include "networkstringtable_gamedll.h"
 	#include "player_resource.h"
 	#include "cs_player_resource.h"
-	#include "cs_loadout.h"
 	#include "vote_controller.h"
 	#include "cs_voteissues.h"
 	#include "flashbang_projectile.h"
@@ -4796,7 +4795,7 @@ ConVar snd_music_selection(
 			if ( IsPlayingAnyCompetitiveStrictRuleset() )
 			{
 				// if all humans are present and warmup time left is greater than mp_warmuptime_all_players_connected, reduce warmup time to mp_warmuptime_all_players_connected
-				if ( ( UTIL_HumansInGame( true, false ) >= GetMinPlayers() )
+				if ( ( UTIL_HumansInGame( true, true ) >= GetMinPlayers() )
 					&& ( mp_warmuptime_all_players_connected.GetFloat() > 0 ) && ( GetWarmupPeriodEndTime() - mp_warmuptime_all_players_connected.GetFloat() >= gpGlobals->curtime ) )
 				{
 					m_fWarmupPeriodStart = gpGlobals->curtime;
@@ -8197,28 +8196,28 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 		{
 			pCSPlayer->m_bShowHints = false;
 		}
+
+		pCSPlayer->m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_knife_weapon_ct" ) );
+		pCSPlayer->m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_knife_weapon_t" ) );
+
+		int m_iNewAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_agent_ct" ) );
+		int m_iNewAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_agent_t" ) );
+		// change the agent in the next round if needed
+		if ( ( m_iNewAgentCT != pCSPlayer->m_iLoadoutSlotAgentCT ) || ( m_iNewAgentT != pCSPlayer->m_iLoadoutSlotAgentT ) )
+		{
+			pCSPlayer->m_bNeedToChangeAgent = true;
+		}
+
+		int m_iNewGlovesCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_gloves_ct" ) );
+		int m_iNewGlovesT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_gloves_t" ) );
+		// change the gloves in the next round if needed
+		if ( ( m_iNewGlovesCT != pCSPlayer->m_iLoadoutSlotGlovesCT ) || ( m_iNewGlovesT != pCSPlayer->m_iLoadoutSlotGlovesT ) )
+		{
+			pCSPlayer->m_bNeedToChangeGloves = true;
+		}
+
+		pCSPlayer->m_bLoadoutStatTrak = !!atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_stattrak" ) );
 	}
-
-	pCSPlayer->m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_knife_weapon_ct" ) );
-	pCSPlayer->m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_knife_weapon_t" ) );
-
-	int m_iNewAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_agent_ct" ) );
-	int m_iNewAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_agent_t" ) );
-	// change the agent in the next round if needed
-	if ( ( m_iNewAgentCT != pCSPlayer->m_iLoadoutSlotAgentCT ) || ( m_iNewAgentT != pCSPlayer->m_iLoadoutSlotAgentT ) )
-	{
-		pCSPlayer->m_bNeedToChangeAgent = true;
-	}
-
-	int m_iNewGlovesCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_gloves_ct" ) );
-	int m_iNewGlovesT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_gloves_t" ) );
-	// change the gloves in the next round if needed
-	if ( ( m_iNewGlovesCT != pCSPlayer->m_iLoadoutSlotGlovesCT ) || ( m_iNewGlovesT != pCSPlayer->m_iLoadoutSlotGlovesT ) )
-	{
-		pCSPlayer->m_bNeedToChangeGloves = true;
-	}
-
-	pCSPlayer->m_bLoadoutStatTrak = !!atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_stattrak" ) );
 }
 
 #ifndef CLIENT_DLL
@@ -9177,7 +9176,7 @@ int CCSGameRules::GetMinPlayers()
 	}
 #endif
 
-	return MIN( g_pGameTypes->GetCurrentServerNumSlots(), 10 );
+	return MAX( g_pGameTypes->GetCurrentServerNumSlots(), 10 );
 }
 
 #ifndef CLIENT_DLL

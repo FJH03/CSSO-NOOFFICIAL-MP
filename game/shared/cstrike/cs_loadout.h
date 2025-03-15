@@ -55,20 +55,22 @@ public:
 
 public:
 	// check if the given weapon is actually a knife
-	bool			IsKnife( CSWeaponID weaponid ) { return (weaponid >= WEAPON_KNIFE) && (weaponid <= WEAPON_KNIFE_LAST); }
+	bool			IsKnife( CSWeaponID weaponid )			{ return (weaponid >= WEAPON_KNIFE) && (weaponid <= WEAPON_KNIFE_LAST); }
+	bool			IsKnife( const char* pszWeaponName )	{ return !V_strncmp( pszWeaponName, "weapon_knife", 12 ); }
 	// get the loadout slot of the weapon
 	LoadoutSlot_t	GetSlotFromWeapon( int team, const char* weaponName );
 	// get the weapon from a client's slot
-	const char*		GetWeaponFromSlot( CBasePlayer* pPlayer, LoadoutSlot_t slot );
+	const char*		GetWeaponFromSlot( CCSPlayer* pPlayer, LoadoutSlot_t slot );
 
-	CSWeaponID		GetLoadoutWeaponID( CBasePlayer* pPlayer, int iTeamNumber, CSWeaponID iWeaponID );
-	const char*		GetLoadoutWeapon( CBasePlayer* pPlayer, const char* pszWeaponName );
+	CSWeaponID		GetLoadoutWeaponID( CCSPlayer* pPlayer, int iTeamNumber, CSWeaponID iWeaponID );
+	const char*		GetLoadoutWeapon( CCSPlayer* pPlayer, const char* pszWeaponName );
 	
 	bool			HasGlovesSet( CCSPlayer* pPlayer, int team );
 	int				GetGlovesForPlayer( CCSPlayer* pPlayer, int team );
 
 	bool			HasKnifeSet( CCSPlayer* pPlayer, int team );
 	int				GetKnifeForPlayer( CCSPlayer* pPlayer, int team );
+
 	bool			HasAgentSet( CCSPlayer* pPlayer, int team );
 	int				GetAgentForPlayer( CCSPlayer* pPlayer, int team );
 };

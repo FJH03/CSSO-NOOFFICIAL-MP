@@ -340,6 +340,7 @@ private:
 private:
 
 	EHANDLE	m_hPlayer;
+	EHANDLE	m_hControlledPlayer;
 	CNetworkVector( m_vecRagdollVelocity );
 	CNetworkVector( m_vecRagdollOrigin );
 	CNetworkVar(int, m_iDeathPose );
@@ -357,6 +358,7 @@ IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_CSRagdoll, DT_CSRagdoll, CCSRagdoll )
 	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
 	RecvPropVector( RECVINFO(m_vecRagdollOrigin) ),
 	RecvPropEHandle( RECVINFO( m_hPlayer ) ),
+	RecvPropEHandle( RECVINFO( m_hControlledPlayer ) ),
 	RecvPropInt( RECVINFO( m_nModelIndex ) ),
 	RecvPropInt( RECVINFO(m_nForceBone) ),
 	RecvPropVector( RECVINFO(m_vecForce) ),
@@ -795,7 +797,9 @@ void C_CSRagdoll::CreateCSRagdoll()
 
 void C_CSRagdoll::CreateGlovesModel()
 {
-	C_CSPlayer *pPlayer = dynamic_cast< C_CSPlayer* >(m_hPlayer.Get());
+	C_CSPlayer *pPlayer = dynamic_cast< C_CSPlayer* >(m_hControlledPlayer.Get());
+ 	if ( !pPlayer )
+ 		pPlayer = dynamic_cast< C_CSPlayer* >(m_hPlayer.Get());
 	if ( !pPlayer )
 		return;
 

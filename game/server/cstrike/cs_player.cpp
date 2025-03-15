@@ -125,6 +125,9 @@ ConVar bot_freeze( "bot_freeze", "0", FCVAR_CHEAT );
 ConVar bot_crouch( "bot_crouch", "0", FCVAR_CHEAT );
 ConVar bot_mimic_yaw_offset( "bot_mimic_yaw_offset", "180", FCVAR_CHEAT );
 ConVar bot_chatter_use_rr( "bot_chatter_use_rr", "1", FCVAR_REPLICATED, "0 = Use old bot chatter system, 1 = Use response rules" );
+extern ConVar bot_loadout_random_knives;
+extern ConVar bot_loadout_random_gloves;
+extern ConVar bot_loadout_random_agents;
 
 ConVar gg_knife_kill_demotes( "gg_knife_kill_demotes", "1", FCVAR_REPLICATED, "0 = knife kill in gungame has no effect on player level, 1 = knife kill demotes player by one level" );
 
@@ -266,6 +269,7 @@ public:
 	// In case the client doesn't have it, we transmit the player's model index, origin, and angles
 	// so they can create a ragdoll in the right place.
 	CNetworkHandle( CBaseEntity, m_hPlayer );	// networked entity handle
+	CNetworkHandle( CBaseEntity, m_hControlledPlayer );
 	CNetworkVector( m_vecRagdollVelocity );
 	CNetworkVector( m_vecRagdollOrigin );
 	CNetworkVar(int, m_iDeathPose );
@@ -280,6 +284,7 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE( CCSRagdoll, DT_CSRagdoll )
 	SendPropVector	(SENDINFO(m_vecOrigin), -1,  SPROP_COORD|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
 	SendPropVector( SENDINFO(m_vecRagdollOrigin), -1,  SPROP_COORD ),
 	SendPropEHandle( SENDINFO( m_hPlayer ) ),
+	SendPropEHandle( SENDINFO( m_hControlledPlayer ) ),
 	SendPropModelIndex( SENDINFO( m_nModelIndex ) ),
 	SendPropInt		( SENDINFO(m_nForceBone), 8, 0 ),
 	SendPropVector	( SENDINFO(m_vecForce) ),
@@ -498,7 +503,7 @@ void cc_CreatePredictionError_f( const CCommand &args )
 {
 	float distance = 32;
 
-	if ( args.ArgC() >= 2 && g_pDeveloper->GetInt() > 0 )
+	if ( args.ArgC() >= 2 )
 	{
 		distance = atof(args[1]);
 	}
@@ -676,6 +681,7 @@ CCSPlayer::CCSPlayer()
 
 	m_duckUntilOnGround = false;
 
+	m_bNeedToChangeKnife = true;
 	m_bNeedToChangeAgent = true;
 	m_bNeedToChangeGloves = true;
 
@@ -684,6 +690,13 @@ CCSPlayer::CCSPlayer()
 	m_iApproachingHealth = -1;
 	m_iApproachingHealthSpeed = 0.0f;
 	m_flApproachingHealthLastTime = 0.0f;
+
+	m_iLoadoutSlotAgentCT = 0;
+	m_iLoadoutSlotAgentT = 0;
+	m_iLoadoutSlotKnifeWeaponCT = 0;
+	m_iLoadoutSlotKnifeWeaponT = 0;
+	m_iLoadoutSlotGlovesCT = 0;
+	m_iLoadoutSlotGlovesT = 0;
 }
 
 
@@ -922,7 +935,7 @@ void CCSPlayer::Precache()
 	PrecacheParticleSystem( "blood_impact_light" );
 	PrecacheParticleSystem( "blood_impact_light_headshot" );
 	PrecacheParticleSystem( "impact_wallbang_heavy" );
- 	PrecacheParticleSystem( "impact_wallbang_light" );
+	PrecacheParticleSystem( "impact_wallbang_light" );
 
 	PrecacheScriptSound( "Bullets.DefaultNearmiss" );
 	PrecacheScriptSound( "FX_RicochetSound.Ricochet" );
@@ -1125,7 +1138,7 @@ void CCSPlayer::InitialSpawn( void )
 
 void CCSPlayer::SetModelFromClass( void )
 {
-	if ( CSLoadout()->HasAgentSet( this, GetTeamNumber() ) && !IsBotOrControllingBot() )
+	if ( CSLoadout()->HasAgentSet( this, GetTeamNumber() ) )
 	{
 		if ( GetTeamNumber() == TEAM_CT )
 		{
@@ -1349,22 +1362,51 @@ void CCSPlayer::SetCSSpawnLocation( Vector position, QAngle angle )
 
 void CCSPlayer::Spawn()
 {
-	m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_knife_weapon_ct" ) );
-	m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_knife_weapon_t" ) );
+	if ( m_bNeedToChangeKnife )
+	{
+		// net players handle this in CCSGameRules::ClientSettingsChanged
+		if ( IsBot() && bot_loadout_random_knives.GetBool() )
+		{
+			m_iLoadoutSlotKnifeWeaponCT = RandomInt( 0, MAX_KNIVES );
+			m_iLoadoutSlotKnifeWeaponT = RandomInt( 0, MAX_KNIVES );
+		}
+		m_bNeedToChangeKnife = false;
+	}
 	if ( m_bNeedToChangeAgent )
 	{
-		m_iLoadoutSlotAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_ct" ) );
-		m_iLoadoutSlotAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_t" ) );
+		if ( IsBot() )
+		{
+			if ( bot_loadout_random_agents.GetBool() )
+			{
+				m_iLoadoutSlotAgentCT = RandomInt( 0, MAX_AGENTS_CT );
+				m_iLoadoutSlotAgentT = RandomInt( 0, MAX_AGENTS_T );
+			}
+		}
+		else
+		{
+			m_iLoadoutSlotAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_ct" ) );
+			m_iLoadoutSlotAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_t" ) );
+		}
 		m_bNeedToChangeAgent = false;
 	}
 	if ( m_bNeedToChangeGloves )
 	{
-		m_iLoadoutSlotGlovesCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_gloves_ct" ) );
-		m_iLoadoutSlotGlovesT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_gloves_t" ) );
+		if ( IsBot() )
+		{
+			if ( bot_loadout_random_gloves.GetBool() )
+			{
+				m_iLoadoutSlotGlovesCT = RandomInt( 0, MAX_GLOVES );
+				m_iLoadoutSlotGlovesT = RandomInt( 0, MAX_GLOVES );
+			}
+		}
+		else
+		{
+			m_iLoadoutSlotGlovesCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_gloves_ct" ) );
+			m_iLoadoutSlotGlovesT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_gloves_t" ) );
+		}
 		m_bNeedToChangeGloves = false;
 	}
-	m_bLoadoutStatTrak = !!atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_stattrak" ) );
-
+	
 	m_RateLimitLastCommandTimes.Purge();
 
 	// Get rid of the progress bar...
@@ -1374,7 +1416,7 @@ void CCSPlayer::Spawn()
 
 	// we need to do that because player can change their agent but the class won't
 	// change and it won't change arms as well
-	if ( CSLoadout()->HasAgentSet( this, GetTeamNumber() ) && !IsBotOrControllingBot() )
+	if ( CSLoadout()->HasAgentSet( this, GetTeamNumber() ) )
 	{
 		if ( GetTeamNumber() == TEAM_CT )
 			m_iClass = GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer( this, GetTeamNumber() ) )->m_iClass;
@@ -1938,6 +1980,7 @@ void CCSPlayer::CreateRagdollEntity()
 	if ( pRagdoll )
 	{
 		pRagdoll->m_hPlayer = this;
+		pRagdoll->m_hControlledPlayer = GetControlledBot();
 		pRagdoll->m_vecRagdollOrigin = GetAbsOrigin();
 		pRagdoll->m_vecRagdollVelocity = GetAbsVelocity();
 		pRagdoll->m_nModelIndex = m_nModelIndex;
@@ -6489,7 +6532,7 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 	}
 	else if ( FStrEq( pcmd, "playerradio" ) )
 	{
-		if ( args.ArgC() >= 2 )
+		if ( args.ArgC() >= 2 && g_pDeveloper->GetInt() > 0 )
 		{
 			const char* pszSound = args.Arg( 1 );
 			const char* pszCaption = (args.ArgC() > 2) ? args.Arg( 2 ) : NULL;
@@ -9531,10 +9574,28 @@ void CCSPlayer::ModifyOrAppendCriteria( AI_CriteriaSet& set )
 	int nTeamNumber = GetTeamNumber();
 	if ( CSLoadout()->HasAgentSet( this, nTeamNumber ) )
 	{
-		if ( GetTeamNumber() == TEAM_TERRORIST )
-			V_strcpy( modelName, GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer( this, TEAM_TERRORIST ) )->m_szRadioPrefix );
-		else if ( GetTeamNumber() == TEAM_CT )
-			V_strcpy( modelName, GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer( this, TEAM_CT ) )->m_szRadioPrefix );
+		const CCSAgentInfo* pAgentInfo = NULL;
+		if ( nTeamNumber == TEAM_TERRORIST )
+		{
+			pAgentInfo = GetCSAgentInfoT( CSLoadout()->GetAgentForPlayer( this, TEAM_TERRORIST ) );
+		}
+		else if ( nTeamNumber == TEAM_CT )
+		{
+			pAgentInfo = GetCSAgentInfoCT( CSLoadout()->GetAgentForPlayer( this, TEAM_CT ) );
+		}
+
+		if ( pAgentInfo && pAgentInfo->m_szRadioPrefix )
+		{
+			V_strcpy( modelName, pAgentInfo->m_szRadioPrefix );
+		}
+		else
+		{
+			// Fix up the model name for rule matching
+			V_FileBase( STRING( GetModelName() ), modelName, sizeof( modelName ) );
+			char *pEnd = V_stristr( modelName, "_var" );
+			if ( pEnd )
+				*pEnd = 0;
+		}
 	}
 	else
 	{
@@ -11859,4 +11920,3 @@ void UTIL_AwardMoneyToTeam( int iAmount, int iTeam, CBaseEntity *pIgnore )
 		pPlayer->AddAccount( iAmount );
 	}
 }
-

@@ -418,6 +418,7 @@ public:
 	void CheckTKPunishment( void );
 
 	bool	IsBotOrControllingBot();
+	bool	m_bNeedToChangeKnife;
 	bool	m_bNeedToChangeAgent;
 
 	CNetworkVar( bool, m_bNeedToChangeGloves );
