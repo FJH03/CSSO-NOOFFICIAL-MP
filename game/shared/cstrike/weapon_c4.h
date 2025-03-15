@@ -14,8 +14,6 @@
 #include "weapon_csbase.h"
 #include "utlvector.h"
 
-#define NUM_BEEPS 7
-
 #if defined( CLIENT_DLL )
 
 	#define CC4 C_C4
@@ -52,19 +50,11 @@
 
 		inline bool IsBombActive( void ) { return m_bBombTicking; }
 
-        //=============================================================================
-        // HPE_BEGIN:
-        // [tj] Accessors related to planting of the bomb
-        //=============================================================================
- 
+        // [tj] Accessors related to planting of the bomb 
         CCSPlayer*  GetPlanter() { return m_pPlanter; }
         void        SetPlanter(CCSPlayer* player) { m_pPlanter = player; }
         
         void SetPlantedAfterPickup (bool plantedAfterPickup) { m_bPlantedAfterPickup = plantedAfterPickup; }
- 
-        //=============================================================================
-        // HPE_END
-        //=============================================================================
 
 		
 	public:
@@ -73,6 +63,10 @@
 		CNetworkVar( float, m_flC4Blow );
 
 	private:
+		COutputEvent m_OnBombDefused;
+		COutputEvent m_OnBombBeginDefuse;
+		COutputEvent m_OnBombDefuseAborted;
+
 
 		void Init( CCSPlayer *pevOwner, Vector vecStart, QAngle vecAngles );
 		void C4Think();
@@ -108,20 +102,12 @@
 
 		int m_iProgressBarTime;
 		bool m_bVoiceAlertFired;
-
-        //=============================================================================
-        // HPE_BEGIN:        
-        //=============================================================================
          
         // [tj] We need to store who planted the bomb so we can track who deserves credits for the kills
         CHandle<CCSPlayer>  m_pPlanter;
 
         // [tj] We need to know if this was planted by a player who recovered the bomb
         bool m_bPlantedAfterPickup;
-         
-        //=============================================================================
-        // HPE_END
-        //=============================================================================
         
 	};
 
@@ -169,22 +155,15 @@ public:
 		virtual unsigned int PhysicsSolidMaskForEntity( void ) const;
 
 		virtual bool Holster( CBaseCombatWeapon *pSwitchingTo );
+		virtual bool Deploy();
 		virtual bool ShouldRemoveOnRoundRestart();
 
-        //=============================================================================
-        // HPE_BEGIN:
         // [tj] Simple Setter
-        //=============================================================================
-         
         void SetDroppedFromDeath(bool droppedFromDeath) { m_bDroppedFromDeath = droppedFromDeath; }
 	
 		void Think( void );
 		void ResetToLastValidPlayerHeldPosition();
 		virtual void PhysicsTouchTriggers(const Vector *pPrevAbsOrigin = NULL);
-         
-        //=============================================================================
-        // HPE_END
-        //=============================================================================
 
 private:
 		Vector m_vecLastValidPlayerHeldPosition;
@@ -206,21 +185,11 @@ public:
 
 	virtual bool IsRemoveable( void ) { return false; }
 
-private:	
-	bool m_bPlayedArmingBeeps[NUM_BEEPS];
+private:
 	bool m_bBombPlanted;
     
-    //=============================================================================
-    // HPE_BEGIN:
-    // [tj] we want to store if this bomb was dropped because the original owner was killed
-    //=============================================================================
-     
+    // [tj] we want to store if this bomb was dropped because the original owner was killed     
     bool m_bDroppedFromDeath;
-     
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
-    
 
 private:
 	

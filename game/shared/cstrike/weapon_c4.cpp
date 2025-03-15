@@ -14,6 +14,7 @@
 #include "fx_cs_shared.h"
 #include "obstacle_pushaway.h"
 #include "particle_parse.h"
+#include "util_shared.h"
 
 #if defined( CLIENT_DLL )
 	#include "c_cs_player.h"
@@ -59,16 +60,17 @@ extern ConVar mp_c4_cannot_be_defused;
 
 ConVar mp_plant_c4_anywhere( "mp_plant_c4_anywhere", "0", FCVAR_REPLICATED );
 
-#ifdef CLIENT_DLL
 
-#else
-
-
+#ifndef CLIENT_DLL
 	LINK_ENTITY_TO_CLASS( planted_c4, CPlantedC4 );
 	PRECACHE_REGISTER( planted_c4 );
 
 	BEGIN_DATADESC( CPlantedC4 )
-		DEFINE_FUNCTION( C4Think )
+		DEFINE_FUNCTION( C4Think ),
+		//Outputs
+		DEFINE_OUTPUT( m_OnBombBeginDefuse, "OnBombBeginDefuse" ),
+		DEFINE_OUTPUT( m_OnBombDefused, "OnBombDefused" ),
+		DEFINE_OUTPUT( m_OnBombDefuseAborted, "OnBombDefuseAborted" ),
 	END_DATADESC()
 	
 
@@ -94,9 +96,6 @@ END_PREDICTION_DATA()
 	CPlantedC4::CPlantedC4()
 	{
 		g_PlantedC4s.AddToTail( this );
-        //=============================================================================
-        // HPE_BEGIN:        
-        //=============================================================================
          
         // [tj] No planter initially
         m_pPlanter = NULL;
@@ -105,11 +104,6 @@ END_PREDICTION_DATA()
         m_bPlantedAfterPickup = false;
 
 		m_bVoiceAlertFired = false;
-         
-        //=============================================================================
-        // HPE_END
-        //=============================================================================
-        
 	}
 
 	CPlantedC4::~CPlantedC4()
@@ -292,24 +286,16 @@ END_PREDICTION_DATA()
 		SetModel( PLANTED_C4_MODEL );	// Change this to c4 model
 		SetSequence( 1 );	// this sequence keeps the toggle switch in the 'up' position
 
+		SetBodygroup( FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
 
 		SetCollisionBounds( Vector( 0, 0, 0 ), Vector( 8, 8, 8 ) );
 
 		SetAbsOrigin( vecStart );
 		SetAbsAngles( vecAngles );
 		SetOwnerEntity( pevOwner );
-        
-        //=============================================================================
-        // HPE_BEGIN:
+
         // [tj] Set the planter when the bomb is planted.
-        //=============================================================================
-         
         SetPlanter( pevOwner );
-         
-        //=============================================================================
-        // HPE_END
-        //=============================================================================
-        
 		
 		// Detonate in "time" seconds
 		SetThink( &CPlantedC4::C4Think );
@@ -506,14 +492,13 @@ END_PREDICTION_DATA()
 
 				return;
 			}
-
-			//if the defuse process has ended, kill the c4
-			if ( !m_pBombDefuser->IsDead() )
+			//if the defuse process has ended, kill the c4 (for safety we also check whether the Terrorists have already won the round in which case we cannot score the defuse!)
+			else if ( m_pBombDefuser->IsAlive() && ( CSGameRules()->m_iRoundWinStatus != WINNER_TER ) )
 			{
 				// set down-to-the-wire defuse fun fact
 				m_pBombDefuser->SetDefusedBombWithThisTimeRemaining( m_flC4Blow - gpGlobals->curtime );
+
                 // [dwenger] Stats update for bomb defusing
-    
                 CCS_GameStats.Event_BombDefused( m_pBombDefuser );
 
 				m_pBombDefuser->AddAccountAward( PlayerCashAward::BOMB_DEFUSED );
@@ -526,10 +511,7 @@ END_PREDICTION_DATA()
 					event->SetInt( "priority", 9 );
 					gameeventmanager->FireEvent( event );
 
-                    //=============================================================================
-                    // HPE_BEGIN
                     // [dwenger] Server-side processing for defusing bombs
-                    //=============================================================================
                     m_pBombDefuser->AwardAchievement(CSWinBombDefuse);
 
                     float   timeToDetonation = (m_flC4Blow - gpGlobals->curtime);
@@ -552,10 +534,6 @@ END_PREDICTION_DATA()
                         // Defuser kit was picked up, so set the fun fact
                         m_pBombDefuser->SetDefusedWithPickedUpKit(true);
                     }
-
-                    //=============================================================================
-                    // HPE_END
-                    //=============================================================================
 				}
 
 			
@@ -572,6 +550,15 @@ END_PREDICTION_DATA()
 
 				CSGameRules()->m_bBombDefused = true;
 				
+				if ( UTIL_IsCSSOBirthday() )
+				{
+					DispatchParticleEffect( "weapon_confetti_balloons", GetAbsOrigin(), QAngle( 0, 0, 0 ) );
+					CPASAttenuationFilter filter( this );
+					filter.UsePredictionRules();
+					EmitSound( filter, entindex(), "Weapon_PartyHorn.Single" );
+					//EmitSound( filter, entindex(), "Birthday_PartyHorn.VO" );
+					//C_BaseEntity::EmitSound(filter, SOUND_FROM_LOCAL_PLAYER, "Birthday_PartyHorn.VO");
+				}
 
 				// [menglish] Give the bomb defuser an mvp if they ended the round		 
 				bool roundWasAlreadyWon = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
@@ -579,51 +566,51 @@ END_PREDICTION_DATA()
 				// Setup MVP granting class in case round wasn't already won
 				class CPlantedC4DefusedMVP : public CCSGameRules::ICalculateEndOfRoundMVPHook_t
 				{
-					public:
- 					virtual CCSPlayer* CalculateEndOfRoundMVP() OVERRIDE
- 					{
- 						if( m_pBombDefuser->HasControlledBotThisRound() )
- 						{ 
- 							// [dkorus] if we controlled a bot this round, use standard MVP conditions
- 							return CSGameRules()->CalculateEndOfRoundMVP();
- 						}
- 
- 						bool bTerroristsAlive = false;
- 						for ( int i = 1; i <= MAX_PLAYERS; i++ )
- 						{
- 							CCSPlayer* pCheckPlayer = (CCSPlayer*)UTIL_PlayerByIndex( i );
- 							if ( !pCheckPlayer )
- 								continue;
- 							if ( pCheckPlayer->GetTeamNumber() != TEAM_TERRORIST )
- 								continue;
- 							if ( pCheckPlayer->IsAlive() )
- 							{
- 								bTerroristsAlive = true;
- 								break;
- 							}
- 						}
- 
- 						if ( bTerroristsAlive || ( m_pBombDefuser->GetNumRoundKills() && !m_pBombDefuser->m_iNumRoundTKs ) )
- 						{
- 							m_pBombDefuser->IncrementNumMVPs( CSMVP_BOMBDEFUSE );
- 							return m_pBombDefuser;
- 						}
- 
- 						if ( CCSPlayer *pDefaultMvp = CSGameRules()->CalculateEndOfRoundMVP() )
- 							return pDefaultMvp;
- 
- 						m_pBombDefuser->IncrementNumMVPs( CSMVP_BOMBDEFUSE );
- 						return m_pBombDefuser;
- 					}
- 					CHandle<CCSPlayer> m_pBombDefuser;
- 				} mvpHook;
- 				mvpHook.m_pBombDefuser = m_pBombDefuser;
- 				if ( !roundWasAlreadyWon )
- 					CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = &mvpHook;
+				public:
+					virtual CCSPlayer* CalculateEndOfRoundMVP() OVERRIDE
+					{
+						if( m_pBombDefuser->HasControlledBotThisRound() )
+						{ 
+							// [dkorus] if we controlled a bot this round, use standard MVP conditions
+							return CSGameRules()->CalculateEndOfRoundMVP();
+						}
+
+						bool bTerroristsAlive = false;
+						for ( int i = 1; i <= MAX_PLAYERS; i++ )
+						{
+							CCSPlayer* pCheckPlayer = (CCSPlayer*)UTIL_PlayerByIndex( i );
+							if ( !pCheckPlayer )
+								continue;
+							if ( pCheckPlayer->GetTeamNumber() != TEAM_TERRORIST )
+								continue;
+							if ( pCheckPlayer->IsAlive() )
+							{
+								bTerroristsAlive = true;
+								break;
+							}
+						}
+
+						if ( bTerroristsAlive || ( m_pBombDefuser->GetNumRoundKills() && !m_pBombDefuser->m_iNumRoundTKs ) )
+						{
+							m_pBombDefuser->IncrementNumMVPs( CSMVP_BOMBDEFUSE );
+							return m_pBombDefuser;
+						}
+
+						if ( CCSPlayer *pDefaultMvp = CSGameRules()->CalculateEndOfRoundMVP() )
+							return pDefaultMvp;
+
+						m_pBombDefuser->IncrementNumMVPs( CSMVP_BOMBDEFUSE );
+						return m_pBombDefuser;
+					}
+					CHandle<CCSPlayer> m_pBombDefuser;
+				} mvpHook;
+				mvpHook.m_pBombDefuser = m_pBombDefuser;
+				if ( !roundWasAlreadyWon )
+					CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = &mvpHook;
 
 				// [menglish] Give the bomb defuser an mvp if they ended the round
 				CSGameRules()->CheckWinConditions();
- 
+
 				// Reset the MVP hook
 				if ( !roundWasAlreadyWon )
 					CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = NULL;
@@ -641,10 +628,12 @@ END_PREDICTION_DATA()
 
 				m_flDefuseLength = 10;
 
+				m_OnBombDefused.FireOutput(this, m_pBombDefuser);
 				return;
 			}
 
 			//if it gets here then the previouse defuser has taken off or been killed
+			m_OnBombDefuseAborted.FireOutput(this, m_pBombDefuser);
 
 #ifndef CLIENT_DLL
 			// tell the bots someone has aborted defusing
@@ -671,10 +660,10 @@ END_PREDICTION_DATA()
 		CSGameRules()->m_bTargetBombed = true;
 		m_bBombTicking = false;
 		m_bBombDefused = false;
-		// HPE_BEGIN:
+
 		// [tj] Saving off this value so we can see if the detonation is what caused the round to end.
 		bool roundWasAlreadyWon = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
-		
+
 		// MVP hook to award the MVP to person who planted the bomb
 		class CPlantedC4ExplodedMVP : public CCSGameRules::ICalculateEndOfRoundMVPHook_t
 		{
@@ -699,54 +688,55 @@ END_PREDICTION_DATA()
 				}
 
 				if ( !pBombOwner )
-				return CSGameRules()->CalculateEndOfRoundMVP();
+					return CSGameRules()->CalculateEndOfRoundMVP();
 
-			// Person who planted the bomb gets credit for the explosion
-			CSGameRules()->ScoreBombExploded( pBombOwner );
+				// Person who planted the bomb gets credit for the explosion
+				CSGameRules()->ScoreBombExploded( pBombOwner );
 
-			if( pBombOwner->HasControlledBotThisRound() )
-			{ 
-				// [dkorus] if we controlled a bot this round, use standard MVP conditions
-				return CSGameRules()->CalculateEndOfRoundMVP();
-			}
-			else 
+				if( pBombOwner->HasControlledBotThisRound() )
+				{ 
+					// [dkorus] if we controlled a bot this round, use standard MVP conditions
+					return CSGameRules()->CalculateEndOfRoundMVP();
+				}
+				else 
 				{
 					pBombOwner->IncrementNumMVPs( CSMVP_BOMBPLANT );
 					return pBombOwner;
 				}
-            }
+			}
 			CCSPlayer *pBombOwner;
 		} mvpHook;
 		mvpHook.pBombOwner = ToCSPlayer( GetOwnerEntity() );
 
-        if ( !roundWasAlreadyWon )
- 			CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = &mvpHook;
- 
- 		bool bWin = CSGameRules()->CheckWinConditions();
- 		if ( bWin && mvpHook.pBombOwner )
- 		{
- 			mvpHook.pBombOwner->AwardAchievement( CSWinBombPlant );
- 
- 			//[tj]more specific achievement for planting the bomb after recovering it.
- 			if ( m_bPlantedAfterPickup )
- 			{
- 				mvpHook.pBombOwner->AwardAchievement( CSWinBombPlantAfterRecovery );
- 			}
- 		}
- 
- 		if ( !roundWasAlreadyWon )
- 			CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = NULL;
+		if ( !roundWasAlreadyWon )
+			CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = &mvpHook;
+
+		bool bWin = CSGameRules()->CheckWinConditions();
+		if ( bWin && mvpHook.pBombOwner )
+		{
+			mvpHook.pBombOwner->AwardAchievement( CSWinBombPlant );
+
+			//[tj]more specific achievement for planting the bomb after recovering it.
+			if ( m_bPlantedAfterPickup )
+			{
+				mvpHook.pBombOwner->AwardAchievement( CSWinBombPlantAfterRecovery );
+			}
+		}
+
+		if ( !roundWasAlreadyWon )
+			CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = NULL;
 
 		// Do the Damage
 		float flBombRadius;
- 		if ( CSGameRules()->IsPlayingGunGameTRBomb() )
- 		{
- 			flBombRadius = 300;
- 		}
- 		else
- 		{
- 			flBombRadius = 500;
- 		}
+		if ( CSGameRules()->IsPlayingGunGameTRBomb() )
+		{
+			flBombRadius = 300;
+		}
+		else
+		{
+			flBombRadius = 500;
+		}
+
 		if ( g_pMapInfo )
 			flBombRadius = g_pMapInfo->m_flBombRadius;
 
@@ -898,6 +888,8 @@ END_PREDICTION_DATA()
 
 
             player->OnStartedDefuse();
+
+			m_OnBombBeginDefuse.FireOutput(this, player);
 		}
 	}
 
@@ -974,6 +966,8 @@ CC4::~CC4()
 void CC4::Spawn()
 {
 	BaseClass::Spawn();
+
+	SetBodygroup( FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
 
 	//Don't allow players to shoot the C4 around
 	SetCollisionGroup( COLLISION_GROUP_DEBRIS );
@@ -1175,6 +1169,17 @@ void CC4::PhysicsTouchTriggers(const Vector *pPrevAbsOrigin)
 		return BaseClass::Holster( pSwitchingTo );
 	}
 
+	bool CC4::Deploy()
+	{
+		bool ret = BaseClass::Deploy();
+		if ( ret )
+		{
+			CCSPlayer* pOwner = GetPlayerOwner();
+			if ( pOwner )
+				pOwner->GetViewModel()->SetBodygroup( pOwner->GetViewModel()->FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
+		}
+		return ret;
+	}
 
 	bool CC4::ShouldRemoveOnRoundRestart()
 	{
@@ -1223,13 +1228,8 @@ void CC4::PrimaryAttack()
 			pPlayer->m_bDuckOverride = true;
 
 
-#if !defined( CLIENT_DLL )
+#if !defined( CLIENT_DLL )			
 			pPlayer->SetAttemptedBombPlace();
-
-			// init the beep flags
-			int i;
-			for( i=0;i<NUM_BEEPS;i++ )
-				m_bPlayedArmingBeeps[i] = false;
 
 			// freeze the player in place while planting
 
@@ -1253,7 +1253,7 @@ void CC4::PrimaryAttack()
 			{
 				pPlayer->Radio( "PlantingBomb", "#Cstrike_TitlesTXT_Planting_Bomb", true );
 				pPlayer->m_flC4PlantTalkTimer = gpGlobals->curtime + 10.0f;
-		}
+			}
 #endif
 
 			SendWeaponAnim( ACT_VM_PRIMARYATTACK );
@@ -1371,11 +1371,7 @@ void CC4::PrimaryAttack()
 				pC4->SetPlantedAfterPickup( m_bDroppedFromDeath );
 			}
 
-            //=============================================================================
-            // HPE_BEGIN
             // [dwenger] Stats update for bomb planting
-            //=============================================================================
-
             // Determine how elapsed time from start of round until the bomb was planted
             float   plantingTime = gpGlobals->curtime - CSGameRules()->GetRoundStartTime();
 
@@ -1383,15 +1379,11 @@ void CC4::PrimaryAttack()
             if ((plantingTime > 0.0f) && (plantingTime <= AchievementConsts::FastBombPlant_Time))
             {
                 pPlayer->AwardAchievement(CSPlantBombWithin25Seconds);
-            }
-			
+			}
+
 			pPlayer->SetBombPlacedTime( gpGlobals->curtime );
 
             CCS_GameStats.Event_BombPlanted( pPlayer );
-
-            //=============================================================================
-            // HPE_END
-            //=============================================================================
 
 			pPlayer->AddAccountAward( PlayerCashAward::BOMB_PLANTED );
 
@@ -1488,6 +1480,7 @@ void CC4::WeaponIdle()
 			SendWeaponAnim( ACT_VM_IDLE );
 	}
 }
+
 
 void CC4::PlayPlantInitSound( void )
 {

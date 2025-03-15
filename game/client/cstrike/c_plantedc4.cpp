@@ -15,6 +15,7 @@
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include <bitbuf.h>
 #include "cs_gamerules.h"
+#include "util_shared.h"
 #include "c_cs_playerresource.h"
 #include "clienteffectprecachesystem.h"
 
@@ -55,6 +56,8 @@ C_PlantedC4::C_PlantedC4()
 	m_flNextGlow = gpGlobals->curtime + 1.0;
 	m_flNextBeep = gpGlobals->curtime + 1.0;
 
+	SetBodygroup( FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
+
 	m_iPlantedAt = -1;
 }
 
@@ -92,6 +95,8 @@ void C_PlantedC4::Spawn( void )
 	BaseClass::Spawn();
 
 	AddFlag( FL_OBJECT );
+
+	SetBodygroup( FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
 
 	SetNextClientThink( CLIENT_THINK_ALWAYS );
 

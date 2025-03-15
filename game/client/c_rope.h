@@ -170,6 +170,8 @@ private:
 	void			ReceiveMessage( int classID, bf_read &msg );
 	bool			CalculateEndPointAttachment( C_BaseEntity *pEnt, int iAttachment, Vector &vPos, QAngle *pAngles );
 
+	void			UpdateHolidayLights( void );
+
 private:
 	// Track which links touched something last frame. Used to prevent wind from gusting on them.
 	CBitVec<ROPE_MAX_SEGMENTS>		m_LinksTouchingSomething;
@@ -262,6 +264,9 @@ public:
 	virtual void				ResetRenderCache( void ) = 0;
 	virtual void				AddToRenderCache( C_RopeKeyframe *pRope ) = 0;
 	virtual void				DrawRenderCache( bool bShadowDepth ) = 0;
+	virtual void				SetHolidayLightMode( bool bHoliday ) = 0;
+	virtual bool				IsHolidayLightMode( void ) = 0;
+	virtual int					GetHolidayLightStyle( void ) = 0;
 };
 
 IRopeManager *RopeManager();

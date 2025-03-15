@@ -2045,6 +2045,11 @@ void C_CSPlayer::CreateAddonModel( int i )
 		// fade out all attached models except C4
 		pEnt->SetFadeMinMax( 400, 500 );
 	}
+	else
+	{
+		pEnt->SetBodygroup( pEnt->FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
+	}
+	
 
 	// Create the addon.
 	CAddonModel *pAddon = &m_AddonModels[m_AddonModels.AddToTail()];

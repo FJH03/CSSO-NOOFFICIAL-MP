@@ -44,7 +44,9 @@ extern ConVar developer;	// developer mode
 #define LANGUAGE_FRENCH					2
 #define LANGUAGE_BRITISH				3
 
+
 const char	*UTIL_VarArgs( PRINTF_FORMAT_STRING const char *format, ... ) FMTFUNCTION( 1, 2 );
+
 
 //-----------------------------------------------------------------------------
 // Pitch + yaw
@@ -73,6 +75,7 @@ QAngle	SharedRandomAngle( const char *sharedname, float minVal, float maxVal, in
 //-----------------------------------------------------------------------------
 bool PassServerEntityFilter( const IHandleEntity *pTouch, const IHandleEntity *pPass );
 bool StandardFilterRules( IHandleEntity *pHandleEntity, int fContentsMask );
+
 
 // "weapon_"
 bool IsWeaponClassname( const char *pszClassName );
@@ -181,6 +184,17 @@ class CTraceFilterNoNPCsOrPlayer : public CTraceFilterSimple
 {
 public:
 	CTraceFilterNoNPCsOrPlayer( const IHandleEntity *passentity, int collisionGroup )
+		: CTraceFilterSimple( passentity, collisionGroup )
+	{
+	}
+
+	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask );
+};
+
+class CTraceFilterNoPlayers : public CTraceFilterSimple
+{
+public:
+	CTraceFilterNoPlayers( const IHandleEntity *passentity = NULL, int collisionGroup = COLLISION_GROUP_NONE )
 		: CTraceFilterSimple( passentity, collisionGroup )
 	{
 	}
@@ -332,6 +346,7 @@ inline void UTIL_TraceRay( const Ray_t &ray, unsigned int mask,
 	}
 }
 
+
 // Sweeps a particular entity through the world
 void UTIL_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, const Vector &vecAbsEnd, unsigned int mask, trace_t *ptr );
 void UTIL_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, const Vector &vecAbsEnd, 
@@ -479,6 +494,20 @@ inline float DistanceToRay( const Vector &pos, const Vector &rayStart, const Vec
 		Remove( this ); \
 	}
 
+//--------------------------------------------------------------------------------------------------------------
+// This would do the same thing without requiring casts all over the place. Yes, it's a template, but 
+// DECLARE_AUTO_LIST requires a CUtlVector<T> anyway. TODO ask about replacing the macros with this.
+//template<class T>
+//class AutoList {
+//public:
+//	typedef CUtlVector<T*> AutoListType;
+//	static AutoListType& All() { return m_autolist; }
+//protected:
+//	AutoList() { m_autolist.AddToTail(static_cast<T*>(this)); }
+//	virtual ~AutoList() { m_autolist.FindAndFastRemove(static_cast<T*>(this)); }
+//private:
+//	static AutoListType m_autolist;
+//};
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -730,5 +759,7 @@ bool				UTIL_IsHolidayActive( /*EHoliday*/ int eHoliday );
 // holidays overlapping, the list order will act as priority.
 const char		   *UTIL_GetActiveHolidayString();
 
+bool				UTIL_IsNewYear();
+bool				UTIL_IsCSSOBirthday();
 
 #endif // UTIL_SHARED_H

@@ -609,6 +609,12 @@ ConVar mp_starting_losses(
 	false,
 	0 );
 
+ConVar sv_disable_radar(
+	"sv_disable_radar",
+	"0",
+	FCVAR_REPLICATED,
+	"0: regular radar; 1: always disabled; 2: disabled in warmup" );
+	
 #ifndef CLIENT_DLL
 CON_COMMAND( mp_warmup_start, "Start warmup." )
 {
@@ -7506,7 +7512,7 @@ bool CCSGameRules::IsPlayingCustomGametype( void ) const
 
 bool CCSGameRules::IsPlayingClassic( void ) const
 {
-	// PiMoN: Custom gametype in CS:SO is the same as classic but with customizeable server settings
+	// PiMoN: Custom gametype in CS:SO is the same as classic but with customizable server settings
 	return ( IsPlayingCustomGametype() || g_pGameTypes->GetCurrentGameType() == CS_GameType_Classic );
 }
 

@@ -39,13 +39,13 @@ bool NPC_CheckBrushExclude( CBaseEntity *pEntity, CBaseEntity *pBrush );
 #include "tier0/memdbgon.h"
 
 ConVar r_visualizetraces( "r_visualizetraces", "0", FCVAR_CHEAT );
-ConVar developer("developer", "0", 0, "Set developer message level." ); // developer mode
+ConVar developer("developer", "0", 0, "Set developer message level" ); // developer mode
 
 const char *UTIL_VarArgs( const char *format, ... )
 {
 	va_list		argptr;
 	static char		string[1024];
-
+	
 	va_start (argptr, format);
 	Q_vsnprintf(string, sizeof(string), format,argptr);
 	va_end (argptr);
@@ -279,11 +279,13 @@ bool StandardFilterRules( IHandleEntity *pHandleEntity, int fContentsMask )
 	return true;
 }
 
+
 bool IsWeaponClassname( const char *pszClassName )
- {
- 	// Look at the name of the class to determine if this is a weapon.
- 	return ( !Q_strnicmp( "weapon_", pszClassName, 7 ) );
- }
+{
+	// Look at the name of the class to determine if this is a weapon.
+	return ( !Q_strnicmp( "weapon_", pszClassName, 7 ) );
+}
+
 
 //-----------------------------------------------------------------------------
 // Simple trace filter
@@ -364,6 +366,22 @@ bool CTraceFilterNoNPCsOrPlayer::ShouldHitEntity( IHandleEntity *pHandleEntity, 
 			return false; // CS hostages are CLASS_PLAYER_ALLY but not IsNPC()
 #endif
 		return (!pEntity->IsNPC() && !pEntity->IsPlayer());
+	}
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Trace filter that doesn't hit players
+//-----------------------------------------------------------------------------
+bool CTraceFilterNoPlayers::ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
+{
+	if ( CTraceFilterSimple::ShouldHitEntity( pHandleEntity, contentsMask ) )
+	{
+		CBaseEntity *pEntity = EntityFromEntityHandle( pHandleEntity );
+		if ( !pEntity )
+			return NULL;
+
+		return !pEntity->IsPlayer();
 	}
 	return false;
 }
@@ -1203,4 +1221,28 @@ const char* UTIL_GetActiveHolidayString()
 #else
 	return NULL;
 #endif
+}
+
+bool UTIL_IsNewYear()
+{
+	time_t timet = time( NULL );
+	struct tm *tm = localtime( &timet );
+
+	// december or january
+	if ( tm->tm_mon > 10 || tm->tm_mon < 1 )
+		return true;
+
+	return false;
+}
+
+bool UTIL_IsCSSOBirthday()
+{
+	time_t timet = time( NULL );
+	struct tm *tm = localtime( &timet );
+
+	// july 9th
+	if ( tm->tm_mon == 6 && tm->tm_mday == 9 )
+		return true;
+
+	return false;
 }
