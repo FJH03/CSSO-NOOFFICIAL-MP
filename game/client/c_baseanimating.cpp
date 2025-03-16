@@ -289,7 +289,6 @@ BEGIN_DATADESC( C_ClientRagdoll )
 
 END_DATADESC()
 
-
 BEGIN_ENT_SCRIPTDESC( C_BaseAnimating, C_BaseEntity, "Animating models client-side" )
 	DEFINE_SCRIPTFUNC_NAMED( ScriptSetPoseParameter, "SetPoseParameter", "Set the specified pose parameter to the specified value"  )
 	DEFINE_SCRIPTFUNC( IsSequenceFinished, "Ask whether the main sequence is done playing" )
@@ -698,6 +697,8 @@ C_BaseAnimating::C_BaseAnimating() :
 	m_iv_flPoseParameter( "C_BaseAnimating::m_iv_flPoseParameter" ),
 	m_iv_flEncodedController("C_BaseAnimating::m_iv_flEncodedController")
 {
+	Assert( (reinterpret_cast<uintp>(this) & 0x0F) == 0 ); // I should be aligned!
+
 	m_nLastNonSkippedFrame = 0;
 
 	m_bMaintainSequenceTransitions = true;
@@ -1490,6 +1491,7 @@ void C_BaseAnimating::ScriptSetPoseParameter( const char *szName, float fValue )
 	SetPoseParameter( pHdr, iPoseParam, fValue );
 }
 
+
 void C_BaseAnimating::GetCachedBoneMatrix( int boneIndex, matrix3x4_t &out )
 {
 	MatrixCopy( GetBone( boneIndex ), out );
@@ -1613,7 +1615,7 @@ void C_BaseAnimating::BuildTransformations( CStudioHdr *hdr, Vector *pos, Quater
 				}
 				else 
 				{
-					ConcatTransforms( GetBone( pbones[i].parent ), bonematrix, goalMX );
+					ConcatTransforms_Aligned( GetBone( pbones[i].parent ), bonematrix, goalMX );
 				}
 
 				// get jiggle properties from QC data
@@ -1634,7 +1636,7 @@ void C_BaseAnimating::BuildTransformations( CStudioHdr *hdr, Vector *pos, Quater
 			} 
 			else 
 			{
-				ConcatTransforms( GetBone( hdr->boneParent(i) ), bonematrix, GetBoneForWrite( i ) );
+				ConcatTransforms_Aligned( GetBone( hdr->boneParent(i) ), bonematrix, GetBoneForWrite( i ) );
 			}
 		}
 
@@ -1972,7 +1974,7 @@ void C_BaseAnimating::AccumulateLayers( IBoneSetup &boneSetup, Vector pos[], Qua
 //-----------------------------------------------------------------------------
 // Purpose: Do the default sequence blending rules as done in HL1
 //-----------------------------------------------------------------------------
-void C_BaseAnimating::StandardBlendingRules( CStudioHdr *hdr, Vector pos[], Quaternion q[], float currentTime, int boneMask )
+void C_BaseAnimating::StandardBlendingRules( CStudioHdr *hdr, Vector pos[], QuaternionAligned q[], float currentTime, int boneMask )
 {
 	VPROF( "C_BaseAnimating::StandardBlendingRules" );
 
@@ -2313,14 +2315,6 @@ bool C_BaseAnimating::GetSoundSpatialization( SpatializationInfo_t& info )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool C_BaseAnimating::IsViewModel() const
-{
-	return false;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 void C_BaseAnimating::UpdateOnRemove( void )
 {
 	RemoveFromClientSideAnimationList( true );
@@ -2647,7 +2641,7 @@ void C_BaseAnimating::MarkForThreadedBoneSetup()
 
 	if ( g_bDoThreadedBoneSetup && !g_bInThreadedBoneSetup && m_iMostRecentBoneSetupRequest != g_iPreviousBoneCounter )
 	{
-		if ( !IsViewModel() )
+		if ( !IsViewModelOrAttachment() )
 		{
 			// This function is protected by m_BoneSetupLock (see SetupBones)
 			if ( m_iMostRecentBoneSetupRequest != g_iPreviousBoneCounter )
@@ -3021,8 +3015,8 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 			if ( !m_pIk && hdr->numikchains() > 0 && !(m_EntClientFlags & ENTCLIENTFLAG_DONTUSEIK) )
 				m_pIk = new CIKContext;
 
-			Vector			pos[MAXSTUDIOBONES];
-			Quaternion		q[MAXSTUDIOBONES];
+			Vector				pos[MAXSTUDIOBONES];
+			QuaternionAligned	q[MAXSTUDIOBONES];
 
 			if ( m_pIk )
 			{
@@ -3069,7 +3063,7 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 			else
 			{
 				memcpy( pos, m_pos_cached, sizeof( Vector ) * hdr->numbones() );
-				memcpy( q, m_q_cached, sizeof( Quaternion ) * hdr->numbones() );
+				memcpy( q, m_q_cached, sizeof( QuaternionAligned ) * hdr->numbones() );
 
 				boneComputed.ClearAll(); // because we need to re-BuildTransformations on all our bones with a new root xform
 				boneMask = m_BoneAccessor.GetWritableBones();
@@ -3107,7 +3101,7 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 			if ( !bSkipThisFrame )
 			{
 				memcpy( m_pos_cached, pos, sizeof( Vector ) * hdr->numbones() );
-				memcpy( m_q_cached, q, sizeof( Quaternion ) * hdr->numbones() );
+				memcpy( m_q_cached, q, sizeof( QuaternionAligned ) * hdr->numbones() );
 			}
 
 		}
@@ -3216,7 +3210,7 @@ bool C_BaseAnimating::IsBoneAccessAllowed() const
 		return true;
 	}
 
-	if ( IsViewModel() )
+	if ( IsViewModelOrAttachment() )
 		return g_BoneAcessBase.bAllowBoneAccessForViewModels;
 	else
 		return g_BoneAcessBase.bAllowBoneAccessForNormalModels;
@@ -5480,7 +5474,7 @@ void C_BaseAnimating::GetSequenceLinearMotion( int iSequence, Vector *pVec )
 
 float C_BaseAnimating::GetSequenceLinearMotionAndDuration( int iSequence, Vector *pVec )
 {
- 	return ::GetSequenceLinearMotionAndDuration( GetModelPtr(), iSequence, m_flPoseParameter, pVec );
+	return ::GetSequenceLinearMotionAndDuration( GetModelPtr(), iSequence, m_flPoseParameter, pVec );
 }
 
 void C_BaseAnimating::GetBlendedLinearVelocity( Vector *pVec )
@@ -5493,13 +5487,12 @@ void C_BaseAnimating::GetBlendedLinearVelocity( Vector *pVec )
 	for (int i = m_SequenceTransitioner.m_animationQueue.Count() - 2; i >= 0; i--)
 	{
 		CAnimationLayer *blend = &m_SequenceTransitioner.m_animationQueue[i];
- 		float flWeight = blend->GetFadeout( gpGlobals->curtime );
- 		if ( flWeight == 0.0f )
- 			continue;
+		float flWeight = blend->GetFadeout( gpGlobals->curtime );
+		if ( flWeight == 0.0f )
+			continue;
 
 		flDuration = GetSequenceLinearMotionAndDuration( blend->GetSequence(), &vecDist );
 		VectorScale( vecDist, 1.0 / flDuration, tmp );
-
 		*pVec = Lerp( flWeight, *pVec, tmp );
 	}
 }
@@ -6561,7 +6554,7 @@ void C_BaseAnimating::GetToolRecordingState( KeyValues *msg )
 	state.m_nSequence = m_nSequence;
 	state.m_pBoneList = NULL;
 	msg->SetPtr( "baseanimating", &state );
-	msg->SetInt( "viewmodel", IsViewModel() ? 1 : 0 );
+	msg->SetInt( "viewmodel", IsViewModelOrAttachment() ? 1 : 0 );
 
 	if ( hdr )
 	{

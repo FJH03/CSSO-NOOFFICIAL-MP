@@ -2761,7 +2761,6 @@ void C_CSPlayer::ClientThink()
 		else
 		{
 			s_bPlayingFreezeCamSound = false;
-			CancelFreezeCamFlashlightEffect();
 		}
 	}
 

@@ -96,6 +96,7 @@ public:
 	Vector					m_vecLastFacing;
 
 	virtual bool			IsViewModel() const { return true; }
+	virtual bool			IsViewModelOrAttachment() const { return true; }
 
 	CNetworkVar( bool, m_bShouldIgnoreOffsetAndAccuracy );
 	virtual void			SetShouldIgnoreOffsetAndAccuracy( bool bIgnore ) { m_bShouldIgnoreOffsetAndAccuracy = bIgnore; }
@@ -280,6 +281,8 @@ public:
 
 	void SetViewmodel( C_BaseViewModel *pVM );
 	virtual int InternalDrawModel( int flags );
+
+	virtual bool IsViewModelOrAttachment() const { return true; }
 
 private:
 	CHandle< C_BaseViewModel > m_hViewmodel;

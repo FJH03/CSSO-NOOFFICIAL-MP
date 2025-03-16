@@ -188,7 +188,7 @@ public:
 
 	// C_BaseClientShader **p_ClientShaders;
 
-	virtual	void StandardBlendingRules( CStudioHdr *pStudioHdr, Vector pos[], Quaternion q[], float currentTime, int boneMask );
+	virtual	void StandardBlendingRules( CStudioHdr *pStudioHdr, Vector pos[], QuaternionAligned q[], float currentTime, int boneMask );
 	void UnragdollBlend( CStudioHdr *hdr, Vector pos[], Quaternion q[], float currentTime );
 
 	bool m_bMaintainSequenceTransitions; // kill-switch so entities can opt out of automatic transitions
@@ -473,7 +473,8 @@ public:
 	void							SetReceivedSequence( void );
 	virtual bool					ShouldResetSequenceOnNewModel( void );
 
-	virtual bool					IsViewModel() const;
+	virtual bool					IsViewModel() const { return false; }
+	virtual bool					IsViewModelOrAttachment() const { return false; }
 	virtual bool					ShouldFlipModel( void ) { return false; }
 	virtual void					UpdateOnRemove( void );
 
@@ -661,7 +662,7 @@ private:
 	int								m_nLastNonSkippedFrame;
 
 	Vector							m_pos_cached[MAXSTUDIOBONES];
-	Quaternion						m_q_cached[MAXSTUDIOBONES];
+	QuaternionAligned				m_q_cached[MAXSTUDIOBONES];
 
 	bool							m_bInitModelEffects;
 	bool							m_bDelayInitModelEffects;
