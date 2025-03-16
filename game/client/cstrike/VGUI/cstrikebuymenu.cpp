@@ -994,7 +994,6 @@ CCSBuyMenu::CCSBuyMenu( IViewPort* pViewPort ): Frame( NULL, PANEL_BUY )
 	SetSizeable( false );
 
 	SetProportional( true );
-	SetPaintBackgroundEnabled( false );
 
 	// initialize variables
 	m_bShowingCategory = false;

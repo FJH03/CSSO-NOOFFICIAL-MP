@@ -48,7 +48,6 @@
 #include "cs_shareddefs.h"
 #include "cs_loadout.h"
 #include "materialsystem/itexture.h"
-#include "viewpostprocess.h"
 //=============================================================================
 // HPE_BEGIN:
 // [tj] Needed to retrieve achievement text
@@ -1098,19 +1097,6 @@ bool ClientModeCSNormal::CanRecordDemo( char *errorMsg, int length ) const
 	}
 
 	return true;
-}
-
-void ClientModeCSNormal::DoPostScreenSpaceEffects( const CViewSetup *pSetup ) 
-{
-	CMatRenderContextPtr pRenderContext( materials );
-
- 	int xl, yl, dest_width, dest_height;
- 	pRenderContext->GetViewport( xl, yl, dest_width, dest_height );
-
- 	IViewPortPanel* pBuyMenu = gViewPortInterface->FindPanelByName( PANEL_BUY );
- 	IViewPortPanel* pTeamMenu = gViewPortInterface->FindPanelByName( PANEL_TEAM );
- 	if ( (pBuyMenu && pBuyMenu->IsVisible()) || (pTeamMenu && pTeamMenu->IsVisible()) )
- 		DoBlurFade( xl, yl, dest_width, dest_height );
 }
 
 //=============================================================================

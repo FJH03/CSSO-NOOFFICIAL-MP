@@ -130,7 +130,7 @@ public:
 
 	virtual void	OnColorCorrectionWeightsReset( void ) = 0;
 	
-	virtual void	DoPostScreenSpaceEffects( const CViewSetup *pSetup ) = 0;
+	virtual bool	DoPostScreenSpaceEffects( const CViewSetup *pSetup ) = 0;
 
 	virtual void	DisplayReplayMessage( const char *pLocalizeName, float flDuration, bool bUrgent,
 										  const char *pSound, bool bDlg ) = 0;

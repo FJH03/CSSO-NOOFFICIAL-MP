@@ -46,8 +46,6 @@ public:
 	virtual void SetServerName(wchar_t* name);
 	virtual wchar_t* GetMapName() { return m_pMapName; }
 	virtual void SetMapName(wchar_t* name);
-	
-	virtual void	DoPostScreenSpaceEffects( const CViewSetup *pSetup );
 
 	virtual void	UpdateColorCorrectionWeights( void );
 	virtual void	OnColorCorrectionWeightsReset( void );

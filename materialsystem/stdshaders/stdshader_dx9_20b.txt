@@ -18,7 +18,6 @@
 //customweapon_ps20b.fxc
 splinerope_vsxx.fxc
 splinerope_ps2x.fxc
-fade_blur_ps2x.fxc
 
 //AccumBuff4Sample_ps2x.fxc
 //accumbuff5sample_ps2x.fxc
