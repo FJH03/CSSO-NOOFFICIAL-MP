@@ -30,8 +30,6 @@
 #include "weapon_csbase.h"
 #include "ironsight_editor.h"
 
-#ifdef IRONSIGHT
-
 CIronSightDialog *g_pIronSightDialog = NULL;
 
 using namespace vgui;
@@ -310,4 +308,3 @@ CON_COMMAND_F( ironsight_editor, "Edit ironsights.", FCVAR_DONTRECORD )
 	g_pIronSightDialog->Repaint();
 	g_pIronSightDialog->MoveToFront();
 }
-#endif

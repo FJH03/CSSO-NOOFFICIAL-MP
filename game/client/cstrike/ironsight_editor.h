@@ -1,4 +1,4 @@
-//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
+//====== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -12,8 +12,6 @@
 
 #include "vgui_controls/Frame.h"
 #include "cs_shareddefs.h"
-
-#ifdef IRONSIGHT
 
 //-----------------------------------------------------------------------------
 // Purpose: Handles selection of IronSight mode on/off
@@ -52,6 +50,5 @@ private:
 
 	vgui::CheckButton *m_pCheckOverride;
 };
-#endif //IRONSIGHT
 
 #endif //IRONSIGHTDIALOG_H
