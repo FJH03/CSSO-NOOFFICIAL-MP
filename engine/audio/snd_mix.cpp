@@ -3905,6 +3905,24 @@ void Mix8StereoWavtype( channel_t *pChannel, portable_samplepair_t *pOutput, int
 		else
 			SW_Mix8Stereo( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
 		break;
+	case CHAR_HRTF:
+		if ( FUseHighQualityPitch( pChannel ) )
+			SW_Mix8Stereo_Interp( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
+		else
+			SW_Mix8Stereo( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
+		break;
+	case CHAR_DIRSTEREO:
+		if ( FUseHighQualityPitch( pChannel ) )
+			SW_Mix8Stereo_Interp( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
+		else
+			SW_Mix8Stereo( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
+		break;
+	case CHAR_SUBTITLED:
+		if ( FUseHighQualityPitch( pChannel ) )
+			SW_Mix8Stereo_Interp( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
+		else
+			SW_Mix8Stereo( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
+		break;
 	}
 }
 
@@ -3942,6 +3960,24 @@ void Mix16StereoWavtype( channel_t *pChannel, portable_samplepair_t *pOutput, in
 
 	default:
 	case CHAR_SPATIALSTEREO:
+		if ( FUseHighQualityPitch( pChannel ) )
+			SW_Mix16Stereo_Interp( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
+		else
+			SW_Mix16Stereo( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
+		break;
+	case CHAR_HRTF:
+		if ( FUseHighQualityPitch( pChannel ) )
+			SW_Mix16Stereo_Interp( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
+		else
+			SW_Mix16Stereo( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
+		break;
+	case CHAR_DIRSTEREO:
+		if ( FUseHighQualityPitch( pChannel ) )
+			SW_Mix16Stereo_Interp( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
+		else
+			SW_Mix16Stereo( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
+		break;
+	case CHAR_SUBTITLED:
 		if ( FUseHighQualityPitch( pChannel ) )
 			SW_Mix16Stereo_Interp( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
 		else

@@ -4277,7 +4277,7 @@ void RemapPlayerOrMusicVols(  channel_t *ch, int volumes[CCHANVOLUMES/2], bool f
 
 		float *pvol_dist;
 		
-		if ( ch->flags.bstereowav && (ch->wavtype == CHAR_OMNI || ch->wavtype == CHAR_SPATIALSTEREO || ch->wavtype == 0))
+		if ( ch->flags.bstereowav && (ch->wavtype == CHAR_OMNI || ch->wavtype == CHAR_SPATIALSTEREO || ch->wavtype == CHAR_HRTF || ch->wavtype == CHAR_DIRSTEREO || ch->wavtype == CHAR_SUBTITLED ||  ch->wavtype == 0))
 		{
 			pvol_dist = (g_AudioDevice->IsSurroundCenter() ? vol_dist5st : vol_dist4st);	
 		}
@@ -4798,6 +4798,15 @@ void S_SetChannelWavtype( channel_t *target_chan, CSfxTable *pSfx )
 
 	if ( TestSoundChar( pSfx->getname(), CHAR_SPATIALSTEREO ))
 		target_chan->wavtype = CHAR_SPATIALSTEREO;
+
+	if ( TestSoundChar( pSfx->getname(), CHAR_HRTF ))
+		target_chan->wavtype = CHAR_HRTF;
+
+	if ( TestSoundChar( pSfx->getname(), CHAR_DIRSTEREO ))
+		target_chan->wavtype = CHAR_DIRSTEREO;
+
+	if ( TestSoundChar( pSfx->getname(), CHAR_SUBTITLED ))
+		target_chan->wavtype = CHAR_SUBTITLED;
 
 	if ( TestSoundChar( pSfx->getname(), CHAR_RADIO ) )
 		target_chan->wavtype = CHAR_RADIO;
