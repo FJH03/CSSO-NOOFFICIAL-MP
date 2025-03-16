@@ -2071,7 +2071,7 @@ const char *GameTypes::GetMapNameID( const char *mapName )
 	Map *pMap = GetMap_Internal( mapName );
 	if ( !pMap )
 	{
-		return NULL;
+		return mapName;
 	}
 
 	return pMap->m_NameID;

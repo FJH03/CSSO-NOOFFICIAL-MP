@@ -147,11 +147,7 @@ void CLoadingDialog::SetExtendedServerInfo( KeyValues* pExtendedServerInfo )
 	if ( szMapName && *szMapName )
 	{
 		m_pMapNameLabel->SetVisible( true );
-		const char* pszUIMapName = g_pGameTypes->GetMapNameID( szMapName );
- 		if ( pszUIMapName )
- 			m_pMapNameLabel->SetText( pszUIMapName );
- 		else
- 			m_pMapNameLabel->SetText( szMapName );
+		m_pMapNameLabel->SetText( g_pGameTypes->GetMapNameID( szMapName ) );
 
 		KeyValues* kvMapData = new KeyValues( szMapName );
 		char tempfile[MAX_PATH];
