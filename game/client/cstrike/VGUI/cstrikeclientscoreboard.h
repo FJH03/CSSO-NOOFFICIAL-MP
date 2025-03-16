@@ -20,6 +20,34 @@
 
 const int cMaxScoreLines = 32;  // This value must be > 2
 
+enum PlayerListIcons_t
+{
+    // NOTE: these go in order with UpdateImageList, starting from index 1!
+    DEFUSER_ICON = 1,
+    BOMB_ICON,
+    DEAD_ICON,
+    CT_AVATAR,
+    T_AVATAR
+};
+
+class CCSClientScoreBoardLossBonusPanel: public vgui::Panel
+{
+    DECLARE_CLASS_SIMPLE( CCSClientScoreBoardLossBonusPanel, vgui::Panel );
+
+public:
+    CCSClientScoreBoardLossBonusPanel( vgui::Panel* pParent, const char* pszPanelName );
+
+    virtual void Paint();
+
+    void SetFilledSegments( int iCount );
+    
+private:
+    int m_iSegmentsFilled;
+    CPanelAnimationVar( int, segment_count, "segment_count", "0" );
+    CPanelAnimationVarAliasType( int, segment_gap, "segment_gap", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, segment_wide, "segment_wide", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, segment_tall, "segment_tall", "0", "proportional_height" );
+};
 
 //-----------------------------------------------------------------------------
 // Purpose: Game ScoreBoard
@@ -31,15 +59,13 @@ private:
 
 public:
     CCSClientScoreBoardDialog( IViewPort *pViewPort );
-    ~CCSClientScoreBoardDialog();
 
     virtual void Update();
+    virtual void Reset();
 
     // vgui overrides for rounded corner background
-    void UpdateMvpElements();
     virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
-
-	virtual void ResetFromGameOverState();
+    virtual void PostApplySchemeSettings( vgui::IScheme* pScheme );
 
     // [tj] Hook in here to hide other UI
     virtual void ShowPanel( bool state ); 
@@ -47,109 +73,70 @@ public:
     // [tj] So we can do processing every frame
     virtual void OnThink();
 
+    virtual void SetMouseInputEnabled( bool state );
+
 protected:
+    virtual void FireGameEvent( IGameEvent* event );
+    virtual bool GetPlayerScoreInfo( int playerIndex, KeyValues* outPlayerInfo );
+    virtual void InitScoreboardSections();
+    virtual int FindItemIDForPlayerIndex( int playerIndex );
+    virtual void UpdateTeamInfo();
+    virtual void UpdatePlayerInfo();
+    virtual void UpdateHLTVList();
+    virtual void UpdatePlayerAvatar( int playerIndex, KeyValues* kv );
+    virtual void UpdateImageList();
 
-	struct PlayerScoreInfo
-	{
-		wchar_t			wszName[MAX_DECORATED_PLAYER_NAME_LENGTH];
-		const char*		szClanTag;
-		int				playerIndex;
-		int				frags;
-		int				assists;
-		int				deaths;
-		int				ping;
-		const char*		szStatus;
-		bool			bStatusPlayerColor;
-	};
-
-	struct PlayerDisplay
-	{
-		vgui::Label*			pNameLabel;
-		vgui::Label*			pClanLabel;
-		vgui::Label*			pScoreLabel;
-		vgui::Label*			pAssistsLabel;
-		vgui::Label*			pDeathsLabel;
-		vgui::Label*			pPingLabel;
-		vgui::Label*			pMVPCountLabel;
-		CAvatarImagePanel*		pAvatar;
-		vgui::ImagePanel*		pStatusImage;
-		vgui::ImagePanel*		pMVPImage;
-		vgui::ImagePanel*		pSelect;
-	};
-
-	struct TeamDisplayInfo
-	{
-		Color					playerDataColor;
-		Color					playerClanColor;
-		PlayerDisplay			playerDisplay[cMaxScoreLines];
-		CUtlVector<PlayerScoreInfo*>  playerScores;		// For sorting team members outside of the listboxes
-		int						scoreAreaInnerHeight;
-		int						scoreAreaLineHeight;
-		int						scoreAreaLinePreferredLeading;
-		int						scoreAreaStartY;
-		int						scoreAreaMinX;
-		int						scoreAreaMaxX;
-		int						maxPlayersVisible;
-	};
-
-	bool GetPlayerScoreInfo( int playerIndex, PlayerScoreInfo& playerScoreInfo );
-	void UpdateTeamPlayerDisplay( TeamDisplayInfo& teamDisplay );
-	void SetupTeamDisplay( TeamDisplayInfo& teamDisplay, const char* szTeamPrefix );
-
-	void UpdateTeamInfo();
-	void UpdatePlayerList();
-
-	bool ForceLocalPlayerVisible( TeamDisplayInfo& teamDisplay );
-	void UpdateSpectatorList();
-	void UpdateHLTVList( void );
-	void UpdateMatchEndText();
-
-	bool ShouldShowAsSpectator( int iPlayerIndex );
-	void FireGameEvent( IGameEvent *event );
-
-	void AdjustFontToFit( const char *pString, vgui::Label *pLabel );
-	void AdjustFontToFit( const wchar_t *pString, vgui::Label *pLabel );
-
-	static int PlayerSortFunction( PlayerScoreInfo* const* pPS1, PlayerScoreInfo* const* pPS2 );
+    // sorts players within a section
+    static bool CSStaticPlayerSortFunc( vgui::SectionedListPanel* list, int itemID1, int itemID2 );
 
 private:
-    vgui::HFont					m_listItemFont;
-    vgui::HFont                 m_listItemFontSmaller;
-    vgui::HFont                 m_listItemFontSmallest;
-    vgui::HFont                 m_MVPFont;
+	vgui::Label* m_pServerLabel;
+	vgui::Label* m_pRoundTimeLabel;
+	vgui::VectorImagePanel* m_pGameModeIcon;
+    vgui::SectionedListPanel* m_pCTPlayerList;
+    vgui::SectionedListPanel* m_pTPlayerList;
+    vgui::Label* m_pTeamCTScoreFirstHalf;
+    vgui::Label* m_pTeamCTScoreSecondHalf;
+    vgui::Label* m_pTeamCTScoreOvertime;
+    vgui::Label* m_pFirstHalfLabel;
+    vgui::Label* m_pSecondHalfLabel;
+    vgui::Label* m_pOvertimeLabel;
+    vgui::Label* m_pTeamTScoreFirstHalf;
+    vgui::Label* m_pTeamTScoreSecondHalf;
+    vgui::Label* m_pTeamTScoreOvertime;
+    CCSClientScoreBoardLossBonusPanel* m_pLossBonusCT;
+    CCSClientScoreBoardLossBonusPanel* m_pLossBonusT;
 
-    int			m_iImageDead;
-    int			m_iImageMVP; // Not used in the section list explicitly.  Drawn over it
-    int			m_iImageDominated;
-    int			m_iImageNemesis;
-    int			m_iImageBomb;
-    int			m_iImageFriend;
-    int         m_iImageNemesisDead;
-    int         m_iImageDominationDead;
+	int     m_iRoundTime;
+	int     m_iGameType;
+	int     m_iGameMode;
+    wchar_t m_pMapName[256];
+    wchar_t m_pServerName[256];
+	bool    m_bForceShow;
+    int     m_iOriginalTall;
+    int     m_iOriginalCTPlayerListTall;
+    int     m_iOriginalTPlayerListTall;
+    bool    m_bHasHalfTime;
+    bool    m_bHasOvertime;
+    bool    m_bHasLossBonus;
 
-	Color			m_DeadPlayerDataColor;
-	Color			m_PlayerDataBgColor;
-	Color			m_DeadPlayerClanColor;
-
-	vgui::Label*	m_pWinConditionLabel;
-	vgui::Label*	m_pClockLabel;
-	vgui::Label*	m_pLabelMapName;
-	vgui::Label*	m_pServerLabel;
-
-    bool			m_gameOver;
-
-    wchar_t			m_pMapName[256];
-    wchar_t			m_pServerName[256];
-    wchar_t			m_pStatsEnabled[256];
-    wchar_t			m_pStatsDisabled[256];
-
-    int m_LocalPlayerItemID;
-	int m_MVPXOffset;
-
-	TeamDisplayInfo	m_teamDisplayT;
-	TeamDisplayInfo	m_teamDisplayCT;
-
-	bool m_bForceShow;
+    CPanelAnimationVarAliasType( int, ping_column_wide, "ping_column_wide", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, avatar_column_wide, "avatar_column_wide", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, avatar_name_gap_wide, "avatar_name_gap_wide", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, name_column_wide, "name_column_wide", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, money_column_wide, "money_column_wide", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, kills_column_wide, "kills_column_wide", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, assists_column_wide, "assists_column_wide", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, deaths_column_wide, "deaths_column_wide", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, mvps_column_wide, "mvps_column_wide", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, score_column_wide, "score_column_wide", "0", "proportional_width" );
+    CPanelAnimationVarAliasType( int, player_status_icon_tall, "player_status_icon_tall", "0", "proportional_height" );
+    CPanelAnimationVar( Color, player_bgcolor, "player_bgcolor", "White" );
+    CPanelAnimationVar( Color, dead_player_bgcolor, "dead_player_bgcolor", "White" );
+    CPanelAnimationVar( Color, localplayer_ct_bgcolor, "localplayer_ct_bgcolor", "White" );
+    CPanelAnimationVar( Color, localplayer_t_bgcolor, "localplayer_t_bgcolor", "White" );
+    CPanelAnimationVar( Color, column_bgcolor1, "column_bgcolor1", "White" );
+    CPanelAnimationVar( Color, column_bgcolor2, "column_bgcolor2", "White" );
 };
 
 

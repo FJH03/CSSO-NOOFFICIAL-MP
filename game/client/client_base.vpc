@@ -1054,6 +1054,7 @@ $Project
 		$File	"$SRCDIR\public\tier1\strtools.h"
 		$File	"$SRCDIR\public\studio.h"
 		$File	"$SRCDIR\public\surfinfo.h"
+		$File	"$SRCDIR\public\vgui_controls\SVGImage.h"
 		$File	"$SRCDIR\public\vgui_controls\TextEntry.h"
 		$File	"$SRCDIR\public\vgui_controls\TextImage.h"
 		$File	"$SRCDIR\public\texture_group_names.h"

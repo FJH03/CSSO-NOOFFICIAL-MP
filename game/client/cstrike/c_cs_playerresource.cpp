@@ -38,6 +38,7 @@ IMPLEMENT_CLIENTCLASS_DT(C_CS_PlayerResource, DT_CSPlayerResource, CCSPlayerReso
 	RecvPropArray3( RECVINFO_ARRAY(m_bHostageSpotted), RecvPropInt( RECVINFO(m_bHostageSpotted[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_iMVPs), RecvPropInt( RECVINFO(m_iMVPs[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_bHasDefuser), RecvPropInt( RECVINFO(m_bHasDefuser[0]))),
+	RecvPropArray3( RECVINFO_ARRAY(m_iAccount), RecvPropInt( RECVINFO(m_iAccount[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_bControllingBot), RecvPropInt( RECVINFO(m_bControllingBot[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_iControlledPlayer), RecvPropInt( RECVINFO(m_iControlledPlayer[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_iControlledByPlayer), RecvPropInt( RECVINFO(m_iControlledByPlayer[0]))),
@@ -59,6 +60,7 @@ C_CS_PlayerResource::C_CS_PlayerResource()
 	m_Colors[TEAM_CT] = pClientScheme->GetColor( "TeamCT", COLOR_RED );
 	memset( m_iMVPs, 0, sizeof( m_iMVPs ) );
 	memset( m_bHasDefuser, 0, sizeof( m_bHasDefuser ) );
+	memset( m_iAccount, 0, sizeof( m_iAccount ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -335,3 +337,11 @@ bool C_CS_PlayerResource::HasDefuser( int iIndex )
 	return m_bHasDefuser[iIndex];
 }
 
+//-----------------------------------------------------------------------------
+int C_CS_PlayerResource::GetAccount( int iIndex )
+{
+	if ( !IsConnected( iIndex ) )
+		return false;
+
+	return m_iAccount[iIndex];
+}

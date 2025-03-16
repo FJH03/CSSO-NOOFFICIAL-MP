@@ -500,7 +500,6 @@ PropertySheet::PropertySheet(
 	m_pTabKV = NULL;
 	m_iTabHeight = 0;
     m_iTabHeightSmall = 0;
-	m_bContextButton = false;
 
 	if ( m_bDraggableTabs )
 	{
@@ -1123,20 +1122,20 @@ void PropertySheet::EnablePage(const char *title)
 //-----------------------------------------------------------------------------
 bool PropertySheet::IsPageEnabled(const char *title) 
 {
- 	if (!_showTabs)
- 		return true;
- 
- 	for (int i = 0; i < m_PageTabs.Count(); i++)
- 	{
- 		char tmp[50];
- 		m_PageTabs[i]->GetText(tmp,50);
- 		if (!strnicmp(title,tmp,strlen(tmp)))
- 		{	
- 			return m_PageTabs[i]->IsEnabled();
- 		}
- 	}
- 
- 	return false;
+	if (!_showTabs)
+		return true;
+
+	for (int i = 0; i < m_PageTabs.Count(); i++)
+	{
+		char tmp[50];
+		m_PageTabs[i]->GetText(tmp,50);
+		if (!strnicmp(title,tmp,strlen(tmp)))
+		{	
+			return m_PageTabs[i]->IsEnabled();
+		}
+	}
+
+	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -1155,10 +1154,10 @@ void PropertySheet::SetPageEnabled(const char *title, bool state)
 				m_PageTabs[i]->SetEnabled(state);
 			}
 		}
-		else
-		{
-			_combo->SetItemEnabled(title,state);
-		}
+	}
+	else
+	{
+		_combo->SetItemEnabled(title,state);
 	}
 }
 

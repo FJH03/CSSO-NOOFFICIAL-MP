@@ -415,6 +415,9 @@ public:
 	CNetworkVar( bool, m_bBombPlanted );
 	CNetworkVar( int, m_iRoundWinStatus );
 
+	CNetworkVar( int, m_iNumConsecutiveCTLoses );			//SupraFiend: the number of rounds the CTs have lost in a row.
+ 	CNetworkVar( int, m_iNumConsecutiveTerroristLoses );	//SupraFiend: the number of rounds the Terrorists have lost in a row.
+
 	int GetNumHostagesRemaining( void ) { return m_iHostagesRemaining; }
 
 	virtual CBaseCombatWeapon *GetNextBestWeapon( CBaseCombatCharacter *pPlayer, CBaseCombatWeapon *pCurrentWeapon );
@@ -710,9 +713,6 @@ public:
 		virtual CCSPlayer* CalculateEndOfRoundMVP() = 0;
 	};
 	ICalculateEndOfRoundMVPHook_t *m_pfnCalculateEndOfRoundMVPHook;
-
-	int m_iNumConsecutiveCTLoses;		//SupraFiend: the number of rounds the CTs have lost in a row.
-	int m_iNumConsecutiveTerroristLoses;//SupraFiend: the number of rounds the Terrorists have lost in a row.
 
 	int m_iSpawnPointCount_Terrorist;		// Number of Terrorist spawn points
 	int m_iSpawnPointCount_CT;				// Number of CT spawn points

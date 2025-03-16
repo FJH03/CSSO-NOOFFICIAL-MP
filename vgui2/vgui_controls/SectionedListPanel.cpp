@@ -15,6 +15,8 @@
 #include <KeyValues.h>
 #include <vgui/MouseCode.h>
 
+#include <VGuiMatSurface/IMatSystemSurface.h>
+
 #include <vgui_controls/SectionedListPanel.h>
 #include <vgui_controls/Button.h>
 #include <vgui_controls/Controls.h>
@@ -219,6 +221,7 @@ public:
 		m_pListPanel = parent;
 		m_iID = itemID;
 		m_pData = NULL;
+		m_HeaderImage = NULL;
 		Clear();
 		m_nHorizFillInset = 0;
 	}
@@ -330,6 +333,22 @@ public:
 				}}
 			}
 
+			// set the header first if it is specified
+			int imageIndex = m_pData->GetInt( SECTIONED_LIST_HEADER_IMAGE );
+			if ( imageIndex > 0 && m_pListPanel->m_pImageList->IsValidIndex( imageIndex ) )
+			{
+				m_HeaderImage = m_pListPanel->m_pImageList->GetImage( imageIndex );
+
+				int iWide, iTall;
+				m_HeaderImage->GetSize( iWide, iTall );
+				m_HeaderImage->SetPos( m_pListPanel->item_header_xpos + (m_pListPanel->item_header_wide / 2) - (iWide / 2), 
+									   m_pListPanel->item_header_ypos + (m_pListPanel->item_header_tall / 2) - (iTall / 2) );
+			}
+			else
+			{
+				m_HeaderImage = NULL;
+			}
+
 			// set the text for each column
 			int xpos = 0;
 			for (int i = 0; i < colCount; i++)
@@ -439,26 +458,22 @@ public:
 					wide = imageWide;
 				}
 
-				if (i == 0 && !(columnFlags & SectionedListPanel::COLUMN_IMAGE))
+				if (columnFlags & SectionedListPanel::COLUMN_IMAGE)
 				{
-					// first column has an extra indent
-					SetImageBounds(i, xpos + SectionedListPanel::COLUMN_DATA_INDENT, wide - (SectionedListPanel::COLUMN_DATA_INDENT + SectionedListPanel::COLUMN_DATA_GAP));
+					SetImageBounds(i, xpos, wide);
+				}
+				else if (columnFlags & SectionedListPanel::COLUMN_CENTER)
+				{
+					int offSet = (wide / 2) - (imageWide / 2);
+					SetImageBounds(i, xpos + offSet, wide - offSet - SectionedListPanel::COLUMN_DATA_GAP);
+				}
+				else if (columnFlags & SectionedListPanel::COLUMN_RIGHT)
+				{
+					SetImageBounds(i, xpos + wide - imageWide, wide - SectionedListPanel::COLUMN_DATA_GAP);
 				}
 				else
 				{
-					if (columnFlags & SectionedListPanel::COLUMN_CENTER)
-					{
-						int offSet = (wide / 2) - (imageWide / 2);
-						SetImageBounds(i, xpos + offSet, wide - offSet - SectionedListPanel::COLUMN_DATA_GAP);
-					}
-					else if (columnFlags & SectionedListPanel::COLUMN_RIGHT)
-					{
-						SetImageBounds(i, xpos + wide - imageWide, wide - SectionedListPanel::COLUMN_DATA_GAP);
-					}
-					else
-					{
-						SetImageBounds(i, xpos, wide - SectionedListPanel::COLUMN_DATA_GAP);
-					}
+					SetImageBounds(i, xpos, wide - SectionedListPanel::COLUMN_DATA_GAP);
 				}
 				xpos += wide;
 			}
@@ -478,9 +493,7 @@ public:
 
 		m_FgColor2 = GetSchemeColor("SectionedListPanel.TextColor", pScheme);
 
-		m_BgColor = GetSchemeColor("SectionedListPanel.BgColor", GetBgColor(), pScheme);
 		m_SelectionBG2Color = GetSchemeColor("SectionedListPanel.OutOfFocusSelectedBgColor", pScheme);
-
 
 		HFont hFont = m_pListPanel->GetRowFont();
 		if ( hFont != INVALID_FONT )
@@ -502,7 +515,24 @@ public:
 
 	virtual void PaintBackground()
 	{
-		int wide, tall;
+		int wide = 0, tall = 0;
+
+		// draw column backgrounds first
+		if ( GetBgColor()[3] > 0 )
+		{
+			int colCount = m_pListPanel->GetColumnCountBySection( m_iSectionID );
+			int xpos = 0;
+			for ( int i = 0; i < colCount; i++ )
+			{
+				wide = m_pListPanel->GetColumnWidthBySection( m_iSectionID, i );
+
+				surface()->DrawSetColor( m_pListPanel->GetColumnBgColorBySection( m_iSectionID, i ) );
+				surface()->DrawFilledRect( xpos, 0, xpos + wide, GetTall() );
+
+				xpos += wide;
+			}
+		}
+
 		GetSize(wide, tall);
 
 		if (IsSelected() && !m_pListPanel->IsInEditMode())
@@ -528,6 +558,12 @@ public:
 	virtual void Paint()
 	{
 		BaseClass::Paint();
+
+		if ( m_HeaderImage )
+		{
+			m_HeaderImage->SetColor( GetFgColor() );
+			m_HeaderImage->Paint();
+		}
 
 		if ( !m_bShowColumns )
 			return;
@@ -744,13 +780,13 @@ private:
 	int m_iSectionID;
 	KeyValues *m_pData;
 	Color m_FgColor2;
-	Color m_BgColor;
 	Color m_ArmedFgColor1;
 	Color m_ArmedFgColor2;
 	Color m_OutOfFocusSelectedTextColor;
 	Color m_ArmedBgColor;
 	Color m_SelectionBG2Color;
 	CUtlVector<vgui::TextImage *> m_TextImages;
+	IImage* m_HeaderImage;
 
 	bool m_bSelected;
 	bool m_bOverrideColors;
@@ -908,9 +944,8 @@ void SectionedListPanel::PerformLayout()
 //-----------------------------------------------------------------------------
 void SectionedListPanel::LayoutPanels(int &contentTall)
 {
-	int tall = GetSectionTall();
-	int x = 5, wide = GetWide() - 10;
-	int y = 5;
+	int tall = GetSectionTall(), wide = GetWide();
+	int x = 0, y = 0;
 	
 	if (m_pScrollBar->IsVisible())
 	{
@@ -993,6 +1028,9 @@ void SectionedListPanel::LayoutPanels(int &contentTall)
 
 				y += m_iLineSpacing + m_iLineGap;
 			}
+
+			// PiMoN: remove the last m_iLineGap for more precise results
+			y -= m_iLineGap;
 		}
 
 		// Add space, if needed to fulfill minimum requested content height
@@ -1105,7 +1143,10 @@ HFont SectionedListPanel::GetRowFont( void ) const
 //-----------------------------------------------------------------------------
 void SectionedListPanel::ApplySettings(KeyValues *inResourceData)
 {
-	BaseClass::ApplySettings(inResourceData);
+	BaseClass::ApplySettings( inResourceData );
+
+	// Override base resolution first
+	g_pMatSystemSurface->OverrideProportionalBase( m_iBaseResolutionOverride[0], m_iBaseResolutionOverride[1] );
 	m_iLineSpacing = inResourceData->GetInt("linespacing", 0);
 	if (!m_iLineSpacing)
 	{
@@ -1127,6 +1168,17 @@ void SectionedListPanel::ApplySettings(KeyValues *inResourceData)
 		m_iSectionGap = scheme()->GetProportionalScaledValueEx(GetScheme(), m_iSectionGap);
 		m_iLineGap = scheme()->GetProportionalScaledValueEx( GetScheme(), m_iLineGap );
 	}
+
+	// font settings
+	const char* overrideFont = inResourceData->GetString( "rowfont", "" );
+	IScheme* pScheme = scheme()->GetIScheme( GetScheme() );
+	if ( *overrideFont )
+	{
+		SetRowFont( pScheme->GetFont( overrideFont, IsProportional() ) );
+	}
+
+	// Restore original proportional base so other panels are not affected
+	g_pMatSystemSurface->RestoreProportionalBase();
 }
 
 //-----------------------------------------------------------------------------
@@ -1537,6 +1589,30 @@ void SectionedListPanel::SetColumnWidthBySection(int sectionID, const char *colu
 
 	// make sure the header for this section reloads with the new width
 	section.m_pHeader->InvalidateLayout();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void SectionedListPanel::SetColumnBgColor(int sectionID, const char *columnName, Color clr)
+{
+	int index = FindSectionIndexByID(sectionID);
+	if (index < 0)
+		return;
+	section_t &section = m_Sections[index];
+
+	// find the specified column
+	int columnIndex;
+	for (columnIndex = 0; columnIndex < section.m_Columns.Count(); columnIndex++)
+	{
+		if (!stricmp(section.m_Columns[columnIndex].m_szColumnName, columnName))
+			break;
+	}
+	if (!section.m_Columns.IsValidIndex(columnIndex))
+		return;
+
+	column_t &column = section.m_Columns[columnIndex];
+	column.m_bgColor = clr;
 }
 
 //=============================================================================
@@ -2226,6 +2302,24 @@ HFont SectionedListPanel::GetColumnFallbackFontBySection( int sectionID, int col
 		return INVALID_FONT;
 
 	return m_Sections[index].m_Columns[columnIndex].m_hFallbackFont;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns background color to use for text image for this column
+// Input  : sectionID - 
+//			columnIndex - 
+// Output : virtual Color
+//-----------------------------------------------------------------------------
+Color SectionedListPanel::GetColumnBgColorBySection( int sectionID, int columnIndex )
+{
+	int index = FindSectionIndexByID(sectionID);
+	if (index < 0)
+		return Color();
+
+	if (columnIndex >= m_Sections[index].m_Columns.Size())
+		return Color();
+
+	return m_Sections[index].m_Columns[columnIndex].m_bgColor;
 }
 
 //-----------------------------------------------------------------------------

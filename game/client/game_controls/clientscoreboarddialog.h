@@ -79,6 +79,7 @@ protected:
 	virtual void AddHeader(); // add the start header of the scoreboard
 	virtual void AddSection(int teamType, int teamNumber); // add a new section header for a team
 	virtual int GetAdditionalHeight() { return 0; }
+	virtual int FindItemIDForPlayerIndex( int playerIndex );
 
 	// sorts players within a section
 	static bool StaticPlayerSortFunc(vgui::SectionedListPanel *list, int itemID1, int itemID2);
@@ -86,9 +87,6 @@ protected:
 	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
 
 	virtual void PostApplySchemeSettings( vgui::IScheme *pScheme );
-
-	// finds the player in the scoreboard
-	int FindItemIDForPlayerIndex(int playerIndex);
 
 	int m_iNumTeams;
 
@@ -114,8 +112,9 @@ protected:
 	CPanelAnimationVarAliasType( int, m_iDeathWidth, "death_width", "35", "proportional_int" );
 	CPanelAnimationVarAliasType( int, m_iPingWidth, "ping_width", "23", "proportional_int" );
 
+	int m_iPlayerIndexSymbol;
+
 private:
-	int			m_iPlayerIndexSymbol;
 	int			m_iDesiredHeight;
 	IViewPort	*m_pViewPort;
 	ButtonCode_t m_nCloseKey;

@@ -36,6 +36,7 @@ IMPLEMENT_SERVERCLASS_ST(CCSPlayerResource, DT_CSPlayerResource)
 	SendPropArray3( SENDINFO_ARRAY3(m_bHostageSpotted), SendPropInt( SENDINFO_ARRAY(m_bHostageSpotted), 1, SPROP_UNSIGNED ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_iMVPs), SendPropInt( SENDINFO_ARRAY(m_iMVPs), COORD_INTEGER_BITS+1, SPROP_UNSIGNED ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_bHasDefuser), SendPropInt( SENDINFO_ARRAY(m_bHasDefuser), 1, SPROP_UNSIGNED ) ),
+	SendPropArray3( SENDINFO_ARRAY3(m_iAccount), SendPropInt( SENDINFO_ARRAY(m_iAccount), COORD_INTEGER_BITS+1, SPROP_UNSIGNED ) ),
 
 	SendPropArray3( SENDINFO_ARRAY3(m_bControllingBot), SendPropInt( SENDINFO_ARRAY(m_bControllingBot), 1, SPROP_UNSIGNED ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_iControlledPlayer), SendPropInt( SENDINFO_ARRAY(m_iControlledPlayer), 8, SPROP_UNSIGNED ) ),
@@ -161,6 +162,8 @@ void CCSPlayerResource::UpdatePlayerData( void )
 			m_iMVPs.Set(i, pPlayer->GetNumMVPs());
 
 			m_bHasDefuser.Set(i, pPlayer->HasDefuser());
+
+			m_iAccount.Set( i, pPlayer->GetAccountBalance() );
 
 		}
 		else
@@ -377,6 +380,7 @@ void CCSPlayerResource::Spawn( void )
 		m_szClan.Set( i, MAKE_STRING( "" ) );
 		m_iMVPs.Set( i, 0 );
 		m_bHasDefuser.Set(i, false);
+		m_iAccount.Set( i, 0 );
 	}
 
 	BaseClass::Spawn();

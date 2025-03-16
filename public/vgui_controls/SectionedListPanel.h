@@ -19,6 +19,8 @@
 #include <vgui_controls/PHandle.h>
 #include <vgui_controls/Label.h>
 
+#define SECTIONED_LIST_HEADER_IMAGE "!header"
+
 namespace vgui
 {
 
@@ -119,6 +121,7 @@ public:
 	virtual int GetColumnFlagsBySection(int sectionID, int columnIndex);
 	virtual int GetColumnWidthBySection(int sectionID, int columnIndex);
 	virtual HFont GetColumnFallbackFontBySection( int sectionID, int columnIndex );
+	virtual Color GetColumnBgColorBySection( int sectionID, int columnIndex );
 
 	// returns the id of the currently selected item, -1 if nothing is selected
 	virtual int GetSelectedItem();
@@ -213,6 +216,7 @@ public:
 	ScrollBar *GetScrollBar( void ) { return m_pScrollBar; }
 
 	void SetColumnWidthBySection(int sectionID, const char *columnName, int iWidth);
+	void SetColumnBgColor(int sectionID, const char *columnName, Color clr);
 
 protected:
 	virtual void PerformLayout();
@@ -244,6 +248,11 @@ public:
 
 	virtual void SetSectionDrawDividerBar( int sectionID, bool bDraw );
 
+	CPanelAnimationVarAliasType( int, item_header_xpos, "item_header_xpos", "0", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, item_header_ypos, "item_header_ypos", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, item_header_wide, "item_header_wide", "0", "proportional_width" );
+	CPanelAnimationVarAliasType( int, item_header_tall, "item_header_tall", "0", "proportional_height" );
+
 private:
 	MESSAGE_FUNC( OnSliderMoved, "ScrollBarSliderMoved" );
 
@@ -272,6 +281,7 @@ private:
 		int m_iColumnFlags;
 		int m_iWidth;
 		HFont m_hFallbackFont;
+		Color m_bgColor;
 	};
 	struct section_t
 	{
@@ -297,7 +307,8 @@ private:
 	int m_iLineSpacing;	// row height
 	int m_iLineGap;		// gap between rows
 	int m_iSectionGap;
-
+	int m_iHeaderSize[2];
+	
 	int FindSectionIndexByID(int sectionID);
     void ReSortList();
 

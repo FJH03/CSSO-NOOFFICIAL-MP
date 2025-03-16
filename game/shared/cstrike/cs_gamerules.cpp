@@ -228,6 +228,8 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropBool( RECVINFO( m_bBombDropped ) ),
 		RecvPropBool( RECVINFO( m_bBombPlanted ) ),
 		RecvPropInt( RECVINFO( m_iRoundWinStatus ) ),
+		RecvPropInt( RECVINFO( m_iNumConsecutiveCTLoses ) ),
+ 		RecvPropInt( RECVINFO( m_iNumConsecutiveTerroristLoses ) ),
 		RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponOrderCT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponOrderCT[0] ) ) ),
 		RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponOrderT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponOrderT[0] ) ) ),
 		RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderCT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponKillUpgradeOrderCT[0] ) ) ),
@@ -266,6 +268,8 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropBool( SENDINFO( m_bBombDropped ) ),
 		SendPropBool( SENDINFO( m_bBombPlanted ) ),
 		SendPropInt( SENDINFO( m_iRoundWinStatus ) ),
+		SendPropInt( SENDINFO( m_iNumConsecutiveCTLoses ) ),
+ 		SendPropInt( SENDINFO( m_iNumConsecutiveTerroristLoses ) ),
 		SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponOrderCT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponOrderCT ), 0, SPROP_UNSIGNED ) ),
 		SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponOrderT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponOrderT ), 0, SPROP_UNSIGNED ) ),
 		SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponKillUpgradeOrderCT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderCT ), 0, SPROP_UNSIGNED ) ),
@@ -857,6 +861,10 @@ ConVar sv_spec_hear( "sv_spec_hear", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Dete
 
 ConVar mp_c4timer( "mp_c4timer", "40", FCVAR_REPLICATED | FCVAR_NOTIFY, "how long from when the C4 is armed until it blows", true, 10, true, 90	);
 
+// PiMoN: moved from under #ifndef CLIENT_DLL for client scoreboard
+ConVar cash_team_loser_bonus( "cash_team_loser_bonus", "1400", FCVAR_REPLICATED | FCVAR_NOTIFY );
+ConVar cash_team_loser_bonus_consecutive_rounds( "cash_team_loser_bonus_consecutive_rounds", "500", FCVAR_REPLICATED | FCVAR_NOTIFY );
+
 #ifdef CLIENT_DLL
 
 ConVar cl_autowepswitch(
@@ -1158,16 +1166,6 @@ ConVar snd_music_selection(
 	ConVar cash_team_win_by_hostage_rescue(
 		"cash_team_win_by_hostage_rescue",
 		"3500",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_team_loser_bonus(
-		"cash_team_loser_bonus",
-		"1400",
-		FCVAR_REPLICATED | FCVAR_NOTIFY );
-
-	ConVar cash_team_loser_bonus_consecutive_rounds(
-		"cash_team_loser_bonus_consecutive_rounds",
-		"500",
 		FCVAR_REPLICATED | FCVAR_NOTIFY );
 
 	ConVar cash_team_rescued_hostage(

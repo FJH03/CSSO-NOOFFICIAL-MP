@@ -53,6 +53,7 @@ public:
 
 	int				GetNumMVPs( int iIndex );
 	bool			HasDefuser( int iIndex );
+	int				GetAccount( int iIndex );
 
 	bool			IsControllingBot( int index );
 	int				GetControlledPlayer( int index );
@@ -85,9 +86,10 @@ protected:
 
 	char	m_szClan[MAX_PLAYERS+1][MAX_CLAN_TAG_LENGTH];
 
-	int		m_iMVPs[ MAX_PLAYERS + 1 ];	 
+	int		m_iMVPs[ MAX_PLAYERS + 1 ];
 	bool	m_bHasDefuser[ MAX_PLAYERS + 1 ];
-
+	int		m_iAccount[ MAX_PLAYERS + 1 ];
+	
 	bool	m_bControllingBot[MAX_PLAYERS + 1];
 	int		m_iControlledPlayer[MAX_PLAYERS + 1];
 	int		m_iControlledByPlayer[MAX_PLAYERS + 1];

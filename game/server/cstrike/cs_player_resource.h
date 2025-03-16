@@ -47,7 +47,8 @@ protected:
 
 	CNetworkArray( int, m_iMVPs, MAX_PLAYERS + 1 );
 	CNetworkArray( bool, m_bHasDefuser, MAX_PLAYERS + 1);
-
+	CNetworkArray( int, m_iAccount, MAX_PLAYERS + 1);
+	
 	CNetworkArray( int, m_bControllingBot, MAX_PLAYERS + 1 );
 	CNetworkArray( int, m_iControlledPlayer, MAX_PLAYERS + 1 );
 	CNetworkArray( int, m_iControlledByPlayer, MAX_PLAYERS + 1 );
