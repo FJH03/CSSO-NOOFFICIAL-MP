@@ -74,6 +74,7 @@ void TE_DynamicLight( IRecipientFilter& filter, float delay,
 	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC, bool bNoStaticPropIllum = false );
 #endif
 
+
 bool IsAmmoType( int iAmmoType, const char *pAmmoName )
 {
 	return GetAmmoDef()->Index( pAmmoName ) == iAmmoType;
@@ -343,8 +344,9 @@ CWeaponCSBase::CWeaponCSBase()
 	m_flDoneSwitchingSilencer = 0.0f;
 
 	m_flRecoilIndex = 0.0f;
+
 	m_bStatTrak = false;
- 	m_nOriginalOwnerIndex = -1;
+	m_nOriginalOwnerIndex = -1;
 
 	ResetGunHeat();
 }
@@ -1025,13 +1027,13 @@ void CWeaponCSBase::Precache( void )
 	PrecacheScriptSound( "Default.ClipEmpty_Pistol" );
 	PrecacheScriptSound( "Default.ClipEmpty_Rifle" );
 	if ( GetCSWpnData().m_szZoomINSound && GetCSWpnData().m_szZoomINSound[0] )
- 	{
- 		PrecacheScriptSound( GetCSWpnData().m_szZoomINSound );
- 	}
- 	if ( GetCSWpnData().m_szZoomOUTSound && GetCSWpnData().m_szZoomOUTSound[0] )
- 	{
- 		PrecacheScriptSound( GetCSWpnData().m_szZoomOUTSound );
- 	}
+	{
+		PrecacheScriptSound( GetCSWpnData().m_szZoomINSound );
+	}
+	if ( GetCSWpnData().m_szZoomOUTSound && GetCSWpnData().m_szZoomOUTSound[0] )
+	{
+		PrecacheScriptSound( GetCSWpnData().m_szZoomOUTSound );
+	}
 
 	PrecacheScriptSound( "Default.Zoom" );
 	PrecacheScriptSound( "Weapon.AutoSemiAutoSwitch" );
@@ -1343,6 +1345,7 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 
 	if ( GetIronSightController() )
 		GetIronSightController()->SetState( IronSight_weapon_is_dropped );
+
 #endif
 }
 
@@ -1441,14 +1444,10 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 			alpha = 200;
 		}
 
-
-#ifdef IRONSIGHT
 		if ( GetIronSightController() && GetIronSightController()->ShouldHideCrossHair() )
 		{
 			alpha = 0;
 		}
-#endif
-
 
 		if ( GetWeaponType() == WEAPONTYPE_SNIPER_RIFLE )
 			return;
@@ -1845,7 +1844,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 			data.m_flScale = GetCSWpnData().m_flMuzzleScale;
 
 			switch( GetMuzzleFlashStyle() )
-			{
+				{
 			case CS_MUZZLEFLASH_NONE:
 				break;
 
@@ -2256,67 +2255,67 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 				}
 			}
 			else if ( nEvent == AE_CL_ATTACH_SILENCER_COMPLETE )
- 			{
- 				m_bSilencerOn = true;
- 				m_weaponMode = Secondary_Mode;
- 			}
- 			else if ( nEvent == AE_CL_DETACH_SILENCER_COMPLETE )
- 			{
- 				m_bSilencerOn = false;
- 				m_weaponMode = Primary_Mode;
- 			}
-			 else if ( nEvent == AE_WPN_CZ_DUMP_CURRENT_MAG )
- 			{
- 				CCSPlayer *pCSPlayer = GetPlayerOwner();
- 				if ( pCSPlayer && pCSPlayer->GetActiveCSWeapon() )
- 				{
- 					//m_iClip1 = 0;
- 					if ( CBaseViewModel *vm = pCSPlayer->GetViewModel( m_nViewModelIndex ) )
- 					{
- 						vm->SetBodygroup( vm->FindBodygroupByName( "front_mag" ), 1 );
- 						//world model
- 						CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
- 						if ( pWorldModel )
- 						{
- 							pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "front_mag" ), 1 );
- 						}
- 						else
- 						{
- 							SetBodygroup( FindBodygroupByName( "front_mag" ), 1 );
- 						}
- 
- 						//if the front mag is removed, all subsequent anims use the non-front mag reload
- 						m_iReloadActivityIndex = ACT_SECONDARY_VM_RELOAD;
- 					}
- 				}
- 			}
- 			else if ( nEvent == AE_WPN_CZ_UPDATE_BODYGROUP )
- 			{
- 				CCSPlayer *pCSPlayer = GetPlayerOwner();
- 				if ( pCSPlayer && pCSPlayer->GetActiveCSWeapon() )
- 				{
- 					int iGroupNum = (GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0) ? 1 : 0;
- 
- 					if ( CBaseViewModel *vm = pCSPlayer->GetViewModel( m_nViewModelIndex ) )
- 					{
- 						vm->SetBodygroup( vm->FindBodygroupByName( "front_mag" ), iGroupNum );
- 						//world model
- 						CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
- 						if ( pWorldModel )
- 						{
- 							pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "front_mag" ), iGroupNum );
- 						}
- 						else
- 						{
- 							SetBodygroup( FindBodygroupByName( "front_mag" ), iGroupNum );
- 						}
- 
- 						//if the front mag is removed, all subsequent anims use the non-front mag reload
- 						m_iReloadActivityIndex = (iGroupNum == 0) ? ACT_VM_RELOAD : ACT_SECONDARY_VM_RELOAD;
- 
- 					}
- 				}
- 			}
+			{
+				m_bSilencerOn = true;
+				m_weaponMode = Secondary_Mode;
+			}
+			else if ( nEvent == AE_CL_DETACH_SILENCER_COMPLETE )
+			{
+				m_bSilencerOn = false;
+				m_weaponMode = Primary_Mode;
+			}
+			else if ( nEvent == AE_WPN_CZ_DUMP_CURRENT_MAG )
+			{
+				CCSPlayer *pCSPlayer = GetPlayerOwner();
+				if ( pCSPlayer && pCSPlayer->GetActiveCSWeapon() )
+				{
+					//m_iClip1 = 0;
+					if ( CBaseViewModel *vm = pCSPlayer->GetViewModel( m_nViewModelIndex ) )
+					{
+						vm->SetBodygroup( vm->FindBodygroupByName( "front_mag" ), 1 );
+						//world model
+						CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
+						if ( pWorldModel )
+						{
+							pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "front_mag" ), 1 );
+						}
+						else
+						{
+							SetBodygroup( FindBodygroupByName( "front_mag" ), 1 );
+						}
+
+						//if the front mag is removed, all subsequent anims use the non-front mag reload
+						m_iReloadActivityIndex = ACT_SECONDARY_VM_RELOAD;
+					}
+				}
+			}
+			else if ( nEvent == AE_WPN_CZ_UPDATE_BODYGROUP )
+			{
+				CCSPlayer *pCSPlayer = GetPlayerOwner();
+				if ( pCSPlayer && pCSPlayer->GetActiveCSWeapon() )
+				{
+					int iGroupNum = (GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0) ? 1 : 0;
+
+					if ( CBaseViewModel *vm = pCSPlayer->GetViewModel( m_nViewModelIndex ) )
+					{
+						vm->SetBodygroup( vm->FindBodygroupByName( "front_mag" ), iGroupNum );
+						//world model
+						CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
+						if ( pWorldModel )
+						{
+							pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "front_mag" ), iGroupNum );
+						}
+						else
+						{
+							SetBodygroup( FindBodygroupByName( "front_mag" ), iGroupNum );
+						}
+
+						//if the front mag is removed, all subsequent anims use the non-front mag reload
+						m_iReloadActivityIndex = (iGroupNum == 0) ? ACT_VM_RELOAD : ACT_SECONDARY_VM_RELOAD;
+
+					}
+				}
+			}
 			else if ( nEvent == AE_CL_EJECT_MAG )
 			{
 				SetBodygroup( FindBodygroupByName( "magazine" ), 1 );
@@ -2449,10 +2448,10 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 
         // [tj] initialize donor of this weapon
         m_donor = NULL;
-        m_donated = false;
+		m_donated = false;
 
 		m_bSilencerOn = HasSilencer() ? true : false;
- 		m_weaponMode = HasSilencer() ? Secondary_Mode : Primary_Mode;
+		m_weaponMode = HasSilencer() ? Secondary_Mode : Primary_Mode;
 
 		UpdateIronSightController();
 
@@ -3196,40 +3195,40 @@ void CWeaponCSBase::UpdateIronSightController()
 }
 
 int CWeaponCSBase::GetZoomFOV( int nZoomLevel ) const
- {
- 	if ( nZoomLevel < 1 || nZoomLevel > 2 )
- 		return 0;
- 
- 	return GetCSWpnData().m_iZoomFOV[nZoomLevel-1];
- }
- 
- float CWeaponCSBase::GetZoomTime( int nZoomLevel ) const
- {
- 	if ( nZoomLevel < 0 || nZoomLevel > 2 )
- 		return 0;
- 
- 	return GetCSWpnData().m_flZoomTime[nZoomLevel];
- }
- 
- void CWeaponCSBase::SetSilencer( bool state )
- {
- 	m_bSilencerOn = state;
- 	m_weaponMode = state ? Secondary_Mode : Primary_Mode;
- 
- 	if ( CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() ) )
- 	{
- 		if ( CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex ) )
- 			vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), state ? 0 : 1 );
- 	}
- 
- 	//world model
- 	CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
- 	if ( pWorldModel )
- 	{
- 		pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "silencer" ), state ? 0 : 1 );
- 	}
- 	else
- 	{
- 		SetBodygroup( FindBodygroupByName( "silencer" ), state ? 0 : 1 );
- 	}
- }
+{
+	if ( nZoomLevel < 1 || nZoomLevel > 2 )
+		return 0;
+
+	return GetCSWpnData().m_iZoomFOV[nZoomLevel-1];
+}
+
+float CWeaponCSBase::GetZoomTime( int nZoomLevel ) const
+{
+	if ( nZoomLevel < 0 || nZoomLevel > 2 )
+		return 0;
+
+	return GetCSWpnData().m_flZoomTime[nZoomLevel];
+}
+
+void CWeaponCSBase::SetSilencer( bool state )
+{
+	m_bSilencerOn = state;
+	m_weaponMode = state ? Secondary_Mode : Primary_Mode;
+
+	if ( CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() ) )
+	{
+		if ( CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex ) )
+			vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), state ? 0 : 1 );
+	}
+
+	//world model
+	CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
+	if ( pWorldModel )
+	{
+		pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "silencer" ), state ? 0 : 1 );
+	}
+	else
+	{
+		SetBodygroup( FindBodygroupByName( "silencer" ), state ? 0 : 1 );
+	}
+}

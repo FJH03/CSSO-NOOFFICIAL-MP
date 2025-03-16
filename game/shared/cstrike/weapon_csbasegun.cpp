@@ -154,9 +154,8 @@ void CWeaponCSBaseGun::ItemPostFrame()
 	//GOOSEMAN : Return zoom level back to previous zoom level before we fired a shot. This is used only for the AWP.
 	// And Scout.
 	if ( (m_flNextPrimaryAttack <= gpGlobals->curtime) && (pPlayer->m_bResumeZoom == TRUE)
-		 && m_zoomLevel > 0 ) // only need to re-zoom the zoom when there's a zoom to re-zoom to. who knew?
- 	{		
-		
+		&& m_zoomLevel > 0 ) // only need to re-zoom the zoom when there's a zoom to re-zoom to. who knew?
+	{		
 		if ( m_iClip1 != 0 || ( GetWeaponFlags() & ITEM_FLAG_NOAUTORELOAD ) )
 		{
 			m_weaponMode = Secondary_Mode;
@@ -241,8 +240,6 @@ void CWeaponCSBaseGun::SecondaryAttack()
 
 			pPlayer->m_bIsScoped = true;
 
-#ifdef IRONSIGHT
-
 			if ( pPlayer->GetActiveCSWeapon() )
 			{
 				CIronSightController *pIronSightController = pPlayer->GetActiveCSWeapon()->GetIronSightController();
@@ -270,9 +267,6 @@ void CWeaponCSBaseGun::SecondaryAttack()
 #endif
 				}
 			}
-			
-#endif
-
 		}
 		else
 		{
@@ -285,7 +279,6 @@ void CWeaponCSBaseGun::SecondaryAttack()
 
 			pPlayer->m_bIsScoped = false;
 
-#ifdef IRONSIGHT
 			if ( pPlayer->GetActiveCSWeapon() )
 			{
 				CIronSightController *pIronSightController = pPlayer->GetActiveCSWeapon()->GetIronSightController();
@@ -297,8 +290,6 @@ void CWeaponCSBaseGun::SecondaryAttack()
 					SendWeaponAnim(ACT_VM_FIDGET);
 				}
 			}
-#endif
-
 		}
 
 #ifdef CLIENT_DLL
