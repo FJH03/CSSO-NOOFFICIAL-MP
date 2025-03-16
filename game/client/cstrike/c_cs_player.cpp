@@ -1010,27 +1010,26 @@ void __MsgFunc_ReloadEffect( bf_read &msg )
 USER_MESSAGE_REGISTER( ReloadEffect );
 
 BEGIN_RECV_TABLE_NOBASE( C_CSPlayer, DT_CSLocalPlayerExclusive )
-	RecvPropVectorXY( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
-	RecvPropFloat( RECVINFO_NAME( m_vecNetworkOrigin[2], m_vecOrigin[2] ) ),
-
 	RecvPropFloat( RECVINFO(m_flStamina) ),
 	RecvPropInt( RECVINFO( m_iDirection ) ),
 	RecvPropInt( RECVINFO( m_iShotsFired ) ),
-	RecvPropBool( RECVINFO( m_bDuckOverride ) ),
 	RecvPropFloat( RECVINFO( m_flVelocityModifier ) ),
+	RecvPropBool( RECVINFO( m_bDuckOverride ) ),
+
+	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
 
     // [tj]Set up the receive table for per-client domination data
+
     RecvPropArray3( RECVINFO_ARRAY( m_bPlayerDominated ), RecvPropBool( RECVINFO( m_bPlayerDominated[0] ) ) ),
     RecvPropArray3( RECVINFO_ARRAY( m_bPlayerDominatingMe ), RecvPropBool( RECVINFO( m_bPlayerDominatingMe[0] ) ) ),
-
-	RecvPropArray3( RECVINFO_ARRAY( m_iWeaponPurchasesThisRound ), RecvPropInt( RECVINFO( m_iWeaponPurchasesThisRound[0] ) ) ),
+ 
+ 	RecvPropArray3( RECVINFO_ARRAY( m_iWeaponPurchasesThisRound ), RecvPropInt( RECVINFO( m_iWeaponPurchasesThisRound[0] ) ) ),
 
 END_RECV_TABLE()
 
 
 BEGIN_RECV_TABLE_NOBASE( C_CSPlayer, DT_CSNonLocalPlayerExclusive )
-	RecvPropVectorXY( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
-	RecvPropFloat( RECVINFO_NAME( m_vecNetworkOrigin[2], m_vecOrigin[2] ) ),
+	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
 END_RECV_TABLE()
 
 
