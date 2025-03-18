@@ -20,7 +20,7 @@
 
 #define MAX_SFX  2048
 
-#define AUDIOSOURCE_CACHE_ROOTDIR	"maps/soundcache"
+#define AUDIOSOURCE_CACHE_ROOTDIR	"sound/soundcache"
 
 class CSfxTable;
 enum soundlevel_t;
