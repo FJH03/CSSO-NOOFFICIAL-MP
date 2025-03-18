@@ -687,6 +687,8 @@ void CGamePlayerEquip::EquipPlayer( CBaseEntity *pEntity, const char *szWeapon )
 
 	const char *weaponName = szWeapon;
 
+	CCSPlayer *pCSPlayer = static_cast<CCSPlayer*>( pPlayer );	
+
 	int nMaxLoop = MAX_EQUIP;
 	if ( szWeapon != NULL )
 		nMaxLoop = 1;
@@ -699,9 +701,22 @@ void CGamePlayerEquip::EquipPlayer( CBaseEntity *pEntity, const char *szWeapon )
 		if ( szWeapon == NULL )
 			weaponName = STRING( m_weaponNames[i] );
 
-		CSWeaponID weaponID = CSLoadout()->GetLoadoutWeaponID( pPlayer, pPlayer->GetTeamNumber(), WeaponIdFromString( weaponName ) );
-
-		CCSPlayer *pCSPlayer = static_cast<CCSPlayer*>( pPlayer );	
+		CSWeaponID weaponID = WeaponIdFromString( weaponName );
+		if ( pCSPlayer )
+		{
+			if ( CSLoadout()->IsKnife( weaponName ) )
+			{
+				if ( CSLoadout()->HasKnifeSet( pCSPlayer, pCSPlayer->GetTeamNumber() ) )
+					weaponName = KnivesEntitiesStrings[CSLoadout()->GetKnifeForPlayer( pCSPlayer, pCSPlayer->GetTeamNumber() )];
+				else
+					weaponName = (pCSPlayer->GetTeamNumber() == TEAM_TERRORIST) ? "weapon_knife_t" : "weapon_knife";
+				weaponID = WeaponIdFromString( weaponName );
+			}
+			else
+			{
+				weaponID = CSLoadout()->GetLoadoutWeaponID( pCSPlayer, pCSPlayer->GetTeamNumber(), weaponID );
+			}
+		}
 
 		// if it's a grenade and we don't have it, give it
 		// if we do have it, don't do anything because you can only carry one of each grenade
