@@ -335,6 +335,7 @@ $Project "Client (CStrike)"
 					$File	"gameui\OptionsSubHaptics.cpp"	[$WIN32]
 					$File	"gameui\OptionsSubKeyboard.cpp"
 					$File	"gameui\OptionsSubMouse.cpp"
+					$File	"gameui\OptionsSubTouch.cpp"
 					$File	"gameui\OptionsSubMultiplayer.cpp"
 					$File	"gameui\OptionsSubPortal.cpp"
 					$File	"gameui\OptionsSubVideo.cpp"
