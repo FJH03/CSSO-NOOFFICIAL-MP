@@ -218,6 +218,14 @@ bool CSoundEmitterSystemBase::InternalModInit()
 				AddSoundsFromFile( sub->GetString(), true );
 				continue;
 			}
+			else if ( !Q_stricmp( sub->GetName(), "autocache_file" ) )
+			{
+				AccumulateFileNameAndTimestampIntoChecksum( &crc, sub->GetString() );
+
+				// Add and always precache
+				AddSoundsFromFile( sub->GetString(), false );
+				continue;
+			}
 			else if ( !Q_stricmp( sub->GetName(), "faceposer_file" ) )
 			{
 				// do nothing for these files; they're only used for faceposer
