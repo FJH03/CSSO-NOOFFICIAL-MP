@@ -1161,8 +1161,7 @@ void CGameUI::ReleaseBackgroundMusic( void )
 void CGameUI::UpdateBackgroundMusic( void )
 {
 	static ConVarRef snd_musicvolume( "snd_musicvolume" );
-	static ConVarRef snd_menumusic_volume( "snd_menumusic_volume" );
-	if ( m_bBackgroundMusicDesired && snd_musicvolume.GetFloat() > 0.0f && snd_menumusic_volume.GetFloat() > 0.0f )
+	if ( m_bBackgroundMusicDesired && snd_musicvolume.GetFloat() > 0.0f )
 	{
 		if ( !IsBackgroundMusicPlaying() )
 		{
