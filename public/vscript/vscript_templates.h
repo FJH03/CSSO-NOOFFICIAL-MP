@@ -75,89 +75,56 @@ FUNC_GENERATE_ALL( DEFINE_CONST_MEMBER_FUNC_TYPE_DEDUCER );
 template <typename FUNCPTR_TYPE>
 inline ScriptFunctionBindingStorageType_t ScriptConvertFreeFuncPtrToVoid( FUNCPTR_TYPE pFunc )
 {
-#if defined(_PS3) || defined(POSIX)
-	COMPILE_TIME_ASSERT( sizeof( FUNCPTR_TYPE ) == sizeof( void* ) * 2 || sizeof( FUNCPTR_TYPE ) == sizeof( void* ) );
-	
-	if ( sizeof( FUNCPTR_TYPE ) == 4 )
-	{
-		union FuncPtrConvertMI
-		{
-			FUNCPTR_TYPE pFunc;
-			ScriptFunctionBindingStorageType_t stype;
-		};
+#if defined(__arm__) || defined(__aarch64__)
+    union FuncPtrConvert
+    {
+        FUNCPTR_TYPE pFunc;
+        ScriptFunctionBindingStorageType_t stype;
+    };
 
-		FuncPtrConvertMI convert;
-		convert.pFunc = pFunc;
-		return convert.stype;
-	}
-	else
-	{
-		union FuncPtrConvertMI
-		{
-			FUNCPTR_TYPE pFunc;
-			struct
-			{
-				ScriptFunctionBindingStorageType_t stype;
-				intptr_t iToc;
-			} fn8;
-		};
+    FuncPtrConvert convert;
+    convert.pFunc = pFunc;
+    return convert.stype;
+#elif defined(_PS3) || defined(POSIX)
+    union FuncPtrConvert
+    {
+        FUNCPTR_TYPE pFunc;
+        ScriptFunctionBindingStorageType_t stype;
+    };
 
-		FuncPtrConvertMI convert;
-		convert.fn8.iToc = 0;
-		convert.pFunc = pFunc;
-		if ( !convert.fn8.iToc )
-			return convert.fn8.stype;
-		
-		Assert( 0 );
-		DebuggerBreak();
-		return 0;
-	}
+    FuncPtrConvert convert;
+    convert.pFunc = pFunc;
+    return convert.stype;
 #else
-	return ( ScriptFunctionBindingStorageType_t ) pFunc;
+    return reinterpret_cast<ScriptFunctionBindingStorageType_t>(pFunc);
 #endif
 }
 
 template <typename FUNCPTR_TYPE>
 inline FUNCPTR_TYPE ScriptConvertFreeFuncPtrFromVoid( ScriptFunctionBindingStorageType_t p )
 {
-#if defined(_PS3) || defined(POSIX)
-	COMPILE_TIME_ASSERT( sizeof( FUNCPTR_TYPE ) == sizeof(void*)*2 || sizeof( FUNCPTR_TYPE ) == sizeof(void*) );
+#if defined(__arm__) || defined(__aarch64__)
+    union FuncPtrConvert
+    {
+        FUNCPTR_TYPE pFunc;
+        ScriptFunctionBindingStorageType_t stype;
+    };
 
-	if ( sizeof( FUNCPTR_TYPE ) == 4 )
-	{
-		union FuncPtrConvertMI
-		{
-			FUNCPTR_TYPE pFunc;
-			ScriptFunctionBindingStorageType_t stype;
-		};
+    FuncPtrConvert convert;
+    convert.stype = p;
+    return convert.pFunc;
+#elif defined(_PS3) || defined(POSIX)
+    union FuncPtrConvert
+    {
+        FUNCPTR_TYPE pFunc;
+        ScriptFunctionBindingStorageType_t stype;
+    };
 
-		FuncPtrConvertMI convert;
-		convert.pFunc = 0;
-		convert.stype = p;
-		return convert.pFunc;
-	}
-	else
-	{
-		union FuncPtrConvertMI
-		{
-			FUNCPTR_TYPE pFunc;
-			struct
-			{
-				ScriptFunctionBindingStorageType_t stype;
-				intptr_t iToc;
-			} fn8;
-		};
-
-		FuncPtrConvertMI convert;
-		convert.pFunc = 0;
-		convert.fn8.stype = p;
-		convert.fn8.iToc = 0;
-		return convert.pFunc;
-	}
-
-
+    FuncPtrConvert convert;
+    convert.stype = p;
+    return convert.pFunc;
 #else
-	return (FUNCPTR_TYPE) p;
+    return reinterpret_cast<FUNCPTR_TYPE>(p);
 #endif
 }
 
