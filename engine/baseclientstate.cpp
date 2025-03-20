@@ -1859,6 +1859,7 @@ int CBaseClientState::GetDemoProtocolVersion() const
 
 bool CBaseClientState::ProcessCmdKeyValues( SVC_CmdKeyValues *msg )
 {
+#ifndef SWDS
 	KeyValues* pkvCmd = msg->GetKeyValues();
  	if ( pkvCmd )
  	{
@@ -1869,6 +1870,7 @@ bool CBaseClientState::ProcessCmdKeyValues( SVC_CmdKeyValues *msg )
  			g_ClientDLL->SetAndParseExtendedServerInfo( pkvCmd );
  		}
  	}
+#endif
 	return true;
 }
 

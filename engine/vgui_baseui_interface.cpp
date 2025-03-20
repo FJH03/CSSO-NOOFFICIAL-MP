@@ -1073,6 +1073,9 @@ bool CEngineVGui::HideGameUI()
 	if ( m_bNotAllowedToHideGameUI )
 		return false;
 
+	if (!staticGameUIFuncs)
+		return false;
+
 	const char *levelName = engineClient->GetLevelName();
 	bool bInNonBgLevel = levelName && levelName[0] && !engineClient->IsLevelMainMenuBackground();
 	if ( bInNonBgLevel )
