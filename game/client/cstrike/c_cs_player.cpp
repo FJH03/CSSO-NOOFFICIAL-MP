@@ -2648,8 +2648,6 @@ void C_CSPlayer::ClientThink()
 
 	UpdateAddonModels( m_bAddonModelsAreOutOfDate );
 
-	UpdateFlashBangEffect();
-
 	UpdateHostageCarryModels();
 
 	// don't show IDs in chase spec mode
