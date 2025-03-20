@@ -989,23 +989,23 @@ int	CHudVote::KeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBin
 
 	int nSlot = 999;
 
-	if ( down && keynum == KEY_F1 )
+	if ( down && keynum == KEY_1 )
 	{
 		nSlot = 1;
 	}
-	else if ( down && keynum == KEY_F2 )
+	else if ( down && keynum == KEY_2 )
 	{
 		nSlot = 2;
 	}
-	else if ( down && keynum == KEY_F3 )
+	else if ( down && keynum == KEY_3 )
 	{
 		nSlot = 3;
 	}
-	else if ( down && keynum == KEY_F4 )
+	else if ( down && keynum == KEY_4 )
 	{
 		nSlot = 4;
 	}
-	else if ( down && keynum == KEY_F5 )
+	else if ( down && keynum == KEY_5 )
 	{
 		nSlot = 5;
 	}
