@@ -19,6 +19,7 @@
 #include "menu.h"
 #include "cs_hud_chat.h"
 #include "gametypes.h"
+#include "inputsystem/iinputsystem.h"
 
 #include <vgui/IScheme.h>
 #include <vgui/ISurface.h>
