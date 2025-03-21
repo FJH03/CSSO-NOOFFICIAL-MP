@@ -531,11 +531,6 @@ void CBaseClientState::SendConnectPacket (int challengeNr, int authProtocol, uin
 	msg.WriteString( GetClientName() );	// Name
 	msg.WriteString( password.GetString() );		// password
 	msg.WriteString( GetSteamInfIDVersionInfo().szVersionString );	// product version
-	if ( !V_stricmp( GetCurrentMod(), "csso" ) )
- 	{
- 		ConVarRef mod_version( "mod_version" );
- 		msg.WriteString( mod_version.GetString() );	// CS:SO mod version
- 	}
 //	msg.WriteByte( ( g_pServerPluginHandler->GetNumLoadedPlugins() > 0 ) ? 1 : 0 ); // have any client-side server plug-ins been loaded?
 
 	switch ( authProtocol )
