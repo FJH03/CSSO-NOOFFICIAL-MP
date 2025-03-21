@@ -36,7 +36,7 @@ CCreateMultiplayerGameDialog::CCreateMultiplayerGameDialog(vgui::Panel *parent) 
 {
 	SetDeleteSelfOnClose(true);
 
-	int w = 348;
+	int w = 424;
 	int h = 460;
 	if (IsProportional())
 	{

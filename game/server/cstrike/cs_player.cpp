@@ -954,6 +954,8 @@ void CCSPlayer::Precache()
 	PrecacheParticleSystem( "blood_impact_medium" );
 	PrecacheParticleSystem( "blood_impact_light" );
 	PrecacheParticleSystem( "blood_impact_light_headshot" );
+	PrecacheParticleSystem( "impact_wallbang_heavy" );
+	PrecacheParticleSystem( "impact_wallbang_light" );
 
 	PrecacheScriptSound( "Bullets.DefaultNearmiss" );
 	PrecacheScriptSound( "FX_RicochetSound.Ricochet" );
@@ -1423,7 +1425,6 @@ void CCSPlayer::Spawn()
 		}
 		m_bNeedToChangeGloves = false;
 	}
-	
 	m_RateLimitLastCommandTimes.Purge();
 
 	// Get rid of the progress bar...
@@ -12228,3 +12229,4 @@ void UTIL_AwardMoneyToTeam( int iAmount, int iTeam, CBaseEntity *pIgnore )
 		pPlayer->AddAccount( iAmount );
 	}
 }
+

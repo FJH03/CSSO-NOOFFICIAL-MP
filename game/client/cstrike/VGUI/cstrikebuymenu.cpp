@@ -30,8 +30,14 @@
 #include "lunasvg/lunasvg.h"
 using namespace lunasvg;
 
-ConVar closeonbuy( "closeonbuy", "0", FCVAR_ARCHIVE, "Set non-zero to close the buy menu after buying something", true, 0, true, 1 );
+#ifdef ANDROID
+#define TOUCH_DISABLE_ON_BUYMENU "1"
+#else
+#define TOUCH_DISABLE_ON_BUYMENU "0"
+#endif
 
+ConVar closeonbuy( "closeonbuy", "0", FCVAR_ARCHIVE, "Set non-zero to close the buy menu after buying something", true, 0, true, 1 );
+ConVar touch_disable_on_buymenu ( "touch_disable_on_buymenu", "0", FCVAR_ARCHIVE, "Set non-zero to disable touch for entering to buymenu  ", true, 0, true, 1 );
 
 void BuyMenuItemIcon::SetTexture( const char* pszTexturePath, int iWide, int iTall, CSWeaponID nItemID )
 {
@@ -1029,6 +1035,8 @@ void CCSBuyMenu::ShowPanel( bool bShow )
 	if ( !pPlayer )
 		return;
 
+	bool bTouchEnable = (cvar->FindVar("touch_disable_on_buymenu")->GetInt() != 0);
+
 	if ( bShow )
 	{
 		// hide the system buttons
@@ -1108,6 +1116,11 @@ void CCSBuyMenu::ShowPanel( bool bShow )
 		}
 
 		engine->ClientCmd_Unrestricted( "gameui_preventescapetoshow\n" );
+
+		if (bTouchEnable)
+ 		{
+ 			engine->ClientCmd_Unrestricted("touch_enable 0\n");
+ 		}
 	}
 	else
 	{
@@ -1121,6 +1134,11 @@ void CCSBuyMenu::ShowPanel( bool bShow )
 
 		SetVisible( false );
 		SetMouseInputEnabled( false );
+
+		if (bTouchEnable)
+ 		{
+ 			engine->ClientCmd_Unrestricted("touch_enable 1\n");
+ 		}
 	}
 
 	m_pViewPort->ShowBackGround( bShow );
@@ -1182,6 +1200,13 @@ void CCSBuyMenu::OnClose()
 	{
 		pHudWS->ShowAndUpdateSelection( WEPSELECT_SWITCH );
 	}
+
+	bool bTouchEnable = (cvar->FindVar("touch_disable_on_buymenu")->GetInt() != 0);
+ 
+ 	if (bTouchEnable)
+ 	{
+ 		engine->ClientCmd_Unrestricted("touch_enable 1\n");
+ 	}
 
 	BaseClass::OnClose();
 }

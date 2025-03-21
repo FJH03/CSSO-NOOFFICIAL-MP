@@ -260,7 +260,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropBool( RECVINFO( m_bTCantBuy ) ),
 		RecvPropBool( RECVINFO( m_bCTCantBuy ) ),
 		RecvPropInt( RECVINFO( m_iNumConsecutiveCTLoses ) ),
- 		RecvPropInt( RECVINFO( m_iNumConsecutiveTerroristLoses ) ),
+		RecvPropInt( RECVINFO( m_iNumConsecutiveTerroristLoses ) ),
 		RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponOrderCT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponOrderCT[0] ) ) ),
 		RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponOrderT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponOrderT[0] ) ) ),
 		RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderCT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponKillUpgradeOrderCT[0] ) ) ),
@@ -302,7 +302,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropBool( SENDINFO( m_bTCantBuy ) ),
 		SendPropBool( SENDINFO( m_bCTCantBuy ) ),
 		SendPropInt( SENDINFO( m_iNumConsecutiveCTLoses ) ),
- 		SendPropInt( SENDINFO( m_iNumConsecutiveTerroristLoses ) ),
+		SendPropInt( SENDINFO( m_iNumConsecutiveTerroristLoses ) ),
 		SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponOrderCT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponOrderCT ), 0, SPROP_UNSIGNED ) ),
 		SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponOrderT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponOrderT ), 0, SPROP_UNSIGNED ) ),
 		SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponKillUpgradeOrderCT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderCT ), 0, SPROP_UNSIGNED ) ),
@@ -9583,7 +9583,7 @@ const char *musicTypeStrings[] =
 	"Music.GotHostage",
 	"Music.MVPAnthem",
 	"Music.Selection",
-	"Music.HalfTime",
+	"Musix.HalfTime",
 };
 
 void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType, int nPlayerEntIndex /* = 0 */ )
@@ -9807,7 +9807,9 @@ static ConVar sv_competitive_minspec( "sv_competitive_minspec",
 
 #ifdef CLIENT_DLL
 
-ENABLE_COMPETITIVE_CONVAR( fps_max, 59, FLT_MAX, 1, 0 );	// force fps_max above 59. One additional value (0) works
+// PiMoN: why would you want to force players' fps? what's going to change if they are running at 10 fps?
+// more than that, fps_max already has a callback which conflicts with ENABLE_COMPETITIVE_CONVAR
+// ENABLE_COMPETITIVE_CONVAR( fps_max, 59, FLT_MAX, 1, 0 );	// force fps_max above 59. One additional value (0) works
 ENABLE_COMPETITIVE_CONVAR( cl_interp_ratio, 1, 2 );			// force cl_interp_ratio from 1 to 2
 ENABLE_COMPETITIVE_CONVAR( cl_interp, 0, 0.031 );			// force cl_interp from 0.0152 to 0.031
 ENABLE_COMPETITIVE_CONVAR( cl_updaterate, 10, 150 );		// force cl_updaterate from 10 to 150
