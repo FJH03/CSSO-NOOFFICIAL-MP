@@ -386,7 +386,7 @@ void CCSGOPlayerAnimState::ModifyEyePosition( Vector& vecInputEyePos )
 		if ( vecHeadPos.z < vecInputEyePos.z )
 		{
 			
-			float flLerp = SimpleSplineRemapValClamped( abs( vecInputEyePos.z - vecHeadPos.z ),
+			float flLerp = SimpleSplineRemapValClamped( fabsf( vecInputEyePos.z - vecHeadPos.z ),
 				FIRSTPERSON_TO_THIRDPERSON_VERTICAL_TOLERANCE_MIN,
 				FIRSTPERSON_TO_THIRDPERSON_VERTICAL_TOLERANCE_MAX,
 				0.0f, 1.0f );
@@ -556,7 +556,7 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4_t boneToWorld[], mst
 			Vector vecPlayerOrigin = m_pPlayer->GetAbsOrigin();
 			
 			// reset the procedural locations if this is the first computation or they haven't been computed recently
-			if ( m_bFirstFootPlantSinceInit || abs(gpGlobals->framecount - m_iLastUpdateFrame) > 10 )
+			if ( m_bFirstFootPlantSinceInit || fabsf(gpGlobals->framecount - m_iLastUpdateFrame) > 10 )
 			{
 				m_footLeft.Init( m_footLeft.m_vecPosAnim );
 				m_footRight.Init( m_footRight.m_vecPosAnim );
@@ -576,8 +576,8 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4_t boneToWorld[], mst
 			bool bLeftFootLockWasBelowThreshold = m_footLeft.m_flLockAmount < FOOT_LOCK_THRESHOLD;
 			bool bRightFootLockWasBelowThreshold = m_footRight.m_flLockAmount < FOOT_LOCK_THRESHOLD;
 			
-			m_footLeft.m_flLockAmount = Approach( clamp( abs(pos[nLeftLockIndex].y), 0, 1 ), m_footLeft.m_flLockAmount, gpGlobals->frametime * 10.0f );
-			m_footRight.m_flLockAmount = Approach( clamp( abs(pos[nRightLockIndex].y), 0, 1 ), m_footRight.m_flLockAmount, gpGlobals->frametime * 10.0f );
+			m_footLeft.m_flLockAmount = Approach( clamp( fabsf(pos[nLeftLockIndex].y), 0, 1 ), m_footLeft.m_flLockAmount, gpGlobals->frametime * 10.0f );
+			m_footRight.m_flLockAmount = Approach( clamp( fabsf(pos[nRightLockIndex].y), 0, 1 ), m_footRight.m_flLockAmount, gpGlobals->frametime * 10.0f );
 			
 			bool bLeftFootLockIsAboveThreshold = m_footLeft.m_flLockAmount >= FOOT_LOCK_THRESHOLD;
 			bool bRightFootLockIsAboveThreshold = m_footRight.m_flLockAmount >= FOOT_LOCK_THRESHOLD;
@@ -643,7 +643,7 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4_t boneToWorld[], mst
 			if ( m_flVelocityLengthXY <= 10.0f )
 			{
 
-				float flEyeFootAngleDiff = abs( AngleDiff(m_flEyeYaw, m_flFootYaw) );
+				float flEyeFootAngleDiff = fabsf( AngleDiff(m_flEyeYaw, m_flFootYaw) );
 				if ( flEyeFootAngleDiff > 56.0f || flTimeStill < 1.0f ) // when turning rapidly, allow the feet to step faster
 				{
 					float flFmod = fmod( gpGlobals->curtime, 0.33f );
@@ -1367,7 +1367,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 
 	Vector vecMoveYawDir;
 	AngleVectors( QAngle(0, AngleNormalize( m_flFootYaw + m_flMoveYaw + 180 ), 0), &vecMoveYawDir );
-	float flYawDeltaAbsDot = abs( DotProduct( m_vecVelocityNormalizedNonZero, vecMoveYawDir ) );
+	float flYawDeltaAbsDot = fabsf( DotProduct( m_vecVelocityNormalizedNonZero, vecMoveYawDir ) );
 	m_flMoveWeight *= Bias( flYawDeltaAbsDot, 0.2 );
 
 	float flMoveWeightWithAirSmooth = m_flMoveWeight * m_flInAirSmoothValue;
@@ -1493,7 +1493,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 
 	if ( m_bLandedOnGroundThisFrame )
 	{
-		flDistanceFell = abs( m_flLeftGroundHeight - m_vecPositionCurrent.z );
+		flDistanceFell = fabsf( m_flLeftGroundHeight - m_vecPositionCurrent.z );
 		float flDistanceFallNormalizedBiasRange = Bias( RemapValClamped( flDistanceFell, 12.0f, 72.0f, 0.0f, 1.0f ), 0.4f );
 
 		//Msg( "Fell %f units, ratio is %f. ", flDistanceFell, flDistanceFallNormalizedBiasRange );
@@ -1562,7 +1562,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 		}
 #endif
 
-		if ( abs(m_flVelocityLengthZ) > 100 )
+		if (fabsf(m_flVelocityLengthZ) > 100 )
 		{
 			m_flLadderSpeed = Approach( 1, m_flLadderSpeed, m_flLastUpdateIncrement * 10.0f );
 		}
@@ -1589,7 +1589,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 		m_tPoseParamMappings[ PLAYER_POSE_PARAM_LADDER_YAW ].SetValue( m_pPlayer, flLadderYaw );
 
 		//float flPlayerZ = m_pPlayer->GetAbsOrigin().z;
-		//float flLadderClimbCycle = fmod( abs(flPlayerZ), 80.0f ) / 80.0f;
+		//float flLadderClimbCycle = fmod( fabsf(flPlayerZ), 80.0f ) / 80.0f;
 		//flLadderClimbCycle = ClampCycle( flPlayerZ < 0 ? (1.0f - flLadderClimbCycle) : flLadderClimbCycle );
 
 		
@@ -1777,7 +1777,7 @@ void CCSGOPlayerAnimState::IncrementLayerCycle( animstate_layer_t nLayerIndex, b
 	if ( !pLayer )
 		return;
 
-	if ( abs(pLayer->GetPlaybackRate()) <= 0 )
+	if (fabsf(pLayer->GetPlaybackRate()) <= 0 )
 		return;
 
 	float flCurrentCycle = pLayer->GetCycle();
@@ -1798,7 +1798,7 @@ void CCSGOPlayerAnimState::IncrementLayerWeight( animstate_layer_t nLayerIndex )
 	if ( !pLayer )
 		return;
 
-	if ( abs(pLayer->GetWeightDeltaRate()) <= 0 )
+	if ( fabsf(pLayer->GetWeightDeltaRate()) <= 0 )
 		return;
 
 	float flCurrentWeight = pLayer->GetWeight();
@@ -2284,11 +2284,11 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 
 	if ( flEyeFootDelta > flTempYawMax )
 	{
-		m_flFootYaw = m_flEyeYaw - abs(flTempYawMax);
+		m_flFootYaw = m_flEyeYaw - fabsf(flTempYawMax);
 	}
 	else if ( flEyeFootDelta < flTempYawMin )
 	{
-		m_flFootYaw = m_flEyeYaw + abs(flTempYawMin);
+		m_flFootYaw = m_flEyeYaw + fabsf(flTempYawMin);
 	}
 	m_flFootYaw = AngleNormalize( m_flFootYaw );
 
@@ -2310,7 +2310,7 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 			m_flFootYaw = ApproachAngle( m_pPlayer->m_flLowerBodyYawTarget.Get(), m_flFootYaw, m_flLastUpdateIncrement * CSGO_ANIM_LOWER_CATCHUP_IDLE );
 
 			#ifndef CLIENT_DLL
-			if ( gpGlobals->curtime > m_flLowerBodyRealignTimer && abs( AngleDiff( m_flFootYaw, m_flEyeYaw ) ) > 35.0f )
+			if ( gpGlobals->curtime > m_flLowerBodyRealignTimer && fabsf( AngleDiff( m_flFootYaw, m_flEyeYaw ) ) > 35.0f )
 			{
 				m_flLowerBodyRealignTimer = gpGlobals->curtime + CSGO_ANIM_LOWER_REALIGN_DELAY;
 				m_pPlayer->m_flLowerBodyYawTarget.Set( m_flEyeYaw );
@@ -2320,7 +2320,7 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 	}
 
 #ifndef CLIENT_DLL
-	if ( m_flVelocityLengthXY <= CS_PLAYER_SPEED_STOPPED && m_bOnGround && !m_bOnLadder && !m_bLanding && m_flLastUpdateIncrement > 0 && abs( AngleDiff( m_flFootYawLast, m_flFootYaw ) / m_flLastUpdateIncrement > CSGO_ANIM_READJUST_THRESHOLD ) )
+	if ( m_flVelocityLengthXY <= CS_PLAYER_SPEED_STOPPED && m_bOnGround && !m_bOnLadder && !m_bLanding && m_flLastUpdateIncrement > 0 && fabsf( AngleDiff( m_flFootYawLast, m_flFootYaw ) / m_flLastUpdateIncrement > CSGO_ANIM_READJUST_THRESHOLD ) )
 	{
 		SetLayerSequence( ANIMATION_LAYER_ADJUST, SelectSequenceFromActMods( ACT_CSGO_IDLE_TURN_BALANCEADJUST ) );
 		m_bAdjustStarted = true;
@@ -2362,35 +2362,35 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 			mstudioseqdesc_t &seqdesc = m_pPlayer->GetModelPtr()->pSeqdesc( nMoveSeq );
 			if ( seqdesc.numanimtags > 0 )
 			{
-				if ( abs( AngleDiff( m_flMoveYaw, 180 ) ) <= EIGHT_WAY_WIDTH ) //N
+				if ( fabsf( AngleDiff( m_flMoveYaw, 180 ) ) <= EIGHT_WAY_WIDTH ) //N
 				{
 					m_flPrimaryCycle = m_pPlayer->GetFirstSequenceAnimTag( nMoveSeq, ANIMTAG_STARTCYCLE_N, 0, 1 );
 				}
-				else if ( abs( AngleDiff( m_flMoveYaw, 135 ) ) <= EIGHT_WAY_WIDTH ) //NE
+				else if ( fabsf( AngleDiff( m_flMoveYaw, 135 ) ) <= EIGHT_WAY_WIDTH ) //NE
 				{
 					m_flPrimaryCycle = m_pPlayer->GetFirstSequenceAnimTag( nMoveSeq, ANIMTAG_STARTCYCLE_NE, 0, 1 );
 				}
-				else if ( abs( AngleDiff( m_flMoveYaw, 90 ) ) <= EIGHT_WAY_WIDTH ) //E
+				else if ( fabsf( AngleDiff( m_flMoveYaw, 90 ) ) <= EIGHT_WAY_WIDTH ) //E
 				{
 					m_flPrimaryCycle = m_pPlayer->GetFirstSequenceAnimTag( nMoveSeq, ANIMTAG_STARTCYCLE_E, 0, 1 );
 				}
-				else if ( abs( AngleDiff( m_flMoveYaw, 45 ) ) <= EIGHT_WAY_WIDTH ) //SE
+				else if ( fabsf( AngleDiff( m_flMoveYaw, 45 ) ) <= EIGHT_WAY_WIDTH ) //SE
 				{
 					m_flPrimaryCycle = m_pPlayer->GetFirstSequenceAnimTag( nMoveSeq, ANIMTAG_STARTCYCLE_SE, 0, 1 );
 				}
-				else if ( abs( AngleDiff( m_flMoveYaw, 0 ) ) <= EIGHT_WAY_WIDTH ) //S
+				else if ( fabsf( AngleDiff( m_flMoveYaw, 0 ) ) <= EIGHT_WAY_WIDTH ) //S
 				{
 					m_flPrimaryCycle = m_pPlayer->GetFirstSequenceAnimTag( nMoveSeq, ANIMTAG_STARTCYCLE_S, 0, 1 );
 				}
-				else if ( abs( AngleDiff( m_flMoveYaw, -45 ) ) <= EIGHT_WAY_WIDTH ) //SW
+				else if ( fabsf( AngleDiff( m_flMoveYaw, -45 ) ) <= EIGHT_WAY_WIDTH ) //SW
 				{
 					m_flPrimaryCycle = m_pPlayer->GetFirstSequenceAnimTag( nMoveSeq, ANIMTAG_STARTCYCLE_SW, 0, 1 );
 				}
-				else if ( abs( AngleDiff( m_flMoveYaw, -90 ) ) <= EIGHT_WAY_WIDTH ) //W
+				else if ( fabsf( AngleDiff( m_flMoveYaw, -90 ) ) <= EIGHT_WAY_WIDTH ) //W
 				{
 					m_flPrimaryCycle = m_pPlayer->GetFirstSequenceAnimTag( nMoveSeq, ANIMTAG_STARTCYCLE_W, 0, 1 );
 				}
-				else if ( abs( AngleDiff( m_flMoveYaw, -135 ) ) <= EIGHT_WAY_WIDTH ) //NW
+				else if ( fabsf( AngleDiff( m_flMoveYaw, -135 ) ) <= EIGHT_WAY_WIDTH ) //NW
 				{
 					m_flPrimaryCycle = m_pPlayer->GetFirstSequenceAnimTag( nMoveSeq, ANIMTAG_STARTCYCLE_NW, 0, 1 );
 				}
@@ -2398,7 +2398,7 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 		}
 
 		#ifdef CLIENT_DLL
-		if ( m_flInAirSmoothValue >= 1 && !m_bFirstRunSinceInit && abs(m_flMoveYawCurrentToIdeal) > 45 && m_bOnGround && m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].GetCurrentWeight() <= 0 )
+		if ( m_flInAirSmoothValue >= 1 && !m_bFirstRunSinceInit && fabsf(m_flMoveYawCurrentToIdeal) > 45 && m_bOnGround && m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].GetCurrentWeight() <= 0 )
 		{
 			m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].SetShouldCapture( bonesnapshot_get( cl_bonesnapshot_speed_movebegin ) );
 		}
@@ -2414,7 +2414,7 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 		else
 		{
 			#ifdef CLIENT_DLL
-			if ( m_flInAirSmoothValue >= 1 && !m_bFirstRunSinceInit && abs(m_flMoveYawCurrentToIdeal) > 100 && m_bOnGround && m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].GetCurrentWeight() <= 0 )
+			if ( m_flInAirSmoothValue >= 1 && !m_bFirstRunSinceInit && fabsf(m_flMoveYawCurrentToIdeal) > 100 && m_bOnGround && m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].GetCurrentWeight() <= 0 )
 			{
 				m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].SetShouldCapture( bonesnapshot_get( cl_bonesnapshot_speed_movebegin ) );
 			}
