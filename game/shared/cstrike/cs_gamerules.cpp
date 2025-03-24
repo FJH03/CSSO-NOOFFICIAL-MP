@@ -9570,65 +9570,111 @@ CCSGameRules::CCSGameRules()
 
 const char *musicTypeStrings[] =
 {
-	"NONE",
-	"Music.StartRound_GG",
-	"Music.StartRound",
-	"Music.StartAction",
-	"Music.DeathCam",
-	"Music.BombPlanted",
-	"Music.BombTenSecCount",
-	"Music.TenSecCount",
-	"Music.WonRound",
-	"Music.LostRound",
-	"Music.GotHostage",
-	"Music.MVPAnthem",
-	"Music.Selection",
-	"Musix.HalfTime",
+    "NONE",
+    "Music.StartRound_GG",
+    "Music.StartRound_01",
+    "Music.StartAction_01",
+    "Music.DeathCam",
+    "Music.BombPlanted",
+    "Music.BombTenSecCount",
+    "Music.TenSecCount",
+    "Music.WonRound",
+    "Music.LostRound",
+    "Music.GotHostage",
+    "Music.MVPAnthem",
+    "Music.Selection",
+    "Musix.HalfTime",
 };
 
-void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType, int nPlayerEntIndex /* = 0 */ )
+
+static CsMusicType_t g_currentPlayingMusic = CSMUSIC_NONE;
+static float g_flMusicStartTime = 0.0f;
+static bool g_bShouldCheckDuration = false;
+
+void CheckMusicDuration()
 {
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// test for between rounds and block incoming events until in round
-	//
-	static bool bBetweenRound = false;
-	if( nMusicType == CSMUSIC_LOSTROUND || nMusicType == CSMUSIC_WONROUND || nMusicType == CSMUSIC_MVP || nMusicType == CSMUSIC_HALFTIME )
-	{
-		bBetweenRound = true;
-	}
-	else if( nMusicType == CSMUSIC_START || nMusicType == CSMUSIC_ACTION || nMusicType== CSMUSIC_STARTGG )
-	{
-		bBetweenRound = false;
-	}
-	if( bBetweenRound && ( nMusicType == CSMUSIC_BOMB || nMusicType == CSMUSIC_BOMBTEN || nMusicType == CSMUSIC_ROUNDTEN ))
-	{
-		return;
-	}
-
-	C_CS_PlayerResource* cs_PR = dynamic_cast<C_CS_PlayerResource*>(g_PR);
-	if ( !cs_PR )
-		return;
-
-	int nPlayerIndex = GetLocalPlayerIndex();
-	if ( nPlayerEntIndex )
-	{
-		if ( cs_PR->IsConnected( nPlayerEntIndex ) )
-		{
-			int nMusicID = cs_PR->GetMusicID( nPlayerEntIndex );
-			if ( nMusicID > 1 )
-				nPlayerIndex = nPlayerEntIndex;
-		}
-	}
-
-	int nMusicKitID = Clamp( cs_PR->GetMusicID( nPlayerIndex ), 0, MAX_MUSIC - 1 );
-	const char* pMusicExtension = g_szMusicKits[nMusicKitID];
-	
-	char musicSelection[128];
-	int nExtLen = V_strlen( pMusicExtension );
-	int nStrLen = V_strlen( musicTypeStrings[nMusicType] );
-	V_snprintf( musicSelection, nExtLen + nStrLen+2, "%s.%s", musicTypeStrings[nMusicType], pMusicExtension );
-	C_BaseEntity::EmitSound( filter, -1, musicSelection );
+    if(g_bShouldCheckDuration && 
+       g_currentPlayingMusic == CSMUSIC_ACTION && 
+       (gpGlobals->curtime - g_flMusicStartTime) > 10.0f)
+    {
+        C_CS_PlayerResource* cs_PR = dynamic_cast<C_CS_PlayerResource*>(g_PR);
+        if(cs_PR)
+        {
+            int nMusicKitID = Clamp(cs_PR->GetMusicID(GetLocalPlayerIndex()), 0, MAX_MUSIC - 1);
+            const char* pMusicExtension = g_szMusicKits[nMusicKitID];
+            
+            char musicSelection[128];
+            V_snprintf(musicSelection, sizeof(musicSelection), "%s.%s", 
+                      musicTypeStrings[g_currentPlayingMusic], pMusicExtension);
+            
+            C_BaseEntity::StopSound(-1, musicSelection);
+            g_currentPlayingMusic = CSMUSIC_NONE;
+            g_bShouldCheckDuration = false;
+        }
+    }
 }
+
+void PlayMusicSelection(IRecipientFilter& filter, CsMusicType_t nMusicType, int nPlayerEntIndex = 0)
+{
+    static bool bBetweenRound = false;
+    if(nMusicType == CSMUSIC_LOSTROUND || nMusicType == CSMUSIC_WONROUND || nMusicType == CSMUSIC_MVP || nMusicType == CSMUSIC_HALFTIME)
+    {
+        bBetweenRound = true;
+    }
+    else if(nMusicType == CSMUSIC_START || nMusicType == CSMUSIC_ACTION || nMusicType == CSMUSIC_STARTGG)
+    {
+        bBetweenRound = false;
+    }
+    if(bBetweenRound && (nMusicType == CSMUSIC_BOMB || nMusicType == CSMUSIC_BOMBTEN || nMusicType == CSMUSIC_ROUNDTEN))
+    {
+        return;
+    }
+
+    if(g_currentPlayingMusic != CSMUSIC_NONE && g_currentPlayingMusic != nMusicType)
+    {
+        C_CS_PlayerResource* cs_PR = dynamic_cast<C_CS_PlayerResource*>(g_PR);
+        if(cs_PR)
+        {
+            int nPrevMusicKitID = Clamp(cs_PR->GetMusicID(GetLocalPlayerIndex()), 0, MAX_MUSIC - 1);
+            const char* pPrevMusicExtension = g_szMusicKits[nPrevMusicKitID];
+            
+            char prevMusicSelection[128];
+            V_snprintf(prevMusicSelection, sizeof(prevMusicSelection), "%s.%s", 
+                      musicTypeStrings[g_currentPlayingMusic], pPrevMusicExtension);
+            
+            C_BaseEntity::StopSound(-1, prevMusicSelection);
+        }
+    }
+
+    C_CS_PlayerResource* cs_PR = dynamic_cast<C_CS_PlayerResource*>(g_PR);
+    if(!cs_PR)
+        return;
+
+    int nPlayerIndex = GetLocalPlayerIndex();
+    if(nPlayerEntIndex)
+    {
+        if(cs_PR->IsConnected(nPlayerEntIndex))
+        {
+            int nMusicID = cs_PR->GetMusicID(nPlayerEntIndex);
+            if(nMusicID > 1)
+                nPlayerIndex = nPlayerEntIndex;
+        }
+    }
+
+    int nMusicKitID = Clamp(cs_PR->GetMusicID(nPlayerIndex), 0, MAX_MUSIC - 1);
+    const char* pMusicExtension = g_szMusicKits[nMusicKitID];
+    
+    char musicSelection[128];
+    V_snprintf(musicSelection, sizeof(musicSelection), "%s.%s", 
+              musicTypeStrings[nMusicType], pMusicExtension);
+    
+    C_BaseEntity::EmitSound(filter, -1, musicSelection);
+    
+    g_currentPlayingMusic = nMusicType;
+    g_flMusicStartTime = gpGlobals->curtime;
+    g_bShouldCheckDuration = (nMusicType == CSMUSIC_ACTION);
+}
+
 #endif
 
 //-----------------------------------------------------------------------------

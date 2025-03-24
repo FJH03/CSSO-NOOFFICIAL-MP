@@ -51,6 +51,7 @@
 
 #include "eventlist.h"
 #include "npcevent.h"
+#include "cs_gamerules.h"
 
 // NVNT - haptics system for spectating
 #include "haptics/haptic_utils.h"
@@ -2627,6 +2628,7 @@ void C_CSPlayer::ClientThink()
 	}
 
 	BaseClass::ClientThink();
+	CheckMusicDuration();
 
 	// velocity music handling
 	if( GetCurrentMusic() == CSMUSIC_START && GetMusicStartRoundElapsed() > 0.5 )
