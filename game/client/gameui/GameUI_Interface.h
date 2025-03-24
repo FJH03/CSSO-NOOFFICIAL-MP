@@ -160,6 +160,7 @@ private:
 	int m_nBackgroundMusicGUID;
 	bool m_bBackgroundMusicDesired;
 	float m_flBackgroundMusicStopTime;
+	float m_flMasterMusicVolume;
 };
 
 // Purpose: singleton accessor

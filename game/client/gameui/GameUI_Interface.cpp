@@ -149,6 +149,7 @@ CGameUI::CGameUI()
 	m_nBackgroundMusicGUID = 0;
 	m_bBackgroundMusicDesired = false;
 	m_flBackgroundMusicStopTime = -1.0;
+	m_flMasterMusicVolume = -1;
 }
 
 //-----------------------------------------------------------------------------
@@ -1161,21 +1162,30 @@ void CGameUI::ReleaseBackgroundMusic( void )
 
 void CGameUI::UpdateBackgroundMusic( void )
 {
-	static ConVarRef snd_musicvolume( "snd_musicvolume" );
-	if ( m_bBackgroundMusicDesired && snd_musicvolume.GetFloat() > 0.0f )
-	{
+	if ( m_bBackgroundMusicDesired )
+	{	
+		static ConVarRef snd_musicvolume( "snd_musicvolume" );
+
+
 		if ( !IsBackgroundMusicPlaying() )
 		{
+			m_flMasterMusicVolume = snd_musicvolume.GetFloat();
 			m_flBackgroundMusicStopTime = -1.0;
 
 			static ConVarRef loadout_music( "loadout_music" );
 
 			char sMusicKit[128];
 			V_sprintf_safe( sMusicKit, "music/%s/%s", g_szMusicKits[Clamp( loadout_music.GetInt(), 0, MAX_MUSIC - 1 )], BACKGROUND_MUSIC_FILENAME );
-			m_nBackgroundMusicGUID = enginesound->EmitAmbientSound( sMusicKit, 1.0f );
+			m_nBackgroundMusicGUID = enginesound->EmitAmbientSound( sMusicKit, m_flMasterMusicVolume);
 		}
 		else
 		{
+			if ( m_flMasterMusicVolume != snd_musicvolume.GetFloat() )
+			{
+				m_flMasterMusicVolume = snd_musicvolume.GetFloat();
+				enginesound->SetVolumeByGuid( m_nBackgroundMusicGUID, m_flMasterMusicVolume );
+			}
+			
 			if( ( m_flBackgroundMusicStopTime > -1.0 ) )
 			{
 				float flDelta = gpGlobals->curtime - m_flBackgroundMusicStopTime;
