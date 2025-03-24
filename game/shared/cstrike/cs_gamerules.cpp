@@ -9614,7 +9614,7 @@ void CheckMusicDuration()
     }
 }
 
-void PlayMusicSelection(IRecipientFilter& filter, CsMusicType_t nMusicType, int nPlayerEntIndex = 0)
+void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType, int nPlayerEntIndex /* = 0 */ )
 {
     // Check if music is disabled
     static ConVarRef cl_music_enable("cl_music_enable");
