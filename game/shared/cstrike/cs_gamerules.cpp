@@ -93,7 +93,7 @@ ConVar sv_buy_status_override( "sv_buy_status_override", "-1", FCVAR_GAMEDLL | F
 
 ConVar mp_team_timeout_time( "mp_team_timeout_time", "60", FCVAR_GAMEDLL | FCVAR_REPLICATED, "Duration of each timeout." );
 ConVar mp_team_timeout_max( "mp_team_timeout_max", "1", FCVAR_GAMEDLL | FCVAR_REPLICATED, "Number of timeouts each team gets per match." );
-
+ConVar cl_music_enable("cl_music_enable", "1", FCVAR_ARCHIVE, "Enable or disable in-game music (1 = enable, 0 = disable).");
 #ifdef CLIENT_DLL
 CON_COMMAND( print_mapgroup, "Prints the current mapgroup and the contained maps" )
 #else
@@ -9616,24 +9616,48 @@ void CheckMusicDuration()
 
 void PlayMusicSelection(IRecipientFilter& filter, CsMusicType_t nMusicType, int nPlayerEntIndex = 0)
 {
+    // Check if music is disabled
+    static ConVarRef cl_music_enable("cl_music_enable");
+    if (cl_music_enable.IsValid() && cl_music_enable.GetInt() == 0)
+    {
+        // Stop any currently playing music
+        if (g_currentPlayingMusic != CSMUSIC_NONE)
+        {
+            C_CS_PlayerResource* cs_PR = dynamic_cast<C_CS_PlayerResource*>(g_PR);
+            if (cs_PR)
+            {
+                int nPrevMusicKitID = Clamp(cs_PR->GetMusicID(GetLocalPlayerIndex()), 0, MAX_MUSIC - 1);
+                const char* pPrevMusicExtension = g_szMusicKits[nPrevMusicKitID];
+                
+                char prevMusicSelection[128];
+                V_snprintf(prevMusicSelection, sizeof(prevMusicSelection), "%s.%s", 
+                          musicTypeStrings[g_currentPlayingMusic], pPrevMusicExtension);
+                
+                C_BaseEntity::StopSound(-1, prevMusicSelection);
+                g_currentPlayingMusic = CSMUSIC_NONE;
+            }
+        }
+        return;
+    }
+
     static bool bBetweenRound = false;
-    if(nMusicType == CSMUSIC_LOSTROUND || nMusicType == CSMUSIC_WONROUND || nMusicType == CSMUSIC_MVP || nMusicType == CSMUSIC_HALFTIME)
+    if (nMusicType == CSMUSIC_LOSTROUND || nMusicType == CSMUSIC_WONROUND || nMusicType == CSMUSIC_MVP || nMusicType == CSMUSIC_HALFTIME)
     {
         bBetweenRound = true;
     }
-    else if(nMusicType == CSMUSIC_START || nMusicType == CSMUSIC_ACTION || nMusicType == CSMUSIC_STARTGG)
+    else if (nMusicType == CSMUSIC_START || nMusicType == CSMUSIC_ACTION || nMusicType == CSMUSIC_STARTGG)
     {
         bBetweenRound = false;
     }
-    if(bBetweenRound && (nMusicType == CSMUSIC_BOMB || nMusicType == CSMUSIC_BOMBTEN || nMusicType == CSMUSIC_ROUNDTEN))
+    if (bBetweenRound && (nMusicType == CSMUSIC_BOMB || nMusicType == CSMUSIC_BOMBTEN || nMusicType == CSMUSIC_ROUNDTEN))
     {
         return;
     }
 
-    if(g_currentPlayingMusic != CSMUSIC_NONE && g_currentPlayingMusic != nMusicType)
+    if (g_currentPlayingMusic != CSMUSIC_NONE && g_currentPlayingMusic != nMusicType)
     {
         C_CS_PlayerResource* cs_PR = dynamic_cast<C_CS_PlayerResource*>(g_PR);
-        if(cs_PR)
+        if (cs_PR)
         {
             int nPrevMusicKitID = Clamp(cs_PR->GetMusicID(GetLocalPlayerIndex()), 0, MAX_MUSIC - 1);
             const char* pPrevMusicExtension = g_szMusicKits[nPrevMusicKitID];
@@ -9647,16 +9671,16 @@ void PlayMusicSelection(IRecipientFilter& filter, CsMusicType_t nMusicType, int 
     }
 
     C_CS_PlayerResource* cs_PR = dynamic_cast<C_CS_PlayerResource*>(g_PR);
-    if(!cs_PR)
+    if (!cs_PR)
         return;
 
     int nPlayerIndex = GetLocalPlayerIndex();
-    if(nPlayerEntIndex)
+    if (nPlayerEntIndex)
     {
-        if(cs_PR->IsConnected(nPlayerEntIndex))
+        if (cs_PR->IsConnected(nPlayerEntIndex))
         {
             int nMusicID = cs_PR->GetMusicID(nPlayerEntIndex);
-            if(nMusicID > 1)
+            if (nMusicID > 1)
                 nPlayerIndex = nPlayerEntIndex;
         }
     }
