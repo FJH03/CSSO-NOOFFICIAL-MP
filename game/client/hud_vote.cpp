@@ -976,9 +976,6 @@ int	CHudVote::KeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBin
 	if ( !IsVisible() )
 		return 1;
 
-	if ( !down )
-		return 1;
-
 	if ( !m_bVotingActive )
 		return 1;
 
@@ -988,25 +985,28 @@ int	CHudVote::KeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBin
 	if ( !m_bShowVoteActivePanel )
 		return 1;
 
+	if (!pszCurrentBinding)
+        return 1;
+
 	int nSlot = 999;
 
-	if ( down && keynum == KEY_1 )
+	if ( !Q_strcmp(pszCurrentBinding, "slot1") )
 	{
 		nSlot = 1;
 	}
-	else if ( down && keynum == KEY_2 )
+	else if ( !Q_strcmp(pszCurrentBinding, "slot2") )
 	{
 		nSlot = 2;
 	}
-	else if ( down && keynum == KEY_3 )
+	else if ( !Q_strcmp(pszCurrentBinding, "slot3") )
 	{
 		nSlot = 3;
 	}
-	else if ( down && keynum == KEY_4 )
+	else if ( !Q_strcmp(pszCurrentBinding, "slot4") )
 	{
 		nSlot = 4;
 	}
-	else if ( down && keynum == KEY_5 )
+	else if ( !Q_strcmp(pszCurrentBinding, "slot5") )
 	{
 		nSlot = 5;
 	}
