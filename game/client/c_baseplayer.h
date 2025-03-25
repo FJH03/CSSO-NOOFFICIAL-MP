@@ -170,7 +170,7 @@ public:
 	virtual IRagdoll* GetRepresentativeRagdoll() const;
 
 	// override the initial bone position for ragdolls
-	virtual void GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt );
+	virtual void GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt ) OVERRIDE;
 
 	// Returns eye vectors
 	void			EyeVectors( Vector *pForward, Vector *pRight = NULL, Vector *pUp = NULL );
@@ -230,7 +230,7 @@ public:
 	virtual void				CalculateVisionUsingCurrentFlags( void ) {}
 
 	virtual int					GetLastKillerIndex() { return 0; }
-	
+
 	// Specific queries about this player.
 	bool						InFirstPersonView();
 	bool						ShouldDrawThisPlayer();
@@ -409,7 +409,7 @@ public:
 
 #if defined USES_ECON_ITEMS
 	// Wearables
-	void					UpdateWearables();
+	virtual void			UpdateWearables();
 	C_EconWearable			*GetWearable( int i ) { return m_hMyWearables[i]; }
 	int						GetNumWearables( void ) { return m_hMyWearables.Count(); }
 #endif
@@ -450,13 +450,12 @@ public:
 	EHANDLE					m_hZoomOwner;		// This is a pointer to the entity currently controlling the player's zoom
 												// Only this entity can change the zoom state once it has ownership
 
-	
 	bool m_bCanShowFreezeFrameNow;
- 	int m_nLastKillerDamageTaken;
- 	int m_nLastKillerHitsTaken;
- 	int m_nLastKillerDamageGiven;
- 	int m_nLastKillerHitsGiven;
-	
+	int m_nLastKillerDamageTaken;
+	int m_nLastKillerHitsTaken;
+	int m_nLastKillerDamageGiven;
+	int m_nLastKillerHitsGiven;
+
 	// For weapon prediction
 	bool			m_fOnTarget;		//Is the crosshair on a target?
 	
@@ -623,7 +622,7 @@ protected:
 	virtual bool IsDucked( void ) const { return m_Local.m_bDucked; }
 	virtual bool IsDucking( void ) const { return m_Local.m_bDucking; }
 	virtual float GetFallVelocity( void ) { return m_Local.m_flFallVelocity; }
-	void ForceSetupBonesAtTimeFakeInterpolation( matrix3x4_t *pBonesOut, float curtimeOffset );
+	bool ForceSetupBonesAtTimeFakeInterpolation( matrix3x4_t *pBonesOut, float curtimeOffset );
 
 	float m_flLaggedMovementValue;
 
@@ -653,6 +652,7 @@ protected:
 	bool			m_bIsLocalPlayer;
 
 	int				m_nForceVisionFilterFlags; // Force our vision filter to a specific setting
+	int				m_nLocalPlayerVisionFlags;
 
 #if defined USES_ECON_ITEMS
 	// Wearables
@@ -687,6 +687,7 @@ public:
 	bool  ShouldGoSouth( Vector vNPCForward, Vector vNPCRight ); //Such a bad name.
 
 	void SetOldPlayerZ( float flOld ) { m_flOldPlayerZ = flOld;	}
+
 	virtual bool IsHoldingLookAtWeapon( void ) const { return false; }
 };
 

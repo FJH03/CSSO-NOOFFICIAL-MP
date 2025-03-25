@@ -21,10 +21,6 @@ static Vector CAM_HULL_MAX( CAM_HULL_OFFSET, CAM_HULL_OFFSET, CAM_HULL_OFFSET);
 
 extern const ConVar *sv_cheats;
 
-extern ConVar cam_idealdist;
-extern ConVar cam_idealdistright;
-extern ConVar cam_idealdistup;
-
 void CAM_ToThirdPerson(void);
 void CAM_ToFirstPerson(void);
 
@@ -51,6 +47,10 @@ ConVar cl_thirdperson( "cl_thirdperson", "0", FCVAR_NOT_CONNECTED | FCVAR_USERIN
 
 #endif
 
+CThirdPersonManager::CThirdPersonManager( void )
+{
+}
+
 void CThirdPersonManager::Init( void )
 {
 	m_bOverrideThirdPerson = false;
@@ -60,8 +60,6 @@ void CThirdPersonManager::Init( void )
 
 	m_flUpLerpTime = 0.0f;
 	m_flLerpTime = 0.0f;
-
-	m_flUpOffset = CAMERA_UP_OFFSET;
 
 	if ( input )
 	{
@@ -99,29 +97,6 @@ void CThirdPersonManager::Update( void )
 
 }
 
-Vector CThirdPersonManager::GetDesiredCameraOffset( void )
-{ 
-	if ( IsOverridingThirdPerson() == true )
-	{
-		return Vector( cam_idealdist.GetFloat(), cam_idealdistright.GetFloat(), cam_idealdistup.GetFloat() );
-	}
-
-	return m_vecDesiredCameraOffset; 
-}
-
-Vector CThirdPersonManager::GetFinalCameraOffset( void )
-{
-	Vector vDesired = GetDesiredCameraOffset();
-
-	if ( m_flUpFraction != 1.0f )
-	{
-		vDesired.z += m_flUpOffset;
-	}
-
-	return vDesired;
-
-}
-
 Vector CThirdPersonManager::GetDistanceFraction( void )
 {
 	if ( IsOverridingThirdPerson() == true )
@@ -153,7 +128,7 @@ Vector CThirdPersonManager::GetDistanceFraction( void )
 	return Vector( flFraction, flFraction, flUpFraction );
 }
 
-void CThirdPersonManager::PositionCamera( CBasePlayer *pPlayer, QAngle angles )
+void CThirdPersonManager::PositionCamera( CBasePlayer *pPlayer, const QAngle& angles )
 {
 	if ( pPlayer )
 	{

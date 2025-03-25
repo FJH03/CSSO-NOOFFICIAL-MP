@@ -27,6 +27,8 @@ public:
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 
+	CEnvTonemapController();
+
 	void	Spawn( void );
 	int		UpdateTransmitState( void );
 	void	UpdateTonemapScaleBlend( void );
@@ -53,8 +55,9 @@ private:
 	CNetworkVar( bool, m_bUseCustomBloomScale );
 	CNetworkVar( float, m_flCustomAutoExposureMin );
 	CNetworkVar( float, m_flCustomAutoExposureMax );
-	CNetworkVar( float, m_flCustomBloomScale);
-	CNetworkVar( float, m_flCustomBloomScaleMinimum);
+	CNetworkVar( float, m_flCustomBloomScale );
+	CNetworkVar( float, m_flCustomBloomScaleMinimum );
+	CNetworkVar( float, m_flTonemapRate );
 };
 
 LINK_ENTITY_TO_CLASS( env_tonemap_controller, CEnvTonemapController );
@@ -71,6 +74,7 @@ BEGIN_DATADESC( CEnvTonemapController )
 	DEFINE_FIELD( m_flCustomBloomScale, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flCustomBloomScaleMinimum, FIELD_FLOAT ),
 	DEFINE_FIELD( m_bUseCustomBloomScale, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_flTonemapRate, FIELD_FLOAT ),
 
 	DEFINE_THINKFUNC( UpdateTonemapScaleBlend ),
 
@@ -94,7 +98,16 @@ IMPLEMENT_SERVERCLASS_ST( CEnvTonemapController, DT_EnvTonemapController )
 	SendPropFloat( SENDINFO(m_flCustomAutoExposureMax), 0, SPROP_NOSCALE),
 	SendPropFloat( SENDINFO(m_flCustomBloomScale), 0, SPROP_NOSCALE),
 	SendPropFloat( SENDINFO(m_flCustomBloomScaleMinimum), 0, SPROP_NOSCALE),
+	SendPropFloat( SENDINFO(m_flTonemapRate), 0, SPROP_NOSCALE ),
 END_SEND_TABLE()
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+CEnvTonemapController::CEnvTonemapController()
+{
+	m_flTonemapRate = 1.0f;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -177,13 +190,7 @@ void CEnvTonemapController::InputSetBloomScaleRange( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CEnvTonemapController::InputSetTonemapRate( inputdata_t &inputdata )
 {
-	// TODO: There should be a better way to do this.
-	ConVarRef mat_hdr_manual_tonemap_rate( "mat_hdr_manual_tonemap_rate" );
-	if ( mat_hdr_manual_tonemap_rate.IsValid() )
-	{
-		float flTonemapRate = inputdata.value.Float();
-		mat_hdr_manual_tonemap_rate.SetValue( flTonemapRate );
-	}
+	m_flTonemapRate = inputdata.value.Float();
 }
 
 //-----------------------------------------------------------------------------

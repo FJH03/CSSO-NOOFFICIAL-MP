@@ -7,7 +7,6 @@
 //===========================================================================//
 #include "cbase.h"
 #include "hud.h"
-#include "cs_gamerules.h"
 #include "clientmode_csnormal.h"
 #include "cdll_client_int.h"
 #include <engine/ivdebugoverlay.h>
@@ -49,7 +48,6 @@
 #include "cs_loadout.h"
 #include "materialsystem/itexture.h"
 #include "viewpostprocess.h"
-#include "ienginevgui.h"
 #include "cstrikeclientscoreboard.h"
 #include "cam_thirdperson.h"
 
@@ -321,7 +319,7 @@ void ClientModeCSNormal::Init()
 	ListenForGameEvent( "bot_takeover" );
 	ListenForGameEvent( "server_spawn" );
 	ListenForGameEvent( "smokegrenade_detonate" );
- 	ListenForGameEvent( "smokegrenade_expired" );
+	ListenForGameEvent( "smokegrenade_expired" );
 
 	usermessages->HookMessage( "KillCam", MsgFunc_KillCam );
 
@@ -391,7 +389,7 @@ void ClientModeCSNormal::Update()
 	// halftime music needs a delay thusly
 	static bool bStartedHalfTimeMusic = false;
 	static float flHalfTimeStart = 0.0;
-	
+
 	if ( CSGameRules() && (CSGameRules()->GetGamePhase() == GAMEPHASE_HALFTIME || CSGameRules()->GetGamePhase() == GAMEPHASE_MATCH_ENDED) )
 	{
 		if( !bStartedHalfTimeMusic && gpGlobals->curtime - flHalfTimeStart > 6.5 )
@@ -543,7 +541,7 @@ void ClientModeCSNormal::OverrideView( CViewSetup* pSetup )
 	if ( ::input->CAM_IsThirdPerson() )
 	{
 		const Vector& cam_ofs = g_ThirdPersonManager.GetCameraOffsetAngles();
-		Vector cam_ofs_distance = g_ThirdPersonManager.GetFinalCameraOffset();
+		Vector cam_ofs_distance = g_ThirdPersonManager.GetDesiredCameraOffset();
 
 		cam_ofs_distance *= g_ThirdPersonManager.GetDistanceFraction();
 
@@ -1128,19 +1126,19 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		}
 	}
 	else if ( V_strcmp( "smokegrenade_detonate", eventname ) == 0 )
- 	{
- 		int index = event->GetInt( "entityid" );
- 		C_BaseEntity* pEnt = ClientEntityList().GetBaseEntity( index );
- 		if ( pEnt )
- 			AddSmokeGrenadeHandle( pEnt );
- 	}
- 	else if ( V_strcmp( "smokegrenade_expired", eventname ) == 0 )
- 	{
- 		int index = event->GetInt( "entityid" );
- 		C_BaseEntity* pEnt = ClientEntityList().GetBaseEntity( index );
- 		if ( pEnt )
- 			RemoveSmokeGrenadeHandle( pEnt );
- 	}
+	{
+		int index = event->GetInt( "entityid" );
+		C_BaseEntity* pEnt = ClientEntityList().GetBaseEntity( index );
+		if ( pEnt )
+			AddSmokeGrenadeHandle( pEnt );
+	}
+	else if ( V_strcmp( "smokegrenade_expired", eventname ) == 0 )
+	{
+		int index = event->GetInt( "entityid" );
+		C_BaseEntity* pEnt = ClientEntityList().GetBaseEntity( index );
+		if ( pEnt )
+			RemoveSmokeGrenadeHandle( pEnt );
+	}
 	else
 	{
 		BaseClass::FireGameEvent( event );

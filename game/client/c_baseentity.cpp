@@ -429,6 +429,7 @@ BEGIN_ENT_SCRIPTDESC_ROOT( C_BaseEntity, "Root class of all client-side entities
 	DEFINE_SCRIPTFUNC( GetTeamNumber, "Gets this entity's team" )
 END_SCRIPTDESC();
 
+
 #ifndef NO_ENTITY_PREDICTION
 BEGIN_RECV_TABLE_NOBASE( C_BaseEntity, DT_PredictableId )
 	RecvPropPredictableId( RECVINFO( m_PredictableID ) ),
@@ -3850,7 +3851,7 @@ void *C_BaseEntity::operator new( size_t stAllocateBlock )
 	MEM_ALLOC_CREDIT();
 	void *pMem = MemAlloc_Alloc( stAllocateBlock );
 	memset( pMem, 0, stAllocateBlock );
-	return pMem;												
+	return pMem;
 }
 
 void *C_BaseEntity::operator new[]( size_t stAllocateBlock )
@@ -3859,7 +3860,7 @@ void *C_BaseEntity::operator new[]( size_t stAllocateBlock )
 	MEM_ALLOC_CREDIT();
 	void *pMem = MemAlloc_Alloc( stAllocateBlock );
 	memset( pMem, 0, stAllocateBlock );
-	return pMem;												
+	return pMem;
 }
 
 void *C_BaseEntity::operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
@@ -3867,7 +3868,7 @@ void *C_BaseEntity::operator new( size_t stAllocateBlock, int nBlockUse, const c
 	Assert( stAllocateBlock != 0 );	
 	void *pMem = MemAlloc_Alloc( stAllocateBlock, pFileName, nLine );
 	memset( pMem, 0, stAllocateBlock );
-	return pMem;												
+	return pMem;
 }
 
 void *C_BaseEntity::operator new[]( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
@@ -3875,7 +3876,7 @@ void *C_BaseEntity::operator new[]( size_t stAllocateBlock, int nBlockUse, const
 	Assert( stAllocateBlock != 0 );				
 	void *pMem = MemAlloc_Alloc( stAllocateBlock, pFileName, nLine );
 	memset( pMem, 0, stAllocateBlock );
-	return pMem;												
+	return pMem;
 }
 
 
@@ -4033,7 +4034,6 @@ void C_BaseEntity::SetDormant( bool bDormant )
 	UpdateVisibility();
 
 	ParticleProp()->OwnerSetDormantTo( bDormant );
-
 }
 
 //-----------------------------------------------------------------------------

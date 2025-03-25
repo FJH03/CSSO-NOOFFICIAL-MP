@@ -33,7 +33,6 @@
 #define	DIST	 2
 #define CAM_HULL_OFFSET		14.0    // the size of the bounding hull used for collision checking
 
-#define CAMERA_UP_OFFSET	25.0f
 #define CAMERA_OFFSET_LERP_TIME 0.5f
 #define CAMERA_UP_OFFSET_LERP_TIME 0.25f
 
@@ -41,26 +40,24 @@ class CThirdPersonManager
 {
 public:
 
-	CThirdPersonManager() = default;
-	void	SetCameraOffsetAngles( Vector vecOffset ) { m_vecCameraOffset = vecOffset; }
-	Vector	GetCameraOffsetAngles( void ) { return m_vecCameraOffset; }
+	CThirdPersonManager();
+	void	SetCameraOffsetAngles( const Vector& vecOffset ) { m_vecCameraOffset = vecOffset; }
+	const Vector&	GetCameraOffsetAngles( void ) const { return m_vecCameraOffset; }
 	
-	void	SetDesiredCameraOffset( Vector vecOffset ) { m_vecDesiredCameraOffset = vecOffset; }
-	Vector	GetDesiredCameraOffset( void );
+	void	SetDesiredCameraOffset( const Vector& vecOffset ) { m_vecDesiredCameraOffset = vecOffset; }
+	const Vector&	GetDesiredCameraOffset( void ) const { return m_vecDesiredCameraOffset; }
 
-	Vector	GetFinalCameraOffset( void );
-
-	void	SetCameraOrigin( Vector vecOffset ) { m_vecCameraOrigin = vecOffset; }
-	Vector	GetCameraOrigin( void ) { return m_vecCameraOrigin; }
+	void	SetCameraOrigin( const Vector& vecOffset ) { m_vecCameraOrigin = vecOffset; }
+	const Vector&	GetCameraOrigin( void ) const { return m_vecCameraOrigin; }
 
 	void	Update( void );
 
-	void	PositionCamera( CBasePlayer *pPlayer, QAngle angles );
+	void	PositionCamera( CBasePlayer *pPlayer, const QAngle& angles );
 
 	void	UseCameraOffsets( bool bUse ) { m_bUseCameraOffsets = bUse; }
 	bool	UsingCameraOffsets( void ) { return m_bUseCameraOffsets; }
 
-	QAngle	GetCameraViewAngles( void ) { return m_ViewAngles; }
+	const QAngle&	GetCameraViewAngles( void ) const { return m_ViewAngles; }
 
 	Vector	GetDistanceFraction( void );
 
@@ -96,8 +93,6 @@ private:
 	bool	m_bOverrideThirdPerson;
 
 	bool	m_bForced;
-
-	float	m_flUpOffset;
 
 	float	m_flLerpTime;
 	float	m_flUpLerpTime;

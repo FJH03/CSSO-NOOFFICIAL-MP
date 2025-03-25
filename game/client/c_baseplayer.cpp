@@ -106,8 +106,8 @@ static ConVar	cl_smoothtime	(
 	 );
 
 #ifdef CSTRIKE_DLL
-ConVar	spec_freeze_time( "spec_freeze_time", "3.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Time spend frozen in observer freeze cam." );
-ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.3", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01, false, 0 );
+ConVar	spec_freeze_time( "spec_freeze_time", "3.0", FCVAR_REPLICATED, "Time spend frozen in observer freeze cam." );
+ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.3", FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01, false, 0 );
 ConVar	spec_freeze_traveltime_long( "spec_freeze_traveltime_long", "0.45", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam when they are far away.", true, 0.01, false, 0 );
 ConVar	spec_freeze_distance_min( "spec_freeze_distance_min", "60", FCVAR_CHEAT, "Minimum random distance from the target to stop when framing them in observer freeze cam." );
 ConVar	spec_freeze_distance_max( "spec_freeze_distance_max", "80", FCVAR_CHEAT, "Maximum random distance from the target to stop when framing them in observer freeze cam." );
@@ -121,7 +121,7 @@ ConVar	spec_freeze_distance_min( "spec_freeze_distance_min", "96", FCVAR_CHEAT, 
 ConVar	spec_freeze_distance_max( "spec_freeze_distance_max", "200", FCVAR_CHEAT, "Maximum random distance from the target to stop when framing them in observer freeze cam." );
 #endif
 
-static ConVar	cl_first_person_uses_world_model ( "cl_first_person_uses_world_model", "0", FCVAR_ARCHIVE, "Causes the third person model to be drawn instead of the view model" );
+static ConVar	cl_first_person_uses_world_model ( "cl_first_person_uses_world_model", "0", FCVAR_NONE, "Causes the third person model to be drawn instead of the view model" );
 
 ConVar demo_fov_override( "demo_fov_override", "0", FCVAR_CLIENTDLL | FCVAR_DONTRECORD, "If nonzero, this value will be used to override FOV during demo playback." );
 
@@ -131,6 +131,9 @@ ConVar demo_fov_override( "demo_fov_override", "0", FCVAR_CLIENTDLL | FCVAR_DONT
 // This value is found by hand, and a good value depends more on the in-game models than on actual human shapes.
 ConVar cl_meathook_neck_pivot_ingame_up( "cl_meathook_neck_pivot_ingame_up", "7.0" );
 ConVar cl_meathook_neck_pivot_ingame_fwd( "cl_meathook_neck_pivot_ingame_fwd", "3.0" );
+
+static ConVar	cl_clean_textures_on_death( "cl_clean_textures_on_death", "0", FCVAR_DEVELOPMENTONLY,  "If enabled, attempts to purge unused textures every time a freeze cam is shown" );
+
 
 void RecvProxy_LocalVelocityX( const CRecvProxyData *pData, void *pStruct, void *pOut );
 void RecvProxy_LocalVelocityY( const CRecvProxyData *pData, void *pStruct, void *pOut );
@@ -312,10 +315,10 @@ END_RECV_TABLE()
 		RecvPropUtlVector( RECVINFO_UTLVECTOR( m_hMyWearables ), MAX_WEARABLES_SENT_FROM_SERVER,	RecvPropEHandle(NULL, 0, 0) ),
 #endif
 
-RecvPropEHandle		( RECVINFO( m_hViewEntity ) ),		// L4D: send view entity to everyone for first-person spectating
-
-	RecvPropFloat	(RECVINFO(m_flDuckAmount)),
-	RecvPropFloat	(RECVINFO(m_flDuckSpeed)),
+		RecvPropEHandle		( RECVINFO( m_hViewEntity ) ),		// L4D: send view entity to everyone for first-person spectating
+		
+		RecvPropFloat	(RECVINFO(m_flDuckAmount)),
+		RecvPropFloat	(RECVINFO(m_flDuckSpeed)),
 
 	END_RECV_TABLE()
 
@@ -470,12 +473,13 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 	m_ignoreLadderJumpTime = 0.0f;
 
 	m_bCanShowFreezeFrameNow = false;
- 	m_nLastKillerDamageTaken = 0;
- 	m_nLastKillerHitsTaken = 0;
- 	m_nLastKillerDamageGiven = 0;
- 	m_nLastKillerHitsGiven = 0;
+	m_nLastKillerDamageTaken = 0;
+	m_nLastKillerHitsTaken = 0;
+	m_nLastKillerDamageGiven = 0;
+	m_nLastKillerHitsGiven = 0;
 
 	m_nForceVisionFilterFlags = 0;
+	m_nLocalPlayerVisionFlags = 0;
 
 	ListenForGameEvent( "base_player_teleported" );
 
@@ -496,23 +500,24 @@ C_BasePlayer::~C_BasePlayer()
 	{
 		s_pLocalPlayer = NULL;
 	}
-
+	
 	delete m_pFlashlight;
 }
 
 void MsgFunc_SendLastKillerDamageToClient( bf_read &msg )
 {
- 	int nNumHitsGiven = msg.ReadShort();
- 	int nDamageGiven = msg.ReadShort();
- 	int nNumHitsTaken = msg.ReadShort();
- 	int nDamageTaken = msg.ReadShort();
- 
- 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
- 	if ( pPlayer )
- 	{
- 		pPlayer->SetLastKillerDamageAndFreezeframe( nDamageTaken, nNumHitsTaken, nDamageGiven, nNumHitsGiven );
- 	}
+	int nNumHitsGiven = msg.ReadShort();
+	int nDamageGiven = msg.ReadShort();
+	int nNumHitsTaken = msg.ReadShort();
+	int nDamageTaken = msg.ReadShort();
+
+	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( pPlayer )
+	{
+		pPlayer->SetLastKillerDamageAndFreezeframe( nDamageTaken, nNumHitsTaken, nDamageGiven, nNumHitsGiven );
+	}
 }
+
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -689,7 +694,7 @@ void C_BasePlayer::SetObserverTarget( EHANDLE hObserverTarget )
 			haptics->OnPlayerChanged();
 
 		UpdateViewmodelVisibility( this );
-		UpdateVisibility();
+		UpdateVisibility();	
 
 		if ( IsLocalPlayer() )
 		{
@@ -830,8 +835,8 @@ void C_BasePlayer::FireGameEvent( IGameEvent *event )
 {
 	if ( FStrEq( event->GetName(), "base_player_teleported" ) )
 	{
-		const int index = event->GetInt( "entindex" );
-		if ( index == entindex() && IsLocalPlayer() )
+		const int index_ = event->GetInt( "entindex" );
+		if ( index_ == entindex() && IsLocalPlayer() )
 		{
 			// In VR, we want to make sure our head and body
 			// are aligned after we teleport.
@@ -1008,7 +1013,7 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 			if ( target && target->IsPlayer() )
 			{
 				C_BasePlayer *player = ToBasePlayer( target );
-				if ( player && player->IsAlive() )
+				if ( player )
 				{
 					m_nForceVisionFilterFlags = player->GetVisionFilterFlags();
 					CalculateVisionUsingCurrentFlags();
@@ -1032,6 +1037,10 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 			pVar->SetValue( "FreezeCam_Only" );
 
 			m_bCanShowFreezeFrameNow = false;
+
+			// When we start, give unused textures an opportunity to unload
+			if ( cl_clean_textures_on_death.GetBool() )
+				g_pMaterialSystem->UncacheUnusedMaterials( false );
 		}
 		else if ( m_bWasFreezeFraming && GetObserverMode() != OBS_MODE_FREEZECAM )
 		{
@@ -1048,6 +1057,14 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 
 			m_nForceVisionFilterFlags = 0;
 			CalculateVisionUsingCurrentFlags();
+		}
+		
+		// force calculate vision when the local vision flags changed
+		int nCurrentLocalPlayerVisionFlags = GetLocalPlayerVisionFilterFlags();
+		if ( m_nLocalPlayerVisionFlags != nCurrentLocalPlayerVisionFlags )
+		{
+			CalculateVisionUsingCurrentFlags();
+			m_nLocalPlayerVisionFlags = nCurrentLocalPlayerVisionFlags;
 		}
 	}
 
@@ -1350,7 +1367,7 @@ void C_BasePlayer::UpdateFlashlight()
 		}
 
 		Vector vecForward, vecRight, vecUp;
-		EyeVectors( &vecForward, &vecRight, &vecUp );
+			EyeVectors( &vecForward, &vecRight, &vecUp );
 
 		// Update the light with the new position and direction.		
 		m_pFlashlight->UpdateLight( EyePosition(), vecForward, vecRight, vecUp, FLASHLIGHT_DISTANCE );
@@ -1542,7 +1559,6 @@ int C_BasePlayer::DrawModel( int flags )
 			player->GetObserverInterpState() != OBSERVER_INTERP_TRAVELING )
 			return 0;
 	}
-
 	return BaseClass::DrawModel( flags );
 }
 
@@ -1553,12 +1569,12 @@ Vector C_BasePlayer::GetChaseCamViewOffset( CBaseEntity *target )
 {
 	C_BasePlayer *player = ToBasePlayer( target );
 	
-	if ( player )
+	if ( player && player->IsAlive() )
 	{
 		if( player->GetFlags() & FL_DUCKING )
 			return VEC_DUCK_VIEW;
 
-			return VEC_VIEW;
+		return VEC_VIEW;
 	}
 
 #ifdef CSTRIKE_DLL
@@ -1660,7 +1676,7 @@ void C_BasePlayer::CalcChaseCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 	trace_t trace;
 	CTraceFilterNoNPCsOrPlayer filter( target, COLLISION_GROUP_NONE );
 	C_BaseEntity::PushEnableAbsRecomputations( false ); // HACK don't recompute positions while doing RayTrace
-	
+
 	Vector hullMin = WALL_MIN, hullMax = WALL_MAX;
 
 #ifdef CSTRIKE_DLL
@@ -1698,6 +1714,7 @@ void C_BasePlayer::CalcRoamingView(Vector& eyeOrigin, QAngle& eyeAngles, float& 
 		target = this;
 	}
 #endif
+
 	m_flObserverChaseDistance = 0.0;
 
 	eyeOrigin = target->EyePosition();
@@ -1705,11 +1722,11 @@ void C_BasePlayer::CalcRoamingView(Vector& eyeOrigin, QAngle& eyeAngles, float& 
 
 	if ( spec_track.GetInt() > 0 )
 	{
-		C_BaseEntity *target =  ClientEntityList().GetBaseEntity( spec_track.GetInt() );
+		C_BaseEntity *pTarget =  ClientEntityList().GetBaseEntity( spec_track.GetInt() );
 
-		if ( target )
+		if ( pTarget )
 		{
-			Vector v = target->GetAbsOrigin(); v.z += 54;
+			Vector v = pTarget->GetAbsOrigin(); v.z += 54;
 			QAngle a; VectorAngles( v - eyeOrigin, a );
 
 			NormalizeAngles( a );
@@ -1858,7 +1875,7 @@ void C_BasePlayer::CalcInEyeCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 
 	eyeAngles = target->EyeAngles();
 	eyeOrigin = target->GetAbsOrigin();
-
+		
 	CalcViewBob( eyeOrigin );
 	CalcViewRoll( eyeAngles );
 
@@ -1920,7 +1937,6 @@ void C_BasePlayer::CalcDeathCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 	QAngle aForward = eyeAngles;
 	Vector origin = EyePosition();			
 
-	// NOTE:  This will create the ragdoll in CSS if m_hRagdoll is set, but m_pRagdoll is not yet presetn
 	IRagdoll *pRagdoll = GetRepresentativeRagdoll();
 	if ( pRagdoll )
 	{
@@ -1929,7 +1945,7 @@ void C_BasePlayer::CalcDeathCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 	}
 	
 	if ( pKiller && pKiller->IsPlayer() && (pKiller != this) ) 
-	{														
+	{
 		Vector vKiller = pKiller->EyePosition() - origin;
 		QAngle aKiller; VectorAngles( vKiller, aKiller );
 		InterpolateAngles( aForward, aKiller, eyeAngles, interpolation );
@@ -2223,7 +2239,7 @@ void C_BasePlayer::GetToolRecordingState( KeyValues *msg )
 	// then this code can (should!) be removed
 	if ( state.m_bThirdPerson )
 	{
-		Vector cam_ofs = g_ThirdPersonManager.GetCameraOffsetAngles();
+		const Vector& cam_ofs = g_ThirdPersonManager.GetCameraOffsetAngles();
 		
 		QAngle camAngles;
 		camAngles[ PITCH ] = cam_ofs[ PITCH ];
@@ -2278,11 +2294,11 @@ void C_BasePlayer::Simulate()
 //		Consider using GetRenderedWeaponModel() instead - it will get the
 //		viewmodel or the active weapon as appropriate.
 //-----------------------------------------------------------------------------
-C_BaseViewModel *C_BasePlayer::GetViewModel( int index /*= 0*/, bool bObserverOK )
+C_BaseViewModel *C_BasePlayer::GetViewModel( int index_ /*= 0*/, bool bObserverOK )
 {
-	Assert( index >= 0 && index < MAX_VIEWMODELS );
+	Assert( index_ >= 0 && index_ < MAX_VIEWMODELS );
 
-	C_BaseViewModel *vm = m_hViewModel[ index ];
+	C_BaseViewModel *vm = m_hViewModel[index_];
 	
 	if ( bObserverOK && GetObserverMode() == OBS_MODE_IN_EYE )
 	{
@@ -2291,7 +2307,7 @@ C_BaseViewModel *C_BasePlayer::GetViewModel( int index /*= 0*/, bool bObserverOK
 		// get the targets viewmodel unless the target is an observer itself
 		if ( target && target != this && !target->IsObserver() )
 		{
-			vm = target->GetViewModel( index );
+			vm = target->GetViewModel( index_ );
 		}
 	}
 
@@ -2782,7 +2798,7 @@ void C_BasePlayer::NotePredictionError( const Vector &vDelta )
 // offset curtime and setup bones at that time using fake interpolation
 // fake interpolation means we don't have reliable interpolation history (the local player doesn't animate locally)
 // so we just modify cycle and origin directly and use that as a fake guess
-void C_BasePlayer::ForceSetupBonesAtTimeFakeInterpolation( matrix3x4_t *pBonesOut, float curtimeOffset )
+bool C_BasePlayer::ForceSetupBonesAtTimeFakeInterpolation( matrix3x4_t *pBonesOut, float curtimeOffset )
 {
 	// we don't have any interpolation data, so fake it
 	float cycle = m_flCycle;
@@ -2797,10 +2813,11 @@ void C_BasePlayer::ForceSetupBonesAtTimeFakeInterpolation( matrix3x4_t *pBonesOu
 	m_flCycle = fmod( 10 + cycle + m_flPlaybackRate * curtimeOffset, 1.0f );
 	SetLocalOrigin( origin + curtimeOffset * GetLocalVelocity() );
 	// Setup bone state to extrapolate physics velocity
-	SetupBones( pBonesOut, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime + curtimeOffset );
+	bool bSuccess = SetupBones( pBonesOut, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime + curtimeOffset );
 
 	m_flCycle = cycle;
 	SetLocalOrigin( origin );
+	return bSuccess;
 }
 
 void C_BasePlayer::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt )
@@ -2810,8 +2827,10 @@ void C_BasePlayer::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x
 		BaseClass::GetRagdollInitBoneArrays(pDeltaBones0, pDeltaBones1, pCurrentBones, boneDt);
 		return;
 	}
+
 	ForceSetupBonesAtTimeFakeInterpolation( pDeltaBones0, -boneDt );
 	ForceSetupBonesAtTimeFakeInterpolation( pDeltaBones1, 0 );
+
 	float ragdollCreateTime = PhysGetSyncCreateTime();
 	if ( ragdollCreateTime != gpGlobals->curtime )
 	{
@@ -2874,12 +2893,12 @@ bool IsInFreezeCam( void )
 
 void C_BasePlayer::SetLastKillerDamageAndFreezeframe( int nLastKillerDamageTaken, int nLastKillerHitsTaken, int nLastKillerDamageGiven, int nLastKillerHitsGiven )
 {
- 	m_nLastKillerDamageTaken = nLastKillerDamageTaken;
- 	m_nLastKillerHitsTaken = nLastKillerHitsTaken;
- 	m_nLastKillerDamageGiven = nLastKillerDamageGiven;
- 	m_nLastKillerHitsGiven = nLastKillerHitsGiven;
- 
- 	m_bCanShowFreezeFrameNow = true;
+	m_nLastKillerDamageTaken = nLastKillerDamageTaken;
+	m_nLastKillerHitsTaken = nLastKillerHitsTaken;
+	m_nLastKillerDamageGiven = nLastKillerDamageGiven;
+	m_nLastKillerHitsGiven = nLastKillerHitsGiven;
+
+	m_bCanShowFreezeFrameNow = true;
 }
 
 //-----------------------------------------------------------------------------
@@ -3006,16 +3025,7 @@ bool C_BasePlayer::GetSteamID( CSteamID *pID )
 	{
 		if ( pi.friendsID && steamapicontext && steamapicontext->SteamUtils() )
 		{
-#if 1	// new
-			static EUniverse universe = k_EUniverseInvalid;
-
-			if ( universe == k_EUniverseInvalid )
-				universe = steamapicontext->SteamUtils()->GetConnectedUniverse();
-
-			pID->InstancedSet( pi.friendsID, 1, universe, k_EAccountTypeIndividual );
-#else	// old
 			pID->InstancedSet( pi.friendsID, 1, steamapicontext->SteamUtils()->GetConnectedUniverse(), k_EAccountTypeIndividual );
-#endif
 
 			return true;
 		}
@@ -3036,10 +3046,13 @@ void C_BasePlayer::UpdateWearables( void )
 		{
 			pItem->ValidateModelIndex();
 			pItem->UpdateVisibility();
+			pItem->CreateShadow();
 		}
 	}
 }
 #endif // USES_ECON_ITEMS
+
+
 
 void CC_DumpClientSoundscapeData( const CCommand& args )
 {

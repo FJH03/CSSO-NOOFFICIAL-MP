@@ -1036,7 +1036,6 @@ void CWeaponCSBase::Precache( void )
 		PrecacheScriptSound( GetCSWpnData().m_szZoomOUTSound );
 	}
 
-	PrecacheScriptSound( "Default.Zoom" );
 	PrecacheScriptSound( "Weapon.AutoSemiAutoSwitch" );
 
 	// PiMoN: weaponscript parsing happens on Precache() of BaseCombatWeapon

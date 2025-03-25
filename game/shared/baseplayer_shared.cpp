@@ -26,8 +26,8 @@
 	#include "sourcevr/isourcevirtualreality.h"
 	#include "weapon_selection.h"
 	#ifdef CSTRIKE_DLL
- 		#include "c_cs_player.h"
- 	#endif
+		#include "c_cs_player.h"
+	#endif
 
 #else
 
@@ -38,9 +38,9 @@
 	#include "ai_basenpc.h"
 	#include "env_zoom.h"
 	#ifdef CSTRIKE_DLL
- 		#include "cs_player.h"
+		#include "cs_player.h"
 		#include "cs_gamerules.h"
- 	#endif
+	#endif
 
 	extern int TrainSpeed(int iSpeed, int iMax);
 	
@@ -459,7 +459,7 @@ const Vector CBasePlayer::GetPlayerMins( void ) const
 // Output : const Vector
 //-----------------------------------------------------------------------------
 const Vector CBasePlayer::GetPlayerMaxs( void ) const
-{	
+{
 	if ( IsObserver() )
 	{
 		return VEC_OBS_HULL_MAX;
@@ -477,6 +477,7 @@ const Vector CBasePlayer::GetPlayerMaxs( void ) const
 	}
 }
 
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -491,6 +492,7 @@ void CBasePlayer::UpdateCollisionBounds( void )
 		SetCollisionBounds( VEC_HULL_MIN, VEC_HULL_MAX );
 	}
 }
+
 
 //-----------------------------------------------------------------------------
 // Purpose: Update the vehicle view, or simply return the cached position and angles
@@ -966,7 +968,7 @@ void CBasePlayer::SetStepSoundTime( stepsoundtimes_t iStepSoundTime, bool bWalki
 	}
 
 	m_flStepSoundTime *= sv_footstep_sound_frequency.GetFloat();
-	
+
 	// UNDONE: need defined numbers for run, walk, crouch, crouch run velocities!!!!	
 	if ( ( GetFlags() & FL_DUCKING) || ( GetMoveType() == MOVETYPE_LADDER ) )
 	{
@@ -1485,6 +1487,7 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 
 	return pNearest;
 }
+
 //-----------------------------------------------------------------------------
 // Purpose: Handles USE keypress
 //-----------------------------------------------------------------------------

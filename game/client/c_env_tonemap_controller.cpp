@@ -12,6 +12,7 @@ extern float g_flCustomAutoExposureMin;
 extern float g_flCustomAutoExposureMax;
 extern float g_flCustomBloomScale;
 extern float g_flCustomBloomScaleMinimum;
+extern float g_flTonemapRate;
 
 EHANDLE g_hTonemapControllerInUse = NULL;
 
@@ -28,7 +29,7 @@ public:
 	~C_EnvTonemapController();
 	virtual void	OnDataChanged( DataUpdateType_t updateType );
 
-private:
+//private:
 	bool m_bUseCustomAutoExposureMin;
 	bool m_bUseCustomAutoExposureMax;
 	bool m_bUseCustomBloomScale;
@@ -36,6 +37,7 @@ private:
 	float m_flCustomAutoExposureMax;
 	float m_flCustomBloomScale;
 	float m_flCustomBloomScaleMinimum;
+	float m_flTonemapRate;
 private:
 	C_EnvTonemapController( const C_EnvTonemapController & );
 };
@@ -48,6 +50,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_EnvTonemapController, DT_EnvTonemapController, CEnvT
 	RecvPropFloat( RECVINFO(m_flCustomAutoExposureMax) ),
 	RecvPropFloat( RECVINFO(m_flCustomBloomScale) ),
 	RecvPropFloat( RECVINFO(m_flCustomBloomScaleMinimum) ),
+	RecvPropFloat( RECVINFO(m_flTonemapRate) ),
 END_RECV_TABLE()
 
 //-----------------------------------------------------------------------------
@@ -62,6 +65,7 @@ C_EnvTonemapController::C_EnvTonemapController( void )
 	m_flCustomAutoExposureMax = 0;
 	m_flCustomBloomScale = 0.0f;
 	m_flCustomBloomScaleMinimum = 0.0f;
+	m_flTonemapRate = 1.0f;
 }
 
 //-----------------------------------------------------------------------------
@@ -74,6 +78,8 @@ C_EnvTonemapController::~C_EnvTonemapController( void )
 		g_bUseCustomAutoExposureMin = false;
 		g_bUseCustomAutoExposureMax = false;
 		g_bUseCustomBloomScale = false;
+
+		g_hTonemapControllerInUse = NULL;
 	}
 }
 
@@ -93,5 +99,36 @@ void C_EnvTonemapController::OnDataChanged( DataUpdateType_t updateType )
 	g_flCustomBloomScaleMinimum = m_flCustomBloomScaleMinimum;
 
 	g_hTonemapControllerInUse = this;
+}
+
+void GetTonemapSettingsFromEnvTonemapController( void )
+{
+	C_EnvTonemapController* tonemapController = dynamic_cast<C_EnvTonemapController*>(g_hTonemapControllerInUse.Get());
+	if ( tonemapController != NULL )
+	{
+		g_bUseCustomAutoExposureMin = tonemapController->m_bUseCustomAutoExposureMin;
+		g_bUseCustomAutoExposureMax = tonemapController->m_bUseCustomAutoExposureMax;
+		g_bUseCustomBloomScale = tonemapController->m_bUseCustomBloomScale;
+		g_flCustomAutoExposureMin = tonemapController->m_flCustomAutoExposureMin;
+		g_flCustomAutoExposureMax = tonemapController->m_flCustomAutoExposureMax;
+		g_flCustomBloomScale = tonemapController->m_flCustomBloomScale;
+		g_flCustomBloomScaleMinimum = tonemapController->m_flCustomBloomScaleMinimum;
+
+		g_flTonemapRate = tonemapController->m_flTonemapRate;
+	}
+	else
+	{
+		g_bUseCustomAutoExposureMin = false;
+		g_bUseCustomAutoExposureMax = false;
+		g_bUseCustomBloomScale = false;
+
+		g_flTonemapRate = 1.0f;
+	}
+
+	ConVarRef mat_hdr_manual_tonemap_rate( "mat_hdr_manual_tonemap_rate" );
+	if ( mat_hdr_manual_tonemap_rate.IsValid() )
+	{
+		mat_hdr_manual_tonemap_rate.SetValue( g_flTonemapRate );
+	}
 }
 
