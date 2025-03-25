@@ -38,6 +38,10 @@ private:
 
 	CCvarToggleCheckButton *m_allowRogues;
 
+	CCvarToggleCheckButton *m_randomKnives;
+	CCvarToggleCheckButton *m_randomGloves;
+	CCvarToggleCheckButton *m_randomAgents;
+
 	CCvarToggleCheckButton *m_allowPistols;
 	CCvarToggleCheckButton *m_allowShotguns;
 	CCvarToggleCheckButton *m_allowSubmachineGuns;

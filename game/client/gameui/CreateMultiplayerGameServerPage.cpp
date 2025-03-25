@@ -251,74 +251,75 @@ void CCreateMultiplayerGameServerPage::OnApplyChanges()
 //-----------------------------------------------------------------------------
 void CCreateMultiplayerGameServerPage::LoadMaps( const char *pszPathID )
 {
-    FileFindHandle_t findHandle = NULL;
+	FileFindHandle_t findHandle = NULL;
 
-    KeyValues *hiddenMaps = ModInfo().GetHiddenMaps();
+	KeyValues *hiddenMaps = ModInfo().GetHiddenMaps();
 
-    const char *pszFilename = g_pFullFileSystem->FindFirstEx( "maps/*.bsp", pszPathID, &findHandle );
+	const char *pszFilename = g_pFullFileSystem->FindFirstEx( "maps/*.bsp", pszPathID, &findHandle );
 
     const char* pszGameType = NULL;
     const char* pszGameMode = NULL;
     KeyValues* pkvData = NULL;
 
-    while ( pszFilename )
-    {
-        char mapname[256];
-        char *ext, *str;
+	while ( pszFilename )
+	{
+		char mapname[256];
+		char *ext, *str;
 
-        // remove the text 'maps/' and '.bsp' from the file name to get the map name
-        
-        str = Q_strstr( pszFilename, "maps" );
-        if ( str )
-        {
-            Q_strncpy( mapname, str + 5, sizeof(mapname) - 1 );    // maps + \\ = 5
-        }
-        else
-        {
-            Q_strncpy( mapname, pszFilename, sizeof(mapname) - 1 );
-        }
-        ext = Q_strstr( mapname, ".bsp" );
-        if ( ext )
-        {
-            *ext = 0;
-        }
+		// remove the text 'maps/' and '.bsp' from the file name to get the map name
+		
+		str = Q_strstr( pszFilename, "maps" );
+		if ( str )
+		{
+			Q_strncpy( mapname, str + 5, sizeof(mapname) - 1 );	// maps + \\ = 5
+		}
+		else
+		{
+			Q_strncpy( mapname, pszFilename, sizeof(mapname) - 1 );
+		}
+		ext = Q_strstr( mapname, ".bsp" );
+		if ( ext )
+		{
+			*ext = 0;
+		}
 
-        // strip out maps that shouldn't be displayed
-        if ( hiddenMaps )
-        {
-            if ( hiddenMaps->GetInt( mapname, 0 ) )
-            {
-                goto nextFile;
-            }
-        }
+		// strip out maps that shouldn't be displayed
+		if ( hiddenMaps )
+		{
+			if ( hiddenMaps->GetInt( mapname, 0 ) )
+			{
+				goto nextFile;
+			}
+		}
 
         pszGameType = g_pGameTypes->GetGameTypeFromInt( m_nGameTypeID );
         pszGameMode = g_pGameTypes->GetGameModeFromInt( m_nGameTypeID, m_nGameModeID );
 
-        if ( !m_pAllMapsCheck->IsSelected() && !g_pGameTypes->IsValidMapForTypeAndMode(mapname, pszGameType, pszGameMode) )
-        {
-            goto nextFile;
-        }
+		if ( !m_pAllMapsCheck->IsSelected() && !g_pGameTypes->IsValidMapForTypeAndMode(mapname, pszGameType, pszGameMode) )
+		{
+			goto nextFile;
+		}
 
-        pkvData = new KeyValues( "data" );
-        if ( pkvData )
-        {
-            pkvData->SetString( "mapname", mapname );
-            pkvData->SetString( "uimapname", g_pGameTypes->GetMapNameID( mapname ) );
-            m_pMapList->AddItem( pkvData, 0, false, false );
-        }
+		// add to the map list
+		pkvData = new KeyValues( "data" );
+		if ( pkvData )
+		{
+			pkvData->SetString( "mapname", mapname );
+			pkvData->SetString( "uimapname", g_pGameTypes->GetMapNameID( mapname ) );
+			m_pMapList->AddItem( pkvData, 0, false, false );
+		}
 
-        // get the next file
-    nextFile:
-        pszFilename = g_pFullFileSystem->FindNext( findHandle );
-    }
-    g_pFullFileSystem->FindClose( findHandle );
+		// get the next file
+	nextFile:
+		pszFilename = g_pFullFileSystem->FindNext( findHandle );
+	}
+	g_pFullFileSystem->FindClose( findHandle );
 
-    // set the first item to be selected
-    if (m_pMapList->GetItemCount() > 0)
-    {
-        m_pMapList->SetSingleSelectedItem(m_pMapList->GetItemIDFromRow(0));
-    }
+	// set the first item to be selected
+	if (m_pMapList->GetItemCount() > 0)
+	{
+		m_pMapList->SetSingleSelectedItem(m_pMapList->GetItemIDFromRow(0));
+	}
 }
 
 

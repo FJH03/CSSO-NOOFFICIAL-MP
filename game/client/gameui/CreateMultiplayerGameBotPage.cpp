@@ -129,6 +129,9 @@ CCreateMultiplayerGameBotPage::CCreateMultiplayerGameBotPage( vgui::Panel *paren
 	m_pSavedData = botKeys;
 
 	m_allowRogues = new CCvarToggleCheckButton( this, "BotAllowRogueCheck", "", "bot_allow_rogues" );
+	m_randomKnives = new CCvarToggleCheckButton( this, "BotRandomKnivesCheck", "", "bot_loadout_random_knives" );
+	m_randomGloves = new CCvarToggleCheckButton( this, "BotRandomGlovesCheck", "", "bot_loadout_random_gloves" );
+	m_randomAgents = new CCvarToggleCheckButton( this, "BotRandomAgentsCheck", "", "bot_loadout_random_agents" );
 	m_allowPistols = new CCvarToggleCheckButton( this, "BotAllowPistolsCheck", "", "bot_allow_pistols" );
 	m_allowShotguns = new CCvarToggleCheckButton( this, "BotAllowShotgunsCheck", "", "bot_allow_shotguns" );
 	m_allowSubmachineGuns = new CCvarToggleCheckButton( this, "BotAllowSubmachineGunsCheck", "", "bot_allow_sub_machine_guns" );
@@ -173,6 +176,9 @@ CCreateMultiplayerGameBotPage::CCreateMultiplayerGameBotPage( vgui::Panel *paren
 	// get initial values from bot keys
 	m_joinAfterPlayer->SetSelected( botKeys->GetInt( "bot_join_after_player", 1 ) );
 	m_allowRogues->SetSelected( botKeys->GetInt( "bot_allow_rogues", 1 ) );
+	m_randomKnives->SetSelected( botKeys->GetInt( "bot_loadout_random_knives", 1 ) );
+	m_randomGloves->SetSelected( botKeys->GetInt( "bot_loadout_random_gloves", 1 ) );
+	m_randomAgents->SetSelected( botKeys->GetInt( "bot_loadout_random_agents", 1 ) );
 	m_allowPistols->SetSelected( botKeys->GetInt( "bot_allow_pistols", 1 ) );
 	m_allowShotguns->SetSelected( botKeys->GetInt( "bot_allow_shotguns", 1 ) );
 	m_allowSubmachineGuns->SetSelected( botKeys->GetInt( "bot_allow_sub_machine_guns", 1 ) );
@@ -235,6 +241,9 @@ void CCreateMultiplayerGameBotPage::OnApplyChanges()
 {
 	UpdateValue( m_pSavedData, "bot_join_after_player", m_joinAfterPlayer->IsSelected() );
 	UpdateValue( m_pSavedData, "bot_allow_rogues", m_allowRogues->IsSelected() );
+	UpdateValue( m_pSavedData, "bot_loadout_random_knives", m_randomKnives->IsSelected() );
+	UpdateValue( m_pSavedData, "bot_loadout_random_gloves", m_randomGloves->IsSelected() );
+	UpdateValue( m_pSavedData, "bot_loadout_random_agents", m_randomAgents->IsSelected() );
 	UpdateValue( m_pSavedData, "bot_allow_pistols", m_allowPistols->IsSelected() );
 	UpdateValue( m_pSavedData, "bot_allow_shotguns", m_allowShotguns->IsSelected() );
 	UpdateValue( m_pSavedData, "bot_allow_sub_machine_guns", m_allowSubmachineGuns->IsSelected() );
@@ -244,7 +253,7 @@ void CCreateMultiplayerGameBotPage::OnApplyChanges()
 	UpdateValue( m_pSavedData, "bot_allow_grenades", m_allowGrenades->IsSelected() );
 	UpdateValue( m_pSavedData, "bot_defer_to_human_goals", m_deferToHuman->IsSelected() );
 	UpdateValue( m_pSavedData, "bot_defer_to_human_items", m_deferToHumanItems->IsSelected() );
-	
+
 	// set bot_join_team
 	UpdateValue( m_pSavedData, "bot_join_team", joinTeamArg[ m_joinTeamCombo->GetActiveItem() ] );
 

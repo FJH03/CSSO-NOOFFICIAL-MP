@@ -112,9 +112,9 @@ const char *CCreateMultiplayerGameGameplayPage::GetValue(const char *cvarName, c
 void CCreateMultiplayerGameGameplayPage::OnApplyChanges()
 {
 	PropertySheet* pParent = dynamic_cast<PropertySheet*>(GetParent());
- 	if ( pParent && !pParent->IsPageEnabled( "GameplayPage" ) )
- 		return;
-	
+	if ( pParent && !pParent->IsPageEnabled( "GameplayPage" ) )
+		return;
+
 	// Get the values from the controls
 	GatherCurrentValues();
 
@@ -225,7 +225,7 @@ void CCreateMultiplayerGameGameplayPage::LoadGameOptionsList()
 		}
 
 		pCtrl->pScrObj = pObj;
-		pCtrl->SetSize( 100, scheme()->GetProportionalScaledValue(28) );
+		pCtrl->SetSize( 100, 28 );
 		//pCtrl->SetBorder( scheme()->GetBorder(1, "DepressedButtonBorder") );
 		m_pOptionsList->AddItem( pCtrl );
 
