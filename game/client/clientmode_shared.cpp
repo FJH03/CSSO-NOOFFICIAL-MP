@@ -781,6 +781,8 @@ void ClientModeShared::LevelInit( const char *newmap )
 {
 	m_pViewport->GetAnimationController()->StartAnimationSequence("LevelInit");
 
+	g_ThirdPersonManager.Init();
+
 	// Tell the Chat Interface
 	if ( m_pChatElement )
 	{
