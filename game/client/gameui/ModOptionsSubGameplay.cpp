@@ -58,6 +58,7 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pAddBotPrefix = new CCvarToggleCheckButton( this, "AddBotPrefix", "#GameUI_Gameplay_AddBotPrefix", "cl_add_bot_prefix" );
 	m_pDrawTracers = new CCvarToggleCheckButton( this, "DrawTracers", "#GameUI_Gameplay_DrawTracers", "r_drawtracers" );
 	m_pSpecInterpCamera = new CCvarToggleCheckButton( this, "SpecInterpCamera", "#GameUI_Gameplay_SpecInterpCamera", "cl_obs_interp_enable" );
+	m_pDisableShootingEffects = new CCvarToggleCheckButton( this, "DisableShootingEffects", "#GameUI_Gameplay_DisableShootingEffects", "cl_disable_shooting_effects" );
 	m_pViewmodelOffsetX = new CCvarSlider( this, "ViewmodelOffsetXSlider", "", -2.0f, 2.5f, "viewmodel_offset_x" );
 	m_pViewmodelOffsetXLabel = new Label( this, "ViewmodelOffsetXLabel", "" );
 	m_pViewmodelOffsetY = new CCvarSlider( this, "ViewmodelOffsetYSlider", "", -2.0f, 2.0f, "viewmodel_offset_y" );
@@ -87,6 +88,7 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pAddBotPrefix->AddActionSignalTarget( this );
 	m_pDrawTracers->AddActionSignalTarget( this );
 	m_pSpecInterpCamera->AddActionSignalTarget( this );
+	m_pDisableShootingEffects->AddActionSignalTarget( this );
 	m_pViewmodelOffsetX->AddActionSignalTarget( this );
 	m_pViewmodelOffsetY->AddActionSignalTarget( this );
 	m_pViewmodelOffsetZ->AddActionSignalTarget( this );
@@ -181,6 +183,7 @@ void CModOptionsSubGameplay::OnResetData()
 	m_pAddBotPrefix->Reset();
 	m_pDrawTracers->Reset();
 	m_pSpecInterpCamera->Reset();
+	m_pDisableShootingEffects->Reset();
 	m_pViewmodelOffsetX->Reset();
 	m_pViewmodelOffsetY->Reset();
 	m_pViewmodelOffsetZ->Reset();
@@ -211,6 +214,7 @@ void CModOptionsSubGameplay::OnApplyChanges()
 	m_pAddBotPrefix->ApplyChanges();
 	m_pDrawTracers->ApplyChanges();
 	m_pSpecInterpCamera->ApplyChanges();
+	m_pDisableShootingEffects->ApplyChanges();
 	m_pViewmodelOffsetPreset->ApplyChanges();
 	m_pViewmodelOffsetX->ApplyChanges();
 	m_pViewmodelOffsetY->ApplyChanges();

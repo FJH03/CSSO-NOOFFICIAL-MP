@@ -123,7 +123,7 @@ WeaponNameInfo s_weaponNameInfo[] =
 
 	{ ITEM_KEVLAR,				"item_kevlar" },
 	{ ITEM_ASSAULTSUIT,			"item_assaultsuit" },
-	{ ITEM_NVGS,					"item_nvgs" },
+	{ ITEM_NVGS,				"item_nvgs" },
 	{ ITEM_DEFUSER,				"item_defuser" },
 
 	{ WEAPON_NONE,				"weapon_none" },
@@ -368,40 +368,12 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_iCrosshairMinDistance		= pKeyValuesData->GetInt( "CrosshairMinDistance", 4 );
 	m_iCrosshairDeltaDistance	= pKeyValuesData->GetInt( "CrosshairDeltaDistance", 3 );
 	m_flAddonScale				= pKeyValuesData->GetFloat( "AddonScale", 1 );
-	m_flMuzzleScale				= pKeyValuesData->GetFloat( "MuzzleFlashScale", 1 );
-
-	const char *pMuzzleFlashStyle = pKeyValuesData->GetString( "MuzzleFlashStyle", "CS_MUZZLEFLASH_NORM" );
-	
-	if( pMuzzleFlashStyle )
-	{
-		if ( Q_stricmp( pMuzzleFlashStyle, "CS_MUZZLEFLASH_X" ) == 0 )
-		{
-			m_iMuzzleFlashStyle = CS_MUZZLEFLASH_X;
-		}
-		else if ( Q_stricmp( pMuzzleFlashStyle, "CS_MUZZLEFLASH_NONE" ) == 0 )
-		{
-			m_iMuzzleFlashStyle = CS_MUZZLEFLASH_NONE;
-		}
-		else
-		{
-			m_iMuzzleFlashStyle = CS_MUZZLEFLASH_NORM;
-		}
-	}
-	else
-	{
-		Assert( false );
-	}
 
 	// muzzle flash
-	/*const char* pTemp = pKeyValuesData->GetString( "MuzzleFlash1stPerson", "" );
-	Q_strncpy( m_szMuzzleFlash1stPerson, pTemp, sizeof( m_szMuzzleFlash1stPerson ) );
-	pTemp = pKeyValuesData->GetString( "MuzzleFlash1stPersonAlt", m_szMuzzleFlash1stPerson );
-	Q_strncpy( m_szMuzzleFlash1stPersonAlt, pTemp, sizeof( m_szMuzzleFlash1stPersonAlt ) );
-
-	pTemp = pKeyValuesData->GetString( "MuzzleFlash3rdPerson", "" );
-	Q_strncpy( m_szMuzzleFlash3rdPerson, pTemp, sizeof( m_szMuzzleFlash3rdPerson ) );
-	pTemp = pKeyValuesData->GetString( "MuzzleFlash3rdPersonAlt", m_szMuzzleFlash3rdPerson );
-	Q_strncpy( m_szMuzzleFlash3rdPersonAlt, pTemp, sizeof( m_szMuzzleFlash3rdPersonAlt ) );*/
+	Q_strncpy( m_szMuzzleFlash1stPerson, pKeyValuesData->GetString( "MuzzleFlash1stPerson" ), sizeof( m_szMuzzleFlash1stPerson ) );
+	Q_strncpy( m_szMuzzleFlash1stPersonAlt, pKeyValuesData->GetString( "MuzzleFlash1stPersonAlt" ), sizeof( m_szMuzzleFlash1stPersonAlt ) );
+	Q_strncpy( m_szMuzzleFlash3rdPerson, pKeyValuesData->GetString( "MuzzleFlash3rdPerson" ), sizeof( m_szMuzzleFlash3rdPerson ) );
+	Q_strncpy( m_szMuzzleFlash3rdPersonAlt, pKeyValuesData->GetString( "MuzzleFlash3rdPersonAlt" ), sizeof( m_szMuzzleFlash3rdPersonAlt ) );
 
 	m_flPenetration		= pKeyValuesData->GetFloat( "Penetration", 1 );
 	m_iDamage			= pKeyValuesData->GetInt( "Damage", 42 ); // Douglas Adams 1952 - 2001
@@ -413,7 +385,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_flHeadshotMultiplier = pKeyValuesData->GetFloat( "HeadshotMultiplier", 4.0f );
 
 	m_flFlinchVelocityModifierLarge = pKeyValuesData->GetFloat( "FlinchVelocityModifierLarge", 1.0f );
- 	m_flFlinchVelocityModifierSmall = pKeyValuesData->GetFloat( "FlinchVelocityModifierSmall", 1.0f );
+	m_flFlinchVelocityModifierSmall = pKeyValuesData->GetFloat( "FlinchVelocityModifierSmall", 1.0f );
 
 	m_bIsRevolver				= pKeyValuesData->GetBool( "IsRevolver" );
 
@@ -484,8 +456,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_fThrowVelocity	= pKeyValuesData->GetFloat( "ThrowVelocity", 0.0f );
 
 	// eject brass variables
-	//const char* pEjectBrassEffect = pKeyValuesData->GetString( "EjectBrassEffect", "" );
-	//Q_strncpy( m_szEjectBrassEffect, pEjectBrassEffect, sizeof( m_szEjectBrassEffect ) );
+	Q_strncpy( m_szEjectBrassEffect, pKeyValuesData->GetString( "EjectBrassEffect" ), sizeof( m_szEjectBrassEffect ) );
 
 	// tracer variables
 	m_iTracerFrequency[0] = pKeyValuesData->GetInt( "TracerFrequency", 0 );

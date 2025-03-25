@@ -9,12 +9,16 @@
 #include "c_te_effect_dispatch.h"
 #include "c_te_legacytempents.h"
 
+extern ConVar cl_disable_shooting_effects;
 
 //-----------------------------------------------------------------------------
 // Purpose: Handle weapon effect callbacks
 //-----------------------------------------------------------------------------
 void CStrike_EjectBrass( int shell, const CEffectData &data )
 {
+	if ( cl_disable_shooting_effects.GetBool() )
+		return;
+
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 
 	if( !pPlayer )

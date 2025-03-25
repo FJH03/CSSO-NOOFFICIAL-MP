@@ -530,9 +530,16 @@ void CWeaponCSBase::CallSecondaryAttack()
 	m_fLastShotTime = gpGlobals->curtime;
 }
 
+#ifdef CLIENT_DLL
+extern ConVar cl_disable_shooting_effects;
+#endif
+
 void CWeaponCSBase::UpdateGunHeat( float heat, int iAttachmentIndex )
 {
 #ifdef CLIENT_DLL
+	if ( cl_disable_shooting_effects.GetBool() )
+		return;
+
 	static const float SECONDS_FOR_COOL_DOWN = 2.0f;
 	static const float MIN_TIME_BETWEEN_SMOKES = 4.0f;
 
@@ -1010,17 +1017,17 @@ void CWeaponCSBase::Precache( void )
 	if ( GetCSWpnData().m_szStatTrakModel[0] != 0 )
 		PrecacheModel( GetCSWpnData().m_szStatTrakModel );
 
-	//if ( GetCSWpnData().m_szEjectBrassEffect[0] != 0 )
-	//	PrecacheParticleSystem( GetCSWpnData().m_szEjectBrassEffect );
+	if ( GetCSWpnData().m_szEjectBrassEffect[0] != 0 )
+		PrecacheParticleSystem( GetCSWpnData().m_szEjectBrassEffect );
 	
-	/*if ( GetCSWpnData().m_szMuzzleFlash1stPerson[0] != 0 )
+	if ( GetCSWpnData().m_szMuzzleFlash1stPerson[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash1stPerson );
 	if ( GetCSWpnData().m_szMuzzleFlash1stPersonAlt[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash1stPersonAlt );
 	if ( GetCSWpnData().m_szMuzzleFlash3rdPerson[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash3rdPerson );
 	if ( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt[0] != 0 )
-		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt );*/
+		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt );
 
 	if ( GetCSWpnData().m_szHeatEffect[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szHeatEffect );
@@ -1778,7 +1785,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 	}
 
 #ifdef CLIENT_DLL
-	/*int CWeaponCSBase::GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson )
+	int CWeaponCSBase::GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson )
 	{
 		if ( pAnimating )
 		{
@@ -1791,9 +1798,9 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 				return pAnimating->LookupAttachment( "1" );
 		}
 		return -1;
-	}*/
+	}
 
-	/*const char* CWeaponCSBase::GetMuzzleFlashEffectName( bool bThirdPerson )
+	const char* CWeaponCSBase::GetMuzzleFlashEffectName( bool bThirdPerson )
 	{
 		if ( HasSilencer() > 0 && IsSilenced() )
 		{
@@ -1816,13 +1823,16 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 		}
 
 		return -1;
-	}*/
+	}
 #endif
 
 	bool CWeaponCSBase::OnFireEvent( C_BaseViewModel *pViewModel, const Vector& origin, const QAngle& angles, int event, const char *options )
 	{
 		if( event == 5001 )
 		{
+			if ( cl_disable_shooting_effects.GetBool() )
+				return true;
+
 			C_CSPlayer* pPlayer = ToCSPlayer( GetOwner() );
 
 			if ( !pPlayer )
@@ -1833,39 +1843,50 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 
 			// hide particle effects when we're interpolating between observer targets
 			C_BasePlayer* pLocalPlayer = C_BasePlayer::GetLocalPlayer();
-			bool bLocalThirdPerson = ( ( pPlayer == pLocalPlayer ) && pPlayer->ShouldDraw() );
 			if ( pLocalPlayer && pLocalPlayer->GetObserverTarget() == pPlayer && pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE && pLocalPlayer->GetObserverInterpState() == C_BasePlayer::OBSERVER_INTERP_TRAVELING )
 				return true;
 
-			CEffectData data;
-			data.m_fFlags = 0;
-			data.m_hEntity = pViewModel->GetRefEHandle();
-			data.m_nAttachmentIndex = 1;
-			data.m_flScale = GetCSWpnData().m_flMuzzleScale;
+			bool bLocalThirdPerson = ( ( pPlayer == pLocalPlayer ) && pPlayer->ShouldDraw() );
 
-			switch( GetMuzzleFlashStyle() )
-				{
-			case CS_MUZZLEFLASH_NONE:
-				break;
+			Vector origin;
+			int iAttachmentIndex = GetMuzzleAttachmentIndex( pViewModel );
+			const char* pszEffect = GetMuzzleFlashEffectName( false );
 
-			case CS_MUZZLEFLASH_X:
+			if ( pszEffect && Q_strlen( pszEffect ) > 0 && iAttachmentIndex >= 0 )
+			{
+				// The view model fixes up the split screen visibility of any effects spawned off of it.
+				if ( !bLocalThirdPerson )
+					DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pViewModel, iAttachmentIndex, false );
+
+				// we can't trust this position
+				//pViewModel->GetAttachment( iAttachmentIndex, origin );
+
+				//silencers produce no light at all - even smaller lights would illuminate smoke or cause unwanted visual effects
+				if ( !(HasSilencer() > 0 && IsSilenced()) )
 				{
-					DispatchEffect( "CS_MuzzleFlash_X", data );
+					CPVSFilter filter( origin );
+					origin = pPlayer->GetAbsOrigin() + pPlayer->GetViewOffset();
+					QAngle	vangles;
+					Vector	vforward, vright, vup;
+					engine->GetViewAngles( vangles );
+					AngleVectors( vangles, &vforward, &vright, &vup );
+					VectorMA( origin, cl_righthand.GetBool() ? 4 : -4, vright, origin );
+					VectorMA( origin, 31, vforward, origin );
+					origin[2] += 3.0f;
+
+					TE_DynamicLight( filter, 0.0, &origin, 255, 186, 64, 5, 70, 0.05, 768, LIGHT_INDEX_TE_DYNAMIC, true );
 				}
-				break;
 
-			case CS_MUZZLEFLASH_NORM:
-			default:
-				{
-					DispatchEffect( "CS_MuzzleFlash", data );
-				}
-				break;
+				UpdateGunHeat( GetCSWpnData().m_flHeatPerShot, iAttachmentIndex );
 			}
 
 			return true;
 		}
-		/*else if ( event == AE_CLIENT_EJECT_BRASS )
+		else if ( event == AE_CLIENT_EJECT_BRASS )
 		{
+			if ( cl_disable_shooting_effects.GetBool() )
+				return true;
+
 			C_CSPlayer *pPlayer = ToCSPlayer( GetOwner() );
 			if( pPlayer && pPlayer->GetFOV() != pPlayer->GetDefaultFOV() && pPlayer->m_bIsScoped && GetCSWpnData().m_bHideViewmodelWhenZoomed )
 				return true;
@@ -1886,7 +1907,6 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 
 			if ( pszEffect && Q_strlen( pszEffect ) > 0 && iAttachmentIndex >= 0 )
 			{
-
 				C_BasePlayer* pLocalPlayer = C_BasePlayer::GetLocalPlayer();
 				bool bLocalThirdPerson = ((pPlayer == pLocalPlayer) && pPlayer->ShouldDraw());
 
@@ -1896,7 +1916,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 			}
 
 			return true;
-		}*/
+		}
 		else if ( event == AE_CL_SET_STATTRAK_GLOW )
 		{
 			pViewModel->SetStatTrakGlowMultiplier( atof( options ) );
@@ -1947,16 +1967,6 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 		}
 
 		return BaseClass::OnFireEvent( pViewModel, origin, angles, event, options );
-	}
-
-	int CWeaponCSBase::GetMuzzleFlashStyle( void )
-	{
-		return GetCSWpnData().m_iMuzzleFlashStyle;
-	}
-
-	int CWeaponCSBase::GetMuzzleAttachment( void )
-	{
-		return LookupAttachment( "muzzle_flash" );
 	}
 
 #else
@@ -3022,7 +3032,7 @@ void CWeaponCSBase::UpdateAccuracyPenalty( )
 	fNewPenalty += RemapValClamped( pPlayer->GetAbsVelocity().Length2D(), 
 		weaponInfo.GetMaxSpeed(m_weaponMode, GetEconItemView()) * CS_PLAYER_SPEED_DUCK_MODIFIER, 
 		weaponInfo.GetMaxSpeed(m_weaponMode, GetEconItemView()) * 0.95f,							// max out at 95% of run speed to avoid jitter near max speed
-		0.0f, weaponInfo.GetInaccuracyMove( m_weaponMode, GetEconItemView( ) ) );
+		0.0f, weaponInfo.GetInaccuracyMove( m_weaponMode, GetEconItemView( ) );
 #endif
 
 

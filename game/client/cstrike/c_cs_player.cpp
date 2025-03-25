@@ -51,7 +51,6 @@
 
 #include "eventlist.h"
 #include "npcevent.h"
-#include "cs_gamerules.h"
 
 // NVNT - haptics system for spectating
 #include "haptics/haptic_utils.h"
@@ -95,7 +94,7 @@ ConVar spec_freeze_cinematiclight_scale( "spec_freeze_cinematiclight_scale", "2.
 
 ConVar cl_crosshair_sniper_width( "cl_crosshair_sniper_width", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If >1 sniper scope cross lines gain extra width (1 for single-pixel hairline)" );
 ConVar cl_ragdoll_physics_enable( "cl_ragdoll_physics_enable", "1", 0, "Enable/disable ragdoll physics." );
-ConVar cl_disable_shooting_effects( "cl_disable_shooting_effects", "0", FCVAR_ARCHIVE );
+ConVar cl_disable_shooting_effects( "cl_disable_shooting_effects", "1", FCVAR_ARCHIVE );
 
 ConVar fov_cs_debug( "fov_cs_debug", "0", FCVAR_CHEAT, "Sets the view fov if cheats are on." );
 
@@ -1026,8 +1025,8 @@ BEGIN_RECV_TABLE_NOBASE( C_CSPlayer, DT_CSLocalPlayerExclusive )
 
     RecvPropArray3( RECVINFO_ARRAY( m_bPlayerDominated ), RecvPropBool( RECVINFO( m_bPlayerDominated[0] ) ) ),
     RecvPropArray3( RECVINFO_ARRAY( m_bPlayerDominatingMe ), RecvPropBool( RECVINFO( m_bPlayerDominatingMe[0] ) ) ),
- 
- 	RecvPropArray3( RECVINFO_ARRAY( m_iWeaponPurchasesThisRound ), RecvPropInt( RECVINFO( m_iWeaponPurchasesThisRound[0] ) ) ),
+
+	RecvPropArray3( RECVINFO_ARRAY( m_iWeaponPurchasesThisRound ), RecvPropInt( RECVINFO( m_iWeaponPurchasesThisRound[0] ) ) ),
 
 END_RECV_TABLE()
 
@@ -3410,79 +3409,33 @@ void C_CSPlayer::UpdateClientSideAnimation()
 
 void C_CSPlayer::ProcessMuzzleFlashEvent()
 {
-	CBasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
-
-	// Reenable when the weapons have muzzle flash attachments in the right spot.
-	if ( this == pLocalPlayer )
-		return; // don't show own world muzzle flashs in for localplayer
-
-	if ( pLocalPlayer && pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE )
-	{
-		// also don't show in 1st person spec mode
-		if ( pLocalPlayer->GetObserverTarget() == this )
+	if ( cl_disable_shooting_effects.GetBool() )
 		return;
-	}
 
 	CWeaponCSBase *pWeapon = GetActiveCSWeapon();
 
 	if ( !pWeapon )
 		return;
 
-	bool hasMuzzleFlash = (pWeapon->GetMuzzleFlashStyle() != CS_MUZZLEFLASH_NONE);
+	// Muzzle Flash Effect.
+	CBaseWeaponWorldModel *pWeaponWorldModel = pWeapon->GetWeaponWorldModel();
+	if ( !pWeaponWorldModel )
+		return;
 
-	Vector vector;
-	QAngle angles;
+	int iAttachmentIndex = pWeapon->GetMuzzleAttachmentIndex( pWeaponWorldModel, true );
+	const char* pszEffect = pWeapon->GetMuzzleFlashEffectName( true );
 
-	int iAttachment = LookupAttachment( "muzzle_flash" );
-
-	if ( iAttachment >= 0 )
+	if ( pszEffect && Q_strlen(pszEffect ) > 0 && iAttachmentIndex >= 0 && pWeaponWorldModel && pWeaponWorldModel->ShouldDraw() && pWeaponWorldModel->IsVisible() && !pWeaponWorldModel->HasDormantOwner() )
 	{
-		bool bFoundAttachment = GetAttachment( iAttachment, vector, angles );
-		// If we have an attachment, then stick a light on it.
-		if ( bFoundAttachment )
-		{
-			if ( hasMuzzleFlash )
-			{
-				dlight_t *el = effects->CL_AllocDlight( LIGHT_INDEX_MUZZLEFLASH + index );
-				el->origin = vector;
-				el->radius = 70;
-				el->decay = el->radius / 0.05f;
-				el->die = gpGlobals->curtime + 0.05f;
-				el->color.r = 255;
-				el->color.g = 192;
-				el->color.b = 64;
-				el->color.exponent = 5;
-			}
-
-			int shellType = GetShellForAmmoType( pWeapon->GetCSWpnData().szAmmo1 );
-
-			QAngle playerAngle = EyeAngles();
-			Vector vForward, vRight, vUp;
-
-			AngleVectors( playerAngle, &vForward, &vRight, &vUp );
-
-			QAngle angVelocity;
-			Vector vVel = vRight * 100 + vUp * 20;
-			VectorAngles( vVel, angVelocity );
-
-			if ( pWeapon->GetMaxClip1() > 0 )
-			{
-				tempents->CSEjectBrass( vector, angVelocity, 120, shellType, this  );
-			}
-		}
+		DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pWeaponWorldModel, iAttachmentIndex, false );
 	}
 
-	if ( hasMuzzleFlash )
+	// Brass Eject Effect.
+	iAttachmentIndex = pWeapon->GetEjectBrassAttachmentIndex( pWeaponWorldModel, true );
+	pszEffect = pWeapon->GetCSWpnData().m_szEjectBrassEffect;
+	if ( pszEffect && Q_strlen(pszEffect ) > 0 && iAttachmentIndex >= 0 && pWeaponWorldModel && pWeaponWorldModel->ShouldDraw() && pWeaponWorldModel->IsVisible() && !pWeaponWorldModel->HasDormantOwner() )
 	{
-		iAttachment = pWeapon->GetMuzzleAttachment();
-
-		if ( iAttachment > 0 )
-		{
-			float flScale = pWeapon->GetCSWpnData().m_flMuzzleScale;
-			flScale *= 0.75;
-			FX_MuzzleEffectAttached( flScale, pWeapon->GetRefEHandle(), iAttachment, NULL, false );
-
-		}
+		DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pWeaponWorldModel, iAttachmentIndex, false );
 	}
 }
 

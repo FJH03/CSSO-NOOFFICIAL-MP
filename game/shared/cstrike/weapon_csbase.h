@@ -64,11 +64,11 @@ enum CSWeaponMode
 };
 
 enum
- {
- 	Silencer_None = 0,
- 	Silencer_Removable,
- 	Silencer_Permanent
- };
+{
+	Silencer_None = 0,
+	Silencer_Removable,
+	Silencer_Permanent
+};
 
 // structure to encapsulate state of head bob
 struct BobState_t
@@ -152,7 +152,7 @@ public:
 	#endif
 
 	virtual int GetShotgunReloadState( void ) { return 0; } // only shotguns use this for multi-stage reloads
-	
+
 	virtual bool	Holster( CBaseCombatWeapon *pSwitchingTo );
 	virtual void	AddViewmodelBob( CBaseViewModel *viewmodel, Vector &origin, QAngle &angles );
 	virtual	float	CalcViewmodelBob( void );
@@ -164,8 +164,9 @@ public:
 	bool			IsPistol() const;
 
 	virtual bool IsFullAuto() const;
+
 	virtual int		GetZoomFOV( int nZoomLevel ) const;
- 	virtual float	GetZoomTime( int nZoomLevel ) const;
+	virtual float	GetZoomTime( int nZoomLevel ) const;
 
 	CCSPlayer* GetPlayerOwner() const;
 
@@ -188,14 +189,14 @@ public:
 	bool IsKindOf( CSWeaponType type ) const			{ return GetCSWpnData().m_WeaponType == type; }
 	virtual CSWeaponType GetWeaponType( void ) const	{ return GetCSWpnData().m_WeaponType; }
 	bool IsPrimaryWeapon( void ) const
- 	{
- 		return (GetCSWpnData().m_WeaponType == WEAPONTYPE_SUBMACHINEGUN ||
- 				GetCSWpnData().m_WeaponType == WEAPONTYPE_RIFLE ||
- 				GetCSWpnData().m_WeaponType == WEAPONTYPE_SHOTGUN ||
- 				GetCSWpnData().m_WeaponType == WEAPONTYPE_SNIPER_RIFLE ||
- 				GetCSWpnData().m_WeaponType == WEAPONTYPE_MACHINEGUN);
+	{
+		return (GetCSWpnData().m_WeaponType == WEAPONTYPE_SUBMACHINEGUN ||
+				GetCSWpnData().m_WeaponType == WEAPONTYPE_RIFLE ||
+				GetCSWpnData().m_WeaponType == WEAPONTYPE_SHOTGUN ||
+				GetCSWpnData().m_WeaponType == WEAPONTYPE_SNIPER_RIFLE ||
+				GetCSWpnData().m_WeaponType == WEAPONTYPE_MACHINEGUN);
 	}
-	
+
 	const char		*GetTracerType( void ) { return GetCSWpnData().m_szTracerEffect; }
 
 	// return true if this weapon has a silencer equipped
@@ -206,13 +207,13 @@ public:
 	{ 
 		return GetCSWpnData().m_nHasSilencer;
 	}
-	
+
 #ifdef CLIENT_DLL
-	//virtual int GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
-	//virtual const char* GetMuzzleFlashEffectName( bool bThirdPerson );
-	//virtual int GetEjectBrassAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
+	virtual int GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
+	virtual const char* GetMuzzleFlashEffectName( bool bThirdPerson );
+	virtual int GetEjectBrassAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
 #endif
-	
+
 	virtual void SetWeaponModelIndex( const char *pName );
 	virtual void OnPickedUp( CBaseCombatCharacter *pNewOwner );
 
@@ -233,8 +234,6 @@ public:
 		virtual void	DrawCrosshair();
 		virtual void	OnDataChanged( DataUpdateType_t type );
 
-		virtual int		GetMuzzleAttachment( void );
-
 		float			m_flCrosshairDistance;
 		int				m_iAmmoLastCheck;
 		int				m_iAlpha;
@@ -242,7 +241,6 @@ public:
 		int				m_iCrosshairTextureID; // for white additive texture
 		float			m_flGunAccuracyPosition;
 
-		virtual int GetMuzzleFlashStyle( void );
 	#else
 		virtual	void	Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
 		virtual bool	Reload();
@@ -273,7 +271,7 @@ public:
 	virtual const char		*GetViewModel( int viewmodelindex = 0 ) const;
 	virtual bool	WeaponHasBurst() const { return false; }
 	virtual bool	IsInBurstMode() { return m_bBurstMode; }
- 	virtual bool	IsRevolver() const { return false; }
+	virtual bool	IsRevolver() const { return false; }
 
 	void			ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer );
 	bool			ItemPostFrame_ProcessZoomAction( CCSPlayer *pPlayer );
@@ -324,12 +322,12 @@ public:
     void AddToPriorOwnerList(CCSPlayer* pPlayer);
     bool IsAPriorOwner(CCSPlayer* pPlayer);
 
-	void SetStatTrak( bool state ) { m_bStatTrak = state; };
- 	bool HasStatTrak() { return m_bStatTrak; }
- 
- 	// keep track of a player who bought it
- 	void SetOriginalOwnerIndex( int index ) { m_nOriginalOwnerIndex = index; }
- 	int GetOriginalOwnerIndex() { return m_nOriginalOwnerIndex; }
+ 	void SetStatTrak( bool state ) { m_bStatTrak = state; };
+	bool HasStatTrak() { return m_bStatTrak; }
+
+	// keep track of a player who bought it
+	void SetOriginalOwnerIndex( int index ) { m_nOriginalOwnerIndex = index; }
+	int GetOriginalOwnerIndex() { return m_nOriginalOwnerIndex; }
 
 protected:
 
@@ -364,7 +362,7 @@ private:
 	CNetworkVar( float, m_fLastShotTime );
 
 	CNetworkVar( bool, m_bStatTrak );
- 	CNetworkVar( int, m_nOriginalOwnerIndex );
+	CNetworkVar( int, m_nOriginalOwnerIndex );
 
 #ifdef CLIENT_DLL
 	// Smoke effect variables.
@@ -374,7 +372,7 @@ private:
 #else
 	int m_numRemoveUnownedWeaponThink;
 #endif
-
+	
 public:
 #ifdef CLIENT_DLL
 	float m_flLastClientFireBulletTime;

@@ -234,9 +234,6 @@ public:
 	// grenade throw parameters
 	float	m_fThrowVelocity;
 	
-	int	  m_iMuzzleFlashStyle;
-	float m_flMuzzleScale;
-	
 	// Parameters for FX_FireBullets:
 	float	m_flPenetration;
 	int		m_iDamage;
@@ -247,7 +244,7 @@ public:
 	float	m_flHeadshotMultiplier;
 
 	float	m_flFlinchVelocityModifierLarge;
- 	float	m_flFlinchVelocityModifierSmall;
+	float	m_flFlinchVelocityModifierSmall;
 
 	bool	m_bIsRevolver;
 
@@ -297,7 +294,7 @@ public:
 	float	m_flIdleInterval;
 
 	// eject brass variables
-	//char	m_szEjectBrassEffect[MAX_WEAPON_STRING];
+	char	m_szEjectBrassEffect[MAX_WEAPON_STRING];
 
 	// tracer variables
 	int		m_iTracerFrequency[2];
@@ -308,10 +305,10 @@ public:
 	char	m_szHeatEffect[MAX_WEAPON_STRING];
 
 	// muzzle flashes
-	/*char	m_szMuzzleFlash1stPerson[MAX_WEAPON_STRING];
+	char	m_szMuzzleFlash1stPerson[MAX_WEAPON_STRING];
 	char	m_szMuzzleFlash1stPersonAlt[MAX_WEAPON_STRING];
 	char	m_szMuzzleFlash3rdPerson[MAX_WEAPON_STRING];
-	char	m_szMuzzleFlash3rdPersonAlt[MAX_WEAPON_STRING];*/
+	char	m_szMuzzleFlash3rdPersonAlt[MAX_WEAPON_STRING];
 
 	// ironsight
 	bool	m_bIronsightCapable;

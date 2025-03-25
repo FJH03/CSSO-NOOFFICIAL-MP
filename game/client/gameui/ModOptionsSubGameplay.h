@@ -52,6 +52,7 @@ private:
 	CCvarToggleCheckButton*		m_pAddBotPrefix;
 	CCvarToggleCheckButton*		m_pDrawTracers;
 	CCvarToggleCheckButton*		m_pSpecInterpCamera;
+	CCvarToggleCheckButton*		m_pDisableShootingEffects;
 	CCvarSlider*				m_pViewmodelOffsetX;
 	vgui::Label*				m_pViewmodelOffsetXLabel;
 	CCvarSlider*				m_pViewmodelOffsetY;
