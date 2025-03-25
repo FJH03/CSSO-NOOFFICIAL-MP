@@ -17,7 +17,6 @@
 #include <vgui/ILocalize.h>
 #include "c_playerresource.h"
 #include "engine/IEngineSound.h"
-#include "viewpostprocess.h"
 
 CCSTeamMenuAgentImage::CCSTeamMenuAgentImage( Panel* parent, const char* panelName, int nTeamNumber ): Button( parent, panelName, L"" )
 {

@@ -73,6 +73,7 @@ public:
     // [tj] So we can do processing every frame
     virtual void OnThink();
 
+	virtual void PaintBackground();
 #if SCOREBOARD_MOUSE_INPUT
     virtual void SetMouseInputEnabled( bool state );
 #endif

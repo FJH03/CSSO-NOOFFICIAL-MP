@@ -19,11 +19,11 @@
 #include "filesystem.h"
 #include "tier0/vprof.h"
 #include "viewpostprocess.h"
+#include "clienteffectprecachesystem.h"
 
 #ifdef CSTRIKE_DLL
 #include "c_cs_player.h"
 #endif
-
 
 #include "proxyentity.h"
 
@@ -48,12 +48,15 @@ float g_flCustomBloomScaleMinimum = 0.0f;
 
 float g_flBloomExponent = 2.5f;
 float g_flBloomSaturation = 1.0f;
+float g_flTonemapRate = 1.0f;
+
+extern void GetTonemapSettingsFromEnvTonemapController( void );
 
 bool g_bFlashlightIsOn = false;
 
 // hdr parameters
 ConVar mat_bloomscale( "mat_bloomscale", "1" );
-ConVar mat_hdr_level( "mat_hdr_level", "2", FCVAR_ARCHIVE );
+ConVar mat_hdr_level( "mat_hdr_level", "2", FCVAR_DEVELOPMENTONLY );
 
 ConVar mat_bloomamount_rate( "mat_bloomamount_rate", "0.05f", FCVAR_CHEAT );
 static ConVar debug_postproc( "mat_debug_postprocessing_effects", "0", FCVAR_NONE, "0 = off, 1 = show post-processing passes in quadrants of the screen, 2 = only apply post-processing to the centre of the screen" );
@@ -74,7 +77,6 @@ ConVar mat_debug_bloom("mat_debug_bloom","0", FCVAR_CHEAT);
 ConVar mat_colorcorrection( "mat_colorcorrection", "0" );
 
 ConVar mat_accelerate_adjust_exposure_down( "mat_accelerate_adjust_exposure_down", "3.0", FCVAR_CHEAT );
-ConVar mat_hdr_manual_tonemap_rate( "mat_hdr_manual_tonemap_rate", "1.0" );
 
 // fudge factor to make non-hdr bloom more closely match hdr bloom. Because of auto-exposure, high
 // bloomscales don't blow out as much in hdr. this factor was derived by comparing images in a
@@ -98,6 +100,7 @@ ConVar mat_tonemap_algorithm( "mat_tonemap_algorithm", "1", FCVAR_CHEAT, "0 = Or
 ConVar mat_tonemap_percent_target( "mat_tonemap_percent_target", "60.0", FCVAR_CHEAT );
 ConVar mat_tonemap_percent_bright_pixels( "mat_tonemap_percent_bright_pixels", "2.0", FCVAR_CHEAT );
 ConVar mat_tonemap_min_avglum( "mat_tonemap_min_avglum", "3.0", FCVAR_CHEAT );
+ConVar mat_tonemap_multiplier( "mat_tonemap_multiplier", "0.75", FCVAR_ARCHIVE, "Tonemap multiplier", true, 0.1f, true, 1.0f);
 ConVar mat_fullbright( "mat_fullbright", "0", FCVAR_CHEAT );
 
 ConVar mat_blur_r( "mat_blur_r", "0.5", FCVAR_ARCHIVE );
@@ -308,7 +311,7 @@ void ApplyPostProcessingPasses(PostProcessingPass *pass_list, // table of effect
 					pRenderContext->SetRenderTarget(NULL);
 					int row=pcount/4;
 					int col=pcount %4;
-					int dest_width,dest_height;
+					//int dest_width,dest_height;
 					pRenderContext->GetRenderTargetDimensions( dest_width, dest_height );
 					pRenderContext->Viewport( 0, 0, dest_width, dest_height );
 					DrawClippedScreenSpaceRectangle(src_mat,10+col*220,10+row*220,
@@ -614,7 +617,7 @@ void CLuminanceHistogramSystem::Update( void )
 	// now, issue queries for the oldest finished queries we have
 	while( n_queries_issued_this_frame < MAX_QUERIES_PER_FRAME )
 	{
-		int nNumRanges = N_LUMINANCE_RANGES;
+		nNumRanges = N_LUMINANCE_RANGES;
 		if ( mat_tonemap_algorithm.GetInt() == 1 )
 			nNumRanges = N_LUMINANCE_RANGES_NEW;
 
@@ -730,7 +733,7 @@ float CLuminanceHistogramSystem::GetTargetTonemapScalar( bool bGetIdealTargetFor
 		flTargetScalar *= flLastScale;
 
 		flTargetScalar = MAX( 0.001f, flTargetScalar );
-		return flTargetScalar;
+		return flTargetScalar * mat_tonemap_multiplier.GetFloat();
 	}
 	else // Original tonemapping
 	{
@@ -774,9 +777,9 @@ float CLuminanceHistogramSystem::GetTargetTonemapScalar( bool bGetIdealTargetFor
 		average_luminance = MAX( 0.0001f, average_luminance );
 
 		// Compute target scalar
-		float flTargetScalar = 0.005 / average_luminance;
+		float flTargetScalar = 0.005f / average_luminance;
 
-		return flTargetScalar;
+		return flTargetScalar * mat_tonemap_multiplier.GetFloat();
 	}
 }
 
@@ -824,6 +827,9 @@ static void GetExposureRange( float *flAutoExposureMin, float *flAutoExposureMax
 		*flAutoExposureMin = 0.0f;
 	}
 
+	*flAutoExposureMax *= mat_tonemap_multiplier.GetFloat();
+	*flAutoExposureMin *= mat_tonemap_multiplier.GetFloat();
+
 	// Make sure min <= max
 	if ( *flAutoExposureMin > *flAutoExposureMax )
 	{
@@ -853,7 +859,7 @@ void CLuminanceHistogramSystem::UpdateLuminanceRanges( void )
 		s_bFirstTime = false;
 
 		// This seems like a bad idea but it's fine for now
-		const char *sModsForOriginalAlgorithm[] = { "dod", "cstrike", "lostcoast", "hl1" };
+		const char *sModsForOriginalAlgorithm[] = { "dod", "cstrike", "lostcoast", "hl1"};
 		for ( int i=0; i<3; i++ )
 		{
 			if ( strlen( engine->GetGameDirectory() ) >= strlen( sModsForOriginalAlgorithm[i] ) )
@@ -969,8 +975,8 @@ void CLuminanceHistogramSystem::DisplayHistogram( void )
 		engine->Con_NPrintf( 21, "AvgLum @ %4.2f%%  mat_tonemap_min_avglum = %4.2f%%  Using %d pixels of %d pixels on screen (%3d%%)", 
 			MAX( 0.0f, FindLocationOfPercentBrightPixels( 50.0f ) ) * 100.0f, mat_tonemap_min_avglum.GetFloat(),
 			nTotalValidPixels, ( dest_width * dest_height ), int( float( nTotalValidPixels ) * 100.0f / float( dest_width * dest_height ) ) );
-		engine->Con_NPrintf( 23, "BloomScale = %4.2f  mat_hdr_manual_tonemap_rate = %4.2f  mat_accelerate_adjust_exposure_down = %4.2f", 
-			GetCurrentBloomScale(), mat_hdr_manual_tonemap_rate.GetFloat(), mat_accelerate_adjust_exposure_down.GetFloat() );
+		engine->Con_NPrintf( 23, "BloomScale = %4.2f  flTonemapRate = %4.2f  mat_accelerate_adjust_exposure_down = %4.2f", 
+			GetCurrentBloomScale(), g_flTonemapRate, mat_accelerate_adjust_exposure_down.GetFloat() );
 	}
 
 	if ( mat_tonemap_algorithm.GetInt() == 1 ) // New algorithm only
@@ -1479,7 +1485,7 @@ static float GetBloomAmount( void )
 
 	if ( hdrType == HDR_TYPE_NONE )
 	{
-		flBloomAmount *= mat_non_hdr_bloom_scalefactor.GetFloat()/2.f;
+		flBloomAmount *= mat_non_hdr_bloom_scalefactor.GetFloat();
 	}
 
 	flBloomAmount *= mat_bloom_scalefactor_scalar.GetFloat();
@@ -1794,6 +1800,7 @@ void ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSet
 		}
 	}
 }
+
 
 typedef struct SPyroSide
 {
@@ -2362,6 +2369,8 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 		}
 	}
 
+	GetTonemapSettingsFromEnvTonemapController();
+
 	float flBloomScale = GetBloomAmount();
 
 	HDRType_t hdrType = g_pMaterialSystemHardwareConfig->GetHDRType();
@@ -2441,8 +2450,7 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 			// bloom, software-AA and colour-correction (applied in 1 pass, after generation of the bloom texture)
 			bool  bPerformSoftwareAA	= IsX360() && ( engine->GetDXSupportLevel() >= 90 ) && ( flAAStrength != 0.0f );
 			bool  bPerformBloom			= !bPostVGui && ( flBloomScale > 0.0f ) && ( engine->GetDXSupportLevel() >= 90 );
-			bool  bPerformColCorrect	= !bPostVGui && 
-										  ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 90) &&
+			bool  bPerformColCorrect	= !bPostVGui &&
 										  ( g_pMaterialSystemHardwareConfig->GetHDRType() != HDR_TYPE_FLOAT ) &&
 										  g_pColorCorrectionMgr->HasNonZeroColorCorrectionWeights() &&
 										  mat_colorcorrection.GetInt();
@@ -2500,9 +2508,9 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 					partialViewportPostDestRect.height	-= 0.50f*fullViewportPostDestRect.height;
 
 					// This math interprets texel coords as being at corner pixel centers (*not* at corner vertices):
-					Vector2D uvScale(	1.0f - ( (w / 2) / (float)(w - 1) ),
+					Vector2D uvScalePost(	1.0f - ( (w / 2) / (float)(w - 1) ),
 										1.0f - ( (h / 2) / (float)(h - 1) ) );
-					CenterScaleQuadUVs( partialViewportPostSrcCorners, uvScale );
+					CenterScaleQuadUVs( partialViewportPostSrcCorners, uvScalePost );
 				}
 
 				// Temporary hack... Color correction was crashing on the first frame 
@@ -2875,7 +2883,7 @@ ConVar mat_motion_blur_falling_intensity( "mat_motion_blur_falling_intensity", "
 ConVar mat_motion_blur_rotation_intensity( "mat_motion_blur_rotation_intensity", "1.0" );
 ConVar mat_motion_blur_strength( "mat_motion_blur_strength", "1.0" );
 
-void DoImageSpaceMotionBlur( const CViewSetup &view, int x, int y, int w, int h )
+void DoImageSpaceMotionBlur( const CViewSetup &viewBlur, int x, int y, int w, int h )
 {
 #ifdef CSS_PERF_TEST
 	return;
@@ -2918,7 +2926,7 @@ void DoImageSpaceMotionBlur( const CViewSetup &view, int x, int y, int w, int h 
 		//===================================//
 		// Get current pitch & wrap to +-180 //
 		//===================================//
-		float flCurrentPitch = view.angles[PITCH];
+		float flCurrentPitch = viewBlur.angles[PITCH];
 		while ( flCurrentPitch > 180.0f )
 			flCurrentPitch -= 360.0f;
 		while ( flCurrentPitch < -180.0f )
@@ -2927,7 +2935,7 @@ void DoImageSpaceMotionBlur( const CViewSetup &view, int x, int y, int w, int h 
 		//=================================//
 		// Get current yaw & wrap to +-180 //
 		//=================================//
-		float flCurrentYaw = view.angles[YAW];
+		float flCurrentYaw = viewBlur.angles[YAW];
 		while ( flCurrentYaw > 180.0f )
 			flCurrentYaw -= 360.0f;
 		while ( flCurrentYaw < -180.0f )
@@ -2940,7 +2948,7 @@ void DoImageSpaceMotionBlur( const CViewSetup &view, int x, int y, int w, int h 
 		// Get current basis vectors //
 		//===========================//
 		matrix3x4_t mCurrentBasisVectors;
-		AngleMatrix( view.angles, mCurrentBasisVectors );
+		AngleMatrix( viewBlur.angles, mCurrentBasisVectors );
 
 		float vCurrentSideVec[3] = { mCurrentBasisVectors[0][1], mCurrentBasisVectors[1][1], mCurrentBasisVectors[2][1] };
 		float vCurrentForwardVec[3] = { mCurrentBasisVectors[0][0], mCurrentBasisVectors[1][0], mCurrentBasisVectors[2][0] };
@@ -2949,7 +2957,7 @@ void DoImageSpaceMotionBlur( const CViewSetup &view, int x, int y, int w, int h 
 		//======================//
 		// Get current position //
 		//======================//
-		float vCurrentPosition[3] = { view.origin.x, view.origin.y, view.origin.z };
+		float vCurrentPosition[3] = { viewBlur.origin.x, viewBlur.origin.y, viewBlur.origin.z };
 
 		//===============================================================//
 		// Evaluate change in position to determine if we need to update //
@@ -2995,8 +3003,8 @@ void DoImageSpaceMotionBlur( const CViewSetup &view, int x, int y, int w, int h 
 			// Normal update path //
 			//====================//
 			// Compute horizontal and vertical fov
-			float flHorizontalFov = view.fov;
-			float flVerticalFov = ( view.m_flAspectRatio <= 0.0f ) ? ( view.fov ) : ( view.fov  / view.m_flAspectRatio );
+			float flHorizontalFov = viewBlur.fov;
+			float flVerticalFov = (viewBlur.m_flAspectRatio <= 0.0f) ? (viewBlur.fov) : (viewBlur.fov  / viewBlur.m_flAspectRatio);
 			//engine->Con_NPrintf( 2, "Horizontal Fov: %6.2f   Vertical Fov: %6.2f", flHorizontalFov, flVerticalFov );
 
 			//=====================//

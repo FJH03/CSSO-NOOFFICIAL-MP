@@ -21,7 +21,7 @@
 #include "model_types.h"
 #include "vgui_avatarimage.h"
 #include "cs_hud_weaponselection.h"
-#include "cs_gamerules.h"#include "viewpostprocess.h"
+#include "viewpostprocess.h"
 
 #include "c_cs_player.h"
 #include "cs_loadout.h"
@@ -1223,7 +1223,7 @@ void CCSBuyMenu::OnClose()
  	if (bTouchEnable)
  	{
  		engine->ClientCmd_Unrestricted("touch_enable 1\n");
- 	}
+	}
 
 	BaseClass::OnClose();
 }
