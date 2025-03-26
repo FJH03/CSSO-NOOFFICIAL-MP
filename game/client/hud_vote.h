@@ -141,6 +141,12 @@ class CHudVote : public vgui::EditablePanel, public CHudElement
 	virtual void	OnThink();
 	virtual int		KeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding );
 
+	void UserCmd_VoteOption1(void);
+	void UserCmd_VoteOption2(void);
+	void UserCmd_VoteOption3(void);
+	void UserCmd_VoteOption4(void);
+	void UserCmd_VoteOption5(void);
+
 	// NOTE: Any MsgFunc_*() methods added here need to check IsPlayingDemo().
 	void			MsgFunc_CallVoteFailed( bf_read &msg );
 	void			MsgFunc_VoteStart( bf_read &msg );
@@ -191,6 +197,9 @@ private:
 	bool				m_bShowVoteActivePanel;
 	int					m_iVoteCallerIdx;
 	int					m_nVoteTeamIndex;			// If defined, only players on this team will see/vote on the issue
+
+protected:
+	void VoteCast(int nOption);
 };
 
 #endif // HUD_VOTE_H
