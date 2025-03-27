@@ -2064,8 +2064,6 @@ static EventNameMap_t g_NameMap[] =
 	{ CChoreoEvent::STOPPOINT,			"stoppoint" },
 	{ CChoreoEvent::PERMIT_RESPONSES,	"permitresponses" },
 	{ CChoreoEvent::GENERIC,			"generic" },
-	{ CChoreoEvent::CAMERA,				"camera" },
-	{ CChoreoEvent::SCRIPT,				"script" },
 };
 
 //-----------------------------------------------------------------------------

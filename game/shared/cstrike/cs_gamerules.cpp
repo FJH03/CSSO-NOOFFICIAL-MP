@@ -1935,19 +1935,6 @@ ConVar cl_autohelp(
 		return pRules->IsWarmupPeriod();
 	}
 
-	void CCSGameRules::RegisterScriptFunctions( void )
-	{
-		ScriptRegisterFunction( g_pScriptVM, ScriptPrintMessageCenterAll, "Prints an alert message in the center print method to all players." );
-		ScriptRegisterFunction( g_pScriptVM, ScriptPrintMessageChatAll, "Prints a message in chat to all players." );
-		ScriptRegisterFunction( g_pScriptVM, ScriptPrintMessageCenterTeam, "Prints an alert message in the center print method to the specified team." );
-		ScriptRegisterFunction( g_pScriptVM, ScriptPrintMessageChatTeam, "Prints a message in chat to the specified team." );
-
-		ScriptRegisterFunction( g_pScriptVM, ScriptGetGameMode, "Gets the current game mode." );
-		ScriptRegisterFunction( g_pScriptVM, ScriptGetGameType, "Gets the current game type." );
-		ScriptRegisterFunction( g_pScriptVM, ScriptGetRoundsPlayed, "Get the number of rounds played so far." );
-		ScriptRegisterFunction( g_pScriptVM, ScriptIsWarmupPeriod, "Is it warmup or not." );
-	}
-
 	//-----------------------------------------------------------------------------
 	// Purpose: TF2 Specific Client Commands
 	// Input  :

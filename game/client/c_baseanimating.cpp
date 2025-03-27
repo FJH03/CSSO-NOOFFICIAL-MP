@@ -288,12 +288,6 @@ BEGIN_DATADESC( C_ClientRagdoll )
 
 END_DATADESC()
 
-
-BEGIN_ENT_SCRIPTDESC( C_BaseAnimating, C_BaseEntity, "Animating models client-side" )
-	DEFINE_SCRIPTFUNC_NAMED( ScriptSetPoseParameter, "SetPoseParameter", "Set the specified pose parameter to the specified value"  )
-	DEFINE_SCRIPTFUNC( IsSequenceFinished, "Ask whether the main sequence is done playing" )
-END_SCRIPTDESC();
-
 C_ClientRagdoll::C_ClientRagdoll( bool bRestoring )
 {
 	m_iCurrentFriction = 0;

@@ -20,8 +20,6 @@
 #include "ServerNetworkProperty.h"
 #include "shareddefs.h"
 #include "engine/ivmodelinfo.h"
-#include "vscript/ivscript.h"
-#include "vscript_server.h"
 
 class CDamageModifier;
 class CDmgAccumulator;
@@ -320,13 +318,12 @@ a list of all CBaseEntitys is kept in gEntList
 // invalid or there is already an edict using that index, it will error out.
 CBaseEntity *CreateEntityByName( const char *className, int iForceEdictIndex = -1 );
 CBaseNetworkable *CreateNetworkableByName( const char *className );
-CBaseEntity *ToEnt( HSCRIPT hScript );
 
 // creates an entity and calls all the necessary spawn functions
 extern void SpawnEntityByName( const char *className, CEntityMapData *mapData = NULL );
 
 // calls the spawn functions for an entity
-extern int DispatchSpawn( CBaseEntity *pEntity, bool bRunVScripts = true );
+extern int DispatchSpawn( CBaseEntity *pEntity );
 
 inline CBaseEntity *GetContainingEntity( edict_t *pent );
 
@@ -510,8 +507,6 @@ public:
 	virtual void			SetOwnerEntity( CBaseEntity* pOwner );
 	void					SetEffectEntity( CBaseEntity *pEffectEnt );
 	CBaseEntity				*GetEffectEntity() const;
-	HSCRIPT					GetScriptOwnerEntity();
-	virtual void			SetScriptOwnerEntity( HSCRIPT pOwner );
 
 	// Only CBaseEntity implements these. CheckTransmit calls the virtual ShouldTransmit to see if the
 	// entity wants to be sent. If so, it calls SetTransmit, which will mark any dependents for transmission too.
@@ -1203,49 +1198,6 @@ public:
 	int				m_debugOverlays;	// For debug only (bitfields)
 	TimedOverlay_t*	m_pTimedOverlay;	// For debug only
 
-	// VSCRIPT
-	HSCRIPT GetScriptInstance();
-	bool ValidateScriptScope();
-	virtual void RunVScripts();
-	bool CallScriptFunction( const char *pFunctionName, ScriptVariant_t *pFunctionReturn );
-	void ConnectOutputToScript( const char *pszOutput, const char *pszScriptFunc );
-	void DisconnectOutputFromScript( const char *pszOutput, const char *pszScriptFunc );
-	void ScriptThink( );
-	const char *GetScriptId();
-	HSCRIPT GetScriptScope();
-	void RunPrecacheScripts( void );
-	void RunOnPostSpawnScripts( void );
-
-	HSCRIPT ScriptGetMoveParent( void );
-	HSCRIPT ScriptGetRootMoveParent();
-	HSCRIPT ScriptFirstMoveChild( void );
-	HSCRIPT ScriptNextMovePeer( void );
-
-	const Vector &ScriptEyePosition( void ) { static Vector vec; vec = EyePosition(); return vec;}
-	void ScriptSetAngles( float fPitch, float fYaw, float fRoll ) {QAngle angles(fPitch,fYaw,fRoll); Teleport(NULL, &angles, NULL);}
-	const Vector &ScriptGetAngles( void ) { static Vector vec; QAngle qa = GetAbsAngles(); vec.x = qa.x; vec.y = qa.y; vec.z = qa.z; return vec;}
-	
-	void ScriptSetSize( const Vector &mins, const Vector &maxs ) { UTIL_SetSize( this, mins, maxs ); }
-	void ScriptUtilRemove( void ) { UTIL_Remove( this ); }
-	void ScriptSetOwner( HSCRIPT hEntity ) { SetOwnerEntity( ToEnt( hEntity ) ); }
-	void ScriptSetOrigin( const Vector &v ) { Teleport( &v, NULL, NULL ); }
-	void ScriptSetForward( const Vector &v ) { QAngle angles; VectorAngles( v, angles ); Teleport( NULL, &angles, NULL ); }
-	const Vector &ScriptGetForward( void ) { static Vector vecForward; GetVectors( &vecForward, NULL, NULL ); return vecForward; }
-	const Vector &ScriptGetLeft( void ) { static Vector vecLeft; GetVectors( NULL, &vecLeft, NULL ); return vecLeft; }
-	const Vector &ScriptGetUp( void ) { static Vector vecUp; GetVectors( NULL, NULL, &vecUp ); return vecUp; }
-
-	HSCRIPT ScriptGetModelKeyValues( void );
-
-	void ScriptPrecacheModel( const char *name );
-	void ScriptPrecacheScriptSound( const char *name );
-
-	string_t		m_iszVScripts;
-	string_t		m_iszScriptThinkFunction;
-	CScriptScope	m_ScriptScope;
-	HSCRIPT			m_hScriptInstance;
-	string_t		m_iszScriptId;
-	CScriptKeyValues *m_pScriptModelKeyValues;
-
 	// virtual functions used by a few classes
 	
 	// creates an entity of a specified class, by name
@@ -1423,9 +1375,6 @@ public:
 	// See CSoundEmitterSystem
 	void					EmitSound( const char *soundname, float soundtime = 0.0f, float *duration = NULL );  // Override for doing the general case of CPASAttenuationFilter filter( this ), and EmitSound( filter, entindex(), etc. );
 	void					EmitSound( const char *soundname, HSOUNDSCRIPTHANDLE& handle, float soundtime = 0.0f, float *duration = NULL );  // Override for doing the general case of CPASAttenuationFilter filter( this ), and EmitSound( filter, entindex(), etc. );
-	void					ScriptEmitSound( const char *soundname );
-	void					ScriptStopSound( const char *soundname );
-	float					ScriptSoundDuration( const char *soundname, const char *actormodel );
 	void					StopSound( const char *soundname );
 	void					StopSound( const char *soundname, HSOUNDSCRIPTHANDLE& handle );
 	void					GenderExpandString( char const *in, char *out, int maxlen );

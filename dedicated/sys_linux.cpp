@@ -41,7 +41,6 @@
 #include "icvar.h"
 #include "filesystem/IQueuedLoader.h"
 #include "console/TextConsoleUnix.h"
-#include "vscript/ivscript.h"
 
 bool InitInstance( );
 
@@ -270,7 +269,6 @@ bool CSys::LoadModules( CDedicatedAppSystemGroup *pAppSystemGroup )
 		{ "datacache" DLL_EXT_STRING,			MDLCACHE_INTERFACE_VERSION },
 		{ "datacache" DLL_EXT_STRING,			STUDIO_DATA_CACHE_INTERFACE_VERSION },
 		{ "dedicated" DLL_EXT_STRING,			QUEUEDLOADER_INTERFACE_VERSION },
-		{ "vscript" DLL_EXT_STRING,			VSCRIPT_INTERFACE_VERSION },
 		{ "engine" DLL_EXT_STRING,				VENGINE_HLDS_API_VERSION },
 		{ "", "" }	// Required to terminate the list
 	};

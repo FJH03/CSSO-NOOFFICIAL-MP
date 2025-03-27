@@ -1230,10 +1230,6 @@ BEGIN_DATADESC( CFuncTrackTrain )
 
 END_DATADESC()
 
-BEGIN_ENT_SCRIPTDESC( CFuncTrackTrain, CBaseEntity, "func_train" )
-	DEFINE_SCRIPTFUNC_NAMED( ScriptGetFuturePosition, "GetFuturePosition", "Get a position on the track x seconds in the future" )
-END_SCRIPTDESC()
-
 LINK_ENTITY_TO_CLASS( func_tracktrain, CFuncTrackTrain );
 
 
@@ -2408,31 +2404,6 @@ void CFuncTrackTrain::Next( void )
 	}
 }
 
-Vector CFuncTrackTrain::ScriptGetFuturePosition( float flSeconds, float flMinSpeed )
-{
-	//
-	// Based on our current position and speed, look ahead along our path and see
-	// where we should be in flSeconds seconds.
-	//
-	Vector nextPos = GetLocalOrigin();
-	float flSpeed = flMinSpeed;
-
-	nextPos.z -= m_height;
-	CPathTrack *pNextNext = NULL; 
-	CPathTrack *pNext = m_ppath->LookAhead( nextPos, flSpeed * flSeconds, 1, &pNextNext );
-
-	// If we're moving towards a dead end, but our desired speed goes in the opposite direction
-	// this fixes us from stalling
-	if ( m_bManualSpeedChanges && ( ( flSpeed < 0 ) != ( m_flDesiredSpeed < 0 ) ) )
-	{
-		if ( !pNext )
-			pNext = m_ppath;
-	}
-
-//	NDebugOverlay::Box( nextPos, Vector( -8, -8, -8 ), Vector( 8, 8, 8 ), 0, 255, 0, 0, 0.1 );
-
-	return nextPos;
-}
 
 void CFuncTrackTrain::FirePassInputs( CPathTrack *pStart, CPathTrack *pEnd, bool forward )
 {
