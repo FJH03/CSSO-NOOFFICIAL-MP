@@ -264,15 +264,6 @@ IMPLEMENT_SERVERCLASS_ST(CBaseAnimating, DT_BaseAnimating)
 
 END_SEND_TABLE()
 
-
-BEGIN_ENT_SCRIPTDESC( CBaseAnimating, CBaseEntity, "Animating models" )
-	DEFINE_SCRIPTFUNC( LookupAttachment, "Get the named attachement id"  )
-	DEFINE_SCRIPTFUNC_NAMED( ScriptGetAttachmentOrigin, "GetAttachmentOrigin", "Get the attachement id's origin vector"  )
-	DEFINE_SCRIPTFUNC_NAMED( ScriptGetAttachmentAngles, "GetAttachmentAngles", "Get the attachement id's angles as a p,y,r vector"  )
-	DEFINE_SCRIPTFUNC( IsSequenceFinished, "Ask whether the main sequence is done playing" )
-	DEFINE_SCRIPTFUNC( SetBodygroup, "Sets a bodygroup")
-END_SCRIPTDESC();
-
 CBaseAnimating::CBaseAnimating()
 {
 	m_vecForce.GetForModify().Init();

@@ -56,7 +56,6 @@
 #include "reslistgenerator.h"
 #include "tier1/fmtstr.h"
 #include "sourcevr/isourcevirtualreality.h"
-#include "vscript/ivscript.h"
 
 #define VERSION_SAFE_STEAM_API_INTERFACES
 #include "steam/steam_api.h"
@@ -675,7 +674,6 @@ bool CSourceAppSystemGroup::Create()
 		{ "datacache" DLL_EXT_STRING,		MDLCACHE_INTERFACE_VERSION },
 		{ "datacache" DLL_EXT_STRING,		STUDIO_DATA_CACHE_INTERFACE_VERSION },
 		{ "studiorender" DLL_EXT_STRING,	STUDIO_RENDER_INTERFACE_VERSION },
-		{ "vscript" DLL_EXT_STRING,			VSCRIPT_INTERFACE_VERSION },
 		{ "vphysics" DLL_EXT_STRING,		VPHYSICS_INTERFACE_VERSION },
 		{ "video_services" DLL_EXT_STRING,  VIDEO_SERVICES_INTERFACE_VERSION },
   

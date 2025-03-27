@@ -421,15 +421,6 @@ BEGIN_RECV_TABLE_NOBASE( C_BaseEntity, DT_AnimTimeMustBeFirst )
 	RecvPropInt( RECVINFO(m_flAnimTime), 0, RecvProxy_AnimTime ),
 END_RECV_TABLE()
 
-BEGIN_ENT_SCRIPTDESC_ROOT( C_BaseEntity, "Root class of all client-side entities" )
-	DEFINE_SCRIPTFUNC_NAMED( GetAbsOrigin, "GetOrigin", ""  )
-	DEFINE_SCRIPTFUNC_NAMED( ScriptGetForward, "GetForwardVector", "Get the forward vector of the entity"  )
-	DEFINE_SCRIPTFUNC_NAMED( ScriptGetLeft, "GetLeftVector", "Get the left vector of the entity"  )
-	DEFINE_SCRIPTFUNC_NAMED( ScriptGetUp, "GetUpVector", "Get the up vector of the entity"  )
-	DEFINE_SCRIPTFUNC( GetTeamNumber, "Gets this entity's team" )
-END_SCRIPTDESC();
-
-
 #ifndef NO_ENTITY_PREDICTION
 BEGIN_RECV_TABLE_NOBASE( C_BaseEntity, DT_PredictableId )
 	RecvPropPredictableId( RECVINFO( m_PredictableID ) ),
@@ -1098,8 +1089,6 @@ bool C_BaseEntity::Init( int entnum, int iSerialNum )
 
 	m_nCreationTick = gpGlobals->tickcount;
 
-	m_hScriptInstance = NULL;
-
 	return true;
 }
 
@@ -1213,12 +1202,6 @@ void C_BaseEntity::Term()
 	RemoveFromLeafSystem();
 
 	RemoveFromAimEntsList();
-
-	if ( m_hScriptInstance )
-	{
-		g_pScriptVM->RemoveInstance( m_hScriptInstance );
-		m_hScriptInstance = NULL;
-	}
 }
 
 
@@ -6487,26 +6470,6 @@ int C_BaseEntity::GetCreationTick() const
 
 void C_BaseEntity::OnParseMapDataFinished()
 {
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-HSCRIPT C_BaseEntity::GetScriptInstance()
-{
-	if ( !m_hScriptInstance )
-	{
-		if ( m_iszScriptId == NULL_STRING )
-		{
-			char *szName = (char *)stackalloc( 1024 );
-			g_pScriptVM->GenerateUniqueKey( ( m_iName != NULL_STRING ) ? STRING(GetEntityName()) : GetClassname(), szName, 1024 );
-			m_iszScriptId = AllocPooledString( szName );
-		}
-
-		m_hScriptInstance = g_pScriptVM->RegisterInstance( GetScriptDesc(), this );
-		g_pScriptVM->SetInstanceUniqeId( m_hScriptInstance, STRING(m_iszScriptId) );
-	}
-	return m_hScriptInstance;
 }
 
 //------------------------------------------------------------------------------

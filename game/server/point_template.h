@@ -21,11 +21,6 @@ struct template_t
 };
 
 //-----------------------------------------------------------------------------
-void ScriptInstallPreSpawnHook();
-bool ScriptPreInstanceSpawn( CScriptScope *pScriptScope, CBaseEntity *pChild, string_t iszKeyValueData );
-void ScriptPostSpawn( CScriptScope *pScriptScope, CBaseEntity **ppEntities, int nEntities );
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 class CPointTemplate : public CLogicalEntity
@@ -54,7 +49,6 @@ public:
 
 	// Template instancing
 	bool			CreateInstance( const Vector &vecOrigin, const QAngle &vecAngles, CUtlVector<CBaseEntity*> *pEntities );
-	void			CreationComplete( const CUtlVector<CBaseEntity*> &entities );
 
 	// Inputs
 	void			InputForceSpawn( inputdata_t &inputdata );

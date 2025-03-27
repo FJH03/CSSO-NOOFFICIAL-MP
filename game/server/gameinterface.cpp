@@ -189,7 +189,6 @@ IMatchmaking *matchmaking = NULL;	// Xbox 360 only
 IReplaySystem *g_pReplay = NULL;
 IServerReplayContext *g_pReplayServerContext = NULL;
 #endif
-IScriptManager *scriptmanager = NULL;
 
 IGameSystem *SoundEmitterSystem();
 
@@ -625,12 +624,6 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 		return false;
 	if ( IsX360() && (matchmaking = (IMatchmaking *)appSystemFactory( VENGINE_MATCHMAKING_VERSION, NULL )) == NULL )
 		return false;
-
-	if ( !CommandLine()->CheckParm( "-noscripting" ) )
-	{
-		if ( (scriptmanager = (IScriptManager*) appSystemFactory( VSCRIPT_INTERFACE_VERSION, NULL )) == NULL )
-			return false;
-	}
 
 	// If not running dedicated, grab the engine vgui interface
 	if ( !engine->IsDedicatedServer() )

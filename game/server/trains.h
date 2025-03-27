@@ -58,7 +58,6 @@ enum TrainOrientationType_t
 class CFuncTrackTrain : public CBaseEntity
 {
 	DECLARE_CLASS( CFuncTrackTrain, CBaseEntity );
-	DECLARE_ENT_SCRIPTDESC();
 	DECLARE_SERVERCLASS();
 
 public:
@@ -133,8 +132,7 @@ public:
 	float GetDesiredSpeed() const { return m_flDesiredSpeed;}
 
 	virtual bool IsBaseTrain( void ) const { return true; }
-	Vector ScriptGetFuturePosition( float flSeconds, float flMinSpeed );
-	
+
 	void SetSpeedForwardModifier( float flModifier );
 	void SetBlockDamage( float flDamage ) { m_flBlockDamage = flDamage; }
 	void SetDamageChild( bool bDamageChild ) { m_bDamageChild = bDamageChild; }

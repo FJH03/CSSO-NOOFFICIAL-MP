@@ -1346,24 +1346,6 @@ soundlevel_t CBaseEntity::LookupSoundLevel( const char *soundname, HSOUNDSCRIPTH
 	return soundemitterbase->LookupSoundLevelByHandle( soundname, handle );
 }
 
-#if !defined ( CLIENT_DLL )
-void CBaseEntity::ScriptEmitSound( const char *soundname )
-{
-	EmitSound( soundname );
-}
-
-void CBaseEntity::ScriptStopSound( const char *soundname )
-{
-	StopSound( soundname );
-}
-
-float CBaseEntity::ScriptSoundDuration( const char *soundname, const char *actormodel )
-{
-	float duration = CBaseEntity::GetSoundDuration( soundname, actormodel );
-	return duration;
-}
-#endif // !CLIENT
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : *entity - 

@@ -36,9 +36,6 @@
 #include "toolframework/itoolentity.h"
 #include "tier0/threadtools.h"
 
-#include "vscript/ivscript.h"
-#include "vscript_shared.h"
-
 class C_Team;
 class IPhysicsObject;
 class IClientVehicle;
@@ -269,11 +266,6 @@ public:
 	virtual void					SetClassname( const char *className );
 
 	string_t						m_iClassname;
-
-	HSCRIPT GetScriptInstance();
-
-	HSCRIPT			m_hScriptInstance;
-	string_t		m_iszScriptId;
 
 // IClientUnknown overrides.
 public:

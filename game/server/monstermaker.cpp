@@ -835,12 +835,6 @@ void CTemplateNPCMaker::MakeNPC( void )
 		pent->SetAbsAngles( angles );
 	}
 
-	if ( !ScriptPreInstanceSpawn( &m_ScriptScope, pEntity, m_iszTemplateData ) )
-	{
-		UTIL_RemoveImmediate( pEntity );
-		return NULL;
-	}
-
 	m_OnSpawnNPC.Set( pEntity, pEntity, this );
 
 	if ( m_spawnflags & SF_NPCMAKER_FADE )
@@ -878,8 +872,6 @@ void CTemplateNPCMaker::MakeNPC( void )
 			SetUse( NULL );
 		}
 	}
-
-	ScriptPostSpawn( &m_ScriptScope, &pEntity, 1 );
 }
 
 //-----------------------------------------------------------------------------
