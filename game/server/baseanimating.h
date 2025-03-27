@@ -40,7 +40,6 @@ public:
 
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
-	DECLARE_ENT_SCRIPTDESC();
 
 	virtual void SetModel( const char *szModelName );
 	virtual void Activate();

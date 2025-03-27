@@ -387,8 +387,6 @@ public:
 	DECLARE_SERVERCLASS();
 	// data description
 	DECLARE_DATADESC();
-	// script description
-	DECLARE_ENT_SCRIPTDESC();
 	
 	// memory handling
     void *operator new( size_t stAllocateBlock );

@@ -44,7 +44,6 @@ class CGameCoopMissionManager : public CRulePointEntity
 {
 	public:
 	DECLARE_CLASS( CGameCoopMissionManager, CRulePointEntity );
-	DECLARE_ENT_SCRIPTDESC();
 	DECLARE_DATADESC();
 
 	void	Spawn( void );
