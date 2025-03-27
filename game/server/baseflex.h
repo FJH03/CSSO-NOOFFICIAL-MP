@@ -47,8 +47,6 @@ public:
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
 	DECLARE_PREDICTABLE();
-	// script description
-	DECLARE_ENT_SCRIPTDESC();
 
 	// Construction
 						CBaseFlex( void );

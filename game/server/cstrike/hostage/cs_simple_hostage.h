@@ -48,7 +48,6 @@ class CHostage : public CAI_ExpresserHost< CHostageExpresserShim >, public CImpr
 {
 public:
 	DECLARE_CLASS( CHostage, CHostageExpresserShim );
-	DECLARE_ENT_SCRIPTDESC();
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
 

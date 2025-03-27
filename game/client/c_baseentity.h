@@ -185,8 +185,6 @@ public:
 	DECLARE_DATADESC();
 	DECLARE_CLIENTCLASS();
 	DECLARE_PREDICTABLE();
-	// script description
-	DECLARE_ENT_SCRIPTDESC();
 
 									C_BaseEntity();
 
