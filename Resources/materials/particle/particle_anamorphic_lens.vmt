@@ -1,0 +1,11 @@
+"SpriteCard"
+{
+	"$basetexture" "particle\particle_anamorphic_lens"
+	$additive 1
+	$mod2x 1
+	$ignorez 0
+	//$STARTFADESIZE 4.0
+	//$ENDFADESIZE 6.0
+	$overbrightfactor 1.5
+	$depthblend 0
+}
