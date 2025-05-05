@@ -4223,8 +4223,13 @@ void CBaseEntity::SetParentAttachment( const char *szInputName, const char *szAt
 	int iAttachment = pAnimating->LookupAttachment( szAttachment );
 	if ( iAttachment <= 0 )
 	{
-		Warning("ERROR: Tried to %s for entity %s (%s), but it has no attachment named %s.\n", szInputName, GetClassname(), GetDebugName(), szAttachment );
-		return;
+		// CSGO玩家模型缺少了某些CSS玩家模型中拥有的attachments，为了实体能够正常工作，我们将用primary替代
+		iAttachment = pAnimating->LookupAttachment( "primary" );
+		if ( iAttachment <= 0 )
+		{
+			Warning("ERROR: Tried to %s for entity %s (%s), but it has no attachment named %s.\n", szInputName, GetClassname(), GetDebugName(), szAttachment );
+			return;
+		}
 	}
 
 	m_iParentAttachment = iAttachment;
