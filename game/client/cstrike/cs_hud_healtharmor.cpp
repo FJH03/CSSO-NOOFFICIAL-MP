@@ -350,7 +350,7 @@ void CHudHealthArmor::OnThink()
 	iRealHealth = MAX( pPlayer->GetHealth(), 0 );
 	iRealArmor = MAX( pPlayer->ArmorValue(), 0 );
 
-	wchar_t unicode[8];
+	wchar_t unicode[16];
 	// Only update the fade if we've changed health
 	if ( iRealHealth != m_iHealth )
 	{
@@ -377,7 +377,7 @@ void CHudHealthArmor::OnThink()
 
 		V_snwprintf( unicode, sizeof( unicode ), L"%d", m_iHealth );
 		m_pHealthLabel->SetText( unicode );
-		m_pHealthProgress->SetProgress( clamp( (float)m_iHealth / (float)iMaxHealth, 0.0f, 1.0f ) );
+		m_pHealthProgress->SetProgress( clamp( (float)m_iHealth / (iMaxHealth > 0 ? (float)iMaxHealth : 1.0f), 0.0f, 1.0f ) );
 	}
 
 	if ( iRealArmor != m_iArmor )
@@ -387,7 +387,7 @@ void CHudHealthArmor::OnThink()
 		V_snwprintf( unicode, sizeof( unicode ), L"%d", m_iArmor );
 		m_pArmorLabel->SetText( unicode );
 		m_pSimpleArmorLabel->SetText( unicode );
-		m_pArmorProgress->SetProgress( clamp( (float)m_iArmor / (float)iMaxArmor, 0.0f, 1.0f ) );
+		m_pArmorProgress->SetProgress( clamp( (float)m_iArmor / (iMaxArmor > 0 ? (float)iMaxArmor : 1.0f), 0.0f, 1.0f ) );
 	}
 
 	m_pHelmetIcon->SetVisible( pPlayer->HasHelmet() );
