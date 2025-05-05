@@ -7,6 +7,7 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "dbg.h"
 #include "hud.h"
 #include "inetgraphpanel.h"
 #include "kbutton.h"
@@ -1175,18 +1176,18 @@ void CNetGraphPanel::DrawServerType( int xright, int y )
 	else if ( engine->IsInGame() )
 	{
 		INetChannelInfo *pInfo = engine->GetNetChannelInfo();
-		bool bP2P = ( Q_strncmp(pInfo->GetAddress(),"127.0.0.1",9) && Q_strncmp(pInfo->GetAddress(),"localhost",9) );
+		bool bLocal = ( pInfo->IsLoopback() || Q_strncmp(pInfo->GetAddress(),"127.0.0.1",9) == 0 || Q_strncmp(pInfo->GetAddress(),"localhost",9) == 0 );
 		if ( engine->IsHLTV() )
 		{
-			if ( bP2P )
-				psz = "P2P HLTV";
+			if ( bLocal )
+				psz = "Local HLTV";
 			else
 				psz = "HLTV";
 		}
 		else
 		{
-			if ( bP2P )
-				psz = "P2P";
+			if ( bLocal )
+				psz = "local";
 			else
 				psz = "online";
 		}
