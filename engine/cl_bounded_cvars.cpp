@@ -72,7 +72,7 @@ public:
 	CBoundedCvar_CmdRate() :
 	  ConVar_ServerBounded( 
 		  "cl_cmdrate", 
-		  "30", 
+		  "64", 
 		  FCVAR_ARCHIVE | FCVAR_USERINFO, 
 		  "Max number of command packets sent to server per second", true, MIN_CMD_RATE, true, MAX_CMD_RATE )
 	{
