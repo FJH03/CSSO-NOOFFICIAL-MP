@@ -9457,6 +9457,8 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 			case WEAPONTYPE_MACHINEGUN:
 			case WEAPONTYPE_C4:
 			{
+				SetFOV( this, GetDefaultFOV() );
+
 				if (CSGameRules()->GetCanDonateWeapon() && !pCSWeapon->GetDonated() )
 				{
 					pCSWeapon->SetDonated( true );
