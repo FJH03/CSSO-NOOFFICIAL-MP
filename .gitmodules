@@ -6,8 +6,4 @@
 	url = https://github.com/nillerusr/source-physics
 [submodule "lib"]
 	path = lib
-	url = https://github.com/denz8028/source-engine-libs.git
-	branch = dllibs
-[submodule "source-engine-libs"]
-	path = source-engine-libs
 	url = https://github.com/DMK95/source-engine-libs
