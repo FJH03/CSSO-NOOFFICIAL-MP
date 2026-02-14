@@ -656,6 +656,7 @@ CCSPlayer::CCSPlayer()
 	m_flDefusingTalkTimer = 0;
 	m_flC4PlantTalkTimer = 0;
 	m_flFlinchStack = 1.0;
+	m_flNextDefuseTime = 0.0f;
 
 	// setting this to the current time prevents late-joining players from getting prioritized for receiving the defuser/bomb
 	m_fLastGivenDefuserTime = gpGlobals->curtime;
@@ -11408,8 +11409,12 @@ void CCSPlayer::OnPreResetRound()
 	}
 }
 
-void CCSPlayer::OnCanceledDefuse()
+void CCSPlayer::OnCanceledDefuse( bool bCooldown )
 {
+	m_flNextDefuseTime = gpGlobals->curtime;
+	if ( bCooldown )
+		m_flNextDefuseTime += 0.5f;
+
 	if (m_gooseChaseStep == GC_SHOT_DURING_DEFUSE)
 	{
 		m_gooseChaseStep = GC_STOPPED_AFTER_GETTING_SHOT;
