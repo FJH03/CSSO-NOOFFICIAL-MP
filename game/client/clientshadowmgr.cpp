@@ -81,6 +81,7 @@
 #include "toolframework_client.h"
 #include "bonetoworldarray.h"
 #include "cmodel.h"
+#include "imaterialproxydict.h"
 
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -4231,7 +4232,7 @@ IMaterial *CShadowProxy::GetMaterial()
 	return m_BaseTextureVar->GetOwningMaterial();
 }
 
-EXPOSE_INTERFACE( CShadowProxy, IMaterialProxy, "Shadow" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CShadowProxy, Shadow );
 
 
 
@@ -4324,4 +4325,4 @@ IMaterial *CShadowModelProxy::GetMaterial()
 	return m_BaseTextureVar->GetOwningMaterial();
 }
 
-EXPOSE_INTERFACE( CShadowModelProxy, IMaterialProxy, "ShadowModel" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CShadowModelProxy, ShadowModel );

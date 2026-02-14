@@ -149,6 +149,9 @@
 #include "fbxsystem/fbxsystem.h"
 #endif
 
+#include "imaterialproxydict.h"
+
+
 #include "touch.h"
 
 extern vgui::IInputInternal *g_InputInternal;
@@ -696,6 +699,7 @@ public:
 	virtual void			StartStatsReporting( HANDLE handle, bool bArbitrated );
 
 	virtual void			InvalidateMdlCache();
+	virtual IMaterialProxy *InstantiateMaterialProxy( const char *proxyName );
 
 	virtual void			ReloadFilesInList( IFileList *pFilesToReload );
 
@@ -2542,6 +2546,11 @@ void CHLClient::RenderView( const CViewSetup &setup, int nClearFlags, int whatTo
 {
 	VPROF("RenderView");
 	view->RenderView( setup, nClearFlags, whatToDraw );
+}
+
+IMaterialProxy *CHLClient::InstantiateMaterialProxy( const char *proxyName )
+{
+	return GetMaterialProxyDict().CreateProxy( proxyName );
 }
 
 void ReloadSoundEntriesInList( IFileList *pFilesToReload );
