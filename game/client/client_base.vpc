@@ -303,6 +303,7 @@ $Project
 		$File	"commentary_modelviewer.cpp"
 		$File	"commentary_modelviewer.h"
 		$File	"$SRCDIR\game\shared\collisionproperty.cpp"
+		$File   "convarproxy.cpp"
 		$File	"$SRCDIR\game\shared\death_pose.cpp"
 		$File	"$SRCDIR\game\shared\debugoverlay_shared.cpp"
 		$File	"$SRCDIR\game\shared\decals.cpp"
