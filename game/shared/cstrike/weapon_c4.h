@@ -109,6 +109,8 @@
         // [tj] We need to know if this was planted by a player who recovered the bomb
         bool m_bPlantedAfterPickup;
         
+		Quaternion m_OldDefuserEyeAngles;
+		bool m_bPunishRapidTurners;
 	};
 
 	extern CUtlVector< CPlantedC4* > g_PlantedC4s;

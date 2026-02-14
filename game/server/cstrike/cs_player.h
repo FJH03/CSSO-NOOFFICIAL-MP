@@ -829,6 +829,7 @@ public:
 	CNetworkVar( bool, m_bInNoDefuseArea );
 	CNetworkVar( bool, m_bKilledByTaser );
 	int m_iBombSiteIndex;
+	float m_flNextDefuseTime;
 
 	CNetworkVar( int, m_iMoveState );		// Is the player trying to run?  Used for state transitioning after a player lands from a jump etc.
 
@@ -1007,7 +1008,6 @@ private:
 	int							m_nPreferredGrenadeDrop;
 
 	float						m_flDefusedBombWithThisTimeRemaining;
-
 
 	// Last usercmd we shot a bullet on.
 	int m_iLastWeaponFireUsercmd;
@@ -1201,7 +1201,7 @@ public:
 	static void ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer *pVictim, const CTakeDamageInfo &info );
 	float GetLongestSurvivalTime( void ) { return m_longestLife; }
 
-    void                        OnCanceledDefuse();
+	void                        OnCanceledDefuse( bool bCooldown );
     void                        OnStartedDefuse();
     GooseChaseAchievementStep   m_gooseChaseStep;
     DefuseDefenseAchivementStep m_defuseDefenseStep;

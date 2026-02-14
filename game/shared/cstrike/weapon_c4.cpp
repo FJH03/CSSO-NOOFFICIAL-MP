@@ -59,6 +59,7 @@ const float C4_DEFUSE_LOCKIN_PERIOD = 0.05f;
 extern ConVar mp_c4_cannot_be_defused;
 
 ConVar mp_plant_c4_anywhere( "mp_plant_c4_anywhere", "0", FCVAR_REPLICATED );
+ConVar mp_c4_turning_fast_penalty( "mp_c4_turning_fast_penalty", "1", FCVAR_REPLICATED, "Determines whether players will stop defusing if they turn too rapidly.");
 
 
 #ifndef CLIENT_DLL
@@ -104,6 +105,9 @@ END_PREDICTION_DATA()
         m_bPlantedAfterPickup = false;
 
 		m_bVoiceAlertFired = false;
+
+		m_OldDefuserEyeAngles = quat_identity;
+		m_bPunishRapidTurners = false;
 	}
 
 	CPlantedC4::~CPlantedC4()
@@ -314,6 +318,9 @@ END_PREDICTION_DATA()
 		m_flDefuseLength = 0.0f;
 		
 		SpawnControlPanels();
+
+		m_OldDefuserEyeAngles = quat_identity;
+		m_bPunishRapidTurners = mp_c4_turning_fast_penalty.GetBool();
 	}
 
 	void CPlantedC4::C4Think()
@@ -405,7 +412,7 @@ END_PREDICTION_DATA()
 			{
 				m_pBombDefuser->m_bIsDefusing = false;
 				m_pBombDefuser->SetProgressBarTime( 0 );
-				m_pBombDefuser->OnCanceledDefuse();
+				m_pBombDefuser->OnCanceledDefuse( false );
 				m_pBombDefuser = NULL;
 				m_bStartDefuse = false;
 			}
@@ -461,11 +468,32 @@ END_PREDICTION_DATA()
 				bool bPlayerUseIsValidNow = m_pBombDefuser->GetUseConfigurationForHighPriorityUseEntity( this, cfgUseEntity ) &&
 					( cfgUseEntity.m_pEntity == this ) && cfgUseEntity.UseByPlayerNow( m_pBombDefuser, cfgUseEntity.k_EPlayerUseType_Progress );
 
+				bool bPlayerMovingTooFast = false;
+				// made it a bool so that it won't break if server changes convar while someone's defusing
+				if ( m_bPunishRapidTurners )
+				{
+					Quaternion eyeAngles;
+					AngleQuaternion( m_pBombDefuser->EyeAngles(), eyeAngles );
+					float flDifference = fabs( QuaternionAngleDiff( eyeAngles, m_OldDefuserEyeAngles ) );
+
+					if ( 0.08f / gpGlobals->frametime < flDifference && flDifference >= 40.0f ) // what the fuck?
+					{
+						bPlayerMovingTooFast = true;
+					}
+					else
+					{
+						m_OldDefuserEyeAngles = eyeAngles;
+					}
+				}
+
 				//if the bomb defuser has stopped defusing the bomb
-				if ( bPlayerStoppedHoldingUse || !bPlayerUseIsValidNow || !iOnGround )
+				if ( bPlayerStoppedHoldingUse || !bPlayerUseIsValidNow || !iOnGround || bPlayerMovingTooFast )
 				{
 					if ( !iOnGround && m_pBombDefuser->IsAlive() )
 						ClientPrint( m_pBombDefuser, HUD_PRINTCENTER, "#C4_Defuse_Must_Be_On_Ground");
+
+					if ( bPlayerMovingTooFast )
+						EmitSound( "DoSpark" );
 
 					// release the player from being frozen
 					m_pBombDefuser->m_bIsDefusing = false;
@@ -483,7 +511,7 @@ END_PREDICTION_DATA()
 
 					//cancel the progress bar
 					m_pBombDefuser->SetProgressBarTime( 0 );
-                    m_pBombDefuser->OnCanceledDefuse();
+					m_pBombDefuser->OnCanceledDefuse( bPlayerMovingTooFast );
 					m_pBombDefuser = NULL;
 					m_bStartDefuse = false;
 					m_flDefuseCountDown = 0;
@@ -856,8 +884,10 @@ END_PREDICTION_DATA()
 		CCSPlayer *player = dynamic_cast< CCSPlayer* >( pActivator );
 
 		// Can't defuse a bomb if we're not CT or we're in a no defuse area.
-		if ( !player || player->GetTeamNumber() != TEAM_CT || player->m_bInNoDefuseArea )
+		if ( !player || player->GetTeamNumber() != TEAM_CT || player->m_bInNoDefuseArea || player->m_flNextDefuseTime > gpGlobals->curtime )
 			return;
+
+		m_bPunishRapidTurners = mp_c4_turning_fast_penalty.GetBool();
 
 		if ( m_bStartDefuse )
 		{
@@ -904,8 +934,11 @@ END_PREDICTION_DATA()
 
 			m_flDefuseLength = player->HasDefuser() ? 5 : 10;
 
+			Quaternion eyeAngles;
+			AngleQuaternion( player->EyeAngles(), eyeAngles );
 
 			m_pBombDefuser = player;
+			m_OldDefuserEyeAngles = eyeAngles;
 			m_bStartDefuse = TRUE;
 			player->m_bIsDefusing = true;
 
