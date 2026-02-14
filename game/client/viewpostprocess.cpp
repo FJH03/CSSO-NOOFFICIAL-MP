@@ -20,6 +20,7 @@
 #include "tier0/vprof.h"
 #include "viewpostprocess.h"
 #include "clienteffectprecachesystem.h"
+#include "imaterialproxydict.h"
 
 #ifdef CSTRIKE_DLL
 #include "c_cs_player.h"
@@ -81,7 +82,6 @@ static ConVar mat_autoexposure_max( "mat_autoexposure_max", "2" );
 static ConVar mat_autoexposure_max_multiplier( "mat_autoexposure_max_multiplier", "1.0", FCVAR_CHEAT );
 static ConVar mat_autoexposure_min( "mat_autoexposure_min", "0.5" );
 static ConVar mat_show_histogram( "mat_show_histogram", "0" );
-ConVar mat_hdr_tonemapscale( "mat_hdr_tonemapscale", "1.0", FCVAR_CHEAT );
 ConVar mat_hdr_uncapexposure( "mat_hdr_uncapexposure", "0", FCVAR_CHEAT );
 ConVar mat_force_bloom("mat_force_bloom","0", FCVAR_CHEAT);
 
@@ -89,7 +89,7 @@ ConVar mat_disable_bloom("mat_disable_bloom","0");
 ConVar mat_debug_bloom("mat_debug_bloom","0", FCVAR_CHEAT);
 ConVar mat_colorcorrection( "mat_colorcorrection", "0" );
 
-ConVar mat_accelerate_adjust_exposure_down( "mat_accelerate_adjust_exposure_down", "3.0", FCVAR_CHEAT );
+ConVar mat_accelerate_adjust_exposure_down( "mat_accelerate_adjust_exposure_down", "40.0", FCVAR_CHEAT );
 
 // fudge factor to make non-hdr bloom more closely match hdr bloom. Because of auto-exposure, high
 // bloomscales don't blow out as much in hdr. this factor was derived by comparing images in a
@@ -455,24 +455,13 @@ void CHistogramBucket::IssueQuery( int nFrameNum )
 	// Set stencil bits where the colors match
 	IMaterial *pLumCompareMaterial;
 
-#if defined(_PS3)
-	if( mat_PS3_findpostvarsfast.GetInt() )
-	{
-		pLumCompareMaterial = CLumCompareMaterialProxy::GetLumCompareMaterial( materials );
-		CLumCompareMaterialProxy::SetupLumCompareMaterial( flTestRangeMin, flTestRangeMax );
-	}
-	else
-#endif
-	{
-		pLumCompareMaterial = materials->FindMaterial( "dev/lumcompare", TEXTURE_GROUP_OTHER, true );
+	pLumCompareMaterial = materials->FindMaterial( "dev/lumcompare", TEXTURE_GROUP_OTHER, true );
 
-		IMaterialVar *pMinVar = pLumCompareMaterial->FindVar( "$C0_X", NULL );
-		pMinVar->SetFloatValue( flTestRangeMin );
+	IMaterialVar *pMinVar = pLumCompareMaterial->FindVar( "$C0_X", NULL );
+	pMinVar->SetFloatValue( flTestRangeMin );
 
-		IMaterialVar *pMaxVar = pLumCompareMaterial->FindVar( "$C0_Y", NULL );
-		pMaxVar->SetFloatValue( flTestRangeMax );
-	}
-
+	IMaterialVar *pMaxVar = pLumCompareMaterial->FindVar( "$C0_Y", NULL );
+	pMaxVar->SetFloatValue( flTestRangeMax );
 
 	int nScreenMinX = FLerp( nViewportX, ( nViewportX + nViewportWidth - 1 ), 0, 1, m_flScreenMinX );
 	int nScreenMaxX = FLerp( nViewportX, ( nViewportX + nViewportWidth - 1 ), 0, 1, m_flScreenMaxX );
@@ -537,13 +526,7 @@ void CHistogramBucket::IssueQuery( int nFrameNum )
 		pRenderContext->SetStencilZFailOperation( STENCILOPERATION_KEEP );
 		pRenderContext->SetStencilReferenceValue( 0x80 );
 
-		IMaterial *pLumCompareStencilMaterial;
-#if defined(_PS3)
-		if( mat_PS3_findpostvarsfast.GetInt() )
-			pLumCompareStencilMaterial = CLumCompareStencilMaterialProxy::GetLumCompareStencilMaterial( materials );
-		else
-#endif
-		pLumCompareStencilMaterial = materials->FindMaterial( "dev/no_pixel_write", TEXTURE_GROUP_OTHER, true);
+		IMaterial *pLumCompareStencilMaterial = materials->FindMaterial( "dev/no_pixel_write", TEXTURE_GROUP_OTHER, true);
 
 		pRenderContext->DrawScreenSpaceRectangle( pLumCompareStencilMaterial,
 												  nScreenMinX, nScreenMinY,
@@ -1572,7 +1555,7 @@ IMaterial * CEnginePostMaterialProxy::SetupEnginePostMaterial(	const Vector4D & 
 	}
 }
 
-EXPOSE_INTERFACE( CEnginePostMaterialProxy, IMaterialProxy, "engine_post" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CEnginePostMaterialProxy, engine_post );
 
 
 static void DrawBloomDebugBoxes( IMatRenderContext *pRenderContext )
@@ -2678,7 +2661,7 @@ IMaterial *CMotionBlurMaterialProxy::GetMaterial()
 	return m_pMaterialParam->GetOwningMaterial();
 }
 
-EXPOSE_INTERFACE( CMotionBlurMaterialProxy, IMaterialProxy, "MotionBlur" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CMotionBlurMaterialProxy, MotionBlur );
 
 //=====================================================================================================================
 // Image-space Motion Blur ============================================================================================
