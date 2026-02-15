@@ -384,6 +384,13 @@ void CParticleSystemDefinition::Precache()
 	m_Material.Init( MaterialName(), TEXTURE_GROUP_OTHER, true );
 #endif
 
+    // call the precache method of the renderers in case they need assets
+	for( int i = 0; i < m_Renderers.Count(); i++ )
+	{
+		CParticleOperatorInstance *pOp = m_Renderers[i];
+		pOp->Precache();
+	}
+
 	int nChildCount = m_Children.Count();
 	for ( int i = 0; i < nChildCount; ++i )
 	{
@@ -412,6 +419,12 @@ void CParticleSystemDefinition::Uncache()
 	m_bIsPrecached = false;
 	m_Material.Shutdown();	
 //	m_Material.Init( "debug/particleerror", TEXTURE_GROUP_OTHER, true );
+
+    for( int i = 0; i < m_Renderers.Count(); i++ )
+	{
+		CParticleOperatorInstance *pOp = m_Renderers[i];
+		pOp->Uncache();
+	}
 
 	int nChildCount = m_Children.Count();
 	for ( int i = 0; i < nChildCount; ++i )
@@ -2893,6 +2906,9 @@ public:
 	}
 
 	virtual float GetPixelVisibility( int *pQueryHandle, const Vector &vecOrigin, float flScale ) { return 0.0f; }
+
+	virtual void DrawModel( void *pModel, const matrix3x4_t &DrawMatrix, CParticleCollection *pParticles, int nParticleNumber, int nBodyPart, int nSubModel,
+		int nSkin, int nAnimationSequence = 0, float flAnimationRate = 30.0f, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f ) { }
 };
 
 static CDefaultParticleSystemQuery s_DefaultParticleSystemQuery;

@@ -2440,7 +2440,56 @@ FORCEINLINE void ConvertStoreAsIntsSIMD(intx4 * RESTRICT pDest, const fltx4 &vSr
 #endif
 }
 
+// // Some convenience operator overloads, which are just aliasing the functions above.
+// Unneccessary on 360, as you already have them from xboxmath.h (same for PS3 PPU and SPU)
+#if !defined(PLATFORM_PPC) && !defined( POSIX ) && !defined(SPU)
+#if 1  // TODO: verify generation of non-bad code. 
+// Componentwise add
+FORCEINLINE fltx4 operator+( FLTX4 a, FLTX4 b )
+{
+	return AddSIMD( a, b );
+}
 
+// Componentwise subtract
+FORCEINLINE fltx4 operator-( FLTX4 a, FLTX4 b )
+{
+	return SubSIMD( a, b );
+}
+
+// Componentwise multiply
+FORCEINLINE fltx4 operator*( FLTX4 a, FLTX4 b )
+{
+	return MulSIMD( a, b );
+}
+
+// No divide. You need to think carefully about whether you want a reciprocal
+// or a reciprocal estimate.
+
+// bitwise and
+FORCEINLINE fltx4 operator&( FLTX4 a, FLTX4 b )
+{
+	return AndSIMD( a ,b );
+}
+
+// bitwise or
+FORCEINLINE fltx4 operator|( FLTX4 a, FLTX4 b )
+{
+	return OrSIMD( a, b );
+}
+
+// bitwise xor
+FORCEINLINE fltx4 operator^( FLTX4 a, FLTX4 b )
+{
+	return XorSIMD( a, b );
+}
+
+// unary negate
+FORCEINLINE fltx4 operator-( FLTX4 a )
+{
+	return NegSIMD( a );
+}
+#endif // 0
+#endif
 
 #endif
 
