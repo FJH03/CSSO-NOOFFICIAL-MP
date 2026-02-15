@@ -2391,7 +2391,200 @@ void C_OP_RenderScreenVelocityRotate::Render( IMatRenderContext *pRenderContext,
 	}
 }
 
+#define MAX_MODEL_CHOICES	1
 
+
+class C_OP_RenderModels : public CParticleRenderOperatorInstance
+{
+	DECLARE_PARTICLE_OPERATOR( C_OP_RenderModels );
+
+
+	uint32 GetReadAttributes( void ) const
+	{
+		return PARTICLE_ATTRIBUTE_XYZ_MASK | PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER_MASK | PARTICLE_ATTRIBUTE_TINT_RGB_MASK | PARTICLE_ATTRIBUTE_ALPHA_MASK | PARTICLE_ATTRIBUTE_ALPHA2_MASK | PARTICLE_ATTRIBUTE_RADIUS_MASK |
+			   PARTICLE_ATTRIBUTE_ROTATION_MASK | PARTICLE_ATTRIBUTE_YAW_MASK | PARTICLE_ATTRIBUTE_PITCH_MASK | PARTICLE_ATTRIBUTE_NORMAL_MASK | 1 << m_nAnimationScaleField;
+	}
+
+	uint32 GetWrittenAttributes( void ) const
+	{
+		return 0;
+	}
+
+	virtual bool IsBatchable() const
+	{
+		return false;
+	}
+	
+	virtual void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, void *pContext ) const;
+
+	virtual void Precache( void );
+	char m_ActivityName[256];
+	char m_pszModelNames[ MAX_MODEL_CHOICES ][256];
+	void *m_pModels[ MAX_MODEL_CHOICES ];
+	bool m_bOrientZ;
+	bool m_bScaleAnimationRate;
+	int m_nAnimationScaleField;
+	int m_nSkin;
+	int m_nActivity;
+	float m_flAnimationRate;
+
+};
+
+DEFINE_PARTICLE_OPERATOR( C_OP_RenderModels, "Render models", OPERATOR_SINGLETON );
+
+BEGIN_PARTICLE_RENDER_OPERATOR_UNPACK( C_OP_RenderModels ) 
+	DMXELEMENT_UNPACK_FIELD_STRING_USERDATA( "sequence 0 model", "NONE", m_pszModelNames[0], "mdlPicker" )
+	DMXELEMENT_UNPACK_FIELD( "animation rate", "30.0", float, m_flAnimationRate )
+	DMXELEMENT_UNPACK_FIELD( "scale animation rate", "0", bool, m_bScaleAnimationRate )
+	DMXELEMENT_UNPACK_FIELD_USERDATA( "animation rate scale field", "10", int, m_nAnimationScaleField, "intchoice particlefield_scalar" )
+	DMXELEMENT_UNPACK_FIELD( "orient model z to normal", "0", bool, m_bOrientZ )
+	DMXELEMENT_UNPACK_FIELD( "skin number", "0", int, m_nSkin )
+	DMXELEMENT_UNPACK_FIELD_STRING( "activity override", "", m_ActivityName )
+END_PARTICLE_OPERATOR_UNPACK( C_OP_RenderModels )
+
+
+void C_OP_RenderModels::Precache( void )
+{
+	// this is the the render operator sequences above, as each one has to be hard coded
+	Assert( MAX_MODEL_CHOICES == 1 );	
+
+	for( int i = 0; i < MAX_MODEL_CHOICES ; i++ )
+	{
+		m_pModels[ i ] = g_pParticleSystemMgr->Query()->GetModel( m_pszModelNames[i] );
+	}
+	
+	// Have to do this here or the model isn't loaded yet
+	if ( V_strcmp( m_ActivityName, "" ) )
+		m_nActivity = g_pParticleSystemMgr->Query()->GetActivityNumber( m_pModels[ 0 ], m_ActivityName );
+	else
+		m_nActivity = -1;
+}
+
+// return a vector perpendicular to another, with smooth variation
+static void AVectorPerpendicularToVector( Vector const &in, Vector *pvecOut )
+{
+	float flY = in.y * in.y;
+	pvecOut->x = RemapVal( flY, 0, 1, in.z, 1 );
+	pvecOut->y = 0;
+	pvecOut->z = -in.x;
+	pvecOut->NormalizeInPlace();
+	float flDot = DotProduct( *pvecOut, in );
+	*pvecOut -= flDot * in;
+	pvecOut->NormalizeInPlace();
+}
+
+void C_OP_RenderModels::Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, void *pContext ) const
+{
+	int nNumParticles;
+	CParticleVisibilityData visibilityData;
+	visibilityData.m_flAlphaVisibility = 1.0;
+	visibilityData.m_flRadiusVisibility = 1.0;
+	visibilityData.m_bUseVisibility = false;
+
+	const ParticleRenderData_t *pRenderList = 
+		pParticles->GetRenderList( pRenderContext, false, &nNumParticles, &visibilityData );
+
+	g_pParticleSystemMgr->Query()->BeginDrawModels( nNumParticles, pParticles->m_Center, pParticles );
+	size_t xyz_stride;
+	const fltx4 *xyz = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_XYZ, &xyz_stride );
+
+	size_t seq_stride;
+	const fltx4 *pSequenceNumber = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER, &seq_stride );
+
+	size_t seq1_stride;
+	const fltx4 *pSequence1Number = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER1, &seq1_stride );
+
+	size_t rgb_stride;
+	const fltx4 *pRGB = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_TINT_RGB, &rgb_stride );
+
+	size_t nAlphaStride;
+	const fltx4 *pAlpha = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_ALPHA, &nAlphaStride );
+
+	size_t nAlpha2Stride;
+	const fltx4 *pAlpha2 = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_ALPHA2, &nAlpha2Stride );
+
+	size_t nRadStride;
+	const fltx4 *pRadius = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_RADIUS, &nRadStride );
+
+	size_t nRotStride;
+	const fltx4 *pRot = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_ROTATION, &nRotStride );
+
+	size_t nYawStride;
+	const fltx4 *pYaw = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_YAW, &nYawStride );
+
+	size_t nPitchStride;
+	const fltx4 *pPitch = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_PITCH, &nPitchStride );
+
+	size_t nScalerStride;
+	const fltx4 *pAnimationScale = pParticles->GetM128AttributePtr( m_nAnimationScaleField, &nScalerStride );
+
+	for( int i = 0; i < nNumParticles; i++ )
+	{
+		int hParticle = ( --pRenderList )->m_nIndex;
+		int nGroup = ( hParticle / 4 );
+		int nOffset = hParticle & 0x3;
+
+		int nSequence = ( int )SubFloat( pSequenceNumber[ nGroup * seq_stride ], nOffset );
+		int nAnimationSequence = m_nActivity;
+		if ( nAnimationSequence == -1 )
+			nAnimationSequence = ( int )SubFloat( pSequence1Number[ nGroup * seq1_stride ], nOffset );
+		float flAnimationRate = m_flAnimationRate;
+		if ( m_bScaleAnimationRate )
+			flAnimationRate *= SubFloat( pAnimationScale[ nGroup * nScalerStride ], nOffset );
+
+		int nXYZIndex = nGroup * xyz_stride;
+		Vector vecWorldPos( SubFloat( xyz[ nXYZIndex ], nOffset ), SubFloat( xyz[ nXYZIndex+1 ], nOffset ), SubFloat( xyz[ nXYZIndex+2 ], nOffset ) );
+
+		const float *pNormal = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_NORMAL, hParticle );
+		Vector vecFwd, vecRight, vecUp;
+		SetVectorFromAttribute( vecFwd, pNormal);
+		vecFwd.NormalizeInPlace();
+		AVectorPerpendicularToVector( vecFwd, &vecRight );
+		float flDot = fabs( DotProduct( vecFwd, vecRight ) );
+		Assert( flDot < 0.1f );
+		if ( flDot >= 0.1f )
+		{
+			AVectorPerpendicularToVector( vecFwd, &vecRight );
+		}
+		vecUp = CrossProduct( vecFwd, vecRight );
+		Assert( fabs( DotProduct( vecFwd, vecUp ) ) < 0.1f );
+		Assert( fabs( DotProduct( vecRight, vecUp ) ) < 0.1f );
+
+		int nColorIndex = nGroup * rgb_stride;
+		float r = SubFloat( pRGB[ nColorIndex ], nOffset );
+		float g = SubFloat( pRGB[ nColorIndex + 1 ], nOffset );
+		float b = SubFloat( pRGB[ nColorIndex + 2 ], nOffset );
+		float a = SubFloat( ( pAlpha[ nGroup * nAlphaStride ] * pAlpha2[ nGroup * nAlpha2Stride ] ), nOffset );
+
+		float flScale = SubFloat( pRadius[ nGroup * nRadStride ], nOffset );
+
+		float rot = SubFloat( pRot[ nGroup * nRotStride ], nOffset );
+		float yaw = SubFloat( pYaw[ nGroup * nRotStride ], nOffset );
+		float pitch = SubFloat( pPitch[ nGroup * nRotStride ], nOffset );
+
+		matrix3x4_t matRotate, matDir, matFinal;
+
+		QAngle qa( RAD2DEG( pitch ), RAD2DEG( yaw ), RAD2DEG( rot ) );
+		AngleMatrix( qa, matRotate );
+
+		if ( m_bOrientZ )
+		{
+			matDir = matrix3x4_t( vecUp * flScale, -vecRight * flScale, vecFwd * flScale, vec3_origin );
+		}
+		else
+		{
+			matDir = matrix3x4_t( vecFwd * flScale, vecRight * flScale, vecUp * flScale, vec3_origin );
+		}
+
+		MatrixMultiply( matDir, matRotate, matFinal );
+
+		matFinal.SetOrigin( vecWorldPos );
+
+		g_pParticleSystemMgr->Query()->DrawModel( m_pModels[ 0 ], matFinal, pParticles, hParticle, nSequence, 1, m_nSkin, nAnimationSequence, flAnimationRate, r, g, b, a );
+	}
+
+	g_pParticleSystemMgr->Query()->FinishDrawModels( pParticles );
+}
 
 
 //-----------------------------------------------------------------------------
@@ -2406,6 +2599,7 @@ void AddBuiltInParticleRenderers( void )
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_RENDERER, C_OP_RenderSpritesTrail );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_RENDERER, C_OP_RenderRope );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_RENDERER, C_OP_RenderScreenVelocityRotate );
+	REGISTER_PARTICLE_OPERATOR( FUNCTION_RENDERER, C_OP_RenderModels );
 #ifdef USE_BLOBULATOR
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_RENDERER, C_OP_RenderBlobs );
 #endif // blobs

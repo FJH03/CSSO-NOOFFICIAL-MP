@@ -115,6 +115,7 @@ DEFPARTICLE_ATTRIBUTE( TRACE_HIT_T, 19 );					// 0..1 if hit
 DEFPARTICLE_ATTRIBUTE( TRACE_HIT_NORMAL, 20 );				// 0 0 0 if no hit
 DEFPARTICLE_ATTRIBUTE( NORMAL, 21 );			// 0 0 0 if none
 
+DEFPARTICLE_ATTRIBUTE( PITCH, 22 );
 
 #define MAX_PARTICLE_CONTROL_POINTS 64
 
@@ -123,7 +124,7 @@ DEFPARTICLE_ATTRIBUTE( NORMAL, 21 );			// 0 0 0 if none
                                           PARTICLE_ATTRIBUTE_PREV_XYZ_MASK | PARTICLE_ATTRIBUTE_NORMAL_MASK | PARTICLE_ATTRIBUTE_TINT_RGB_MASK | \
                                           PARTICLE_ATTRIBUTE_HITBOX_RELATIVE_XYZ_MASK )
 #define ATTRIBUTES_WHICH_ARE_0_TO_1 (PARTICLE_ATTRIBUTE_ALPHA_MASK | PARTICLE_ATTRIBUTE_ALPHA2_MASK)
-#define ATTRIBUTES_WHICH_ARE_ANGLES (PARTICLE_ATTRIBUTE_ROTATION_MASK | PARTICLE_ATTRIBUTE_YAW_MASK )
+#define ATTRIBUTES_WHICH_ARE_ANGLES (PARTICLE_ATTRIBUTE_ROTATION_MASK | PARTICLE_ATTRIBUTE_YAW_MASK | PARTICLE_ATTRIBUTE_PITCH_MASK )
 #define ATTRIBUTES_WHICH_ARE_INTS (PARTICLE_ATTRIBUTE_PARTICLE_ID_MASK | PARTICLE_ATTRIBUTE_HITBOX_INDEX_MASK )
 #define ATTRIBUTES_WHICH_ARE_NORMAL (PARTICLE_ATTRIBUTE_NORMAL_MASK)
 
@@ -284,11 +285,21 @@ public:
 		*pUp = vec3_origin;
 	}
 
+	virtual int GetActivityNumber( void *pModel, const char *m_pszActivityName ) { return -1; }
 	virtual float GetPixelVisibility( int *pQueryHandle, const Vector &vecOrigin, float flScale ) = 0;
 
 	virtual void SetUpLightingEnvironment( const Vector& pos )
 	{
 	}
+
+	virtual void *GetModel( char const *pMdlName ) { return NULL; }
+
+	virtual void DrawModel( void *pModel, const matrix3x4_t &DrawMatrix, CParticleCollection *pParticles, int nParticleNumber, int nBodyPart, int nSubModel,
+							int nSkin, int nAnimationSequence = 0, float flAnimationRate = 30.0f, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f ) = 0;
+
+	virtual void BeginDrawModels( int nNumModels, Vector const &vecCenter, CParticleCollection *pParticles ) {}
+
+	virtual void FinishDrawModels( CParticleCollection *pParticles ) {}
 };
 
 
@@ -766,6 +777,14 @@ public:
 	float m_flOpStartFadeOutTime;
 	float m_flOpEndFadeOutTime;
 	float m_flOpFadeOscillatePeriod;
+
+	virtual void Precache( void )
+	{
+	}
+
+	virtual void Uncache( void )
+	{
+	}
 
 	virtual ~CParticleOperatorInstance( void )
 	{
@@ -1307,6 +1326,7 @@ public:
 	CParticleCollection *m_pParent;
 	
 	CUtlIntrusiveDList<CParticleCollection>  m_Children;	// list for all child particle systems
+	Vector m_Center;										// average of particle centers
 
 	void *operator new(size_t nSize);
 	void *operator new( size_t size, int nBlockUse, const char *pFileName, int nLine );
@@ -1355,8 +1375,6 @@ private:
 	// How many frames have we drawn?
 	int m_nDrawnFrames;
 	int m_nSimulatedFrames;
-
-	Vector m_Center;										// average of particle centers
 
 	// Used to assign unique ids to each particle
 	int m_nUniqueParticleId;
