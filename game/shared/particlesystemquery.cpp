@@ -43,6 +43,8 @@ public:
 							const IHandleEntity *ignore,
 							int collisionGroup, CBaseTrace *ptr );
 
+	virtual bool IsPointInSolid( const Vector& vecPos, const int nContentsMask );
+
 	virtual bool MovePointInsideControllingObject( CParticleCollection *pParticles,
 												   void *pObject,
 												   Vector *pPnt );
@@ -177,6 +179,20 @@ void CParticleSystemQuery::TraceLine( const Vector& vecAbsStart,
 		ptr->fraction = 1.0;
 	}
 
+}
+
+bool CParticleSystemQuery::IsPointInSolid( const Vector& vecPos, const int nContentsMask )
+{
+	bool bDoTrace = false;
+#ifndef GAME_DLL
+	bDoTrace = engine->IsInGame();
+#endif
+	if ( bDoTrace )
+	{
+		return ( UTIL_PointContents(vecPos, nContentsMask) & nContentsMask ) != 0;
+	}
+
+	return false;
 }
 
 bool CParticleSystemQuery::MovePointInsideControllingObject( 

@@ -851,9 +851,9 @@ static bool TraceToExit( CCSPlayer *pPlayer, Vector start, Vector dir, Vector &e
 		Vector vecTrEnd = end - ( flStepSize * dir );
 
 		if ( nStartContents == 0 )
-			nStartContents = UTIL_PointContents( end );
+			nStartContents = UTIL_PointContents( end, CS_MASK_SHOOT|CONTENTS_HITBOX );
 		
-		int nCurrentContents = UTIL_PointContents( end );
+		int nCurrentContents = UTIL_PointContents( end, CS_MASK_SHOOT|CONTENTS_HITBOX );
 
 		if ( (nCurrentContents & CS_MASK_SHOOT) == 0 || ((nCurrentContents & CONTENTS_HITBOX) && nStartContents != nCurrentContents) )
 		{
@@ -1403,7 +1403,7 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 	if ( !TraceToExit( this, tr.endpos, vecDir, penetrationEnd, tr, exitTr, 4, MAX_PENETRATION_DISTANCE ) )
 	{
 		// ended in solid
-		if ( (UTIL_PointContents ( tr.endpos ) & CS_MASK_SHOOT) == 0 )
+		if ( (UTIL_PointContents ( tr.endpos, CS_MASK_SHOOT ) & CS_MASK_SHOOT) == 0 )
 		{
 			bFailedPenetrate = true;
 		}

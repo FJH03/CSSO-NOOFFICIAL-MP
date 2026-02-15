@@ -1946,7 +1946,7 @@ void CBaseCombatCharacter::Weapon_Drop( CBaseCombatWeapon *pWeapon, const Vector
 	{
 		Vector vThrowPos = Weapon_ShootPosition() - Vector(0,0,12);
 		
-		if( UTIL_PointContents(vThrowPos) & CONTENTS_SOLID )
+		if( UTIL_PointContents(vThrowPos, CONTENTS_SOLID) & CONTENTS_SOLID )
 		{
 			Msg("Weapon spawning in solid!\n");
 		}
