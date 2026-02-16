@@ -565,6 +565,7 @@ extern CUtlVector< RayTracingEnvironment * > g_RayTraceEnvironments;
 void CParticleSystemQuery::TraceAgainstRayTraceEnv( int envnumber, const FourRays &rays, fltx4 TMin, fltx4 TMax,
 													  RayTracingResult *rslt_out, int32 skip_id ) const
 {
+    /*
 #if defined( CLIENT_DLL )
 	if ( g_RayTraceEnvironments.IsValidIndex( envnumber ) )
 	{
@@ -572,6 +573,9 @@ void CParticleSystemQuery::TraceAgainstRayTraceEnv( int envnumber, const FourRay
 		RtEnv->Trace4Rays( rays, TMin, TMax, rslt_out, skip_id );
 	}
 #endif
+    */
+    
+    //unimplemented (ndke_01 why???)
 }
 
 
