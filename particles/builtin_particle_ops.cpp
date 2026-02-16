@@ -1268,42 +1268,44 @@ END_PARTICLE_OPERATOR_UNPACK( C_OP_RemapSpeed );
 void C_OP_RemapSpeed::Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
 {
 	// clamp the result to 0 and 1 if it's alpha
-	fltx4 flMin = ReplicateX4( m_flOutputMin );
-	fltx4 flMax = ReplicateX4( m_flOutputMax );
+	float flMin = m_flOutputMin;
+	float flMax = m_flOutputMax;
 	if ( ATTRIBUTES_WHICH_ARE_0_TO_1 & ( 1 << m_nFieldOutput ) )
 	{
-		flMin = ReplicateX4( clamp(m_flOutputMin, 0.0f, 1.0f ) );
-		flMax = ReplicateX4( clamp(m_flOutputMax, 0.0f, 1.0f ) );
+		flMin = clamp(m_flOutputMin, 0.0f, 1.0f);
+		flMax = clamp(m_flOutputMax, 0.0f, 1.0f);
 	}
 
-	fltx4 fl4Dt = ReplicateX4( pParticles->m_flDt );
-	fltx4 fl4InputMin = ReplicateX4( m_flInputMin );
-	fltx4 fl4InputMax = ReplicateX4( m_flInputMax );
-	fltx4 fl4Strength = ReplicateX4( flStrength );
-	C4VAttributeIterator pXYZ( PARTICLE_ATTRIBUTE_XYZ, pParticles );
-	C4VAttributeIterator pPrevXYZ( PARTICLE_ATTRIBUTE_PREV_XYZ, pParticles );
-	CM128AttributeWriteIterator pOutput (m_nFieldOutput, pParticles);
-	CM128InitialAttributeIterator pInitialOutput ( m_nFieldOutput, pParticles );
-
-	for ( int i = 0; i < pParticles->m_nPaddedActiveParticles; i++ )
+	float flDt = pParticles->m_flDt;
+	float flInputMin = m_flInputMin;
+	float flInputMax = m_flInputMax;
+	
+	for ( int i = 0; i < pParticles->m_nActiveParticles; i++ )
 	{
-		fltx4 fl4Speed = DivSIMD ( (*pXYZ - *pPrevXYZ).length(), fl4Dt );
-		fltx4 fl4Output = RemapValClampedSIMD( fl4Speed, fl4InputMin, fl4InputMax, flMin, flMax  );
+		const float *pXYZ = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_XYZ, i );
+		const float *pPrevXYZ = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_PREV_XYZ, i );
+		float *pOutput = pParticles->GetFloatAttributePtrForWrite( m_nFieldOutput, i );
+		const float *pInitialOutput = pParticles->GetInitialFloatAttributePtr( m_nFieldOutput, i );
+		
+		// Calculate speed
+		Vector vecDelta;
+		vecDelta.x = pXYZ[0] - pPrevXYZ[0];
+		vecDelta.y = pXYZ[4] - pPrevXYZ[4];
+		vecDelta.z = pXYZ[8] - pPrevXYZ[8];
+		float flSpeed = vecDelta.Length() / flDt;
+		
+		float flOutput = RemapValClamped( flSpeed, flInputMin, flInputMax, flMin, flMax );
+		
 		if ( m_bScaleInitialRange )
 		{
-			fl4Output = MulSIMD( *pInitialOutput, fl4Output );
+			flOutput *= *pInitialOutput;
 		}
 		if ( m_bScaleCurrent )
 		{
-			fl4Output = MulSIMD( *pOutput, fl4Output );
+			flOutput *= *pOutput;
 		}
 
-		*pOutput = LerpSIMD( fl4Strength, *pOutput, fl4Output );
-
-		++pXYZ;
-		++pPrevXYZ;
-		++pOutput;
-		++pInitialOutput;
+		*pOutput = Lerp( flStrength, *pOutput, flOutput );
 	}
 }
 
@@ -5073,7 +5075,7 @@ void AddBuiltInParticleOperators( void )
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_Decay );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_VelocityDecay );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_FadeAndKill );
-	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_FadeAndKillForTracers );
+	//REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_FadeAndKillForTracers );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_FadeIn );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_FadeInSimple );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_FadeOut );
@@ -5107,7 +5109,7 @@ void AddBuiltInParticleOperators( void )
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_VelocityMatchingForce );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_MaxVelocity );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_MaintainSequentialPath );
-	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_MovementPlaceOnGround );
+	//REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_MovementPlaceOnGround );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_RemapDotProductToScalar );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_RemapCPtoScalar );		
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_MovementRotateParticleAroundAxis );		
