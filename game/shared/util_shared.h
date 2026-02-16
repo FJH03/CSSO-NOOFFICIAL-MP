@@ -358,7 +358,7 @@ bool UTIL_EntityHasMatchingRootParent( CBaseEntity *pRootParent, CBaseEntity *pE
 
 inline int UTIL_PointContents( const Vector &vec, int contentsMask )
 {
-	return enginetrace->GetPointContents( vec, contentsMask );
+    return enginetrace->GetPointContents( vec ) & contentsMask;
 }
 
 // Sweeps against a particular model, using collision rules 

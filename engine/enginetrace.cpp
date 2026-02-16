@@ -295,7 +295,7 @@ public:
 		// Deal with static props
 		// NOTE: I could have added static props to a different list and
 		// enumerated them separately, but that would have been less efficient
-		if ( (validMask & CONTENTS_SOLID) && StaticPropMgr()->IsStaticProp( pCollide->GetEntityHandle() ) )
+		if ( StaticPropMgr()->IsStaticProp( pCollide->GetEntityHandle() ) )
 		{
 			Ray_t ray;
 			trace_t trace;
@@ -388,7 +388,11 @@ int	CEngineTrace::GetPointContents( const Vector &vecAbsPosition, int contentsMa
 	
 	m_traceStatCounters[TRACE_STAT_COUNTER_POINTCONTENTS]++;
 	// First check the collision model
-	int nContents = CM_PointContents( vecAbsPosition, 0 ) & contentsMask;
+	int nContents = CM_PointContents( vecAbsPosition, 0 );
+	if ( nContents & MASK_CURRENT )
+	{
+		nContents = CONTENTS_WATER;
+	}
 	
 	if ( nContents != CONTENTS_SOLID )
 	{
