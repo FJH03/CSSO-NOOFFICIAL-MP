@@ -1031,17 +1031,13 @@ CCSBuyMenu::~CCSBuyMenu()
 	m_kvBuyMenuConfig->deleteThis();
 }
 
-bool g_bBuyMenuOpen = false;
 void CCSBuyMenu::ShowPanel( bool bShow )
 {
 	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if ( !pPlayer )
 		return;
 
-	g_bBuyMenuOpen = bShow;
 	bool bTouchEnable = (cvar->FindVar("touch_disable_on_buymenu")->GetInt() != 0);
-
-	g_bBuyMenuOpen = bShow;
 
 	if ( bShow )
 	{
@@ -1149,6 +1145,13 @@ void CCSBuyMenu::ShowPanel( bool bShow )
 
 	m_pViewPort->ShowBackGround( bShow );
 	HideCategory();
+}
+
+bool g_bBuyMenuOpen = false;
+void CCSBuyMenu::SetVisible( bool bState )
+{
+	BaseClass::SetVisible( bState );
+	g_bBuyMenuOpen = bState;
 }
 
 void CCSBuyMenu::Update()
