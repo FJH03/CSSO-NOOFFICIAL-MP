@@ -157,6 +157,31 @@ CGameRules::CGameRules() : CAutoGameSystemPerFrame( "CGameRules" )
 }
 
 //-----------------------------------------------------------------------------
+// Precache game-specific resources
+//-----------------------------------------------------------------------------
+void CGameRules::Precache( void )
+{
+	// Used by particle property
+	PrecacheEffect( "ParticleEffect" );
+	PrecacheEffect( "ParticleEffectStop" );
+
+	// Used by default impact system
+	PrecacheEffect( "GlassImpact" );
+	PrecacheEffect( "Impact" );
+	PrecacheEffect( "RagdollImpact" );
+	PrecacheEffect( "gunshotsplash" );
+	PrecacheEffect( "TracerSound" );
+	PrecacheEffect( "Tracer" );
+
+	// Used by physics impacts
+	PrecacheEffect( "watersplash" );
+	PrecacheEffect( "waterripple" );
+
+	// Used by UTIL_BloodImpact, which is used in many places
+	PrecacheEffect( "bloodimpact" );
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: Return true if the specified player can carry any more of the ammo type
 //-----------------------------------------------------------------------------
 bool CGameRules::CanHaveAmmo( CBaseCombatCharacter *pPlayer, int iAmmoIndex )

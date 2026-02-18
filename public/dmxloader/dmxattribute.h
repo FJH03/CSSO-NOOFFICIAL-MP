@@ -86,6 +86,8 @@ public:
 
 	// Returns the size of the variables storing the various attribute types
 	static int AttributeDataSize( DmAttributeType_t type );
+	// Gets the basic type for a given array attribute type (e.g. AT_INT_ARRAY -> AT_INT)
+	static DmAttributeType_t ArrayAttributeBasicType( DmAttributeType_t type );
 
 private:
 	CDmxAttribute( const char *pAttributeName );
@@ -94,10 +96,29 @@ private:
 
 	// Allocate, free memory for data
 	void AllocateDataMemory( DmAttributeType_t type );
+	void AllocateDataMemory_AndConstruct( DmAttributeType_t type );
 	void FreeDataMemory( );
 
-	// Untyped method for setting used by unpack
+	// Untyped methods for getting/setting used by unpack
 	void SetValue( DmAttributeType_t type, const void *pSrc, int nLen );
+	// NOTE: [Get|Set]ArrayValue don't currently support AT_STRING_ARRAY, AT_STRING_VOID or AT_ELEMENT_ARRAY
+	void SetArrayValue( DmAttributeType_t type, const void *pSrc, int nDataTypeSize, int nArrayLength, int nSrcStride );
+	void GetArrayValue( DmAttributeType_t type, void *pDest, int nDataTypeSize, int nArrayLength, const char *pDefaultString = NULL ) const;
+	void SetArrayCount( int nArrayCount );
+	const void *GetArrayBase( void ) const;
+
+	// Helper templated methods called from untyped methods (VT is vector datatype, T is basic datatype, VT will be the same as T if the attribute is non-array)
+	template < class VT, class T > void ConstructDataMemory( void );
+	template < class VT, class T > void DestructDataMemory( void );
+	template < class VT, class T > void SetArrayCount( int nArrayCount );
+	template < class VT, class T > void GetArrayCount( int &nArrayCount ) const;
+	template < class VT, class T > void GetArrayBase( const void * &pBasePtr ) const;
+	template < class VT, class T > void SerializesOnMultipleLines( bool &bResult ) const;
+	template < class VT, class T > void SerializeType( bool &bSuccess, CUtlBuffer &buf ) const;
+	template < class VT, class T > void SerializeTypedElement( bool &bSuccess, int nIndex, CUtlBuffer &buf ) const;
+	template < class VT, class T > void UnserializeType( bool &bSuccess, CUtlBuffer &buf );
+	template < class VT, class T > void UnserializeTypedElement( bool &bSuccess, CUtlBuffer &buf );
+	template < class VT, class T > void SetDefaultValue( void );
 
 	DmAttributeType_t m_Type;
 	CUtlSymbol m_Name;

@@ -64,28 +64,48 @@ static CTEEffectDispatch g_TEEffectDispatch( "EffectDispatch" );
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void TE_DispatchEffect( IRecipientFilter& filter, float delay, const Vector &pos, const char *pName, const CEffectData &data )
+void DispatchEffect( const char *pName, const CEffectData &data )
 {
-	// Copy the supplied effect data.
-	g_TEEffectDispatch.m_EffectData = data;
+	//Broadcast effects to all players. The potential for cheating
+	//seems minimal on the effects that are sent through this,
+	//and the overhead is minimal enough to make it worth sending to
+	//all players.
+	CReliableBroadcastRecipientFilter filter;
+	filter.AddAllPlayers();
 
-	// Get the entry index in the string table.
-	g_TEEffectDispatch.m_EffectData.m_iEffectName = g_pStringTableEffectDispatch->AddString( CBaseEntity::IsServer(), pName );
+	if ( data.m_fFlags & EFFECTDATA_SERVER_IGNOREPREDICTIONCULL )
+	{
+		// remove prediction cull so it works on listen servers for the host
+		filter.SetIgnorePredictionCull( true );
+	}
 
-	// Send it to anyone who can see the effect's origin.
-	g_TEEffectDispatch.Create( filter, 0 );
+	if ( !te->SuppressTE( filter ) )
+	{
+		// Copy the supplied effect data.
+		g_TEEffectDispatch.m_EffectData = data;
+
+		// Get the entry index in the string table.
+		g_TEEffectDispatch.m_EffectData.m_iEffectName = GetEffectIndex( pName );
+
+		// Send it to anyone who can see the effect's origin.
+		g_TEEffectDispatch.Create( filter, 0 );
+	}
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void DispatchEffect( const char *pName, const CEffectData &data )
+void DispatchEffect( IRecipientFilter& filter, float flDelay, const char *pName, const CEffectData &data )
 {
-	CPASFilter filter( data.m_vOrigin );
-	DispatchEffect( pName, data, filter );
-}
+	if ( !te->SuppressTE( filter ) )
+	{
+		// Copy the supplied effect data.
+		g_TEEffectDispatch.m_EffectData = data;
 
-void DispatchEffect( const char *pName, const CEffectData &data, CRecipientFilter &filter )
-{
-	te->DispatchEffect( filter, 0.0, data.m_vOrigin, pName, data );
+// Get the entry index in the string table.
+		g_TEEffectDispatch.m_EffectData.m_iEffectName = GetEffectIndex( pName );
+
+		// Send it to anyone who can see the effect's origin.
+		g_TEEffectDispatch.Create( filter, flDelay );
+	}
 }

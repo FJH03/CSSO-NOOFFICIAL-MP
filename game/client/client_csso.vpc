@@ -544,6 +544,7 @@ $Project "Client (CStrike)"
 	$Folder	"Link Libraries" 
 	{
 		$Lib vtf
+		$Lib $LIBPUBLIC\raytrace
 	}
 
 }

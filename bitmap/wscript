@@ -25,6 +25,7 @@ def build(bld):
 		'float_cube.cpp',
 		'imageformat.cpp',
 		'psd.cpp',
+		'psheet.cpp',
 		'resample.cpp',
 		'tgaloader.cpp',
 		'tgawriter.cpp',

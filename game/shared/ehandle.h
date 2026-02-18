@@ -49,8 +49,8 @@ public:
 			CHandle( const CBaseHandle &handle );
 			CHandle( T *pVal );
 
-	// The index should have come from a call to ToInt(). If it hasn't, you're in trouble.
-	static CHandle<T> FromIndex( int index );
+	// The index should have come from a call to CBaseHandle::ToInt(). If it hasn't, you're in trouble.
+	static CHandle<T> UnsafeFromIndex( int index );
 
 	T*		Get() const;
 	void	Set( const T* pVal );
@@ -94,7 +94,7 @@ CHandle<T>::CHandle( T *pObj )
 
 
 template<class T>
-inline CHandle<T> CHandle<T>::FromIndex( int index )
+inline CHandle<T> CHandle<T>::UnsafeFromIndex( int index )
 {
 	CHandle<T> ret;
 	ret.m_Index = index;

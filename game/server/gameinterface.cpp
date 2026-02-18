@@ -275,6 +275,14 @@ class CPostFrameNavigationHook;
 extern CPostFrameNavigationHook *PostFrameNavigationSystem( void );
 
 //-----------------------------------------------------------------------------
+// Also in cdll so linked libs can extern it
+//-----------------------------------------------------------------------------
+bool UTIL_IsDedicatedServer( void )
+{
+	return engine->IsDedicatedServer();
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: 
 // Output : int
 //-----------------------------------------------------------------------------
@@ -659,7 +667,9 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	InitializeCvars();
 	
 	// Initialize the particle system
-	if ( !g_pParticleSystemMgr->Init( g_pParticleSystemQuery ) )
+	COM_TimestampedLog( "g_pParticleSystemMgr->Init" );
+	bool bPrecacheParticles = IsPC();
+	if ( !g_pParticleSystemMgr->Init( g_pParticleSystemQuery, bPrecacheParticles ) )
 	{
 		return false;
 	}
@@ -688,6 +698,9 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 
 	// Physics must occur before the sound envelope manager
 	IGameSystem::Add( PhysicsGameSystem() );
+
+	// Precache system must be next (requires physics game system)
+	IGameSystem::Add( g_pPrecacheRegister );
 	
 	// Used to service deferred navigation queries for NPCs
 	IGameSystem::Add( (IGameSystem *) PostFrameNavigationSystem() );
@@ -728,7 +741,7 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	InvalidateQueryCache();
 
 	// Parse the particle manifest file & register the effects within it
-	ParseParticleEffects( false, false );
+	ParseParticleEffects( false );
 
 	// try to get debug overlay, may be NULL if on HLDS
 	debugoverlay = (IVDebugOverlay *)appSystemFactory( VDEBUG_OVERLAY_INTERFACE_VERSION, NULL );
@@ -974,9 +987,6 @@ bool CServerGameDLL::LevelInit( const char *pMapName, char const *pMapEntities, 
 		// Single player games tell xbox live what game & chapter the user is playing
 		UpdateRichPresence();
 	}
-
-	//Tony; parse custom manifest if exists!
-	ParseParticleEffectsMap( pMapName, false );
 
 	// IGameSystem::LevelInitPreEntityAllSystems() is called when the world is precached
 	// That happens either in LoadGameState() or in MapEntity_ParseAllEntities()
@@ -1471,6 +1481,9 @@ void CServerGameDLL::CreateNetworkStringTables( void )
 
 	PrecacheParticleSystem( "error" );	// ensure error particle system is handy
 	Assert( GetParticleSystemIndex( "error" ) == 0 );
+
+	PrecacheEffect( "error" );	// ensure error effect is handy
+	Assert( GetEffectIndex( "error" ) == 0 );
 
 	CreateNetworkStringTables_GameRules();
 
@@ -2423,6 +2436,33 @@ const char *GetParticleSystemNameFromIndex( int nMaterialIndex )
 	if ( nMaterialIndex < g_pStringTableParticleEffectNames->GetMaxStrings() )
 		return g_pStringTableParticleEffectNames->GetString( nMaterialIndex );
 	return "error";
+}
+
+//-----------------------------------------------------------------------------
+// Precaches an effect (used by DispatchEffect)
+//-----------------------------------------------------------------------------
+void PrecacheEffect( const char *pEffectName )
+{
+	Assert( pEffectName && pEffectName[0] );
+	g_pStringTableEffectDispatch->AddString( CBaseEntity::IsServer(), pEffectName );
+}
+
+//-----------------------------------------------------------------------------
+// Converts a previously precached effect into an index
+//-----------------------------------------------------------------------------
+int GetEffectIndex( const char *pEffectName )
+{
+	if ( pEffectName )
+	{
+		int nIndex = g_pStringTableEffectDispatch->FindStringIndex( pEffectName );
+		if (nIndex != INVALID_STRING_INDEX )
+			return nIndex;
+
+		DevWarning("Server: Missing precache for effect \"%s\"!\n", pEffectName );
+	}
+
+	// This is the invalid string index
+	return 0;
 }
 
 //-----------------------------------------------------------------------------

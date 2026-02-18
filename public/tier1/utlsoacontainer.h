@@ -107,6 +107,10 @@ public:
 	{
 		m_pData += nNumElements*m_nStride;
 	}
+	FORCEINLINE size_t Stride( void ) const
+	{
+		return m_nStride;
+	}
 };
 
 // allowed field data types. if you change these values, you need to change the tables in the .cpp file
@@ -187,6 +191,16 @@ public:
 			m_nFieldPresentMask |= ( 1 << nAttrIdx );
 		else
 			m_nFieldPresentMask &= ~( 1 << nAttrIdx );
+	}
+	FORCEINLINE EAttributeDataType GetAttributeType( int nAttrIdx ) const
+	{
+		Assert( ( nAttrIdx >= 0 ) && ( nAttrIdx < MAX_SOA_FIELDS ) );
+		return m_nDataType[nAttrIdx];
+	}
+	
+	FORCEINLINE bool HasAllocatedMemory( int nAttrIdx ) const
+	{
+		return ( m_nFieldPresentMask & ( 1 << nAttrIdx ) ) != 0;
 	}
 
 	FORCEINLINE int NumRows( void ) const
@@ -272,6 +286,22 @@ public:
 									  + nY * m_nRowStrideInBytes[nAttributeIdx]
 									  + nZ * m_nSliceStrideInBytes[nAttributeIdx]
 			);
+	}
+
+	FORCEINLINE FourVectors *ElementPointer4V( int nAttributeIdx, int nX, int nY, int nZ ) const
+	{
+		Assert( nAttributeIdx < MAX_SOA_FIELDS );
+		Assert( nX < m_nColumns );
+		Assert( nY < m_nRows );
+		Assert( nZ < m_nSlices );
+		Assert( m_nDataType[nAttributeIdx] == ATTRDATATYPE_4V );
+		int nXIdx = nX / 4;
+		uint8 *pRet =  m_pAttributePtrs[nAttributeIdx] 
+			+ nXIdx * 4 * m_nStrideInBytes[nAttributeIdx]
+			+ nY * m_nRowStrideInBytes[nAttributeIdx]
+			+ nZ * m_nSliceStrideInBytes[nAttributeIdx];
+		pRet += 4 * ( nX & 3 );
+		return reinterpret_cast<FourVectors *>( pRet );
 	}
 		
 	FORCEINLINE size_t ItemByteStride( int nAttributeIdx ) const

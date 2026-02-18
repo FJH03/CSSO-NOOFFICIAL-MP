@@ -323,4 +323,4 @@ void WheelDustCallback( const CEffectData &data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "WheelDust", WheelDustCallback );
+DECLARE_CLIENT_EFFECT( WheelDust, WheelDustCallback );

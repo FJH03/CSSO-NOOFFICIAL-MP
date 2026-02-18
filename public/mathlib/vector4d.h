@@ -92,7 +92,14 @@ public:
 	Vector4D&	operator*=(const Vector4D &v);			
 	Vector4D&	operator*=(float s);
 	Vector4D&	operator/=(const Vector4D &v);		
-	Vector4D&	operator/=(float s);					
+	Vector4D&	operator/=(float s);
+
+	Vector4D	operator-( void ) const;
+	Vector4D	operator*( float fl ) const;
+	Vector4D	operator/( float fl ) const;
+	Vector4D	operator*( const Vector4D& v ) const;
+	Vector4D	operator+( const Vector4D& v ) const;
+	Vector4D	operator-( const Vector4D& v ) const;
 
 	// negate the Vector4D components
 	void	Negate(); 
@@ -422,6 +429,52 @@ inline Vector4D& Vector4D::operator*=(Vector4D const& v)
 	w *= v.w;
 	Assert( IsValid() );
 	return *this;
+}
+
+inline Vector4D Vector4D::operator-(void) const
+{ 
+	return Vector4D(-x,-y,-z,-w);
+}
+
+inline Vector4D Vector4D::operator+(const Vector4D& v) const	
+{ 
+	Vector4D res;
+	Vector4DAdd( *this, v, res );
+	return res;	
+}
+
+inline Vector4D Vector4D::operator-(const Vector4D& v) const	
+{ 
+	Vector4D res;
+	Vector4DSubtract( *this, v, res );
+	return res;	
+}
+
+
+inline Vector4D Vector4D::operator*(float fl) const	
+{ 
+	Vector4D res;
+	Vector4DMultiply( *this, fl, res );
+	return res;	
+}
+
+inline Vector4D Vector4D::operator*(const Vector4D& v) const	
+{ 
+	Vector4D res;
+	Vector4DMultiply( *this, v, res );
+	return res;	
+}
+
+inline Vector4D Vector4D::operator/(float fl) const	
+{ 
+	Vector4D res;
+	Vector4DDivide( *this, fl, res );
+	return res;	
+}
+
+inline Vector4D operator*( float fl, const Vector4D& v )	
+{ 
+	return v * fl; 
 }
 
 inline Vector4D& Vector4D::operator/=(float fl)	

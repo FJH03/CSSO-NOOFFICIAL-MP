@@ -68,12 +68,27 @@ CRagdollBoogie *CRagdollBoogie::Create( CBaseEntity *pTarget, float flMagnitude,
 	return pBoogie;
 }
 
+//-----------------------------------------------------------------------------
+// Spawn
+//-----------------------------------------------------------------------------
+void CRagdollBoogie::Precache()
+{
+	BaseClass::Precache();
+
+	PrecacheEffect( "TeslaHitboxes" );
+
+#ifdef HL2_EPISODIC
+	PrecacheScriptSound( "RagdollBoogie.Zap" );
+#endif
+}
 
 //-----------------------------------------------------------------------------
 // Spawn
 //-----------------------------------------------------------------------------
 void CRagdollBoogie::Spawn()
 {
+	Precache();
+	
 	BaseClass::Spawn();
 
 	SetThink( &CRagdollBoogie::BoogieThink );

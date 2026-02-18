@@ -55,6 +55,17 @@ public:
 		return m_SymbolTable.Find( pString );
 	}
 
+	UtlSymId_t AddString( const char *pString )
+	{
+		CUtlSymbol symbol = m_SymbolTable.AddString( pString );
+		int index = ( int )( UtlSymId_t )symbol;
+		if( m_Vector.Count() <= index )
+		{
+			m_Vector.EnsureCount( index + 1 );
+		}
+		return symbol;
+	}
+
 	/// Add a string to the map and also insert an item at 
 	/// its location in the same operation. Returns the 
 	/// newly created index (or the one that was just 

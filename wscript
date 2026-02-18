@@ -74,6 +74,7 @@ projects={
 		'materialsystem/stdshaders',
 		'mathlib',
 		'particles',
+		'raytrace',
 		'scenefilecache',
 		'serverbrowser',
 		'soundemittersystem',

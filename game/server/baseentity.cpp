@@ -4780,11 +4780,46 @@ void CBaseEntity::PrecacheSoundHelper( const char *pName )
 	}
 }
 
+class CModelPrecacheSystem : public CAutoGameSystem
+{
+public:
+	CModelPrecacheSystem() : CAutoGameSystem( "CModelPrecacheSystem" ), m_RepeatCounts( 0, 0, DefLessFunc( int ) )
+	{
+	}
+
+	// Level init, shutdown
+	virtual void LevelShutdownPreEntity()
+	{
+		m_RepeatCounts.Purge();
+	}
+
+	bool ShouldPrecache( int nModelIndex )
+	{
+		int slot = m_RepeatCounts.Find( nModelIndex );
+		if ( slot != m_RepeatCounts.InvalidIndex() )
+		{
+			m_RepeatCounts[ slot ]++;
+			return false;
+		}
+
+		m_RepeatCounts.Insert( nModelIndex, 0 );
+		return true;
+	}
+
+private:
+
+	CUtlMap< int, int > m_RepeatCounts;
+};
+
+static CModelPrecacheSystem g_ModelPrecacheSystem;
+
 //-----------------------------------------------------------------------------
 // Precache model components
 //-----------------------------------------------------------------------------
 void CBaseEntity::PrecacheModelComponents( int nModelIndex )
 {
+	if ( !g_ModelPrecacheSystem.ShouldPrecache( nModelIndex ) )
+		return;
 
 	model_t *pModel = (model_t *)modelinfo->GetModel( nModelIndex );
 	if ( !pModel || modelinfo->GetModelType( pModel ) != mod_studio )

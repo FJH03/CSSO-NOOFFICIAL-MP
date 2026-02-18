@@ -17,16 +17,9 @@
 #include "cs_gamerules.h"
 #include "util_shared.h"
 #include "c_cs_playerresource.h"
-#include "clienteffectprecachesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
-
-// Precache rope materials
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheC4Ropes )
-CLIENTEFFECT_MATERIAL( "cable/phonecable" ) //.vmt
-CLIENTEFFECT_MATERIAL( "cable/phonecable_red" ) //.vmt
-CLIENTEFFECT_REGISTER_END()
 
 #define PLANTEDC4_MSG_JUSTBLEW 1
 #define TIME_TO_DETONATE_WARNING 10

@@ -6,7 +6,6 @@
 //=============================================================================//
 
 #include "cbase.h"
-#include "clienteffectprecachesystem.h"
 #include "fx_sparks.h"
 #include "iefx.h"
 #include "c_te_effect_dispatch.h"
@@ -25,12 +24,12 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectBloodSpray )
-CLIENTEFFECT_MATERIAL( "effects/blood_core" )
-CLIENTEFFECT_MATERIAL( "effects/blood_gore" )
-CLIENTEFFECT_MATERIAL( "effects/blood_drop" )
-CLIENTEFFECT_MATERIAL( "effects/blood_puff" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectBloodSpray )
+PRECACHE( MATERIAL, "effects/blood_core" )
+PRECACHE( MATERIAL, "effects/blood_gore" )
+PRECACHE( MATERIAL, "effects/blood_drop" )
+PRECACHE( MATERIAL, "effects/blood_puff" )
+PRECACHE_REGISTER_END()
 
 // Cached material handles
 PMaterialHandle g_Blood_Core = NULL;
@@ -495,7 +494,7 @@ void BloodSprayCallback( const CEffectData &data )
 	FX_BloodSpray( data.m_vOrigin, data.m_vNormal, data.m_flScale, color.r, color.g, color.b, data.m_fFlags );
 }
 
-DECLARE_CLIENT_EFFECT( "bloodspray", BloodSprayCallback );
+DECLARE_CLIENT_EFFECT( bloodspray, BloodSprayCallback );
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -529,7 +528,7 @@ void BloodImpactCallback( const CEffectData & data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "BloodImpact", BloodImpactCallback );
+DECLARE_CLIENT_EFFECT( BloodImpact, BloodImpactCallback );
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -588,4 +587,4 @@ void HunterDamageCallback( const CEffectData &data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "HunterDamage", HunterDamageCallback );
+DECLARE_CLIENT_EFFECT( HunterDamage, HunterDamageCallback );

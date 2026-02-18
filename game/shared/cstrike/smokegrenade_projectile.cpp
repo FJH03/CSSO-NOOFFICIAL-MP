@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -6,7 +6,9 @@
 
 #include "cbase.h"
 #include "smokegrenade_projectile.h"
-#ifdef CLIENT_DLL
+#include "weapon_csbase.h"
+#include "particle_parse.h"
+#if defined( CLIENT_DLL )
 #include "c_cs_player.h"
 #else
 #include "sendproxy.h"
@@ -14,7 +16,6 @@
 #include "cs_player.h"
 #include "KeyValues.h"
 #include "bot_manager.h"
-#include "weapon_csbase.h"
 #include "effects/inferno.h"
 #include "cs_gamerules.h"
 #endif
@@ -25,13 +26,9 @@
 #if defined( CLIENT_DLL )
 
 IMPLEMENT_CLIENTCLASS_DT( C_SmokeGrenadeProjectile, DT_SmokeGrenadeProjectile, CSmokeGrenadeProjectile )
-RecvPropBool( RECVINFO( m_bDidSmokeEffect ) )
+RecvPropBool( RECVINFO( m_bDidSmokeEffect ) ),
+RecvPropInt( RECVINFO( m_nSmokeEffectTickBegin ) )
 END_RECV_TABLE()
-
-C_SmokeGrenadeProjectile::C_SmokeGrenadeProjectile()
-{
-	m_bSmokeEffectSpawned = false;
-}
 
 C_SmokeGrenadeProjectile::~C_SmokeGrenadeProjectile()
 {
@@ -45,19 +42,72 @@ void C_SmokeGrenadeProjectile::PostDataUpdate( DataUpdateType_t type )
 
 void C_SmokeGrenadeProjectile::OnDataChanged( DataUpdateType_t updateType ) 
 { 
-	if ( m_bDidSmokeEffect && !m_bSmokeEffectSpawned )
+	if ( ( m_nSmokeEffectTickBegin || m_bDidSmokeEffect ) && !m_bSmokeEffectSpawned )
 	{
-		m_bSmokeEffectSpawned = true;
+		SpawnSmokeEffect();
 		// And the smoke grenade particle began! - every call but the first is extraneous here
 		AddSmokeGrenadeHandle( this );
 	}
 }
-#else
+
+void C_SmokeGrenadeProjectile::SpawnSmokeEffect( )
+{
+	if ( !m_bSmokeEffectSpawned )
+	{
+		m_bSmokeEffectSpawned = true;
+		CNewParticleEffect *pSmokeEffect = NULL;
+
+		// Used to be: 
+		int nUseMethod = 2;
+		if ( nUseMethod == 0 )
+		{
+			// this is the closest to the old method; it doesn't let us correct the lifetime of the particle system in case of full frame update
+			DispatchParticleEffect( "explosion_smokegrenade", GetAbsOrigin(), QAngle( 0, 0, 0 ) );// note QAngle(0,0,0). But we need to simulate the particle effect forward sometimes, so we need to use different API now.
+		}
+		else
+		{
+			Vector vOrigin = GetNetworkOrigin();
+			if ( nUseMethod == 1 )
+			{
+				// This method works, but isn't the closest to the old method. The old method used CNewParticleEffect::CreateOrAggregate() API in its guts, but aggregation is implicitly disabled by explosion_smokegrenade particle definition as of Dec 2015 in CSGO staging.
+				pSmokeEffect = ParticleProp()->Create( "explosion_smokegrenade", PATTACH_CUSTOMORIGIN );
+			}
+			else
+			{
+				// The old method used CNewParticleEffect::CreateOrAggregate() API in its guts, so this is the closest method to create smoke to the old method, but it's not been tested in trunk
+				pSmokeEffect = CNewParticleEffect::CreateOrAggregate( NULL, "explosion_smokegrenade", vOrigin );
+			}
+
+			if ( pSmokeEffect )
+			{
+				pSmokeEffect->SetSortOrigin( vOrigin );
+				pSmokeEffect->SetControlPoint( 0, vOrigin );
+				pSmokeEffect->SetControlPoint( 1, vOrigin );
+				pSmokeEffect->SetControlPointOrientation( 0, Vector( 1, 0, 0 ), Vector( 0, -1, 0 ), Vector( 0, 0, 1 ) );
+			}
+		}
+
+		if ( m_nSmokeEffectTickBegin )
+		{
+			int nSkipFrames = gpGlobals->tickcount - m_nSmokeEffectTickBegin;
+			if ( nSkipFrames > 4 && pSmokeEffect )
+			{
+				//Note: pSmokeEffect->Simulate( flSkipSeconds ); would be ideal, but it doesn't work well for long intervals. SkipToTime would be even better but it will extinguish the particle effect if it skips past 2 seconds due to some perf heuristic, and it's not clear if it skips correctly either.
+				// this doesn't happen often, and when it does, it's on connection or on replay begin/end, so a little hitch shouldn't be a problem.
+				for ( int i = 2; i < nSkipFrames; i += 2 )
+					pSmokeEffect->Simulate( gpGlobals->interval_per_tick * 2 );
+			}
+		}
+	}
+}
+
+#else // GAME_DLL
 LINK_ENTITY_TO_CLASS( smokegrenade_projectile, CSmokeGrenadeProjectile );
-PRECACHE_WEAPON_REGISTER( smokegrenade_projectile );
+PRECACHE_REGISTER( smokegrenade_projectile );
 
 IMPLEMENT_SERVERCLASS_ST( CSmokeGrenadeProjectile, DT_SmokeGrenadeProjectile )
-SendPropBool( SENDINFO( m_bDidSmokeEffect ) )
+SendPropBool( SENDINFO( m_bDidSmokeEffect ) ),
+SendPropInt( SENDINFO( m_nSmokeEffectTickBegin ) )
 END_SEND_TABLE()
 
 BEGIN_DATADESC( CSmokeGrenadeProjectile )
@@ -65,7 +115,6 @@ BEGIN_DATADESC( CSmokeGrenadeProjectile )
 	DEFINE_THINKFUNC( Think_Fade ),
 	DEFINE_THINKFUNC( Think_Remove )
 END_DATADESC()
-
 
 CSmokeGrenadeProjectile* CSmokeGrenadeProjectile::Create( 
 	const Vector &position, 
@@ -96,10 +145,11 @@ CSmokeGrenadeProjectile* CSmokeGrenadeProjectile::Create(
 	pGrenade->SetFriction( BaseClass::GetGrenadeFriction() );
 	pGrenade->SetElasticity( BaseClass::GetGrenadeElasticity() );
 	pGrenade->m_bDidSmokeEffect = false;
+	pGrenade->m_nSmokeEffectTickBegin = 0;
 	pGrenade->m_flLastBounce = 0;
-
 	pGrenade->m_pWeaponInfo = GetWeaponInfo( WEAPON_SMOKEGRENADE );
 
+	pGrenade->SetCollisionGroup( COLLISION_GROUP_PROJECTILE );
 	return pGrenade;
 }
 
@@ -129,47 +179,46 @@ void CSmokeGrenadeProjectile::SmokeDetonate( void )
 	TheBots->SetGrenadeRadius( this, SmokeGrenadeRadius );
 
 	// Ok, we've stopped rolling or whatever. Now detonate.
-	ParticleSmokeGrenade *pGren = (ParticleSmokeGrenade*)CBaseEntity::Create( PARTICLESMOKEGRENADE_ENTITYNAME, GetAbsOrigin(), QAngle(0,0,0), NULL );
-	if ( pGren )
+
+	// Make sure all players get the message about this smoke effect.
+	// This fixes an exploit where a player could enter a room where others were seeing smoke and he wasn't
+	// because he wasn't in the PVS when the smoke effect started.
+	m_nSmokeEffectTickBegin = gpGlobals->tickcount; // client will star the explosion_smokegrenade particle effect at AbsOrigin
+
+	//tell the hostages about the smoke!
+	CBaseEntity *pEntity = NULL;
+	variant_t var;	//send the location of the smoke?
+	var.SetVector3D( GetAbsOrigin() );
+	while ( ( pEntity = gEntList.FindEntityByClassname( pEntity, "hostage_entity" ) ) != NULL)
 	{
-		pGren->FillVolume();
-		pGren->SetFadeTime( 15, 20 );
-		pGren->SetAbsOrigin( GetAbsOrigin() );
+		//send to hostages that have a resonable chance of being in it while its still smoking
+		if( (GetAbsOrigin() - pEntity->GetAbsOrigin()).Length() < 1000 )
+			pEntity->AcceptInput( "smokegrenade", this, this, var, 0 );
+	}
 
-		//tell the hostages about the smoke!
-		CBaseEntity *pEntity = NULL;
-		variant_t var;	//send the location of the smoke?
-		var.SetVector3D( GetAbsOrigin() );
-		while ( ( pEntity = gEntList.FindEntityByClassname( pEntity, "hostage_entity" ) ) != NULL)
+	// tell the bots a smoke grenade has exploded
+	CCSPlayer *player = ToCSPlayer(GetThrower());
+	if ( player )
+	{
+		IGameEvent * event = gameeventmanager->CreateEvent( "smokegrenade_detonate" );
+		if ( event )
 		{
-			//send to hostages that have a resonable chance of being in it while its still smoking
-			if( (GetAbsOrigin() - pEntity->GetAbsOrigin()).Length() < 1000 )
-				pEntity->AcceptInput( "smokegrenade", this, this, var, 0 );
-		}
-
-		// tell the bots a smoke grenade has exploded
-		CCSPlayer *player = ToCSPlayer(GetThrower());
-		if ( player )
-		{
-			IGameEvent * event = gameeventmanager->CreateEvent( "smokegrenade_detonate" );
-			if ( event )
-			{
-				event->SetInt( "userid", player->GetUserID() );
-				event->SetInt( "entityid", this->entindex() );
-				event->SetFloat( "x", GetAbsOrigin().x );
-				event->SetFloat( "y", GetAbsOrigin().y );
-				event->SetFloat( "z", GetAbsOrigin().z );
-				gameeventmanager->FireEvent( event );
-			}
+			event->SetInt( "userid", player->GetUserID() );
+			event->SetInt( "entityid", this->entindex() );
+			event->SetFloat( "x", GetAbsOrigin().x );
+			event->SetFloat( "y", GetAbsOrigin().y );
+			event->SetFloat( "z", GetAbsOrigin().z );
+			gameeventmanager->FireEvent( event );
 		}
 	}
 
-	m_hSmokeEffect = pGren;
-	m_bDidSmokeEffect = true;
+	m_bDidSmokeEffect = true; //<- the old way to signal the start of smoke effect; the new way is to set the particle start tick, so that we can replay and fix the bug when we lose the smoke effect when we connect right after smoke grenade went off
 
 	EmitSound( "BaseSmokeEffect.Sound" );
 
 	m_nRenderMode = kRenderTransColor;
+
+	SetMoveType(MOVETYPE_NONE);
 	SetNextThink( gpGlobals->curtime + 12.5f );
 	SetThink( &CSmokeGrenadeProjectile::Think_Fade );
 
@@ -307,4 +356,5 @@ void CSmokeGrenadeProjectile::BounceSound( void )
 		EmitSound( "SmokeGrenade.Bounce" );
 	}
 }
+
 #endif

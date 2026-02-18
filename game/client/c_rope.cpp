@@ -21,7 +21,6 @@
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "tier1/callqueue.h"
 #include "tier1/memstack.h"
-#include "clienteffectprecachesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -29,9 +28,9 @@
 //int		g_sModelXmasBulb;	// holds the sprite index for splattered blood
 
 //Precache the rope shadowdepth material
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheRopes )
-	CLIENTEFFECT_MATERIAL( "cable/rope_shadowdepth" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheRopes )
+	PRECACHE( MATERIAL, "cable/rope_shadowdepth" )
+PRECACHE_REGISTER_END()
 
 void RecvProxy_RecomputeSprings( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
@@ -151,7 +150,7 @@ public:
 
 	void ResetRenderCache( void );
 	void AddToRenderCache( C_RopeKeyframe *pRope );
-	void DrawRenderCache( bool bShadowDepth );
+	void DrawRenderCache( IMatRenderContext *pRenderContext, bool bShadowDepth );
 
 	void SetHolidayLightMode( bool bHoliday ) { m_bDrawHolidayLights = bHoliday; }
 	bool IsHolidayLightMode( void );
@@ -566,7 +565,7 @@ ConVar r_queued_ropes( "r_queued_ropes", "1" );
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CRopeManager::DrawRenderCache( bool bShadowDepth )
+void CRopeManager::DrawRenderCache( IMatRenderContext *pRenderContext, bool bShadowDepth )
 {
 	int iRenderCacheCount = m_aRenderCache.Count();
 
@@ -579,8 +578,6 @@ void CRopeManager::DrawRenderCache( bool bShadowDepth )
 
 	Vector vForward = CurrentViewForward();
 	Vector vOrigin = CurrentViewOrigin();
-
-	CMatRenderContextPtr pRenderContext( materials );
 
 	ICallQueue *pCallQueue;
 	if( r_queued_ropes.GetBool() && (pCallQueue = pRenderContext->GetCallQueue()) != NULL )
@@ -756,7 +753,7 @@ void ShakeRopesCallback( const CEffectData &data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "ShakeRopes", ShakeRopesCallback )
+DECLARE_CLIENT_EFFECT( ShakeRopes, ShakeRopesCallback )
 
 
 // ------------------------------------------------------------------------------------ //

@@ -60,6 +60,7 @@ void CBaseHLBludgeonWeapon::Spawn( void )
 void CBaseHLBludgeonWeapon::Precache( void )
 {
 	//Call base class first
+	PrecacheEffect( "watersplash" );
 	BaseClass::Precache();
 }
 

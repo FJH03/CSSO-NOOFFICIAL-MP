@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -15,6 +15,8 @@
 
 #define PARTICLESMOKEGRENADE_ENTITYNAME	"env_particlesmokegrenade"
 
+#define MIN_SMOKE_TINT 0.5f
+#define MAX_SMOKE_TINT 0.6f
 
 class ParticleSmokeGrenade : public CBaseParticleEntity
 {
@@ -24,8 +26,13 @@ public:
 	DECLARE_SERVERCLASS();
 
 						ParticleSmokeGrenade();
+	
+	virtual				~ParticleSmokeGrenade();
 
+	virtual void		Spawn( void );
 	virtual int			UpdateTransmitState( void );
+	void				SetCreator(CBasePlayer *creator);
+	CBasePlayer*		GetCreator();
 
 public:
 
@@ -38,6 +45,10 @@ public:
 	// Set time to fade out relative to current time
 	void				SetRelativeFadeTime(float startTime, float endTime);
 
+	// Set the tint color of the grenade smoke.
+	void				SetSmokeColor(Vector color);
+
+	void				Think( void );
 
 public:
 	
@@ -50,9 +61,14 @@ public:
 	// When to fade in and out.
 	CNetworkVar( float, m_FadeStartTime );
 	CNetworkVar( float, m_FadeEndTime );
+	CNetworkVar( Vector, m_MinColor );
+	CNetworkVar( Vector, m_MaxColor );
+
+protected:
+    
+	EHANDLE m_creatorPlayer;
 };
 
 
 #endif
-
 

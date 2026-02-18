@@ -9,7 +9,6 @@
 #include "iviewrender.h"
 #include "c_sun.h"
 #include "particles_simple.h"
-#include "clienteffectprecachesystem.h"
 #include "c_pixel_visibility.h"
 #include "glow_overlay.h"
 #include "utllinkedlist.h"
@@ -20,10 +19,10 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectGlow )
-CLIENTEFFECT_MATERIAL( "sun/overlay" )
-CLIENTEFFECT_MATERIAL( "sprites/light_glow02_add_noz" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectGlow )
+PRECACHE( MATERIAL, "sun/overlay" )
+PRECACHE( MATERIAL, "sprites/light_glow02_add_noz" )
+PRECACHE_REGISTER_END()
 
 class CGlowOverlaySystem : public CAutoGameSystem
 {

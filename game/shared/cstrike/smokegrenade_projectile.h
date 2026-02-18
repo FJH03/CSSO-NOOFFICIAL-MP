@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -10,7 +10,6 @@
 #pragma once
 #endif
 
-
 #include "basecsgrenade_projectile.h"
 
 #if defined( CLIENT_DLL )
@@ -21,12 +20,15 @@ class C_SmokeGrenadeProjectile : public C_BaseCSGrenadeProjectile
 	DECLARE_CLASS( C_SmokeGrenadeProjectile, C_BaseCSGrenadeProjectile );
 	DECLARE_NETWORKCLASS();
 
-	C_SmokeGrenadeProjectile();
+	C_SmokeGrenadeProjectile() {}
 	virtual ~C_SmokeGrenadeProjectile();
 
 	virtual void PostDataUpdate( DataUpdateType_t updateType ) OVERRIDE;
 	virtual void OnDataChanged( DataUpdateType_t updateType ) OVERRIDE;
 
+	void SpawnSmokeEffect();
+
+	CNetworkVar( int, m_nSmokeEffectTickBegin );
 	CNetworkVar( bool, m_bDidSmokeEffect );
 
 	bool m_bSmokeEffectSpawned;
@@ -38,11 +40,11 @@ class CSmokeGrenadeProjectile : public CBaseCSGrenadeProjectile
 public:
 	DECLARE_CLASS( CSmokeGrenadeProjectile, CBaseCSGrenadeProjectile );
 	DECLARE_NETWORKCLASS();
-	DECLARE_DATADESC();
 
+public:
+	DECLARE_DATADESC();
 // Overrides.
 public:
-	
 	virtual void Spawn();
 	virtual void Precache();
 	virtual void Detonate();
@@ -70,7 +72,7 @@ public:
 
 	void SetTimer( float timer );
 
-	EHANDLE m_hSmokeEffect;
+	CNetworkVar( int, m_nSmokeEffectTickBegin );
 	CNetworkVar( bool, m_bDidSmokeEffect );
 	float m_flLastBounce;
 };

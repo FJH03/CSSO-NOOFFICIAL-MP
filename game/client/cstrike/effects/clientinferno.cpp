@@ -8,22 +8,20 @@
 #include "hud_macros.h"
 #include "view.h"
 #include "enginesprite.h"
-#include "precache_register.h"
 #include "iefx.h"
 #include "dlight.h"
 #include "tier0/vprof.h"
 #include "debugoverlay_shared.h"
 #include "basecsgrenade_projectile.h"
 #include "clientinferno.h"
-#include "clienteffectprecachesystem.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
 
-CLIENTEFFECT_REGISTER_BEGIN( InfernoMaterials )
-	CLIENTEFFECT_MATERIAL( "sprites/white" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, InfernoMaterials )
+	PRECACHE( MATERIAL, "sprites/white" )
+PRECACHE_REGISTER_END()
 
 ConVar InfernoDlightSpacing( "inferno_dlight_spacing", "200", FCVAR_CHEAT, "Inferno dlights are at least this far apart" );
 ConVar InfernoDlights( "inferno_dlights", "30", 0, "Min FPS at which molotov dlights will be created" );

@@ -41,4 +41,4 @@ void ImpactCallback( const CEffectData &data )
 	PlayImpactSound( pEntity, tr, vecOrigin, nSurfaceProp );
 }
 
-DECLARE_CLIENT_EFFECT( "Impact", ImpactCallback );
+DECLARE_CLIENT_EFFECT( Impact, ImpactCallback );

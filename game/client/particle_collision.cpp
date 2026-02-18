@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Local fast collision system for particles
 //
@@ -11,12 +11,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-#ifdef _XBOX
-#define	__DEBUG_PARTICLE_COLLISION_RETEST			0
-#else
 #define	__DEBUG_PARTICLE_COLLISION_RETEST			1
-#endif // _XBOX
-
 #define	__DEBUG_PARTICLE_COLLISION_OVERLAY			0
 #define	__DEBUG_PARTICLE_COLLISION_OVERLAY_LIFETIME	0.1f
 

@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //=============================================================================
 
@@ -15,7 +15,7 @@
 //
 //-----------------------------------------------------------------------------
 CDmxSerializationDictionary::CDmxSerializationDictionary( int nElementsHint /* = 0 */ ) :
-	m_Dict( 0, nElementsHint, CDmxSerializationDictionary::LessFunc )
+m_Dict( 0, nElementsHint, CDmxSerializationDictionary::LessFunc )
 {
 }
 
@@ -39,7 +39,7 @@ DmxSerializationHandle_t CDmxSerializationDictionary::Find( CDmxElement *pElemen
 	return m_Dict.Find( find );
 }
 
-	
+
 //-----------------------------------------------------------------------------
 // Creates the list of all things to serialize
 //-----------------------------------------------------------------------------
@@ -71,7 +71,7 @@ void CDmxSerializationDictionary::BuildElementList_R( CDmxElement *pElement, boo
 		CDmxAttribute *pAttribute = pElement->GetAttribute(i);
 		switch( pAttribute->GetType() )
 		{
-		case AT_ELEMENT:
+			case AT_ELEMENT:
 			{
 				CDmxElement *pChild = pAttribute->GetValue<CDmxElement*>();
 				if ( !pChild )
@@ -81,7 +81,7 @@ void CDmxSerializationDictionary::BuildElementList_R( CDmxElement *pElement, boo
 			}
 			break;
 
-		case AT_ELEMENT_ARRAY:
+			case AT_ELEMENT_ARRAY:
 			{
 				const CUtlVector<CDmxElement*> &array = pAttribute->GetArray<CDmxElement*>( );
 				int nCountArray = array.Count();
@@ -149,7 +149,7 @@ int CDmxSerializationDictionary::RootElementCount() const
 	return nCount;
 }
 
-	
+
 //-----------------------------------------------------------------------------
 // Iterates over all root elements to serialize
 //-----------------------------------------------------------------------------
@@ -184,5 +184,4 @@ CDmxElement *CDmxSerializationDictionary::GetRootElement( DmxSerializationHandle
 	Assert( m_Dict[h].m_bRoot );
 	return m_Dict[h].m_pElement;
 }
-
 

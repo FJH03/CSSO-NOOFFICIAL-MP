@@ -18,7 +18,6 @@
 #include "iefx.h"
 #include "engine/IEngineSound.h"
 #include "env_wind_shared.h"
-#include "clienteffectprecachesystem.h"
 #include "fx_sparks.h"
 #include "fx.h"
 #include "movevars_shared.h"
@@ -45,24 +44,24 @@ extern ConVar muzzleflash_light;
 
 //Precache the effects
 #ifndef TF_CLIENT_DLL
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectMuzzleFlash )
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectMuzzleFlash )
 
-	CLIENTEFFECT_MATERIAL( "effects/muzzleflash1" )
-	CLIENTEFFECT_MATERIAL( "effects/muzzleflash2" )
-	CLIENTEFFECT_MATERIAL( "effects/muzzleflash3" )
-	CLIENTEFFECT_MATERIAL( "effects/muzzleflash4" )
-	CLIENTEFFECT_MATERIAL( "effects/muzzleflash1_noz" )
-	CLIENTEFFECT_MATERIAL( "effects/muzzleflash2_noz" )
-	CLIENTEFFECT_MATERIAL( "effects/muzzleflash3_noz" )
-	CLIENTEFFECT_MATERIAL( "effects/muzzleflash4_noz" )
+	PRECACHE( MATERIAL, "effects/muzzleflash1" )
+	PRECACHE( MATERIAL, "effects/muzzleflash2" )
+	PRECACHE( MATERIAL, "effects/muzzleflash3" )
+	PRECACHE( MATERIAL, "effects/muzzleflash4" )
+	PRECACHE( MATERIAL, "effects/muzzleflash1_noz" )
+	PRECACHE( MATERIAL, "effects/muzzleflash2_noz" )
+	PRECACHE( MATERIAL, "effects/muzzleflash3_noz" )
+	PRECACHE( MATERIAL, "effects/muzzleflash4_noz" )
 #ifndef CSTRIKE_DLL
-	CLIENTEFFECT_MATERIAL( "effects/combinemuzzle1" )
-	CLIENTEFFECT_MATERIAL( "effects/combinemuzzle2" )
-	CLIENTEFFECT_MATERIAL( "effects/combinemuzzle1_noz" )
-	CLIENTEFFECT_MATERIAL( "effects/combinemuzzle2_noz" )
-	CLIENTEFFECT_MATERIAL( "effects/strider_muzzle" )
+	PRECACHE( MATERIAL, "effects/combinemuzzle1" )
+	PRECACHE( MATERIAL, "effects/combinemuzzle2" )
+	PRECACHE( MATERIAL, "effects/combinemuzzle1_noz" )
+	PRECACHE( MATERIAL, "effects/combinemuzzle2_noz" )
+	PRECACHE( MATERIAL, "effects/strider_muzzle" )
 #endif
-CLIENTEFFECT_REGISTER_END()
+	PRECACHE_REGISTER_END()
 #endif
 
 //Whether or not to eject brass from weapons

@@ -33,6 +33,14 @@ public:
 	CBaseHandle( uintp value );
 	CBaseHandle( int iEntry, int iSerialNumber );
 
+	// NOTE: The following constructor is not type-safe, and can allow creating an
+	//       arbitrary CBaseHandle that doesn't necessarily point to an actual object.
+	//
+	// It is your responsibility to ensure that the target of the handle actually points
+	// to the object you think it does.  Generally, the argument to this function should
+	// have been obtained from CBaseHandle::ToInt() on a valid handle.
+	static CBaseHandle UnsafeFromIndex( int index );
+
 	void Init( int iEntry, int iSerialNumber );
 	void Term();
 
@@ -88,6 +96,13 @@ inline CBaseHandle::CBaseHandle( uintp value )
 inline CBaseHandle::CBaseHandle( int iEntry, int iSerialNumber )
 {
 	Init( iEntry, iSerialNumber );
+}
+
+inline CBaseHandle CBaseHandle::UnsafeFromIndex( int index )
+{
+	CBaseHandle ret;
+	ret.m_Index = index;
+	return ret;
 }
 
 inline void CBaseHandle::Init( int iEntry, int iSerialNumber )

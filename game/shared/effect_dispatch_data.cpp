@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -13,13 +13,16 @@
 #include "cliententitylist.h"
 #endif
 
-#include "qlimits.h"
-
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
 
 #define SUBINCH_PRECISION	3
+
+// Note, must match common/qlimits.h!!!
+// Must have this value in sync(-1) with qlimits.h and const.h
+#define MAX_MODEL_INDEX_BITS	12
+
 
 #ifdef CLIENT_DLL
 
@@ -28,18 +31,18 @@
 	static void RecvProxy_EntIndex( const CRecvProxyData *pData, void *pStruct, void *pOut )
 	{
 		int nEntIndex = pData->m_Value.m_Int;
-		((CEffectData*)pStruct)->m_hEntity = (nEntIndex < 0) ? INVALID_EHANDLE_INDEX : ClientEntityList().EntIndexToHandle( nEntIndex );
+		((CEffectData*)pStruct)->m_hEntity = (nEntIndex < 0) ? NULL : ClientEntityList().EntIndexToHandle( nEntIndex );
 	}
 
 	BEGIN_RECV_TABLE_NOBASE( CEffectData, DT_EffectData )
 
-		RecvPropFloat( RECVINFO( m_vOrigin[0] ) ),
-		RecvPropFloat( RECVINFO( m_vOrigin[1] ) ),
-		RecvPropFloat( RECVINFO( m_vOrigin[2] ) ),
+		RecvPropFloat( RECVINFO( m_vOrigin.x ) ),
+		RecvPropFloat( RECVINFO( m_vOrigin.y ) ),
+		RecvPropFloat( RECVINFO( m_vOrigin.z ) ),
 
-		RecvPropFloat( RECVINFO( m_vStart[0] ) ),
-		RecvPropFloat( RECVINFO( m_vStart[1] ) ),
-		RecvPropFloat( RECVINFO( m_vStart[2] ) ),
+		RecvPropFloat( RECVINFO( m_vStart.x ) ),
+		RecvPropFloat( RECVINFO( m_vStart.y ) ),
+		RecvPropFloat( RECVINFO( m_vStart.z ) ),
 
 		RecvPropQAngles( RECVINFO( m_vAngles ) ),
 
@@ -57,21 +60,13 @@
 		RecvPropInt( RECVINFO( m_nHitBox ) ),
 
 		RecvPropInt( "entindex", 0, SIZEOF_IGNORE, 0, RecvProxy_EntIndex ),
+		RecvPropInt( RECVINFO( m_nOtherEntIndex ) ),
 
 		RecvPropInt( RECVINFO( m_nColor ) ),
 
 		RecvPropFloat( RECVINFO( m_flRadius ) ),
 
-		RecvPropBool( RECVINFO( m_bCustomColors ) ),
-		RecvPropVector( RECVINFO( m_CustomColors.m_vecColor1 ) ),
-		RecvPropVector( RECVINFO( m_CustomColors.m_vecColor2 ) ),
-
-		RecvPropBool( RECVINFO( m_bControlPoint1 ) ),
-		RecvPropInt( RECVINFO( m_ControlPoint1.m_eParticleAttachment ) ),
-		RecvPropFloat( RECVINFO( m_ControlPoint1.m_vecOffset[0] ) ),
-		RecvPropFloat( RECVINFO( m_ControlPoint1.m_vecOffset[1] ) ),
-		RecvPropFloat( RECVINFO( m_ControlPoint1.m_vecOffset[2] ) ),
-
+		RecvPropBool( RECVINFO( m_bPositionsAreRelativeToEntity ) ),
 	END_RECV_TABLE()
 
 #else
@@ -85,19 +80,19 @@
 
 		// Get half-inch precision here.
 #ifdef HL2_DLL
-		SendPropFloat( SENDINFO_NOCHECK( m_vOrigin[0] ), COORD_INTEGER_BITS+SUBINCH_PRECISION, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
-		SendPropFloat( SENDINFO_NOCHECK( m_vOrigin[1] ), COORD_INTEGER_BITS+SUBINCH_PRECISION, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
-		SendPropFloat( SENDINFO_NOCHECK( m_vOrigin[2] ), COORD_INTEGER_BITS+SUBINCH_PRECISION, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
-		SendPropFloat( SENDINFO_NOCHECK( m_vStart[0] ), COORD_INTEGER_BITS+SUBINCH_PRECISION, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
-		SendPropFloat( SENDINFO_NOCHECK( m_vStart[1] ), COORD_INTEGER_BITS+SUBINCH_PRECISION, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
-		SendPropFloat( SENDINFO_NOCHECK( m_vStart[2] ), COORD_INTEGER_BITS+SUBINCH_PRECISION, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
+		SendPropFloat( SENDINFO_NOCHECK( m_vOrigin.x ), COORD_INTEGER_BITS+SUBINCH_PRECISION, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
+		SendPropFloat( SENDINFO_NOCHECK( m_vOrigin.y ), COORD_INTEGER_BITS+SUBINCH_PRECISION, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
+		SendPropFloat( SENDINFO_NOCHECK( m_vOrigin.z ), COORD_INTEGER_BITS+SUBINCH_PRECISION, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
+		SendPropFloat( SENDINFO_NOCHECK( m_vStart.x ), COORD_INTEGER_BITS+SUBINCH_PRECISION, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
+		SendPropFloat( SENDINFO_NOCHECK( m_vStart.y ), COORD_INTEGER_BITS+SUBINCH_PRECISION, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
+		SendPropFloat( SENDINFO_NOCHECK( m_vStart.z ), COORD_INTEGER_BITS+SUBINCH_PRECISION, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
 #else
-		SendPropFloat( SENDINFO_NOCHECK( m_vOrigin[0] ), -1, SPROP_COORD_MP_INTEGRAL ),
-		SendPropFloat( SENDINFO_NOCHECK( m_vOrigin[1] ), -1, SPROP_COORD_MP_INTEGRAL ),
-		SendPropFloat( SENDINFO_NOCHECK( m_vOrigin[2] ), -1, SPROP_COORD_MP_INTEGRAL ),
-		SendPropFloat( SENDINFO_NOCHECK( m_vStart[0] ), -1, SPROP_COORD_MP_INTEGRAL ),
-		SendPropFloat( SENDINFO_NOCHECK( m_vStart[1] ), -1, SPROP_COORD_MP_INTEGRAL ),
-		SendPropFloat( SENDINFO_NOCHECK( m_vStart[2] ), -1, SPROP_COORD_MP_INTEGRAL ),
+		SendPropFloat( SENDINFO_NOCHECK( m_vOrigin.x ), -1, SPROP_COORD_MP_INTEGRAL ),
+		SendPropFloat( SENDINFO_NOCHECK( m_vOrigin.y ), -1, SPROP_COORD_MP_INTEGRAL ),
+		SendPropFloat( SENDINFO_NOCHECK( m_vOrigin.z ), -1, SPROP_COORD_MP_INTEGRAL ),
+		SendPropFloat( SENDINFO_NOCHECK( m_vStart.x ), -1, SPROP_COORD_MP_INTEGRAL ),
+		SendPropFloat( SENDINFO_NOCHECK( m_vStart.y ), -1, SPROP_COORD_MP_INTEGRAL ),
+		SendPropFloat( SENDINFO_NOCHECK( m_vStart.z ), -1, SPROP_COORD_MP_INTEGRAL ),
 #endif
 		SendPropQAngles( SENDINFO_NOCHECK( m_vAngles ), 7 ),
 
@@ -110,7 +105,7 @@
 		SendPropInt( SENDINFO_NOCHECK( m_fFlags ), MAX_EFFECT_FLAG_BITS, SPROP_UNSIGNED ),
 		SendPropFloat( SENDINFO_NOCHECK( m_flMagnitude ), 12, SPROP_ROUNDDOWN, 0.0f, 1023.0f ),
 		SendPropFloat( SENDINFO_NOCHECK( m_flScale ), 0, SPROP_NOSCALE ),
-		SendPropInt( SENDINFO_NOCHECK( m_nAttachmentIndex ), 5, SPROP_UNSIGNED ),
+		SendPropInt( SENDINFO_NOCHECK( m_nAttachmentIndex ), 5 ),
 		SendPropIntWithMinusOneFlag( SENDINFO_NOCHECK( m_nSurfaceProp ), 8, SendProxy_ShortAddOne ),
 		SendPropInt( SENDINFO_NOCHECK( m_iEffectName ), MAX_EFFECT_DISPATCH_STRING_BITS, SPROP_UNSIGNED ),
 
@@ -119,21 +114,13 @@
 		SendPropInt( SENDINFO_NOCHECK( m_nHitBox ), 11, SPROP_UNSIGNED ),
 
 		SendPropInt( SENDINFO_NAME( m_nEntIndex, entindex ), MAX_EDICT_BITS, SPROP_UNSIGNED ),
+		SendPropInt( SENDINFO_NOCHECK( m_nOtherEntIndex ), MAX_EDICT_BITS, SPROP_UNSIGNED ),
 
 		SendPropInt( SENDINFO_NOCHECK( m_nColor ), 8, SPROP_UNSIGNED ),
 
 		SendPropFloat( SENDINFO_NOCHECK( m_flRadius ), 10, SPROP_ROUNDDOWN, 0.0f, 1023.0f ),
 
-		SendPropBool( SENDINFO_NOCHECK( m_bCustomColors) ),
-		SendPropVector( SENDINFO_NOCHECK( m_CustomColors.m_vecColor1 ), 8, 0, 0, 1 ),
-		SendPropVector( SENDINFO_NOCHECK( m_CustomColors.m_vecColor2 ), 8, 0, 0, 1 ),
-
-		SendPropBool( SENDINFO_NOCHECK( m_bControlPoint1) ),
-		SendPropInt( SENDINFO_NOCHECK( m_ControlPoint1.m_eParticleAttachment ), 5, SPROP_UNSIGNED ),
-		SendPropFloat( SENDINFO_NOCHECK( m_ControlPoint1.m_vecOffset[0] ), -1, SPROP_COORD ),
-		SendPropFloat( SENDINFO_NOCHECK( m_ControlPoint1.m_vecOffset[1] ), -1, SPROP_COORD ),
-		SendPropFloat( SENDINFO_NOCHECK( m_ControlPoint1.m_vecOffset[2] ), -1, SPROP_COORD ),
-
+		SendPropBool( SENDINFO_NOCHECK( m_bPositionsAreRelativeToEntity ) ), 
 	END_SEND_TABLE()
 
 #endif

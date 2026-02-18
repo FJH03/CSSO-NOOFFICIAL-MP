@@ -24,6 +24,7 @@ public:
 	virtual void Precache();
 	virtual void BounceSound( void );
 	virtual void Detonate();
+	virtual const char *GetParticleSystemName( int pointContents, surfacedata_t *pdata );
 
 // Grenade stuff.
 public:

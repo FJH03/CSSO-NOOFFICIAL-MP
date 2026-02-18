@@ -9,7 +9,6 @@
 #include "viewrender.h"
 #include "c_tracer.h"
 #include "dlight.h"
-#include "clienteffectprecachesystem.h"
 #include "fx_sparks.h"
 #include "iefx.h"
 #include "c_te_effect_dispatch.h"
@@ -23,18 +22,18 @@
 #include "tier0/memdbgon.h"
 
 //Precahce the effects
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectSparks )
-CLIENTEFFECT_MATERIAL( "effects/spark" )
-CLIENTEFFECT_MATERIAL( "effects/energysplash" )
-CLIENTEFFECT_MATERIAL( "effects/energyball" )
-CLIENTEFFECT_MATERIAL( "sprites/rico1" )
-CLIENTEFFECT_MATERIAL( "sprites/rico1_noz" )
-CLIENTEFFECT_MATERIAL( "sprites/blueflare1" )
-CLIENTEFFECT_MATERIAL( "effects/yellowflare" )
-CLIENTEFFECT_MATERIAL( "effects/combinemuzzle1_nocull" )
-CLIENTEFFECT_MATERIAL( "effects/combinemuzzle2_nocull" )
-CLIENTEFFECT_MATERIAL( "effects/yellowflare_noz" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectSparks )
+	PRECACHE( MATERIAL, "effects/spark" )
+	PRECACHE( MATERIAL, "effects/energysplash" )
+	PRECACHE( MATERIAL, "effects/energyball" )
+	PRECACHE( MATERIAL, "sprites/rico1" )
+	PRECACHE( MATERIAL, "sprites/rico1_noz" )
+	PRECACHE( MATERIAL, "sprites/blueflare1" )
+	PRECACHE( MATERIAL, "effects/yellowflare" )
+	PRECACHE( MATERIAL, "effects/combinemuzzle1_nocull" )
+	PRECACHE( MATERIAL, "effects/combinemuzzle2_nocull" )
+	PRECACHE( MATERIAL, "effects/yellowflare_noz" )
+PRECACHE_REGISTER_END()
 
 PMaterialHandle g_Material_Spark = NULL;
 
@@ -644,7 +643,6 @@ void FX_MetalSpark( const Vector &position, const Vector &direction, const Vecto
 	sparkEmitter->GetBinding().SetBBox( offset - Vector( 32, 32, 32 ), offset + Vector( 32, 32, 32 ) );
 
 	int	numSparks = random->RandomInt( 4, 8 ) * ( iScale * 2 );
-	numSparks = (int)( 0.5f + (float)numSparks * g_pParticleSystemMgr->ParticleThrottleScaling() );
 	
 	if ( g_Material_Spark == NULL )
 	{
@@ -1534,4 +1532,4 @@ void ManhackSparkCallback( const CEffectData & data )
 	FX_SparkFan( vecPosition, vecNormal );
 }
 
-DECLARE_CLIENT_EFFECT( "ManhackSparks", ManhackSparkCallback );
+DECLARE_CLIENT_EFFECT( ManhackSparks, ManhackSparkCallback );

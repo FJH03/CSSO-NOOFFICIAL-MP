@@ -61,6 +61,7 @@ public:
 	
 	// Shakes all ropes near vCenter. The higher flMagnitude is, the larger the shake will be.
 	static void ShakeRopes( const Vector &vCenter, float flRadius, float flMagnitude );
+	static void PrecacheShakeRopes();
 
 // CBaseEntity overrides.
 public:

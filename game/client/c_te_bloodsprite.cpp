@@ -17,8 +17,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-extern short		g_sModelIndexBloodDrop;	
-extern short		g_sModelIndexBloodSpray;
+extern int		g_sModelIndexBloodDrop;
+extern int		g_sModelIndexBloodSpray;
 
 //-----------------------------------------------------------------------------
 // Purpose: Blood sprite

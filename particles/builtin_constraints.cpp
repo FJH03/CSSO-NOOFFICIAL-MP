@@ -35,6 +35,11 @@ class C_OP_ConstrainDistance : public CParticleOperatorInstance
 		return PARTICLE_ATTRIBUTE_XYZ_MASK;
 	}
 
+	virtual uint64 GetReadControlPointMask() const
+	{
+		return 1ULL << m_nControlPointNumber;
+	}
+
 
 	bool EnforceConstraint( int nStartBlock,
 							int nEndBlock,
@@ -192,7 +197,7 @@ bool C_OP_ConstrainDistanceToPath::EnforceConstraint( int nStartBlock,
 									 &StartPnt, &MidP, &EndPnt );
 
 	fltx4 CurTime = ReplicateX4( pParticles->m_flCurTime );
-	fltx4 TimeScale= ReplicateX4( 1.0/(max(0.001f,  m_flTravelTime ) ) );
+	fltx4 TimeScale= ReplicateX4( 1.0 / ( fpmax( 0.001,  m_flTravelTime ) ) );
 
 	// calculate radius spline
 	bool bConstantRadius = true;
@@ -659,7 +664,7 @@ class C_OP_WorldTraceConstraint : public CParticleOperatorInstance
 
 	bool m_bKillonContact;
 
-	virtual bool IsFinalConstraint( void ) const
+	virtual bool IsFinalConstaint( void ) const
 	{
 		return ( m_flBounceAmount != 0. ) || ( m_flSlideAmount != 0. );
 	}
@@ -673,7 +678,7 @@ class C_OP_WorldTraceConstraint : public CParticleOperatorInstance
 	int m_nCollisionGroupNumber;
 	bool m_bBrushOnly;
 
-	void InitParams( CParticleSystemDefinition *pDef, CDmxElement *pElement );
+	void InitParams( CParticleSystemDefinition *pDef );
 
 	bool EnforceConstraint( int nStartBlock,
 							int nEndBlock,
@@ -686,7 +691,7 @@ class C_OP_WorldTraceConstraint : public CParticleOperatorInstance
 																				void *pContext, int nNumValidParticlesInLastChunk ) const;
 };
 
-void C_OP_WorldTraceConstraint::InitParams( CParticleSystemDefinition *pDef, CDmxElement *pElement )
+void C_OP_WorldTraceConstraint::InitParams( CParticleSystemDefinition *pDef )
 {
 	m_nCollisionGroupNumber = g_pParticleSystemMgr->Query()->GetCollisionGroupFromName( m_CollisionGroupName );
 }
@@ -732,7 +737,7 @@ static void WorldIntersectTNew( FourVectors const *pStartPnt, FourVectors const 
 						pStartPnt->DistSqrToLineSegment( pCtx->m_TraceStartPnt[i], pCtx->m_TraceEndPnt[i] ),
 						pEndPnt->DistSqrToLineSegment( pCtx->m_TraceStartPnt[i], pCtx->m_TraceEndPnt[i] ) );
 					fltx4 fl4Nearestmask = CmpLeSIMD( fl4TrialDistance, fl4ClosestDist );
-					fl4ClosestDist = MaskedAssign( fl4ClosestDist, fl4TrialDistance, fl4Nearestmask );
+					fl4ClosestDist = MaskedAssign( ( fltx4 ) fl4ClosestDist, fl4TrialDistance, ( fltx4 ) fl4Nearestmask );
 					v4PointOnPlane.x = MaskedAssign( fl4Nearestmask, pCtx->m_PointOnPlane[i].x, v4PointOnPlane.x );
 					v4PointOnPlane.y = MaskedAssign( fl4Nearestmask, pCtx->m_PointOnPlane[i].y, v4PointOnPlane.y );
 					v4PointOnPlane.z = MaskedAssign( fl4Nearestmask, pCtx->m_PointOnPlane[i].z, v4PointOnPlane.z );
@@ -755,7 +760,7 @@ static void WorldIntersectTNew( FourVectors const *pStartPnt, FourVectors const 
 						
 						float ln = delta.Length();
 
-						float traceScale = max( 5.0, 300.0 / ( ln + .01 ) );
+						float traceScale = MAX( 5.0, 300.0 / ( ln + .01 ) );
 
 						Vector end = start + delta * traceScale;
 
@@ -791,7 +796,7 @@ static void WorldIntersectTNew( FourVectors const *pStartPnt, FourVectors const 
 			fltx4 fl4StartDist = v4StartD * v4PlaneNormal;
 			fltx4 fl4EndDist = v4EndD * v4PlaneNormal;
 			fltx4 fl4CrossMask = AndSIMD( CmpGeSIMD( fl4StartDist, Four_Zeros ), CmpLtSIMD( fl4EndDist, Four_Zeros ) );
-			fl4CrossMask = AndSIMD( fl4CrossMask, fl4ParticleValidMask );
+			fl4CrossMask = ( fltx4 ) AndSIMD( fl4CrossMask, fl4ParticleValidMask );
 			if ( IsAnyNegative( fl4CrossMask ) )
 			{
 				// a hit!

@@ -107,6 +107,7 @@ void CKnife::Precache()
 	PrecacheScriptSound( "Weapon_Knife.Slash" );
 	PrecacheScriptSound( "Weapon_Knife.Stab" );
 	PrecacheScriptSound( "Weapon_Knife.Hit" );
+	PrecacheEffect( "KnifeSlash" );
 }
 
 void CKnife::Spawn()
@@ -412,7 +413,7 @@ bool CKnife::SwingOrStab( CSWeaponMode weaponMode )
 
 		data.m_vAngles = pPlayer->GetAbsAngles();
 		data.m_fFlags = 0x1;	//IMPACT_NODECAL;
-		te->DispatchEffect( filter, 0.0, data.m_vOrigin, "KnifeSlash", data );
+		DispatchEffect( filter, 0.0, "KnifeSlash", data );
 	}
 	else
 	{

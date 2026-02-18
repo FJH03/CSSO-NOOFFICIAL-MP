@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //=============================================================================
 
@@ -78,8 +78,8 @@ static CDmxKeyValues2ErrorStack g_KeyValues2ErrorStack;
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
-CDmxKeyValues2ErrorStack::CDmxKeyValues2ErrorStack() : 
-	m_pFilename("NULL"), m_errorIndex(0), m_maxErrorIndex(0), m_nFileLine(1) 
+CDmxKeyValues2ErrorStack::CDmxKeyValues2ErrorStack() :
+m_pFilename("NULL"), m_errorIndex(0), m_maxErrorIndex(0), m_nFileLine(1)
 {
 }
 
@@ -231,7 +231,7 @@ enum
 class CDmxElementDictionary
 {
 public:
-	CDmxElementDictionary() = default;
+	CDmxElementDictionary();
 
 	DmxElementDictHandle_t InsertElement( CDmxElement *pElement );
 	CDmxElement *GetElement( DmxElementDictHandle_t handle );
@@ -286,6 +286,15 @@ private:
 	AttributeList_t m_Attributes;
 	AttributeList_t m_ArrayAttributes;
 };
+
+
+//-----------------------------------------------------------------------------
+// Constructor
+//-----------------------------------------------------------------------------
+CDmxElementDictionary::CDmxElementDictionary()
+{
+}
+
 
 //-----------------------------------------------------------------------------
 // Clears the dictionary
@@ -467,7 +476,7 @@ private:
 		TOKEN_OPEN_BRACKET,		// [
 		TOKEN_CLOSE_BRACKET,	// ]
 		TOKEN_COMMA,			// ,
-//		TOKEN_STRING,			// Any non-quoted string
+		//		TOKEN_STRING,			// Any non-quoted string
 		TOKEN_DELIMITED_STRING,	// Any quoted string
 		TOKEN_INCLUDE,			// #include
 		TOKEN_EOF,				// End of buffer
@@ -650,38 +659,38 @@ bool CDmxSerializerKeyValues2::SerializeAttributes( CUtlBuffer& buf, CDmxSeriali
 
 		switch( nAttrType )
 		{
-		default:
-			if ( nAttrType >= AT_FIRST_ARRAY_TYPE )
-			{
-				SerializeArrayAttribute( buf, pAttribute );
-			}
-			else
-			{
-				if ( pAttribute->SerializesOnMultipleLines() )
+			default:
+				if ( nAttrType >= AT_FIRST_ARRAY_TYPE )
 				{
-					buf.PutChar( '\n' );
+					SerializeArrayAttribute( buf, pAttribute );
 				}
+				else
+				{
+					if ( pAttribute->SerializesOnMultipleLines() )
+					{
+						buf.PutChar( '\n' );
+					}
 
-				buf.PutChar( '\"' );
-				buf.PushTab();
+					buf.PutChar( '\"' );
+					buf.PushTab();
+					pAttribute->Serialize( buf );
+					buf.PopTab();
+					buf.PutChar( '\"' );
+				}
+				break;
+
+			case AT_STRING:
+				// Don't explicitly add string delimiters; serialization does that.
 				pAttribute->Serialize( buf );
-				buf.PopTab();
-				buf.PutChar( '\"' );
-			}
-			break;
+				break;
 
-		case AT_STRING:
-			// Don't explicitly add string delimiters; serialization does that.
-			pAttribute->Serialize( buf );
-			break;
+			case AT_ELEMENT:
+				SerializeElementAttribute( buf, dict, pAttribute );
+				break;
 
-		case AT_ELEMENT:
-			SerializeElementAttribute( buf, dict, pAttribute );
-			break;
-
-		case AT_ELEMENT_ARRAY:
-			SerializeElementArrayAttribute( buf, dict, pAttribute );
-			break;
+			case AT_ELEMENT_ARRAY:
+				SerializeElementArrayAttribute( buf, dict, pAttribute );
+				break;
 		}
 
 		buf.PutChar( '\n' );
@@ -750,7 +759,7 @@ void CDmxSerializerKeyValues2::EatWhitespacesAndComments( CUtlBuffer &buf )
 	// eating white spaces and remarks loop
 	int nMaxPut = buf.TellMaxPut() - buf.TellGet();
 	int nOffset = 0;
-	while ( nOffset < nMaxPut )	
+	while ( nOffset < nMaxPut )
 	{
 		// Eat whitespaces, keep track of line count
 		const char *pPeek = NULL;
@@ -800,8 +809,8 @@ CDmxSerializerKeyValues2::TokenType_t CDmxSerializerKeyValues2::ReadToken( CUtlB
 	EatWhitespacesAndComments( buf );
 
 	// if message text buffers go over this size
- 	// change this value to make sure they will fit
- 	// affects loading of last active chat window
+	// change this value to make sure they will fit
+	// affects loading of last active chat window
 	if ( !buf.IsValid() || ( buf.TellGet() == buf.TellMaxPut() ) )
 		return TOKEN_EOF;
 
@@ -811,48 +820,48 @@ CDmxSerializerKeyValues2::TokenType_t CDmxSerializerKeyValues2::ReadToken( CUtlB
 	char c = *((const char *)buf.PeekGet());
 	switch( c )
 	{
-	case '{':
-		nLength = 1;
-		t = TOKEN_OPEN_BRACE;
-		break;
+		case '{':
+			nLength = 1;
+			t = TOKEN_OPEN_BRACE;
+			break;
 
-	case '}':
-		nLength = 1;
-		t = TOKEN_CLOSE_BRACE;
-		break;
+		case '}':
+			nLength = 1;
+			t = TOKEN_CLOSE_BRACE;
+			break;
 
-	case '[':
-		nLength = 1;
-		t = TOKEN_OPEN_BRACKET;
-		break;
+		case '[':
+			nLength = 1;
+			t = TOKEN_OPEN_BRACKET;
+			break;
 
-	case ']':
-		nLength = 1;
-		t = TOKEN_CLOSE_BRACKET;
-		break;
+		case ']':
+			nLength = 1;
+			t = TOKEN_CLOSE_BRACKET;
+			break;
 
-	case ',':
-		nLength = 1;
-		t = TOKEN_COMMA;
-		break;
+		case ',':
+			nLength = 1;
+			t = TOKEN_COMMA;
+			break;
 
-	case '\"':
-		// NOTE: The -1 is because peek includes room for the /0
-		nLength = buf.PeekDelimitedStringLength( GetCStringCharConversion(), false ) - 1;
-		if ( (nLength <= 1) || ( *(const char *)buf.PeekGet( nLength - 1 ) != '\"' ))
-		{
-			g_KeyValues2ErrorStack.ReportError( "Unexpected EOF in quoted string" );
+		case '\"':
+			// NOTE: The -1 is because peek includes room for the /0
+			nLength = buf.PeekDelimitedStringLength( GetCStringCharConversion(), false ) - 1;
+			if ( (nLength <= 1) || ( *(const char *)buf.PeekGet( nLength - 1 ) != '\"' ))
+			{
+				g_KeyValues2ErrorStack.ReportError( "Unexpected EOF in quoted string" );
+				t = TOKEN_INVALID;
+			}
+			else
+			{
+				t = TOKEN_DELIMITED_STRING;
+			}
+			break;
+
+		default:
 			t = TOKEN_INVALID;
-		}
-		else
-		{
-			t = TOKEN_DELIMITED_STRING;
-		}
-		break;
-
-	default:
-		t = TOKEN_INVALID;
-		break;
+			break;
 	}
 
 	// Point the token buffer to the token + update the original buffer get index
@@ -895,7 +904,7 @@ bool CDmxSerializerKeyValues2::UnserializeElementAttribute( CUtlBuffer &buf, Dmx
 		g_KeyValues2ErrorStack.ReportError( "Attribute \"%s\" was defined more than once.\n", pAttributeName );
 		return false;
 	}
-	
+
 	CDmxAttribute *pAttribute;
 	{
 		CDmxElementModifyScope modify( pElement );
@@ -1089,7 +1098,7 @@ bool CDmxSerializerKeyValues2::UnserializeArrayAttribute( CUtlBuffer &buf, DmxEl
 	{
 		CDmxElementModifyScope modify( pElement );
 		pAttribute = pElement->AddAttribute( pAttributeName );
-		}
+	}
 
 	// Arrays first must have a '[' specified
 	TokenType_t token;
@@ -1154,8 +1163,8 @@ bool CDmxSerializerKeyValues2::UnserializeArrayAttribute( CUtlBuffer &buf, DmxEl
 //-----------------------------------------------------------------------------
 // Reads an attribute for an element
 //-----------------------------------------------------------------------------
-bool CDmxSerializerKeyValues2::UnserializeAttribute( CUtlBuffer &buf, 
-	DmxElementDictHandle_t hElement, const char *pAttributeName, DmAttributeType_t nAttrType )
+bool CDmxSerializerKeyValues2::UnserializeAttribute( CUtlBuffer &buf,
+													 DmxElementDictHandle_t hElement, const char *pAttributeName, DmAttributeType_t nAttrType )
 {
 	// Read the attribute value
 	CUtlBuffer tokenBuf;
@@ -1200,7 +1209,7 @@ bool CDmxSerializerKeyValues2::UnserializeAttribute( CUtlBuffer &buf,
 
 	switch( nAttrType )
 	{
-	case AT_ELEMENT:
+		case AT_ELEMENT:
 		{
 			// Get the attribute value out
 			CUtlCharConversion *pConv = GetCStringCharConversion();
@@ -1223,9 +1232,9 @@ bool CDmxSerializerKeyValues2::UnserializeAttribute( CUtlBuffer &buf,
 		}
 		return true;
 
-	default:
-		if ( UnserializeAttributeValueFromToken( pAttribute, nAttrType, tokenBuf ) )
-			return true;
+		default:
+			if ( UnserializeAttributeValueFromToken( pAttribute, nAttrType, tokenBuf ) )
+				return true;
 
 		g_KeyValues2ErrorStack.ReportError("Error reading attribute \"%s\"", pAttributeName );
 		return false;
@@ -1312,24 +1321,24 @@ bool CDmxSerializerKeyValues2::UnserializeElement( CUtlBuffer &buf, const char *
 		bool bOk = true;
 		switch( nAttrType )
 		{
-		case AT_UNKNOWN:
-			bOk = UnserializeElementAttribute( buf, hElement, pAttributeName, pAttributeType );
-			break;
+			case AT_UNKNOWN:
+				bOk = UnserializeElementAttribute( buf, hElement, pAttributeName, pAttributeType );
+				break;
 
-		case AT_ELEMENT_ARRAY:
-			bOk = UnserializeElementArrayAttribute( buf, hElement, pAttributeName );
-			break;
+			case AT_ELEMENT_ARRAY:
+				bOk = UnserializeElementArrayAttribute( buf, hElement, pAttributeName );
+				break;
 
-		default:
-			if ( nAttrType >= AT_FIRST_ARRAY_TYPE )
-			{
-				bOk = UnserializeArrayAttribute( buf, hElement, pAttributeName, nAttrType );
-			}
-			else
-			{
-				bOk = UnserializeAttribute( buf, hElement, pAttributeName, nAttrType );
-			}
-			break;
+			default:
+				if ( nAttrType >= AT_FIRST_ARRAY_TYPE )
+				{
+					bOk = UnserializeArrayAttribute( buf, hElement, pAttributeName, nAttrType );
+				}
+				else
+				{
+					bOk = UnserializeAttribute( buf, hElement, pAttributeName, nAttrType );
+				}
+				break;
 		}
 
 		if ( !bOk )
@@ -1340,7 +1349,7 @@ bool CDmxSerializerKeyValues2::UnserializeElement( CUtlBuffer &buf, const char *
 	return true;
 }
 
-	
+
 //-----------------------------------------------------------------------------
 // Unserializes a single element
 //-----------------------------------------------------------------------------
@@ -1355,7 +1364,7 @@ bool CDmxSerializerKeyValues2::UnserializeElement( CUtlBuffer &buf, DmxElementDi
 	TokenType_t token = ReadToken( buf, tokenBuf );
 	if ( token == TOKEN_INVALID )
 		return false;
-	
+
 	if ( token == TOKEN_EOF )
 		return true;
 
@@ -1374,7 +1383,7 @@ bool CDmxSerializerKeyValues2::UnserializeElement( CUtlBuffer &buf, DmxElementDi
 	return UnserializeElement( buf, pTypeName, pHandle );
 }
 
-			   
+
 //-----------------------------------------------------------------------------
 // Main entry point for the unserialization
 //-----------------------------------------------------------------------------

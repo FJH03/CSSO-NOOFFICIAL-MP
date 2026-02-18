@@ -19,16 +19,15 @@
 #include "IEffects.h"
 #include "c_entitydissolve.h"
 #include "movevars_shared.h"
-#include "clienteffectprecachesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectBuild )
-CLIENTEFFECT_MATERIAL( "effects/tesla_glow_noz" )
-CLIENTEFFECT_MATERIAL( "effects/spark" )
-CLIENTEFFECT_MATERIAL( "effects/combinemuzzle2" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectBuild )
+	PRECACHE( MATERIAL,"effects/tesla_glow_noz" )
+	PRECACHE( MATERIAL,"effects/spark" )
+	PRECACHE( MATERIAL,"effects/combinemuzzle2" )
+PRECACHE_REGISTER_END()
 
 //-----------------------------------------------------------------------------
 // Networking

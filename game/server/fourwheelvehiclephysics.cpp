@@ -341,6 +341,13 @@ void CFourWheelVehiclePhysics::CalcWheelData( vehicleparams_t &vehicle )
 	}
 }
 
+//-----------------------------------------------------------------------------
+// Precaches the effect
+//-----------------------------------------------------------------------------
+void CFourWheelVehiclePhysics::Precache()
+{
+	PrecacheEffect( "WheelDust" );
+}
 
 //-----------------------------------------------------------------------------
 // Spawns the vehicle

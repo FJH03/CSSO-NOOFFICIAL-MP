@@ -9,6 +9,7 @@
 #include "basegrenade_shared.h"
 #include "shake.h"
 #include "engine/IEngineSound.h"
+#include "particle_parse.h"
 
 #if !defined( CLIENT_DLL )
 
@@ -21,9 +22,9 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-extern short	g_sModelIndexFireball;		// (in combatweapon.cpp) holds the index for the fireball 
-extern short	g_sModelIndexWExplosion;	// (in combatweapon.cpp) holds the index for the underwater explosion
-extern short	g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for the smoke cloud
+extern int	g_sModelIndexFireball;		// (in combatweapon.cpp) holds the index for the fireball 
+extern int	g_sModelIndexWExplosion;	// (in combatweapon.cpp) holds the index for the underwater explosion
+extern int	g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for the smoke cloud
 extern ConVar    sk_plr_dmg_grenade;
 
 #if !defined( CLIENT_DLL )
@@ -110,6 +111,8 @@ END_PREDICTION_DATA()
 // Grenades flagged with this will be triggered when the owner calls detonateSatchelCharges
 #define SF_DETONATE		0x0001
 
+#define	MAX_WATER_SURFACE_DISTANCE	512
+
 // UNDONE: temporary scorching for PreAlpha - find a less sleazy permenant solution.
 void CBaseGrenade::Explode( trace_t *pTrace, int bitsDamageType )
 {
@@ -135,34 +138,74 @@ void CBaseGrenade::Explode( trace_t *pTrace, int bitsDamageType )
 	CDisablePredictionFiltering disabler;
 #endif
 
-	if ( pTrace->fraction != 1.0 )
+	// Try using the new particle system instead of temp ents
+	surfacedata_t *pSurfaceData = physprops->GetSurfaceData( pTrace->surface.surfaceProps );
+	const char *pEffectName = GetParticleSystemName( contents, pSurfaceData );
+	if ( pEffectName != NULL )
 	{
-		Vector vecNormal = pTrace->plane.normal;
-		surfacedata_t *pdata = physprops->GetSurfaceData( pTrace->surface.surfaceProps );	
-		CPASFilter filter( vecAbsOrigin );
+		Vector vecParticleOrigin = vecAbsOrigin;
 
-		te->Explosion( filter, -1.0, // don't apply cl_interp delay
-			&vecAbsOrigin,
-			!( contents & MASK_WATER ) ? g_sModelIndexFireball : g_sModelIndexWExplosion,
-			m_DmgRadius * .03, 
-			25,
-			TE_EXPLFLAG_NONE,
-			m_DmgRadius,
-			m_flDamage,
-			&vecNormal,
-			(char) pdata->game.material );
+		if ( contents & MASK_WATER )
+		{
+			// Find our water surface by tracing up till we're out of the water
+			trace_t tr;
+			Vector vecTrace( 0, 0, MAX_WATER_SURFACE_DISTANCE );
+			UTIL_TraceLine( vecParticleOrigin, vecParticleOrigin + vecTrace, MASK_WATER, NULL, COLLISION_GROUP_NONE, &tr );
+
+			// If we didn't start in water, we're above it
+			if ( tr.startsolid == false )
+			{
+				// Look downward to find the surface
+				vecTrace.Init( 0, 0, -MAX_WATER_SURFACE_DISTANCE );
+				UTIL_TraceLine( vecParticleOrigin, vecParticleOrigin + vecTrace, MASK_WATER, NULL, COLLISION_GROUP_NONE, &tr );
+
+				// If we hit it, setup the explosion
+				if ( tr.fraction < 1.0f )
+				{
+					vecParticleOrigin = tr.endpos;
+				}
+			}
+			else if ( tr.fractionleftsolid )
+			{
+				// Otherwise we came out of the water at this point
+				vecParticleOrigin = vecParticleOrigin + (vecTrace * tr.fractionleftsolid);
+			}
+		}
+
+		QAngle	vecAngles;
+		DispatchParticleEffect( pEffectName, vecParticleOrigin, vecAngles );
 	}
 	else
 	{
-		CPASFilter filter( vecAbsOrigin );
-		te->Explosion( filter, -1.0, // don't apply cl_interp delay
-			&vecAbsOrigin, 
-			!( contents & MASK_WATER ) ? g_sModelIndexFireball : g_sModelIndexWExplosion,
-			m_DmgRadius * .03, 
-			25,
-			TE_EXPLFLAG_NONE,
-			m_DmgRadius,
-			m_flDamage );
+		if ( pTrace->fraction != 1.0 )
+		{
+			Vector vecNormal = pTrace->plane.normal;
+			surfacedata_t *pdata = physprops->GetSurfaceData( pTrace->surface.surfaceProps );	
+			CPASFilter filter( vecAbsOrigin );
+
+			te->Explosion( filter, -1.0, // don't apply cl_interp delay
+				&vecAbsOrigin,
+				!( contents & MASK_WATER ) ? g_sModelIndexFireball : g_sModelIndexWExplosion,
+				m_DmgRadius * .03, 
+				25,
+				TE_EXPLFLAG_NONE,
+				m_DmgRadius,
+				m_flDamage,
+				&vecNormal,
+				(char) pdata->game.material );
+		}
+		else
+		{
+			CPASFilter filter( vecAbsOrigin );
+			te->Explosion( filter, -1.0, // don't apply cl_interp delay
+				&vecAbsOrigin, 
+				!( contents & MASK_WATER ) ? g_sModelIndexFireball : g_sModelIndexWExplosion,
+				m_DmgRadius * .03, 
+				25,
+				TE_EXPLFLAG_NONE,
+				m_DmgRadius,
+				m_flDamage );
+		}
 	}
 
 #if !defined( CLIENT_DLL )

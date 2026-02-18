@@ -8,13 +8,12 @@
 #include "particles_simple.h"
 #include "particles_localspace.h"
 #include "c_te_effect_dispatch.h"
-#include "clienteffectprecachesystem.h"
 
 // Precache our effects
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffect_CS_MuzzleFlash )
-CLIENTEFFECT_MATERIAL( "effects/muzzleflashX" )	//.vmt
-CLIENTEFFECT_MATERIAL( "sprites/muzzleflash4" )	//.vmt
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffect_CS_MuzzleFlash )
+	PRECACHE( MATERIAL, "effects/muzzleflashX" )	//.vmt
+	PRECACHE( MATERIAL, "sprites/muzzleflash4" )	//.vmt
+PRECACHE_REGISTER_END()
 
 void TE_DynamicLight( IRecipientFilter& filter, float delay,
 	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC, bool bNoStaticPropIllum = false );
@@ -88,7 +87,7 @@ void CS_MuzzleFlashCallback( const CEffectData &data )
 	TE_DynamicLight( filter, 0.0, &(pEmitter->GetSortOrigin()), 255, 192, 64, 5, 70, 0.05, 768 );
 }
 
-DECLARE_CLIENT_EFFECT( "CS_MuzzleFlash", CS_MuzzleFlashCallback );
+DECLARE_CLIENT_EFFECT( CS_MuzzleFlash, CS_MuzzleFlashCallback );
 
 
 // 'X' shaped muzzleflash used by certain weapons
@@ -136,4 +135,4 @@ void CS_MuzzleFlashXCallback( const CEffectData &data )
 	TE_DynamicLight( filter, 0.0, &(pEmitter->GetSortOrigin()), 255, 192, 64, 5, 70, 0.05, 768 );
 }
 
-DECLARE_CLIENT_EFFECT( "CS_MuzzleFlash_X", CS_MuzzleFlashXCallback );
+DECLARE_CLIENT_EFFECT( CS_MuzzleFlash_X, CS_MuzzleFlashXCallback );

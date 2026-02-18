@@ -53,10 +53,14 @@ void CMolotovGrenade::Precache( void )
 	BaseClass::Precache();
 	
 	PrecacheScriptSound( "Molotov.IdleLoop" );
-	PrecacheParticleSystem( "weapon_molotov_held" );
 }
 
 #else // GAME_DLL
+
+static int s_nMolotovFire;
+PRECACHE_REGISTER_BEGIN( GLOBAL, CMolotovGrenade )
+	PRECACHE_INDEX( PARTICLE_SYSTEM, "weapon_molotov_held", s_nMolotovFire );
+PRECACHE_REGISTER_END()
 
 void CMolotovGrenade::UpdateParticles( void )
 {
@@ -105,7 +109,7 @@ void CMolotovGrenade::UpdateParticles( void )
 					if ( iAttachment >= 0 )
 					{
 						// FIXME: Precache 'Wick' attachment index
-						m_molotovParticleEffect = pWeaponAnimating->ParticleProp()->Create( "weapon_molotov_held", PATTACH_POINT_FOLLOW, iAttachment );
+						m_molotovParticleEffect = pWeaponAnimating->ParticleProp()->CreatePrecached( s_nMolotovFire, PATTACH_POINT_FOLLOW, iAttachment );
 						EmitSound( "Molotov.IdleLoop" );
 						SetLoopingSoundPlaying( true );
 

@@ -39,15 +39,14 @@ extern int	gEvilImpulse101;		// In Player.h
 // -----------------------------------------
 //	Sprite Index info
 // -----------------------------------------
-short		g_sModelIndexLaser;			// holds the index for the laser beam
-const char	*g_pModelNameLaser = "sprites/laserbeam.vmt";
-short		g_sModelIndexLaserDot;		// holds the index for the laser beam dot
-short		g_sModelIndexFireball;		// holds the index for the fireball
-short		g_sModelIndexSmoke;			// holds the index for the smoke cloud
-short		g_sModelIndexWExplosion;	// holds the index for the underwater explosion
-short		g_sModelIndexBubbles;		// holds the index for the bubbles model
-short		g_sModelIndexBloodDrop;		// holds the sprite index for the initial blood
-short		g_sModelIndexBloodSpray;	// holds the sprite index for splattered blood
+int		g_sModelIndexLaser;			// holds the index for the laser beam
+int		g_sModelIndexLaserDot;		// holds the index for the laser beam dot
+int		g_sModelIndexFireball;		// holds the index for the fireball
+int		g_sModelIndexSmoke;			// holds the index for the smoke cloud
+int		g_sModelIndexWExplosion;	// holds the index for the underwater explosion
+int		g_sModelIndexBubbles;		// holds the index for the bubbles model
+int		g_sModelIndexBloodDrop;		// holds the sprite index for the initial blood
+int		g_sModelIndexBloodSpray;	// holds the sprite index for splattered blood
 
 
 ConVar weapon_showproficiency( "weapon_showproficiency", "0" );
@@ -56,37 +55,31 @@ extern ConVar ai_debug_shoot_positions;
 //-----------------------------------------------------------------------------
 // Purpose: Precache global weapon sounds
 //-----------------------------------------------------------------------------
+PRECACHE_REGISTER_BEGIN( GLOBAL, WeaponResources )
+
+	#if !defined( TF_DLL )
+	PRECACHE_INDEX( MODEL, "sprites/zerogxplode.vmt", g_sModelIndexFireball )
+	PRECACHE_INDEX( MODEL, "sprites/steam1.vmt", g_sModelIndexSmoke )
+	PRECACHE_INDEX( MODEL, "sprites/bubble.vmt", g_sModelIndexBubbles )
+	PRECACHE_INDEX( MODEL, "sprites/laserbeam.vmt", g_sModelIndexLaser )
+	PRECACHE( PARTICLE_SYSTEM, "blood_impact_red_01" )
+	PRECACHE( PARTICLE_SYSTEM, "blood_impact_green_01" )
+	PRECACHE( PARTICLE_SYSTEM, "blood_impact_yellow_01" )
+	PRECACHE( MODEL, "effects/bubble.vmt" )
+	PRECACHE( MODEL, "models/weapons/w_bullet.mdl" )
+#endif // !TF_DLL
+
+	PRECACHE( GAMESOUND, "BaseCombatWeapon.WeaponDrop" )
+	PRECACHE( GAMESOUND, "BaseCombatWeapon.WeaponMaterialize" )
+
+PRECACHE_REGISTER_END()
+
+//-----------------------------------------------------------------------------
+// Purpose: Precache global weapon sounds
+//-----------------------------------------------------------------------------
 void W_Precache(void)
 {
 	PrecacheFileWeaponInfoDatabase( filesystem, g_pGameRules->GetEncryptionKey() );
-
-
-
-#ifdef HL1_DLL
-	g_sModelIndexWExplosion = CBaseEntity::PrecacheModel ("sprites/WXplo1.vmt");// underwater fireball
-	g_sModelIndexBloodSpray = CBaseEntity::PrecacheModel ("sprites/bloodspray.vmt"); // initial blood
-	g_sModelIndexBloodDrop = CBaseEntity::PrecacheModel ("sprites/blood.vmt"); // splattered blood 
-	g_sModelIndexLaserDot = CBaseEntity::PrecacheModel("sprites/laserdot.vmt");
-#endif // HL1_DLL
-
-#ifndef TF_DLL
-	g_sModelIndexFireball = CBaseEntity::PrecacheModel ("sprites/zerogxplode.vmt");// fireball
-
-	g_sModelIndexSmoke = CBaseEntity::PrecacheModel ("sprites/steam1.vmt");// smoke
-	g_sModelIndexBubbles = CBaseEntity::PrecacheModel ("sprites/bubble.vmt");//bubbles
-	g_sModelIndexLaser = CBaseEntity::PrecacheModel( (char *)g_pModelNameLaser );
-
-	PrecacheParticleSystem( "blood_impact_red_01" );
-	PrecacheParticleSystem( "blood_impact_green_01" );
-	PrecacheParticleSystem( "blood_impact_yellow_01" );
-
-	CBaseEntity::PrecacheModel ("effects/bubble.vmt");//bubble trails
-
-	CBaseEntity::PrecacheModel("models/weapons/w_bullet.mdl");
-#endif
-
-	CBaseEntity::PrecacheScriptSound( "BaseCombatWeapon.WeaponDrop" );
-	CBaseEntity::PrecacheScriptSound( "BaseCombatWeapon.WeaponMaterialize" );
 }
 
 //-----------------------------------------------------------------------------

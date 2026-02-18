@@ -683,9 +683,6 @@ void CWorld::Precache( void )
 	g_pGameRules->InitDefaultAIRelationships();
 	CBaseCombatCharacter::InitInteractionSystem();
 
-	// Call all registered precachers.
-	CPrecacheRegister::Precache();	
-
 	if ( m_iszChapterTitle != NULL_STRING )
 	{
 		DevMsg( 2, "Chapter title: %s\n", STRING(m_iszChapterTitle) );

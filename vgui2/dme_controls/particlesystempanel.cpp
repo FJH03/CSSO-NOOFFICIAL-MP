@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright � 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -172,7 +172,7 @@ void CParticleSystemPanel::OnTick()
 
 	if ( !bIsInvalid )
 	{
-		m_pParticleSystem->Simulate( flDt, false );
+		m_pParticleSystem->Simulate( flDt );
 	}
 
 	if ( m_pParticleSystem->IsFinished() || bIsInvalid )
@@ -328,7 +328,7 @@ void CParticleSystemPanel::OnPaint3D()
 	{
 		m_pParticleSystem->VisualizeOperator( &m_RenderHelperId );
 	}
-	m_pParticleSystem->Render( pRenderContext );
+	m_pParticleSystem->Render( 0, pRenderContext );
 	m_pParticleSystem->VisualizeOperator( );
 	RenderAxes( vec3_origin, AXIS_SIZE, true );
 

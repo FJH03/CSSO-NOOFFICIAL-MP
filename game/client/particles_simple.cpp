@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright � 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -60,7 +60,6 @@ CParticleEffect::~CParticleEffect( void )
 	// Investigate dangling pointer
 	m_Flags = 0;
 
-#if !defined( _XBOX )
 	if ( ( m_nToolParticleEffectId != TOOLPARTICLESYSTEMID_INVALID ) && clienttools->IsInRecordingMode() )
 	{
 		KeyValues *msg = new KeyValues( "OldParticleSystem_Destroy" );
@@ -69,7 +68,6 @@ CParticleEffect::~CParticleEffect( void )
 		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
 		m_nToolParticleEffectId = TOOLPARTICLESYSTEMID_INVALID; 
 	}
-#endif
 }
 
 

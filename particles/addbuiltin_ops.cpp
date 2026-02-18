@@ -7,6 +7,9 @@
 #include "tier0/platform.h"
 #include "particles/particles.h"
 
+// NOTE: This has to be the last file included!
+#include "tier0/memdbgon.h"
+
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------

@@ -90,7 +90,7 @@ public:
 	void ValidateActiveGrenades( void );						///< destroy any invalid active grenades
 	void DestroyAllGrenades( void );
 	bool IsLineBlockedBySmoke( const Vector &from, const Vector &to, float grenadeBloat = 1.0f );	///< return true if line intersects smoke volume, with grenade radius increased by the grenadeBloat factor
-	bool IsInsideSmokeCloud( const Vector *pos );				///< return true if position is inside a smoke cloud
+	bool IsInsideSmokeCloud( const Vector *pos, float radius );	///< return true if sphere at position overlaps a smoke cloud
 
 	//
 	// Invoke functor on all active grenades.

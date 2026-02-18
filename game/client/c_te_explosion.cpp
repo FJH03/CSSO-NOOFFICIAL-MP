@@ -10,7 +10,6 @@
 #include "ragdollexplosionenumerator.h"
 #include "glow_overlay.h"
 #include "fx_explosion.h"
-#include "clienteffectprecachesystem.h"
 #include "engine/ivdebugoverlay.h"
 #include "tier1/KeyValues.h"
 #include "toolframework_client.h"

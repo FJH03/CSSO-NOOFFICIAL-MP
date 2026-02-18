@@ -35,16 +35,15 @@
 #include "c_cs_player.h"
 #include "cs_gamerules.h"
 #include "shake.h"
-#include "clienteffectprecachesystem.h"
 #include <vgui/ISurface.h>
 #include "basecsgrenade_projectile.h"
 
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheCSViewScene )
-CLIENTEFFECT_MATERIAL( "effects/overlaysmoke" )
-CLIENTEFFECT_MATERIAL( "effects/flashbang" )
-CLIENTEFFECT_MATERIAL( "effects/flashbang_white" )
-CLIENTEFFECT_MATERIAL( "effects/nightvision" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheCSViewScene )
+PRECACHE( MATERIAL, "effects/overlaysmoke" )
+PRECACHE( MATERIAL, "effects/flashbang" )
+PRECACHE( MATERIAL, "effects/flashbang_white" )
+PRECACHE( MATERIAL, "effects/nightvision" )
+PRECACHE_REGISTER_END()
 
 static CCSViewRender g_ViewRender;
 

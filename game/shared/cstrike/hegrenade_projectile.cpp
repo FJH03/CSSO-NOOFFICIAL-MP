@@ -11,6 +11,8 @@
 #include "KeyValues.h"
 #include "weapon_csbase.h"
 #include "cs_gamerules.h"
+#include "decals.h"
+#include "bot_manager.h"
 
 #define GRENADE_MODEL "models/Weapons/w_eq_fraggrenade_dropped.mdl"
 
@@ -97,4 +99,36 @@ void CHEGrenadeProjectile::Detonate()
 			gameeventmanager->FireEvent( event );
 		}
 	}
+}
+
+const char *CHEGrenadeProjectile::GetParticleSystemName( int pointContents, surfacedata_t *pdata )
+{
+	if ( pointContents & MASK_WATER )
+		return "explosion_basic_water";
+	
+	// [msmith] If the grenade goes off near smoke, then we need to make sure that it doesn't
+	// spawn any of it's own smoke (the explosion_hegrenade_brief effect has no smoke).
+	// This fixes an exploit that allowed players to "see through" the smokegrenade smoke.
+	const Vector *detonatePosition = &GetAbsOrigin();
+	if ( TheBots->IsInsideSmokeCloud( detonatePosition, HEGrenadeRadius ) )
+		return "explosion_hegrenade_brief";
+
+	if ( pdata )
+	{
+
+		switch( pdata->game.material )
+		{
+		case CHAR_TEX_DIRT:
+		case CHAR_TEX_SAND:
+		case CHAR_TEX_GRASS:
+		case CHAR_TEX_MUD:
+		case CHAR_TEX_FOLIAGE:
+			return "explosion_hegrenade_dirt";
+
+		case CHAR_TEX_SNOW:
+			return "explosion_hegrenade_snow";
+		}
+	}
+
+	return "explosion_basic";
 }

@@ -28,6 +28,7 @@ $Project "datacache"
 	{
 		$File	"datacache.cpp"
 		$File	"mdlcache.cpp"
+		$File	"precachesystem.cpp"
 		$File	"$SRCDIR\public\studio.cpp"
 		$File	"$SRCDIR\public\studio_virtualmodel.cpp"
 		$File	"..\common\studiobyteswap.cpp"
@@ -45,6 +46,7 @@ $Project "datacache"
 	{
 		$File	"$SRCDIR\public\datacache\idatacache.h"
 		$File	"$SRCDIR\public\datacache\imdlcache.h"
+		$File	"$SRCDIR\public\datacache\iprecachesystem.h"
 	}
 
 	$folder	"Link Libraries"

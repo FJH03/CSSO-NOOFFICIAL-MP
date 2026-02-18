@@ -22,6 +22,7 @@
 #include "client.h"
 #include "cs_shareddefs.h"
 #include "effects/inferno.h"
+#include "particle_parse.h"
 #include "mapinfo.h"
 #include "shake.h"
 #include "team.h"
@@ -962,6 +963,8 @@ void CCSPlayer::Precache()
 
 	PrecacheModel ( "sprites/glow01.vmt" );
 	PrecacheModel ( "models/items/cs_gift.mdl" );
+
+	PrecacheEffect( "csblood" );
 
 	PrecacheParticleSystem( "impact_helmet_headshot" );
 	PrecacheParticleSystem( "ricochet_sparks" );

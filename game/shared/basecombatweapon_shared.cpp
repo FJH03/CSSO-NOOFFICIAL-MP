@@ -803,9 +803,10 @@ void CBaseCombatWeapon::Precache( void )
 	const char *pszTracerName = GetTracerType();
 	if ( pszTracerName && pszTracerName[0] )
 	{
-		PrecacheParticleSystem( pszTracerName );
+		PrecacheEffect( pszTracerName );
 	}
 
+	PrecacheEffect( "ParticleTracer" );
 	PrecacheParticleSystem( "weapon_tracers" );
 }
 

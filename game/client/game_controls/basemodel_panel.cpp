@@ -873,8 +873,8 @@ void CBaseModelPanel::PostPaint3D( IMatRenderContext *pRenderContext )
 	{
 		if ( m_particleList[i]->m_bIsUpdateToDate )
 		{
-			m_particleList[i]->m_pParticleSystem->Simulate( gpGlobals->frametime, false );
-			m_particleList[i]->m_pParticleSystem->Render( pRenderContext );
+			m_particleList[i]->m_pParticleSystem->Simulate( gpGlobals->frametime );
+			m_particleList[i]->m_pParticleSystem->Render( 0, pRenderContext );
 			m_particleList[i]->m_bIsUpdateToDate = false;
 		}
 	}

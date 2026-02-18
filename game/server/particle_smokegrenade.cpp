@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -13,10 +13,12 @@
 #include "tier0/memdbgon.h"
 
 IMPLEMENT_SERVERCLASS_ST(ParticleSmokeGrenade, DT_ParticleSmokeGrenade)
-	SendPropTime(SENDINFO(m_flSpawnTime) ),
-	SendPropFloat(SENDINFO(m_FadeStartTime), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_FadeEndTime), 0, SPROP_NOSCALE),
-	SendPropInt(SENDINFO(m_CurrentStage), 1, SPROP_UNSIGNED),
+	SendPropTime( SENDINFO(m_flSpawnTime) ),
+	SendPropFloat( SENDINFO(m_FadeStartTime), 0, SPROP_NOSCALE),
+	SendPropFloat( SENDINFO(m_FadeEndTime), 0, SPROP_NOSCALE),
+	SendPropVector( SENDINFO(m_MinColor), 0, SPROP_NOSCALE),
+	SendPropVector( SENDINFO(m_MaxColor), 0, SPROP_NOSCALE),
+	SendPropInt( SENDINFO(m_CurrentStage), 1, SPROP_UNSIGNED),
 END_SEND_TABLE()
 
 LINK_ENTITY_TO_CLASS( env_particlesmokegrenade, ParticleSmokeGrenade );
@@ -26,6 +28,8 @@ BEGIN_DATADESC( ParticleSmokeGrenade )
 	DEFINE_FIELD( m_CurrentStage, FIELD_CHARACTER ),
 	DEFINE_FIELD( m_FadeStartTime, FIELD_TIME ),
 	DEFINE_FIELD( m_FadeEndTime, FIELD_TIME ),
+	DEFINE_FIELD( m_MinColor, FIELD_VECTOR ),
+	DEFINE_FIELD( m_MaxColor, FIELD_VECTOR ),
 	DEFINE_FIELD( m_flSpawnTime, FIELD_TIME ),
 
 END_DATADESC()
@@ -36,10 +40,16 @@ ParticleSmokeGrenade::ParticleSmokeGrenade()
 	m_CurrentStage = 0;
 	m_FadeStartTime = 17;
 	m_FadeEndTime = 22;
+	
+	m_MinColor = Vector(MIN_SMOKE_TINT, MIN_SMOKE_TINT, MIN_SMOKE_TINT);
+	m_MaxColor = Vector(MAX_SMOKE_TINT, MAX_SMOKE_TINT, MAX_SMOKE_TINT);
 
 	m_flSpawnTime = gpGlobals->curtime;
 }
 
+ParticleSmokeGrenade::~ParticleSmokeGrenade()
+{
+}
 
 // Smoke grenade particles should always transmitted to clients.  If not, a client who
 // enters the PVS late will see the smoke start billowing from then, allowing better vision.
@@ -51,6 +61,23 @@ int ParticleSmokeGrenade::UpdateTransmitState( void )
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
 
+void ParticleSmokeGrenade::Spawn()
+{
+	BaseClass::Spawn();
+
+	SetNextThink( gpGlobals->curtime );
+	m_creatorPlayer = NULL;
+}
+
+void ParticleSmokeGrenade::SetCreator(CBasePlayer *creator)
+{
+	m_creatorPlayer = creator;
+}
+
+CBasePlayer* ParticleSmokeGrenade::GetCreator()
+{
+	return (CBasePlayer*)m_creatorPlayer.Get();
+}
 
 void ParticleSmokeGrenade::FillVolume()
 {
@@ -72,4 +99,27 @@ void ParticleSmokeGrenade::SetRelativeFadeTime(float startTime, float endTime)
 
 	m_FadeStartTime = flCurrentTime + startTime;
 	m_FadeEndTime = flCurrentTime + endTime;
+}
+
+// Fade start and end are relative to current time
+void ParticleSmokeGrenade::SetSmokeColor( Vector color )
+{
+	m_MinColor = color * MIN_SMOKE_TINT;
+	m_MaxColor = color * MAX_SMOKE_TINT;
+}
+
+void ParticleSmokeGrenade::Think()
+{
+	// Override, don't extend.  (Baseclass's Think just deletes.)
+
+	float now = gpGlobals->curtime;
+	if( now >= (m_flSpawnTime + m_FadeEndTime) )
+	{
+		// We are done
+		UTIL_Remove(this);
+		return;
+	}
+
+	const float PSG_THINK_DELAY = 1.0f;
+	SetNextThink(now + PSG_THINK_DELAY);
 }

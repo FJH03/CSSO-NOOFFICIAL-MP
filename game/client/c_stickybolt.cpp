@@ -173,4 +173,4 @@ void StickyBoltCallback( const CEffectData &data )
 	 StickRagdollNow( data.m_vOrigin, data.m_vNormal );
 }
 
-DECLARE_CLIENT_EFFECT( "BoltImpact", StickyBoltCallback );
+DECLARE_CLIENT_EFFECT( BoltImpact, StickyBoltCallback );

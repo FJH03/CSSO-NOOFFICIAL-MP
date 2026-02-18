@@ -1021,19 +1021,21 @@ void CWeaponCSBase::Precache( void )
 		PrecacheModel( GetCSWpnData().m_szStatTrakModel );
 
 	if ( GetCSWpnData().m_szEjectBrassEffect[0] != 0 )
-		PrecacheParticleSystem( GetCSWpnData().m_szEjectBrassEffect );
+		PrecacheEffect( GetCSWpnData().m_szEjectBrassEffect );
 	
 	if ( GetCSWpnData().m_szMuzzleFlash1stPerson[0] != 0 )
-		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash1stPerson );
+		PrecacheEffect( GetCSWpnData().m_szMuzzleFlash1stPerson );
 	if ( GetCSWpnData().m_szMuzzleFlash1stPersonAlt[0] != 0 )
-		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash1stPersonAlt );
+		PrecacheEffect( GetCSWpnData().m_szMuzzleFlash1stPersonAlt );
 	if ( GetCSWpnData().m_szMuzzleFlash3rdPerson[0] != 0 )
-		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash3rdPerson );
+		PrecacheEffect( GetCSWpnData().m_szMuzzleFlash3rdPerson );
 	if ( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt[0] != 0 )
-		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt );
+		PrecacheEffect( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt );
 
 	if ( GetCSWpnData().m_szHeatEffect[0] != 0 )
-		PrecacheParticleSystem( GetCSWpnData().m_szHeatEffect );
+		PrecacheEffect( GetCSWpnData().m_szHeatEffect );
+
+	PrecacheEffect( "gunshotsplash" );
 
 	PrecacheScriptSound( "Default.ClipEmpty_Pistol" );
 	PrecacheScriptSound( "Default.ClipEmpty_Rifle" );

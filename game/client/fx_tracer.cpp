@@ -124,7 +124,7 @@ void TracerCallback( const CEffectData &data )
 	FX_Tracer( (Vector&)vecStart, (Vector&)data.m_vOrigin, flVelocity, bWhiz );
 }
 
-DECLARE_CLIENT_EFFECT( "Tracer", TracerCallback )
+DECLARE_CLIENT_EFFECT( Tracer, TracerCallback )
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -219,7 +219,7 @@ void ParticleTracerCallback( const CEffectData &data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "ParticleTracer", ParticleTracerCallback );
+DECLARE_CLIENT_EFFECT( ParticleTracer, ParticleTracerCallback );
 
 
 //-----------------------------------------------------------------------------
@@ -234,4 +234,4 @@ void TracerSoundCallback( const CEffectData &data )
 	FX_TracerSound( vecStart, (Vector&)data.m_vOrigin, data.m_fFlags );
 }
 
-DECLARE_CLIENT_EFFECT( "TracerSound", TracerSoundCallback );
+DECLARE_CLIENT_EFFECT( TracerSound, TracerSoundCallback );

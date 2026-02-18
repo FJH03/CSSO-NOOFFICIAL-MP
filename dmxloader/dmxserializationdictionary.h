@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //=============================================================================
 
@@ -50,7 +50,7 @@ public:
 	// Iterates over all root elements to serialize
 	DmxSerializationHandle_t FirstRootElement() const;
 	DmxSerializationHandle_t NextRootElement( DmxSerializationHandle_t h ) const;
- 	CDmxElement* GetRootElement( DmxSerializationHandle_t h );
+	CDmxElement* GetRootElement( DmxSerializationHandle_t h );
 
 	// Finds the handle of the element
 	DmxSerializationHandle_t Find( CDmxElement *pElement );

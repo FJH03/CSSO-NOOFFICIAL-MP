@@ -317,83 +317,85 @@ void Host_Say( edict_t *pEdict, const CCommand &args, bool teamonly )
 }
 
 
-void ClientPrecache( void )
-{
+PRECACHE_REGISTER_BEGIN( GLOBAL, ClientPrecache )
 	// Precache cable textures.
-	CBaseEntity::PrecacheModel( "cable/phonecable.vmt" );
-	CBaseEntity::PrecacheModel( "cable/phonecable_red.vmt" );
-	CBaseEntity::PrecacheModel( "cable/cable.vmt" );
-	CBaseEntity::PrecacheModel( "cable/cable_lit.vmt" );	
-	CBaseEntity::PrecacheModel( "cable/chain.vmt" );	
-	CBaseEntity::PrecacheModel( "cable/rope.vmt" );	
-	CBaseEntity::PrecacheModel( "sprites/blueglow1.vmt" );	
-	CBaseEntity::PrecacheModel( "sprites/purpleglow1.vmt" );	
-	CBaseEntity::PrecacheModel( "sprites/purplelaser1.vmt" );	
+	PRECACHE( MODEL, "cable/phonecable.vmt" );
+	PRECACHE( MODEL, "cable/phonecable_red.vmt" );
+	PRECACHE( MODEL, "cable/cable.vmt" );
+	PRECACHE( MODEL, "cable/cable_lit.vmt" );	
+	PRECACHE( MODEL, "cable/chain.vmt" );	
+	PRECACHE( MODEL, "cable/rope.vmt" );	
+	PRECACHE( MODEL, "sprites/blueglow1.vmt" );	
+	PRECACHE( MODEL, "sprites/purpleglow1.vmt" );	
+	PRECACHE( MODEL, "sprites/purplelaser1.vmt" );	
 	
 #ifndef HL2MP
-	CBaseEntity::PrecacheScriptSound( "Hud.Hint" );
+	PRECACHE( GAMESOUND, "Hud.Hint" );
 #endif // HL2MP
-	CBaseEntity::PrecacheScriptSound( "Player.FallDamage" );
-	CBaseEntity::PrecacheScriptSound( "Player.Swim" );
+	PRECACHE( GAMESOUND, "Player.FallDamage" );
+	PRECACHE( GAMESOUND, "Player.Swim" );
 
 	// General HUD sounds
-	CBaseEntity::PrecacheScriptSound( "Player.PickupWeapon" );
-	CBaseEntity::PrecacheScriptSound( "Player.DenyWeaponSelection" );
-	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelected" );
-	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelected_CT" );
-	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelected_T" );
-	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelectionClose_CT" );
-	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelectionClose_T" );
-	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelectionClose" );
-	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelectionMoveSlot" );
-	CBaseEntity::PrecacheScriptSound( "Player.EquipArmor_CT" );
-	CBaseEntity::PrecacheScriptSound( "Player.EquipArmor_T" );
-	CBaseEntity::PrecacheScriptSound( "Player.FreezeCam" );
+	PRECACHE( GAMESOUND, "Player.PickupWeapon" );
+	PRECACHE( GAMESOUND, "Player.DenyWeaponSelection" );
+	PRECACHE( GAMESOUND, "Player.WeaponSelected" );
+	PRECACHE( GAMESOUND, "Player.WeaponSelected_CT" );
+	PRECACHE( GAMESOUND, "Player.WeaponSelected_T" );
+	PRECACHE( GAMESOUND, "Player.WeaponSelectionClose_CT" );
+	PRECACHE( GAMESOUND, "Player.WeaponSelectionClose_T" );
+	PRECACHE( GAMESOUND, "Player.WeaponSelectionClose" );
+	PRECACHE( GAMESOUND, "Player.WeaponSelectionMoveSlot" );
+	PRECACHE( GAMESOUND, "Player.EquipArmor_CT" );
+	PRECACHE( GAMESOUND, "Player.EquipArmor_T" );
+	PRECACHE( GAMESOUND, "Player.FreezeCam" );
 
 	// General legacy temp ents sounds
-	CBaseEntity::PrecacheScriptSound( "Bounce.Glass" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.Metal" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.Flesh" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.Wood" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.Shrapnel" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.ShotgunShell" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.Shell" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.Concrete" );
+	PRECACHE( GAMESOUND, "Bounce.Glass" );
+	PRECACHE( GAMESOUND, "Bounce.Metal" );
+	PRECACHE( GAMESOUND, "Bounce.Flesh" );
+	PRECACHE( GAMESOUND, "Bounce.Wood" );
+	PRECACHE( GAMESOUND, "Bounce.Shrapnel" );
+	PRECACHE( GAMESOUND, "Bounce.ShotgunShell" );
+	PRECACHE( GAMESOUND, "Bounce.Shell" );
+	PRECACHE( GAMESOUND, "Bounce.Concrete" );
 
 #ifdef CSTRIKE_DLL
 	// nav_edit
-	CBaseEntity::PrecacheScriptSound( "Bot.EditSwitchOn" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_TOGGLE_PLACE_MODE" );
-	CBaseEntity::PrecacheScriptSound( "Bot.EditSwitchOff" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_PLACE_PICK" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_DELETE" );
-	CBaseEntity::PrecacheScriptSound( "EDIT.ToggleAttribute" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_SPLIT.MarkedArea" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_SPLIT.NoMarkedArea" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_MERGE.Enable" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_MERGE.Disable" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_MARK.Enable" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_MARK.Disable" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_MARK_UNNAMED.Enable" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_MARK_UNNAMED.NoMarkedArea" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_MARK_UNNAMED.MarkedArea" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_CONNECT.AllDirections" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_CONNECT.Added" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_DISCONNECT.MarkedArea" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_DISCONNECT.NoMarkedArea" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_SPLICE.MarkedArea" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_SPLICE.NoMarkedArea" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_SELECT_CORNER.MarkedArea" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_SELECT_CORNER.NoMarkedArea" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_MOVE_CORNER.MarkedArea" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_MOVE_CORNER.NoMarkedArea" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_BEGIN_AREA.Creating" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_BEGIN_AREA.NotCreating" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_END_AREA.Creating" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_END_AREA.NotCreating" );
-	CBaseEntity::PrecacheScriptSound( "EDIT_WARP_TO_MARK" );
+	PRECACHE( GAMESOUND, "Bot.EditSwitchOn" );
+	PRECACHE( GAMESOUND, "EDIT_TOGGLE_PLACE_MODE" );
+	PRECACHE( GAMESOUND, "Bot.EditSwitchOff" );
+	PRECACHE( GAMESOUND, "EDIT_PLACE_PICK" );
+	PRECACHE( GAMESOUND, "EDIT_DELETE" );
+	PRECACHE( GAMESOUND, "EDIT.ToggleAttribute" );
+	PRECACHE( GAMESOUND, "EDIT_SPLIT.MarkedArea" );
+	PRECACHE( GAMESOUND, "EDIT_SPLIT.NoMarkedArea" );
+	PRECACHE( GAMESOUND, "EDIT_MERGE.Enable" );
+	PRECACHE( GAMESOUND, "EDIT_MERGE.Disable" );
+	PRECACHE( GAMESOUND, "EDIT_MARK.Enable" );
+	PRECACHE( GAMESOUND, "EDIT_MARK.Disable" );
+	PRECACHE( GAMESOUND, "EDIT_MARK_UNNAMED.Enable" );
+	PRECACHE( GAMESOUND, "EDIT_MARK_UNNAMED.NoMarkedArea" );
+	PRECACHE( GAMESOUND, "EDIT_MARK_UNNAMED.MarkedArea" );
+	PRECACHE( GAMESOUND, "EDIT_CONNECT.AllDirections" );
+	PRECACHE( GAMESOUND, "EDIT_CONNECT.Added" );
+	PRECACHE( GAMESOUND, "EDIT_DISCONNECT.MarkedArea" );
+	PRECACHE( GAMESOUND, "EDIT_DISCONNECT.NoMarkedArea" );
+	PRECACHE( GAMESOUND, "EDIT_SPLICE.MarkedArea" );
+	PRECACHE( GAMESOUND, "EDIT_SPLICE.NoMarkedArea" );
+	PRECACHE( GAMESOUND, "EDIT_SELECT_CORNER.MarkedArea" );
+	PRECACHE( GAMESOUND, "EDIT_SELECT_CORNER.NoMarkedArea" );
+	PRECACHE( GAMESOUND, "EDIT_MOVE_CORNER.MarkedArea" );
+	PRECACHE( GAMESOUND, "EDIT_MOVE_CORNER.NoMarkedArea" );
+	PRECACHE( GAMESOUND, "EDIT_BEGIN_AREA.Creating" );
+	PRECACHE( GAMESOUND, "EDIT_BEGIN_AREA.NotCreating" );
+	PRECACHE( GAMESOUND, "EDIT_END_AREA.Creating" );
+	PRECACHE( GAMESOUND, "EDIT_END_AREA.NotCreating" );
+	PRECACHE( GAMESOUND, "EDIT_WARP_TO_MARK" );
 #endif
+PRECACHE_REGISTER_END()
 
+void ClientPrecache( void )
+{
 	ClientGamePrecache();
 }
 
@@ -1000,6 +1002,7 @@ void CC_Player_TestDispatchEffect( const CCommand &args )
 	data.m_fFlags = flags;
 	data.m_flMagnitude = magnitude;
 	data.m_flScale = scale;
+	PrecacheEffect( (char *)args[1] );
 	DispatchEffect( (char *)args[1], data );
 }
 

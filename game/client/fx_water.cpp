@@ -5,7 +5,6 @@
 //=============================================================================//
 
 #include "cbase.h"
-#include "clienteffectprecachesystem.h"
 #include "fx_sparks.h"
 #include "iefx.h"
 #include "c_te_effect_dispatch.h"
@@ -20,12 +19,12 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectSplash )
-CLIENTEFFECT_MATERIAL( "effects/splash1" )
-CLIENTEFFECT_MATERIAL( "effects/splash2" )
-CLIENTEFFECT_MATERIAL( "effects/splash4" )
-CLIENTEFFECT_MATERIAL( "effects/slime1" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectSplash )
+PRECACHE( MATERIAL, "effects/splash1" )
+PRECACHE( MATERIAL, "effects/splash2" )
+PRECACHE( MATERIAL, "effects/splash4" )
+PRECACHE( MATERIAL, "effects/slime1" )
+PRECACHE_REGISTER_END()
 
 
 #define	SPLASH_MIN_SPEED	50.0f
@@ -428,7 +427,7 @@ void SplashCallback( const CEffectData &data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "watersplash", SplashCallback );
+DECLARE_CLIENT_EFFECT( watersplash, SplashCallback );
 
 
 //-----------------------------------------------------------------------------
@@ -447,7 +446,7 @@ void GunshotSplashCallback( const CEffectData &data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "gunshotsplash", GunshotSplashCallback );
+DECLARE_CLIENT_EFFECT( gunshotsplash, GunshotSplashCallback );
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -466,7 +465,7 @@ void RippleCallback( const CEffectData &data )
 	FX_WaterRipple( data.m_vOrigin, flScale, &color, 1.5f, luminosity );
 }
 
-DECLARE_CLIENT_EFFECT( "waterripple", RippleCallback );
+DECLARE_CLIENT_EFFECT( waterripple, RippleCallback );
 
 //-----------------------------------------------------------------------------
 // Purpose: 

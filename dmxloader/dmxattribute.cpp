@@ -151,6 +151,90 @@ int CDmxAttribute::AttributeDataSize( DmAttributeType_t type )
 	return s_pAttributeSize[type];
 }
 
+//-----------------------------------------------------------------------------
+// Gets the basic type for a given array attribute type
+//-----------------------------------------------------------------------------
+DmAttributeType_t CDmxAttribute::ArrayAttributeBasicType( DmAttributeType_t type )
+{
+	COMPILE_TIME_ASSERT( ( AT_FIRST_ARRAY_TYPE - AT_FIRST_VALUE_TYPE ) == ( AT_TYPE_COUNT - AT_FIRST_ARRAY_TYPE ) );
+	if ( IsArrayType( type ) )
+		type = (DmAttributeType_t)( type - ( AT_FIRST_ARRAY_TYPE - AT_FIRST_VALUE_TYPE ) ); // Array -> array element
+	return type;
+}
+
+
+//-----------------------------------------------------------------------------
+// Macros to tersify operations on attribute data of any type
+//-----------------------------------------------------------------------------
+#define NON_ARRAY_TYPE_CASES(	_func_, _params_, _errCase_ )												\
+	case AT_INT:				_func_< int							,	int				>_params_;	break;	\
+	case AT_FLOAT:				_func_< float						,	float			>_params_;	break;	\
+	case AT_BOOL:				_func_< bool						,	bool			>_params_;	break;	\
+	case AT_STRING:				_func_< CUtlString					,	CUtlString		>_params_;	break;	\
+	case AT_VOID:				_func_< CUtlBinaryBlock				,	CUtlBinaryBlock	>_params_;	break;	\
+	case AT_OBJECTID:			_func_< DmObjectId_t				,	DmObjectId_t	>_params_;	break;	\
+	case AT_COLOR:				_func_< Color						,	Color			>_params_;	break;	\
+	case AT_VECTOR2:			_func_< Vector2D					,	Vector2D		>_params_;	break;	\
+	case AT_VECTOR3:			_func_< Vector						,	Vector			>_params_;	break;	\
+	case AT_VECTOR4:			_func_< Vector4D					,	Vector4D		>_params_;	break;	\
+	case AT_QANGLE:				_func_< QAngle						,	QAngle			>_params_;	break;	\
+	case AT_QUATERNION:			_func_< Quaternion					,	Quaternion		>_params_;	break;	\
+	case AT_VMATRIX:			_func_< VMatrix						,	VMatrix			>_params_;	break;
+
+#define ARRAY_TYPE_CASES(		_func_, _params_, _errCase_ )												\
+	case AT_INT_ARRAY:			_func_< CUtlVector<int				>,	int				>_params_;	break;	\
+	case AT_FLOAT_ARRAY:		_func_< CUtlVector<float			>,	float			>_params_;	break;	\
+	case AT_BOOL_ARRAY:			_func_< CUtlVector<bool				>,	bool			>_params_;	break;	\
+	case AT_STRING_ARRAY:		_func_< CUtlVector<CUtlString		>,	CUtlString		>_params_;	break;	\
+	case AT_VOID_ARRAY:			_func_< CUtlVector<CUtlBinaryBlock	>,	CUtlBinaryBlock	>_params_;	break;	\
+	case AT_OBJECTID_ARRAY:		_func_< CUtlVector<DmObjectId_t		>,	DmObjectId_t	>_params_;	break;	\
+	case AT_COLOR_ARRAY:		_func_< CUtlVector<Color			>,	Color			>_params_;	break;	\
+	case AT_VECTOR2_ARRAY:		_func_< CUtlVector<Vector2D			>,	Vector2D		>_params_;	break;	\
+	case AT_VECTOR3_ARRAY:		_func_< CUtlVector<Vector			>,	Vector			>_params_;	break;	\
+	case AT_VECTOR4_ARRAY:		_func_< CUtlVector<Vector4D			>,	Vector4D		>_params_;	break;	\
+	case AT_QANGLE_ARRAY:		_func_< CUtlVector<QAngle			>,	QAngle			>_params_;	break;	\
+	case AT_QUATERNION_ARRAY:	_func_< CUtlVector<Quaternion		>,	Quaternion		>_params_;	break;	\
+	case AT_VMATRIX_ARRAY:		_func_< CUtlVector<VMatrix			>,	VMatrix			>_params_;	break;
+
+#define NON_ARRAY_ELEMENT_CASE(	_func_, _params_, _errCase_ )												\
+	case AT_ELEMENT:			_func_< CDmxElement*				,	CDmxElement*	>_params_;	break;
+	
+#define ARRAY_ELEMENT_CASE(		_func_, _params_, _errCase_ )												\
+	case AT_ELEMENT_ARRAY:		_func_< CUtlVector<CDmxElement*		>,	CDmxElement*	>_params_;	break;
+
+#define CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( _func_, _params_, _errCase_ )						\
+	switch( m_Type )																						\
+	{																										\
+		ARRAY_TYPE_CASES(		_func_, _params_, _errCase_ )												\
+		default:	_errCase_;																				\
+	}
+
+#define CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION( _func_, _params_, _errCase_ )									\
+	switch( m_Type )																						\
+	{																										\
+		ARRAY_TYPE_CASES(		_func_, _params_, _errCase_ )												\
+		ARRAY_ELEMENT_CASE(	_func_, _params_, _errCase_ )													\
+		default:	_errCase_;																				\
+	}
+
+#define CALL_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( _func_, _params_, _errCase_ )							\
+	switch( m_Type )																						\
+	{																										\
+		NON_ARRAY_TYPE_CASES(	_func_, _params_, _errCase_ )												\
+		ARRAY_TYPE_CASES(		_func_, _params_, _errCase_ )												\
+		default:	_errCase_;																				\
+	}
+
+#define CALL_TYPE_TEMPLATIZED_FUNCTION( _func_, _params_, _errCase_ )										\
+	switch( m_Type )																						\
+	{																										\
+		NON_ARRAY_TYPE_CASES(	_func_, _params_, _errCase_ )												\
+		NON_ARRAY_ELEMENT_CASE(_func_, _params_, _errCase_ )												\
+		ARRAY_TYPE_CASES(		_func_, _params_, _errCase_ )												\
+		ARRAY_ELEMENT_CASE(	_func_, _params_, _errCase_ )													\
+		default:	_errCase_;																				\
+	}
+
 
 //-----------------------------------------------------------------------------
 // Allocate, free memory for data
@@ -163,47 +247,32 @@ void CDmxAttribute::AllocateDataMemory( DmAttributeType_t type )
 	m_pData = DMXAlloc( s_pAttributeSize[m_Type] );
 }
 
-#define DESTRUCT_ARRAY( _dataType )									\
-case CDmAttributeInfo< CUtlVector< _dataType > >::ATTRIBUTE_TYPE:	\
-	Destruct( ( CUtlVector< _dataType >* )m_pData );				\
-	break;
+template < class VT, class T >
+void CDmxAttribute::ConstructDataMemory( void )
+{
+	Construct( (VT *)m_pData );
+}
+void CDmxAttribute::AllocateDataMemory_AndConstruct( DmAttributeType_t type )
+{
+	AllocateDataMemory( type );
+	Assert( m_pData != NULL );
 
+	// Process array and non-array types, including elements
+	CALL_TYPE_TEMPLATIZED_FUNCTION( ConstructDataMemory, (), );
+}
+
+template < class VT, class T >
+void CDmxAttribute::DestructDataMemory( void )
+{
+	Destruct( (VT *)m_pData );
+}
 void CDmxAttribute::FreeDataMemory()
 {
 	if ( m_Type != AT_UNKNOWN )
 	{
 		Assert( m_pData != NULL );
-		if ( !IsArrayType( m_Type ) )
-		{
-			if ( m_Type == AT_STRING )
-			{
-				Destruct( (CUtlString*)m_pData );
-			}
-			else if ( m_Type == AT_VOID	)
-			{
-				Destruct( (CUtlBinaryBlock*)m_pData );
-			}
-		}
-		else
-		{
-			switch ( m_Type )
-			{
-				DESTRUCT_ARRAY( int );
-				DESTRUCT_ARRAY( float );
-				DESTRUCT_ARRAY( bool );
-				DESTRUCT_ARRAY( CUtlString );
-				DESTRUCT_ARRAY( CUtlBinaryBlock );
-				DESTRUCT_ARRAY( DmObjectId_t );
-				DESTRUCT_ARRAY( Color );
-				DESTRUCT_ARRAY( Vector2D );
-				DESTRUCT_ARRAY( Vector );
-				DESTRUCT_ARRAY( Vector4D );
-				DESTRUCT_ARRAY( QAngle );
-				DESTRUCT_ARRAY( Quaternion );
-				DESTRUCT_ARRAY( VMatrix );
-				DESTRUCT_ARRAY( CDmxElement* );
-			}
-		}
+		// Process array and non-array types, including elements
+		CALL_TYPE_TEMPLATIZED_FUNCTION( DestructDataMemory, (), );
 		m_Type = AT_UNKNOWN;
 	}
 }
@@ -230,284 +299,167 @@ const char *CDmxAttribute::GetName() const
 //-----------------------------------------------------------------------------
 // Gets the size of an array, returns 0 if it's not an array type
 //-----------------------------------------------------------------------------
-#define GET_ARRAY_COUNT( _dataType )			\
-	case CDmAttributeInfo< CUtlVector< _dataType > >::ATTRIBUTE_TYPE:		\
-	{															\
-		const CUtlVector< _dataType > &array = *( CUtlVector< _dataType >* )m_pData; \
-		return array.Count();									\
-	}
-
+template < class VT, class T >
+void CDmxAttribute::GetArrayCount( int &nCount ) const
+{
+	nCount = ((VT *)m_pData)->Count();
+}
 int CDmxAttribute::GetArrayCount() const
 {
-	if ( !IsArrayType( m_Type ) || !m_pData )
-		return 0;
+	int nCount = 0;
+	// Process array types only, including elements
+	if ( IsArrayType( m_Type ) && m_pData )
+		CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION( GetArrayCount, (nCount), );
+	return nCount;
+}
 
-	switch( m_Type )
-	{
-		GET_ARRAY_COUNT( int );
-		GET_ARRAY_COUNT( float );
-		GET_ARRAY_COUNT( bool );
-		GET_ARRAY_COUNT( CUtlString );
-		GET_ARRAY_COUNT( CUtlBinaryBlock );
-		GET_ARRAY_COUNT( DmObjectId_t );
-		GET_ARRAY_COUNT( Color );
-		GET_ARRAY_COUNT( Vector2D );
-		GET_ARRAY_COUNT( Vector );
-		GET_ARRAY_COUNT( Vector4D );
-		GET_ARRAY_COUNT( QAngle );
-		GET_ARRAY_COUNT( Quaternion );
-		GET_ARRAY_COUNT( VMatrix );
-		GET_ARRAY_COUNT( CDmxElement* );
-	}
+//-----------------------------------------------------------------------------
+// Sets the size of an array, non-destructively
+//-----------------------------------------------------------------------------
+template < class VT, class T >
+void CDmxAttribute::SetArrayCount( int nArrayCount )
+{
+	((VT *)m_pData)->SetCountNonDestructively( nArrayCount );
+}
+void CDmxAttribute::SetArrayCount( int nArrayCount )
+{
+	// Process array types only, including elements
+	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION( SetArrayCount, (nArrayCount), Assert(0) );
+}
 
-	return 0;
+//-----------------------------------------------------------------------------
+// Gets the base data pointer of an array
+//-----------------------------------------------------------------------------
+template < class VT, class T >
+void CDmxAttribute::GetArrayBase( const void * &pBasePtr ) const
+{
+	pBasePtr = ((VT *)m_pData)->Base();
+}
+const void *CDmxAttribute::GetArrayBase( void ) const
+{
+	const void *pBasePtr = NULL;
+	// Process array types only, including elements
+	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION( GetArrayBase, (pBasePtr), Assert(0) );
+	return pBasePtr;
 }
 
 
 //-----------------------------------------------------------------------------
 // Gets the size of an array, returns 0 if it's not an array type
 //-----------------------------------------------------------------------------
-#define SERIALIZES_ON_MULTIPLE_LINES( _dataType )	\
-	case CDmAttributeInfo< _dataType >::ATTRIBUTE_TYPE: \
-		return ::SerializesOnMultipleLines< _dataType >();  \
-	case CDmAttributeInfo< CUtlVector< _dataType > >::ATTRIBUTE_TYPE: \
-		return ::SerializesOnMultipleLines< CUtlVector< _dataType > >()
-
+template < class VT, class T >
+void CDmxAttribute::SerializesOnMultipleLines( bool &bResult ) const
+{
+	bResult = ::SerializesOnMultipleLines<VT>();
+}
 bool CDmxAttribute::SerializesOnMultipleLines() const
 {
-	switch( m_Type )
-	{
-		SERIALIZES_ON_MULTIPLE_LINES( CDmxElement* );
-		SERIALIZES_ON_MULTIPLE_LINES( int );
-		SERIALIZES_ON_MULTIPLE_LINES( float );
-		SERIALIZES_ON_MULTIPLE_LINES( bool );
-		SERIALIZES_ON_MULTIPLE_LINES( CUtlString );
-		SERIALIZES_ON_MULTIPLE_LINES( CUtlBinaryBlock );
-		SERIALIZES_ON_MULTIPLE_LINES( DmObjectId_t );
-		SERIALIZES_ON_MULTIPLE_LINES( Color );
-		SERIALIZES_ON_MULTIPLE_LINES( Vector2D );
-		SERIALIZES_ON_MULTIPLE_LINES( Vector );
-		SERIALIZES_ON_MULTIPLE_LINES( Vector4D );
-		SERIALIZES_ON_MULTIPLE_LINES( QAngle );
-		SERIALIZES_ON_MULTIPLE_LINES( Quaternion );
-		SERIALIZES_ON_MULTIPLE_LINES( VMatrix );
-	}
-
-	return false;
+	bool bResult = false;
+	// Process array and non-array types, including elements
+	CALL_TYPE_TEMPLATIZED_FUNCTION( SerializesOnMultipleLines, (bResult), );
+	return bResult;
 }
 
 
 //-----------------------------------------------------------------------------
 // Write to file
 //-----------------------------------------------------------------------------
-#define SERIALIZE_TYPE( _buf, _attributeType, _dataType )		\
-	case _attributeType:										\
-	{															\
-		if ( m_pData )											\
-			return ::Serialize( _buf, *(_dataType*)m_pData );	\
-		_dataType temp;											\
-		CDmAttributeInfo< _dataType >::SetDefaultValue( temp ); \
-		return ::Serialize( _buf, temp );						\
+template < class VT, class T >
+void CDmxAttribute::SerializeType( bool &bSuccess, CUtlBuffer &buf ) const
+{
+	if ( m_pData )
+	{
+		bSuccess = ::Serialize( buf, *(VT *)m_pData );
 	}
-
-#define SERIALIZE_ARRAY_TYPE( _buf, _attributeType, _dataType )	\
-	case _attributeType:										\
-	{															\
-		if ( m_pData )											\
-			return ::Serialize( _buf, *(CUtlVector< _dataType >*)m_pData ); \
-		CUtlVector< _dataType > temp;							\
-		CDmAttributeInfo< CUtlVector< _dataType > >::SetDefaultValue( temp ); \
-		return ::Serialize( _buf, temp );						\
+	else
+	{
+		VT temp;
+		CDmAttributeInfo< VT >::SetDefaultValue( temp );
+		bSuccess = ::Serialize( buf, temp );
 	}
+}
 
 bool CDmxAttribute::Serialize( CUtlBuffer &buf ) const
 {
-	switch( m_Type )
-	{
-		SERIALIZE_TYPE( buf, AT_INT, int );
-		SERIALIZE_TYPE( buf, AT_FLOAT, float );
-		SERIALIZE_TYPE( buf, AT_BOOL, bool );
-		SERIALIZE_TYPE( buf, AT_STRING, CUtlString );
-		SERIALIZE_TYPE( buf, AT_VOID, CUtlBinaryBlock );
-		SERIALIZE_TYPE( buf, AT_OBJECTID, DmObjectId_t );
-		SERIALIZE_TYPE( buf, AT_COLOR, Color );
-		SERIALIZE_TYPE( buf, AT_VECTOR2, Vector2D );
-		SERIALIZE_TYPE( buf, AT_VECTOR3, Vector );
-		SERIALIZE_TYPE( buf, AT_VECTOR4, Vector4D );
-		SERIALIZE_TYPE( buf, AT_QANGLE, QAngle );
-		SERIALIZE_TYPE( buf, AT_QUATERNION, Quaternion );
-		SERIALIZE_TYPE( buf, AT_VMATRIX, VMatrix );
-		SERIALIZE_ARRAY_TYPE( buf, AT_INT_ARRAY, int );
-		SERIALIZE_ARRAY_TYPE( buf, AT_FLOAT_ARRAY, float );
-		SERIALIZE_ARRAY_TYPE( buf, AT_BOOL_ARRAY, bool );
-		SERIALIZE_ARRAY_TYPE( buf, AT_STRING_ARRAY, CUtlString );
-		SERIALIZE_ARRAY_TYPE( buf, AT_VOID_ARRAY, CUtlBinaryBlock );
-		SERIALIZE_ARRAY_TYPE( buf, AT_OBJECTID_ARRAY, DmObjectId_t );
-		SERIALIZE_ARRAY_TYPE( buf, AT_COLOR_ARRAY, Color );
-		SERIALIZE_ARRAY_TYPE( buf, AT_VECTOR2_ARRAY, Vector2D );
-		SERIALIZE_ARRAY_TYPE( buf, AT_VECTOR3_ARRAY, Vector );
-		SERIALIZE_ARRAY_TYPE( buf, AT_VECTOR4_ARRAY, Vector4D );
-		SERIALIZE_ARRAY_TYPE( buf, AT_QANGLE_ARRAY, QAngle );
-		SERIALIZE_ARRAY_TYPE( buf, AT_QUATERNION_ARRAY, Quaternion );
-		SERIALIZE_ARRAY_TYPE( buf, AT_VMATRIX_ARRAY, VMatrix );
-	default:
-		AssertMsg( 0, "Cannot serialize elements or element arrays!\n" );
-		return false;
-	}
-
-	return false;
+	bool bSuccess = false;
+	// Process array and non-array types, excluding elements
+	CALL_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( SerializeType, (bSuccess, buf), AssertMsg( 0, "Cannot serialize elements or element arrays!\n" ) );
+	return bSuccess;
 }
 
 
 //-----------------------------------------------------------------------------
 // Serialize a single element in an array attribute
 //-----------------------------------------------------------------------------
-#define SERIALIZE_TYPED_ELEMENT( _index, _buf, _attributeType, _dataType )			\
-	case _attributeType:															\
-	{																				\
-		if ( m_pData )																\
-		{																			\
-			const CUtlVector< _dataType > &array = *( CUtlVector< _dataType >* )m_pData;\
-			return ::Serialize( buf, array[_index] );								\
-		}																			\
-		_dataType temp;																\
-		CDmAttributeInfo< _dataType >::SetDefaultValue( temp );						\
-		return ::Serialize( _buf, temp );											\
+template < class VT, class T >
+void CDmxAttribute::SerializeTypedElement( bool &bSuccess, int nIndex, CUtlBuffer &buf ) const
+{
+	if ( m_pData )
+	{
+		const VT &array = *(VT *)m_pData;
+		bSuccess = ::Serialize( buf, array[nIndex] );
 	}
-
+	else
+	{
+		T temp;
+		CDmAttributeInfo<T>::SetDefaultValue( temp );
+		bSuccess = ::Serialize( buf, temp );
+	}
+}
 bool CDmxAttribute::SerializeElement( int nIndex, CUtlBuffer &buf ) const
 {
 	if ( !IsArrayType( m_Type ) )
 		return false;
 
-	switch( m_Type )
-	{
-		SERIALIZE_TYPED_ELEMENT( nIndex, buf, AT_INT_ARRAY, int );
-		SERIALIZE_TYPED_ELEMENT( nIndex, buf, AT_FLOAT_ARRAY, float );
-		SERIALIZE_TYPED_ELEMENT( nIndex, buf, AT_BOOL_ARRAY, bool );
-		SERIALIZE_TYPED_ELEMENT( nIndex, buf, AT_STRING_ARRAY, CUtlString );
-		SERIALIZE_TYPED_ELEMENT( nIndex, buf, AT_VOID_ARRAY, CUtlBinaryBlock );
-		SERIALIZE_TYPED_ELEMENT( nIndex, buf, AT_OBJECTID_ARRAY, DmObjectId_t );
-		SERIALIZE_TYPED_ELEMENT( nIndex, buf, AT_COLOR_ARRAY, Color );
-		SERIALIZE_TYPED_ELEMENT( nIndex, buf, AT_VECTOR2_ARRAY, Vector2D );
-		SERIALIZE_TYPED_ELEMENT( nIndex, buf, AT_VECTOR3_ARRAY, Vector );
-		SERIALIZE_TYPED_ELEMENT( nIndex, buf, AT_VECTOR4_ARRAY, Vector4D );
-		SERIALIZE_TYPED_ELEMENT( nIndex, buf, AT_QANGLE_ARRAY, QAngle );
-		SERIALIZE_TYPED_ELEMENT( nIndex, buf, AT_QUATERNION_ARRAY, Quaternion );
-		SERIALIZE_TYPED_ELEMENT( nIndex, buf, AT_VMATRIX_ARRAY, VMatrix );
-
-	default:
-		AssertMsg( 0, "Cannot serialize elements!\n" );
-		return false;
-	}
-
-	return false;
+	bool bSuccess = false;
+	// Process array types only, excluding elements
+	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( SerializeTypedElement, (bSuccess, nIndex, buf), AssertMsg( 0, "Cannot serialize elements!\n" ); );
+	return bSuccess;
 }
 
 
 //-----------------------------------------------------------------------------
 // Read from file
 //-----------------------------------------------------------------------------
-#define UNSERIALIZE_TYPE( _buf, _attributeType, _dataType )	\
-	case _attributeType:									\
-		Construct( (_dataType*)m_pData );					\
-		return ::Unserialize( _buf, *(_dataType*)m_pData )
-
-#define UNSERIALIZE_ARRAY_TYPE( _buf, _attributeType, _dataType )		\
-	case _attributeType:												\
-		Construct( (CUtlVector< _dataType > *)m_pData );				\
-		return ::Unserialize( _buf, *(CUtlVector< _dataType >*)m_pData )
-
+template < class VT, class T >
+void CDmxAttribute::UnserializeType( bool &bSuccess, CUtlBuffer &buf )
+{
+	bSuccess = ::Unserialize( buf, *(VT *)m_pData );
+}
 bool CDmxAttribute::Unserialize( DmAttributeType_t type, CUtlBuffer &buf )
 {
-	AllocateDataMemory( type );
-	switch( type )
-	{
-	UNSERIALIZE_TYPE( buf, AT_INT, int );
-	UNSERIALIZE_TYPE( buf, AT_FLOAT, float );
-	UNSERIALIZE_TYPE( buf, AT_BOOL, bool );
-	UNSERIALIZE_TYPE( buf, AT_STRING, CUtlString );
-	UNSERIALIZE_TYPE( buf, AT_VOID, CUtlBinaryBlock );
-	UNSERIALIZE_TYPE( buf, AT_OBJECTID, DmObjectId_t );
-	UNSERIALIZE_TYPE( buf, AT_COLOR, Color );
-	UNSERIALIZE_TYPE( buf, AT_VECTOR2, Vector2D );
-	UNSERIALIZE_TYPE( buf, AT_VECTOR3, Vector );
-	UNSERIALIZE_TYPE( buf, AT_VECTOR4, Vector4D );
-	UNSERIALIZE_TYPE( buf, AT_QANGLE, QAngle );
-	UNSERIALIZE_TYPE( buf, AT_QUATERNION, Quaternion );
-	UNSERIALIZE_TYPE( buf, AT_VMATRIX, VMatrix );
-	UNSERIALIZE_ARRAY_TYPE( buf, AT_INT_ARRAY, int );
-	UNSERIALIZE_ARRAY_TYPE( buf, AT_FLOAT_ARRAY, float );
-	UNSERIALIZE_ARRAY_TYPE( buf, AT_BOOL_ARRAY, bool );
-	UNSERIALIZE_ARRAY_TYPE( buf, AT_STRING_ARRAY, CUtlString );
-	UNSERIALIZE_ARRAY_TYPE( buf, AT_VOID_ARRAY, CUtlBinaryBlock );
-	UNSERIALIZE_ARRAY_TYPE( buf, AT_OBJECTID_ARRAY, DmObjectId_t );
-	UNSERIALIZE_ARRAY_TYPE( buf, AT_COLOR_ARRAY, Color );
-	UNSERIALIZE_ARRAY_TYPE( buf, AT_VECTOR2_ARRAY, Vector2D );
-	UNSERIALIZE_ARRAY_TYPE( buf, AT_VECTOR3_ARRAY, Vector );
-	UNSERIALIZE_ARRAY_TYPE( buf, AT_VECTOR4_ARRAY, Vector4D );
-	UNSERIALIZE_ARRAY_TYPE( buf, AT_QANGLE_ARRAY, QAngle );
-	UNSERIALIZE_ARRAY_TYPE( buf, AT_QUATERNION_ARRAY, Quaternion );
-	UNSERIALIZE_ARRAY_TYPE( buf, AT_VMATRIX_ARRAY, VMatrix );
-	default:
-		AssertMsg( 0, "Cannot unserialize elements or element arrays!\n" );
-		return false;
-	}
+	AllocateDataMemory_AndConstruct( type );
 
-	return false;
+	bool bSuccess = false;
+	// Process array and non-array types, excluding elements
+	CALL_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( UnserializeType, (bSuccess, buf), AssertMsg( 0, "Cannot unserialize elements or element arrays!\n" ); );
+	return bSuccess;
 }
 
 
 //-----------------------------------------------------------------------------
 // Read element from file
 //-----------------------------------------------------------------------------
-#define UNSERIALIZE_TYPED_ELEMENT( _buf, _attributeType, _dataType )	\
-	case _attributeType:										\
-	{															\
-		if ( !bIsDataMemoryAllocated )							\
-		{														\
-			Construct( (CUtlVector< _dataType > *)m_pData );	\
-		}														\
-		_dataType temp;											\
-		bool bReadElement = ::Unserialize( _buf, temp );		\
-		if ( bReadElement )										\
-		{														\
-			GetArrayForEdit< _dataType >().AddToTail( temp );	\
-		}														\
-		return bReadElement;									\
-	}															
-
+template < class VT, class T >
+void CDmxAttribute::UnserializeTypedElement( bool &bSuccess, CUtlBuffer &buf )
+{
+	T temp;
+	bSuccess = ::Unserialize( buf, temp );
+	if ( bSuccess )
+		((VT *)m_pData)->AddToTail( temp );
+}
 bool CDmxAttribute::UnserializeElement( DmAttributeType_t type, CUtlBuffer &buf )
 {
 	if ( !IsArrayType( type ) )
 		return false;
 
-	bool bIsDataMemoryAllocated = ( m_Type == type );
-	if ( !bIsDataMemoryAllocated )
-	{
-		AllocateDataMemory( type );
-	}
-	switch( type )
-	{
-	UNSERIALIZE_TYPED_ELEMENT( buf, AT_INT_ARRAY, int );
-	UNSERIALIZE_TYPED_ELEMENT( buf, AT_FLOAT_ARRAY, float );
-	UNSERIALIZE_TYPED_ELEMENT( buf, AT_BOOL_ARRAY, bool );
-	UNSERIALIZE_TYPED_ELEMENT( buf, AT_STRING_ARRAY, CUtlString );
-	UNSERIALIZE_TYPED_ELEMENT( buf, AT_VOID_ARRAY, CUtlBinaryBlock );
-	UNSERIALIZE_TYPED_ELEMENT( buf, AT_OBJECTID_ARRAY, DmObjectId_t );
-	UNSERIALIZE_TYPED_ELEMENT( buf, AT_COLOR_ARRAY, Color );
-	UNSERIALIZE_TYPED_ELEMENT( buf, AT_VECTOR2_ARRAY, Vector2D );
-	UNSERIALIZE_TYPED_ELEMENT( buf, AT_VECTOR3_ARRAY, Vector );
-	UNSERIALIZE_TYPED_ELEMENT( buf, AT_VECTOR4_ARRAY, Vector4D );
-	UNSERIALIZE_TYPED_ELEMENT( buf, AT_QANGLE_ARRAY, QAngle );
-	UNSERIALIZE_TYPED_ELEMENT( buf, AT_QUATERNION_ARRAY, Quaternion );
-	UNSERIALIZE_TYPED_ELEMENT( buf, AT_VMATRIX_ARRAY, VMatrix );
-	default:
-		AssertMsg( 0, "Cannot unserialize elements!\n" );
-		return false;
-	}
+	if ( m_Type != type )
+		AllocateDataMemory_AndConstruct( type );
 
-	return false;
+	bool bSuccess = false;
+	// Process array types only, excluding elements
+	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( UnserializeTypedElement, (bSuccess, buf), AssertMsg( 0, "Cannot unserialize elements!\n" ) );
+	return bSuccess;
 }
 
 
@@ -554,6 +506,95 @@ void CDmxAttribute::SetValue( DmAttributeType_t type, const void *pSrc, int nLen
 	memcpy( m_pData, pSrc, nLen );
 }
 
+// Untyped method for setting arrays, used by unpack
+void CDmxAttribute::SetArrayValue( DmAttributeType_t type, const void *pSrc, int nDataTypeSize, int nArrayLength, int nSrcStride )
+{
+	if ( !IsArrayType( type ) )
+		return;
+
+	if ( m_Type != type )
+	{
+		AllocateDataMemory( type );
+	}
+
+	// NOTE: nDestStride will be 4 for char/short/int values, and the below code is designed to work in all those cases
+	DmAttributeType_t basicType = ArrayAttributeBasicType( type );
+	int nDestStride = CDmxAttribute::AttributeDataSize( basicType );
+	Assert( nDataTypeSize <= nDestStride );
+	nDataTypeSize = MIN( nDataTypeSize, nDestStride );
+
+	SetArrayCount( nArrayLength );
+	void *pDest = (void *)GetArrayBase();
+	if ( !pDest )
+		return;
+	if ( nDataTypeSize != nDestStride )
+	{
+		// Avoid writing junk, keep the data clean in case we inspect the memory or a serialized file:
+		Q_memset( pDest, 0, nDestStride*nArrayLength );
+	}
+	if ( ( nSrcStride == nDestStride ) && ( nDataTypeSize == nSrcStride ) )
+	{
+		memcpy( pDest, pSrc, nDestStride*nArrayLength );
+	}
+	else
+	{
+		byte       *pByteDest =       (byte *)pDest;
+		const byte *pByteSrc  = (const byte *)pSrc;
+		for ( int i = 0; i < nArrayLength; i++ )
+		{
+			memcpy( pByteDest, pByteSrc, nDataTypeSize );
+			pByteDest += nDestStride;
+			pByteSrc  += nSrcStride;
+		}
+	}
+}
+
+void CDmxAttribute::GetArrayValue( DmAttributeType_t type, void *pDest, int nDataTypeSize, int nDestArrayLength, const char *pDefaultString ) const
+{
+	if ( !IsArrayType( type ) || ( m_Type != type ) )
+		return;
+
+	// NOTE: nDestStride will be 4 for char/short/int values, and the below code is designed to work in all those cases
+	DmAttributeType_t basicType = ArrayAttributeBasicType( type );
+	int nSrcStride = CDmxAttribute::AttributeDataSize( basicType );
+	Assert( nDataTypeSize <= nSrcStride );
+	nDataTypeSize = MIN( nDataTypeSize, nSrcStride );
+
+	int nSrcArrayLength = GetArrayCount();
+	const void *pSrc = GetArrayBase();
+	if ( nSrcArrayLength && pSrc )
+	{
+		if ( nSrcStride == nDataTypeSize )
+		{
+			memcpy( pDest, pSrc, nSrcArrayLength*nDataTypeSize );
+		}
+		else
+		{
+			byte       *pByteDst =       (byte *)pDest;
+			const byte *pByteSrc = (const byte *)pSrc;
+			for ( int i = 0; i < nSrcArrayLength; i++ )
+			{
+				memcpy( pByteDst, pByteSrc, nDataTypeSize );
+				pByteDst += nDataTypeSize;
+				pByteSrc += nSrcStride;
+			}
+		}
+	}
+	if ( ( nSrcArrayLength < nDestArrayLength ) && pDefaultString )
+	{
+		CDmxAttribute temp( NULL );
+		temp.AllocateDataMemory_AndConstruct( basicType );
+		temp.SetValueFromString( pDefaultString );
+
+		byte *pByteDst = ( (byte *)pDest ) + nSrcArrayLength*nDataTypeSize;
+		for ( int i = nSrcArrayLength; i < nDestArrayLength; i++ )
+		{
+			memcpy( pByteDst, temp.m_pData, nDataTypeSize );
+			pByteDst += nDataTypeSize;
+		}
+	}
+}
+
 
 void CDmxAttribute::SetValue( const CDmxAttribute *pAttribute )
 {
@@ -570,36 +611,15 @@ void CDmxAttribute::SetValue( const CDmxAttribute *pAttribute )
 }
 
 // Sets the attribute to its default value based on its type
-#define SET_DEFAULT_VALUE( _dataType )	\
-	case CDmAttributeInfo< _dataType >::ATTRIBUTE_TYPE:			\
-		CDmAttributeInfo< _dataType >::SetDefaultValue( *reinterpret_cast< _dataType* >( m_pData ) );	\
-		break;																	\
-	case CDmAttributeInfo< CUtlVector< _dataType > >::ATTRIBUTE_TYPE:			\
-		CDmAttributeInfo< CUtlVector< _dataType > >::SetDefaultValue( *reinterpret_cast< CUtlVector< _dataType > * >( m_pData ) );	\
-		break
-
+template < class VT, class T >
+void CDmxAttribute::SetDefaultValue( void )
+{
+	CDmAttributeInfo< VT >::SetDefaultValue( *(VT *)( m_pData ) );
+}
 void CDmxAttribute::SetToDefaultValue()
 {
-	switch( GetType() )
-	{
-	SET_DEFAULT_VALUE( int );
-	SET_DEFAULT_VALUE( float );
-	SET_DEFAULT_VALUE( bool );
-	SET_DEFAULT_VALUE( CUtlString );
-	SET_DEFAULT_VALUE( CUtlBinaryBlock );
-	SET_DEFAULT_VALUE( DmObjectId_t );
-	SET_DEFAULT_VALUE( Color );
-	SET_DEFAULT_VALUE( Vector2D );
-	SET_DEFAULT_VALUE( Vector );
-	SET_DEFAULT_VALUE( Vector4D );
-	SET_DEFAULT_VALUE( QAngle );
-	SET_DEFAULT_VALUE( Quaternion );
-	SET_DEFAULT_VALUE( VMatrix );
-	SET_DEFAULT_VALUE( CDmxElement* );
-
-	default:
-		break;
-	}
+	// Process array and non-array types, including elements
+	CALL_TYPE_TEMPLATIZED_FUNCTION( SetDefaultValue, (), );
 }
 
 

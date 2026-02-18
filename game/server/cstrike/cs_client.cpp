@@ -143,17 +143,23 @@ const char *GetGameDescription()
 //-----------------------------------------------------------------------------
 // Purpose: Precache game-specific models & sounds
 //-----------------------------------------------------------------------------
-void ClientGamePrecache( void )
-{
+PRECACHE_REGISTER_BEGIN( GLOBAL, ClientGamePrecache )
 	// Materials used by the client effects
-	CBaseEntity::PrecacheModel( "sprites/white.vmt" );
-	CBaseEntity::PrecacheModel( "sprites/physbeam.vmt" );
+	PRECACHE( MODEL, "sprites/white.vmt" );
+	PRECACHE( MODEL, "sprites/physbeam.vmt" );
 
 	// Legacy temp ents sounds
-	CBaseEntity::PrecacheScriptSound( "Bounce.PistolShell" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.RifleShell" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.ShotgunShell" );
+	PRECACHE( GAMESOUND, "Bounce.PistolShell" );
+	PRECACHE( GAMESOUND, "Bounce.RifleShell" );
+	PRECACHE( GAMESOUND, "Bounce.ShotgunShell" );
+PRECACHE_REGISTER_END()
 
+//-----------------------------------------------------------------------------
+// Purpose: Precache game-specific models & sounds
+//-----------------------------------------------------------------------------
+void ClientGamePrecache( void )
+{
+	
 // Moved to pure_server_minimal.txt
 //	// Flashbang-related files
 //	engine->ForceExactFile( "sprites/white.vmt" );

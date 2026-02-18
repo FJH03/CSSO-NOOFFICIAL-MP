@@ -20,7 +20,6 @@
 #include "tier0/dbg.h"
 #include "tier1/utlsoacontainer.h"
 #include "mathlib/ssemath.h"
-#include "tier1/memhelpers.h"
 
 class CSIMDVectorMatrix
 {
@@ -62,19 +61,19 @@ public:
 	// set up storage and fields for m x n matrix. destroys old data
 	void SetSize( int width, int height )
 	{
-		if ( ( ! m_pData ) || ( width > m_nWidth ) || ( height > m_nHeight ) )
+		if ( ( ! m_pData ) || ( width != m_nWidth ) || ( height != m_nHeight ) )
 		{
 			if ( m_pData )
 				delete[] m_pData;
-
+			
+			m_nWidth = width;
+			m_nHeight = height;
+			
 			m_nPaddedWidth = ( m_nWidth + 3) >> 2;
 			m_pData = NULL;
 			if ( width && height )
 				m_pData = new FourVectors[ m_nPaddedWidth * m_nHeight ];
 		}
-
-		m_nWidth = width;
-		m_nHeight = height;
 	}
 
 	CSIMDVectorMatrix( int width, int height )
@@ -87,8 +86,7 @@ public:
 	{
 		SetSize( src.m_nWidth, src.m_nHeight );
 		if ( m_pData )
-			memutils::copy( m_pData, src.m_pData, m_nHeight*m_nPaddedWidth );
-
+			memcpy( m_pData, src.m_pData, m_nHeight*m_nPaddedWidth*sizeof(m_pData[0]) ); 
 		return *this;
 	}
 
@@ -133,9 +131,7 @@ public:
 	void Clear( void )
 	{
 		Assert( m_pData );
-
-		static FourVectors value{Four_Zeros, Four_Zeros, Four_Zeros};
-		memutils::set( m_pData, value, m_nHeight*m_nPaddedWidth );
+		memset( m_pData, 0, m_nHeight*m_nPaddedWidth*sizeof(m_pData[0]) );
 	}
 
 	void RaiseToPower( float power );

@@ -24,14 +24,12 @@
 #define GLASS_SHARD_GRAVITY  500
 #define GLASS_SHARD_DAMPING	 0.3
 
-#include "clienteffectprecachesystem.h"
-
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectGlassShatter )
-CLIENTEFFECT_MATERIAL( "effects/fleck_glass1" )
-CLIENTEFFECT_MATERIAL( "effects/fleck_glass2" )
-CLIENTEFFECT_MATERIAL( "effects/fleck_tile1" )
-CLIENTEFFECT_MATERIAL( "effects/fleck_tile2" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectGlassShatter )
+PRECACHE( MATERIAL, "effects/fleck_glass1" )
+PRECACHE( MATERIAL, "effects/fleck_glass2" )
+PRECACHE( MATERIAL, "effects/fleck_tile1" )
+PRECACHE( MATERIAL, "effects/fleck_tile2" )
+PRECACHE_REGISTER_END()
 
 //###################################################
 // > C_TEShatterSurface

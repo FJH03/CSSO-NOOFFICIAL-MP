@@ -1020,6 +1020,7 @@ class CBlood : public CPointEntity
 public:
 	DECLARE_CLASS( CBlood, CPointEntity );
 
+	void	Precache();
 	void	Spawn( void );
 	bool	KeyValue( const char *szKeyName, const char *szValue );
 
@@ -1064,12 +1065,22 @@ END_DATADESC()
 #define SF_BLOOD_DROPS		0x0020
 #define SF_BLOOD_GORE		0x0040
 
+//-----------------------------------------------------------------------------
+// Precache
+//-----------------------------------------------------------------------------
+void CBlood::Precache()
+{
+	BaseClass::Precache();
+	PrecacheEffect( "bloodspray" );
+}
 
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
 void CBlood::Spawn( void )
 {
+	Precache();
+
 	// Convert spraydir from angles to a vector
 	QAngle angSprayDir = QAngle( m_vecSprayDir.x, m_vecSprayDir.y, m_vecSprayDir.z );
 	AngleVectors( angSprayDir, &m_vecSprayDir );
@@ -1932,6 +1943,9 @@ class CEnvSplash : public CPointEntity
 	DECLARE_CLASS( CEnvSplash, CPointEntity );
 
 public:
+	virtual void Precache();
+	virtual void Spawn();
+	
 	// Input handlers
 	void	InputSplash( inputdata_t &inputdata );
 
@@ -1949,6 +1963,18 @@ BEGIN_DATADESC( CEnvSplash )
 END_DATADESC()
 
 LINK_ENTITY_TO_CLASS( env_splash, CEnvSplash );
+
+void CEnvSplash::Precache()
+{
+	BaseClass::Precache();
+	PrecacheEffect( "watersplash" );
+}
+
+void CEnvSplash::Spawn()
+{
+	Precache();
+	BaseClass::Spawn();
+}
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -2103,6 +2129,8 @@ LINK_ENTITY_TO_CLASS( env_gunfire, CEnvGunfire );
 void CEnvGunfire::Precache()
 {
 	PrecacheScriptSound( STRING( m_iszShootSound ) );
+	PrecacheEffect( "impact_wallbang_heavy" );
+	PrecacheEffect( "impact_wallbang_light" );
 }
 
 //-----------------------------------------------------------------------------
@@ -2298,23 +2326,14 @@ CEnvQuadraticBeam *CreateQuadraticBeam( const char *pSpriteName, const Vector &s
 	return pBeam;
 }
 
-void EffectsPrecache( void *pUser )
-{
-	CBaseEntity::PrecacheScriptSound( "Underwater.BulletImpact" );
-
-	CBaseEntity::PrecacheScriptSound( "FX_RicochetSound.Ricochet" );
-
-	CBaseEntity::PrecacheScriptSound( "Physics.WaterSplash" );
-	CBaseEntity::PrecacheScriptSound( "BaseExplosionEffect.Sound" );
-	CBaseEntity::PrecacheScriptSound( "Splash.SplashSound" );
-
-	if ( gpGlobals->maxClients > 1 )
-	{
-		CBaseEntity::PrecacheScriptSound( "HudChat.Message" );
-	}
-}
-
-PRECACHE_REGISTER_FN( EffectsPrecache );
+PRECACHE_REGISTER_BEGIN( GLOBAL, EffectsPrecache )
+	PRECACHE( GAMESOUND, "Underwater.BulletImpact" )
+	PRECACHE( GAMESOUND, "FX_RicochetSound.Ricochet" )
+	PRECACHE( GAMESOUND, "Physics.WaterSplash" )
+	PRECACHE( GAMESOUND, "BaseExplosionEffect.Sound" )
+	PRECACHE( GAMESOUND, "Splash.SplashSound" )
+	PRECACHE_CONDITIONAL( GAMESOUND, "HudChat.Message", gpGlobals->maxClients > 1 )
+PRECACHE_REGISTER_END()
 
 
 class CEnvViewPunch : public CPointEntity

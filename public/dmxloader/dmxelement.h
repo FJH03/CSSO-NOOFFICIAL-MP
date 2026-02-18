@@ -45,7 +45,13 @@ struct DmxElementUnpackStructure_t
 	int m_nOffset;
 	int m_nSize;
 	const void *m_pUserData;	// If you want to associate some app-specific data with each field
+
+	int m_nArrayLength;			// For fixed-size arrays, this is a positive value (default is 0). For arrays, m_nSize is the size of an array element and m_pDefaultString is the default element value.
 };
+
+#define UTL_STRING_SIZE	-1
+#define NO_USER_DATA	NULL
+#define NOT_AN_ARRAY 0
 
 #define DECLARE_DMXELEMENT_UNPACK() \
 	template <typename T> friend DmxElementUnpackStructure_t *DmxElementUnpackInit(T *);
@@ -65,16 +71,25 @@ struct DmxElementUnpackStructure_t
 		{ \
 
 #define DMXELEMENT_UNPACK_FLTX4( _attributeName, _defaultString, _varName )	\
-	{ _attributeName, _defaultString, CDmAttributeInfo<float>::AttributeType(), (int)offsetof( DestStructType_t, _varName ), sizeof( fltx4 ), NULL },
+	{ _attributeName, _defaultString, CDmAttributeInfo<float>::AttributeType(), (int)offsetof( DestStructType_t, _varName ), sizeof( fltx4 ), NULL, NOT_AN_ARRAY },
 #define DMXELEMENT_UNPACK_FIELD( _attributeName, _defaultString, _type, _varName )	\
-	{ _attributeName, _defaultString, CDmAttributeInfo<_type>::AttributeType(), (int)offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NULL },
+	{ _attributeName, _defaultString, CDmAttributeInfo<_type>::AttributeType(), (int)offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NULL, NOT_AN_ARRAY },
 #define DMXELEMENT_UNPACK_FIELD_STRING( _attributeName, _defaultString, _varName )	\
-	{ _attributeName, _defaultString, AT_STRING, offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NULL },
+	{ _attributeName, _defaultString, AT_STRING, offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NULL, NOT_AN_ARRAY },
+// Use for UtlString datatype
+#define DMXELEMENT_UNPACK_FIELD_UTLSTRING( _attributeName, _defaultString, _varName )	\
+	{ _attributeName, _defaultString, AT_STRING, offsetof( DestStructType_t, _varName ), UTL_STRING_SIZE, NO_USER_DATA, NOT_AN_ARRAY },
+
+// NOTE: DMXELEMENT_UNPACK_FIELD_ARRAY is for fixed-size arrays, not pointers or CUtlVectors (TODO: doesn't work for strings or bitfields yet!)
+#define DMXELEMENT_UNPACK_FIELD_ARRAY( _attributeName, _defaultString, _type, _varName )	\
+	{ _attributeName, _defaultString, CDmAttributeInfo< CUtlVector< _type > >::AttributeType(), offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName[0]), NO_USER_DATA, ARRAYSIZE( ((DestStructType_t *)0)->_varName ) },
 
 #define DMXELEMENT_UNPACK_FIELD_USERDATA( _attributeName, _defaultString, _type, _varName, _userData )	\
-	{ _attributeName, _defaultString, CDmAttributeInfo<_type>::AttributeType(), (int)offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), _userData },
+	{ _attributeName, _defaultString, CDmAttributeInfo<_type>::AttributeType(), (int)offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), _userData, NOT_AN_ARRAY },
 #define DMXELEMENT_UNPACK_FIELD_STRING_USERDATA( _attributeName, _defaultString, _varName, _userData )	\
-	{ _attributeName, _defaultString, AT_STRING, (int)offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), _userData },
+	{ _attributeName, _defaultString, AT_STRING, offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), _userData, NOT_AN_ARRAY },
+#define DMXELEMENT_UNPACK_FIELD_UTLSTRING_USERDATA( _attributeName, _defaultString, _varName, _userData )	\
+	{ _attributeName, _defaultString, AT_STRING, offsetof( DestStructType_t, _varName ), UTL_STRING_SIZE, _userData, NOT_AN_ARRAY },
 
 #define END_DMXELEMENT_UNPACK( _structName, _varName )			\
 			{ NULL, NULL, AT_UNKNOWN, 0, 0, NULL }				\

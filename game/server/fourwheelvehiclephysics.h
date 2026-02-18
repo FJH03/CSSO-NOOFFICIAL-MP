@@ -38,6 +38,7 @@ public:
 	~CFourWheelVehiclePhysics ();
 
 	// Call Precache + Spawn from the containing entity's Precache + Spawn methods
+	void Precache();
 	void Spawn();
 	void SetOuter( CBaseAnimating *pOuter, CFourWheelServerVehicle *pServerVehicle ); 
 	

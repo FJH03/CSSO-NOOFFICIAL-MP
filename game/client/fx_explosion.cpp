@@ -6,7 +6,6 @@
 //=============================================================================//
 #include "cbase.h"
 #include "fx_explosion.h"
-#include "clienteffectprecachesystem.h"
 #include "fx_sparks.h"
 #include "dlight.h"
 #include "tempentity.h"
@@ -24,17 +23,17 @@
 
 #define	__EXPLOSION_DEBUG	0
 
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectExplosion )
-CLIENTEFFECT_MATERIAL( "effects/fire_cloud1" )
-CLIENTEFFECT_MATERIAL( "effects/fire_cloud2" )
-CLIENTEFFECT_MATERIAL( "effects/fire_embers1" )
-CLIENTEFFECT_MATERIAL( "effects/fire_embers2" )
-CLIENTEFFECT_MATERIAL( "effects/fire_embers3" )
-CLIENTEFFECT_MATERIAL( "particle/particle_smokegrenade" )
-CLIENTEFFECT_MATERIAL( "particle/particle_smokegrenade1" )
-CLIENTEFFECT_MATERIAL( "effects/splash3" )
-CLIENTEFFECT_MATERIAL( "effects/splashwake1" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectExplosion )
+	PRECACHE( MATERIAL, "effects/fire_cloud1" )
+	PRECACHE( MATERIAL, "effects/fire_cloud2" )
+	PRECACHE( MATERIAL, "effects/fire_embers1" )
+	PRECACHE( MATERIAL, "effects/fire_embers2" )
+	PRECACHE( MATERIAL, "effects/fire_embers3" )
+	PRECACHE( MATERIAL, "particle/particle_smokegrenade" )
+	PRECACHE( MATERIAL, "particle/particle_smokegrenade1" )
+	PRECACHE( MATERIAL, "effects/splash3" )
+	PRECACHE( MATERIAL, "effects/splashwake1" )
+PRECACHE_REGISTER_END()
 
 //
 // CExplosionParticle
@@ -801,7 +800,7 @@ void ExplosionCallback( const CEffectData &data )
 	BaseExplosionEffect().Create( data.m_vOrigin, data.m_flMagnitude, data.m_flScale, data.m_fFlags );
 }
 
-DECLARE_CLIENT_EFFECT( "Explosion", ExplosionCallback );
+DECLARE_CLIENT_EFFECT( Explosion, ExplosionCallback );
 
 
 //===============================================================================================================
@@ -1311,7 +1310,7 @@ void WaterSurfaceExplosionCallback( const CEffectData &data )
 	WaterExplosionEffect().Create( data.m_vOrigin, data.m_flMagnitude, data.m_flScale, data.m_fFlags );
 }
 
-DECLARE_CLIENT_EFFECT( "WaterSurfaceExplosion", WaterSurfaceExplosionCallback );
+DECLARE_CLIENT_EFFECT( WaterSurfaceExplosion, WaterSurfaceExplosionCallback );
 
 //Singleton static member definition
 C_MegaBombExplosionEffect	C_MegaBombExplosionEffect::m_megainstance;
@@ -1415,4 +1414,4 @@ void HelicopterMegaBombCallback( const CEffectData &data )
 	C_MegaBombExplosionEffect().Create( data.m_vOrigin, 1.0f, 1.0f, 0 );
 }
 
-DECLARE_CLIENT_EFFECT( "HelicopterMegaBomb", HelicopterMegaBombCallback );
+DECLARE_CLIENT_EFFECT( HelicopterMegaBomb, HelicopterMegaBombCallback );

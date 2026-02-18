@@ -16,7 +16,6 @@
 #include "tier1/KeyValues.h"
 #include "toolframework_client.h"
 #include "view.h"
-#include "clienteffectprecachesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -1124,7 +1123,7 @@ void RPGShotDownCallback( const CEffectData &data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "RPGShotDown", RPGShotDownCallback );
+DECLARE_CLIENT_EFFECT( RPGShotDown, RPGShotDownCallback );
 
 
 
@@ -1728,26 +1727,26 @@ void C_DustTrail::OnDataChanged(DataUpdateType_t updateType)
 
 
 // FIXME: These all have to be moved out of this old system and into the new to leverage art assets!
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectDusttrail )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0001" )
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectDusttrail )
+PRECACHE( MATERIAL, "particle/smokesprites_0001" )
 /*
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0002" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0003" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0004" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0005" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0006" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0007" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0008" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0009" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0010" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0011" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0012" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0013" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0014" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0015" )
-CLIENTEFFECT_MATERIAL( "particle/smokesprites_0016" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0002" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0003" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0004" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0005" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0006" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0007" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0008" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0009" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0010" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0011" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0012" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0013" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0014" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0015" )
+ PRECACHE( MATERIAL, "particle/smokesprites_0016" )
 */
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_END()
 
 
 //-----------------------------------------------------------------------------

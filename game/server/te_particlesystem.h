@@ -26,7 +26,7 @@ public:
 		m_vecOrigin.GetForModify().Init();
 	}
 
-	CNetworkVector( m_vecOrigin );
+	CNetworkVectorXYZ( m_vecOrigin );
 };
 
 

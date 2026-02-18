@@ -403,7 +403,7 @@ int UTIL_PrecacheDecal( const char *name, bool preload )
 	return effects->Draw_DecalIndexFromName( (char*)name );
 }
 
-extern short g_sModelIndexSmoke;
+extern int g_sModelIndexSmoke;
 
 void UTIL_Smoke( const Vector &origin, const float scale, const float framerate )
 {
@@ -1340,4 +1340,12 @@ bool UTIL_HasLoadedAnyMap()
 		return false;
 
 	return g_pFullFileSystem->FileExists( szFilename, "MOD" );
+}
+
+//-----------------------------------------------------------------------------
+// Also in cdll so linked libs can extern it
+//-----------------------------------------------------------------------------
+bool UTIL_IsDedicatedServer( void )
+{
+	return false;
 }

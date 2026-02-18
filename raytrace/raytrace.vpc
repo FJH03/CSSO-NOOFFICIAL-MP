@@ -21,6 +21,6 @@ $Project "Raytrace"
 	{
 		$File	"raytrace.cpp"
 		$File	"trace2.cpp"
-		$File	"trace3.cpp"
+		//$File	"trace3.cpp"
 	}
 }

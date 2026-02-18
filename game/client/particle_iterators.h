@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Client side CTFTeam class
 //
@@ -17,12 +17,7 @@
 
 
 #define NUM_PARTICLES_PER_BATCH 200
-#ifndef _XBOX
 #define MAX_TOTAL_PARTICLES		2048	// Max particles in the world
-#else
-#define MAX_TOTAL_PARTICLES		1024
-#endif
-
 
 //
 // Iterate the particles like this:
@@ -66,6 +61,7 @@ private:
 	CMeshBuilder *m_pMeshBuilder;
 	IMesh *m_pMesh;
 	bool m_bBucketSort;
+	IMaterialSystem *m_pMaterialSystem; // Needed when we have to break particles into multiple batches
 	
 	// Output after rendering.
 	float m_MinZ;
@@ -149,6 +145,13 @@ inline void CParticleRenderIterator::TestFlushBatch()
 	if( m_nParticlesInCurrentBatch >= NUM_PARTICLES_PER_BATCH )
 	{
 		m_pMeshBuilder->End( false, true );
+
+		if(m_pMaterialSystem)
+		{
+			CMatRenderContextPtr pRenderContext( m_pMaterialSystem );
+			m_pMesh = pRenderContext->GetDynamicMesh( true );
+		}
+
 		m_pMeshBuilder->Begin( m_pMesh, MATERIAL_QUADS, NUM_PARTICLES_PER_BATCH * 4 );
 
 		m_nParticlesInCurrentBatch = 0;
@@ -267,4 +270,3 @@ inline float CParticleSimulateIterator::GetTimeDelta() const
 
 
 #endif // PARTICLE_ITERATORS_H
-

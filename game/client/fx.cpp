@@ -12,7 +12,6 @@
 #include "dlight.h"
 #include "iefx.h"
 #include "clientsideeffects.h"
-#include "clienteffectprecachesystem.h"
 #include "glow_overlay.h"
 #include "effect_dispatch_data.h"
 #include "c_te_effect_dispatch.h"
@@ -31,24 +30,24 @@
 
 //Precahce the effects
 #ifndef TF_CLIENT_DLL
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheMuzzleFlash )
-CLIENTEFFECT_MATERIAL( "effects/muzzleflash1" )
-CLIENTEFFECT_MATERIAL( "effects/muzzleflash2" )
-CLIENTEFFECT_MATERIAL( "effects/muzzleflash3" )
-CLIENTEFFECT_MATERIAL( "effects/muzzleflash4" )
-#ifndef CSTRIKE_DLL
-CLIENTEFFECT_MATERIAL( "effects/bluemuzzle" )
-CLIENTEFFECT_MATERIAL( "effects/gunshipmuzzle" )
-CLIENTEFFECT_MATERIAL( "effects/gunshiptracer" )
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheMuzzleFlash )
+PRECACHE( MATERIAL, "effects/muzzleflash1" )
+PRECACHE( MATERIAL, "effects/muzzleflash2" )
+PRECACHE( MATERIAL, "effects/muzzleflash3" )
+PRECACHE( MATERIAL, "effects/muzzleflash4" )
+#if !defined( CSTRIKE_DLL )
+PRECACHE( MATERIAL, "effects/bluemuzzle" )
+PRECACHE( MATERIAL, "effects/gunshipmuzzle" )
+PRECACHE( MATERIAL, "effects/gunshiptracer" )
 #ifndef HL2MP
-CLIENTEFFECT_MATERIAL( "effects/huntertracer" )
+PRECACHE( MATERIAL, "effects/huntertracer" )
 #endif
-CLIENTEFFECT_MATERIAL( "sprites/physcannon_bluelight2" )
-CLIENTEFFECT_MATERIAL( "effects/combinemuzzle1" )
-CLIENTEFFECT_MATERIAL( "effects/combinemuzzle2" )
-CLIENTEFFECT_MATERIAL( "effects/combinemuzzle2_nocull" )
+PRECACHE( MATERIAL, "sprites/physcannon_bluelight2" )
+PRECACHE( MATERIAL, "effects/combinemuzzle1" )
+PRECACHE( MATERIAL, "effects/combinemuzzle2" )
+PRECACHE( MATERIAL, "effects/combinemuzzle2_nocull" )
 #endif
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_END()
 #endif
 
 //Whether or not we should emit a dynamic light
@@ -494,7 +493,7 @@ void MuzzleFlashCallback( const CEffectData &data )
 	tempents->MuzzleFlash( vecOrigin, vecAngles, data.m_fFlags & (~MUZZLEFLASH_FIRSTPERSON), data.m_hEntity, (data.m_fFlags & MUZZLEFLASH_FIRSTPERSON) != 0 );	
 }
 
-DECLARE_CLIENT_EFFECT( "MuzzleFlash", MuzzleFlashCallback );
+DECLARE_CLIENT_EFFECT( MuzzleFlash, MuzzleFlashCallback );
  
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -759,7 +758,7 @@ void SmokeCallback( const CEffectData &data )
 	FX_BuildSmoke( vecOrigin, vecAngles, data.m_hEntity, data.m_nAttachmentIndex, 100.0, color ); 
 }
 
-DECLARE_CLIENT_EFFECT( "Smoke", SmokeCallback );
+DECLARE_CLIENT_EFFECT( Smoke, SmokeCallback );
 
 
 //-----------------------------------------------------------------------------
@@ -798,7 +797,7 @@ void GunshipImpactCallback( const CEffectData & data )
 
 	FX_GunshipImpact( vecPosition, Vector( 0, 0, 1 ), 100, 0, 200 );
 }
-DECLARE_CLIENT_EFFECT( "GunshipImpact", GunshipImpactCallback );
+DECLARE_CLIENT_EFFECT( GunshipImpact, GunshipImpactCallback );
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -816,7 +815,7 @@ void CommandPointerCallback( const CEffectData & data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "CommandPointer", CommandPointerCallback );
+DECLARE_CLIENT_EFFECT( CommandPointer, CommandPointerCallback );
 
 
 //-----------------------------------------------------------------------------
@@ -1289,7 +1288,7 @@ void FX_BuildTeslaHitbox( const CEffectData &data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "TeslaHitboxes", FX_BuildTeslaHitbox );
+DECLARE_CLIENT_EFFECT( TeslaHitboxes, FX_BuildTeslaHitbox );
 
 
 //-----------------------------------------------------------------------------
@@ -1331,5 +1330,5 @@ void FX_BuildTeslaZap( const CEffectData &data )
 	beams->CreateBeamEntPoint( beamInfo );
 }
 
-DECLARE_CLIENT_EFFECT( "TeslaZap", FX_BuildTeslaZap );
+DECLARE_CLIENT_EFFECT( TeslaZap, FX_BuildTeslaZap );
 

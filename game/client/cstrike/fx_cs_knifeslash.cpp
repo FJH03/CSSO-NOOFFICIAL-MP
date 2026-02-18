@@ -69,4 +69,4 @@ void KnifeSlash( const CEffectData &data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "KnifeSlash",		KnifeSlash );
+DECLARE_CLIENT_EFFECT( KnifeSlash,		KnifeSlash );

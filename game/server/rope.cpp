@@ -288,6 +288,10 @@ void CRopeKeyframe::ActivateEndDirectionConstraints( bool bEnable )
 	}
 }
 
+void CRopeKeyframe::PrecacheShakeRopes()
+{
+	PrecacheEffect( "ShakeRopes" );
+}
 
 void CRopeKeyframe::ShakeRopes( const Vector &vCenter, float flRadius, float flMagnitude )
 {

@@ -59,6 +59,7 @@ def build(bld):
 		'tier2',
 		'tier3',
 		'mathlib',
+		'raytrace',
 		'vstdlib',
 		'choreoobjects',
 		'steam_api',

@@ -57,6 +57,8 @@ CTeamplayRules::CTeamplayRules()
 //-----------------------------------------------------------------------------
 void CTeamplayRules::Precache( void )
 {
+	BaseClass::Precache();
+	
 	// Call the Team Manager's precaches
 	for ( int i = 0; i < GetNumberOfTeams(); i++ )
 	{

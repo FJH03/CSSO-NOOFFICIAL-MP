@@ -6,7 +6,6 @@
 //=============================================================================//
 #include "cbase.h"
 #include "iviewrender.h"
-#include "clienteffectprecachesystem.h"
 #include "studio.h"
 #include "bone_setup.h"
 #include "engine/ivmodelinfo.h"
@@ -20,9 +19,9 @@
 #include "tier0/memdbgon.h"
 
 
-CLIENTEFFECT_REGISTER_BEGIN( SmokeStackMaterials )
-	CLIENTEFFECT_MATERIAL( "particle/SmokeStack" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, SmokeStackMaterials )
+	PRECACHE( MATERIAL, "particle/SmokeStack" )
+PRECACHE_REGISTER_END()
 
 
 //-----------------------------------------------------------------------------

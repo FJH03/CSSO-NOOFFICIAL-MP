@@ -34,7 +34,6 @@
 #include "view_shared.h"
 #include "env_wind_shared.h"
 #include "detailobjectsystem.h"
-#include "clienteffectprecachesystem.h"
 #include "soundenvelope.h"
 #include "c_basetempentity.h"
 #include "materialsystem/imaterialsystemstub.h"
@@ -792,8 +791,8 @@ const char *GetMaterialNameFromIndex( int nIndex )
 //-----------------------------------------------------------------------------
 void PrecacheParticleSystem( const char *pParticleSystemName )
 {
-	g_pStringTableParticleEffectNames->AddString( false, pParticleSystemName );
-	g_pParticleSystemMgr->PrecacheParticleSystem( pParticleSystemName );
+	int nIndex = g_pStringTableParticleEffectNames->AddString( false, pParticleSystemName );
+	g_pParticleSystemMgr->PrecacheParticleSystem( nIndex, pParticleSystemName );
 }
 
 
@@ -822,6 +821,15 @@ const char *GetParticleSystemNameFromIndex( int nIndex )
 	if ( nIndex < g_pStringTableParticleEffectNames->GetMaxStrings() )
 		return g_pStringTableParticleEffectNames->GetString( nIndex );
 	return "error";
+}
+
+//-----------------------------------------------------------------------------
+// Precache-related methods for effects
+//-----------------------------------------------------------------------------
+void PrecacheEffect( const char *pEffectName )
+{
+	// Bring in dependent resources
+	g_pPrecacheSystem->Cache( g_pPrecacheHandler, DISPATCH_EFFECT, pEffectName, true );
 }
 
 //-----------------------------------------------------------------------------
@@ -1001,12 +1009,12 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 	
 	// Client Leaf System has to be initialized first, since DetailObjectSystem uses it
 	IGameSystem::Add( GameStringSystem() );
+	IGameSystem::Add( g_pPrecacheRegister );
 	IGameSystem::Add( SoundEmitterSystem() );
 	IGameSystem::Add( ToolFrameworkClientSystem() );
 	IGameSystem::Add( ClientLeafSystem() );
 	IGameSystem::Add( DetailObjectSystem() );
 	IGameSystem::Add( ViewportClientSystem() );
-	IGameSystem::Add( ClientEffectPrecacheSystem() );
 	IGameSystem::Add( g_pClientShadowMgr );
 	IGameSystem::Add( g_pColorCorrectionMgr );	// NOTE: This must happen prior to ClientThinkList (color correction is updated there)
 	IGameSystem::Add( ClientThinkList() );
@@ -1599,9 +1607,6 @@ void CHLClient::LevelInitPreEntity( char const* pMapName )
 
 	vieweffects->LevelInit();
 	
-	//Tony; loadup per-map manifests.
-	ParseParticleEffectsMap( pMapName, true );
-	
 	// Tell mode manager that map is changing
 	modemanager->LevelInit( pMapName );
 	ParticleMgr()->LevelInit();
@@ -1832,6 +1837,15 @@ void OnMaterialStringTableChanged( void *object, INetworkStringTable *stringTabl
 	RequestCacheUsedMaterials();
 }
 
+//-----------------------------------------------------------------------------
+// Called when the string table for dispatch effects changes
+//-----------------------------------------------------------------------------
+void OnEffectStringTableChanged( void *object, INetworkStringTable *stringTable, int stringNumber, const char *newString, void const *newData )
+{
+	// Make sure this puppy is precached
+	g_pPrecacheSystem->Cache( g_pPrecacheHandler, DISPATCH_EFFECT, newString, true );
+	RequestCacheUsedMaterials();
+}
 
 //-----------------------------------------------------------------------------
 // Called when the string table for particle systems changes
@@ -1839,7 +1853,7 @@ void OnMaterialStringTableChanged( void *object, INetworkStringTable *stringTabl
 void OnParticleSystemStringTableChanged( void *object, INetworkStringTable *stringTable, int stringNumber, const char *newString, void const *newData )
 {
 	// Make sure this puppy is precached
-	g_pParticleSystemMgr->PrecacheParticleSystem( newString );
+	g_pParticleSystemMgr->PrecacheParticleSystem( stringNumber, newString );
 	RequestCacheUsedMaterials();
 }
 
@@ -1893,6 +1907,9 @@ void CHLClient::InstallStringTableCallback( const char *tableName )
 	else if ( !Q_strcasecmp( tableName, "EffectDispatch" ) )
 	{
 		g_StringTableEffectDispatch = networkstringtable->FindTable( tableName );
+
+		// When the effect list changes, we need to know immediately
+		g_StringTableEffectDispatch->SetStringChangedCallback( NULL, OnEffectStringTableChanged );
 	}
 	else if ( !Q_strcasecmp( tableName, "InfoPanel" ) )
 	{
@@ -2560,7 +2577,6 @@ void ReloadSoundEntriesInList( IFileList *pFilesToReload );
 //-----------------------------------------------------------------------------
 void CHLClient::ReloadFilesInList( IFileList *pFilesToReload )
 {
-	ReloadParticleEffectsInList( pFilesToReload );
 	ReloadSoundEntriesInList( pFilesToReload );
 }
 

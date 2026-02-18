@@ -239,7 +239,7 @@ void CBotManager::DestroyAllGrenades( void )
 /**
  * Return true if position is inside a smoke cloud
  */
-bool CBotManager::IsInsideSmokeCloud( const Vector *pos )
+bool CBotManager::IsInsideSmokeCloud( const Vector *pos, float radius )
 {
 	int it = m_activeGrenadeList.Head();
 
@@ -262,8 +262,8 @@ bool CBotManager::IsInsideSmokeCloud( const Vector *pos )
 		{
 			const Vector &smokeOrigin = ag->GetDetonationPosition();
 
-			if ((smokeOrigin - *pos).IsLengthLessThan( ag->GetRadius() ))
-				return true;			
+			if ((smokeOrigin - *pos).IsLengthLessThan( ag->GetRadius() + radius ))
+				return true;		
 		}
 	}
 

@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //=============================================================================
 
@@ -27,7 +27,8 @@ void BeginDMXContext( )
 
 	if ( !s_bAllocatorInitialized )
 	{
-		s_DMXAllocator.Init( 2 * 1024 * 1024, 0, 0, 4 );
+		// PiMoN TODO: this must be 2 * 1024 * 1024, revisit after upgrading DMX loader system!
+		s_DMXAllocator.Init( 4 * 1024 * 1024, 0, 0, 4 );
 		s_bAllocatorInitialized = true;
 	}
 
@@ -196,17 +197,17 @@ bool CDmxSerializer::SaveElement( CUtlBuffer& buf, CDmxSerializationDictionary& 
 		buf.PutChar( pAttribute->GetType() );
 		switch( pAttribute->GetType() )
 		{
-		default:
-			pAttribute->Serialize( buf );
-			break;
+			default:
+				pAttribute->Serialize( buf );
+				break;
 
-		case AT_ELEMENT:
-			SerializeElementAttribute( buf, list, pAttribute );
-			break;
+			case AT_ELEMENT:
+				SerializeElementAttribute( buf, list, pAttribute );
+				break;
 
-		case AT_ELEMENT_ARRAY:
-			SerializeElementArrayAttribute( buf, list, pAttribute );
-			break;
+			case AT_ELEMENT_ARRAY:
+				SerializeElementArrayAttribute( buf, list, pAttribute );
+				break;
 		}
 	}
 
@@ -362,17 +363,17 @@ bool CDmxSerializer::UnserializeAttributes( CUtlBuffer &buf, CDmxElement *pEleme
 
 		switch( nAttributeType )
 		{
-		default:
-			pAttribute->Unserialize( nAttributeType, buf );
-			break;
+			default:
+				pAttribute->Unserialize( nAttributeType, buf );
+				break;
 
-		case AT_ELEMENT:
-			UnserializeElementAttribute( buf, pAttribute, elementList );
-			break;
+			case AT_ELEMENT:
+				UnserializeElementAttribute( buf, pAttribute, elementList );
+				break;
 
-		case AT_ELEMENT_ARRAY:
-			UnserializeElementArrayAttribute( buf, pAttribute, elementList );
-			break;
+			case AT_ELEMENT_ARRAY:
+				UnserializeElementArrayAttribute( buf, pAttribute, elementList );
+				break;
 		}
 	}
 
@@ -508,7 +509,7 @@ bool CDmxSerializer::Unserialize( CUtlBuffer &buf, int nEncodingVersion, CDmxEle
 //-----------------------------------------------------------------------------
 bool SerializeDMX( CUtlBuffer &buf, CDmxElement *pRoot, const char *pFileName )
 {
-	// Write the format name into the file using XML format so that 
+	// Write the format name into the file using XML format so that
 	// 3rd-party XML readers can read the file without fail
 	const char *pEncodingName = buf.IsText() ? "keyvalues2" : "binary";
 	int nEncodingVersion = buf.IsText() ? 1 : 2; // HACK - we should have some way of automatically updating this when the encoding version changes!
@@ -566,9 +567,9 @@ bool ReadDMXHeader( CUtlBuffer &buf, char *pEncodingName, int nEncodingNameLen, 
 	bool bOk = buf.ParseToken( DMX_VERSION_STARTING_TOKEN, DMX_VERSION_ENDING_TOKEN, header, sizeof( header ) );
 	if ( bOk )
 	{
-#ifdef _WIN32
+		#ifdef _WIN32
 		int nAssigned = sscanf_s( header, "encoding %s %d format %s %d\n", pEncodingName, nEncodingNameLen, &nEncodingVersion, pFormatName, nFormatNameLen, &nFormatVersion );
-#else
+		#else
 		// sscanf considered harmful. We don't have POSIX 2008 support on OS X and "C11 Annex K" is optional... (optional specs considered useful)
 		char pTmpEncodingName[ sizeof( header ) ] = { 0 };
 		char pTmpFormatName  [ sizeof( header ) ] = { 0 };
@@ -576,7 +577,7 @@ bool ReadDMXHeader( CUtlBuffer &buf, char *pEncodingName, int nEncodingNameLen, 
 		bOk = ( V_strlen( pTmpEncodingName ) < nEncodingNameLen ) && ( V_strlen( pTmpFormatName ) < nFormatNameLen );
 		V_strncpy( pEncodingName, pTmpEncodingName, nEncodingNameLen );
 		V_strncpy( pFormatName, pTmpFormatName, nFormatNameLen );
-#endif
+		#endif
 		bOk = bOk && ( nAssigned == 4 );
 		if ( bOk )
 		{
@@ -631,7 +632,7 @@ bool UnserializeDMX( CUtlBuffer &buf, CDmxElement **ppRoot, const char *pFileNam
 	char pFormatName  [ DMX_MAX_FORMAT_NAME_MAX_LENGTH ];
 	if ( !ReadDMXHeader( buf,
 		pEncodingName, sizeof( pEncodingName ), nEncodingVersion,
-		pFormatName, sizeof( pFormatName ), nFormatVersion ) )
+						 pFormatName, sizeof( pFormatName ), nFormatVersion ) )
 		return false;
 
 	// TODO - retire legacy format version reading

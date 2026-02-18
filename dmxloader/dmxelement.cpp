@@ -340,20 +340,21 @@ void CDmxElement::RemoveAllElementsRecursive()
 //-----------------------------------------------------------------------------
 void CDmxElement::UnpackIntoStructure( void *pData, size_t DestSizeInBytes, const DmxElementUnpackStructure_t *pUnpack ) const
 {
-	void *pDataEnd = ( char * )pData + DestSizeInBytes;
-
 	for ( ; pUnpack->m_AttributeType != AT_UNKNOWN; ++pUnpack )
 	{
 		char *pDest = (char*)pData + pUnpack->m_nOffset;
 
-		// NOTE: This does not work with array data at the moment
 		if ( IsArrayType( pUnpack->m_AttributeType ) )
 		{
-			AssertMsg( 0, ( "CDmxElement::UnpackIntoStructure: Array attribute types not currently supported!\n" ) );
-			continue;
+			// NOTE: This does not work with string/bitfield array data at the moment
+			if ( ( pUnpack->m_AttributeType == AT_STRING_ARRAY ) )
+			{
+				AssertMsg( 0, ( "CDmxElement::UnpackIntoStructure: String and bitfield array attribute types not currently supported!\n" ) );
+				continue;
+			}
 		}
 
-		if ( pUnpack->m_AttributeType == AT_VOID )
+		if ( ( pUnpack->m_AttributeType == AT_VOID ) || ( pUnpack->m_AttributeType == AT_VOID_ARRAY ) )
 		{
 			AssertMsg( 0, ( "CDmxElement::UnpackIntoStructure: Binary blob attribute types not currently supported!\n" ) );
 			continue;
@@ -366,17 +367,11 @@ void CDmxElement::UnpackIntoStructure( void *pData, size_t DestSizeInBytes, cons
 			if ( !pUnpack->m_pDefaultString )
 				continue;
 
-			// Convert the default string into the target
-			int nLen = Q_strlen( pUnpack->m_pDefaultString );
-			if ( nLen > 0 )
+			temp.AllocateDataMemory_AndConstruct( pUnpack->m_AttributeType );
+			if ( !IsArrayType( pUnpack->m_AttributeType ) )
 			{
-				CUtlBuffer buf( pUnpack->m_pDefaultString, nLen, CUtlBuffer::READ_ONLY | CUtlBuffer::TEXT_BUFFER );
-				temp.Unserialize( pUnpack->m_AttributeType, buf );
-			}
-			else
-			{
-				CUtlBuffer buf;
-				temp.Unserialize( pUnpack->m_AttributeType, buf );				
+				// Convert the default string into the target (array types do this inside GetArrayValue below)
+				temp.SetValueFromString( pUnpack->m_pDefaultString );
 			}
 			pAttribute = &temp;
 		}
@@ -389,43 +384,65 @@ void CDmxElement::UnpackIntoStructure( void *pData, size_t DestSizeInBytes, cons
 
 		if ( pAttribute->GetType() == AT_STRING )
 		{
-			if ( pDest + pUnpack->m_nSize > pDataEnd )
+			if ( pUnpack->m_nSize == UTL_STRING_SIZE )  // the string is a UtlString.
 			{
-				Warning( "ERROR Memory corruption: CDmxElement::UnpackIntoStructure string buffer overrun!\n" );
-				continue;
+				*(CUtlString *)pDest = pAttribute->GetValueString();		
 			}
-
-			// Strings get special treatment: they are stored as in-line arrays of chars
-			Q_strncpy( pDest, pAttribute->GetValueString(), pUnpack->m_nSize );
+			else  // the string is a preallocated char array.
+			{
+				// Strings get special treatment: they are stored as in-line arrays of chars
+				Q_strncpy( pDest, pAttribute->GetValueString(), pUnpack->m_nSize );
+			}
 			continue;
 		}
 
-		// special case - if data type is float, but dest size == 16, we are unpacking into simd by
-		// replication
-		if ( ( pAttribute->GetType() == AT_FLOAT ) && ( pUnpack->m_nSize == sizeof( fltx4 ) ) )
-		{
-			if ( pDest + 4 * sizeof( float ) > pDataEnd )
-			{
-				Warning( "ERROR Memory corruption: CDmxElement::UnpackIntoStructure float buffer overrun!\n" );
-				continue;
-			}
+		// Get the basic type, if the attribute is an array:
+		DmAttributeType_t basicType = CDmxAttribute::ArrayAttributeBasicType( pAttribute->GetType() );
 
-			memcpy( pDest + 0 * sizeof( float ) , pAttribute->m_pData, sizeof( float ) );
-			memcpy( pDest + 1 * sizeof( float ) , pAttribute->m_pData, sizeof( float ) );
-			memcpy( pDest + 2 * sizeof( float ) , pAttribute->m_pData, sizeof( float ) );
-			memcpy( pDest + 3 * sizeof( float ) , pAttribute->m_pData, sizeof( float ) );
+		// Special case - if data type is float, but dest size == 16, we are unpacking into simd by replication
+		if ( ( basicType == AT_FLOAT ) && ( pUnpack->m_nSize == sizeof( fltx4 ) ) )
+		{
+			if ( IsArrayType( pUnpack->m_AttributeType ) )
+			{
+				// Copy from the attribute into a fixed-size array:
+				float *pfDest = (float *)pDest;
+				const CUtlVector< float > &floatVector = pAttribute->GetArray< float >();
+				for ( int i = 0; i < pUnpack->m_nArrayLength; i++ )
+				{
+					for ( int j = 0; j < 4; j++ ) memcpy( pfDest++, &floatVector[ i ], sizeof( float ) );
+				}
+			}
+			else
+			{
+				memcpy( pDest + 0 * sizeof( float ), pAttribute->m_pData, sizeof( float ) );
+				memcpy( pDest + 1 * sizeof( float ), pAttribute->m_pData, sizeof( float ) );
+				memcpy( pDest + 2 * sizeof( float ), pAttribute->m_pData, sizeof( float ) );
+				memcpy( pDest + 3 * sizeof( float ), pAttribute->m_pData, sizeof( float ) );
+			}
 		}
 		else
 		{
-			if ( pDest + pUnpack->m_nSize > pDataEnd )
+			int nDataTypeSize = pUnpack->m_nSize;
+			if ( basicType == AT_INT )
 			{
-				Warning( "ERROR Memory corruption: CDmxElement::UnpackIntoStructure memcpy buffer overrun!\n" );
-				continue;
+				AssertMsg( nDataTypeSize <= CDmxAttribute::AttributeDataSize( basicType ), 
+					( "CDmxElement::UnpackIntoStructure: Incorrect size to unpack data into in attribute \"%s\"!\n", pUnpack->m_pAttributeName ) );
+			}
+			else
+			{
+				AssertMsg( nDataTypeSize == CDmxAttribute::AttributeDataSize( basicType ), 
+					( "CDmxElement::UnpackIntoStructure: Incorrect size to unpack data into in attribute \"%s\"!\n", pUnpack->m_pAttributeName ) );
 			}
 
-			AssertMsg( pUnpack->m_nSize == CDmxAttribute::AttributeDataSize( pAttribute->GetType() ), 
-					   "CDmxElement::UnpackIntoStructure: Incorrect size to unpack data into in attribute \"%s\"!\n", pUnpack->m_pAttributeName );
-			memcpy( pDest, pAttribute->m_pData, pUnpack->m_nSize );
+			if ( IsArrayType( pUnpack->m_AttributeType ) )
+			{
+				// Copy from the attribute into a fixed-size array (padding with the default value if need be):
+				pAttribute->GetArrayValue( pUnpack->m_AttributeType, pDest, nDataTypeSize, pUnpack->m_nArrayLength, pUnpack->m_pDefaultString );
+			}
+			else
+			{
+				memcpy( pDest, pAttribute->m_pData, pUnpack->m_nSize );
+			}
 		}
 	}
 }
@@ -468,21 +485,49 @@ void CDmxElement::AddAttributesFromStructure_Internal( const void *pData, size_t
 			CDmxAttribute *pAttribute = AddAttribute( pUnpack->m_pAttributeName );
 			if ( pUnpack->m_AttributeType == AT_STRING )
 			{
-				pAttribute->SetValue( pSrc );
+				if ( pUnpack->m_nSize == UTL_STRING_SIZE )	  // it is a UtlString. 
+				{
+					const char *test = (*(CUtlString *)pSrc).Get();
+					pAttribute->SetValue( test );
+				}
+				else
+				{
+					pAttribute->SetValue( pSrc );
+				}
 			}
 			else
 			{
+				// Get the basic data type, if the attribute is an array:
+				DmAttributeType_t basicType = CDmxAttribute::ArrayAttributeBasicType( pUnpack->m_AttributeType );
 				int nSize = pUnpack->m_nSize;
 
 				// handle float attrs stored as replicated fltx4's
-				if ( ( pUnpack->m_AttributeType == AT_FLOAT ) && ( nSize == sizeof( fltx4 ) ) )
+				if ( ( basicType == AT_FLOAT ) && ( nSize == sizeof( fltx4 ) ) )
 				{
 					nSize = sizeof( float );
 				}
 
-				AssertMsg( nSize == CDmxAttribute::AttributeDataSize( pUnpack->m_AttributeType ), 
-						   "CDmxElement::UnpackIntoStructure: Incorrect size to unpack data into in attribute \"%s\"!\n", pUnpack->m_pAttributeName );
-				pAttribute->SetValue( pUnpack->m_AttributeType, pSrc, nSize );
+				if ( basicType == AT_INT )
+				{
+					AssertMsg( nSize <= CDmxAttribute::AttributeDataSize( basicType ), 
+						( "CDmxElement::UnpackIntoStructure: Incorrect size to unpack data in attribute \"%s\"!\n", pUnpack->m_pAttributeName ) );
+				}
+				else
+				{
+					AssertMsg( nSize == CDmxAttribute::AttributeDataSize( basicType ), 
+							( "CDmxElement::UnpackIntoStructure: Incorrect size to unpack data in attribute \"%s\"!\n", pUnpack->m_pAttributeName ) );
+				}
+
+				if ( IsArrayType( pUnpack->m_AttributeType ) )
+				{
+					// Copy from a fixed-size array into the attribute:
+					int nArrayStride = pUnpack->m_nSize;
+					pAttribute->SetArrayValue( pUnpack->m_AttributeType, pSrc, nSize, pUnpack->m_nArrayLength, nArrayStride );
+				}
+				else
+				{
+					pAttribute->SetValue( pUnpack->m_AttributeType, pSrc, nSize );
+				}
 			}
 		}
 	}

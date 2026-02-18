@@ -218,7 +218,7 @@ public:
 	// Called when game rules are destroyed by CWorld
 	virtual void LevelShutdown( void ) { return; };
 
-	virtual void Precache( void ) { return; };
+	virtual void Precache( void );
 
 	virtual void RefreshSkillData( bool forceUpdate );// fill skill data struct with proper values
 	

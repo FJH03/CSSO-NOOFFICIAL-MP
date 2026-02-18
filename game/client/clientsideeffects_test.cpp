@@ -17,18 +17,17 @@
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "tier0/vprof.h"
 #include "collisionutils.h"
-#include "clienteffectprecachesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
 //FIXME: All these functions will be moved out to FX_Main.CPP or a individual folder
 
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectsTest )
-CLIENTEFFECT_MATERIAL( "effects/spark" )
-CLIENTEFFECT_MATERIAL( "effects/gunshiptracer" )
-CLIENTEFFECT_MATERIAL( "effects/bluespark" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectsTest )
+PRECACHE( MATERIAL, "effects/spark" )
+PRECACHE( MATERIAL, "effects/gunshiptracer" )
+PRECACHE( MATERIAL, "effects/bluespark" )
+PRECACHE_REGISTER_END()
 
 //-----------------------------------------------------------------------------
 // Purpose: 

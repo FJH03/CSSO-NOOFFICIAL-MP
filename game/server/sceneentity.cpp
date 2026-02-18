@@ -4625,6 +4625,41 @@ int GetSceneSpeechCount( char const *pszScene )
 	return 0;
 }
 
+class CScenePrecacheSystem : public CAutoGameSystem
+{
+public:
+	CScenePrecacheSystem() : CAutoGameSystem( "CScenePrecacheSystem" ), m_RepeatCounts( 0, 0, DefLessFunc( int ) )
+	{
+	}
+
+	// Level init, shutdown
+	virtual void LevelShutdownPreEntity()
+	{
+		m_RepeatCounts.Purge();
+	}
+
+	bool ShouldPrecache( char const *pszScene )
+	{
+		int hash = HashStringCaselessConventional( pszScene );
+
+		int slot = m_RepeatCounts.Find( hash );
+		if ( slot != m_RepeatCounts.InvalidIndex() )
+		{
+			m_RepeatCounts[ slot ]++;
+			return false;
+		}
+
+		m_RepeatCounts.Insert( hash, 0 );
+		return true;
+	}
+
+private:
+
+	CUtlMap< int, int > m_RepeatCounts;
+};
+
+static CScenePrecacheSystem g_ScenePrecacheSystem;
+
 //-----------------------------------------------------------------------------
 // Purpose: Used for precaching instanced scenes
 // Input  : *pszScene - 
@@ -4632,6 +4667,9 @@ int GetSceneSpeechCount( char const *pszScene )
 void PrecacheInstancedScene( char const *pszScene )
 {
 	static int nMakingReslists = -1;
+
+	if ( !g_ScenePrecacheSystem.ShouldPrecache( pszScene ) )
+		return;
 	
 	if ( nMakingReslists == -1 )
 	{

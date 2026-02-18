@@ -8,7 +8,6 @@
 #include "particle_prototype.h"
 #include "particle_util.h"
 #include "baseparticleentity.h"
-#include "clienteffectprecachesystem.h"
 #include "fx.h"
 
 // memdbgon must be the last include file in a .cpp file!!!

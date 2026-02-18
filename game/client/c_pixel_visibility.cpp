@@ -10,7 +10,6 @@
 #include "c_pixel_visibility.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
-#include "clienteffectprecachesystem.h"
 #include "view.h"
 #include "viewrender.h"
 #include "utlmultilist.h"
@@ -458,10 +457,10 @@ void CPixelVisibilityQuery::IssueCountingQuery( IMatRenderContext *pRenderContex
 }
 
 //Precache the effects
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheOcclusionProxy )
-CLIENTEFFECT_MATERIAL( "engine/occlusionproxy" )
-CLIENTEFFECT_MATERIAL( "engine/occlusionproxy_countdraw" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheOcclusionProxy )
+PRECACHE( MATERIAL, "engine/occlusionproxy" )
+PRECACHE( MATERIAL, "engine/occlusionproxy_countdraw" )
+PRECACHE_REGISTER_END()
 
 class CPixelVisibilitySystem : public CAutoGameSystem
 {

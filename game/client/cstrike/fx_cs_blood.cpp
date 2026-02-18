@@ -365,4 +365,4 @@ void CSBloodSprayCallback( const CEffectData &data )
 	FX_CS_BloodSpray( data.m_vOrigin, data.m_vNormal, data.m_flMagnitude );
 }
 
-DECLARE_CLIENT_EFFECT( "csblood", CSBloodSprayCallback );
+DECLARE_CLIENT_EFFECT( csblood, CSBloodSprayCallback );

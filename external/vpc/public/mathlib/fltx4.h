@@ -90,6 +90,7 @@ typedef fltx4 bi32x4;
 typedef __m128 fltx4;
 typedef __m128 i32x4;
 typedef __m128 u32x4;
+typedef __m128i shortx8;
 typedef fltx4 bi32x4;
 
 #endif

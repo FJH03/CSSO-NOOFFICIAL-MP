@@ -24,7 +24,7 @@ void ShellEjectCallback( const CEffectData &data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "ShellEject", ShellEjectCallback );
+DECLARE_CLIENT_EFFECT( ShellEject, ShellEjectCallback );
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -39,7 +39,7 @@ void RifleShellEjectCallback( const CEffectData &data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "RifleShellEject", RifleShellEjectCallback );
+DECLARE_CLIENT_EFFECT( RifleShellEject, RifleShellEjectCallback );
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -54,6 +54,6 @@ void ShotgunShellEjectCallback( const CEffectData &data )
 	}
 }
 
-DECLARE_CLIENT_EFFECT( "ShotgunShellEject", ShotgunShellEjectCallback );
+DECLARE_CLIENT_EFFECT( ShotgunShellEject, ShotgunShellEjectCallback );
 
 

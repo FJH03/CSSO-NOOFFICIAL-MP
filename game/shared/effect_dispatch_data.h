@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright � 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -11,7 +11,6 @@
 #pragma once
 #endif
 
-#include "particle_parse.h"
 
 #ifdef CLIENT_DLL
 
@@ -29,13 +28,11 @@
 
 #endif
 
+#define EFFECTDATA_SERVER_IGNOREPREDICTIONCULL 0x4
 // NOTE: These flags are specifically *not* networked; so it's placed above the max effect flag bits
 #define EFFECTDATA_NO_RECORD 0x80000000
 
 #define MAX_EFFECT_FLAG_BITS 8
-
-#define CUSTOM_COLOR_CP1		9
-#define CUSTOM_COLOR_CP2		10
 
 // This is the class that holds whatever data we're sending down to the client to make the effect.
 class CEffectData
@@ -61,15 +58,12 @@ public:
 	int		m_nMaterial;
 	int		m_nDamageType;
 	int		m_nHitBox;
+
+	int		m_nOtherEntIndex;
 	
 	unsigned char	m_nColor;
 
-	// Color customizability
-	bool							m_bCustomColors;
-	te_tf_particle_effects_colors_t	m_CustomColors;
-
-	bool									m_bControlPoint1;
-	te_tf_particle_effects_control_point_t	m_ControlPoint1;
+	bool	m_bPositionsAreRelativeToEntity;
 
 // Don't mess with stuff below here. DispatchEffect handles all of this.
 public:
@@ -82,7 +76,7 @@ public:
 
 		m_fFlags = 0;
 #ifdef CLIENT_DLL
-		m_hEntity = INVALID_EHANDLE_INDEX;
+		m_hEntity = 0;
 #else
 		m_nEntIndex = 0;
 #endif
@@ -99,13 +93,9 @@ public:
 
 		m_nColor = 0;
 
-		m_bCustomColors = false;
-		m_CustomColors.m_vecColor1.Init();
-		m_CustomColors.m_vecColor2.Init();
+		m_nOtherEntIndex = 0;
 
-		m_bControlPoint1 = false;
-		m_ControlPoint1.m_eParticleAttachment = PATTACH_ABSORIGIN;
-		m_ControlPoint1.m_vecOffset.Init();
+		m_bPositionsAreRelativeToEntity = false;
 	}
 
 	int GetEffectNameIndex() { return m_iEffectName; }

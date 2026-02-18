@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //
@@ -135,7 +135,7 @@ protected:
 	void	AddFlames( void );
 	void	SpawnSmoke( void );
 	void	FindClipPlane( void );
-	
+
 //C_BaseEntity
 public:
 
@@ -143,7 +143,7 @@ public:
 	virtual bool	ShouldDraw();
 
 	float GetScale( void ) const { return m_flScaleRegister;	}
-	
+
 //From the server
 public:
 	float	m_flStartScale;
@@ -193,7 +193,7 @@ private:
 class CFireOverlay : public CGlowOverlay
 {
 public:
-	
+
 	//Constructor
 	CFireOverlay( C_FireSmoke *owner )
 	{
@@ -215,7 +215,7 @@ public:
 		result = sin( time * 1000.0f );
 		result += 0.5f * sin( time * 2000.0f );
 		result -= 0.5f * cos( time * 8000.0f );
-		
+
 		return result;
 	}
 
@@ -241,7 +241,7 @@ public:
 
 		m_Sprites[0].m_flHorzSize = ( newScale * 0.2f ) + ( m_Sprites[0].m_flHorzSize * 0.8f );
 		m_Sprites[0].m_flVertSize = m_Sprites[0].m_flHorzSize * 1.5f;
-		
+
 		float	cameraDistance = ( CurrentViewOrigin() - (m_pOwner->GetAbsOrigin())).Length();
 
 		C_BasePlayer *local = C_BasePlayer::GetLocalPlayer();

@@ -7,6 +7,9 @@
 //=============================================================================//
 #include "cbase.h"
 
+// NOTE: This has to be the last file included!
+#include "tier0/memdbgon.h"
+
 PrototypeEffectLink *g_pPrototypeEffects = 0;
 
 PrototypeEffectLink::PrototypeEffectLink(PrototypeEffectCreateFn fn, const char *pName)

@@ -12,6 +12,7 @@
 #include "IEffects.h"
 #include "toolframework_client.h"
 #include "cdll_client_int.h"
+#include "c_te_effect_dispatch.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -118,9 +119,6 @@ void TE_Dust( IRecipientFilter& filter, float delay,
 			 const Vector &pos, const Vector &dir, float size, float speed );
 void TE_GaussExplosion( IRecipientFilter& filter, float delayt,
 			 const Vector &pos, const Vector &dir, int type );
-void TE_DispatchEffect( IRecipientFilter& filter, float delay, 
-			 const Vector &pos, const char *pName, const CEffectData &data );
-void TE_DispatchEffect( IRecipientFilter& filter, float delay, KeyValues *pKeyValues );
 void TE_PhysicsProp( IRecipientFilter& filter, float delay,
 	int modelindex, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, bool breakmodel, int effects );
 void TE_PhysicsProp( IRecipientFilter& filter, float delay, KeyValues *pKeyValues );
@@ -500,14 +498,6 @@ public:
 			TE_GaussExplosion( filter, delay, pos, dir, type );
 		}
 	}
-	virtual void DispatchEffect( IRecipientFilter& filter, float delay,
-				const Vector &pos, const char *pName, const CEffectData &data )
-	{
-		if ( !SuppressTE( filter ) )
-		{
-			TE_DispatchEffect( filter, delay, pos, pName, data );
-		}
-	}
 	virtual void PhysicsProp( IRecipientFilter& filter, float delay, int modelindex, int skin,
 		const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects )
 	{
@@ -549,7 +539,7 @@ public:
 			break;
 
 		case TE_DISPATCH_EFFECT:
-			TE_DispatchEffect( filter, 0.0f, pKeyValues );
+			DispatchEffect( filter, 0.0f, pKeyValues );
 			break;
 
 		case TE_MUZZLE_FLASH:

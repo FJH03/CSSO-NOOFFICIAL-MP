@@ -1,6 +1,6 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //=============================================================================//
 
@@ -13,14 +13,13 @@
 #include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
-// Purpose: DustParticle emitter 
+// Purpose: DustParticle emitter
 //-----------------------------------------------------------------------------
 class CDustParticle : public CSimpleEmitter
 {
 public:
-	
-	CDustParticle( const char *pDebugName ) : CSimpleEmitter( pDebugName ) {}
-	
+	explicit CDustParticle( const char *pDebugName ) : CSimpleEmitter( pDebugName ) {}
+
 	//Create
 	static CDustParticle *Create( const char *pDebugName="dust" )
 	{
@@ -31,21 +30,13 @@ public:
 	virtual	float UpdateRoll( SimpleParticle *pParticle, float timeDelta )
 	{
 		pParticle->m_flRoll += pParticle->m_flRollDelta * timeDelta;
-		
+
 		pParticle->m_flRollDelta += pParticle->m_flRollDelta * ( timeDelta * -8.0f );
 
-#ifdef _XBOX
-		//Cap the minimum roll
-		if ( fabs( pParticle->m_flRollDelta ) < 0.1f )
-		{
-			pParticle->m_flRollDelta = ( pParticle->m_flRollDelta > 0.0f ) ? 0.1f : -0.1f;
-		}
-#else
 		if ( fabs( pParticle->m_flRollDelta ) < 0.5f )
 		{
 			pParticle->m_flRollDelta = ( pParticle->m_flRollDelta > 0.0f ) ? 0.5f : -0.5f;
 		}
-#endif // _XBOX
 
 		return pParticle->m_flRoll;
 	}
@@ -68,20 +59,11 @@ public:
 
 		pParticle->m_vecVelocity = pParticle->m_vecVelocity * decay;
 
-#ifdef _XBOX
-		//Cap the minimum speed
-		if ( pParticle->m_vecVelocity.LengthSqr() < (8.0f*8.0f) )
-		{
-			VectorNormalize( saveVelocity );
-			pParticle->m_vecVelocity = saveVelocity * 8.0f;
-		}
-#else
 		if ( pParticle->m_vecVelocity.LengthSqr() < (32.0f*32.0f) )
 		{
 			VectorNormalize( saveVelocity );
 			pParticle->m_vecVelocity = saveVelocity * 32.0f;
 		}
-#endif // _XBOX
 	}
 
 	//Alpha

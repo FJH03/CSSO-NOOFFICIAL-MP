@@ -19,7 +19,6 @@
 #include "activitylist.h"
 #include "animation.h"
 #include "tier0/vprof.h"
-#include "clienteffectprecachesystem.h"
 #include "IEffects.h"
 #include "engine/ivmodelinfo.h"
 #include "engine/ivdebugoverlay.h"

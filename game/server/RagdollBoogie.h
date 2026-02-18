@@ -32,6 +32,8 @@ public:
 	static void IncrementSuppressionCount( CBaseEntity *pTarget );
 	static void DecrementSuppressionCount( CBaseEntity *pTarget );
 
+	virtual void Precache();
+	
 	void Spawn();
 
 private:

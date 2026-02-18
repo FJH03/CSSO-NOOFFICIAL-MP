@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright � 1996-2006, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: particle system code
 //
@@ -22,10 +22,12 @@ extern int g_nParticle_Multiplier;
 //-----------------------------------------------------------------------------
 struct InstantaneousEmitterContext_t
 {
-	int m_nRemainingParticles;
-	int m_ActualParticlesToEmit;
+	int   m_nRemainingParticles;
+	int   m_StartingParticlesToEmit;
+	bool  m_bComputedActualParticlesToEmit;
 	float m_flTimeOffset;
-	bool m_bReadScaleFactor;
+	float m_flRandomStartTime;
+	bool  m_bOn;
 };
 
 class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
@@ -44,6 +46,14 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 
 	virtual uint64 GetReadControlPointMask() const 
 	{
+		uint64 nMask = 0;
+		if ( m_nScaleControlPoint >= 0 )
+			nMask |= ( 1ULL << m_nScaleControlPoint );
+		return nMask;
+	}
+
+	virtual uint64 GetNonPositionalControlPointMask() const
+	{
 		if ( m_nScaleControlPoint >= 0 )
 			return ( 1ULL << m_nScaleControlPoint );
 		return 0; 
@@ -53,21 +63,18 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 						 void *pContext ) const;
 
 	// unpack structure will be applied by creator. add extra initialization needed here
-	virtual void InitParams( CParticleSystemDefinition *pDef, CDmxElement *pElement )
+	virtual void InitParams( CParticleSystemDefinition *pDef )
 	{
-		if ( m_nMinParticlesToEmit >= 0 )
+		if ( ( m_nMinParticlesToEmit >= 0 ) && ( m_nMinParticlesToEmit > m_nParticlesToEmit ) )
 		{
-			if ( m_nMinParticlesToEmit > m_nParticlesToEmit )
-			{
-				V_swap( m_nParticlesToEmit, m_nMinParticlesToEmit );
-			}
+			V_swap( m_nParticlesToEmit, m_nMinParticlesToEmit );
 		}
-
-		if ( m_nPerFrameNum < 0 )
+		if ( m_nMaxEmittedPerFrame < 0 )
 		{
-			m_nPerFrameNum = INT_MAX;
+			m_nMaxEmittedPerFrame = MIN( pDef->m_nMaxParticles, MAX_PARTICLES_IN_A_SYSTEM );
 		}
 		m_nScaleControlPointField = clamp( m_nScaleControlPointField, 0, 2 );
+		m_nScaleControlPoint      = clamp( m_nScaleControlPoint,    -1, MAX_PARTICLE_CONTROL_POINTS );
 	}
 
 	virtual void StopEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
@@ -75,16 +82,19 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 		InstantaneousEmitterContext_t *pCtx = reinterpret_cast<InstantaneousEmitterContext_t *>( pContext );
 		if ( !bInfiniteOnly )
 		{
-			pCtx->m_nRemainingParticles = 0;
+			pCtx->m_bOn = false;
 		}
 	}
+
 	virtual void StartEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
 	{
 		InstantaneousEmitterContext_t *pCtx = reinterpret_cast<InstantaneousEmitterContext_t *>( pContext );
 		if ( !bInfiniteOnly )
 		{
-			pCtx->m_nRemainingParticles = pCtx->m_ActualParticlesToEmit;
+			// Recompute the number of particles to emit (control points may have changed) - this will reset the remaining particle count:
+			UpdateActualParticlesToEmit( pParticles, pCtx, true );
 			SkipToTime( pParticles->m_flCurTime, pParticles, pCtx );
+			pCtx->m_bOn = true;
 		}
 	}
 
@@ -99,32 +109,47 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 		float flStartTime = m_flStartTime + pCtx->m_flTimeOffset;
 		if ( flTime > ( flStartTime + 2.0f ) )
 		{
-			pCtx->m_nRemainingParticles = 0;
+			pCtx->m_bOn = false;
 		}
 	}
 
 	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		InstantaneousEmitterContext_t *pCtx = reinterpret_cast<InstantaneousEmitterContext_t *>( pContext );
+		// Compute the desired number of particles to emit
 		if ( m_nMinParticlesToEmit >= 0 )
 		{
-			pCtx->m_ActualParticlesToEmit = pParticles->RandomInt( m_nMinParticlesToEmit, m_nParticlesToEmit );
+			pCtx->m_StartingParticlesToEmit = pParticles->RandomInt( m_nMinParticlesToEmit, m_nParticlesToEmit );
 		}
 		else
 		{
-			pCtx->m_ActualParticlesToEmit = m_nParticlesToEmit;
+			pCtx->m_StartingParticlesToEmit = m_nParticlesToEmit;
 		}
-		pCtx->m_nRemainingParticles = pCtx->m_ActualParticlesToEmit;
+		// Start with that many particles 'remaining to emit'
+		pCtx->m_nRemainingParticles = pCtx->m_StartingParticlesToEmit;
+		// Later, when we can access control points, we may modify the number of particles to emit
+		pCtx->m_bComputedActualParticlesToEmit = false;
 		pCtx->m_flTimeOffset = 0.0f;
-		pCtx->m_bReadScaleFactor = false;
+		pCtx->m_bOn = true;
+
+		if ( m_flStartTimeMax > 0 )
+			pCtx->m_flRandomStartTime = pParticles->RandomFloat( m_flStartTime, m_flStartTimeMax );
+		else
+			pCtx->m_flRandomStartTime = m_flStartTime;
+
 	}
 
 	virtual void Restart( CParticleCollection *pParticles, void *pContext )
 	{
 		InstantaneousEmitterContext_t *pCtx = reinterpret_cast<InstantaneousEmitterContext_t *>( pContext );
-		pCtx->m_nRemainingParticles = pCtx->m_ActualParticlesToEmit;
+		// Recompute the number of particles to emit (control points may have changed) - this will reset the remaining particle count:
+		UpdateActualParticlesToEmit( pParticles, pCtx, true );
 		pCtx->m_flTimeOffset = pParticles->m_flCurTime;
-		pCtx->m_bReadScaleFactor = false;
+		pCtx->m_bOn = true;
+		if ( m_flStartTimeMax > 0 )
+			pCtx->m_flRandomStartTime = pParticles->RandomFloat( m_flStartTime, m_flStartTimeMax );
+		else
+			pCtx->m_flRandomStartTime = m_flStartTime;
 	}
 
 	size_t GetRequiredContextBytes( void ) const
@@ -132,16 +157,42 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 		return sizeof( InstantaneousEmitterContext_t );
 	}
 
-	virtual bool MayCreateMoreParticles( CParticleCollection *pParticles, void *pContext ) const
+	virtual bool MayCreateMoreParticles( CParticleCollection const *pParticles, void *pContext ) const
 	{
 		InstantaneousEmitterContext_t *pCtx = reinterpret_cast<InstantaneousEmitterContext_t *>( pContext );
-		return !(pCtx->m_nRemainingParticles <= 0);
+		return ( pCtx->m_bOn && (pCtx->m_nRemainingParticles > 0) );
+	}
+
+	void UpdateActualParticlesToEmit( CParticleCollection *pParticles, InstantaneousEmitterContext_t *pCtx, bool bForceUpdate = false ) const
+	{
+		if ( !bForceUpdate && pCtx->m_bComputedActualParticlesToEmit )
+			return; // Already initted
+
+		int nActualParticlesToEmit = pCtx->m_StartingParticlesToEmit;
+		if ( m_nScaleControlPoint >= 0 )
+		{
+			Vector vecScale;
+			float flStartTime = m_flStartTime + pCtx->m_flTimeOffset;
+			if ( ( flStartTime <= pParticles->m_flCurTime ) && ( flStartTime >= pParticles->m_flCurTime - pParticles->m_flPreviousDt ) )
+			{
+				pParticles->GetControlPointAtTime( m_nScaleControlPoint, flStartTime, &vecScale );
+			}
+			else
+			{
+				pParticles->GetControlPointAtPrevTime( m_nScaleControlPoint, &vecScale );
+			}
+
+			nActualParticlesToEmit = pCtx->m_StartingParticlesToEmit * vecScale[m_nScaleControlPointField];
+		}
+		pCtx->m_nRemainingParticles = MAX( 0, nActualParticlesToEmit );
+		pCtx->m_bComputedActualParticlesToEmit = true;
 	}
 
 	int m_nParticlesToEmit;
 	int m_nMinParticlesToEmit;
 	float m_flStartTime;
-	int m_nPerFrameNum;
+	float m_flStartTimeMax;
+	int m_nMaxEmittedPerFrame;
 	int m_nScaleControlPoint;
 	int m_nScaleControlPointField;
 };
@@ -150,9 +201,10 @@ DEFINE_PARTICLE_OPERATOR( C_OP_InstantaneousEmitter, "emit_instantaneously", OPE
 
 BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_InstantaneousEmitter ) 
 	DMXELEMENT_UNPACK_FIELD( "emission_start_time", "0", float, m_flStartTime )
+	DMXELEMENT_UNPACK_FIELD( "emission_start_time max", "-1", float, m_flStartTimeMax )
 	DMXELEMENT_UNPACK_FIELD( "num_to_emit_minimum", "-1", int, m_nMinParticlesToEmit )
 	DMXELEMENT_UNPACK_FIELD( "num_to_emit", "100", int, m_nParticlesToEmit )
-	DMXELEMENT_UNPACK_FIELD( "maximum emission per frame", "-1", int, m_nPerFrameNum )
+	DMXELEMENT_UNPACK_FIELD( "maximum emission per frame", "-1", int, m_nMaxEmittedPerFrame )
 	DMXELEMENT_UNPACK_FIELD( "emission count scale control point", "-1", int, m_nScaleControlPoint )
 	DMXELEMENT_UNPACK_FIELD( "emission count scale control point field", "0", int, m_nScaleControlPointField )
 END_PARTICLE_OPERATOR_UNPACK( C_OP_InstantaneousEmitter )
@@ -161,57 +213,36 @@ END_PARTICLE_OPERATOR_UNPACK( C_OP_InstantaneousEmitter )
 uint32 C_OP_InstantaneousEmitter::Emit( CParticleCollection *pParticles, float flCurStrength, 
 										void *pContext ) const
 {
-	// Don't emit any more if the particle system has emitted all it's supposed to.
 	InstantaneousEmitterContext_t *pCtx = reinterpret_cast<InstantaneousEmitterContext_t *>( pContext );
-	if ( pCtx->m_nRemainingParticles <= 0 )
+
+	if ( !pCtx->m_bOn )
 		return 0;
 
 	// Wait until we're told to start emitting
-	float flStartTime = m_flStartTime + pCtx->m_flTimeOffset;
+	float flStartTime = pCtx->m_flRandomStartTime + pCtx->m_flTimeOffset;
 	if ( pParticles->m_flCurTime < flStartTime )
 		return 0;
 
-	if ( pCtx->m_ActualParticlesToEmit == 0 )
+	// Update how many particles we're supposed to be emitting
+	UpdateActualParticlesToEmit( pParticles, pCtx );
+
+	// Don't emit any more if the particle system has emitted all it's supposed to.
+	if ( pCtx->m_nRemainingParticles <= 0 )
 		return 0;
 
-	if ( ( m_nScaleControlPoint >= 0 ) && !pCtx->m_bReadScaleFactor )
-	{
-		Vector vecScale;
-		if ( flStartTime <= pParticles->m_flCurTime && flStartTime >= pParticles->m_flCurTime - pParticles->m_flPreviousDt )
-		{
-			pParticles->GetControlPointAtTime( m_nScaleControlPoint, flStartTime, &vecScale );
-		}
-		else
-		{
-			pParticles->GetControlPointAtPrevTime( m_nScaleControlPoint, &vecScale );
-		}
-
-		pCtx->m_ActualParticlesToEmit *= vecScale[m_nScaleControlPointField];
-		pCtx->m_nRemainingParticles *= vecScale[m_nScaleControlPointField];
-		pCtx->m_bReadScaleFactor = true;
-	}
-
-	pCtx->m_nRemainingParticles = max( pCtx->m_nRemainingParticles, 0 );
-
-	// NOTE: Applying the scale here because I don't believe we can sample the control point
-	// values inside 
-	// We're only allowed to emit so many particles, though..
-	// If we run out of room, only emit the last N particles
-	int nAllowedParticlesToEmit = pParticles->m_nMaxAllowedParticles - pParticles->m_nActiveParticles;
-	// Cap to the maximum emission per frame
-	int nParticlesThisFrame = min( m_nPerFrameNum, pCtx->m_nRemainingParticles );
-	nAllowedParticlesToEmit = min( nAllowedParticlesToEmit, nParticlesThisFrame );
-	int nActualParticlesToEmit = min( nAllowedParticlesToEmit, pCtx->m_ActualParticlesToEmit * g_nParticle_Multiplier );
+	// Tick down remaining particles, capped to the maximum emission per frame
+	int nParticlesThisFrame = MIN( m_nMaxEmittedPerFrame, pCtx->m_nRemainingParticles );
 	pCtx->m_nRemainingParticles -= nParticlesThisFrame;
-	Assert( pCtx->m_nRemainingParticles >= 0 );
 
+	// We're only allowed to own so many particles, though... if we run out of room, only emit the last N particles
+	int nAllowedParticlesToEmit = pParticles->m_nMaxAllowedParticles - pParticles->m_nActiveParticles;
+	int nActualParticlesToEmit  = MIN( nAllowedParticlesToEmit, nParticlesThisFrame );
 	if ( nActualParticlesToEmit == 0 )
 		return 0;
-	
-	int nStartParticle = pParticles->m_nActiveParticles;
-	pParticles->SetNActiveParticles( nActualParticlesToEmit + pParticles->m_nActiveParticles );
 
 	// !! speed!! do sse init here
+	int nStartParticle = pParticles->m_nActiveParticles;
+	pParticles->SetNActiveParticles( nActualParticlesToEmit + pParticles->m_nActiveParticles );
 	for( int i = nStartParticle; i < nStartParticle + nActualParticlesToEmit; i++ )
 	{
 		float *pTimeStamp = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_CREATION_TIME, i );
@@ -231,7 +262,7 @@ struct ContinuousEmitterContext_t
 	int		m_nTotalEmittedSoFar;
 	float	m_flNextEmitTime;
 	float	m_flTimeOffset;
-	bool	m_bStoppedEmission;
+	bool	m_bOn;
 };
 	  
 bool g_bDontMakeSkipToTimeTakeForever = false;
@@ -251,7 +282,21 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		return 0;
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef, CDmxElement *pElement )
+	virtual uint64 GetReadControlPointMask() const 
+	{
+		if ( m_nScaleControlPoint >= 0 )
+			return ( 1ULL << m_nScaleControlPoint );
+		return 0; 
+	}
+
+	virtual uint64 GetNonPositionalControlPointMask() const
+	{
+		if ( m_nScaleControlPoint >= 0 )
+			return ( 1ULL << m_nScaleControlPoint );
+		return 0; 
+	}
+
+	virtual void InitParams( CParticleSystemDefinition *pDef )
 	{
 		if ( m_flEmitRate < 0.0f )
 		{
@@ -277,7 +322,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		ContinuousEmitterContext_t *pCtx = reinterpret_cast<ContinuousEmitterContext_t *>( pContext );
 		if ( !bInfiniteOnly || IsInfinitelyEmitting() )
 		{
-			pCtx->m_bStoppedEmission = true;
+			pCtx->m_bOn = false;
 		}
 	}
 	virtual void StartEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
@@ -285,7 +330,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		ContinuousEmitterContext_t *pCtx = reinterpret_cast<ContinuousEmitterContext_t *>( pContext );
 		if ( !bInfiniteOnly || IsInfinitelyEmitting() )
 		{
-			pCtx->m_bStoppedEmission = false;
+			pCtx->m_bOn = true;
 			SkipToTime( pParticles->m_flCurTime, pParticles, pCtx );
 		}
 	}
@@ -297,7 +342,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		pCtx->m_flTotalActualParticlesSoFar = 0.0f;
 		pCtx->m_nTotalEmittedSoFar = 0;
 		pCtx->m_flTimeOffset = 0.0f;
-		pCtx->m_bStoppedEmission = false;
+		pCtx->m_bOn = true;
 	}
 
 	virtual void Restart( CParticleCollection *pParticles, void *pContext )
@@ -322,14 +367,27 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		if ( flTime <= flStartTime )
 			return;
 	
+		if ( m_bInitFromKilledParentParticles ) // Only emit when parent particles die
+			return;
+	
 		float flControlPointScale = pParticles->GetHighestControlPoint();
 		flControlPointScale *= m_flEmissionScale;
+
 		float flEmissionRate = m_flEmitRate;
 	
 		float flEmitStrength;
 		if ( pParticles->CheckIfOperatorShouldRun( this, &flEmitStrength ) )
 		{
 			flEmissionRate *= flEmitStrength;
+		}
+
+		if ( ( m_nScaleControlPoint >= 0 ) )
+		{
+			Vector vecScale;
+			pParticles->GetControlPointAtTime( m_nScaleControlPoint, pParticles->m_flCurTime, &vecScale );
+			float flScale = vecScale[m_nScaleControlPointField];
+			Assert( flScale >= 0.0f );
+			flEmissionRate *= MAX( 0.0f, flScale );
 		}
 
 		if ( flControlPointScale != 0.0f )
@@ -352,7 +410,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 			//}
 		}
 		float flDeltaTime = flCurrDrawTime - flPrevDrawTime;
-		flDeltaTime = min( flDeltaTime, 4.f );
+		flDeltaTime = fpmin (flDeltaTime, 4.0f);
 		flPrevDrawTime = flCurrDrawTime - flDeltaTime;
 		//disabled for now
 		pCtx->m_flTotalActualParticlesSoFar = flDeltaTime * flEmissionRate;
@@ -380,19 +438,20 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		for( int i = nStartParticle; i < nStartParticle + nActualParticlesToEmit; i++ )
 		{
 			float *pTimeStamp = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_CREATION_TIME, i );
-			flTimeStep = min( flTimeStep, flCurrDrawTime );
+			flTimeStep = MIN( flTimeStep, flCurrDrawTime );
 			*pTimeStamp = flTimeStep;
 			flTimeStep += flTimeStampStep;
 		}
 
 		if ( !g_bDontMakeSkipToTimeTakeForever )
 		{
-			flPrevDrawTime = max( flPrevDrawTime, flCurrDrawTime - pParticles->m_pDef->m_flNoDrawTimeToGoToSleep );
+			flPrevDrawTime = MAX( flPrevDrawTime, flCurrDrawTime - pParticles->m_pDef->m_flNoDrawTimeToGoToSleep );
 			pParticles->m_flCurTime = flPrevDrawTime;
 			pParticles->m_fl4CurTime = ReplicateX4( flPrevDrawTime );
+			pParticles->m_flTargetDrawTime = flPrevDrawTime;
 			for( float i = flPrevDrawTime; i < flCurrDrawTime; i += 0.1 )
 			{
-				pParticles->Simulate( .1, false );
+				pParticles->Simulate( .1 );
 			}
 		}
 	}
@@ -402,10 +461,13 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		return sizeof( ContinuousEmitterContext_t );
 	}
 
-	virtual bool MayCreateMoreParticles( CParticleCollection *pParticles, void *pContext ) const
+	virtual bool MayCreateMoreParticles( CParticleCollection const *pParticles, void *pContext ) const
 	{
 		ContinuousEmitterContext_t *pCtx = reinterpret_cast<ContinuousEmitterContext_t *>( pContext );
-		if ( pCtx->m_bStoppedEmission )
+		if ( !pCtx->m_bOn )
+			return false;
+
+		if ( m_bInitFromKilledParentParticles ) // We only emit when parent particles die, so defer to what the parent returns from MayCreateMoreParticles
 			return false;
 
 		if ( m_flEmitRate <= 0.0f )
@@ -418,12 +480,23 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		return true;
 	}
 
+	virtual bool ShouldRun( bool bApplyingParentKillList ) const
+	{
+		if ( m_bInitFromKilledParentParticles )
+			return bApplyingParentKillList;
+		else
+			return !bApplyingParentKillList;
+	}
+
 	float m_flEmissionDuration;
 	float m_flStartTime;
 	float m_flEmitRate;
 	float m_flTimePerEmission;
 	float m_flEmissionScale;
+	int	  m_nScaleControlPoint;
+	int   m_nScaleControlPointField;
 	bool  m_bScalePerParticle;
+	bool  m_bInitFromKilledParentParticles;
 };
 
 DEFINE_PARTICLE_OPERATOR( C_OP_ContinuousEmitter, "emit_continuously", OPERATOR_GENERIC );
@@ -434,70 +507,95 @@ BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_ContinuousEmitter )
 	DMXELEMENT_UNPACK_FIELD( "emission_duration", "0", float, m_flEmissionDuration )
 	DMXELEMENT_UNPACK_FIELD( "scale emission to used control points", "0.0", float, m_flEmissionScale )
 	DMXELEMENT_UNPACK_FIELD( "use parent particles for emission scaling", "0", bool, m_bScalePerParticle )
+	DMXELEMENT_UNPACK_FIELD( "emission count scale control point", "-1", int, m_nScaleControlPoint )
+	DMXELEMENT_UNPACK_FIELD( "emission count scale control point field", "0", int, m_nScaleControlPointField )
+	DMXELEMENT_UNPACK_FIELD( "emit particles for killed parent particles", "0", bool, m_bInitFromKilledParentParticles )
 END_PARTICLE_OPERATOR_UNPACK( C_OP_ContinuousEmitter )
 
 uint32 C_OP_ContinuousEmitter::Emit( CParticleCollection *pParticles, float flCurStrength,
 									 void *pContext ) const
 {
-	// Have we emitted all the particles we're going to emit?
-	// NOTE: Using C_OP_ContinuousEmitter:: avoids a virtual function call
 	ContinuousEmitterContext_t *pCtx = reinterpret_cast<ContinuousEmitterContext_t *>( pContext );
-
-	//Allows for dynamic scaling via changes in number of control points.
-	float flControlPointScale = pParticles->GetHighestControlPoint();
-	//The emission scale here allows for a scalar value per controlpoint, like 2 or .25...
-	flControlPointScale *= m_flEmissionScale;
-	//Global strength scale brought in by operator fade in/fade out/oscillate 
-	float flEmissionRate = m_flEmitRate * flCurStrength;
-	if ( flControlPointScale != 0.0f || m_bScalePerParticle )
-	{
-		if ( m_bScalePerParticle )
-		{ 
-			if ( pParticles->m_pParent )
-			{
-				flControlPointScale = pParticles->m_pParent->m_nActiveParticles * m_flEmissionScale;
-			}
-			else
-			{
-				flControlPointScale = m_flEmissionScale;
-			}
-
-		}
-		flEmissionRate *= flControlPointScale;
-	}
-
-	if ( flEmissionRate == 0.0f )
-		return 0;
-
-	if ( !C_OP_ContinuousEmitter::MayCreateMoreParticles( pParticles, pContext ) )
-		return 0;
 
 	float flStartTime = m_flStartTime + pCtx->m_flTimeOffset;
 	if ( pParticles->m_flCurTime < flStartTime )
 		return 0;
 
-	Assert( flEmissionRate != 0.0f );
-
-	// determine our previous and current draw times and clamp them to start time and emission duration
-	float flPrevDrawTime = pParticles->m_flCurTime - pParticles->m_flDt;
-	float flCurrDrawTime = pParticles->m_flCurTime;
-
-	if ( !IsInfinitelyEmitting() )
+	float flActualParticlesToEmit, flDeltaTime, flPrevDrawTime, flCurrDrawTime;
+	if ( m_bInitFromKilledParentParticles )
 	{
-		if ( flPrevDrawTime < flStartTime )
+		// Emit one particle for each parent particle that was killed
+		// TODO; support scaling the number of particles emitted (requires communicating this to initializers
+		//       though, somehow, since they'll want to read data from the killed particles)
+		int nNumParticlesToKill;
+		GetParentKillList( pParticles, nNumParticlesToKill );
+		flActualParticlesToEmit = nNumParticlesToKill;
+		Assert( flActualParticlesToEmit > 0 );
+
+		// Just emit all particles at once since this time isn't advancing here (TODO: is there a better way?)
+		flCurrDrawTime = pParticles->m_flCurTime;
+		if ( !IsInfinitelyEmitting() )
+			flCurrDrawTime = clamp( flCurrDrawTime, flStartTime, ( flStartTime + m_flEmissionDuration ) );
+		flPrevDrawTime = flCurrDrawTime;
+		flDeltaTime = 0;
+	}
+	else
+	{
+		//Allows for dynamic scaling via changes in number of control points.
+		float flControlPointScale = pParticles->GetHighestControlPoint();
+		//The emission scale here allows for a scalar value per controlpoint, like 2 or .25...
+		flControlPointScale *= m_flEmissionScale;
+
+		//Global strength scale brought in by operator fade in/fade out/oscillate 
+		float flEmissionRate = m_flEmitRate * flCurStrength;
+
+		if ( ( m_nScaleControlPoint >= 0 ) )
 		{
-			flPrevDrawTime = flStartTime;
+			Vector vecScale;
+			pParticles->GetControlPointAtTime( m_nScaleControlPoint, pParticles->m_flCurTime, &vecScale );
+			Assert( vecScale[m_nScaleControlPointField] >= 0.0f );
+			flEmissionRate *= MAX( 0.0f, vecScale[m_nScaleControlPointField] );
 		}
-		if ( flCurrDrawTime > flStartTime + m_flEmissionDuration )
+
+		if ( flControlPointScale != 0.0f || m_bScalePerParticle )
 		{
-			flCurrDrawTime = flStartTime + m_flEmissionDuration;
+			if ( m_bScalePerParticle )
+			{ 
+				if ( pParticles->m_pParent )
+				{
+					flControlPointScale = pParticles->m_pParent->m_nActiveParticles * m_flEmissionScale;
+				}
+				else
+				{
+					flControlPointScale = m_flEmissionScale;
+				}
+
+			}
+			flEmissionRate *= flControlPointScale;
 		}
+
+		if ( flEmissionRate == 0.0f )
+			return 0;
+
+			// Have we emitted all the particles we're going to emit?
+			// NOTE: Using C_OP_ContinuousEmitter:: avoids a virtual function call
+		if ( !C_OP_ContinuousEmitter::MayCreateMoreParticles( pParticles, pContext ) )
+			return 0;
+
+		// determine our previous and current draw times and clamp them to start time and emission duration
+			flPrevDrawTime = pParticles->m_flCurTime - pParticles->m_flDt;
+			flCurrDrawTime = pParticles->m_flCurTime;
+		if ( !IsInfinitelyEmitting() )
+		{
+				flPrevDrawTime = MAX( flPrevDrawTime, flStartTime );
+			flCurrDrawTime = MIN( flCurrDrawTime, ( flStartTime + m_flEmissionDuration ) );
+		}
+		flDeltaTime = flCurrDrawTime - flPrevDrawTime;
+
+		//Calculate emission rate by delta time from last frame to determine number of particles to emit this frame as a fractional float
+		flActualParticlesToEmit = flEmissionRate  * flDeltaTime;
 	}
 	
-	float flDeltaTime = flCurrDrawTime - flPrevDrawTime;
-
-	//Calculate emission rate by delta time from last frame to determine number of particles to emit this frame as a fractional float
-	float flActualParticlesToEmit = flEmissionRate  * flDeltaTime;
 
 	//Add emitted particle to float counter to allow for fractional emission
 	pCtx->m_flTotalActualParticlesSoFar += flActualParticlesToEmit;
@@ -528,17 +626,17 @@ uint32 C_OP_ContinuousEmitter::Emit( CParticleCollection *pParticles, float flCu
 	pParticles->SetNActiveParticles( nActualParticlesToEmit + pParticles->m_nActiveParticles );
 
 
-	float flTimeStampStep = ( flDeltaTime ) / ( nActualParticlesToEmit );
-	float flTimeStep = flPrevDrawTime + flTimeStampStep;
+	float flEmitTimeStep = flDeltaTime / nActualParticlesToEmit;
+	float flEmitTime = flPrevDrawTime + flEmitTimeStep;
 	
 	// Set the particle creation time to the exact sub-frame particle emission time
 	// !! speed!! do sse init here
 	for( int i = nStartParticle; i < nStartParticle + nActualParticlesToEmit; i++ )
 	{
 		float *pTimeStamp = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_CREATION_TIME, i );
-		flTimeStep = min( flTimeStep, flCurrDrawTime );
-		*pTimeStamp = flTimeStep;
-		flTimeStep += flTimeStampStep;
+		flEmitTime = MIN( flEmitTime, flCurrDrawTime );
+		*pTimeStamp = flEmitTime;
+		flEmitTime += flEmitTimeStep;
 	}
 
 	return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
@@ -554,7 +652,7 @@ struct NoiseEmitterContext_t
 	int		m_nTotalEmittedSoFar;
 	float	m_flNextEmitTime;
 	float	m_flTimeOffset;
-	bool	m_bStoppedEmission;
+	bool	m_bOn;
 };
 
 class C_OP_NoiseEmitter : public CParticleOperatorInstance
@@ -571,17 +669,12 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 		return 0;
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef, CDmxElement *pElement )
+	virtual void InitParams( CParticleSystemDefinition *pDef )
 	{
-		if ( m_flEmitRate < 0.0f )
-		{
-			m_flEmitRate = 0.0f;
-		}
 		if ( m_flEmissionDuration < 0.0f )
 		{
 			m_flEmissionDuration = 0.0f;
 		}
-		m_flEmitRate *= g_nParticle_Multiplier;
 	}
 
 	virtual uint32 Emit( CParticleCollection *pParticles, float flCurStrength,
@@ -597,7 +690,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 		NoiseEmitterContext_t *pCtx = reinterpret_cast<NoiseEmitterContext_t *>( pContext );
 		if ( !bInfiniteOnly || IsInfinitelyEmitting() )
 		{
-			pCtx->m_bStoppedEmission = true;
+			pCtx->m_bOn = false;
 		}
 	}
 	virtual void StartEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
@@ -605,7 +698,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 		NoiseEmitterContext_t *pCtx = reinterpret_cast<NoiseEmitterContext_t *>( pContext );
 		if ( !bInfiniteOnly || IsInfinitelyEmitting() )
 		{
-			pCtx->m_bStoppedEmission = false;
+			pCtx->m_bOn = true;
 			SkipToTime( pParticles->m_flCurTime, pParticles, pCtx );
 		}
 	}
@@ -617,7 +710,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 		pCtx->m_flTotalActualParticlesSoFar = 1.0f;
 		pCtx->m_nTotalEmittedSoFar = 0;
 		pCtx->m_flTimeOffset = 0.0f;
-		pCtx->m_bStoppedEmission = false;
+		pCtx->m_bOn = true;
 	}
 
 	virtual void Restart( CParticleCollection *pParticles, void *pContext )
@@ -642,7 +735,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 
 		float flControlPointScale = pParticles->GetHighestControlPoint();
 		flControlPointScale *= m_flEmissionScale;
-		float flEmissionRate = m_flEmitRate;
+		float flEmissionRate = 1.0f;
 
 		float flEmitStrength;
 		if ( pParticles->CheckIfOperatorShouldRun( this, &flEmitStrength ) )
@@ -654,7 +747,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 		{
 			flEmissionRate *= flControlPointScale;
 		}
-		pCtx->m_flTotalActualParticlesSoFar = ( pParticles->m_flCurTime - flStartTime ) * flEmissionRate + 1;
+		pCtx->m_flTotalActualParticlesSoFar = 1.0f;
 
 		//if ( !IsInfinitelyEmitting() )
 		//	pCtx->m_flTotalActualParticlesSoFar = min( pCtx->m_ActualParticlesToEmit, pCtx->m_flTotalActualParticlesSoFar );
@@ -667,13 +760,10 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 		return sizeof( NoiseEmitterContext_t );
 	}
 
-	virtual bool MayCreateMoreParticles( CParticleCollection *pParticles, void *pContext ) const
+	virtual bool MayCreateMoreParticles( CParticleCollection const *pParticles, void *pContext ) const
 	{
 		NoiseEmitterContext_t *pCtx = reinterpret_cast<NoiseEmitterContext_t *>( pContext );
-		if ( pCtx->m_bStoppedEmission )
-			return false;
-
-		if ( m_flEmitRate <= 0.0f )
+		if ( !pCtx->m_bOn )
 			return false;
 
 		float flStartTime = m_flStartTime + pCtx->m_flTimeOffset;
@@ -685,7 +775,6 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 
 	float	m_flEmissionDuration;
 	float	m_flStartTime;
-	float	m_flEmitRate;
 	float	m_flTimePerEmission;
 	float	m_flEmissionScale;
 	bool	m_bAbsVal, m_bAbsValInv;
@@ -780,7 +869,7 @@ uint32 C_OP_NoiseEmitter::Emit( CParticleCollection *pParticles, float flCurStre
 	}
 
 	float flInitialNoise = ( ValueBase + ( ValueScale * flNoise ) );
-	flInitialNoise = clamp(flInitialNoise, 0.0f, (float) INT_MAX );
+	flInitialNoise = clamp(flInitialNoise, 0.0f, INT_MAX );
 
 	//Global strength scale brought in by operator fade in/fade out/oscillate 
 	float flEmissionRate = flInitialNoise * flCurStrength;
@@ -844,7 +933,7 @@ uint32 C_OP_NoiseEmitter::Emit( CParticleCollection *pParticles, float flCurStre
 		nActualParticlesToEmit = nAllowedParticlesToEmit;
 		//flStartEmissionTime = pCtx->m_flNextEmitTime - flTimePerEmission * nActualParticlesToEmit;
 	}
-	if ( nActualParticlesToEmit == 0 )
+	if ( nActualParticlesToEmit <= 0 )
 		return 0;
 
 	int nStartParticle = pParticles->m_nActiveParticles;
@@ -858,7 +947,7 @@ uint32 C_OP_NoiseEmitter::Emit( CParticleCollection *pParticles, float flCurStre
 	for( int i = nStartParticle; i < nStartParticle + nActualParticlesToEmit; i++ )
 	{
 		float *pTimeStamp = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_CREATION_TIME, i );
-		flTimeStep = min( flTimeStep, flCurrDrawTime );
+		flTimeStep = MIN( flTimeStep, flCurrDrawTime );
 		*pTimeStamp = flTimeStep;
 		flTimeStep += flTimeStampStep;
 	}
@@ -867,10 +956,194 @@ uint32 C_OP_NoiseEmitter::Emit( CParticleCollection *pParticles, float flCurStre
 }
 
 
+
+
+
+struct MaintainEmitterContext_t
+{
+	int m_ActualParticlesToMaintain;
+	float m_flTimeOffset;
+	bool m_bOn;
+};
+
+
+class C_OP_MaintainEmitter : public CParticleOperatorInstance
+{
+	DECLARE_PARTICLE_OPERATOR( C_OP_MaintainEmitter );
+
+	uint32 GetWrittenAttributes( void ) const
+	{
+		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
+	}
+
+	uint32 GetReadAttributes( void ) const
+	{
+		return 0;
+	}
+
+	virtual uint64 GetReadControlPointMask() const 
+	{
+		uint64 nMask = 0;
+		if ( m_nScaleControlPoint >= 0 )
+			nMask |= ( 1ULL << m_nScaleControlPoint );
+		return nMask;
+	}
+
+	virtual uint64 GetNonPositionalControlPointMask() const
+	{
+		uint64 nMask = 0;
+		if ( m_nScaleControlPoint >= 0 )
+			nMask |= ( 1ULL << m_nScaleControlPoint );
+		return nMask;
+	}
+
+	virtual uint32 Emit( CParticleCollection *pParticles, float flCurStrength, 
+		void *pContext ) const;
+
+	// unpack structure will be applied by creator. add extra initialization needed here
+	virtual void InitParams( CParticleSystemDefinition *pDef )
+	{
+		m_nScaleControlPointField = clamp( m_nScaleControlPointField, 0, 2 );
+		m_nScaleControlPoint      = clamp( m_nScaleControlPoint,    -1, MAX_PARTICLE_CONTROL_POINTS );
+	}
+
+	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	{
+		MaintainEmitterContext_t *pCtx = reinterpret_cast<MaintainEmitterContext_t *>( pContext );
+		pCtx->m_flTimeOffset = 0.0f;
+		pCtx->m_bOn = true;
+		pCtx->m_ActualParticlesToMaintain = m_nParticlesToMaintain;
+	}
+
+	virtual void StartEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
+	{
+		MaintainEmitterContext_t *pCtx = reinterpret_cast<MaintainEmitterContext_t *>( pContext );
+		pCtx->m_bOn = true;
+	}
+
+	virtual void StopEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
+	{
+		MaintainEmitterContext_t *pCtx = reinterpret_cast<MaintainEmitterContext_t *>( pContext );
+		pCtx->m_bOn = false;
+	}
+
+	virtual void Restart( CParticleCollection *pParticles, void *pContext )
+	{
+		MaintainEmitterContext_t *pCtx = reinterpret_cast<MaintainEmitterContext_t *>( pContext );
+		pCtx->m_flTimeOffset = pParticles->m_flCurTime;
+		pCtx->m_bOn = true;
+	}
+
+	virtual bool MayCreateMoreParticles( CParticleCollection const *pParticles, void *pContext ) const
+	{
+		MaintainEmitterContext_t *pCtx = reinterpret_cast<MaintainEmitterContext_t *>( pContext );
+		return pCtx->m_bOn;
+	}
+
+	size_t GetRequiredContextBytes( void ) const
+	{
+		return sizeof( MaintainEmitterContext_t );
+	}
+
+	void UpdateActualParticlesToMaintain( CParticleCollection *pParticles, MaintainEmitterContext_t *pCtx ) const
+	{
+		pCtx->m_ActualParticlesToMaintain = m_nParticlesToMaintain;
+
+		if ( m_nScaleControlPoint >= 0 )
+		{
+			Vector vecScale;
+			float flStartTime = m_flStartTime + pCtx->m_flTimeOffset;
+			if ( ( flStartTime <= pParticles->m_flCurTime ) && ( flStartTime >= pParticles->m_flCurTime - pParticles->m_flPreviousDt ) )
+			{
+				pParticles->GetControlPointAtTime( m_nScaleControlPoint, flStartTime, &vecScale );
+			}
+			else
+			{
+				pParticles->GetControlPointAtPrevTime( m_nScaleControlPoint, &vecScale );
+			}
+
+			pCtx->m_ActualParticlesToMaintain = m_nParticlesToMaintain * vecScale[m_nScaleControlPointField];
+		}
+
+		pCtx->m_ActualParticlesToMaintain = MAX( 0, pCtx->m_ActualParticlesToMaintain );
+	}
+
+	int m_nParticlesToMaintain;
+	float m_flStartTime;
+	int m_nScaleControlPoint;
+	int m_nScaleControlPointField;
+};
+
+DEFINE_PARTICLE_OPERATOR( C_OP_MaintainEmitter, "emit to maintain count", OPERATOR_GENERIC );
+
+BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_MaintainEmitter ) 
+DMXELEMENT_UNPACK_FIELD( "emission start time", "0", float, m_flStartTime )
+DMXELEMENT_UNPACK_FIELD( "count to maintain", "100", int, m_nParticlesToMaintain )
+DMXELEMENT_UNPACK_FIELD( "maintain count scale control point", "-1", int, m_nScaleControlPoint )
+DMXELEMENT_UNPACK_FIELD( "maintain count scale control point field", "0", int, m_nScaleControlPointField )
+END_PARTICLE_OPERATOR_UNPACK( C_OP_MaintainEmitter )
+
+
+uint32 C_OP_MaintainEmitter::Emit( CParticleCollection *pParticles, float flCurStrength, 
+									   void *pContext ) const
+{
+	MaintainEmitterContext_t *pCtx = reinterpret_cast<MaintainEmitterContext_t *>( pContext );
+
+	if ( !pCtx->m_bOn )
+		return 0;
+
+	// Wait until we're told to start emitting
+	float flStartTime = m_flStartTime + pCtx->m_flTimeOffset;
+	if ( pParticles->m_flCurTime < flStartTime )
+		return 0;
+
+	// Update how many particles were supposed to be emitting
+	UpdateActualParticlesToMaintain( pParticles, pCtx );
+
+	// Don't emit any more if the particle system has emitted all it's supposed to.
+	if ( pParticles->m_nActiveParticles >= pCtx->m_ActualParticlesToMaintain || pCtx->m_ActualParticlesToMaintain <= 0 )
+		return 0;
+
+	// We're only allowed to emit so many particles, though..
+	// If we run out of room, only emit the last N particles
+	int nAllowedParticlesToEmit = pParticles->m_nMaxAllowedParticles - pParticles->m_nActiveParticles;
+	// Cap to the maximum emission 
+	int nParticlesToTryToEmit = pCtx->m_ActualParticlesToMaintain - pParticles->m_nActiveParticles;
+	int nActualParticlesToEmit = MIN( nAllowedParticlesToEmit, nParticlesToTryToEmit );
+
+	if ( nActualParticlesToEmit < 0 )
+		return 0;
+
+	int nStartParticle = pParticles->m_nActiveParticles;
+	pParticles->SetNActiveParticles( nActualParticlesToEmit + pParticles->m_nActiveParticles );
+
+	// While we always try to kick up to the specified number of particles, 
+	// we'll space their creation times over the last frame to avoid clumping
+
+	float flEmissionStart = MAX( pParticles->m_flPrevSimTime, flStartTime );
+	float flDeltaTime = pParticles->m_flCurTime - flEmissionStart;
+	float flEmitTimeStep = flDeltaTime / nActualParticlesToEmit;
+	float flEmitTime = flEmissionStart;
+
+	// !! speed!! do sse init here
+	for( int i = nStartParticle; i < nStartParticle + nActualParticlesToEmit; i++ )
+	{
+		float *pTimeStamp = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_CREATION_TIME, i );
+		flEmitTime = MIN( flEmitTime, pParticles->m_flCurTime );
+		*pTimeStamp = flEmitTime;
+		flEmitTime += flEmitTimeStep;
+	}
+
+	return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
+}
+
+
+
+
 void AddBuiltInParticleEmitters( void )
 {
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_EMITTER, C_OP_ContinuousEmitter );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_EMITTER, C_OP_InstantaneousEmitter );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_EMITTER, C_OP_NoiseEmitter );
+	REGISTER_PARTICLE_OPERATOR( FUNCTION_EMITTER, C_OP_MaintainEmitter );
 }
-

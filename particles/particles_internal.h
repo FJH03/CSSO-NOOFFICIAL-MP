@@ -53,6 +53,9 @@ struct CWorldCollideContextData
 						  Vector const *pCpOffset = NULL, float flMovementTolerance = 0.  );
 };
 
+// This is defined in the owner DLL
+extern bool UTIL_IsDedicatedServer( void );
+
 #endif // PARTICLES_INTERNAL_H	
 
 

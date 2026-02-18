@@ -638,11 +638,9 @@ void CMatRenderContextBase::RecomputeViewState()
 		viewMatrix[1][3] * viewMatrix[1][2] + 
 		viewMatrix[2][3] * viewMatrix[2][2] );
 
-	// FIXME Implement computation of m_vecViewForward, etc
-	m_vecViewForward.Init();
-	m_vecViewRight.Init();
-
-	// FIXME: Is this correct?
+	m_vecViewForward.Init( viewMatrix[2][0], viewMatrix[2][1], viewMatrix[2][2]);
+	m_vecViewForward *= -1.0f;
+	m_vecViewRight.Init( viewMatrix[0][0], viewMatrix[0][1], viewMatrix[0][2] );
 	m_vecViewUp.Init( viewMatrix[1][0], viewMatrix[1][1], viewMatrix[1][2] );
 }
 
@@ -655,9 +653,6 @@ void CMatRenderContextBase::GetWorldSpaceCameraPosition( Vector *pCameraPos )
 void CMatRenderContextBase::GetWorldSpaceCameraVectors( Vector *pVecForward, Vector *pVecRight, Vector *pVecUp )
 {
 	RecomputeViewState();
-
-	// FIXME Implement computation of m_vecViewForward
-	Assert( 0 );
 
 	if ( pVecForward )
 	{

@@ -25,7 +25,6 @@ def build(bld):
 		'builtin_particle_render_ops.cpp',
 		'particle_sort.cpp',		
 		'particles.cpp',
-		'psheet.cpp'
 	]
 
 	includes = [
@@ -37,7 +36,7 @@ def build(bld):
 
 	defines = []
 
-	libs = []
+	libs = ['bitmap']
 
 	install_path = bld.env.PREFIX
 

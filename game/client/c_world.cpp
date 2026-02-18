@@ -131,15 +131,28 @@ void C_World::RegisterSharedActivities( void )
 // -----------------------------------------
 //	Sprite Index info
 // -----------------------------------------
-short		g_sModelIndexLaser;			// holds the index for the laser beam
-const char	*g_pModelNameLaser = "sprites/laserbeam.vmt";
-short		g_sModelIndexLaserDot;		// holds the index for the laser beam dot
-short		g_sModelIndexFireball;		// holds the index for the fireball
-short		g_sModelIndexSmoke;			// holds the index for the smoke cloud
-short		g_sModelIndexWExplosion;	// holds the index for the underwater explosion
-short		g_sModelIndexBubbles;		// holds the index for the bubbles model
-short		g_sModelIndexBloodDrop;		// holds the sprite index for the initial blood
-short		g_sModelIndexBloodSpray;	// holds the sprite index for splattered blood
+int		g_sModelIndexLaser;			// holds the index for the laser beam
+int		g_sModelIndexLaserDot;		// holds the index for the laser beam dot
+int		g_sModelIndexFireball;		// holds the index for the fireball
+int		g_sModelIndexSmoke;			// holds the index for the smoke cloud
+int		g_sModelIndexWExplosion;	// holds the index for the underwater explosion
+int		g_sModelIndexBubbles;		// holds the index for the bubbles model
+int		g_sModelIndexBloodSpray;	// holds the sprite index for splattered blood
+int		g_sModelIndexBloodDrop;		// holds the sprite index for the initial blood
+
+//-----------------------------------------------------------------------------
+// Purpose: Precache global weapon resources
+//-----------------------------------------------------------------------------
+PRECACHE_REGISTER_BEGIN( GLOBAL, WeaponSprites )
+	PRECACHE_INDEX( MODEL, "sprites/zerogxplode.vmt", g_sModelIndexFireball )
+	PRECACHE_INDEX( MODEL, "sprites/WXplo1.vmt", g_sModelIndexWExplosion )
+	PRECACHE_INDEX( MODEL, "sprites/steam1.vmt", g_sModelIndexSmoke )
+	PRECACHE_INDEX( MODEL, "sprites/bubble.vmt", g_sModelIndexBubbles )
+	PRECACHE_INDEX( MODEL, "sprites/bloodspray.vmt", g_sModelIndexBloodSpray )
+	PRECACHE_INDEX( MODEL, "sprites/blood.vmt", g_sModelIndexBloodDrop )
+	PRECACHE_INDEX( MODEL, "sprites/laserbeam.vmt", g_sModelIndexLaser )
+	PRECACHE_INDEX( MODEL, "sprites/laserdot.vmt", g_sModelIndexLaserDot )
+PRECACHE_REGISTER_END()
 
 //-----------------------------------------------------------------------------
 // Purpose: Precache global weapon sounds
@@ -147,15 +160,6 @@ short		g_sModelIndexBloodSpray;	// holds the sprite index for splattered blood
 void W_Precache(void)
 {
 	PrecacheFileWeaponInfoDatabase( filesystem, g_pGameRules->GetEncryptionKey() );
-
-	g_sModelIndexFireball = modelinfo->GetModelIndex ("sprites/zerogxplode.vmt");// fireball
-	g_sModelIndexWExplosion = modelinfo->GetModelIndex ("sprites/WXplo1.vmt");// underwater fireball
-	g_sModelIndexSmoke = modelinfo->GetModelIndex ("sprites/steam1.vmt");// smoke
-	g_sModelIndexBubbles = modelinfo->GetModelIndex ("sprites/bubble.vmt");//bubbles
-	g_sModelIndexBloodSpray = modelinfo->GetModelIndex ("sprites/bloodspray.vmt"); // initial blood
-	g_sModelIndexBloodDrop = modelinfo->GetModelIndex ("sprites/blood.vmt"); // splattered blood 
-	g_sModelIndexLaser = modelinfo->GetModelIndex( (char *)g_pModelNameLaser );
-	g_sModelIndexLaserDot = modelinfo->GetModelIndex("sprites/laserdot.vmt");
 }
 
 void C_World::Precache( void )
@@ -172,8 +176,6 @@ void C_World::Precache( void )
 	// Get weapon precaches
 	W_Precache();	
 
-	// Call all registered precachers.
-	CPrecacheRegister::Precache();
 	// NVNT notify system of precache
 	if (haptics)
 		haptics->WorldPrecache();

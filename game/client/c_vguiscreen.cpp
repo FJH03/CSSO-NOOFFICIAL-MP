@@ -21,7 +21,6 @@
 #include "in_buttons.h"
 #include <vgui/MouseCode.h>
 #include "materialsystem/imesh.h"
-#include "clienteffectprecachesystem.h"
 #include "c_vguiscreen.h"
 #include "iclientmode.h"
 #include "vgui_bitmapbutton.h"
@@ -38,9 +37,9 @@ extern vgui::IInputInternal *g_InputInternal;
 #define VGUI_SCREEN_MODE_RADIUS	80
 
 //Precache the materials
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectVGuiScreen )
-CLIENTEFFECT_MATERIAL( "engine/writez" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectVGuiScreen )
+PRECACHE( MATERIAL, "engine/writez" )
+PRECACHE_REGISTER_END()
 
 
 // ----------------------------------------------------------------------------- //

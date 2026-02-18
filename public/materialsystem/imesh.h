@@ -215,6 +215,17 @@ inline void IncrementFloatPointer( float* &pBufferPointer, int vertexSize )
 	pBufferPointer = reinterpret_cast<float*>( reinterpret_cast<unsigned char*>( pBufferPointer ) + vertexSize );
 }
 
+inline int PackRGBToPlatformColor( int r, int g, int b, int a )
+{
+	#ifdef OPENGL_SWAP_COLORS
+		int col = r | (g << 8) | (b << 16) | (a << 24);	// r, g, b, a in memory
+	#elif defined( CELL_GCM_SWAP_COLORS )
+		int col = ( r << 24 ) | ( g << 16 ) | ( b << 8 ) | a;
+	#else
+		int col = b | (g << 8) | (r << 16) | (a << 24);
+	#endif
+	return col;
+}
 
 //-----------------------------------------------------------------------------
 // Used in lists of indexed primitives.
@@ -484,6 +495,7 @@ public:
 	void Position3f( int nVertexOffset, float x, float y, float z );
 	void Position3f( const fltx4 &fl4Position );
 	void Position3fv( const float *v );
+	void Position3fv( int nVertexOffset, const float *v );
 
 	// normal setting
 	void Normal3f( float nx, float ny, float nz );
@@ -522,11 +534,13 @@ public:
 	// texture coordinate setting
 	void TexCoord1f( int stage, float s );
 	void TexCoord2f( int stage, float s, float t );
+	void TexCoord2f( int nVertexOffset, int stage, float s, float t );
 	void TexCoord2fv( int stage, const float *st );
 	void TexCoord3f( int stage, float s, float t, float u );
 	void TexCoord3fv( int stage, const float *stu );
 	void TexCoord4f( int stage, float s, float t, float u, float w );
 	void TexCoord4fv( int stage, const float *stuv );
+	void TexCoord4f( int nVertexOffset, int stage, float s, float t, float u, float w );
 	void TexCoord4fv( int nVertexOffset, int stage, const float *stuv );
 
 	void TexCoordSubRect2f( int stage, float s, float t, float offsetS, float offsetT, float scaleS, float scaleT );
@@ -1752,6 +1766,15 @@ inline void	CVertexBuilder::Position3fv( const float *v )
 	*pDst = *v;
 }
 
+inline void	CVertexBuilder::Position3fv( int nVertexOffset, const float *v )
+{
+	Assert(v);
+	Assert( m_pPosition && m_pCurrPosition );
+	float *pDst = OffsetFloatPointer( m_pCurrPosition, nVertexOffset, m_VertexSize_Position );
+	*pDst++ = *v++;
+	*pDst++ = *v++;
+	*pDst = *v;
+}
 
 //-----------------------------------------------------------------------------
 // Normal setting methods
@@ -2137,6 +2160,16 @@ inline void	CVertexBuilder::TexCoord2f( int nStage, float s, float t )
 	*pDst = t;
 }
 
+inline void	CVertexBuilder::TexCoord2f( int nVertexOffset, int nStage, float s, float t )
+{
+	Assert( m_pTexCoord[nStage] && m_pCurrTexCoord[nStage] );
+	Assert( IsFinite(s) && IsFinite(t) );
+
+	float *pDst = OffsetFloatPointer( m_pCurrTexCoord[nStage], nVertexOffset, m_VertexSize_TexCoord[nStage] );
+	*pDst++ = s;
+	*pDst = t;
+}
+
 inline void	CVertexBuilder::TexCoord2fv( int nStage, const float *st )
 {
 	Assert(st);
@@ -2194,6 +2227,19 @@ inline void	CVertexBuilder::TexCoord4fv( int stage, const float *stuv )
 	*pDst++ = *stuv++;
 	*pDst++ = *stuv++;
 	*pDst = *stuv;
+}
+
+inline void CVertexBuilder::TexCoord4f( int nVertexOffset, int stage, float s, float t, float u, float v )
+{
+	// Tried to add too much!
+	Assert( m_pTexCoord[stage] && m_pCurrTexCoord[stage] );
+	Assert( IsFinite(s) && IsFinite(t)  && IsFinite(u) );
+
+	float *pDst = OffsetFloatPointer( m_pCurrTexCoord[stage], nVertexOffset, m_VertexSize_TexCoord[stage] );
+	*pDst++ = s;
+	*pDst++ = t;
+	*pDst++ = u;
+	*pDst = v;
 }
 
 inline void CVertexBuilder::TexCoord4fv( int nVertexOffset, int stage, const float *stuv )
@@ -2537,9 +2583,11 @@ public:
 	void AdvanceIndices( int nIndexCount );
 
 	int GetCurrentIndex();
+	int GetIndexOffset();
 	int GetFirstIndex() const;
 
 	unsigned short const* Index() const;
+	unsigned short *BaseIndexData() const;
 
 	// Used to define the indices (only used if you aren't using primitives)
 	void Index( unsigned short nIndex );
@@ -2563,6 +2611,7 @@ public:
 
 	void FastTriangle( int startVert );
 	void FastQuad( int startVert );
+	void FastQuad( int nIndexOffset, int startVert );
 	void FastPolygon( int startVert, int numTriangles );
 	void FastPolygonList( int startVert, int *pVertexCount, int polygonCount );
 	void FastIndexList( const unsigned short *pIndexList, int startVert, int indexCount );
@@ -2940,10 +2989,20 @@ inline int CIndexBuilder::GetCurrentIndex()
 	return m_nCurrentIndex;
 }
 
+inline int CIndexBuilder::GetIndexOffset()
+{
+	return m_nIndexOffset;
+}
+
 inline unsigned short const* CIndexBuilder::Index() const
 {
 	Assert( m_nCurrentIndex < m_nMaxIndexCount );
 	return &m_pIndices[m_nCurrentIndex];
+}
+
+inline unsigned short *CIndexBuilder::BaseIndexData() const
+{
+	return m_pIndices;
 }
 
 inline void CIndexBuilder::SelectIndex( int nIndex )
@@ -2990,16 +3049,23 @@ inline void CIndexBuilder::FastTriangle( int startVert )
 	AdvanceIndices(3);
 }
 
-inline void CIndexBuilder::FastQuad( int startVert )
+FORCEINLINE void CIndexBuilder::FastQuad( int startVert )
+{
+	FastQuad( m_nCurrentIndex, startVert );
+	AdvanceIndices(6);
+}
+
+FORCEINLINE void CIndexBuilder::FastQuad( int nIndexOffset, int startVert )
 {
 	startVert += m_nIndexOffset;
-	m_pIndices[m_nCurrentIndex+0] = startVert;
-	m_pIndices[m_nCurrentIndex+1] = startVert + 1;
-	m_pIndices[m_nCurrentIndex+2] = startVert + 2;
-	m_pIndices[m_nCurrentIndex+3] = startVert;
-	m_pIndices[m_nCurrentIndex+4] = startVert + 2;
-	m_pIndices[m_nCurrentIndex+5] = startVert + 3;
-	AdvanceIndices(6);
+	unsigned short *pIndices = &m_pIndices[ nIndexOffset ];
+	*pIndices++ = startVert++;
+	*pIndices++ = startVert++;
+	*pIndices++ = startVert;
+
+	*pIndices++ = startVert - 2;
+	*pIndices++ = startVert++;
+	*pIndices++ = startVert;
 }
 
 inline void CIndexBuilder::FastPolygon( int startVert, int triangleCount )
@@ -3070,6 +3136,14 @@ inline void CIndexBuilder::FastIndexList( const unsigned short *pIndexList, int 
 	AdvanceIndices(indexCount);
 }
 
+FORCEINLINE unsigned int TwoIndices( unsigned int nIndex1, unsigned int nIndex2 )
+{
+#ifdef VALVE_LITTLE_ENDIAN
+	return ( (unsigned int)nIndex1 ) | ( ( (unsigned int)nIndex2 ) << 16 );
+#else
+	return ( (unsigned int)nIndex2 ) | ( ( (unsigned int)nIndex1 ) << 16 );
+#endif
+}
 
 //-----------------------------------------------------------------------------
 // NOTE: This version is the one you really want to achieve write-combining;
@@ -3201,6 +3275,9 @@ public:
 	// Returns the base vertex memory pointer
 	void* BaseVertexData();
 
+	// Returns the base index memory pointer
+	unsigned short* BaseIndexData();
+
 	// Selects the nth Vertex and Index 
 	void SelectVertex( int idx );
 	void SelectIndex( int idx );
@@ -3218,6 +3295,7 @@ public:
 
 	int GetCurrentVertex();
 	int GetCurrentIndex();
+	int GetIndexOffset();
 
 	// Data retrieval...
 	const float *Position() const;
@@ -3249,6 +3327,7 @@ public:
 	void Position3f( int nVertexOffset, float x, float y, float z );
 	void Position3f( const fltx4 &f4Position );
 	void Position3fv( const float *v );
+	void Position3fv( int nVertexOffset, const float *v );
 
 	// normal setting
 	void Normal3f( float nx, float ny, float nz );
@@ -3288,12 +3367,14 @@ public:
 	// texture coordinate setting
 	void TexCoord1f( int stage, float s );
 	void TexCoord2f( int stage, float s, float t );
+	void TexCoord2f( int nVertexOffset, int stage, float s, float t );
 	void TexCoord2fv( int stage, const float *st );
 	void TexCoord3f( int stage, float s, float t, float u );
 	void TexCoord3fv( int stage, const float *stu );
 	void TexCoord4f( int stage, float s, float t, float u, float w );
 	void TexCoord4fv( int stage, const float *stuv );
 	void TexCoord4fv( int nVertexOffset, int stage, const float *stuv );
+	void TexCoord4f( int nVertexOffset, int stage, float s, float t, float u, float w );
 
 	void TexCoordSubRect2f( int stage, float s, float t, float offsetS, float offsetT, float scaleS, float scaleT );
 	void TexCoordSubRect2fv( int stage, const float *st, const float *offset, const float *scale );
@@ -3330,7 +3411,10 @@ public:
 
 	// Fast Index! No need to call advance index, and no random access allowed
 	void FastIndex( unsigned short index );
+	void FastQuad( int index );
+
 	void FastIndex( int nIndexOffset, unsigned short index );
+	void FastQuad( int nIndexOffset, int index );
 
 	// Fast Vertex! No need to call advance vertex, and no random access allowed. 
 	// WARNING - these are low level functions that are intended only for use
@@ -3354,6 +3438,17 @@ public:
 #if defined( _X360 )
 	void VertexDX8ToX360( const ModelVertexDX8_t &vertex );
 #endif
+
+	// this low level function gets you a pointer to the vertex output data. It is dangerous - any
+	// caller using it must understand the vertex layout that it is building. It is for optimized
+	// meshbuilding loops like particle drawing that use special shaders. After writing to the output
+	// data, you shuodl call FastAdvanceNVertices
+	FORCEINLINE void *GetVertexDataPtr( int nWhatSizeIThinkItIs )
+	{
+		if ( m_VertexBuilder.m_VertexSize_Position != nWhatSizeIThinkItIs )
+			return NULL;
+		return m_VertexBuilder.m_pCurrPosition;
+	}
 
 private:
 	// Computes number of verts and indices 
@@ -3748,6 +3843,10 @@ FORCEINLINE int CMeshBuilder::GetCurrentIndex()
 	return m_IndexBuilder.GetCurrentIndex();
 }
 
+FORCEINLINE int CMeshBuilder::GetIndexOffset()
+{
+	return m_IndexBuilder.GetIndexOffset();
+}
 
 //-----------------------------------------------------------------------------
 // A helper method since this seems to be done a whole bunch.
@@ -3820,6 +3919,14 @@ FORCEINLINE int CMeshBuilder::IndexCount() const
 FORCEINLINE void* CMeshBuilder::BaseVertexData()
 {
 	return m_VertexBuilder.BaseVertexData();
+}
+
+//-----------------------------------------------------------------------------
+// Returns the base index memory pointer
+//-----------------------------------------------------------------------------
+FORCEINLINE unsigned short* CMeshBuilder::BaseIndexData()
+{
+	return m_IndexBuilder.BaseIndexData();
 }
 
 //-----------------------------------------------------------------------------
@@ -3910,6 +4017,16 @@ FORCEINLINE void CMeshBuilder::FastIndex2( unsigned short nIndex1, unsigned shor
 	m_IndexBuilder.FastIndex2( nIndex1, nIndex2 );
 }
 
+FORCEINLINE void CMeshBuilder::FastQuad( int nIndex )
+{
+	m_IndexBuilder.FastQuad( nIndex );
+}
+
+FORCEINLINE void CMeshBuilder::FastQuad( int nIndexOffset, int nIndex )
+{
+	m_IndexBuilder.FastQuad( nIndexOffset, nIndex );
+}
+
 //-----------------------------------------------------------------------------
 // For use with the FastVertex methods, advances the current vertex by N
 //-----------------------------------------------------------------------------
@@ -3980,6 +4097,11 @@ FORCEINLINE void CMeshBuilder::Position3f( const fltx4 &f4Position )
 FORCEINLINE void CMeshBuilder::Position3fv( const float *v )
 {
 	m_VertexBuilder.Position3fv( v );
+}
+
+FORCEINLINE void CMeshBuilder::Position3fv( int nVertexOffset, const float *v )
+{
+	m_VertexBuilder.Position3fv( nVertexOffset, v );
 }
 
 FORCEINLINE void CMeshBuilder::Normal3f( float nx, float ny, float nz )
@@ -4097,6 +4219,11 @@ FORCEINLINE void CMeshBuilder::TexCoord2f( int nStage, float s, float t )
 	m_VertexBuilder.TexCoord2f( nStage, s, t );
 }
 
+FORCEINLINE void CMeshBuilder::TexCoord2f( int nVertexOffset, int nStage, float s, float t )
+{
+	m_VertexBuilder.TexCoord2f( nVertexOffset, nStage, s, t );
+}
+
 FORCEINLINE void CMeshBuilder::TexCoord2fv( int nStage, const float *st )
 {
 	m_VertexBuilder.TexCoord2fv( nStage, st );
@@ -4120,6 +4247,11 @@ FORCEINLINE void CMeshBuilder::TexCoord4f( int nStage, float s, float t, float u
 FORCEINLINE void CMeshBuilder::TexCoord4fv( int nStage, const float *stuv )
 {
 	m_VertexBuilder.TexCoord4fv( nStage, stuv );
+}
+
+FORCEINLINE void CMeshBuilder::TexCoord4f( int nVertexOffset, int nStage, float s, float t, float u, float v )
+{
+	m_VertexBuilder.TexCoord4f( nVertexOffset, nStage, s, t, u, v );
 }
 
 FORCEINLINE void CMeshBuilder::TexCoord4fv( int nVertexOffset, int nStage, const float *stuv )

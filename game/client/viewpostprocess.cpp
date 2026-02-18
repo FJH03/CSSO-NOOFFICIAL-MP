@@ -19,7 +19,6 @@
 #include "filesystem.h"
 #include "tier0/vprof.h"
 #include "viewpostprocess.h"
-#include "clienteffectprecachesystem.h"
 #include "imaterialproxydict.h"
 #include "renderparm.h"
 
@@ -29,11 +28,11 @@
 
 #include "proxyentity.h"
 
-// PiMoN: I just don't want to precache the entire post processing
+// PiMoN: I don't want to precache the entire post processing
 // material table for only one texture
-CLIENTEFFECT_REGISTER_BEGIN( PrecachePostProcessingEffectsDX80 )
-	CLIENTEFFECT_MATERIAL( "dev/engine_post" )
-CLIENTEFFECT_REGISTER_END_CONDITIONAL( engine->GetDXSupportLevel() < 90 )
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecachePostProcessingEffectsDX80 )
+	PRECACHE_CONDITIONAL( MATERIAL, "dev/engine_post", engine->GetDXSupportLevel() < 90 )
+PRECACHE_REGISTER_END( )
 
 //-----------------------------------------------------------------------------
 // Globals

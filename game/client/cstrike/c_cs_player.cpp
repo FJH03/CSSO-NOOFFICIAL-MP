@@ -750,7 +750,7 @@ void C_CSRagdoll::CreateCSRagdoll()
 				// The player isn't even visible right now, so we don't need to run the complicated and hacky logic to make ragdoll transition seamless. That logic would teleport the ragdoll to the last known position of the now-dormant player
 
 				SetupBones( currentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
-				// Plat_FastMemcpy( boneDelta0, m_CachedBoneData.Base(), sizeof( matrix3x4a_t ) * m_CachedBoneData.Count() );
+				// Plat_FastMemcpy( boneDelta0, m_CachedBoneData.Base(), sizeof( matrix3x4_t ) * m_CachedBoneData.Count() );
 				InitAsClientRagdoll( currentBones, currentBones, currentBones, boneDt );
 			}
 			else

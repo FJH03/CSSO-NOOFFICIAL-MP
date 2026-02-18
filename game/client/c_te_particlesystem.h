@@ -92,8 +92,8 @@ public:
 	virtual void SimulateParticles( CParticleSimulateIterator *pIterator );
 
 private:
-					CTEParticleRenderer( const char *pDebugName );
-					CTEParticleRenderer( const CTEParticleRenderer & ); // not defined, not accessible
+	explicit		CTEParticleRenderer( const char *pDebugName );
+					CTEParticleRenderer( const CTEParticleRenderer & ); // = delete; not defined, not accessible
 
 	int				m_nActiveParticles;
 	float			m_ParticleSize;

@@ -35,7 +35,6 @@
 #include "engine/IStaticPropMgr.h"
 #include "engine/ivdebugoverlay.h"
 #include "c_pixel_visibility.h"
-#include "clienteffectprecachesystem.h"
 #include "c_rope.h"
 #include "c_effects.h"
 #include "smoke_fog_overlay.h"
@@ -770,43 +769,41 @@ static void SetClearColorToFogColor()
 //-----------------------------------------------------------------------------
 
 #ifdef HL2_CLIENT_DLL
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheViewRender )
-	CLIENTEFFECT_MATERIAL( "scripted/intro_screenspaceeffect" )
-CLIENTEFFECT_REGISTER_END()
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheViewRender )
+	PRECACHE( MATERIAL, "scripted/intro_screenspaceeffect" )
+PRECACHE_REGISTER_END()
 #endif
 
-CLIENTEFFECT_REGISTER_BEGIN( PrecachePostProcessingEffects )
-	CLIENTEFFECT_MATERIAL ( "dev/blurfiltery_and_add_nohdr" )
-	CLIENTEFFECT_MATERIAL ( "dev/blurfilterx" )
-	CLIENTEFFECT_MATERIAL ( "dev/blurfilterx_nohdr" )
-	CLIENTEFFECT_MATERIAL ( "dev/blurfiltery" )
-	CLIENTEFFECT_MATERIAL ( "dev/blurfiltery_nohdr" )
-	CLIENTEFFECT_MATERIAL ( "dev/blurfiltery_nohdr_clear" )
-	CLIENTEFFECT_MATERIAL ( "dev/bloomadd" )
-	CLIENTEFFECT_MATERIAL ( "dev/clearalpha" )
-	CLIENTEFFECT_MATERIAL ( "dev/downsample" )
-	CLIENTEFFECT_MATERIAL ( "dev/downsample_non_hdr" )
-	CLIENTEFFECT_MATERIAL ( "dev/no_pixel_write" )
-	CLIENTEFFECT_MATERIAL ( "dev/lumcompare" )
-	CLIENTEFFECT_MATERIAL ( "dev/floattoscreen_combine" )
-	CLIENTEFFECT_MATERIAL ( "dev/copyfullframefb_vanilla" )
-	CLIENTEFFECT_MATERIAL ( "dev/copyfullframefb" )
-	CLIENTEFFECT_MATERIAL ( "dev/engine_post" )
-	CLIENTEFFECT_MATERIAL ( "dev/motion_blur" )
-	CLIENTEFFECT_MATERIAL ( "dev/depth_of_field" )
-	CLIENTEFFECT_MATERIAL ( "dev/upscale" )
-	CLIENTEFFECT_MATERIAL ( "dev/fade_blur" )
+PRECACHE_REGISTER_BEGIN( GLOBAL, PrecachePostProcessingEffects )
+	PRECACHE( MATERIAL, "dev/blurfiltery_and_add_nohdr" )
+	PRECACHE( MATERIAL, "dev/blurfilterx" )
+	PRECACHE( MATERIAL, "dev/blurfilterx_nohdr" )
+	PRECACHE( MATERIAL, "dev/blurfiltery" )
+	PRECACHE( MATERIAL, "dev/blurfiltery_nohdr" )
+	PRECACHE( MATERIAL, "dev/blurfiltery_nohdr_clear" )
+	PRECACHE( MATERIAL, "dev/bloomadd" )
+	PRECACHE( MATERIAL, "dev/downsample" )
+	PRECACHE( MATERIAL, "dev/downsample_non_hdr" )
+	PRECACHE( MATERIAL, "dev/no_pixel_write" )
+	PRECACHE( MATERIAL, "dev/lumcompare" )
+	PRECACHE( MATERIAL, "dev/floattoscreen_combine" )
+	PRECACHE( MATERIAL, "dev/copyfullframefb_vanilla" )
+	PRECACHE( MATERIAL, "dev/copyfullframefb" )
+	PRECACHE( MATERIAL, "dev/engine_post" )
+	PRECACHE( MATERIAL, "dev/motion_blur" )
+	PRECACHE( MATERIAL, "dev/upscale" )
+	PRECACHE( MATERIAL, "dev/fade_blur" )
 
 #ifdef TF_CLIENT_DLL
-	CLIENTEFFECT_MATERIAL( "dev/pyro_blur_filter_y" )
-	CLIENTEFFECT_MATERIAL( "dev/pyro_blur_filter_x" )
-	CLIENTEFFECT_MATERIAL( "dev/pyro_dof" )
-	CLIENTEFFECT_MATERIAL( "dev/pyro_vignette_border" )
-	CLIENTEFFECT_MATERIAL( "dev/pyro_vignette" )
-	CLIENTEFFECT_MATERIAL( "dev/pyro_post" )
+	PRECACHE( MATERIAL, "dev/pyro_blur_filter_y" )
+	PRECACHE( MATERIAL, "dev/pyro_blur_filter_x" )
+	PRECACHE( MATERIAL, "dev/pyro_dof" )
+	PRECACHE( MATERIAL, "dev/pyro_vignette_border" )
+	PRECACHE( MATERIAL, "dev/pyro_vignette" )
+	PRECACHE( MATERIAL, "dev/pyro_post" )
 #endif
 
-CLIENTEFFECT_REGISTER_END_CONDITIONAL( engine->GetDXSupportLevel() >= 90 )
+PRECACHE_REGISTER_END( )
 
 //-----------------------------------------------------------------------------
 // Accessors to return the current view being rendered
@@ -4201,8 +4198,10 @@ void CRendering3dView::DrawOpaqueRenderables( ERenderDepthMode DepthMode )
 	//
 	// Ropes and particles
 	//
-	RopeManager()->DrawRenderCache( DepthMode );
-	g_pParticleSystemMgr->DrawRenderCache( DepthMode );
+	CMatRenderContextPtr pRenderContext( materials );
+	RopeManager()->DrawRenderCache( pRenderContext, DepthMode );
+
+	g_pParticleSystemMgr->DrawRenderCache( pRenderContext, (DepthMode == DEPTH_MODE_SHADOW) ? true : false );
 }
 
 
