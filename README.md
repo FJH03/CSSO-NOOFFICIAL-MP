@@ -1,3 +1,12 @@
+# CS:SO Android source code
+Credits:
+Ported by ndke01, den4iklovelinux, cherrybtw
+Mod author: PimonFeeD
+Source engine port author: nillerusr
+
+CS:SO apk source code https://github.com/ndke01/csso-android-launcher
+
+
 # Source Engine
 [![GitHub Actions Status](https://github.com/nillerusr/source-engine/actions/workflows/build.yml/badge.svg)](https://github.com/nillerusr/source-engine/actions/workflows/build.yml) [![GitHub Actions Status](https://github.com/nillerusr/source-engine/actions/workflows/tests.yml/badge.svg)](https://github.com/nillerusr/source-engine/actions/workflows/tests.yml)
  Discord: [![Discord Server](https://img.shields.io/discord/672055862608658432.svg)](https://discord.gg/hZRB7WMgGw)
@@ -29,6 +38,10 @@ This project is using waf buildsystem. If you have waf-related questions look ht
 - Achivement system working without steam
 - Fixed many bugs
 - Serverbrowser works without steam
+# CS:SO
+- Bink video
+- Lunasvg
+- I forgot
 
 # Current tasks
 - Rewrite materialsystem for OpenGL render
