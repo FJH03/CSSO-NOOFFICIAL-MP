@@ -1,6 +1,6 @@
 # CS:SO Android source code
 Credits:
-Ported by ndke01, den4iklovelinux, cherrybtw
+Ported by ndke, den4iklovelinux, cherrybtw
 Mod author: PimonFeeD
 Source engine port author: nillerusr
 
