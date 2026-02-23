@@ -21,6 +21,7 @@
 #include "c_team.h"
 #include "../shared/steamworks_gamestats.h"
 #include "cs_gamerules.h"
+#include "filesystem.h"
 
 CCSClientGameStats g_CSClientGameStats;
 
@@ -62,6 +63,9 @@ void CCSClientGameStats::PostInit()
 	GetSteamWorksSGameStatsUploader().StartSession();
 
 	m_RoundEndReason = Invalid_Round_End_Reason;
+
+	// CS:S Android: Load stats from local file instead of Steam
+	LoadStatsFromFile();
 }
 
 //-----------------------------------------------------------------------------
@@ -81,6 +85,9 @@ void CCSClientGameStats::LevelShutdownPreEntity()
 //-----------------------------------------------------------------------------
 void CCSClientGameStats::Shutdown()
 {
+	// Save stats on game shutdown
+	SaveStatsToFile();
+	
 	GetSteamWorksSGameStatsUploader().EndSession();
 }
 
@@ -186,9 +193,12 @@ void CCSClientGameStats::RetrieveSteamStats()
 //-----------------------------------------------------------------------------
 void CCSClientGameStats::UpdateSteamStats()
 {
-	// only upload if Steam is running
+	// CS:S Android: Save stats to local file (no Steam)
+	SaveStatsToFile();
+
+	// only upload to Steam if Steam is running
 	if ( !steamapicontext->SteamUserStats() )
-		return; 
+		return;
 
 	CAchievementMgr *pAchievementMgr = dynamic_cast<CAchievementMgr *>( engine->GetAchievementMgr() );
 	Assert(pAchievementMgr != NULL);
@@ -230,7 +240,7 @@ CON_COMMAND_F( stats_reset, "Resets all player stats", FCVAR_CLIENTDLL )
 
 CON_COMMAND_F( stats_dump, "Dumps all player stats", FCVAR_DEVELOPMENTONLY )
 {
-	Msg( "Accumulated stats on Steam\n");
+	Msg( "Accumulated stats:\n");
 
 	const StatsCollection_t& accumulatedStats = g_CSClientGameStats.GetLifetimeStats();
 
@@ -795,5 +805,118 @@ void CCSClientGameStats::CalculateMatchFavoriteWeapons()
 		m_lifetimeStats[CSSTAT_LASTMATCH_FAVWEAPON_SHOTS] = m_matchStats[WeaponName_StatId_Table[statTableID].shotStatId];
 		m_lifetimeStats[CSSTAT_LASTMATCH_FAVWEAPON_HITS] = m_matchStats[WeaponName_StatId_Table[statTableID].hitStatId];
 		m_lifetimeStats[CSSTAT_LASTMATCH_FAVWEAPON_KILLS] = m_matchStats[WeaponName_StatId_Table[statTableID].killStatId];
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Save stats to local file (CS:S Android - no Steam)
+// Saves: Lifetime Stats (Summary), Match Stats, Round Stats
+//-----------------------------------------------------------------------------
+void CCSClientGameStats::SaveStatsToFile()
+{
+	FileHandle_t hFile = g_pFullFileSystem->Open( STATS_FILE_NAME, "wb", "GAME" );
+	if ( !hFile )
+	{
+		Warning( "SaveStatsToFile: Failed to open %s for writing\n", STATS_FILE_NAME );
+		return;
+	}
+
+	// Write version header
+	int version = STATS_FILE_VERSION;
+	g_pFullFileSystem->Write( &version, sizeof(version), hFile );
+
+	// Write stats count
+	int statCount = CSSTAT_MAX;
+	g_pFullFileSystem->Write( &statCount, sizeof(statCount), hFile );
+
+	// Write lifetime stats (Summary/Lifetime State)
+	for ( int i = 0; i < CSSTAT_MAX; ++i )
+	{
+		int statValue = m_lifetimeStats[i];
+		g_pFullFileSystem->Write( &statValue, sizeof(statValue), hFile );
+	}
+
+	// Write match stats (Match State)
+	for ( int i = 0; i < CSSTAT_MAX; ++i )
+	{
+		int statValue = m_matchStats[i];
+		g_pFullFileSystem->Write( &statValue, sizeof(statValue), hFile );
+	}
+
+	// Write round stats (Round State)
+	for ( int i = 0; i < CSSTAT_MAX; ++i )
+	{
+		int statValue = m_roundStats[i];
+		g_pFullFileSystem->Write( &statValue, sizeof(statValue), hFile );
+	}
+
+	g_pFullFileSystem->Close( hFile );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Load stats from local file (CS:S Android - no Steam)
+// Loads: Lifetime Stats (Summary), Match Stats, Round Stats
+//-----------------------------------------------------------------------------
+void CCSClientGameStats::LoadStatsFromFile()
+{
+	FileHandle_t hFile = g_pFullFileSystem->Open( STATS_FILE_NAME, "rb", "GAME" );
+	if ( !hFile )
+	{
+		// No stats file exists yet - this is normal for first run
+		return;
+	}
+
+	// Read and verify version
+	int version = 0;
+	g_pFullFileSystem->Read( &version, sizeof(version), hFile );
+	if ( version != STATS_FILE_VERSION )
+	{
+		Warning( "LoadStatsFromFile: Version mismatch (file: %d, expected: %d)\n", version, STATS_FILE_VERSION );
+		g_pFullFileSystem->Close( hFile );
+		return;
+	}
+
+	// Read stats count
+	int statCount = 0;
+	g_pFullFileSystem->Read( &statCount, sizeof(statCount), hFile );
+	if ( statCount != CSSTAT_MAX )
+	{
+		Warning( "LoadStatsFromFile: Stat count mismatch (file: %d, expected: %d)\n", statCount, CSSTAT_MAX );
+		g_pFullFileSystem->Close( hFile );
+		return;
+	}
+
+	// Read lifetime stats (Summary/Lifetime State)
+	for ( int i = 0; i < CSSTAT_MAX; ++i )
+	{
+		int statValue = 0;
+		g_pFullFileSystem->Read( &statValue, sizeof(statValue), hFile );
+		m_lifetimeStats[i] = statValue;
+	}
+
+	// Read match stats (Match State)
+	for ( int i = 0; i < CSSTAT_MAX; ++i )
+	{
+		int statValue = 0;
+		g_pFullFileSystem->Read( &statValue, sizeof(statValue), hFile );
+		m_matchStats[i] = statValue;
+	}
+
+	// Read round stats (Round State)
+	for ( int i = 0; i < CSSTAT_MAX; ++i )
+	{
+		int statValue = 0;
+		g_pFullFileSystem->Read( &statValue, sizeof(statValue), hFile );
+		m_roundStats[i] = statValue;
+	}
+
+	g_pFullFileSystem->Close( hFile );
+	m_bSteamStatsDownload = true;
+
+	// Fire event to notify that stats are available
+	IGameEvent * event = gameeventmanager->CreateEvent( "player_stats_updated" );
+	if ( event )
+	{
+		gameeventmanager->FireEventClientSide( event );
 	}
 }
