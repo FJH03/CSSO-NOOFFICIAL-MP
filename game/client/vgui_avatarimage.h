@@ -17,7 +17,7 @@
 #include "checksum_crc.h"
 
 // size of the friend background frame (see texture ico_friend_indicator_avatar)
-#define FRIEND_ICON_SIZE_X	(55)	
+#define FRIEND_ICON_SIZE_X	(55)
 #define FRIEND_ICON_SIZE_Y	(34)
 
 // offset of avatar within the friend icon
@@ -41,10 +41,10 @@ struct AvatarImagePair_t
 	AvatarImagePair_t( CSteamID steamID, int av ) { m_SteamID = steamID; m_iAvatar = av; }
 	bool operator<( const AvatarImagePair_t &rhs ) const
 	{
-		return m_SteamID.ConvertToUint64() < rhs.m_SteamID.ConvertToUint64() || 
+		return m_SteamID.ConvertToUint64() < rhs.m_SteamID.ConvertToUint64() ||
 		( m_SteamID.ConvertToUint64() == rhs.m_SteamID.ConvertToUint64() && m_iAvatar < rhs.m_iAvatar );
-	}	
-					  
+	}
+
 	CSteamID m_SteamID;
 	int m_iAvatar;
 };
@@ -135,6 +135,7 @@ public:
 	// HPE_END
 	//=============================================================================
 
+	// Custom avatar support (cl_avatar CVar) - CRC-based system like sprays
 	bool SetAvatarFromCRC( CRC32_t crc );
 	bool SetAvatarFromNetworkedCRC( int iPlayerIndex );
 	bool SetAvatarFromVTFFile( const char *szFilePath );
@@ -148,7 +149,7 @@ public:
 
 protected:
 	void InitFromRGBA( int iAvatar, const byte *rgba, int width, int height );
-    void InitFromRGBA_VTF( const byte *rgba, int width, int height, CRC32_t crc );
+	void InitFromRGBA_VTF( const byte *rgba, int width, int height, CRC32_t crc );
 
 private:
 	void LoadAvatarImage();
@@ -181,15 +182,15 @@ private:
 	// HPE_END
 	//=============================================================================
 
+	// Custom avatar members
+	bool m_bIsVTFAvatar;
+
 	static CUtlMap< AvatarImagePair_t, int > s_AvatarImageCache;
 	static bool m_sbInitializedAvatarCache;
 
 	CCallback<CAvatarImage, PersonaStateChange_t, false> m_sPersonaStateChangedCallback;
 
 	void OnPersonaStateChanged( PersonaStateChange_t *info );
-
-    // Custom avatar members
-	bool m_bIsVTFAvatar;
 };
 
 //-----------------------------------------------------------------------------
@@ -235,7 +236,7 @@ public:
 	// specify a fallback image to use
 	void SetDefaultAvatar(vgui::IImage* pDefaultAvatar);
 
-    // Custom avatar support - load from VTF file
+	// Custom avatar support - load from VTF file
 	bool SetAvatarFromVTFFile( const char *szFilePath );
 
 	virtual void OnSizeChanged(int newWide, int newTall);
