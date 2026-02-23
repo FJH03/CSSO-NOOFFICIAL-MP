@@ -14,6 +14,7 @@
 #include <vgui_controls/ImagePanel.h>
 #include "steam/steam_api.h"
 #include "c_baseplayer.h"
+#include "checksum_crc.h"
 
 // size of the friend background frame (see texture ico_friend_indicator_avatar)
 #define FRIEND_ICON_SIZE_X	(55)	
@@ -134,6 +135,11 @@ public:
 	// HPE_END
 	//=============================================================================
 
+	bool SetAvatarFromCRC( CRC32_t crc );
+	bool SetAvatarFromNetworkedCRC( int iPlayerIndex );
+	bool SetAvatarFromVTFFile( const char *szFilePath );
+	bool IsVTFAvatar() const { return m_bIsVTFAvatar; }
+
 	virtual bool Evict();
 	virtual int GetNumFrames();
 	virtual void SetFrame( int nFrame );
@@ -142,6 +148,7 @@ public:
 
 protected:
 	void InitFromRGBA( int iAvatar, const byte *rgba, int width, int height );
+    void InitFromRGBA_VTF( const byte *rgba, int width, int height, CRC32_t crc );
 
 private:
 	void LoadAvatarImage();
@@ -174,11 +181,6 @@ private:
 	// HPE_END
 	//=============================================================================
 
-    // Custom avatar support (cl_avatar CVar)
-	void LoadCustomAvatar( const char *pszAvatarPath );
-	void ClearCustomAvatar();
-	bool HasCustomAvatar() const { return m_bHasCustomAvatar; }
-
 	static CUtlMap< AvatarImagePair_t, int > s_AvatarImageCache;
 	static bool m_sbInitializedAvatarCache;
 
@@ -186,10 +188,8 @@ private:
 
 	void OnPersonaStateChanged( PersonaStateChange_t *info );
 
-private:
-	// Custom avatar members
-	bool m_bHasCustomAvatar;
-	int m_nCustomAvatarTextureID;
+    // Custom avatar members
+	bool m_bIsVTFAvatar;
 };
 
 //-----------------------------------------------------------------------------
@@ -234,6 +234,9 @@ public:
 
 	// specify a fallback image to use
 	void SetDefaultAvatar(vgui::IImage* pDefaultAvatar);
+
+    // Custom avatar support - load from VTF file
+	bool SetAvatarFromVTFFile( const char *szFilePath );
 
 	virtual void OnSizeChanged(int newWide, int newTall);
 
