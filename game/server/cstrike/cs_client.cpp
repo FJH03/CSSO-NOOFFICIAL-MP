@@ -38,6 +38,7 @@ extern CBaseEntity *FindPickerEntity( CBasePlayer *pPlayer );
 
 extern bool			g_fGameOver;
 
+ConVar  cl_clantag( "cl_clantag", "", FCVAR_ARCHIVE | FCVAR_USERINFO | FCVAR_PRINTABLEONLY, "Set Clan tag (max 12 chars)", CL_ClanTagChanged );
 
 void FinishClientPutInServer( CCSPlayer *pPlayer )
 {
@@ -56,6 +57,16 @@ void FinishClientPutInServer( CCSPlayer *pPlayer )
 		pPlayer->SetThink( NULL );
 		pPlayer->AddAccount( CSGameRules()->GetStartMoney() );
 
+		// Read clan tag from client CVar (cl_clantag)
+		const char *pClanTag = engine->GetClientConVarValue( engine->IndexOfEdict( pPlayer->edict() ), "cl_clantag" );
+		if ( pClanTag && pClanTag[0] )
+		{
+			char szClanTag[13]; // 12 chars + null terminator
+			Q_strncpy( szClanTag, pClanTag, sizeof(szClanTag) );
+			szClanTag[12] = '\0';
+			pPlayer->SetClanTag( szClanTag );
+		}
+		
 		// Move them to the first intro camera.
 		pPlayer->MoveToNextIntroCamera();
 		pPlayer->SetMoveType( MOVETYPE_NONE );
