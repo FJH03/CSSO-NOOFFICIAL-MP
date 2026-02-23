@@ -6785,6 +6785,8 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 	}
 	else if ( FStrEq( pcmd, "+lookatweapon" ) )
 	{
+		StopLookingAtWeapon();
+		
 		m_bIsHoldingLookAtWeapon = true;
 
 		if ( ShouldRunRateLimitedCommand( args ) )
