@@ -51,6 +51,10 @@ CAvatarImage::CAvatarImage( void )
 
 	m_pDefaultImage = NULL;
 
+	// Initialize custom avatar members
+	m_bHasCustomAvatar = false;
+	m_nCustomAvatarTextureID = -1;
+	
 	SetAvatarSize(DEFAULT_AVATAR_SIZE, DEFAULT_AVATAR_SIZE);
 
 	//=============================================================================
