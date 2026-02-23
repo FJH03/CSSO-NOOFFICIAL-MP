@@ -15,7 +15,6 @@
 #include "steam/steam_api.h"
 #include "vtf/vtf.h"
 #include "filesystem.h"
-#include "c_cs_playerresource.h"
 #include "checksum_crc.h"
 #include "qlimits.h"
 
@@ -439,25 +438,26 @@ bool CAvatarImage::SetAvatarFromCRC( CRC32_t crc )
 //-----------------------------------------------------------------------------
 // Purpose: Load avatar for any player using their networked avatar CRC from server
 // This enables server-side avatar sharing (works like sprays with sv_allowupload)
+// The customFiles[2] is networked from server - same system as sprays!
 // Returns: true if successfully loaded VTF avatar for the player
 //-----------------------------------------------------------------------------
 bool CAvatarImage::SetAvatarFromNetworkedCRC( int iPlayerIndex )
 {
-        // Get the player resource to access networked avatar CRCs
-        C_CS_PlayerResource *pResource = dynamic_cast<C_CS_PlayerResource*>( g_PR );
-        if ( !pResource )
+        // Get player info - customFiles[2] contains avatar CRC (networked from server)
+        player_info_t pi;
+        if ( !engine->GetPlayerInfo( iPlayerIndex, &pi ) )
                 return false;
         
-        // Get the networked avatar CRC for this player
-        CRC32_t avatarCRC = pResource->GetAvatarCRC( iPlayerIndex );
-        if ( avatarCRC == 0 )
+        // Check if player has custom avatar in slot 2 (same as sprays use slot 0)
+        if ( pi.customFiles[2] == 0 )
         {
                 // No custom avatar set for this player
                 return false;
         }
         
         // Load the VTF avatar from the CRC-based path
-        return SetAvatarFromCRC( avatarCRC );
+        // The file is downloaded automatically via the engine's custom file system
+        return SetAvatarFromCRC( pi.customFiles[2] );
 }
 
 //-----------------------------------------------------------------------------
@@ -621,32 +621,17 @@ void CAvatarImagePanel::SetPlayer( C_BasePlayer *pPlayer, EAvatarSize avatarSize
 //-----------------------------------------------------------------------------
 // Purpose: Set the avatar by entity number
 // Uses CRC-based system like sprays - avatar VTF is uploaded via sv_allowupload (slot 2)
+// Other players download it automatically - works exactly like spray system!
 //-----------------------------------------------------------------------------
 void CAvatarImagePanel::SetPlayer( int entindex, EAvatarSize avatarSize )
 {
         m_pImage->ClearAvatarSteamID();
 
         // Try to load avatar from networked CRC (uploaded like sprays via sv_allowupload)
-        // This works for all players - the VTF file is uploaded to server and downloaded by other clients
+        // This works for ALL players on server - the VTF file is uploaded and downloaded automatically
         if ( m_pImage->SetAvatarFromNetworkedCRC( entindex ) )
         {
                 return; // Successfully loaded avatar from CRC
-        }
-
-        // Fallback: For local player, also check cl_avatar directly (in case not yet networked)
-        C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
-        if ( pLocalPlayer && pLocalPlayer->entindex() == entindex )
-        {
-                // Check if local player has avatar set via cl_avatar cvar
-                player_info_t pi;
-                if ( engine->GetPlayerInfo( entindex, &pi ) && pi.customFiles[2] != 0 )
-                {
-                        // Try loading from local custom file
-                        if ( m_pImage->SetAvatarFromCRC( pi.customFiles[2] ) )
-                        {
-                                return;
-                        }
-                }
         }
 
         // No custom avatar - try Steam avatar
