@@ -174,12 +174,22 @@ private:
 	// HPE_END
 	//=============================================================================
 
+    // Custom avatar support (cl_avatar CVar)
+	void LoadCustomAvatar( const char *pszAvatarPath );
+	void ClearCustomAvatar();
+	bool HasCustomAvatar() const { return m_bHasCustomAvatar; }
+
 	static CUtlMap< AvatarImagePair_t, int > s_AvatarImageCache;
 	static bool m_sbInitializedAvatarCache;
 
 	CCallback<CAvatarImage, PersonaStateChange_t, false> m_sPersonaStateChangedCallback;
 
 	void OnPersonaStateChanged( PersonaStateChange_t *info );
+
+private:
+	// Custom avatar members
+	bool m_bHasCustomAvatar;
+	int m_nCustomAvatarTextureID;
 };
 
 //-----------------------------------------------------------------------------
