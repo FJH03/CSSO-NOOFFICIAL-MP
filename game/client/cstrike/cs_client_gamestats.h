@@ -15,7 +15,7 @@
 #include "GameEventListener.h"
 #include "../game/shared/cstrike/cs_gamestats_shared.h"
 
-// CS:S Android: Local stats file (no Steam)
+// CS:SO Android: Local stats file (no Steam)
 #define STATS_FILE_NAME			"csso_stats.dat"
 #define STATS_FILE_VERSION		1
 
