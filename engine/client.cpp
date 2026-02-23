@@ -1227,6 +1227,7 @@ void CClientState::CheckOwnCustomFiles()
 	{
 		AddCustomFile( 0, cl_logofile.GetString() );
 		AddCustomFile( 1, cl_soundfile.GetString() );
+		AddCustomFile( 2, cl_avatar.GetString() );
 	}
 }
 
