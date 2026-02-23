@@ -397,8 +397,6 @@ void CAchievementMgr::PostInit()
 	// download achievements/stats from Steam/XBox Live
 	DownloadUserData();
 
-	// CS:SO Android: Load achievements from local file
-	LoadAchievementsFromFile();
 }
 
 //-----------------------------------------------------------------------------
@@ -730,22 +728,6 @@ void CAchievementMgr::UploadUserData()
 #ifndef NO_STEAM
 		if ( steamapicontext->SteamUserStats() )
 		{
-			// Upload achievements to Steam
-			for ( int i = 0; i < m_Achievements.Count(); ++i )
-			{
-				CBaseAchievement *pAchievement = m_Achievements[ i ];
-				if ( pAchievement && pAchievement->IsAchieved() && !pAchievement->IsAchievementUnlocked() )
-				{
-					pAchievement->UnlockAchievement();
-				}
-			}
-		}
-#endif
-	}
-	
-	// CS:S Android: Save achievements to local file
-	SaveAchievementsToFile();
-    }
 			// Upload current Steam client achievements & stats state to Steam.  Will get called back at OnUserStatsStored when complete.
 			// Only values previously set via SteamUserStats() get uploaded
 			steamapicontext->SteamUserStats()->StoreStats();
@@ -753,6 +735,9 @@ void CAchievementMgr::UploadUserData()
 		}
 #endif
 	}
+	
+	// CS:SO Android: Save achievement state to file
+	SaveGlobalState();
 }
 
 //-----------------------------------------------------------------------------
@@ -2093,120 +2078,6 @@ CON_COMMAND_F( achievement_mark_dirty, "Mark achievement data as dirty", FCVAR_C
 	pAchievementMgr->SetDirty( true );
 }
 #endif // _DEBUG
-
-//-----------------------------------------------------------------------------
-// Purpose: Save achievements to local file (CS:S Android - no Steam)
-//-----------------------------------------------------------------------------
-void CAchievementMgr::SaveAchievementsToFile()
-{
-#ifdef CLIENT_DLL
-	KeyValues *pKV = new KeyValues( "Achievements" );
-	pKV->SetInt( "Version", 1 );
-	
-	for ( int i = 0; i < m_Achievements.Count(); ++i )
-	{
-		CBaseAchievement *pAchievement = m_Achievements[ i ];
-		if ( !pAchievement )
-			continue;
-		
-		char szAchievementKey[64];
-		Q_snprintf( szAchievementKey, sizeof(szAchievementKey), "Achievement_%d", pAchievement->GetAchievementID() );
-		
-		KeyValues *pAchievementKV = pKV->CreateNewKey( szAchievementKey );
-		pAchievementKV->SetInt( "Achieved", pAchievement->IsAchieved() ? 1 : 0 );
-		pAchievementKV->SetInt( "Progress", pAchievement->GetProgress() );
-		pAchievementKV->SetInt( "Unlocked", pAchievement->IsAchievementUnlocked() ? 1 : 0 );
-	}
-	
-	// Save to file
-	char szFilename[_MAX_PATH];
-	Q_snprintf( szFilename, sizeof(szFilename), "achievements.dat" );
-	
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
-	pKV->RecursiveSaveToFile( buf, 0 );
-	filesystem->WriteFile( szFilename, "MOD", buf );
-	
-	pKV->deleteThis();
-	DevMsg( "SaveAchievementsToFile: Achievements saved to %s\n", szFilename );
-#endif
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Load achievements from local file (CS:S Android - no Steam)
-//-----------------------------------------------------------------------------
-void CAchievementMgr::LoadAchievementsFromFile()
-{
-#ifdef CLIENT_DLL
-	char szFilename[_MAX_PATH];
-	Q_snprintf( szFilename, sizeof(szFilename), "achievements.dat" );
-	
-	FileHandle_t hFile = filesystem->Open( szFilename, "rb", "MOD" );
-	if ( !hFile )
-	{
-		// No achievements file exists yet - this is normal for first run
-		DevMsg( "LoadAchievementsFromFile: No achievements file found, starting fresh\n" );
-		return;
-	}
-	
-	// Read into buffer
-	int fileSize = filesystem->Size( hFile );
-	if ( fileSize <= 0 )
-	{
-		filesystem->Close( hFile );
-		return;
-	}
-	
-	char *pBuffer = new char[fileSize + 1];
-	filesystem->Read( pBuffer, fileSize, hFile );
-	pBuffer[fileSize] = '\0';
-	filesystem->Close( hFile );
-	
-	// Parse KeyValues
-	KeyValues *pKV = new KeyValues( "Achievements" );
-	if ( !pKV->LoadFromBuffer( szFilename, pBuffer, fileSize ) )
-	{
-		delete[] pBuffer;
-		pKV->deleteThis();
-		Warning( "LoadAchievementsFromFile: Failed to parse %s\n", szFilename );
-		return;
-	}
-	
-	delete[] pBuffer;
-	
-	// Verify version
-	int version = pKV->GetInt( "Version", 0 );
-	if ( version != 1 )
-	{
-		Warning( "LoadAchievementsFromFile: Version mismatch (file: %d, expected: 1)\n", version );
-		pKV->deleteThis();
-		return;
-	}
-	
-	// Load achievement data
-	for ( KeyValues *pAchievementKV = pKV->GetFirstSubKey(); pAchievementKV; pAchievementKV = pAchievementKV->GetNextKey() )
-	{
-		const char *pKeyName = pAchievementKV->GetName();
-		if ( !Q_strnicmp( pKeyName, "Achievement_", 12 ) )
-		{
-			int achievementID = atoi( pKeyName + 12 );
-			CBaseAchievement *pAchievement = GetAchievementByID( achievementID );
-			if ( pAchievement )
-			{
-				pAchievement->SetAchieved( pAchievementKV->GetInt( "Achieved", 0 ) != 0 );
-				pAchievement->SetProgress( pAchievementKV->GetInt( "Progress", 0 ) );
-				// Note: IsAchievementUnlocked is typically set when achieved
-				if ( pAchievementKV->GetInt( "Unlocked", 0 ) )
-				{
-					pAchievement->SetAchieved( true );
-				}
-			}
-		}
-	}
-	
-	pKV->deleteThis();
-	DevMsg( "LoadAchievementsFromFile: Achievements loaded from %s\n", szFilename );
-#endif
-}
 
 #endif // CLIENT_DLL
 
