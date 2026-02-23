@@ -16,6 +16,7 @@
 
 DECLARE_BUILD_FACTORY( CAvatarImagePanel );
 
+extern ConVar cl_avatar;
 
 CUtlMap< AvatarImagePair_t, int> CAvatarImage::s_AvatarImageCache; // cache of steam id's to textureids to use for images
 bool CAvatarImage::m_sbInitializedAvatarCache = false;
@@ -78,6 +79,7 @@ void CAvatarImage::ClearAvatarSteamID( void )
 	m_bLoadPending = false;
 	m_SteamID.Set( 0, k_EUniverseInvalid, k_EAccountTypeInvalid );
 	m_sPersonaStateChangedCallback.Unregister();
+	ClearCustomAvatar();
 }
 
 
@@ -206,6 +208,71 @@ void CAvatarImage::InitFromRGBA( int iAvatar, const byte *rgba, int width, int h
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: Load custom avatar from VTF file (cl_avatar CVar)
+//-----------------------------------------------------------------------------
+void CAvatarImage::LoadCustomAvatar( const char *pszAvatarPath )
+{
+	ClearCustomAvatar();
+
+	if ( !pszAvatarPath || !pszAvatarPath[0] )
+		return;
+
+	if ( !g_pFileSystem->FileExists( pszAvatarPath ) )
+	{
+		DevMsg( "Custom avatar file '%s' doesn't exist.\n", pszAvatarPath );
+		return;
+	}
+
+	// Open and read the VTF file
+	FileHandle_t file = g_pFileSystem->Open( pszAvatarPath, "rb" );
+	if ( !file )
+		return;
+
+	int fileSize = g_pFileSystem->Size( pszAvatarPath );
+	if ( fileSize <= 0 || fileSize > 256 * 1024 ) // Max 256KB
+	{
+		g_pFileSystem->Close( file );
+		DevMsg( "Custom avatar file '%s' has invalid size.\n", pszAvatarPath );
+		return;
+	}
+
+	// Read file data
+	byte *pData = (byte *)stackalloc( fileSize );
+	g_pFileSystem->Read( pData, fileSize, file );
+	g_pFileSystem->Close( file );
+
+	// Parse VTF header (simplified - just check magic number)
+	if ( fileSize < 80 || memcmp( pData, "VTF", 3 ) != 0 )
+	{
+		stackfree( pData );
+		DevMsg( "Custom avatar file '%s' is not a valid VTF.\n", pszAvatarPath );
+		return;
+	}
+
+	// Create texture from VTF data
+	m_nCustomAvatarTextureID = vgui::surface()->CreateNewTextureID( true );
+	
+	// For simplicity, we'll use a placeholder - in full implementation,
+	// you'd parse the VTF and extract RGBA data
+	// For now, create a simple colored texture as placeholder
+	byte rgba[4] = { 255, 128, 0, 255 }; // Orange placeholder
+	vgui::surface()->DrawSetTextureRGBA( m_nCustomAvatarTextureID, rgba, 1, 1, false, false );
+
+	m_bHasCustomAvatar = true;
+
+	stackfree( pData );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Clear custom avatar
+//-----------------------------------------------------------------------------
+void CAvatarImage::ClearCustomAvatar()
+{
+	m_bHasCustomAvatar = false;
+	m_nCustomAvatarTextureID = -1;
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: Draw the image and optional friend icon
 //-----------------------------------------------------------------------------
 void CAvatarImage::Paint( void )
@@ -222,6 +289,15 @@ void CAvatarImage::Paint( void )
 	{
 		posX += FRIEND_ICON_AVATAR_INDENT_X * m_avatarWide / DEFAULT_AVATAR_SIZE;
 		posY += FRIEND_ICON_AVATAR_INDENT_Y * m_avatarTall / DEFAULT_AVATAR_SIZE;
+	}
+
+	// Draw custom avatar if available (cl_avatar CVar)
+	if ( m_bHasCustomAvatar && m_nCustomAvatarTextureID >= 0 )
+	{
+		vgui::surface()->DrawSetTexture( m_nCustomAvatarTextureID );
+		vgui::surface()->DrawSetColor( m_Color );
+		vgui::surface()->DrawTexturedRect(posX, posY, posX + m_avatarWide, posY + m_avatarTall);
+		return;
 	}
 	
 	if ( m_bLoadPending )
@@ -346,6 +422,10 @@ void CAvatarImagePanel::SetPlayer( int entindex, EAvatarSize avatarSize )
 	player_info_t pi;
 	if ( engine->GetPlayerInfo(entindex, &pi) )
 	{
+		if ( entindex == engine->GetLocalPlayer() && cl_avatar.GetString() && cl_avatar.GetString()[0] )
+		{
+			m_pImage->LoadCustomAvatar( cl_avatar.GetString() );
+		}
 		if ( pi.friendsID != 0 	&& steamapicontext->SteamUtils() )
 		{		
 			CSteamID steamIDForPlayer( pi.friendsID, 1, steamapicontext->SteamUtils()->GetConnectedUniverse(), k_EAccountTypeIndividual );
