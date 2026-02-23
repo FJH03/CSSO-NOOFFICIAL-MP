@@ -17,6 +17,7 @@
 DECLARE_BUILD_FACTORY( CAvatarImagePanel );
 
 extern ConVar cl_avatar;
+extern IFileSystem *g_pFileSystem;
 
 CUtlMap< AvatarImagePair_t, int> CAvatarImage::s_AvatarImageCache; // cache of steam id's to textureids to use for images
 bool CAvatarImage::m_sbInitializedAvatarCache = false;
