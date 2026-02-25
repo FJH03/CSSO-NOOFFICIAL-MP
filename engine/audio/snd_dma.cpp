@@ -1262,6 +1262,20 @@ channel_t *SND_StealDynamicChannel(SoundSource soundsource, int entchannel, cons
 	{
 		channel_t *ch = &channels[ch_idx];
 		
+		if ( entchannel == CHAN_WEAPON && ch->entchannel == CHAN_WEAPON )
+		{
+			if ( ch->sfx && ch->sfx->pSource && !ch->flags.delayed_start )
+			{
+				unsigned int remaining = RemainingSamples( ch );
+				float timeLeft = (float)remaining / (float)ch->sfx->pSource->SampleRate();
+
+				if ( timeLeft > 0.1f )
+				{
+					canSteal[canStealCount++] = ch_idx;
+					continue;
+				}
+			}
+		}
 		if ( ch->activeIndex )
 		{
 			// channel CHAN_AUTO never overrides sounds on same channel
@@ -1328,7 +1342,7 @@ channel_t *SND_StealDynamicChannel(SoundSource soundsource, int entchannel, cons
 
 
 	// coalesce the timeline for this channel
-	if ( nExactCount > 0 )
+	if ( nExactCount > 0 && entchannel != CHAN_WEAPON )
 	{
 		uint nFreeSampleTime = g_paintedtime + (flDelay * SOUND_DMA_SPEED);
 		channel_t *pReturn = &channels[nExactMatch[0]];
@@ -1368,6 +1382,12 @@ channel_t *SND_StealDynamicChannel(SoundSource soundsource, int entchannel, cons
 		// long-term solution involving only counting channels that are actually going to play (delay included)
 		// at the same time as this one.
 		int maxSameSounds = bDelaySame ? 5 : 4;
+
+		if ( entchannel == CHAN_WEAPON )
+		{
+			maxSameSounds = 8;
+		}
+
 		float distSqr = 0.0f;
 		if ( sfx->pSource )
 		{
@@ -1405,6 +1425,12 @@ channel_t *SND_StealDynamicChannel(SoundSource soundsource, int entchannel, cons
 		int ch_idx = canSteal[i];
 		channel_t *ch = &channels[ch_idx];
 		float timeleft = 0;
+
+		if ( entchannel != CHAN_WEAPON && ch->entchannel == CHAN_WEAPON )
+		{
+			continue;
+		}
+
 		if ( bAllowVoiceSteal )
 		{
 			int maxVolume = ChannelGetMaxVol( ch );
@@ -5933,6 +5959,11 @@ void S_StopAllSounds( bool bClear )
 
 	total_channels = MAX_DYNAMIC_CHANNELS;	// no statics
 
+	for ( i = 0; i < MAX_CHANNELS; i++ )
+	{
+		channels[i].flags.m_bIsFreeingChannel = false;
+	}
+
 	CChannelList list;
 	g_ActiveChannels.GetActiveChannels( list );
 	for ( i = 0; i < list.Count(); i++ )
@@ -5963,6 +5994,53 @@ void S_StopAllSoundsC( void )
 {
 	S_StopAllSounds( true );
 }
+
+//-----------------------------------------------------------------------------
+// Purpose: Console command to cleanup stuck sounds
+//-----------------------------------------------------------------------------
+static void S_CleanupStuckSounds_f()
+{
+	THREAD_LOCK_SOUND();
+	
+	int cleanedCount = 0;
+	
+	// Clear any stuck m_bIsFreeingChannel flags
+	for ( int i = 0; i < MAX_CHANNELS; i++ )
+	{
+		if ( channels[i].activeIndex && channels[i].flags.m_bIsFreeingChannel )
+		{
+			channels[i].flags.m_bIsFreeingChannel = false;
+			cleanedCount++;
+		}
+	}
+	
+	// Force free channels that have been stuck for too long
+	CChannelList list;
+	g_ActiveChannels.GetActiveChannels( list );
+	for ( int i = 0; i < list.Count(); i++ )
+	{
+		channel_t *pChannel = list.GetChannel(i);
+		if ( pChannel && pChannel->sfx )
+		{
+			// Check if channel has been playing for too long (more than 10 seconds for non-looping)
+			if ( !pChannel->sfx->pSource->IsLooped() )
+			{
+				unsigned int remaining = RemainingSamples( pChannel );
+				if ( remaining == 0 && pChannel->activeIndex )
+				{
+					// Sound should have ended but channel is still active
+					S_FreeChannel( pChannel );
+					cleanedCount++;
+					DevMsg("Cleaned up stuck sound: %s\n", pChannel->sfx->getname());
+				}
+			}
+		}
+	}
+	
+	Msg("Cleaned up %d stuck sound channels\n", cleanedCount);
+}
+
+static ConCommand snd_cleanup_sounds("snd_cleanup_sounds", S_CleanupStuckSounds_f, "Cleanup stuck sound channels", FCVAR_CHEAT);
 
 void S_OnLoadScreen( bool value )
 {
@@ -6628,6 +6706,41 @@ void S_Update_( float mixAheadTime )
 			if ( IsX360() )
 			{
 				ThreadSetAffinity( g_hMixThread, XBOX_PROCESSOR_5 );
+			}
+		}
+	}
+
+	static float s_flNextCleanup = 0;
+	if ( g_pSoundServices->GetHostTime() > s_flNextCleanup )
+	{
+		s_flNextCleanup = g_pSoundServices->GetHostTime() + 5.0f;
+		
+		// Clear stuck flags
+		for ( int i = 0; i < MAX_CHANNELS; i++ )
+		{
+			if ( channels[i].activeIndex && channels[i].flags.m_bIsFreeingChannel )
+			{
+				channels[i].flags.m_bIsFreeingChannel = false;
+			}
+		}
+		
+		// Free channels that should have ended
+		CChannelList list;
+		g_ActiveChannels.GetActiveChannels( list );
+		for ( int i = 0; i < list.Count(); i++ )
+		{
+			channel_t *pChannel = list.GetChannel(i);
+			if ( pChannel && pChannel->sfx && pChannel->sfx->pSource )
+			{
+				if ( !pChannel->sfx->pSource->IsLooped() )
+				{
+					unsigned int remaining = RemainingSamples( pChannel );
+					if ( remaining == 0 && pChannel->activeIndex && !pChannel->flags.delayed_start )
+					{
+						// Sound finished but channel still active - clean it up
+						S_FreeChannel( pChannel );
+					}
+				}
 			}
 		}
 	}

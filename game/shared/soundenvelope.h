@@ -74,6 +74,7 @@ public:
 	static	CSoundEnvelopeController &GetController( void );
 
 	virtual void		SoundSetCloseCaptionDuration( CSoundPatch *pSound, float flDuration ) = 0;
+	virtual void		StopSoundPatchesForEntity( int entIndex ) = 0;
 };
 
 
