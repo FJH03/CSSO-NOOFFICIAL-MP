@@ -33,6 +33,7 @@
 #include "physics_saverestore.h"
 #include "saverestore_utlvector.h"
 #include "bone_setup.h"
+#include "soundenvelope.h"
 #include "vcollide_parse.h"
 #include "filters.h"
 #include "te_effect_dispatch.h"
@@ -2012,6 +2013,8 @@ extern bool g_bReceivedChainedUpdateOnRemove;
 void CBaseEntity::UpdateOnRemove( void )
 {
 	g_bReceivedChainedUpdateOnRemove = true;
+
+	CSoundEnvelopeController::GetController().StopSoundPatchesForEntity( entindex() );
 
 	// Virtual call to shut down any looping sounds.
 	StopLoopingSounds();

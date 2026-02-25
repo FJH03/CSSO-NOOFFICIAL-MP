@@ -486,10 +486,16 @@ void CSoundPatch::Shutdown( void )
 		{
 			CBaseEntity::StopSound( entIndex, m_entityChannel, STRING( m_iszSoundName ) );
 		}
+		else
+		{
+			if ( enginesound )
+			{
+				enginesound->StopSound( -1, m_entityChannel, STRING( m_iszSoundName ) );
+			}
+		}
 		m_isPlaying = false;
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Update all envelopes and send appropriate data to the client
@@ -767,6 +773,20 @@ public:
 		SystemReset();
 	}
 	
+	virtual void StopSoundPatchesForEntity( int entIndex )
+	{
+		// Iterate through all sound patches and stop ones for this entity
+		for ( int i = m_soundList.Count() - 1; i >= 0; i-- )
+		{
+			CSoundPatch *pPatch = m_soundList[i];
+			if ( pPatch && pPatch->EntIndex() == entIndex )
+			{
+				pPatch->Shutdown();
+				m_soundList.FastRemove( i );
+			}
+		}
+	}
+
 private:
 	CUtlVector<CSoundPatch *>			m_soundList;
 	CUtlPriorityQueue<SoundCommand_t *>	m_commandList;
