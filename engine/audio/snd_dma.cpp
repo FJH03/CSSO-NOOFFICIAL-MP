@@ -1453,7 +1453,7 @@ channel_t *SND_StealDynamicChannel(SoundSource soundsource, int entchannel, cons
 			if ( ch->sfx )
 			{
 				// basically steals the first one you come to
-				timeleft = 1;	//ch->end - paintedtime
+				timeleft = 0.1;	//ch->end - paintedtime
 			}
 		}
 
