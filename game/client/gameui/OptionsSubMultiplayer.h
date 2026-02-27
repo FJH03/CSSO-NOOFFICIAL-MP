@@ -52,14 +52,17 @@ protected:
 private:
 	void InitModelList(CLabeledCommandComboBox *cb);
 	void InitLogoList(CLabeledCommandComboBox *cb);
+	void InitAvatarList(CLabeledCommandComboBox *cb);
 
 	void RemapModel();
 	void RemapLogo();
+	void RemapAvatar();
 
 	void ConversionError( ConversionErrorType nError );
 
 	MESSAGE_FUNC_PTR( OnTextChanged, "TextChanged", panel );
 	MESSAGE_FUNC_CHARPTR( OnFileSelected, "FileSelected", fullpath );
+	MESSAGE_FUNC_CHARPTR( OnFileSelectedAvatar, "FileSelectedAvatar", fullpath );
 
 	void ColorForName(char const *pszColorName, int &r, int &g, int &b);
 
@@ -71,9 +74,18 @@ private:
 	CLabeledCommandComboBox *m_pLogoList;
     char m_LogoName[128];
 
+	// Avatar controls
+	vgui::ImagePanel *m_pAvatarImage;
+	CLabeledCommandComboBox *m_pAvatarList;
+	char m_AvatarName[128];
+
     CCvarSlider *m_pPrimaryColorSlider;
     CCvarSlider *m_pSecondaryColorSlider;
 	CCvarToggleCheckButton *m_pHighQualityModelCheckBox;
+
+	// Name and Clan Tag text entries
+	CCvarTextEntry *m_pPlayerNameText;
+	CCvarTextEntry *m_pClanTagText;
 
 	// Mod specific general checkboxes
 	vgui::Dar< CCvarToggleCheckButton * > m_cvarToggleCheckButtons;
@@ -86,6 +98,7 @@ private:
 	// Begin Spray Import Functions
 	ConversionErrorType WriteSprayVMT(const char *vtfPath);
 	void SelectLogo(const char *logoName);
+	void SelectAvatar(const char *avatarName);
 	// End Spray Import Functions
 
 	int	m_nLogoR;
@@ -96,6 +109,7 @@ private:
 	vgui::DHANDLE<CMultiplayerAdvancedDialog> m_hMultiplayerAdvancedDialog;
 #endif
 	vgui::FileOpenDialog *m_hImportSprayDialog;
+	vgui::FileOpenDialog *m_hImportAvatarDialog;
 };
 
 #endif // OPTIONSSUBMULTIPLAYER_H
