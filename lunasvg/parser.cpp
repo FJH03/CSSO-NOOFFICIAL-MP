@@ -1,7 +1,7 @@
 #include "parser.h"
 #include "parserutils.h"
 #include "layoutcontext.h"
-
+#include <cmath>
 #include "clippathelement.h"
 #include "defselement.h"
 #include "gelement.h"
@@ -892,7 +892,7 @@ bool Parser::parseColorComponent(const char*& ptr, const char* end, int& compone
         value *= 2.55;
 
     value = clamp(value, 0.0, 255.0);
-    component = static_cast<int>(std::round(value));
+    component = static_cast<int>(round(value));
     return true;
 }
 
