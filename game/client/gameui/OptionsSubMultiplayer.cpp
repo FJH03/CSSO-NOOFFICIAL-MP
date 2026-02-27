@@ -116,7 +116,11 @@ COptionsSubMultiplayer::COptionsSubMultiplayer(vgui::Panel *parent) : vgui::Prop
 	Button *importSprayImage = new Button( this, "ImportSprayImage", "#GameUI_ImportSprayEllipsis" );
 	importSprayImage->SetCommand("ImportSprayImage");
 
+	Button *importAvatarImage = new Button( this, "ImportAvatarImage", "#GameUI_ImportAvatarEllipsis" );
+	importAvatarImage->SetCommand("ImportAvatarImage");
+
 	m_hImportSprayDialog = NULL;
+	m_hImportAvatarDialog = NULL;
 
 	m_pPrimaryColorSlider = new CCvarSlider( this, "Primary Color Slider", "#GameUI_PrimaryColor",
 		0.0f, 255.0f, "topcolor" );
@@ -133,12 +137,27 @@ COptionsSubMultiplayer::COptionsSubMultiplayer(vgui::Panel *parent) : vgui::Prop
 	m_pLogoList = new CLabeledCommandComboBox( this, "SpraypaintList" );
     m_LogoName[0] = 0;
 	InitLogoList( m_pLogoList );
+	m_pLogoList->AddActionSignalTarget( this );
+
+	m_pAvatarList = new CLabeledCommandComboBox( this, "AvatarList" );
+    m_AvatarName[0] = 0;
+	InitAvatarList( m_pAvatarList );
+	m_pAvatarList->AddActionSignalTarget( this );
 
 	m_pModelImage = new CBitmapImagePanel( this, "ModelImage", NULL );
 	m_pModelImage->AddActionSignalTarget( this );
 
 	m_pLogoImage = new ImagePanel( this, "LogoImage" );
 	m_pLogoImage->AddActionSignalTarget( this );
+
+	m_pAvatarImage = new ImagePanel( this, "AvatarImage" );
+	m_pAvatarImage->AddActionSignalTarget( this );
+
+	m_pPlayerNameText = new CCvarTextEntry( this, "PlayerNameText", "name" );
+	m_pPlayerNameText->AddActionSignalTarget( this );
+
+	m_pClanTagText = new CCvarTextEntry( this, "ClanTagText", "cl_clantag" );
+	m_pClanTagText->AddActionSignalTarget( this );
 
 	m_nLogoR = 255;
 	m_nLogoG = 255;
@@ -251,7 +270,27 @@ void COptionsSubMultiplayer::OnCommand( const char *command )
 		m_hImportSprayDialog->DoModal(false);
 		m_hImportSprayDialog->Activate();
 	}
-
+	else if (!stricmp( command, "ImportAvatarImage" ) )
+	{
+		if (m_hImportAvatarDialog == NULL)
+		{
+			m_hImportAvatarDialog = new FileOpenDialog(NULL, "#GameUI_ImportAvatarImage", true);
+#ifdef WIN32
+			m_hImportAvatarDialog->AddFilter("*.tga,*.jpg,*.bmp,*.vtf", "#GameUI_All_Images", true);
+#else
+			m_hImportAvatarDialog->AddFilter("*.tga,*.jpg,*.vtf", "#GameUI_All_ImagesNoBmp", true);
+#endif
+			m_hImportAvatarDialog->AddFilter("*.tga", "#GameUI_TGA_Images", false);
+			m_hImportAvatarDialog->AddFilter("*.jpg", "#GameUI_JPEG_Images", false);
+#ifdef WIN32
+			m_hImportAvatarDialog->AddFilter("*.bmp", "#GameUI_BMP_Images", false);
+#endif
+			m_hImportAvatarDialog->AddFilter("*.vtf", "#GameUI_VTF_Images", false);
+			m_hImportAvatarDialog->AddActionSignalTarget(this);
+		}
+		m_hImportAvatarDialog->DoModal(false);
+		m_hImportAvatarDialog->Activate();
+	}
 	else if ( !stricmp( command, "ResetStats" ) )
 	{
 		QueryBox *box = new QueryBox("#GameUI_ConfirmResetStatsTitle", "#GameUI_ConfirmResetStatsText", this);
@@ -344,6 +383,38 @@ void COptionsSubMultiplayer::OnFileSelected(const char *fullpath)
 
 		// automatically select the logo that was just imported.
 		SelectLogo(szRootFilename);
+	}
+	else
+	{
+		ConversionError( nErrorCode );
+	}
+
+	// change the cursor back to normal
+	surface()->SetCursor(dc_user);
+#endif
+}
+
+void COptionsSubMultiplayer::OnFileSelectedAvatar(const char *fullpath)
+{
+#ifndef _XBOX
+	// this can take a while, put up a waiting cursor
+	surface()->SetCursor(dc_hourglass);
+
+	ConversionErrorType nErrorCode = ImgUtl_ConvertToVTFAndDumpVMT( fullpath, IsPosix() ? "/vgui/avatars" : "\\vgui\\avatars", 256, 256 );
+	if ( nErrorCode == CE_SUCCESS )
+	{
+		// refresh the avatar list so the new avatar shows up.
+		InitAvatarList(m_pAvatarList);
+
+		// Get the filename
+		char szRootFilename[MAX_PATH];
+		V_FileBase( fullpath, szRootFilename, sizeof( szRootFilename ) );
+
+		// automatically select the avatar that was just imported.
+		SelectAvatar(szRootFilename);
+
+		// Update the avatar preview
+		RemapAvatar();
 	}
 	else
 	{
@@ -461,6 +532,88 @@ void COptionsSubMultiplayer::SelectLogo(const char *logoName)
 	{
 		// select the logo.
 		m_pLogoList->ActivateItem(index);
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Builds the list of avatars
+//-----------------------------------------------------------------------------
+void COptionsSubMultiplayer::InitAvatarList( CLabeledCommandComboBox *cb )
+{
+	// Find out images
+	FileFindHandle_t fh;
+	char directory[ 512 ];
+
+	ConVarRef cl_avatar( "cl_avatar", true );
+	if ( !cl_avatar.IsValid() )
+		return;
+
+	cb->DeleteAllItems();
+
+	const char *avatarfile = cl_avatar.GetString();
+	Q_snprintf( directory, sizeof( directory ), "materials/vgui/avatars/*.vtf" );
+	const char *fn = g_pFullFileSystem->FindFirst( directory, &fh );
+	int i = 0, initialItem = 0;
+	while (fn)
+	{
+		char filename[ 512 ];
+		Q_snprintf( filename, sizeof(filename), "materials/vgui/avatars/%s", fn );
+		if ( strlen( filename ) >= 4 )
+		{
+			filename[ strlen( filename ) - 4 ] = 0;
+			Q_strncat( filename, ".vmt", sizeof( filename ), COPY_ALL_CHARACTERS );
+			if ( g_pFullFileSystem->FileExists( filename ) )
+			{
+				// strip off the extension
+				Q_strncpy( filename, fn, sizeof( filename ) );
+				filename[ strlen( filename ) - 4 ] = 0;
+				cb->AddItem( filename, "" );
+
+				// check to see if this is the one we have set
+				Q_snprintf( filename, sizeof(filename), "materials/vgui/avatars/%s", fn );
+				if (!Q_stricmp(filename, avatarfile))
+				{
+					initialItem = i;
+				}
+
+				++i;
+			}
+		}
+
+		fn = g_pFullFileSystem->FindNext( fh );
+	}
+
+	g_pFullFileSystem->FindClose( fh );
+	cb->SetInitialItem(initialItem);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Selects the given avatar in the avatar list.
+//-----------------------------------------------------------------------------
+void COptionsSubMultiplayer::SelectAvatar(const char *avatarName)
+{
+	int numEntries = m_pAvatarList->GetItemCount();
+	int index;
+	wchar_t itemText[MAX_PATH];
+	wchar_t itemToSelectText[MAX_PATH];
+
+	// convert the avatar filename to unicode
+	g_pVGuiLocalize->ConvertANSIToUnicode(avatarName, itemToSelectText, sizeof(itemToSelectText));
+
+	// find the index of the avatar we want.
+	for (index = 0; index < numEntries; ++index)
+	{
+		m_pAvatarList->GetItemText(index, itemText, sizeof(itemText));
+		if (!wcscmp(itemText, itemToSelectText))
+		{
+			break;
+		}
+	}
+
+	if (index < numEntries)
+	{
+		// select the avatar.
+		m_pAvatarList->ActivateItem(index);
 	}
 }
 
@@ -619,6 +772,48 @@ void COptionsSubMultiplayer::RemapLogo()
 }
 
 //-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void COptionsSubMultiplayer::RemapAvatar()
+{
+	char avatarname[256];
+
+	m_pAvatarList->GetText( avatarname, sizeof( avatarname ) );
+	if( !avatarname[ 0 ] )
+		return;
+
+	char fullAvatarName[512];
+
+	// make sure there is a version with the proper shader
+	g_pFullFileSystem->CreateDirHierarchy( "materials/VGUI/avatars/UI", "GAME" );
+	Q_snprintf( fullAvatarName, sizeof( fullAvatarName ), "materials/VGUI/avatars/UI/%s.vmt", avatarname );
+	if ( !g_pFullFileSystem->FileExists( fullAvatarName ) )
+	{
+		FileHandle_t fp = g_pFullFileSystem->Open( fullAvatarName, "wb" );
+		if ( !fp )
+			return;
+
+		char data[1024];
+		Q_snprintf( data, sizeof( data ), "\"UnlitGeneric\"\n\
+{\n\
+	\"$translucent\" 1\n\
+	\"$basetexture\" \"VGUI/avatars/%s\"\n\
+	\"$vertexcolor\" 1\n\
+	\"$vertexalpha\" 1\n\
+	\"$no_fullbright\" 1\n\
+	\"$ignorez\" 1\n\
+}\n\
+", avatarname );
+
+		g_pFullFileSystem->Write( data, strlen( data ), fp );
+		g_pFullFileSystem->Close( fp );
+	}
+
+	Q_snprintf( fullAvatarName, sizeof( fullAvatarName ), "avatars/UI/%s", avatarname );
+	m_pAvatarImage->SetImage( fullAvatarName );
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void COptionsSubMultiplayer::RemapModel()
@@ -641,8 +836,18 @@ void COptionsSubMultiplayer::RemapModel()
 //-----------------------------------------------------------------------------
 void COptionsSubMultiplayer::OnTextChanged(vgui::Panel *panel)
 {
-	RemapModel();
-	RemapLogo();
+	if ( panel == m_pModelList )
+	{
+		RemapModel();
+	}
+	else if ( panel == m_pLogoList )
+	{
+		RemapLogo();
+	}
+	else if ( panel == m_pAvatarList )
+	{
+		RemapAvatar();
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -806,6 +1011,8 @@ void COptionsSubMultiplayer::OnApplyChanges()
 	m_pLogoList->ApplyChanges();
     m_pLogoList->GetText(m_LogoName, sizeof(m_LogoName));
 	m_pHighQualityModelCheckBox->ApplyChanges();
+	m_pAvatarList->ApplyChanges();
+    m_pAvatarList->GetText(m_AvatarName, sizeof(m_AvatarName));
 
 	for ( int i=0; i<m_cvarToggleCheckButtons.GetCount(); ++i )
 	{
