@@ -110,6 +110,8 @@ private:
 #endif
 	vgui::FileOpenDialog *m_hImportSprayDialog;
 	vgui::FileOpenDialog *m_hImportAvatarDialog;
+
+	bool m_bImportingAvatar;
 };
 
 #endif // OPTIONSSUBMULTIPLAYER_H
