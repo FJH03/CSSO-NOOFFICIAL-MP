@@ -294,6 +294,7 @@ void COptionsSubMultiplayer::OnCommand( const char *command )
 		m_hImportAvatarDialog->Activate();
 		m_bAvatarImportActive = true;
 	}
+
 	else if ( !stricmp( command, "ResetStats" ) )
 	{
 		QueryBox *box = new QueryBox("#GameUI_ConfirmResetStatsTitle", "#GameUI_ConfirmResetStatsText", this);
@@ -371,8 +372,7 @@ void COptionsSubMultiplayer::ConversionError( ConversionErrorType nError )
 void COptionsSubMultiplayer::OnFileSelected(const char *fullpath)
 {
 #ifndef _XBOX
-
-	// Check if this is from the avatar import
+	// Check if this is an avatar import
 	if ( m_bAvatarImportActive )
 	{
 		m_bAvatarImportActive = false;
@@ -412,6 +412,7 @@ void COptionsSubMultiplayer::OnFileSelectedAvatar(const char *fullpath)
 	// this can take a while, put up a waiting cursor
 	surface()->SetCursor(dc_hourglass);
 
+	// Use same folder as sprays: materials/vgui/logos
 	ConversionErrorType nErrorCode = ImgUtl_ConvertToVTFAndDumpVMT( fullpath, IsPosix() ? "/vgui/logos" : "\\vgui\\logos", 256, 256 );
 	if ( nErrorCode == CE_SUCCESS )
 	{
@@ -424,7 +425,7 @@ void COptionsSubMultiplayer::OnFileSelectedAvatar(const char *fullpath)
 
 		// automatically select the avatar that was just imported.
 		SelectAvatar(szRootFilename);
-
+		
 		// Update the avatar preview
 		RemapAvatar();
 	}
@@ -552,7 +553,7 @@ void COptionsSubMultiplayer::SelectLogo(const char *logoName)
 //-----------------------------------------------------------------------------
 void COptionsSubMultiplayer::InitAvatarList( CLabeledCommandComboBox *cb )
 {
-	// Find out images
+	// Find out images - same folder as sprays
 	FileFindHandle_t fh;
 	char directory[ 512 ];
 
@@ -563,6 +564,7 @@ void COptionsSubMultiplayer::InitAvatarList( CLabeledCommandComboBox *cb )
 	cb->DeleteAllItems();
 
 	const char *avatarfile = cl_avatar.GetString();
+	
 	// Search in materials/vgui/logos/ for available avatars (same as sprays)
 	Q_snprintf( directory, sizeof( directory ), "materials/vgui/logos/*.vtf" );
 	const char *fn = g_pFullFileSystem->FindFirst( directory, &fh );
@@ -577,10 +579,11 @@ void COptionsSubMultiplayer::InitAvatarList( CLabeledCommandComboBox *cb )
 			Q_strncat( filename, ".vmt", sizeof( filename ), COPY_ALL_CHARACTERS );
 			if ( g_pFullFileSystem->FileExists( filename ) )
 			{
-				// strip off the extension
+				// strip off the extension - store full relative path
 				Q_strncpy( filename, fn, sizeof( filename ) );
 				filename[ strlen( filename ) - 4 ] = 0;
-
+				
+				// Store as "vgui/logos/filename" for the combo box
 				char displayPath[512];
 				Q_snprintf( displayPath, sizeof(displayPath), "vgui/logos/%s", filename );
 				cb->AddItem( filename, displayPath );
@@ -803,15 +806,14 @@ void COptionsSubMultiplayer::RemapAvatar()
 
 	char fullAvatarName[512];
 
-	// make sure there is a version with the proper shader
-	g_pFullFileSystem->CreateDirHierarchy( "materials/VGUI/avatars/UI", "GAME" );
-
+	// make sure there is a version with the proper shader in UI folder
+	g_pFullFileSystem->CreateDirHierarchy( "materials/VGUI/logos/UI", "GAME" );
+	
 	// Get just the filename for the UI wrapper
 	char szFileName[MAX_PATH];
 	Q_FileBase( avatarpath, szFileName, sizeof( szFileName ) );
 	
-	Q_snprintf( fullAvatarName, sizeof( fullAvatarName ), "materials/VGUI/avatars/UI/%s.vmt", szFileName );
-
+	Q_snprintf( fullAvatarName, sizeof( fullAvatarName ), "materials/VGUI/logos/UI/%s.vmt", szFileName );
 	if ( !g_pFullFileSystem->FileExists( fullAvatarName ) )
 	{
 		FileHandle_t fp = g_pFullFileSystem->Open( fullAvatarName, "wb" );
@@ -834,12 +836,12 @@ void COptionsSubMultiplayer::RemapAvatar()
 		g_pFullFileSystem->Close( fp );
 	}
 
-	QQ_snprintf( fullAvatarName, sizeof( fullAvatarName ), "avatars/UI/%s", szFileName );
+	Q_snprintf( fullAvatarName, sizeof( fullAvatarName ), "logos/UI/%s", szFileName );
 	m_pAvatarImage->SetImage( fullAvatarName );
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void COptionsSubMultiplayer::RemapModel()
 {
@@ -996,7 +998,7 @@ void COptionsSubMultiplayer::ColorForName( char const *pszColorName, int&r, int&
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void COptionsSubMultiplayer::OnResetData()
 {
@@ -1038,9 +1040,9 @@ void COptionsSubMultiplayer::OnApplyChanges()
 //	m_pModelList->ApplyChanges();
 	m_pLogoList->ApplyChanges();
     m_pLogoList->GetText(m_LogoName, sizeof(m_LogoName));
-	m_pHighQualityModelCheckBox->ApplyChanges();
 	m_pAvatarList->ApplyChanges();
     m_pAvatarList->GetText(m_AvatarName, sizeof(m_AvatarName));
+	m_pHighQualityModelCheckBox->ApplyChanges();
 
 	for ( int i=0; i<m_cvarToggleCheckButtons.GetCount(); ++i )
 	{
@@ -1084,7 +1086,7 @@ void COptionsSubMultiplayer::OnApplyChanges()
 	{
 		Q_strncpy( m_ModelName, m_pModelList->GetActiveItemCommand(), sizeof( m_ModelName ) );
 		Q_StripExtension( m_ModelName, m_ModelName, sizeof ( m_ModelName ) );
-		
+
 		// save the player model name
 		Q_snprintf(cmd, sizeof(cmd), "cl_playermodel models/%s.mdl\n", m_ModelName );
 		engine->ClientCmd_Unrestricted(cmd);
@@ -1098,7 +1100,7 @@ void COptionsSubMultiplayer::OnApplyChanges()
 	if ( m_pDownloadFilterCombo )
 	{
 		ConVarRef  cl_downloadfilter( "cl_downloadfilter" );
-		
+
 		switch ( m_pDownloadFilterCombo->GetActiveItem() )
 		{
 		default:
