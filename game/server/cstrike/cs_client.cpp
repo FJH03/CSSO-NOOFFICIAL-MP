@@ -38,7 +38,7 @@ extern CBaseEntity *FindPickerEntity( CBasePlayer *pPlayer );
 
 extern bool			g_fGameOver;
 
-ConVar  cl_clantag( "cl_clantag", "", FCVAR_ARCHIVE | FCVAR_USERINFO | FCVAR_PRINTABLEONLY, "Set Clan tag (max 12 chars)", CL_ClanTagChanged );
+ConVar  cl_clantag( "cl_clantag", "", FCVAR_ARCHIVE | FCVAR_USERINFO | FCVAR_PRINTABLEONLY, "Set Clan tag (max 12 chars)");
 
 void FinishClientPutInServer( CCSPlayer *pPlayer )
 {
