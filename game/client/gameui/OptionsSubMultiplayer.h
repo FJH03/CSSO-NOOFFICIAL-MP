@@ -111,7 +111,7 @@ private:
 	vgui::FileOpenDialog *m_hImportSprayDialog;
 	vgui::FileOpenDialog *m_hImportAvatarDialog;
 
-	bool m_bImportingAvatar;
+	bool m_bAvatarImportActive;
 };
 
 #endif // OPTIONSSUBMULTIPLAYER_H
