@@ -4,8 +4,8 @@
 //
 //=============================================================================//
 
+#include "cbase.h"
 #include "hud.h"
-#include "cvardef.h"
 #include "gyroscope.h"
 
 #ifdef __ANDROID__
@@ -18,10 +18,10 @@
 //-----------------------------------------------------------------------------
 // CVARs
 //-----------------------------------------------------------------------------
-cvar_t *gyroscope = NULL;
-cvar_t *gyroscope_sensitivity = NULL;
-cvar_t *gyroscope_reverse_x = NULL;
-cvar_t *gyroscope_reverse_y = NULL;
+ConVar gyroscope( "gyroscope", "0", FCVAR_ARCHIVE, "Enable gyroscope input on Android" );
+ConVar gyroscope_sensitivity( "gyroscope_sensitivity", "1.0", FCVAR_ARCHIVE, "Gyroscope sensitivity multiplier" );
+ConVar gyroscope_reverse_x( "gyroscope_reverse_x", "0", FCVAR_ARCHIVE, "Reverse gyroscope yaw (left/right)" );
+ConVar gyroscope_reverse_y( "gyroscope_reverse_y", "0", FCVAR_ARCHIVE, "Reverse gyroscope pitch (top/bottom)" );
 
 #ifdef __ANDROID__
 
@@ -124,10 +124,10 @@ static int Gyro_SensorCallback( int fd, int events, void *data )
 		float rawPitch =  gyroY;
 
 		// Apply reversal CVARs
-		if ( gyroscope_reverse_x && gyroscope_reverse_x->value != 0.0f )
+		if ( gyroscope_reverse_x.GetBool() )
 			rawYaw = -rawYaw;
 		
-		if ( gyroscope_reverse_y && gyroscope_reverse_y->value != 0.0f )
+		if ( gyroscope_reverse_y.GetBool() )
 			rawPitch = -rawPitch;
 
 		// Apply deadzone
@@ -137,8 +137,9 @@ static int Gyro_SensorCallback( int fd, int events, void *data )
 			rawPitch = 0.0f;
 
 		// Get sensitivity from CVAR
-		float sens = ( gyroscope_sensitivity && gyroscope_sensitivity->value > 0.0f )
-					 ? gyroscope_sensitivity->value : 1.0f;
+		float sens = gyroscope_sensitivity.GetFloat();
+		if ( sens <= 0.0f )
+			sens = 1.0f;
 
 		// Apply exponential sensitivity curve
 		float expo = sens * ( 1.0f + sens * 0.25f );
@@ -179,18 +180,12 @@ static int Gyro_SensorCallback( int fd, int events, void *data )
 //-----------------------------------------------------------------------------
 void Gyro_Init( void )
 {
-	// Register CVARs
-	gyroscope = gEngfuncs.pfnRegisterVariable( "gyroscope", "0", FCVAR_ARCHIVE );
-	gyroscope_sensitivity = gEngfuncs.pfnRegisterVariable( "gyroscope_sensitivity", "1.0", FCVAR_ARCHIVE );
-	gyroscope_reverse_x = gEngfuncs.pfnRegisterVariable( "gyroscope_reverse_x", "0", FCVAR_ARCHIVE );
-	gyroscope_reverse_y = gEngfuncs.pfnRegisterVariable( "gyroscope_reverse_y", "0", FCVAR_ARCHIVE );
-
 #ifdef __ANDROID__
 	// Get sensor manager
 	g_pSensorManager = ASensorManager_getInstance();
 	if ( !g_pSensorManager )
 	{
-		gEngfuncs.Con_Printf( "Gyroscope: Failed to get sensor manager\n" );
+		Msg( "Gyroscope: Failed to get sensor manager\n" );
 		return;
 	}
 	
@@ -198,7 +193,7 @@ void Gyro_Init( void )
 	g_pGyroSensor = ASensorManager_getDefaultSensor( g_pSensorManager, ASENSOR_TYPE_GYROSCOPE );
 	if ( !g_pGyroSensor )
 	{
-		gEngfuncs.Con_Printf( "Gyroscope: Gyroscope sensor not available\n" );
+		Msg( "Gyroscope: Gyroscope sensor not available\n" );
 		return;
 	}
 	
@@ -211,7 +206,7 @@ void Gyro_Init( void )
 	
 	if ( !g_pLooper )
 	{
-		gEngfuncs.Con_Printf( "Gyroscope: Failed to get looper\n" );
+		Msg( "Gyroscope: Failed to get looper\n" );
 		return;
 	}
 	
@@ -226,7 +221,7 @@ void Gyro_Init( void )
 	
 	if ( !g_pSensorEventQueue )
 	{
-		gEngfuncs.Con_Printf( "Gyroscope: Failed to create event queue\n" );
+		Msg( "Gyroscope: Failed to create event queue\n" );
 		return;
 	}
 	
@@ -238,9 +233,9 @@ void Gyro_Init( void )
 	g_flSmoothYaw = 0.0f;
 	g_flSmoothPitch = 0.0f;
 	
-	gEngfuncs.Con_Printf( "Gyroscope: Initialized successfully\n" );
+	Msg( "Gyroscope: Initialized successfully\n" );
 #else
-	gEngfuncs.Con_Printf( "Gyroscope: Not available on this platform\n" );
+	Msg( "Gyroscope: Not available on this platform\n" );
 #endif
 }
 
@@ -263,7 +258,7 @@ void Gyro_Shutdown( void )
 	g_pLooper = NULL;
 	g_bGyroInitialized = false;
 	
-	gEngfuncs.Con_Printf( "Gyroscope: Shutdown\n" );
+	Msg( "Gyroscope: Shutdown\n" );
 #endif
 }
 
@@ -281,7 +276,7 @@ void Gyro_Update( float *yaw, float *pitch )
 	}
 
 	// Check if gyroscope should be enabled
-	bool bShouldEnable = ( gyroscope && gyroscope->value != 0.0f );
+	bool bShouldEnable = gyroscope.GetBool();
 
 	if ( bShouldEnable && !g_bGyroSensorEnabled )
 	{
@@ -343,9 +338,8 @@ int Gyro_IsEnabled( void )
 #ifdef __ANDROID__
 	if ( !g_bGyroInitialized )
 		return 0;
-	if ( !gyroscope )
-		return 0;
-	return ( gyroscope->value != 0.0f ) ? 1 : 0;
+	
+	return gyroscope.GetBool() ? 1 : 0;
 #else
 	return 0;
 #endif
