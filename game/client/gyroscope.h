@@ -14,10 +14,10 @@
 //-----------------------------------------------------------------------------
 // Gyroscope CVARs
 //-----------------------------------------------------------------------------
-extern cvar_t *gyroscope;
-extern cvar_t *gyroscope_sensitivity;
-extern cvar_t *gyroscope_reverse_x;
-extern cvar_t *gyroscope_reverse_y;
+extern ConVar gyroscope;
+extern ConVar gyroscope_sensitivity;
+extern ConVar gyroscope_reverse_x;
+extern ConVar gyroscope_reverse_y;
 
 //-----------------------------------------------------------------------------
 // Gyroscope functions
