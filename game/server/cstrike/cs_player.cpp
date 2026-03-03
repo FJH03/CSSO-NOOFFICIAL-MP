@@ -7544,10 +7544,7 @@ void CCSPlayer::State_Enter_WELCOME()
 
 	PhysObjectSleep();
 
-	const ConVar *hostname = cvar->FindVar( "hostname" );
-	const char *title = (hostname) ? hostname->GetString() : "MESSAGE OF THE DAY";
-
-	// Show info panel (if it's not a simple demo map).
+	// Skip MOTD and go directly to team selection
 	if ( !CSGameRules()->IsLogoMap() )
 	{
 		if ( CommandLine()->FindParm( "-makereslists" ) ) // don't show the MOTD when making reslists
@@ -7556,16 +7553,8 @@ void CCSPlayer::State_Enter_WELCOME()
 		}
 		else
 		{
-			KeyValues *data = new KeyValues("data");
-			data->SetString( "title", title );		// info panel title
-			data->SetString( "type", "1" );			// show userdata from stringtable entry
-			data->SetString( "msg",	"motd" );		// use this stringtable entry
-			data->SetInt( "cmd", TEXTWINDOW_CMD_JOINGAME );	// exec this command if panel closed
-			data->SetBool( "unload", sv_motd_unload_on_dismissal.GetBool() );
-
-			ShowViewPortPanel( PANEL_INFO, true, data );
-
-			data->deleteThis();
+			// Skip MOTD - go directly to team selection
+			engine->ClientCommand( edict(), "chooseteam\n" );
 		}
 	}
 }
