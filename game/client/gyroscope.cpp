@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: Gyroscope input support for Android devices
+// Purpose: Gyroscope input support for Android devices using SDL2
 //
 //=============================================================================//
 
@@ -9,8 +9,9 @@
 #include "gyroscope.h"
 
 #ifdef __ANDROID__
-#include <android/sensor.h>
-#include <android/looper.h>
+
+// FjH_03: Use SDL2 sensor API instead of direct NDK calls
+#include <SDL.h>
 #endif
 
 #include <math.h>
@@ -26,42 +27,32 @@ ConVar gyroscope_reverse_y( "gyroscope_reverse_y", "0", FCVAR_ARCHIVE, "Reverse 
 #ifdef __ANDROID__
 
 //-----------------------------------------------------------------------------
-// Android Gyroscope Implementation
+// SDL2 Gyroscope Implementation
 //-----------------------------------------------------------------------------
 
-static ASensorManager *g_pSensorManager = NULL;
-static ASensorEventQueue *g_pSensorEventQueue = NULL;
-static const ASensor *g_pGyroSensor = NULL;
-static ALooper *g_pLooper = NULL;
-
+static SDL_Sensor *g_pSDLSensor = NULL;
 static float g_flGyroYaw = 0.0f;
 static float g_flGyroPitch = 0.0f;
-static int64_t g_iLastTimestamp = 0;
 static bool g_bGyroInitialized = false;
 static bool g_bGyroSensorEnabled = false;
-static bool g_bFirstEvent = true;
 static float g_flSmoothYaw = 0.0f;
 static float g_flSmoothPitch = 0.0f;
 
 // Constants
 static const float GYRO_RAD2DEG = 57.2957795f;
 static const float GYRO_MIN_DEADZONE = 0.010f;
-static const float NS2S = 1.0f / 1000000000.0f;
 
 //-----------------------------------------------------------------------------
 // Enable gyroscope sensor
 //-----------------------------------------------------------------------------
 static void Gyro_EnableSensor( void )
 {
-	if ( !g_bGyroInitialized || !g_pSensorEventQueue || !g_pGyroSensor )
+	if ( !g_bGyroInitialized || !g_pSDLSensor )
 		return;
 	
 	if ( !g_bGyroSensorEnabled )
 	{
-		ASensorEventQueue_enableSensor( g_pSensorEventQueue, g_pGyroSensor );
-		ASensorEventQueue_setEventRate( g_pSensorEventQueue, g_pGyroSensor, 16666 ); // 60Hz
 		g_bGyroSensorEnabled = true;
-		g_bFirstEvent = true;
 		g_flGyroYaw = 0.0f;
 		g_flGyroPitch = 0.0f;
 		g_flSmoothYaw = 0.0f;
@@ -74,12 +65,12 @@ static void Gyro_EnableSensor( void )
 //-----------------------------------------------------------------------------
 static void Gyro_DisableSensor( void )
 {
-	if ( !g_bGyroInitialized || !g_pSensorEventQueue || !g_pGyroSensor )
+	if ( !g_bGyroInitialized || !g_pSDLSensor )
 		return;
 	
 	if ( g_bGyroSensorEnabled )
 	{
-		ASensorEventQueue_disableSensor( g_pSensorEventQueue, g_pGyroSensor );
+		SDL_SensorClose( g_pSDLSensor );
 		g_bGyroSensorEnabled = false;
 		g_flGyroYaw = 0.0f;
 		g_flGyroPitch = 0.0f;
@@ -89,88 +80,71 @@ static void Gyro_DisableSensor( void )
 }
 
 //-----------------------------------------------------------------------------
-// Sensor event callback
+// Update gyroscope data from SDL
 //-----------------------------------------------------------------------------
-static int Gyro_SensorCallback( int fd, int events, void *data )
+static void Gyro_ReadSensor( void )
 {
-	ASensorEvent event;
+	if ( !g_bGyroSensorEnabled || !g_pSDLSensor )
+		return;
 
-	while ( ASensorEventQueue_getEvents( g_pSensorEventQueue, &event, 1 ) > 0 )
-	{
-		if ( event.type != ASENSOR_TYPE_GYROSCOPE )
-			continue;
+	float data[4];
+	if ( SDL_SensorGetData( g_pSDLSensor, data, 4 ) < 0 )
+		return;
 
-		// Skip first event (initialization)
-		if ( g_bFirstEvent )
-		{
-			g_iLastTimestamp = event.timestamp;
-			g_bFirstEvent = false;
-			continue;
-		}
+	// SDL gyro data is in rad/s
+	float gyroX = data[0];
+	float gyroY = data[1];
 
-		// Calculate delta time
-		float dT = ( float )( event.timestamp - g_iLastTimestamp ) * NS2S;
-		g_iLastTimestamp = event.timestamp;
+	// Apply axis mapping
+	float rawYaw   = -gyroX;
+	float rawPitch =  gyroY;
 
-		if ( dT <= 0.0f || dT > 0.5f )
-			continue;
+	// Apply reversal CVARs
+	if ( gyroscope_reverse_x.GetBool() )
+		rawYaw = -rawYaw;
+	
+	if ( gyroscope_reverse_y.GetBool() )
+		rawPitch = -rawPitch;
 
-		// Get raw gyro data (angular velocity in rad/s)
-		float gyroX = event.data[0];
-		float gyroY = event.data[1];
+	// Apply deadzone
+	if ( fabsf( rawYaw ) < GYRO_MIN_DEADZONE )
+		rawYaw = 0.0f;
+	if ( fabsf( rawPitch ) < GYRO_MIN_DEADZONE )
+		rawPitch = 0.0f;
 
-		// Apply axis mapping and reversal
-		float rawYaw   = -gyroX;
-		float rawPitch =  gyroY;
+	// Get sensitivity
+	float sens = gyroscope_sensitivity.GetFloat();
+	if ( sens <= 0.0f )
+		sens = 1.0f;
 
-		// Apply reversal CVARs
-		if ( gyroscope_reverse_x.GetBool() )
-			rawYaw = -rawYaw;
-		
-		if ( gyroscope_reverse_y.GetBool() )
-			rawPitch = -rawPitch;
+	// Apply exponential sensitivity curve
+	float expo = sens * ( 1.0f + sens * 0.25f );
 
-		// Apply deadzone
-		if ( fabsf( rawYaw ) < GYRO_MIN_DEADZONE )
-			rawYaw = 0.0f;
-		if ( fabsf( rawPitch ) < GYRO_MIN_DEADZONE )
-			rawPitch = 0.0f;
+	// Assume ~16ms frame time for smoothing
+	float dT = 0.016f;
+	float scaledYaw   = rawYaw   * dT * expo * GYRO_RAD2DEG;
+	float scaledPitch = rawPitch * dT * expo * GYRO_RAD2DEG;
 
-		// Get sensitivity from CVAR
-		float sens = gyroscope_sensitivity.GetFloat();
-		if ( sens <= 0.0f )
-			sens = 1.0f;
+	// Adaptive smoothing
+	float mag = fmaxf( fabsf( scaledYaw ), fabsf( scaledPitch ) );
+	float baseAlpha = dT * 140.0f;
 
-		// Apply exponential sensitivity curve
-		float expo = sens * ( 1.0f + sens * 0.25f );
+	if ( baseAlpha < 0.12f )
+		baseAlpha = 0.12f;
+	if ( baseAlpha > 0.30f )
+		baseAlpha = 0.30f;
 
-		// Scale by delta time and convert to degrees
-		float scaledYaw   = rawYaw   * dT * expo * GYRO_RAD2DEG;
-		float scaledPitch = rawPitch * dT * expo * GYRO_RAD2DEG;
+	float alpha = baseAlpha + mag * 0.40f;
+	if ( alpha > 0.85f )
+		alpha = 0.85f;
 
-		// Adaptive smoothing based on movement magnitude
-		float mag = fmaxf( fabsf( scaledYaw ), fabsf( scaledPitch ) );
-		float baseAlpha = dT * 140.0f;
+	// Apply smoothing
+	g_flSmoothYaw   = g_flSmoothYaw   * ( 1.0f - alpha ) + scaledYaw   * alpha;
+	g_flSmoothPitch = g_flSmoothPitch * ( 1.0f - alpha ) + scaledPitch * alpha;
 
-		if ( baseAlpha < 0.12f )
-			baseAlpha = 0.12f;
-		if ( baseAlpha > 0.30f )
-			baseAlpha = 0.30f;
-
-		float alpha = baseAlpha + mag * 0.40f;
-		if ( alpha > 0.85f )
-			alpha = 0.85f;
-
-		// Apply smoothing
-		g_flSmoothYaw   = g_flSmoothYaw   * ( 1.0f - alpha ) + scaledYaw   * alpha;
-		g_flSmoothPitch = g_flSmoothPitch * ( 1.0f - alpha ) + scaledPitch * alpha;
-
-		// Accumulate deltas
-		g_flGyroYaw   += g_flSmoothYaw;
-		g_flGyroPitch += g_flSmoothPitch;
-	}
-
-	return 1;
+	// Accumulate deltas
+	g_flGyroYaw   += g_flSmoothYaw;
+	g_flGyroPitch += g_flSmoothPitch;
 }
 
 #endif // __ANDROID__
@@ -181,59 +155,38 @@ static int Gyro_SensorCallback( int fd, int events, void *data )
 void Gyro_Init( void )
 {
 #ifdef __ANDROID__
-	// Get sensor manager
-	g_pSensorManager = ASensorManager_getInstance();
-	if ( !g_pSensorManager )
+	// Initialize SDL sensor subsystem
+	if ( SDL_InitSubSystem( SDL_INIT_SENSOR ) < 0 )
 	{
-		Msg( "Gyroscope: Failed to get sensor manager\n" );
+		Msg( "Gyroscope: Failed to initialize SDL sensor subsystem: %s\n", SDL_GetError() );
 		return;
 	}
-	
-	// Get gyroscope sensor
-	g_pGyroSensor = ASensorManager_getDefaultSensor( g_pSensorManager, ASENSOR_TYPE_GYROSCOPE );
-	if ( !g_pGyroSensor )
+
+	// Try to open the first gyroscope sensor
+	int sensorCount = SDL_NumSensors();
+	for ( int i = 0; i < sensorCount; i++ )
 	{
-		Msg( "Gyroscope: Gyroscope sensor not available\n" );
-		return;
+		SDL_SensorType type = SDL_SensorGetDeviceType( i );
+		if ( type == SDL_SENSOR_GYRO )
+		{
+			g_pSDLSensor = SDL_SensorOpen( i );
+			if ( g_pSDLSensor )
+			{
+				g_bGyroInitialized = true;
+				g_bGyroSensorEnabled = false;
+				g_flGyroYaw = 0.0f;
+				g_flGyroPitch = 0.0f;
+				g_flSmoothYaw = 0.0f;
+				g_flSmoothPitch = 0.0f;
+				
+				Msg( "Gyroscope: Initialized successfully (SDL sensor %d)\n", i );
+				return;
+			}
+		}
 	}
-	
-	// Get or create looper
-	g_pLooper = ALooper_forThread();
-	if ( !g_pLooper )
-	{
-		g_pLooper = ALooper_prepare( ALOOPER_PREPARE_ALLOW_NON_CALLBACKS );
-	}
-	
-	if ( !g_pLooper )
-	{
-		Msg( "Gyroscope: Failed to get looper\n" );
-		return;
-	}
-	
-	// Create event queue
-	g_pSensorEventQueue = ASensorManager_createEventQueue(
-		g_pSensorManager,
-		g_pLooper,
-		ALOOPER_POLL_CALLBACK,
-		Gyro_SensorCallback,
-		NULL
-	);
-	
-	if ( !g_pSensorEventQueue )
-	{
-		Msg( "Gyroscope: Failed to create event queue\n" );
-		return;
-	}
-	
-	g_bGyroInitialized = true;
-	g_bGyroSensorEnabled = false;
-	g_bFirstEvent = true;
-	g_flGyroYaw = 0.0f;
-	g_flGyroPitch = 0.0f;
-	g_flSmoothYaw = 0.0f;
-	g_flSmoothPitch = 0.0f;
-	
-	Msg( "Gyroscope: Initialized successfully\n" );
+
+	Msg( "Gyroscope: No gyroscope sensor found\n" );
+	SDL_QuitSubSystem( SDL_INIT_SENSOR );
 #else
 	Msg( "Gyroscope: Not available on this platform\n" );
 #endif
@@ -247,16 +200,11 @@ void Gyro_Shutdown( void )
 #ifdef __ANDROID__
 	Gyro_DisableSensor();
 	
-	if ( g_pSensorManager && g_pSensorEventQueue )
+	if ( g_bGyroInitialized )
 	{
-		ASensorManager_destroyEventQueue( g_pSensorManager, g_pSensorEventQueue );
+		SDL_QuitSubSystem( SDL_INIT_SENSOR );
+		g_bGyroInitialized = false;
 	}
-	
-	g_pSensorEventQueue = NULL;
-	g_pGyroSensor = NULL;
-	g_pSensorManager = NULL;
-	g_pLooper = NULL;
-	g_bGyroInitialized = false;
 	
 	Msg( "Gyroscope: Shutdown\n" );
 #endif
@@ -296,11 +244,8 @@ void Gyro_Update( float *yaw, float *pitch )
 		return;
 	}
 
-	// Process pending sensor events
-	if ( g_pLooper )
-	{
-		ALooper_pollOnce( 0, NULL, NULL, NULL );
-	}
+	// Read sensor data
+	Gyro_ReadSensor();
 
 	// Output accumulated deltas
 	if ( yaw )   *yaw = g_flGyroYaw;
@@ -325,8 +270,6 @@ void Gyro_Reset( void )
 	g_flGyroPitch = 0.0f;
 	g_flSmoothYaw = 0.0f;
 	g_flSmoothPitch = 0.0f;
-	g_bFirstEvent = true;
-	g_iLastTimestamp = 0;
 #endif
 }
 
@@ -338,7 +281,6 @@ int Gyro_IsEnabled( void )
 #ifdef __ANDROID__
 	if ( !g_bGyroInitialized )
 		return 0;
-	
 	return gyroscope.GetBool() ? 1 : 0;
 #else
 	return 0;
