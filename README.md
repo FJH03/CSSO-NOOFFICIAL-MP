@@ -1,10 +1,11 @@
-# CS:SO Android source code
+# CS:SO Android Source Code
 Credits:
 Ported by ndke, den4iklovelinux, cherrybtw
 Mod author: PimonFeeD
 Source engine port author: nillerusr
+1.1 Updates: PowerSiderS
 
-CS:SO apk source code https://github.com/ndke01/csso-android-launcher
+CS:SO Apk Source Code https://github.com/ndke01/csso-android-launcher
 
 
 # Source Engine
@@ -41,7 +42,17 @@ This project is using waf buildsystem. If you have waf-related questions look ht
 # CS:SO
 - Bink video
 - Lunasvg
-- I forgot
+- Ability to add your custom avatar & clantag. Added also UI implements for it
+- Added Gyroscope (Dogshit Edition)
+- Fixed Name & Avatar not displayed in Achievement Menu
+- Now achievement menu save your stats , stuffs
+- Decreased the issues of missing sounds in gameplay (use snd_restart if sounds began to disappear)
+- Re-Worked on scoreboard (Avatars display and clantag)
+- Fixed custom avatar not displayed on voice icon
+- small optimizations lol
+- CS2 Animation (Grenades Only)
+- Skip HTML Panel to Choose Team Directly
+- i forgot. Maybe that's all?
 
 # Current tasks
 - Rewrite materialsystem for OpenGL render
