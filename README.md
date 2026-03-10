@@ -52,7 +52,13 @@ This project is using waf buildsystem. If you have waf-related questions look ht
 - small optimizations lol
 - CS2 Animation (Grenades Only)
 - Skip HTML Panel to Choose Team Directly
+- Agent Show Blind Animation
+- Spam Inspection Animation
 - i forgot. Maybe that's all?
+# Bugs
+- Menu does't show avatars (IDK why) sometimes show and sometimes no
+- you need `jpg` and ratio 1:1. put avatar in `csso/materials/vgui/logos` otherwise, it will show you error message
+- Backgrounds changing not supported currently (issue from the project itself?)
 
 # Current tasks
 - Rewrite materialsystem for OpenGL render
