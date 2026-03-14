@@ -4672,6 +4672,29 @@ void CCSPlayer::Blind( float holdTime, float fadeTime, float startingAlpha )
 		event->SetInt( "userid", GetUserID() );
 		gameeventmanager->FireEvent( event );
 	}
+
+	if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+	{
+		// So this makes raised arm goes down earlier, making it a better representation of actual blindness.
+
+		float flAdjustedHold = holdTime * 0.45f;
+		float flAdjustedEnd = fadeTime * 0.7f;
+		m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutStart = gpGlobals->curtime + flAdjustedHold;
+		m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutEnd = gpGlobals->curtime + flAdjustedEnd;
+		// This check moves the ease-out start and end to account for a non-255 starting alpha.
+		// However it looks like starting alpha is ALWAYS 255, since no current code path seems to ever pass in less.
+		if ( m_flFlashMaxAlpha < 255 )
+		{
+			float flScaleBack = 1.0f - (( flAdjustedEnd / 255.0f ) * m_flFlashMaxAlpha);
+			m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutStart -= flScaleBack;
+			m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutEnd -= flScaleBack;
+		}
+		// when fade out time is very soon, don't pull the arm up all the way. It looks silly and robotic.
+		if ( flAdjustedEnd < 1.5f )
+		{
+			m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutStart -= 1.0f;
+		}
+	}
 }
 
 void CCSPlayer::Deafen( float flDistance )
