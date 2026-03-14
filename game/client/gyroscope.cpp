@@ -40,7 +40,7 @@ static float g_flSmoothPitch = 0.0f;
 
 // Constants
 static const float GYRO_RAD2DEG = 57.2957795f;
-static const float GYRO_MIN_DEADZONE = 0.010f;
+static const float GYRO_MIN_DEADZONE = 0.0001f;
 
 //-----------------------------------------------------------------------------
 // Enable gyroscope sensor
@@ -125,22 +125,9 @@ static void Gyro_ReadSensor( void )
 	float scaledYaw   = rawYaw   * dT * expo * GYRO_RAD2DEG;
 	float scaledPitch = rawPitch * dT * expo * GYRO_RAD2DEG;
 
-	// Adaptive smoothing
-	float mag = fmaxf( fabsf( scaledYaw ), fabsf( scaledPitch ) );
-	float baseAlpha = dT * 140.0f;
-
-	if ( baseAlpha < 0.12f )
-		baseAlpha = 0.12f;
-	if ( baseAlpha > 0.30f )
-		baseAlpha = 0.30f;
-
-	float alpha = baseAlpha + mag * 0.40f;
-	if ( alpha > 0.85f )
-		alpha = 0.85f;
-
-	// Apply smoothing
-	g_flSmoothYaw   = g_flSmoothYaw   * ( 1.0f - alpha ) + scaledYaw   * alpha;
-	g_flSmoothPitch = g_flSmoothPitch * ( 1.0f - alpha ) + scaledPitch * alpha;
+	// Bypass smoothing for responsive real gyroscope
+        g_flSmoothYaw   = scaledYaw;
+        g_flSmoothPitch = scaledPitch;
 
 	// Accumulate deltas
 	g_flGyroYaw   += g_flSmoothYaw;
