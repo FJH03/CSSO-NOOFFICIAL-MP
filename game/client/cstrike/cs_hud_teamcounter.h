@@ -204,6 +204,10 @@ private:
     int m_nPreviousGGProgressiveTotalPlayers;
     int m_iOriginalXPos;
     int m_iOriginalYPos;
+    int m_iOriginalWide;
+    bool m_bLayoutExpanded;
+    int m_iLayoutShiftLeft;
+    int m_iLayoutShiftRight;
     int m_iTimerXPos;
     int m_iTimerYPos;
     int m_iTimerWide;
