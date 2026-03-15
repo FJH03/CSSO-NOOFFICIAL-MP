@@ -151,6 +151,10 @@ CHudTeamCounter::CHudTeamCounter(const char *pElementName) : CHudElement(pElemen
     m_iOriginalYPos     = 0;
     m_iTimerXPos = 0;
     m_iTimerYPos = 0;
+    m_iOriginalWide     = 0;
+    m_bLayoutExpanded   = false;
+    m_iLayoutShiftLeft  = 0;
+    m_iLayoutShiftRight = 0;
     m_iTimerWide = 0;
     m_iTimerTall = 0;
     m_iAvatarXMargin = 2;
