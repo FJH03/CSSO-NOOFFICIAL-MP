@@ -50,14 +50,10 @@ This project is using waf buildsystem. If you have waf-related questions look ht
 - Re-Worked on scoreboard (Avatars display and clantag)
 - Fixed custom avatar not displayed on voice icon
 - small optimizations lol
-- CS2 Animation (Grenades Only)
+- CS2 Animation (Grenades Only) (Broken & Removed
 - Skip HTML Panel to Choose Team Directly
 - Agent Show Blind Animation
 - Spam Inspection Animation
-- i forgot. Maybe that's all?
-# Bugs
-- Menu does't show avatars (IDK why) sometimes show and sometimes no
-- you need `jpg` and ratio 1:1. put avatar in `csso/materials/vgui/logos` otherwise, it will show you error message
 - Backgrounds changing Fixed (missed libs TF)
 - HeadName like CS:GO (Re-worked on vibecode)
 - New Teamcounter that's display avatars (Simple Script)
@@ -67,6 +63,10 @@ This project is using waf buildsystem. If you have waf-related questions look ht
 - GameUI translated to chinese by Qwen :v
 - CS:GO Chat (From CS:SO 2.0) (to disable it run game with `-nocustomchat`)
 - i forgot ¯⁠\⁠_⁠(⁠ ͡⁠°⁠ ͜⁠ʖ⁠ ͡⁠°⁠)⁠_⁠/⁠¯
+
+# Bugs
+- Menu does't show avatars (IDK why) sometimes show and sometimes no
+- you need `jpg` and ratio 1:1. put avatar in `csso/materials/vgui/logos` otherwise, it will show you error message
 
 # Current tasks
 - Rewrite materialsystem for OpenGL render
