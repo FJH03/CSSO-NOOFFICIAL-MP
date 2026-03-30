@@ -55,13 +55,16 @@ This project is using waf buildsystem. If you have waf-related questions look ht
 - Agent Show Blind Animation
 - Spam Inspection Animation
 - Backgrounds changing Fixed (missed libs TF)
-- HeadName like CS:GO (Re-worked on vibecode)
+- HeadName like CS:GO (Re-worked on vibecode) [ `cl_headname "1/0"` ]
 - New Teamcounter that's display avatars (Simple Script)
 - Radio Menu (i didn't commit yet here)
 - Vignette Script (or fade with ability to adjust & enable/disable) write in console `csgo_` and commands will appear
 - `touch_disable_on_buymenu` Cvar (Already exist. lol)
 - GameUI translated to chinese by Qwen :v
 - CS:GO Chat (From CS:SO 2.0) (to disable it run game with `-nocustomchat`)
+- New Touch UI [ `exec touch2.cfg` ] its contain radio button btw
+- Fixed Name & Clantag not changed when client press **Apply** Button
+- M4A1-S Amoo changed from 25 to 20 to match CS:GO
 - i forgot ¯⁠\⁠_⁠(⁠ ͡⁠°⁠ ͜⁠ʖ⁠ ͡⁠°⁠)⁠_⁠/⁠¯
 
 # Bugs
