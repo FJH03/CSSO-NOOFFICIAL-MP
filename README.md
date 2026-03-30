@@ -58,7 +58,15 @@ This project is using waf buildsystem. If you have waf-related questions look ht
 # Bugs
 - Menu does't show avatars (IDK why) sometimes show and sometimes no
 - you need `jpg` and ratio 1:1. put avatar in `csso/materials/vgui/logos` otherwise, it will show you error message
-- Backgrounds changing not supported currently (issue from the project itself?)
+- Backgrounds changing Fixed (missed libs TF)
+- HeadName like CS:GO (Re-worked on vibecode)
+- New Teamcounter that's display avatars (Simple Script)
+- Radio Menu (i didn't commit yet here)
+- Vignette Script (or fade with ability to adjust & enable/disable) write in console `csgo_` and commands will appear
+- `touch_disable_on_buymenu` Cvar (Already exist. lol)
+- GameUI translated to chinese by Qwen :v
+- CS:GO Chat (From CS:SO 2.0) (to disable it run game with `-nocustomchat`)
+- i forgot ¯⁠\⁠_⁠(⁠ ͡⁠°⁠ ͜⁠ʖ⁠ ͡⁠°⁠)⁠_⁠/⁠¯
 
 # Current tasks
 - Rewrite materialsystem for OpenGL render
