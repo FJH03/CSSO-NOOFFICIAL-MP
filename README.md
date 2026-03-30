@@ -3,7 +3,7 @@ Credits:
 Ported by ndke, den4iklovelinux, cherrybtw
 Mod author: PimonFeeD
 Source engine port author: nillerusr
-1.1 Updates: PowerSiderS
+1.2 Updates: PowerSiderS
 
 CS:SO Apk Source Code https://github.com/ndke01/csso-android-launcher
 
