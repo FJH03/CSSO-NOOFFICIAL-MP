@@ -165,7 +165,7 @@ void plutovg_matrix_map_rect(const plutovg_matrix_t* matrix, const plutovg_rect_
 
 plutovg_path_t* plutovg_path_create(void)
 {
-    plutovg_path_t* path = malloc(sizeof(plutovg_path_t));
+    plutovg_path_t* path = (plutovg_path_t*)malloc(sizeof(plutovg_path_t));
     path->ref = 1;
     path->contours = 0;
     path->start.x = 0.0;

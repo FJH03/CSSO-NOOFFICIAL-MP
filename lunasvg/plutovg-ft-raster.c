@@ -1192,7 +1192,7 @@ PVG_FT_END_STMNT
   /*                                                                       */
   static
   int  PVG_FT_Outline_Decompose( const PVG_FT_Outline*        outline,
-                                void*                       user )
+                                PWorker                     user )
   {
 #undef SCALED
 #define SCALED( x )  (x)
@@ -1397,7 +1397,7 @@ PVG_FT_END_STMNT
 
     if ( pvg_ft_setjmp( ras.jump_buffer ) == 0 )
     {
-      error = PVG_FT_Outline_Decompose( &ras.outline, &ras );
+      error = PVG_FT_Outline_Decompose( &ras.outline, (PWorker)&ras );
       if ( !ras.invalid )
         gray_record_cell( RAS_VAR );
     }
