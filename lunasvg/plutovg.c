@@ -2,10 +2,10 @@
 
 plutovg_surface_t* plutovg_surface_create(int width, int height)
 {
-    plutovg_surface_t* surface = malloc(sizeof(plutovg_surface_t));
+    plutovg_surface_t* surface = (plutovg_surface_t*)malloc(sizeof(plutovg_surface_t));
     surface->ref = 1;
     surface->owndata = 1;
-    surface->data = calloc(1, (size_t)(width * height * 4));
+    surface->data = (unsigned char*)calloc(1, (size_t)(width * height * 4));
     surface->width = width;
     surface->height = height;
     surface->stride = width * 4;
@@ -14,7 +14,7 @@ plutovg_surface_t* plutovg_surface_create(int width, int height)
 
 plutovg_surface_t* plutovg_surface_create_for_data(unsigned char* data, int width, int height, int stride)
 {
-    plutovg_surface_t* surface = malloc(sizeof(plutovg_surface_t));
+    plutovg_surface_t* surface = (plutovg_surface_t*)malloc(sizeof(plutovg_surface_t));
     surface->ref = 1;
     surface->owndata = 0;
     surface->data = data;
@@ -70,7 +70,7 @@ int plutovg_surface_get_stride(const plutovg_surface_t* surface)
 
 plutovg_state_t* plutovg_state_create(void)
 {
-    plutovg_state_t* state = malloc(sizeof(plutovg_state_t));
+    plutovg_state_t* state = (plutovg_state_t*)malloc(sizeof(plutovg_state_t));
     state->clippath = NULL;
     plutovg_paint_init(&state->paint);
     plutovg_matrix_init_identity(&state->matrix);
@@ -114,7 +114,7 @@ void plutovg_state_destroy(plutovg_state_t* state)
 
 plutovg_t* plutovg_create(plutovg_surface_t* surface)
 {
-    plutovg_t* pluto = malloc(sizeof(plutovg_t));
+    plutovg_t* pluto = (plutovg_t*)malloc(sizeof(plutovg_t));
     pluto->ref = 1;
     pluto->surface = plutovg_surface_reference(surface);
     pluto->state = plutovg_state_create();

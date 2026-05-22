@@ -19,7 +19,7 @@ static void ft_outline_init(PVG_FT_Outline* outline, plutovg_t* pluto, int point
         pluto->outline_size = size_n;
     }
 
-    PVG_FT_Byte* data = pluto->outline_data;
+    PVG_FT_Byte* data = (PVG_FT_Byte*)pluto->outline_data;
     outline->points = (PVG_FT_Vector*)(data);
     outline->tags = outline->contours_flag = NULL;
     outline->contours = NULL;
@@ -139,7 +139,7 @@ static void ft_outline_convert_dash(PVG_FT_Outline* outline, plutovg_t* pluto, c
 
 static void generation_callback(int count, const PVG_FT_Span* spans, void* user)
 {
-    plutovg_rle_t* rle = user;
+    plutovg_rle_t* rle = (plutovg_rle_t*)user;
     plutovg_array_ensure(rle->spans, count);
     plutovg_span_t* data = rle->spans.data + rle->spans.size;
     memcpy(data, spans, (size_t)count * sizeof(plutovg_span_t));
@@ -148,7 +148,7 @@ static void generation_callback(int count, const PVG_FT_Span* spans, void* user)
 
 plutovg_rle_t* plutovg_rle_create(void)
 {
-    plutovg_rle_t* rle = malloc(sizeof(plutovg_rle_t));
+    plutovg_rle_t* rle = (plutovg_rle_t*)malloc(sizeof(plutovg_rle_t));
     plutovg_array_init(rle->spans);
     rle->x = 0;
     rle->y = 0;
@@ -290,7 +290,7 @@ void plutovg_rle_rasterize(plutovg_t* pluto, plutovg_rle_t* rle, const plutovg_p
 plutovg_rle_t* plutovg_rle_intersection(const plutovg_rle_t* a, const plutovg_rle_t* b)
 {
     int count = plutovg_max(a->spans.size, b->spans.size);
-    plutovg_rle_t* result = malloc(sizeof(plutovg_rle_t));
+    plutovg_rle_t* result = (plutovg_rle_t*)malloc(sizeof(plutovg_rle_t));
     plutovg_array_init(result->spans);
     plutovg_array_ensure(result->spans, count);
 
@@ -401,7 +401,7 @@ plutovg_rle_t* plutovg_rle_clone(const plutovg_rle_t* rle)
     if(rle==NULL)
         return NULL;
 
-    plutovg_rle_t* result = malloc(sizeof(plutovg_rle_t));
+    plutovg_rle_t* result = (plutovg_rle_t*)malloc(sizeof(plutovg_rle_t));
     plutovg_array_init(result->spans);
     plutovg_array_ensure(result->spans, rle->spans.size);
 

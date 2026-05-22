@@ -7,9 +7,9 @@ plutovg_dash_t* plutovg_dash_create(double offset, const double* data, int size)
     if(data==NULL || size==0)
         return NULL;
 
-    plutovg_dash_t* dash = malloc(sizeof(plutovg_dash_t));
+    plutovg_dash_t* dash = (plutovg_dash_t*)malloc(sizeof(plutovg_dash_t));
     dash->offset = offset;
-    dash->data = malloc((size_t)size * sizeof(double));
+    dash->data = (double*)malloc((size_t)size * sizeof(double));
     dash->size = size;
     memcpy(dash->data, data, (size_t)size * sizeof(double));
     return dash;
