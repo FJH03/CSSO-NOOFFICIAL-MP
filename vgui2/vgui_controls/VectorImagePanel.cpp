@@ -13,13 +13,17 @@
 #include "VGuiMatSurface/IMatSystemSurface.h"
 #include "tier2/fileutils.h"
 
+#ifndef DEDICATED
 #include "lunasvg/lunasvg.h"
+#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
 using namespace vgui;
+#ifndef DEDICATED
 using namespace lunasvg;
+#endif
 
 DECLARE_BUILD_FACTORY( VectorImagePanel );
 
@@ -43,6 +47,7 @@ VectorImagePanel::~VectorImagePanel()
 
 void VectorImagePanel::SetTexture( const char *szFilePath )
 {
+#ifndef DEDICATED
 	// don't even bother doing anything without a file
 	if ( !szFilePath )
 		return;
@@ -103,6 +108,7 @@ void VectorImagePanel::SetTexture( const char *szFilePath )
 	texCoords[1] = m_bMirrorY ? (float) tall / (float) textureTall : 0.0f;
 	texCoords[2] = m_bMirrorX ? 0.0f : (float) wide / (float) textureWide;
 	texCoords[3] = m_bMirrorY ? 0.0f : (float) tall / (float) textureTall;
+#endif
 }
 
 void VectorImagePanel::DestroyTexture()

@@ -1632,7 +1632,7 @@ void CBaseCombatWeapon::SetActivity( Activity act, float duration )
 		{
 			// FIXME: does this even make sense in non-shoot animations?
 			m_flPlaybackRate = SequenceDuration( sequence ) / duration;
-			m_flPlaybackRate = fpmin( m_flPlaybackRate, 12.0f);  // FIXME; magic number!, network encoding range
+			m_flPlaybackRate = fpmin( (float)m_flPlaybackRate, 12.0f);  // FIXME; magic number!, network encoding range
 			Assert( IsFinite( m_flPlaybackRate ) );
 		}
 		else

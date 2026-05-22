@@ -1,4 +1,4 @@
-//========= Copyright © Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ Valve Corporation, All rights reserved. ============//
 #include "capsule.h"
 #include "trace.h"
 //#include "body.h"
@@ -91,9 +91,9 @@ static void CastCapsuleRay2DInternal( CapsuleCast2D_t &out, const Vector2D &m, c
 
 	// first, intersect the ray with the rectangle
 
-	float t = ( -r - m.y ) / d.y, t0 = fpmax( 0, t ), s0 = m.x + d.x * t0;
+	float t = ( -r - m.y ) / d.y, t0 = fpmax( 0.0f, t ), s0 = m.x + d.x * t0;
 
-	// solutions: -b0±sqrt(b0^2-c0) , -b1±sqrt(b1^2-c1) with	± controlled by d.x sign
+	// solutions: -b0ï¿½sqrt(b0^2-c0) , -b1ï¿½sqrt(b1^2-c1) with	ï¿½ controlled by d.x sign
 	// since we know we go left-bottom to right-top, we can just choose the circle we wanna hit
 	// since we know we don't start-in-solid, we know the first root (if any) will be t>=0
 	float mxh;
