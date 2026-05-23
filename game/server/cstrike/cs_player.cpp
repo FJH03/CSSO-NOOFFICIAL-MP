@@ -75,6 +75,16 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+#if defined(_MSC_VER) && defined(_WIN32)
+	#ifndef SMGD_EXPORT_ALIAS
+		#define SMGD_EXPORT_ALIAS(name) __pragma(comment(linker, "/EXPORT:" name "=" __FUNCDNAME__))
+	#endif
+#else
+	#ifndef SMGD_EXPORT_ALIAS
+		#define SMGD_EXPORT_ALIAS(name)
+	#endif
+#endif
+
 #pragma optimize( "", off )
 
 #pragma warning( disable : 4355 )
@@ -1159,6 +1169,8 @@ void CCSPlayer::InitialSpawn( void )
 
 void CCSPlayer::SetModelFromClass( void )
 {
+	SMGD_EXPORT_ALIAS("SMGD_SetModelFromClass");
+
 	if ( CSLoadout()->HasAgentSet( this, GetTeamNumber() ) )
 	{
 		if ( GetTeamNumber() == TEAM_CT )
@@ -2031,6 +2043,8 @@ void CCSPlayer::RemoveGloves()
 
 void CCSPlayer::SetClanTag( const char *pTag )
 {
+	SMGD_EXPORT_ALIAS("SMGD_SetClanTag");
+
 	if ( pTag )
 	{
 		Q_strncpy( m_szClanTag, pTag, sizeof( m_szClanTag ) );
@@ -4776,6 +4790,8 @@ void CCSPlayer::ObserverRoundRespawn()
 
 void CCSPlayer::RoundRespawn()
 {
+	SMGD_EXPORT_ALIAS("SMGD_RoundRespawn");
+
 	if ( CSGameRules()->IsPlayingGunGame() )
 	{
 		Reset( CSGameRules()->IsPlayingGunGameProgressive() );
@@ -4835,6 +4851,27 @@ void CCSPlayer::RoundRespawn()
 	OutputDamageGiven();
 	OutputDamageTaken();
 	ResetDamageCounters();
+}
+
+bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool bThrowForward )
+{
+	SMGD_EXPORT_ALIAS("SMGD_CSWeaponDrop");
+
+	// This codebase does not model the "drop shield" parameter.
+	(void)bDropShield;
+	return CSWeaponDrop( pWeapon, bThrowForward );
+}
+
+BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char *wpnName )
+{
+	SMGD_EXPORT_ALIAS("SMGD_HandleCommand_Buy_Internal");
+	return HandleCommand_Buy_Internal( wpnName, true, false );
+}
+
+void CCSPlayer::SwitchTeam( int iTeamNum )
+{
+	SMGD_EXPORT_ALIAS("SMGD_SwitchTeam");
+	SwitchTeam( iTeamNum, false );
 }
 
 void CCSPlayer::CheckTKPunishment( void )

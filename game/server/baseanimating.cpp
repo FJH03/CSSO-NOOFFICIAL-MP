@@ -2027,8 +2027,18 @@ int CBaseAnimating::GetNumBones ( void )
 // Input  : name of attachment
 // Output :	attachment index number or -1 if attachment not found
 //-----------------------------------------------------------------------------
+
+#ifndef SMGD_EXPORT_ALIAS
+#if defined(_MSC_VER)
+#define SMGD_EXPORT_ALIAS(alias) __pragma(comment(linker, "/export:" alias "=" __FUNCDNAME__))
+#else
+#define SMGD_EXPORT_ALIAS(alias)
+#endif
+#endif
+
 int CBaseAnimating::LookupAttachment( const char *szName )
 {
+	SMGD_EXPORT_ALIAS("SMGD_LookupAttachment");
 	CStudioHdr *pStudioHdr = GetModelPtr( );
 	if (!pStudioHdr)
 	{

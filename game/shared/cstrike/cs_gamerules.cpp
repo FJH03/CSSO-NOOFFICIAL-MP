@@ -75,6 +75,15 @@
 
 
 #ifndef CLIENT_DLL
+#if defined(_MSC_VER) && defined(_WIN32)
+	#ifndef SMGD_EXPORT_ALIAS
+		#define SMGD_EXPORT_ALIAS(name) __pragma(comment(linker, "/EXPORT:" name "=" __FUNCDNAME__))
+	#endif
+#else
+	#ifndef SMGD_EXPORT_ALIAS
+		#define SMGD_EXPORT_ALIAS(name)
+	#endif
+#endif
 
 #define ROUND_END_WARNING_TIME 10.0f
 static const float MAX_TIME_TO_WAIT_BEFORE_ENTERING = 5.0f;
@@ -6786,6 +6795,8 @@ ConVar cl_autohelp(
 
 	void CCSGameRules::TerminateRound(float tmDelay, int iReason )
 	{
+		SMGD_EXPORT_ALIAS("SMGD_TerminateRound");
+
 		variant_t emptyVariant;
 		int iWinnerTeam = WINNER_NONE;
 		const char *text = "UNKNOWN";
