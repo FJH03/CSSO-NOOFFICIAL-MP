@@ -627,7 +627,7 @@ void CDebugViewRender::Draw2DDebuggingInfo( const CViewSetup &view )
 //-----------------------------------------------------------------------------
 // A console command allowing you to draw a material as an overlay
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( r_screenoverlay, "Draw specified material as an overlay", FCVAR_CHEAT|FCVAR_SERVER_CAN_EXECUTE )
+CON_COMMAND_F( r_screenoverlay, "Draw specified material as an overlay", FCVAR_SERVER_CAN_EXECUTE )
 {
 	if( args.ArgC() == 2 )
 	{
