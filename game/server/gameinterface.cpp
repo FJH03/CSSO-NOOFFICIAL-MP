@@ -1366,10 +1366,18 @@ void CServerGameDLL::OnQueryCvarValueFinished( QueryCvarCookie_t iCookie, edict_
 {
 }
 
+#ifndef SMGD_EXPORT_ALIAS
+#if defined(_MSC_VER)
+#define SMGD_EXPORT_ALIAS(alias) __pragma(comment(linker, "/export:" alias "=" __FUNCDNAME__))
+#else
+#define SMGD_EXPORT_ALIAS(alias)
+#endif
+#endif
 
 // Called when a level is shutdown (including changing levels)
 void CServerGameDLL::LevelShutdown( void )
 {
+	SMGD_EXPORT_ALIAS("SMGD_LevelShutdown");
 #ifndef NO_STEAM
 	IGameSystem::LevelShutdownPreClearSteamAPIContextAllSystems();
 

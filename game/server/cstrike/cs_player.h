@@ -582,7 +582,11 @@ public:
 	bool Weapon_CanSwitchTo( CBaseCombatWeapon *pWeapon );
 	virtual void OnSwitchWeapons( CBaseCombatWeapon* pWeapon );
 	void ChangeTeam( int iTeamNum );
-	void SwitchTeam( int iTeamNum, bool bSilent = false );	// Changes teams without penalty - used for auto team balancing
+	void SwitchTeam( int iTeamNum, bool bSilent );	// Changes teams without penalty - used for auto team balancing
+	// Compatibility overloads for plugin platforms expecting older signatures.
+	void SwitchTeam( int iTeamNum );
+	// Compatibility overload for older platforms expecting a single-arg buy handler.
+	BuyResult_e HandleCommand_Buy_Internal( const char *item );
 
 	virtual void ModifyOrAppendCriteria( AI_CriteriaSet& set );
 	void ModifyOrAppendPlayerCriteria( AI_CriteriaSet& set );
@@ -929,6 +933,8 @@ public:
 	bool GetPickedUpWeaponThisRound( void ) { return m_bPickedUpWeapon; }
 
 	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bThrow = false );
+	// Compatibility overload matching older CS:S signature expected by SourceMod gamedata.
+	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool bThrowForward );
 	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos );
 
 	bool HandleDropWeapon( CBaseCombatWeapon *pWeapon = NULL, bool bSwapping = false );

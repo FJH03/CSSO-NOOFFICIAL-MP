@@ -12,6 +12,16 @@
 #include "icvar.h"
 #include "cs_gamerules.h"
 
+#if defined(_MSC_VER) && defined(_WIN32) && !defined(CLIENT_DLL)
+	#ifndef SMGD_EXPORT_ALIAS
+		#define SMGD_EXPORT_ALIAS(name) __pragma(comment(linker, "/EXPORT:" name "=" __FUNCDNAME__))
+	#endif
+#else
+	#ifndef SMGD_EXPORT_ALIAS
+		#define SMGD_EXPORT_ALIAS(name)
+	#endif
+#endif
+
 
 //--------------------------------------------------------------------------------------------------------
 struct WeaponTypeInfo
@@ -134,6 +144,8 @@ WeaponNameInfo s_weaponNameInfo[] =
 //--------------------------------------------------------------------------------------------------------------
 CCSWeaponInfo * GetWeaponInfo( CSWeaponID weaponID )
 {
+	SMGD_EXPORT_ALIAS("SMGD_GetWeaponInfo");
+
 	if ( weaponID == WEAPON_NONE )
 		return NULL;
 
@@ -231,6 +243,8 @@ CSWeaponID WeaponIdFromString( const char *szWeaponName )
 //
 const char *WeaponIDToAlias( int id )
 {
+	SMGD_EXPORT_ALIAS("SMGD_WeaponIDToAlias");
+
 	for ( int i = 0; i < ARRAYSIZE( s_weaponNameInfo ); ++i )
 	{
 		if ( s_weaponNameInfo[i].id == id )
@@ -246,6 +260,8 @@ const char *WeaponIDToAlias( int id )
 //
 CSWeaponID AliasToWeaponID( const char *szAlias )
 {
+	SMGD_EXPORT_ALIAS("SMGD_AliasToWeaponID");
+
 	if ( !szAlias )
 		return WEAPON_NONE;
 
@@ -344,6 +360,7 @@ int	CCSWeaponInfo::GetKillAward( void ) const
 
 int	CCSWeaponInfo::GetWeaponPrice( void ) const
 {
+	SMGD_EXPORT_ALIAS("SMGD_GetWeaponPrice");
 	return m_iWeaponPrice;
 }
 

@@ -255,8 +255,18 @@ CBaseEntityOutput::~CBaseEntityOutput()
 // Input  : pActivator - Entity that initiated this sequence of actions.
 //			pCaller - Entity that is actually causing the event.
 //-----------------------------------------------------------------------------
+
+#ifndef SMGD_EXPORT_ALIAS
+#if defined(_MSC_VER)
+#define SMGD_EXPORT_ALIAS(alias) __pragma(comment(linker, "/export:" alias "=" __FUNCDNAME__))
+#else
+#define SMGD_EXPORT_ALIAS(alias)
+#endif
+#endif
+
 void CBaseEntityOutput::FireOutput(variant_t Value, CBaseEntity *pActivator, CBaseEntity *pCaller, float fDelay)
 {
+	SMGD_EXPORT_ALIAS("SMGD_FireOutput");
 	//
 	// Iterate through all eventactions and fire them off.
 	//
