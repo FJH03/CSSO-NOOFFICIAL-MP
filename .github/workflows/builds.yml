@@ -82,23 +82,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Cloning modlaucher repo and preparing for building
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y openjdk-8-jre zip apksigner
+
+    - name: Download Android NDK r10e
+      run: |
+        wget -q https://dl.google.com/android/repository/android-ndk-r10e-linux-x86_64.zip
+        unzip -q android-ndk-r10e-linux-x86_64.zip
+        echo "ANDROID_NDK_HOME=$PWD/android-ndk-r10e" >> $GITHUB_ENV
+
+    - name: Download Clang 11
+      run: |
+        wget -q https://github.com/llvm/llvm-project/releases/download/llvmorg-11.1.0/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+        tar -xf clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+        echo "$PWD/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-16.04/bin" >> $GITHUB_PATH
+
+    - name: Clone mod launcher
       run: |
         git clone https://github.com/DMK95/Srceng-mod-launcher/ -b csso
-        sudo apt-get update
-        sudo apt-get install -f -y openjdk-8-jre zip apksigner
+
     - name: Build Android (64 bit)
       run: |
-        scripts/build-android-aarch64.sh    
+        scripts/build-android-aarch64.sh
+
     - name: Build APK
       run: |
-        scripts/build-apk.sh 
+        scripts/build-apk.sh
+
     - name: Rename APK
       run: |
-         mv Srceng-mod-launcher/build/android/mod-signed.apk csso-release.apk
+        mv Srceng-mod-launcher/build/android/mod-signed.apk csso-release.apk
 
-    - name: 'Upload Artifact'
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: csso-apk
