@@ -1367,7 +1367,7 @@ void CServerGameDLL::OnQueryCvarValueFinished( QueryCvarCookie_t iCookie, edict_
 }
 
 #ifndef SMGD_EXPORT_ALIAS
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && defined(_WIN32)
 #define SMGD_EXPORT_ALIAS(alias) __pragma(comment(linker, "/export:" alias "=" __FUNCDNAME__))
 #else
 #define SMGD_EXPORT_ALIAS(alias)
