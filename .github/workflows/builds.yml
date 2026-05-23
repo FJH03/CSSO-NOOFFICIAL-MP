@@ -70,57 +70,30 @@ jobs:
           name: csso-${{matrix.target}}
           path: ./output/*
 
-  Build-apk-for-android:
+  builds-android:
+    strategy:
+      matrix:
+        include:
+          - target: android-aarch64
+            build_cmd: |
+              chmod +x scripts/build-android-aarch64.sh
+              scripts/build-android-aarch64.sh
+    name: Build ${{matrix.target}}
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y openjdk-8-jre zip apksigner libbz2-dev
-
-    - name: Download Android NDK r10e
-      run: |
-        wget -q https://dl.google.com/android/repository/android-ndk-r10e-linux-x86_64.zip
-        unzip -q android-ndk-r10e-linux-x86_64.zip
-        echo "ANDROID_NDK_HOME=$PWD/android-ndk-r10e" >> $GITHUB_ENV
-
-    - name: Download Clang 11
-      run: |
-        wget -q https://github.com/llvm/llvm-project/releases/download/llvmorg-11.1.0/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
-        tar -xf clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
-        echo "$PWD/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-16.04/bin" >> $GITHUB_PATH
-
-    - name: Clone mod launcher
-      run: |
-        git clone https://github.com/DMK95/Srceng-mod-launcher/ -b csso
-
-    - name: Build Android (64 bit)
-      run: |
-        chmod +x waf
-        python3 waf configure -T release --build-game=csso --prefix=Srceng-mod-launcher/android --android=aarch64,host,21 --target=../aarch64 --enable-opus --togles --disable-warns
-        python3 waf install --strip
-        rm -f Srceng-mod-launcher/android/lib/arm64-v8a/README.md 2>/dev/null || true
-
-    - name: Build APK
-      run: |
-        cd Srceng-mod-launcher
-        git clone https://gitlab.com/LostGamer/android-sdk
-        export ANDROID_SDK_HOME=$PWD/android-sdk
-        chmod +x waf
-        python3 waf configure -T release
-        python3 waf build
-
-    - name: Rename APK
-      run: |
-        mv Srceng-mod-launcher/build/android/mod-signed.apk csso-release.apk
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: csso-apk
-        path: csso-release.apk
+      - name: Checkout source (shallow clone)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive
+        
+      - name: Build ${{matrix.target}}
+        run: |
+          ${{matrix.build_cmd}}
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: csso-${{matrix.target}}
+          path: ./output/*
