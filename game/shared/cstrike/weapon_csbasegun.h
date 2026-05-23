@@ -73,6 +73,10 @@ public:
 
 	virtual Activity GetDeployActivity( void );
 
+#ifdef CLIENT_DLL
+	virtual float GetTaserRechargePercentage() { return 1.0f; }
+#endif
+
 private:
 
 	CWeaponCSBaseGun( const CWeaponCSBaseGun & );

@@ -154,6 +154,7 @@ extern ConVar mp_ggprogressive_healthshot_killcount;
 extern ConVar mp_damage_headshot_only;
 extern ConVar mp_max_armor;
 extern ConVar mp_ggtr_bomb_pts_for_upgrade;
+extern ConVar mp_taser_recharge_time;
 
 // [menglish] Added in convars for freeze cam time length
 extern ConVar spec_freeze_time;
@@ -8053,7 +8054,7 @@ bool CCSPlayer::Weapon_CanUse( CBaseCombatWeapon *pBaseWeapon )
 
 	if ( pWeapon )
 	{
-		if ( pWeapon->IsA(WEAPON_TASER) && !pWeapon->HasAnyAmmo() )
+		if ( pWeapon->IsA(WEAPON_TASER) && !pWeapon->HasAnyAmmo() && mp_taser_recharge_time.GetFloat() < 0.0f )
 			return false;
 
 		if ( CanAcquire( pWeapon->GetCSWeaponID(), AcquireMethod::PickUp ) != AcquireResult::Allowed )

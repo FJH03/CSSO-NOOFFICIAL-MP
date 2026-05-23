@@ -15,6 +15,7 @@
 #include "cs_shareddefs.h"
 #include "c_cs_player.h"
 #include "cs_client_gamestats.h"
+#include "weapon_csbasegun.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -325,6 +326,49 @@ void CEntityRandomProxy::OnBind( void *pC_BaseEntity )
 }
 
 EXPOSE_INTERFACE( CEntityRandomProxy, IMaterialProxy, "EntityRandom" IMATERIAL_PROXY_INTERFACE_VERSION );
+
+//-----------------------------------------------------------------------------
+// Taser recharge meter
+//-----------------------------------------------------------------------------
+class CTaserMeterProxy: public CResultProxy
+{
+public:
+	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
+	virtual void OnBind( void* pC_BaseEntity );
+
+private:
+	IMaterialVar* m_pTextureOffsetVar;
+};
+
+
+bool CTaserMeterProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
+{
+	bool bFound = false;
+	m_pTextureOffsetVar = pMaterial->FindVar( "$basetexturetransform", &bFound );
+
+	return bFound;
+}
+
+void CTaserMeterProxy::OnBind( void* pC_BaseEntity )
+{
+	if ( !pC_BaseEntity )
+		return;
+
+	C_BaseViewModel* pViewModel = ToBaseViewModel( BindArgToEntity( pC_BaseEntity ) );
+	if ( pViewModel )
+	{
+		C_WeaponCSBaseGun* pWeapon = dynamic_cast<C_WeaponCSBaseGun*>(pViewModel->GetOwningWeapon());
+		if ( pWeapon )
+		{
+			float flPercentage = pWeapon->GetTaserRechargePercentage();
+			VMatrix matrix;
+			MatrixBuildTranslation( matrix, 0.0f, flPercentage - 1.0f, 0.0f );
+			m_pTextureOffsetVar->SetMatrixValue( matrix );
+		}
+	}
+}
+
+EXPOSE_INTERFACE( CTaserMeterProxy, IMaterialProxy, "TaserMeter" IMATERIAL_PROXY_INTERFACE_VERSION );
 
 #include "utlrbtree.h"
 
