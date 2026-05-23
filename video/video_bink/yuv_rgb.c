@@ -108,21 +108,21 @@ typedef struct
 } YUV2RGBParam;
 
 #define RGB2YUV_PARAM(Rf, Bf, YMin, YMax, CbCrRange) \
-{.r_factor=FIXED_POINT_VALUE(Rf, 8), \
-.g_factor=256-FIXED_POINT_VALUE(Rf, 8)-FIXED_POINT_VALUE(Bf, 8), \
-.b_factor=FIXED_POINT_VALUE(Bf, 8), \
-.cb_factor=FIXED_POINT_VALUE((CbCrRange/255.0)/(2.0*(1-Bf)), 8), \
-.cr_factor=FIXED_POINT_VALUE((CbCrRange/255.0)/(2.0*(1-Rf)), 8), \
-.y_factor=FIXED_POINT_VALUE((YMax-YMin)/255.0, 7), \
-.y_offset=YMin}
+{FIXED_POINT_VALUE(Rf, 8), \
+256-FIXED_POINT_VALUE(Rf, 8)-FIXED_POINT_VALUE(Bf, 8), \
+FIXED_POINT_VALUE(Bf, 8), \
+FIXED_POINT_VALUE((CbCrRange/255.0)/(2.0*(1-Bf)), 8), \
+FIXED_POINT_VALUE((CbCrRange/255.0)/(2.0*(1-Rf)), 8), \
+FIXED_POINT_VALUE((YMax-YMin)/255.0, 7), \
+YMin}
 
 #define YUV2RGB_PARAM(Rf, Bf, YMin, YMax, CbCrRange) \
-{.cb_factor=FIXED_POINT_VALUE(255.0*(2.0*(1-Bf))/CbCrRange, 6), \
-.cr_factor=FIXED_POINT_VALUE(255.0*(2.0*(1-Rf))/CbCrRange, 6), \
-.g_cb_factor=FIXED_POINT_VALUE(Bf/(1.0-Bf-Rf)*255.0*(2.0*(1-Bf))/CbCrRange, 7), \
-.g_cr_factor=FIXED_POINT_VALUE(Rf/(1.0-Bf-Rf)*255.0*(2.0*(1-Rf))/CbCrRange, 7), \
-.y_factor=FIXED_POINT_VALUE(255.0/(YMax-YMin), 7), \
-.y_offset=YMin}
+{FIXED_POINT_VALUE(255.0*(2.0*(1-Bf))/CbCrRange, 6), \
+FIXED_POINT_VALUE(255.0*(2.0*(1-Rf))/CbCrRange, 6), \
+FIXED_POINT_VALUE(Bf/(1.0-Bf-Rf)*255.0*(2.0*(1-Bf))/CbCrRange, 7), \
+FIXED_POINT_VALUE(Rf/(1.0-Bf-Rf)*255.0*(2.0*(1-Rf))/CbCrRange, 7), \
+FIXED_POINT_VALUE(255.0/(YMax-YMin), 7), \
+YMin}
 
 static const RGB2YUVParam RGB2YUV[3] = {
 	// ITU-T T.871 (JPEG)

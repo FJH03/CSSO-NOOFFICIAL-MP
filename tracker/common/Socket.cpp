@@ -71,7 +71,7 @@ private:
 	// Thread handle
 	HANDLE					m_hThread;
 	// Thread id
-	DWORD					m_nThreadId;
+	uintp					m_nThreadId;
 	// Event to set when we want to tell the thread to shut itself down
 	HANDLE					m_hShutdown;
 
