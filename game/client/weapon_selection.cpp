@@ -263,10 +263,21 @@ int	CBaseHudWeaponSelection::KeyInput( int down, ButtonCode_t keynum, const char
 		return 0;
 	}
 
-	if ( down >= 1 && keynum >= KEY_1 && keynum <= KEY_9 )
+	if ( down >= 1 && keynum >= KEY_0 && keynum <= KEY_9 )
 	{
 		if ( HandleHudMenuInput( keynum - KEY_0 ) )
 			return 0;
+	}
+
+	// Handle cancelselect (ESC / Android back) for menu close
+	if ( pszCurrentBinding && !stricmp(pszCurrentBinding, "cancelselect") )
+	{
+		CHudMenu *pHudMenu = GET_HUDELEMENT( CHudMenu );
+		if ( pHudMenu && pHudMenu->IsMenuOpen() )
+		{
+			pHudMenu->SelectMenuItem( 0 );
+			return 0;
+		}
 	}
 
 	// let someone else handle it

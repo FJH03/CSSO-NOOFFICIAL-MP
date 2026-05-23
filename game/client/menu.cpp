@@ -252,6 +252,14 @@ void CHudMenu::Paint()
 //-----------------------------------------------------------------------------
 void CHudMenu::SelectMenuItem( int menu_item )
 {
+	// Handle exit/cancel (menu_item == 0)
+	if ( menu_item == 0 )
+	{
+		engine->ClientCmd( "menuselect 0\n" );
+		HideMenu();
+		return;
+	}
+
 	// if menu_item is in a valid slot,  send a menuselect command to the server
 	if ( (menu_item > 0) && (m_bitsValidSlots & (1 << (menu_item-1))) )
 	{
