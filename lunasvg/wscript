@@ -16,15 +16,15 @@ def configure(conf):
 
 def build(bld):
 	source = [
-'plutovg.c',
-'plutovg-paint.c',
-'plutovg-geometry.c',
-'plutovg-blend.c',
-'plutovg-rle.c',
-'plutovg-dash.c',
-'plutovg-ft-raster.c',
-'plutovg-ft-stroker.c',
-'plutovg-ft-math.c',
+'plutovg.cpp',
+'plutovg-paint.cpp',
+'plutovg-geometry.cpp',
+'plutovg-blend.cpp',
+'plutovg-rle.cpp',
+'plutovg-dash.cpp',
+'plutovg-ft-raster.cpp',
+'plutovg-ft-stroker.cpp',
+'plutovg-ft-math.cpp',
 'lunasvg.cpp',
 'element.cpp',
 'property.cpp',
@@ -72,6 +72,6 @@ def build(bld):
 		defines  = defines,
 		use      = libs,
 		subsystem = bld.env.MSVC_SUBSYSTEM,
-		idx      = bld.get_taskgen_count()
+		idx      = bld.get_taskgen_count(),
 	)
 
