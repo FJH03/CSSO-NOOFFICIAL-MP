@@ -77,7 +77,7 @@ def build(bld):
 
 	source = [ 'in_touch.cpp' ]
 	if bld.env.DEST_OS == 'win32':
-		libs += ['USER32']
+		libs += ['USER32', 'GDI32']
 
 	source += game["sources"] + ['../../public/tier0/memoverride.cpp']
 	includes += game["includes"]

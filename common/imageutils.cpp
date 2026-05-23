@@ -6,11 +6,9 @@
 //=======================================================================================//
 
 // @note Tom Bui: we need to use fopen below in the jpeg code, so we can't have this on...
-#ifdef PROTECTED_THINGS_ENABLE
 #if !defined( POSIX )
 #undef fopen
 #endif // POSIX
-#endif
 
 #if defined( WIN32 ) && !defined( _X360 )
 #include <windows.h> // SRC only!!
