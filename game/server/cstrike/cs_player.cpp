@@ -4676,26 +4676,31 @@ void CCSPlayer::Blind( float holdTime, float fadeTime, float startingAlpha )
 		// The previous flashbang is still going strong - only extend the duration
 		float remainingDuration = oldBlindStartTime + m_flFlashDuration - gpGlobals->curtime;
 
-			m_flFlashDuration = MAX( remainingDuration, fadeTime );
-			m_flFlashMaxAlpha = MAX( m_flFlashMaxAlpha, startingAlpha );
-	}
+		float flNewDuration = Max( remainingDuration, fadeTime );
 
-	// allow bots to react
-	IGameEvent * event = gameeventmanager->CreateEvent( "player_blind" );
-	if ( event )
-	{
-		event->SetInt( "userid", GetUserID() );
-		gameeventmanager->FireEvent( event );
+		// The flashbang client effect runs off a network var change callback... Make sure the bits for duration get
+		// sent by changing it a tiny bit whenever these end up being equal.
+		if ( m_flFlashDuration == flNewDuration )
+			flNewDuration += 0.01f;
+
+		m_flFlashDuration = flNewDuration;
+		m_flFlashMaxAlpha = Max( m_flFlashMaxAlpha.Get(), startingAlpha );
 	}
 
 	if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
 	{
+		// Magic numbers to reduce the fade time to within 'perceptible' range.
+		// Players can see well enough to shoot back somewhere around 50% white plus burn-in effect.
+		// Varies by player and amount of panic ;)
 		// So this makes raised arm goes down earlier, making it a better representation of actual blindness.
-
 		float flAdjustedHold = holdTime * 0.45f;
 		float flAdjustedEnd = fadeTime * 0.7f;
+
+		//DevMsg( "Flashing. Time is: %f. Params: holdTime: %f, fadeTime: %f, alpha: %f\n", gpGlobals->curtime, holdTime, fadeTime, m_flFlashMaxAlpha );
+
 		m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutStart = gpGlobals->curtime + flAdjustedHold;
 		m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutEnd = gpGlobals->curtime + flAdjustedEnd;
+
 		// This check moves the ease-out start and end to account for a non-255 starting alpha.
 		// However it looks like starting alpha is ALWAYS 255, since no current code path seems to ever pass in less.
 		if ( m_flFlashMaxAlpha < 255 )
@@ -4704,11 +4709,20 @@ void CCSPlayer::Blind( float holdTime, float fadeTime, float startingAlpha )
 			m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutStart -= flScaleBack;
 			m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutEnd -= flScaleBack;
 		}
+
 		// when fade out time is very soon, don't pull the arm up all the way. It looks silly and robotic.
 		if ( flAdjustedEnd < 1.5f )
 		{
 			m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutStart -= 1.0f;
 		}
+	}
+
+	// allow bots to react
+	IGameEvent * event = gameeventmanager->CreateEvent( "player_blind" );
+	if ( event )
+	{
+		event->SetInt( "userid", GetUserID() );
+		gameeventmanager->FireEvent( event );
 	}
 }
 
