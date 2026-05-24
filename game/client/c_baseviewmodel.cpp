@@ -675,7 +675,14 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	// add gloves and sleeves
 	if ( pPlayer->m_pViewmodelArmConfig != NULL && m_vecViewmodelArmModels.Count() == 0 )
 	{
-		if ( CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
+		// --- SourceMod custom arm model override ---
+		// If m_szArmsModel is set, use it exclusively and skip all
+		// default glove/sleeve logic for this character.
+		if ( pPlayer->m_szArmsModel[0] != '\0' )
+		{
+			AddViewmodelArmModel( pPlayer->m_szArmsModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex, pPlayer->m_pViewmodelArmConfig->bHideBareArms );
+		}
+		else if ( CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
 		{
 			AddViewmodelArmModel( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szViewModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex, pPlayer->m_pViewmodelArmConfig->bHideBareArms );
 			if ( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModelGloveOverride[0] != NULL )
