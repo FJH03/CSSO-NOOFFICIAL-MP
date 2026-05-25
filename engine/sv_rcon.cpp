@@ -34,7 +34,6 @@
 #include "sv_remoteaccess.h"
 #include "cl_rcon.h"
 #include "sv_filter.h"
-#include "sv_ipratelimit.h"
 
 #if defined( _X360 )
 #include "xbox/xbox_win32stubs.h"
@@ -185,46 +184,13 @@ bool CRConServer::CreateSocket()
 	return m_Socket.CreateListenSocket( m_Address );
 }
 
-static ConVar	sv_max_sockets_sec( "sv_max_packets_sec", "1.0", 0, "Maximum sockets per second to respond to from a single IP address." );
-static ConVar	sv_max_sockets_window( "sv_max_sockets_window", "5.0", 0, "Window over which to average sockets per second averages." );
-// This defaults to zero so that somebody spamming the server with packets cannot lock out other clients.
-static ConVar	sv_max_sockets_sec_global( "sv_max_sockets_sec_global", "0", 0, "Maximum sockets per second to respond to from anywhere." );
-static ConVar	sv_max_sockets_ban_time( "sv_max_sockets_ban_time", "0", 0, "Time length of an IP ban for creating too much sockets." );
-static CIPRateLimit s_socketRateChecker( &sv_max_sockets_sec, &sv_max_sockets_window, &sv_max_sockets_sec_global );
 
 //-----------------------------------------------------------------------------
 // Inherited from ISocketCreatorListener
 //-----------------------------------------------------------------------------
 bool CRConServer::ShouldAcceptSocket( SocketHandle_t hSocket, const netadr_t & netAdr )
 {
-	if ( !Filter_ShouldDiscard( netAdr ) )
- 		return false;
- 
- 	// check if there are too much packets coming from this server
- 	if ( !s_socketRateChecker.CheckIP( netAdr ) )
- 	{
- 		Warning( "Banning potential DDoS attacker: %s for %d minutes\n", netAdr.ToString( true ), sv_max_sockets_ban_time.GetInt() );
- 
- 		char szCommand[128];
- 		V_snprintf( szCommand, sizeof( szCommand ), "addip %d %s;writeip\n", sv_max_sockets_ban_time.GetInt(), netAdr.ToString( true ) );
- 		Cbuf_Clear();
- 		Cbuf_AddText( szCommand );
- 		Cbuf_Execute();
- 
- 		return false;
- 	}
- 
- 	int nCount = m_Socket.GetAcceptedSocketCount();
- 	for ( int i = nCount - 1; i >= 0; --i )
- 	{
- 		const netadr_t& socketAdr = m_Socket.GetAcceptedSocketAddress( i );
- 		if ( socketAdr.CompareAdr( netAdr, true ) )
- 		{
- 			return false; // DDoS protection: only allow one socket from a single IP :(
- 		}
- 	}
- 
- 	return true;
+	return !Filter_ShouldDiscard( netAdr );
 }
 
 void CRConServer::OnSocketAccepted( SocketHandle_t hSocket, const netadr_t &netAdr, void** ppData )
@@ -262,13 +228,6 @@ void CRConServer::RunFrame()
 		ConnectedRConSocket_t *pData = GetSocketData( i );
 		SocketHandle_t hSocket = m_Socket.GetAcceptedSocketHandle( i );
 		const netadr_t& socketAdr = m_Socket.GetAcceptedSocketAddress( i );
-		// DDoS protection: check if the IP has been banned so that we can remove the socket from memory
-		if ( Filter_ShouldDiscard( socketAdr ) )
-		{
-			m_Socket.CloseAcceptedSocket( i );
-			continue;
-		}
-		
 		while ( pData->m_OutstandingSends.Count() > 0 )
 		{
 			CUtlBuffer &packet = pData->m_OutstandingSends[ pData->m_OutstandingSends.Head()];
