@@ -190,7 +190,6 @@ static ConVar	sv_max_sockets_window( "sv_max_sockets_window", "5.0", 0, "Window 
 // This defaults to zero so that somebody spamming the server with packets cannot lock out other clients.
 static ConVar	sv_max_sockets_sec_global( "sv_max_sockets_sec_global", "0", 0, "Maximum sockets per second to respond to from anywhere." );
 static ConVar	sv_max_sockets_ban_time( "sv_max_sockets_ban_time", "0", 0, "Time length of an IP ban for creating too much sockets." );
-static ConVar	sv_max_sockets_from_one_ip( "sv_max_sockets_from_one_ip", "0", 0, "The maximum amount of sockets to allow from one IP." );
 static CIPRateLimit s_socketRateChecker( &sv_max_sockets_sec, &sv_max_sockets_window, &sv_max_sockets_sec_global );
 
 //-----------------------------------------------------------------------------
@@ -216,17 +215,13 @@ bool CRConServer::ShouldAcceptSocket( SocketHandle_t hSocket, const netadr_t & n
  	}
  
  	int nCount = m_Socket.GetAcceptedSocketCount();
-	int nThisIP = 0;
  	for ( int i = nCount - 1; i >= 0; --i )
  	{
  		const netadr_t& socketAdr = m_Socket.GetAcceptedSocketAddress( i );
  		if ( socketAdr.CompareAdr( netAdr, true ) )
  		{
-			nThisIP++;
+ 			return false; // DDoS protection: only allow one socket from a single IP :(
  		}
-
-		if ( nThisIP >= sv_max_sockets_from_one_ip.GetInt() )
-			return false; // DDoS protection: only allow X sockets from a single IP
  	}
  
  	return true;
