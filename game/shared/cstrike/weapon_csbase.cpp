@@ -1846,7 +1846,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 			if ( pLocalPlayer && pLocalPlayer->GetObserverTarget() == pPlayer && pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE && pLocalPlayer->GetObserverInterpState() == C_BasePlayer::OBSERVER_INTERP_TRAVELING )
 				return true;
 
-			bool bLocalThirdPerson = ( ( pPlayer == pLocalPlayer ) && pPlayer->ShouldDraw() );
+			bool bLocalThirdPerson = ( ( pPlayer == pLocalPlayer ) && pPlayer->ShouldDraw() && !pPlayer->InFirstPersonView() );
 
 			Vector origin;
 			int iAttachmentIndex = GetMuzzleAttachmentIndex( pViewModel );

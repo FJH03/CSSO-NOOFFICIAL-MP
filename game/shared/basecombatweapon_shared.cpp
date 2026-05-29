@@ -403,6 +403,14 @@ bool CBaseWeaponWorldModel::ShouldDraw( void )
 	{
 		return false; // only respect nodraw if we also can't fire (presumably deploying)
 	}
+
+	// When in first-person with cl_first_person_uses_world_model, hide the world-model weapon
+	// (the view model weapon already handles first-person weapon rendering)
+	if ( pWeaponParentOwner == C_BasePlayer::GetLocalPlayer() &&
+		 C_BasePlayer::GetLocalPlayer()->InFirstPersonView() )
+	{
+		return false;
+	}
 	
 	return true;
 }

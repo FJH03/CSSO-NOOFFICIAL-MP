@@ -3290,6 +3290,10 @@ ShadowType_t C_CSPlayer::ShadowCastType( void )
 	if ( !IsVisible() )
 		 return SHADOWS_NONE;
 
+	// Don't cast shadow in first-person (body would cast shadow at camera position)
+	if ( IsLocalPlayer() && InFirstPersonView() )
+		return SHADOWS_NONE;
+
 	return SHADOWS_RENDER_TO_TEXTURE_DYNAMIC;
 }
 
@@ -3963,6 +3967,11 @@ void C_CSPlayer::BuildTransformations( CStudioHdr *pHdr, Vector *pos, Quaternion
 
 	if ( !IsVisible() || IsDormant() || (IsLocalPlayer() && !C_BasePlayer::ShouldDrawLocalPlayer()) || !ShouldDraw() )
 		return;
+
+	ConVarRef cl_first_person_uses_world_model( "cl_first_person_uses_world_model" );
+	if ( cl_first_person_uses_world_model.GetBool() ) {
+		BuildFirstPersonMeathookTransformations( pHdr, pos, q, cameraTransform, boneMask, boneComputed, "ValveBiped.Bip01_Head1" );
+	}
 
 	if ( boneMask == BONE_USED_BY_ATTACHMENT )
 		return; // we're only building transformations to get attachment positions. No need to update bone snapshots now.

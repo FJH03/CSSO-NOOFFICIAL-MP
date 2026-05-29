@@ -962,10 +962,11 @@ bool CViewRender::ShouldDrawViewModel( bool bDrawViewmodel )
 	if ( !r_drawviewmodel.GetBool() )
 		return false;
 
-	if ( C_BasePlayer::ShouldDrawLocalPlayer() )
+	// Only skip view model when in true third-person (not first-person-with-world-model)
+	if ( !C_BasePlayer::LocalPlayerInFirstPersonView() )
 		return false;
 
-	if ( C_BasePlayer::GetLocalPlayer()->ShouldDrawLocalPlayer() && 
+	if ( !C_BasePlayer::GetLocalPlayer()->InFirstPersonView() && 
 		( C_BasePlayer::GetLocalPlayer()->GetObserverMode() != OBS_MODE_IN_EYE || C_BasePlayer::GetLocalPlayer()->GetObserverInterpState() == C_BasePlayer::OBSERVER_INTERP_TRAVELING ) )
 		return false;
 
