@@ -1549,6 +1549,7 @@ int C_BasePlayer::DrawModel( int flags )
 #endif
 
 	// if local player is spectating this player in first person mode, don't draw it
+	// (unless using world model in first-person, i.e. meathook mode, where we want legs visible)
 	C_BasePlayer * player = C_BasePlayer::GetLocalPlayer();
 
 	if ( player && player->IsObserver() )
@@ -1557,7 +1558,10 @@ int C_BasePlayer::DrawModel( int flags )
 			player->GetObserverTarget() == this &&
 			!input->CAM_IsThirdPerson() && 
 			player->GetObserverInterpState() != OBSERVER_INTERP_TRAVELING )
-			return 0;
+		{
+			if ( !cl_first_person_uses_world_model.GetBool() )
+				return 0;
+		}
 	}
 	return BaseClass::DrawModel( flags );
 }
@@ -3152,6 +3156,48 @@ void C_BasePlayer::BuildFirstPersonMeathookTransformations( CStudioHdr *hdr, Vec
 	// Then scale the head to zero, but leave its position - forms a "neck stub".
 	// This prevents us rendering junk all over the screen, e.g. inside of mouth, etc.
 	MatrixScaleByZero( mHeadTransform );
+
+	// Hide upper body (spine_0 and all descendants) by collapsing them
+	// to the same point as the head bone (neck stub at camera position).
+	// Legs are NOT descendants of spine_0 so they remain visible.
+	// Bonemerge is already disabled before this runs.
+	{
+		int iSpine0 = LookupBone( "spine_0" );
+		if ( iSpine0 >= 0 )
+		{
+			for ( int i = 0; i < hdr->numbones(); i++ )
+			{
+				// Only process spine_0 and its descendants (spine, neck, head, arms).
+				// Legs are children of pelvis, NOT spine_0, so they're excluded.
+				if ( i != iSpine0 )
+				{
+					bool bIsDescendant = false;
+					int iParent = hdr->pBone( i )->parent;
+					while ( iParent >= 0 )
+					{
+						if ( iParent == iSpine0 )
+						{
+							bIsDescendant = true;
+							break;
+						}
+						iParent = hdr->pBone( iParent )->parent;
+					}
+					if ( !bIsDescendant )
+						continue;
+				}
+
+				matrix3x4_t &bone = GetBoneForWrite( i );
+
+				// Collapse to head bone position — always at camera center, never visible
+				bone[0][3] = mHeadTransform[0][3];
+				bone[1][3] = mHeadTransform[1][3];
+				bone[2][3] = mHeadTransform[2][3];
+
+				// Scale to zero to collapse all skinned vertices to a single point
+				MatrixScaleByZero( bone );
+			}
+		}
+	}
 
 	// TODO: right now we nuke the hats by shrinking them to nothing,
 	// but it feels like we should do something more sensible.

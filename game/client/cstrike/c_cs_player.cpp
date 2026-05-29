@@ -2177,8 +2177,8 @@ void C_CSPlayer::UpdateAddonModels( bool bForce )
 {
 	int iCurAddonBits = m_iAddonBits;
 
-	// Don't put addon models on the local player unless in third person.
-	if ( IsLocalPlayer() && !C_BasePlayer::ShouldDrawLocalPlayer() )
+	// Don't put addon models on the local player in first-person view.
+	if ( IsLocalPlayer() && InFirstPersonView() )
 		iCurAddonBits = 0;
 
 	// If the local player is observing this entity in first-person mode, get rid of its addons.
@@ -3290,8 +3290,9 @@ ShadowType_t C_CSPlayer::ShadowCastType( void )
 	if ( !IsVisible() )
 		 return SHADOWS_NONE;
 
-	// Don't cast shadow in first-person (body would cast shadow at camera position)
-	if ( IsLocalPlayer() && InFirstPersonView() )
+	// Don't cast shadow in first-person view (body would cast shadow at camera position).
+	// This covers both local first-person and IN_EYE spectating.
+	if ( InFirstPersonView() )
 		return SHADOWS_NONE;
 
 	return SHADOWS_RENDER_TO_TEXTURE_DYNAMIC;
@@ -3488,9 +3489,12 @@ bool C_CSPlayer::ShouldDraw( void )
 	}
 
 	// don't draw players we're observing in first-person
+	// (unless using world model in first-person, i.e. meathook mode, where we want legs visible)
 	if ( pLocalPlayer && pLocalPlayer->GetObserverTarget() == ToBasePlayer(this) && pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE )
 	{
-		return false;
+		ConVarRef cl_first_person_uses_world_model( "cl_first_person_uses_world_model" );
+		if ( !cl_first_person_uses_world_model.GetBool() )
+			return false;
 	}
 
 	return BaseClass::ShouldDraw();
