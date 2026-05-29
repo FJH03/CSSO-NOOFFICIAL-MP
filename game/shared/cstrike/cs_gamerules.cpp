@@ -134,7 +134,7 @@ CON_COMMAND( print_mapgroup_sv, "Prints the current mapgroup and the contained m
  * Player hull & eye position for standing, ducking, etc.  This version has a taller
  * player height, but goldsrc-compatible collision bounds.
  */
-static CViewVectors g_CSViewVectors(
+static CViewVectors g_CSGOViewVectors(
     Vector( 0, 0, 64 ),		// eye position
 
     Vector(-16, -16, 0 ),	// hull min
@@ -148,6 +148,29 @@ static CViewVectors g_CSViewVectors(
     Vector( 10,  10,  10 ),	// observer hull max
 
     Vector( 0, 0, 14 )		// dead view height
+);
+
+static CViewVectors g_CSSViewVectors(
+	Vector( 0, 0, 64 ),		// eye position
+
+	Vector(-16, -16, 0 ),	// hull min
+	Vector( 16,  16, 62 ),	// hull max
+
+	Vector(-16, -16, 0 ),	// duck hull min
+	Vector( 16,  16, 45 ),	// duck hull max
+	Vector( 0, 0, 47 ),		// duck view
+
+	Vector(-10, -10, -10 ),	// observer hull min
+	Vector( 10,  10,  10 ),	// observer hull max
+
+	Vector( 0, 0, 14 )		// dead view height
+);
+
+ConVar sv_cs_use_legacy_viewvectors(
+	"sv_cs_use_legacy_viewvectors",
+	"0",
+	FCVAR_REPLICATED | FCVAR_NOTIFY,
+	"Use Counter-Strike: Source legacy player hull/duck view values instead of the newer CS:GO-style values."
 );
 
 
@@ -7900,7 +7923,7 @@ int CCSGameRules::DefaultFOV()
 
 const CViewVectors* CCSGameRules::GetViewVectors() const
 {
-	return &g_CSViewVectors;
+	return sv_cs_use_legacy_viewvectors.GetBool() ? &g_CSSViewVectors : &g_CSGOViewVectors;
 }
 
 #ifdef GAME_DLL
