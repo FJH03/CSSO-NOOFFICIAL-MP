@@ -581,6 +581,9 @@ void CHudWeaponSelection::SetSelectedWeapon( C_BaseCombatWeapon *pWeapon )
 // Switch to knife
 void CHudWeaponSelection::UserCmd_Slot3( void )
 {
+	if ( HandleHudMenuInput( 3 ) )
+		return;
+
 	//SelectSpecificWeapon( WEAPON_KNIFE );
 	CycleToNextWeapon( WEAPON_SELECTION_MELEE );
 }
@@ -588,42 +591,63 @@ void CHudWeaponSelection::UserCmd_Slot3( void )
 // Cycle grenades
 void CHudWeaponSelection::UserCmd_Slot4( void )
 {
+	if ( HandleHudMenuInput( 4 ) )
+		return;
+
 	CycleToNextWeapon( WEAPON_SELECTION_GRENADE );
 }
 
 // Switch to breach charges
 void CHudWeaponSelection::UserCmd_Slot5( void )
 {
+	if ( HandleHudMenuInput( 5 ) )
+		return;
+
 	SelectSpecificWeapon( WEAPON_C4 );
 }
 
 // Switch to hegrenade
 void CHudWeaponSelection::UserCmd_Slot6( void )
 {
+	if ( HandleHudMenuInput( 6 ) )
+		return;
+
 	SelectSpecificWeapon( WEAPON_HEGRENADE );
 }
 
 // Switch to flashbang
 void CHudWeaponSelection::UserCmd_Slot7( void )
 {
+	if ( HandleHudMenuInput( 7 ) )
+		return;
+
 	SelectSpecificWeapon( WEAPON_FLASHBANG );
 }
 
 // Switch to smoke grenade
 void CHudWeaponSelection::UserCmd_Slot8( void )
 {
+	if ( HandleHudMenuInput( 8 ) )
+		return;
+
 	SelectSpecificWeapon( WEAPON_SMOKEGRENADE );
 }
 
 // Switch to decoy
 void CHudWeaponSelection::UserCmd_Slot9( void )
 {
+	if ( HandleHudMenuInput( 9 ) )
+		return;
+
 	SelectSpecificWeapon( WEAPON_DECOY );
 }
 
 // Switch to molotov
 void CHudWeaponSelection::UserCmd_Slot10( void )
 {
+	if ( HandleHudMenuInput( 10 ) )
+		return;
+
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 
 	if ( !pPlayer )
@@ -638,12 +662,18 @@ void CHudWeaponSelection::UserCmd_Slot10( void )
 // Switch to taser
 void CHudWeaponSelection::UserCmd_Slot11( void )
 {
+	if ( HandleHudMenuInput( 11 ) )
+		return;
+
 	SelectSpecificWeapon( WEAPON_TASER );
 }
 
 // Switch to healthshot
 void CHudWeaponSelection::UserCmd_Slot12( void )
 {
+	if ( HandleHudMenuInput( 12 ) )
+		return;
+
 	CycleToNextWeapon( WEAPON_SELECTION_ITEMSLOT );
 }
 
