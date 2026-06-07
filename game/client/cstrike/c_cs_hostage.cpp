@@ -107,6 +107,13 @@ bool C_HostageCarriableProp::ShouldDraw( void )
 		if ( pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE )
 			return false;
 
+		// Local player in first-person with meathook (legs mode):
+		// hide the third-person hostage model on the back,
+		// only show the first-person viewmodel arms.
+		ConVarRef cl_first_person_uses_world_model( "cl_first_person_uses_world_model" );
+		if ( cl_first_person_uses_world_model.GetBool() && C_BasePlayer::LocalPlayerInFirstPersonView() )
+			return false;
+
 		// 3rd person mode
 		return pViewedPlayer->ShouldDrawLocalPlayer();
 	}
