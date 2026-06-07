@@ -368,7 +368,7 @@ void CTaserMeterProxy::OnBind( void* pC_BaseEntity )
 	}
 }
 
-EXPOSE_INTERFACE( CTaserMeterProxy, IMaterialProxy, "TaserMeter" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_INTERFACE( CTaserMeterProxy, IMaterialProxy, "tasermeter" IMATERIAL_PROXY_INTERFACE_VERSION );
 
 #include "utlrbtree.h"
 
