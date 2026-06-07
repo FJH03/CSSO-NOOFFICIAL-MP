@@ -8,7 +8,6 @@
 #include "c_te_effect_dispatch.h"
 #include "basecombatweapon_shared.h"
 #include "baseviewmodel_shared.h"
-#include "particles_new.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -127,96 +126,54 @@ void TracerCallback( const CEffectData &data )
 DECLARE_CLIENT_EFFECT( "Tracer", TracerCallback )
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose: HL2DM-style tracer — FX_PlayerTracer (1P) / FX_Tracer (3P).
+//          No particle system, won't crash leaf system.
 //-----------------------------------------------------------------------------
-static int s_nWeaponTracerIndex;
+static int s_nWeaponTracerIndex; // unused, kept for compatibility
 
 void ParticleTracerCallback( const CEffectData &data )
 {
-	if ( !C_BasePlayer::GetLocalPlayer() )
+	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( !pLocalPlayer )
 		return;
 
 	if ( !r_drawtracers.GetBool() )
 		return;
 
 	C_BaseEntity *pEntity = data.GetEntity();
-	C_BasePlayer *pPlayer = NULL;
-	C_BaseViewModel *pViewModel = dynamic_cast<C_BaseViewModel*>(pEntity);
-	if ( pEntity )
-	{
-		pPlayer = dynamic_cast<C_BasePlayer*>( pEntity );
-		if ( pPlayer && !pViewModel )
-			pViewModel = pPlayer->GetViewModel( 0 );
+	C_BaseViewModel *pViewModel = dynamic_cast< C_BaseViewModel * >( pEntity );
 
-		if ( !r_drawtracers_firstperson.GetBool() && pPlayer )
-		{	
-			if ( pViewModel )
-				return;
-		}
+	// Honor first-person tracer toggle (matches TracerCallback logic)
+	if ( !r_drawtracers_firstperson.GetBool() && pViewModel )
+		return;
+
+	// --- Local-player first-person ---
+	// TracerCallback uses iEntIndex == player->index, but ParticleTracer
+	// sets iEntIndex to the viewmodel.  Check viewmodel ownership instead.
+	//
+	// IMPORTANT: data.m_vStart is (999,999,999) in non-HL2MP multiplayer
+	// (see ComputeTracerStartPosition).  We MUST use GetTracerOrigin which
+	// pulls the real muzzle position from the viewmodel attachment.
+	if ( pViewModel && pViewModel->GetOwner() == pLocalPlayer )
+	{
+		Vector vecMuzzle = GetTracerOrigin( data );
+		FormatViewModelAttachment( vecMuzzle, true );
+
+		FX_PlayerTracer( vecMuzzle, (Vector &)data.m_vOrigin );
+		return;
 	}
 
-	int nParticleIndex = (data.m_nHitBox > 1) ? data.m_nHitBox : s_nWeaponTracerIndex;
-	Vector vecEnd;
-	// Grab the data
-	
-	C_BaseCombatWeapon *pWpn = (pEntity) ? pEntity->MyCombatWeaponPointer() : NULL;
-	if ( (!pWpn && !pViewModel) || !(data.m_fFlags & TRACER_FLAG_USEATTACHMENT) )
-	{
-		Vector vecStart = GetTracerOrigin( data );
-		vecEnd = data.m_vOrigin;
+	// --- Third-person (other players / NPCs) ---
+	Vector vecStart = GetTracerOrigin( data );
+	Vector vecEnd   = data.m_vOrigin;
 
-		// if the tracer visually hits anything that it should not, we move the tracer to almost match the bullet trace itself
-		if ( r_drawtracers_movetonotintersect.GetBool() )
-		{
-			trace_t tr;
-			UTIL_TraceLine( vecStart, vecEnd, MASK_SHOT, pEntity, COLLISION_GROUP_PROJECTILE, &tr );
-			if ( tr.fraction != 1.0f && pPlayer )
-			{
-				vecStart = pPlayer->EyePosition();
+	float flVelocity = data.m_flScale;
+	if ( !flVelocity )
+		flVelocity = TRACER_SPEED;
 
-				QAngle	vangles;
-				Vector	vforward, vright, vup;
+	bool bWhiz = ( data.m_fFlags & TRACER_FLAG_WHIZ ) != 0;
 
-				engine->GetViewAngles( vangles );
-				AngleVectors( vangles, &vforward, &vright, &vup );
-
-				VectorMA( vecStart, cl_righthand.GetBool() ? 2.5 : -2.5, vright, vecStart );
-				VectorMA( vecStart, 10, vforward, vecStart );
-				vecStart[2] -= 2.5f;
-			}
-		}
-
-		// Create the particle effect
-		QAngle vecAngles;
-		Vector vecToEnd = vecEnd - vecStart;
-		VectorNormalize(vecToEnd);
-		VectorAngles( vecToEnd, vecAngles );
-		DispatchParticleEffect( nParticleIndex, vecStart, vecEnd, vecAngles );
-	}
-	else
-	{
-		Vector vecStart = GetTracerOrigin( data );  
-		vecEnd = data.m_vOrigin;
-		QAngle dummy;
-		
-		if ( pViewModel )
-		{
-			FormatViewModelAttachment( vecStart, true );
-		}
-
-		// if the tracer visually hits anything that it should not, just don't do the tracer
-		trace_t tr;
-		UTIL_TraceLine( vecStart, vecEnd, MASK_VISIBLE, pEntity, COLLISION_GROUP_DEBRIS, &tr );
-		if ( tr.fraction == 1.0f )
-			DispatchParticleEffect( nParticleIndex, vecStart, vecEnd, dummy );
-		
-	}
-
-	if ( data.m_fFlags & TRACER_FLAG_WHIZ )
-	{
-		Vector vecStart = data.m_vStart;
-		FX_TracerSound( vecStart, vecEnd, TRACER_TYPE_DEFAULT );	
-	}
+	FX_Tracer( (Vector &)vecStart, (Vector &)vecEnd, flVelocity, bWhiz );
 }
 
 DECLARE_CLIENT_EFFECT( "ParticleTracer", ParticleTracerCallback );
