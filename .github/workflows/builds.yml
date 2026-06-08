@@ -45,9 +45,17 @@ jobs:
             build_cmd: |
               ./waf.bat configure -T release --build-games=csso -4 -d --disable-warns --prefix="./output"
               ./waf.bat install
+          - target: windows-amd64-dedicated
+            build_cmd: |
+              ./waf.bat configure -T release --build-games=csso -d --disable-warns --prefix="./output"
+              ./waf.bat install
           - target: windows-i386
             build_cmd: |
               ./waf.bat configure -T release --build-games=csso -4 --enable-opus --disable-warns --prefix="./output"
+              ./waf.bat install
+          - target: windows-amd64
+            build_cmd: |
+              ./waf.bat configure -T release --build-games=csso --enable-opus --disable-warns --prefix="./output"
               ./waf.bat install
     name: Build ${{matrix.target}}
     runs-on: windows-latest
