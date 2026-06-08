@@ -1384,7 +1384,7 @@ void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 
 #if defined( CLIENT_DLL )
 ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.75", 0, "" );
-ConVar cl_crosshair_recoil( "cl_crosshair_recoil", "0", FCVAR_CHEAT, "Recoil/aimpunch will move the user's crosshair to show the effect", true, 0, true, 1 );
+ConVar cl_crosshair_recoil( "cl_crosshair_recoil", "0", FCVAR_ARCHIVE, "Recoil/aimpunch will move the user's crosshair to show the effect", true, 0, true, 1 );
 extern ConVar view_recoil_tracking;
 
 	//-----------------------------------------------------------------------------
