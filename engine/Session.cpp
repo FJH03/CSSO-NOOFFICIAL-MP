@@ -78,7 +78,8 @@ void CSession::ResetSession()
 
 	if ( m_pRegistrationResults )
 	{
-		delete m_pRegistrationResults;
+		delete [] (byte *)m_pRegistrationResults;
+		m_pRegistrationResults = NULL;
 	}
 
 	m_nSessionFlags	= 0;
