@@ -1,0 +1,17 @@
+"VertexLitGeneric"
+{
+	"$basetexture"				"models/weapons/v_models/eq_grenades/eq_smoke_grenade"
+
+	"$phong"					"1"
+	"$phongfresnelranges"		"[.83 .83 1]"
+	"$phongboost"				".5"
+	"$phongalbedoboost"			"65"
+	"$phongalbedotint"			"1"
+	"$phongexponenttexture"		"models/weapons/v_models/eq_grenades/eq_smoke_grenade_exponent"
+	"$phongdisablehalflambert"	"1"
+	"$basemapalphaphongmask"	"1"
+
+	"$envmap" "env_cubemap"
+	"$envmapfresnel" "1"
+	"$envmaptint" 		"[.3 .3 .4]"
+}

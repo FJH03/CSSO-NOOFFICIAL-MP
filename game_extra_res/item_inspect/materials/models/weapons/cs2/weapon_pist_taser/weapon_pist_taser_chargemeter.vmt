@@ -1,0 +1,12 @@
+"UnLitGeneric"
+{
+	"$basetexture" "models/weapons/cs2/weapon_pist_taser/chargemeter"
+	"$alphatest" "1"
+	"$alphatestreference" ".475"
+	"proxies"
+	{
+		"tasermeter"
+		{
+		}
+	}
+}

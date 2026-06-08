@@ -1,0 +1,10 @@
+"UnLitGeneric"
+{
+	"$basetexture" "models/weapons/v_models/eq_taser/taser_meter"
+	"proxies"
+	{
+		"tasermeter"
+		{
+		}
+	}
+}
