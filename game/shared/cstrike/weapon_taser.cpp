@@ -160,8 +160,11 @@ void CWeaponTaser::TaserThink()
 #else
 float CWeaponTaser::GetTaserRechargePercentage()
 {
-	if ( mp_taser_recharge_time.GetFloat() < 0.0f || m_iClip1 > 0 )
+	if ( m_iClip1 > 0 )
 		return 1.0f;
+
+	if ( mp_taser_recharge_time.GetFloat() < 0.0f )
+		return 0.0f;
 
 	float flTimeDelta = gpGlobals->curtime - m_fFireTime;
 	//return clamp( flTimeDelta / mp_taser_recharge_time.GetFloat(), 0.0f, 1.0f);
