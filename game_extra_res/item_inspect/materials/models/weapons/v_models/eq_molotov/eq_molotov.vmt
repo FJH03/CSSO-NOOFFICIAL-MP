@@ -1,0 +1,12 @@
+"VertexLitGeneric"
+{
+	"$basetexture"			"models/weapons/v_models/eq_molotov/eq_molotov"
+	"$bumpmap"				"models/weapons/v_models/eq_molotov/eq_molotov_normal"
+	"$phong"				"1"
+	"$phongboost"			"160"
+	"$phongexponent"		"80"
+	"$phongtint"			"[1.6 1.1 1.0]"
+	"$phongfresnelranges"	"[0 .1 1]"
+
+	"$nocull" "1"
+}
