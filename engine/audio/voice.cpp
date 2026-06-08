@@ -1025,18 +1025,18 @@ void Voice_UserDesiresStop()
 	if ( g_bVoiceRecordStopping )
 		return;
 
-	g_bVoiceRecordStopping = true;
 	g_pSoundServices->OnChangeVoiceStatus( -1, false );		// Tell the client DLL.
 
 	// If we're using Steam voice, we'll keep recording until Steam tells us we
 	// received all the data.
 	if ( g_bUsingSteamVoice )
 	{
+		g_bVoiceRecordStopping = true;
 		steamapicontext->SteamUser()->StopVoiceRecording();
 	}
 	else
 	{
-		VoiceRecord_Stop();
+		Voice_RecordStop();
 	}
 }
 
