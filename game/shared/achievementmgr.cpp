@@ -664,7 +664,7 @@ void CAchievementMgr::DownloadUserData()
 		}
 		
 		// Enumerate the achievements from Live
-		void *pBuffer = new byte[bytes];
+		byte *pBuffer = new byte[bytes];
 		if ( bDownloadSuccessful )
 		{
 			ret = xboxsystem->EnumerateAchievements( XBX_GetPrimaryUserId(), 0, 0, nTotalAchievements, pBuffer, bytes, false );
@@ -695,7 +695,7 @@ void CAchievementMgr::DownloadUserData()
 			}
 		}
 
-		delete pBuffer;
+		delete [] pBuffer;
 #endif // X360
 	}
 }
@@ -838,6 +838,8 @@ void CAchievementMgr::LoadGlobalState()
 
 		m_bGlobalStateLoaded = true;
 	}
+
+	pKV->deleteThis();
 }
 
 //-----------------------------------------------------------------------------
