@@ -53,7 +53,6 @@ This project is using waf buildsystem. If you have waf-related questions look ht
 - CS2 Animation (Grenades Only) (Broken & Removed
 - Skip HTML Panel to Choose Team Directly
 - Agent Show Blind Animation
-- Spam Inspection Animation
 - Backgrounds changing Fixed (missed libs TF)
 - HeadName like CS:GO (Re-worked on vibecode) [ `cl_headname "1/0"` ]
 - New Teamcounter that's display avatars (Simple Script)
