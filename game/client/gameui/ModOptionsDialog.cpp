@@ -42,7 +42,7 @@ CModOptionsDialog::CModOptionsDialog(vgui::Panel *parent) : PropertyDialog(paren
 	SetDeleteSelfOnClose(true);
 
 	int w = 512;
-	int h = 406;
+	int h = 430;
 	if (IsProportional())
 	{
 		w = scheme()->GetProportionalScaledValueEx(GetScheme(), w);

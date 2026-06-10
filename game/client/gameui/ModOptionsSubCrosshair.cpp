@@ -116,6 +116,7 @@ private:
 	CCvarToggleCheckButton	*m_pCrosshairDrawOutline;
 	CCvarSlider				*m_pCrosshairOutlineThickness;
 	CCvarToggleCheckButton	*m_pCrosshairT;
+	CCvarToggleCheckButton	*m_pCrosshairRecoil;
 	CLabeledCommandComboBox	*m_pCrosshairColor;
 	int m_iCrosshairTextureID;
 };
@@ -138,6 +139,7 @@ CrosshairImagePanelCS::CrosshairImagePanelCS( Panel *parent, const char *name, C
 	m_pCrosshairDrawOutline = new CCvarToggleCheckButton( m_pOptionsPanel, "CrosshairDrawOutline", "#GameUI_Crosshair_DrawOutline", "cl_crosshair_drawoutline" );
 	m_pCrosshairOutlineThickness = new CCvarSlider( m_pOptionsPanel, "CrosshairOutlineThickness", "#GameUI_Crosshair_OutlineThickness", 0.0f, 3.0f, "cl_crosshair_outlinethickness" );
 	m_pCrosshairT = new CCvarToggleCheckButton( m_pOptionsPanel, "CrosshairT", "#GameUI_Crosshair_T", "cl_crosshair_t" );
+	m_pCrosshairRecoil = new CCvarToggleCheckButton( m_pOptionsPanel, "CrosshairRecoil", "#GameUI_Crosshair_Recoil", "cl_crosshair_recoil" );
 	m_pCrosshairColor = new CLabeledCommandComboBox( m_pOptionsPanel, "CrosshairColor" );
 
 	//m_pCrosshairStyle->AddItem( "#GameUI_Crosshair_Style_0", "cl_crosshairstyle 0" );
@@ -168,6 +170,7 @@ CrosshairImagePanelCS::CrosshairImagePanelCS( Panel *parent, const char *name, C
 	m_pCrosshairDrawOutline->AddActionSignalTarget( this );
 	m_pCrosshairOutlineThickness->AddActionSignalTarget( this );
 	m_pCrosshairT->AddActionSignalTarget( this );
+	m_pCrosshairRecoil->AddActionSignalTarget( this );
 	m_pCrosshairColor->AddActionSignalTarget( this );
 
 	m_iCrosshairTextureID = vgui::surface()->CreateNewTextureID();
@@ -335,6 +338,7 @@ void CrosshairImagePanelCS::ResetData()
 	m_pCrosshairDrawOutline->Reset();
 	m_pCrosshairOutlineThickness->Reset();
 	m_pCrosshairT->Reset();
+	m_pCrosshairRecoil->Reset();
 
 	ConVarRef cl_crosshaircolor( "cl_crosshaircolor" );
 	m_pCrosshairColor->SetInitialItem( cl_crosshaircolor.GetInt() );
@@ -360,6 +364,7 @@ void CrosshairImagePanelCS::ApplyChanges()
 	m_pCrosshairDrawOutline->ApplyChanges();
 	m_pCrosshairOutlineThickness->ApplyChanges();
 	m_pCrosshairT->ApplyChanges();
+	m_pCrosshairRecoil->ApplyChanges();
 	m_pCrosshairColor->ApplyChanges();
 }
 
