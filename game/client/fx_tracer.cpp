@@ -143,24 +143,52 @@ void ParticleTracerCallback( const CEffectData &data )
 	C_BaseEntity *pEntity = data.GetEntity();
 	C_BaseViewModel *pViewModel = dynamic_cast< C_BaseViewModel * >( pEntity );
 
-	// Honor first-person tracer toggle (matches TracerCallback logic)
+	// Honor first-person tracer toggle
 	if ( !r_drawtracers_firstperson.GetBool() && pViewModel )
 		return;
 
-	// --- Local-player first-person ---
-	// TracerCallback uses iEntIndex == player->index, but ParticleTracer
-	// sets iEntIndex to the viewmodel.  Check viewmodel ownership instead.
-	//
-	// IMPORTANT: data.m_vStart is (999,999,999) in non-HL2MP multiplayer
-	// (see ComputeTracerStartPosition).  We MUST use GetTracerOrigin which
-	// pulls the real muzzle position from the viewmodel attachment.
-	if ( pViewModel && pViewModel->GetOwner() == pLocalPlayer )
+	// --- 找到 tracer 所属的玩家 ---
+	// entity 可能是: v模 / 武器w模 / C_CSPlayer
+	C_BasePlayer *pOwner = NULL;
+	if ( pViewModel )
 	{
-		Vector vecMuzzle = GetTracerOrigin( data );
-		FormatViewModelAttachment( vecMuzzle, true );
+		pOwner = ToBasePlayer( pViewModel->GetOwner() );
+	}
+	else
+	{
+		pOwner = ToBasePlayer( pEntity );                    // 玩家自身
+		if ( !pOwner )
+		{
+			C_BaseCombatWeapon *pWpn = dynamic_cast< C_BaseCombatWeapon * >( pEntity );
+			if ( pWpn )
+				pOwner = ToBasePlayer( pWpn->GetOwner() );   // 武器的持有者
+		}
+	}
 
-		FX_PlayerTracer( vecMuzzle, (Vector &)data.m_vOrigin );
-		return;
+	// --- 本地玩家 / 第一人称观战的 tracer → 1P 弹道 ---
+	bool bFirstPerson = ( pOwner == pLocalPlayer ) ||
+		( pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE &&
+		  pLocalPlayer->GetObserverTarget() == pOwner &&
+		  pLocalPlayer->GetObserverInterpState() != C_BasePlayer::OBSERVER_INTERP_TRAVELING );
+
+	if ( bFirstPerson && pOwner )
+	{
+		C_BaseViewModel *pVM = pOwner->GetViewModel( 0 );
+		if ( pVM )
+		{
+			Vector vecMuzzle;
+			int iAttach = pVM->LookupAttachment( "muzzle_flash" );
+			if ( iAttach <= 0 )
+				iAttach = pVM->LookupAttachment( "1" );
+
+			QAngle angDummy;
+			if ( iAttach > 0 && pVM->GetAttachment( iAttach, vecMuzzle, angDummy ) )
+			{
+				FormatViewModelAttachment( vecMuzzle, true );
+				FX_PlayerTracer( vecMuzzle, (Vector &)data.m_vOrigin );
+				return;
+			}
+		}
 	}
 
 	// --- Third-person (other players / NPCs) ---
