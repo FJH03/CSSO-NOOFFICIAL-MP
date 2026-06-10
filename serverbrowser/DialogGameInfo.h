@@ -35,6 +35,7 @@ public:
 
 	// forces the dialog to attempt to connect to the server
 	void Connect();
+	void SetPasswordRequired( bool bPassword ) { m_Server.m_bPassword = bPassword; }
 
 	// implementation of IServerRefreshResponse interface
 	// called when the server has successfully responded
