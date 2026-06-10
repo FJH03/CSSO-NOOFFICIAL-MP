@@ -48,11 +48,12 @@ public:
 
 	FORCEINLINE CUtlReference( const CUtlReference<T>& other ) 
 	{
-		CUtlReference();
+		m_pNext = m_pPrev = NULL;
+		m_pObject = NULL;
 
 		if ( other.IsValid() )
 		{
-			AddRef( (T*)( other.GetObject() ) );
+			AddRef( other.m_pObject );
 		}
 	}
 
