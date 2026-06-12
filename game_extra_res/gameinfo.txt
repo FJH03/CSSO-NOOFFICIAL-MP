@@ -55,7 +55,7 @@
 			// in folders where they don't exist.  (Searching a VPK is much faster than making an operating
 			// system call.)
 			game+mod			|gameinfo_path|item_inspect.vpk
-			game+mod			|gameinfo_path|taser_charge_anim_fix.vpk
+			game+mod			|gameinfo_path|csso_patch.vpk
 			game+mod			|gameinfo_path|csso_pak.vpk
 
 			// Now search loose files.  We'll set the directory containing the gameinfo.txt file
