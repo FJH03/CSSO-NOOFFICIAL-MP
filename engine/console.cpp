@@ -1269,7 +1269,7 @@ void CConPanel::Paint()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-static ConVar mod_version( "mod_version", "1.0", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
+static ConVar mod_version( "mod_version", "1.23.2", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
 void CConPanel::PaintBackground()
 {
 	if ( !Con_IsVisible() )
@@ -1277,14 +1277,12 @@ void CConPanel::PaintBackground()
 
 	int wide = GetWide();
 	char ver[ 100 ];
-	
-       if ( !Q_stricmp( "csso", GetCurrentMod() ) ){ // weird hardcode but works
-		Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)  CS:SO v%2.1f by PiMoNFeeD", PROTOCOL_VERSION, build_number(), mod_version.GetFloat() );
-	        Q_snprintf(ver, sizeof( ver ), "Unofficial port by /dev/nvme0n1,den4iklovelinux,kroky,atomic_reactor(compiler)");
-        }
-        else{
-             Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)", PROTOCOL_VERSION, build_number() );
-        }
+
+	if ( !Q_stricmp( "csso", GetCurrentMod() ) ) {
+		Q_snprintf(ver, sizeof( ver ), "Unofficial port CSSO %s (build %d)", mod_version.GetString(), build_number() );
+	} else {
+		Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)", PROTOCOL_VERSION, build_number() );
+	}
 
 	wchar_t unicode[ 200 ];
 	g_pVGuiLocalize->ConvertANSIToUnicode( ver, unicode, sizeof( unicode ) );
