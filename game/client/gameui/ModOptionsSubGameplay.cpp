@@ -193,7 +193,7 @@ void CModOptionsSubGameplay::OnResetData()
 	
 	ConVarRef viewmodel_presetpos( "viewmodel_presetpos" );
 	if ( viewmodel_presetpos.IsValid() )
-		m_pViewmodelOffsetPreset->SetInitialItem( viewmodel_presetpos.GetInt() - 1 );
+		m_pViewmodelOffsetPreset->SetInitialItem( MAX( 0, viewmodel_presetpos.GetInt() - 1 ) );
 
 	ConVarRef cl_use_new_headbob( "cl_use_new_headbob" );
 	if ( cl_use_new_headbob.IsValid() )
