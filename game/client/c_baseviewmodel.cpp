@@ -637,6 +637,7 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	if ( !pPlayer )
 	{
 		RemoveViewmodelArmModels();
+		m_szCachedArmModelPath[0] = '\0';
 		RemoveViewmodelStatTrak();
 		return;
 	}
@@ -645,6 +646,7 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	if ( !pCSWeapon )
 	{
 		RemoveViewmodelArmModels();
+		m_szCachedArmModelPath[0] = '\0';
 		RemoveViewmodelStatTrak();
 		return;
 	}
@@ -658,6 +660,23 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 		SetBodygroup( 0, bodyPartID );
 	}
 
+	// Determine expected arm model from m_szArmsModel (plugin) or loadout (native).
+	const char *pszExpectedArm = NULL;
+	if ( pPlayer->m_szArmsModel[0] != '\0' )
+	{
+		// Custom arm path: skip config-dependent logic entirely
+		pszExpectedArm = pPlayer->m_szArmsModel;
+		if ( m_vecViewmodelArmModels.Count() == 0 ||
+		     Q_stricmp( m_szCachedArmModelPath, pszExpectedArm ) != 0 )
+		{
+			RemoveViewmodelArmModels();
+			AddViewmodelArmModel( pszExpectedArm, -1, false );
+			Q_strncpy( m_szCachedArmModelPath, pszExpectedArm, MAX_PATH );
+		}
+		goto finally;
+	}
+
+	// Not using custom arms — ensure config is valid before proceeding
 	if ( pPlayer->m_pViewmodelArmConfig == NULL )
 	{
 		RemoveViewmodelArmModels();
@@ -667,6 +686,13 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 		{
 			pPlayer->m_pViewmodelArmConfig = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() );
 		}
+	}
+
+	// Transition from custom arm → default: clear cached custom arms
+	if ( m_szCachedArmModelPath[0] != '\0' )
+	{
+		RemoveViewmodelArmModels();
+		m_szCachedArmModelPath[0] = '\0';
 	}
 
 	if ( pPlayer->m_bNeedToChangeGloves )
@@ -688,8 +714,11 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 			AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedGloveModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex, pPlayer->m_pViewmodelArmConfig->bHideBareArms );
 			AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModel );
 		}
+
+		m_szCachedArmModelPath[0] = '\0';
 	}
 
+finally:
 	// verify stattrak module and add if necessary
 	if ( pCSWeapon->HasStatTrak() )
 	{

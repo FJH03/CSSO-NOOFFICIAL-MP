@@ -1111,6 +1111,9 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropInt( RECVINFO( m_iLoadoutSlotAgentT ) ),
 	RecvPropEHandle( RECVINFO( m_hLoadoutGloves ) ),
 
+	// Custom arm model path (networked from server, set by SourceMod)
+	RecvPropString( RECVINFO( m_szArmsModel ) ),
+
 END_RECV_TABLE()
 
 bool C_CSPlayer::s_bPlayingFreezeCamSound = false;
@@ -1230,6 +1233,8 @@ C_CSPlayer::C_CSPlayer() :
 
 	m_pViewmodelArmConfig = NULL;
 	m_szPlayerDefaultGloves = NULL;
+
+	m_szArmsModel[0] = '\0';
 }
 
 

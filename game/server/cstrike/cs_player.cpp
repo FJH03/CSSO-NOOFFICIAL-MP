@@ -494,6 +494,8 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_iLoadoutSlotAgentT ) ),
 	SendPropEHandle( SENDINFO( m_hLoadoutGloves ) ),
 
+	// Custom arm model path (set by SourceMod via SetEntPropString)
+	SendPropString( SENDINFO( m_szArmsModel ) ),
 
 END_SEND_TABLE()
 
