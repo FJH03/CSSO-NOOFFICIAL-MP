@@ -57,6 +57,8 @@ CBaseViewModel::CBaseViewModel()
 	m_flStatTrakGlowMultiplier = 0.0f;
 	m_flStatTrakGlowMultiplierIdeal = 0.0f;
 
+	m_szCachedArmModelPath[0] = '\0';
+
 	m_flCamDriverAppliedTime = 0;
 	m_flCamDriverWeight = 0;
 	m_vecCamDriverLastPos.Init();

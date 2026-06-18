@@ -246,6 +246,8 @@ private:
 	CUtlVector< CHandle< C_ViewmodelAttachmentModel > > m_vecViewmodelArmModels; // gloves, sleeves, etc
 	CHandle< C_ViewmodelAttachmentModel > m_viewmodelStatTrakAddon;
 
+	char					m_szCachedArmModelPath[MAX_PATH];
+
 	float					m_flStatTrakGlowMultiplierIdeal;
 	float					m_flStatTrakGlowMultiplier;
 #endif
