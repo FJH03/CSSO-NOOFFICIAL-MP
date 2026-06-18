@@ -494,8 +494,6 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_iLoadoutSlotAgentT ) ),
 	SendPropEHandle( SENDINFO( m_hLoadoutGloves ) ),
 
-	// Custom arm model path (set by SourceMod via SetEntPropString)
-	SendPropString( SENDINFO( m_szArmsModel ) ),
 
 END_SEND_TABLE()
 
@@ -1999,13 +1997,6 @@ void CCSPlayer::UpdateGloves()
 {
 	int nGlovesID = CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() );
 	if ( nGlovesID == 0 )
-	{
-		RemoveGloves();
-		return;
-	}
-
-	// SourceMod custom arm model override: skip world-model gloves
-	if ( m_szArmsModel[0] != '\0' )
 	{
 		RemoveGloves();
 		return;

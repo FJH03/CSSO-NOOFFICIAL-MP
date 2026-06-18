@@ -433,10 +433,6 @@ public:
 
 	const char *m_szPlayerDefaultGloves;
 
-	// Custom arm model set by SourceMod (via SetEntPropString).
-	// When non-empty, completely overrides the character's default gloves and sleeves.
-	CNetworkString( m_szArmsModel, MAX_PATH );
-
 	virtual void ObserverUse( bool bIsPressed ); // observer pressed use
 
 	// Add money to this player's account.
