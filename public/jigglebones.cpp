@@ -24,6 +24,7 @@ ConVar cl_jiggle_bone_debug_pitch_constraints( "cl_jiggle_bone_debug_pitch_const
 #endif // CLIENT_DLL
 
 ConVar cl_jiggle_bone_framerate_cutoff( "cl_jiggle_bone_framerate_cutoff", "20", 0, "Skip jiggle bone simulation if framerate drops below this value (frames/second)" );
+ConVar cl_jiggle_bone_sanity( "cl_jiggle_bone_sanity", "1", 0, "Reset jiggle bones that point away from their target due to numerical instability." );
 
 
 //-----------------------------------------------------------------------------
@@ -33,7 +34,15 @@ JiggleData * CJiggleBones::GetJiggleData( int bone, float currenttime, const Vec
 	{
 		if ( m_jiggleBoneState[it].bone == bone )
 		{
-			return &m_jiggleBoneState[it];
+			JiggleData *data = &m_jiggleBoneState[it];
+			// NaN protection: if any state is corrupted, reinitialize
+			if ( !IsFinite( data->lastUpdate ) ||
+			     !data->basePos.IsValid() || !data->tipPos.IsValid() ||
+			     !data->tipVel.IsValid() || !data->tipAccel.IsValid() )
+			{
+				data->Init( bone, currenttime, initBasePos, initTipPos );
+			}
+			return data;
 		}
 	}
 
@@ -57,7 +66,7 @@ JiggleData * CJiggleBones::GetJiggleData( int bone, float currenttime, const Vec
  * Do spring physics calculations and update "jiggle bone" matrix
  * (Michael Booth, Turtle Rock Studios)
  */
-void CJiggleBones::BuildJiggleTransformations( int boneIndex, float currenttime, const mstudiojigglebone_t *jiggleInfo, const matrix3x4_t &goalMX, matrix3x4_t &boneMX )
+void CJiggleBones::BuildJiggleTransformations( int boneIndex, float currenttime, const mstudiojigglebone_t *jiggleInfo, const matrix3x4_t &goalMX, matrix3x4_t &boneMX, bool coordSystemIsFlipped )
 {
 	Vector goalBasePosition;
 	MatrixPosition( goalMX, goalBasePosition );
@@ -78,15 +87,31 @@ void CJiggleBones::BuildJiggleTransformations( int boneIndex, float currenttime,
 
 	// if frames have been skipped since our last update, we were likely
 	// disabled and re-enabled, so re-init
-#if defined(CLIENT_DLL) || defined(GAME_DLL)
-	float timeTolerance = 1.2f * gpGlobals->frametime;
-#else
-	float timeTolerance = 0.5f;
-#endif
-
-	if ( currenttime - data->lastUpdate > timeTolerance )
+	if ( currenttime - data->lastUpdate > 0.5f )
 	{
 		data->Init( boneIndex, currenttime, goalBasePosition, goalTip );
+	}
+
+	// Detect large position discontinuity (e.g. round restart, teleport).
+	float tipError = ( goalTip - data->tipPos ).Length();
+	float baseError = ( goalBasePosition - data->basePos ).Length();
+	float boneLen = jiggleInfo->length;
+	if ( tipError > boneLen * 2.0f || baseError > boneLen )
+	{
+		data->Init( boneIndex, currenttime, goalBasePosition, goalTip );
+	}
+
+	// Sanity: if jiggle points almost completely away from goal, reset
+	if ( cl_jiggle_bone_sanity.GetBool() )
+	{
+		Vector goalDir = goalTip - goalBasePosition;
+		goalDir.NormalizeInPlace();
+		Vector dataDir = data->tipPos - goalBasePosition;
+		dataDir.NormalizeInPlace();
+		if ( DotProduct( goalDir, dataDir ) < -0.9f )
+		{
+			data->Init( boneIndex, currenttime, goalBasePosition, goalTip );
+		}
 	}
 
 	if ( data->lastLeft.IsZero() )
@@ -95,52 +120,10 @@ void CJiggleBones::BuildJiggleTransformations( int boneIndex, float currenttime,
 	}
 
 	// limit maximum deltaT to avoid simulation blowups
-	// if framerate is too low, skip jigglebones altogether, since movement will be too
-	// large between frames to simulate with a simple Euler integration
-	float deltaT = currenttime - data->lastUpdate;
-
+	// if framerate gets very low, jiggle will run in slow motion
+	const float thirtyHZ = 0.0333f;
 	const float thousandHZ = 0.001f;
-	bool bMaxDeltaT = deltaT < thousandHZ;
-	bool bUseGoalMatrix = cl_jiggle_bone_framerate_cutoff.GetFloat() <= 0.0f || deltaT > ( 1.0f / cl_jiggle_bone_framerate_cutoff.GetFloat() );
-
-	if ( bUseGoalMatrix )
-	{
-		// We hit the jiggle bone framerate cutoff. Reset the useGoalMatrixCount so we
-		//  use the goal matrix at least 32 frames and don't flash back and forth.
-		data->useGoalMatrixCount = 32;
-	}
-	else if ( data->useGoalMatrixCount > 0 )
-	{
-		// Below the cutoff, but still need to use the goal matrix a few more times.
-		bUseGoalMatrix = true;
-		data->useGoalMatrixCount--;
-	}
-	else
-	{
-		// Use real jiggle bones. Woot!
-		data->useJiggleBoneCount = 32;
-	}
-
-	if ( data->useJiggleBoneCount > 0 )
-	{
-		// Make sure we draw at least runs of 32 frames with real jiggle bones.
-		data->useJiggleBoneCount--;
-		data->useGoalMatrixCount = 0;
-		bUseGoalMatrix = false;
-	}
-
-	if ( bMaxDeltaT )
-	{
-		deltaT = thousandHZ;
-	}
-	else if ( bUseGoalMatrix )
-	{
-		// disable jigglebone - just use goal matrix
-		boneMX = goalMX;
-		return;
-	}
-
-	// we want lastUpdate here, so if jigglebones were skipped they get reinitialized if they turn back on
+	float deltaT = clamp( currenttime - data->lastUpdate, thousandHZ, thirtyHZ );
 	data->lastUpdate = currenttime;
 
 	//
@@ -153,46 +136,51 @@ void CJiggleBones::BuildJiggleTransformations( int boneIndex, float currenttime,
 
 		if ( jiggleInfo->flags & JIGGLE_IS_FLEXIBLE )
 		{
-			// decompose into local coordinates
-			Vector error = goalTip - data->tipPos;
-
-			Vector localError;
-			localError.x = DotProduct( goalLeft, error );
-			localError.y = DotProduct( goalUp, error );
-			localError.z = DotProduct( goalForward, error );
-
-			Vector localVel;
-			localVel.x = DotProduct( goalLeft, data->tipVel );
-			localVel.y = DotProduct( goalUp, data->tipVel );
-
-			// yaw spring
-			float yawAccel = jiggleInfo->yawStiffness * localError.x - jiggleInfo->yawDamping * localVel.x;
-
-			// pitch spring
-			float pitchAccel = jiggleInfo->pitchStiffness * localError.y - jiggleInfo->pitchDamping * localVel.y;
-
-			if ( jiggleInfo->flags & JIGGLE_HAS_LENGTH_CONSTRAINT )
+			// Sub-step at 120Hz for stability
+			static const float MIN_DELTA_T_PER_ITERATION = 1.0f / 120.0f;
+			for ( float deltaTLeft = deltaT; deltaTLeft > 0.0f; deltaTLeft -= MIN_DELTA_T_PER_ITERATION )
 			{
-				// drive tip towards goal tip position	
-				data->tipAccel += yawAccel * goalLeft + pitchAccel * goalUp;
-			}
-			else
-			{
-				// allow flex along length of spring
-				localVel.z = DotProduct( goalForward, data->tipVel );
+				float usableDeltaT = deltaTLeft > MIN_DELTA_T_PER_ITERATION ? MIN_DELTA_T_PER_ITERATION : deltaTLeft;
 
-				// along spring
-				float alongAccel = jiggleInfo->alongStiffness * localError.z - jiggleInfo->alongDamping * localVel.z;
+				// decompose into local coordinates
+				Vector error = goalTip - data->tipPos;
 
-				// drive tip towards goal tip position	
-				data->tipAccel += yawAccel * goalLeft + pitchAccel * goalUp + alongAccel * goalForward;
+				Vector localError;
+				localError.x = DotProduct( goalLeft, error );
+				localError.y = DotProduct( goalUp, error );
+				localError.z = DotProduct( goalForward, error );
+
+				Vector localVel;
+				localVel.x = DotProduct( goalLeft, data->tipVel );
+				localVel.y = DotProduct( goalUp, data->tipVel );
+
+				// yaw spring
+				float yawAccel = jiggleInfo->yawStiffness * localError.x - jiggleInfo->yawDamping * localVel.x;
+
+				// pitch spring
+				float pitchAccel = jiggleInfo->pitchStiffness * localError.y - jiggleInfo->pitchDamping * localVel.y;
+
+				if ( jiggleInfo->flags & JIGGLE_HAS_LENGTH_CONSTRAINT )
+				{
+					data->tipAccel += yawAccel * goalLeft + pitchAccel * goalUp;
+				}
+				else
+				{
+					localVel.z = DotProduct( goalForward, data->tipVel );
+					float alongAccel = jiggleInfo->alongStiffness * localError.z - jiggleInfo->alongDamping * localVel.z;
+					data->tipAccel += yawAccel * goalLeft + pitchAccel * goalUp + alongAccel * goalForward;
+				}
+
+				data->tipVel += data->tipAccel * usableDeltaT;
+				data->tipPos += data->tipVel * usableDeltaT;
 			}
 		}
-
-
-		// simple euler integration		
-		data->tipVel += data->tipAccel * deltaT;
-		data->tipPos += data->tipVel * deltaT;
+		else
+		{
+			// simple euler integration
+			data->tipVel += data->tipAccel * deltaT;
+			data->tipPos += data->tipVel * deltaT;
+		}
 
 		// clear this timestep's accumulated accelerations
 		data->tipAccel = vec3_origin;		
@@ -296,8 +284,14 @@ void CJiggleBones::BuildJiggleTransformations( int boneIndex, float currenttime,
 					// clip to limit plane
 					data->tipPos = goalBasePosition + limitAlong.y * limitUp + limitAlong.z * limitForward;
 
-					// removed friction and velocity clipping against constraint - was causing simulation blowups (MSB 12/9/2010)
-					data->tipVel.Zero();
+					// friction and bounce against yaw constraint
+					Vector limitVel;
+					limitVel.x = 0.0f;
+					limitVel.y = DotProduct( limitUp, data->tipVel );
+					limitVel.z = DotProduct( limitForward, data->tipVel );
+
+					data->tipAccel -= jiggleInfo->yawFriction * (limitVel.y * limitUp + limitVel.z * limitForward);
+					data->tipVel = -jiggleInfo->yawBounce * limitVel.x * limitLeft + limitVel.y * limitUp + limitVel.z * limitForward;
 
 					// update along vectors for use by pitch constraint
 					along = data->tipPos - goalBasePosition;
@@ -394,8 +388,14 @@ void CJiggleBones::BuildJiggleTransformations( int boneIndex, float currenttime,
 					// clip to limit plane
 					data->tipPos = goalBasePosition + limitAlong.x * limitLeft + limitAlong.z * limitForward;
 
-					// removed friction and velocity clipping against constraint - was causing simulation blowups (MSB 12/9/2010)
-					data->tipVel.Zero();
+					// friction and bounce against pitch constraint
+					Vector limitVel;
+					limitVel.x = 0.0f;
+					limitVel.y = DotProduct( limitUp, data->tipVel );
+					limitVel.z = DotProduct( limitForward, data->tipVel );
+
+					data->tipAccel -= jiggleInfo->pitchFriction * (limitVel.x * limitLeft + limitVel.z * limitForward);
+					data->tipVel = limitVel.x * limitLeft - jiggleInfo->pitchBounce * limitVel.y * limitUp + limitVel.z * limitForward;
 				}
 			}
 		}
@@ -442,8 +442,20 @@ void CJiggleBones::BuildJiggleTransformations( int boneIndex, float currenttime,
 		//
 		// Build bone matrix to align along current tip direction
 		//
-		Vector left = CrossProduct( goalUp, forward );
-		left.NormalizeInPlace();
+		Vector left, up;
+		if ( coordSystemIsFlipped )
+		{
+			// Viewmodel / flipped coordinate system
+			left = CrossProduct( forward, goalUp );
+			left.NormalizeInPlace();
+			up = CrossProduct( left, forward );
+		}
+		else
+		{
+			left = CrossProduct( goalUp, forward );
+			left.NormalizeInPlace();
+			up = CrossProduct( forward, left );
+		}
 
 		if ( DotProduct( left, data->lastLeft ) < 0.0f )
 		{
@@ -463,8 +475,6 @@ void CJiggleBones::BuildJiggleTransformations( int boneIndex, float currenttime,
 			}
 		}
 #endif
-
-		Vector up = CrossProduct( forward, left );
 
 		boneMX[0][0] = left.x;
 		boneMX[1][0] = left.y;
