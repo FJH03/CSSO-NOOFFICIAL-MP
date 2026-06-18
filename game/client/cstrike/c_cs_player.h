@@ -642,10 +642,6 @@ public:
 	CNetworkVar( int, m_iLoadoutSlotGlovesT );
 	EHANDLE	m_hLoadoutGloves;
 
-	// Custom arm model path (networked from server, set by SourceMod).
-	// When non-empty, completely overrides default gloves and sleeves.
-	char m_szArmsModel[MAX_PATH];
-
 	float m_flThirdpersonRecoil;
 
 	// taser items	
