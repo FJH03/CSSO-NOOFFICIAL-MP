@@ -96,6 +96,8 @@ extern IReplaySystem *g_pReplay;
 
 ConVar sv_disable_observer_interpolation( "sv_disable_observer_interpolation", "0", FCVAR_REPLICATED, "Disallow interpolating between observer targets on this server." );
 
+ConVar sv_allow_thirdperson( "sv_allow_thirdperson", "0", FCVAR_REPLICATED, "Allow server to enable third-person camera mode." );
+
 #if defined( GAME_DLL )
 ConVar sv_buy_status_override( "sv_buy_status_override", "-1", FCVAR_GAMEDLL | FCVAR_REPLICATED, "Override for buy status map info. 0 = everyone can buy, 1 = ct only, 2 = t only 3 = nobody" );
 #endif
@@ -7919,6 +7921,11 @@ int CCSGameRules::GetWeaponScoreForDeathmatch( CSWeaponID nWeapID )
 int CCSGameRules::DefaultFOV()
 {
 	return 90;
+}
+
+bool CCSGameRules::AllowThirdPersonCamera( void )
+{
+	return sv_allow_thirdperson.GetBool();
 }
 
 const CViewVectors* CCSGameRules::GetViewVectors() const
