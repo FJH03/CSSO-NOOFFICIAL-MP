@@ -335,6 +335,9 @@ public:
 
 	virtual int	DefaultFOV();
 
+	// Allow third-person camera if sv_allow_thirdperson is enabled
+	virtual bool AllowThirdPersonCamera( void );
+
 	// Get the view vectors for this mod.
 	virtual const CViewVectors* GetViewVectors() const;
 

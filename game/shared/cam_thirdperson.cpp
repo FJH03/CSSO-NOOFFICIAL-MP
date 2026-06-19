@@ -19,8 +19,6 @@ static Vector CAM_HULL_MAX( CAM_HULL_OFFSET, CAM_HULL_OFFSET, CAM_HULL_OFFSET);
 #include "input.h"
 
 
-extern const ConVar *sv_cheats;
-
 void CAM_ToThirdPerson(void);
 void CAM_ToFirstPerson(void);
 
@@ -43,7 +41,7 @@ void ThirdPersonChange( IConVar *pConVar, const char *pOldValue, float flOldValu
 	ToggleThirdPerson( var.GetBool() );
 }
 
-ConVar cl_thirdperson( "cl_thirdperson", "0", FCVAR_NOT_CONNECTED | FCVAR_USERINFO | FCVAR_ARCHIVE | FCVAR_DEVELOPMENTONLY, "Enables/Disables third person", ThirdPersonChange  );
+ConVar cl_thirdperson( "cl_thirdperson", "0", FCVAR_NOT_CONNECTED | FCVAR_USERINFO | FCVAR_ARCHIVE, "Enables/Disables third person", ThirdPersonChange  );
 
 #endif
 
@@ -71,13 +69,8 @@ void CThirdPersonManager::Update( void )
 {
 
 #ifdef CLIENT_DLL
-	if ( !sv_cheats )
-	{
-		sv_cheats = cvar->FindVar( "sv_cheats" );
-	}
-
-	// If cheats have been disabled, pull us back out of third-person view.
-	if ( sv_cheats && !sv_cheats->GetBool() && GameRules() && GameRules()->AllowThirdPersonCamera() == false )
+	// Only allow third person if the server permits it
+	if ( GameRules() && GameRules()->AllowThirdPersonCamera() == false )
 	{
 		if ( (bool)input->CAM_IsThirdPerson() == true )
 		{
@@ -88,7 +81,7 @@ void CThirdPersonManager::Update( void )
 
 	if ( IsOverridingThirdPerson() == false )
 	{
-		if ( (bool)input->CAM_IsThirdPerson() != ( cl_thirdperson.GetBool() || m_bForced ) && GameRules() && GameRules()->AllowThirdPersonCamera() == true )
+		if ( (bool)input->CAM_IsThirdPerson() != ( cl_thirdperson.GetBool() || m_bForced ) )
 		{
 			ToggleThirdPerson( m_bForced || cl_thirdperson.GetBool() );
 		}
