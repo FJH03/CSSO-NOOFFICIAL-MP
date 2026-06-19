@@ -746,6 +746,8 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
  
  					ConVarRef mod_version( "mod_version" );
  
+ 					ConMsg( "[CSSO] Client mod_version: '%s', Server mod_version: '%s'\n", cssoModVersion, mod_version.GetString() );
+ 
  					if ( V_strcmp( cssoModVersion, mod_version.GetString() ) )
  					{
  						RejectConnection( packet->from, clientChallenge, "#GameUI_ServerRejectModDifferentVersion" );
