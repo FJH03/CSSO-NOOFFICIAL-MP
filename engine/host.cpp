@@ -71,6 +71,7 @@
 #include "host_saverestore.h"
 #include "l_studio.h"
 #include "cl_demo.h"
+#include "cl_identification.h"
 #include "cdll_engine_int.h"
 #include "host_cmd.h"
 #include "host_state.h"
@@ -4186,6 +4187,7 @@ void Host_Init( bool bDedicated )
 	if ( !bDedicated )
 	{
 		TRACEINIT( CL_Init(), CL_Shutdown() );
+		ID_Init();
 
 		// NOTE: This depends on the mod search path being set up
 		TRACEINIT( InitMaterialSystem(), ShutdownMaterialSystem() );

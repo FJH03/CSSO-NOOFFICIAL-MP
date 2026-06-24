@@ -32,44 +32,44 @@ DLL_EXPORT int LauncherMain( int argc, char **argv ); // from launcher.cpp
 
 DLL_EXPORT int Java_com_valvesoftware_ValveActivity2_setenv(JNIEnv *jenv, jclass *jclass, jstring env, jstring value, jint over)
 {
-	Msg( "Java_com_valvesoftware_ValveActivity2_setenv %s=%s\n", jenv->GetStringUTFChars(env, NULL), jenv->GetStringUTFChars(value, NULL) );
-	return setenv( jenv->GetStringUTFChars(env, NULL), jenv->GetStringUTFChars(value, NULL), over );
+        Msg( "Java_com_valvesoftware_ValveActivity2_setenv %s=%s\n", jenv->GetStringUTFChars(env, NULL), jenv->GetStringUTFChars(value, NULL) );
+        return setenv( jenv->GetStringUTFChars(env, NULL), jenv->GetStringUTFChars(value, NULL), over );
 }
 
 DLL_EXPORT void Java_com_valvesoftware_ValveActivity2_nativeOnActivityResult()
 {
-//	Msg( "Java_com_valvesoftware_ValveActivity_nativeOnActivityResult\n" );
+//      Msg( "Java_com_valvesoftware_ValveActivity_nativeOnActivityResult\n" );
 }
 
 DLL_EXPORT void Java_com_valvesoftware_ValveActivity2_setArgs(JNIEnv *env, jclass *clazz, jstring str)
 {
-	strncpy( java_args, env->GetStringUTFChars(str, NULL), sizeof java_args );
+        strncpy( java_args, env->GetStringUTFChars(str, NULL), sizeof java_args );
 }
 
 void SetLauncherArgs()
 {
 #define A(a,b) LauncherArgv[iLastArgs++] = (char*)a; \
-	LauncherArgv[iLastArgs++] = (char*)b
+        LauncherArgv[iLastArgs++] = (char*)b
 #define D(a) LauncherArgv[iLastArgs++] = (char*)a
 
-	static char binPath[2048];
-	snprintf(binPath, sizeof binPath, "%s/hl2_linux", getenv("APP_DATA_PATH") );
-	D(binPath);
+        static char binPath[2048];
+        snprintf(binPath, sizeof binPath, "%s/hl2_linux", getenv("APP_DATA_PATH") );
+        D(binPath);
 
-	D("-nouserclip");
+        D("-nouserclip");
 
-	char *pch;
+        char *pch;
 
-	pch = strtok (java_args," ");
-	while (pch != NULL)
-	{
-		LauncherArgv[iLastArgs++] = pch;
-		pch = strtok (NULL, " ");
-	}
+        pch = strtok (java_args," ");
+        while (pch != NULL)
+        {
+                LauncherArgv[iLastArgs++] = pch;
+                pch = strtok (NULL, " ");
+        }
 
-	D("-fullscreen");
-	D("-nosteam");
-	D("-insecure");
+        D("-fullscreen");
+        D("-nosteam");
+        D("-insecure");
 
 #undef A
 #undef D
@@ -77,62 +77,104 @@ void SetLauncherArgs()
 
 float GetTotalMemory()
 {
-	int64_t mem = 0;
+        int64_t mem = 0;
 
-	char meminfo[8196] = { 0 };
-	FILE *f = fopen("/proc/meminfo", "r");
-	if( !f )
-		return 0.f;
+        char meminfo[8196] = { 0 };
+        FILE *f = fopen("/proc/meminfo", "r");
+        if( !f )
+                return 0.f;
 
-	size_t size = fread(meminfo, 1, sizeof(meminfo), f);
-	if( !size )
-		return 0.f;
+        size_t size = fread(meminfo, 1, sizeof(meminfo), f);
+        if( !size )
+                return 0.f;
 
-	char *s = strstr(meminfo, "MemTotal:");
+        char *s = strstr(meminfo, "MemTotal:");
 
-	if( !s ) return 0.f;
+        if( !s ) return 0.f;
 
-	sscanf(s+9, "%lld", &mem);
-	fclose(f);
+        sscanf(s+9, "%lld", &mem);
+        fclose(f);
 
-	return mem/1024/1024.f;
+        return mem/1024/1024.f;
 }
 
 void android_property_print(const char *name)
 {
-	char prop[1024];
+        char prop[1024];
 
-	char strValue[64];
-	memset (strValue, 0, 64);
-	snprintf(prop, sizeof(prop), "getprop %s", name);
-	FILE *fp = NULL;
-	fp = popen(prop, "r");
-	if (!fp) return;
+        char strValue[64];
+        memset (strValue, 0, 64);
+        snprintf(prop, sizeof(prop), "getprop %s", name);
+        FILE *fp = NULL;
+        fp = popen(prop, "r");
+        if (!fp) return;
 
-	fgets(strValue, sizeof(strValue), fp);
-	pclose(fp);
-	fp = NULL;
+        fgets(strValue, sizeof(strValue), fp);
+        pclose(fp);
+        fp = NULL;
 
-	Msg("prop %s=%s", name, strValue);
+        Msg("prop %s=%s", name, strValue);
 }
 
+// Like android_property_print but writes the value into buf instead of printing.
+static void android_getprop(const char *name, char *buf, size_t bufsz)
+{
+        char cmd[256];
+        snprintf(cmd, sizeof(cmd), "getprop %s", name);
+        FILE *fp = popen(cmd, "r");
+        if (!fp) return;
+        if (fgets(buf, (int)bufsz, fp))
+        {
+                size_t len = strlen(buf);
+                if (len > 0 && buf[len-1] == '\n')
+                        buf[len-1] = '\0';
+        }
+        pclose(fp);
+}
+
+static void SetAndroidIDEnvVars()
+{
+        char buf[256];
+
+        buf[0] = '\0';
+        android_getprop("ro.serialno", buf, sizeof(buf));
+        if (buf[0]) setenv("ANDROID_ID", buf, 1);
+
+        buf[0] = '\0';
+        android_getprop("ro.build.fingerprint", buf, sizeof(buf));
+        if (buf[0]) setenv("DEVICE_FINGERPRINT", buf, 1);
+
+        buf[0] = '\0';
+        android_getprop("ro.product.model", buf, sizeof(buf));
+        if (buf[0]) setenv("DEVICE_MODEL", buf, 1);
+
+        buf[0] = '\0';
+        android_getprop("ro.product.manufacturer", buf, sizeof(buf));
+        if (buf[0]) setenv("DEVICE_MANUFACTURER", buf, 1);
+}
 
 DLL_EXPORT int LauncherMainAndroid( int argc, char **argv )
 {
-	InitCrashHandler();
+        InitCrashHandler();
 
-	Msg("GetTotalMemory() = %.2f \n", GetTotalMemory());
+        // Populate ANDROID_ID / DEVICE_FINGERPRINT / DEVICE_MODEL /
+        // DEVICE_MANUFACTURER before anything else so cl_identification.cpp
+        // can use them when building the stable per-player bloom-filter ID.
+        // APP_DATA_PATH is set by the Java side before this function is called.
+        SetAndroidIDEnvVars();
 
-	android_property_print("ro.build.version.sdk");
-	android_property_print("ro.product.device");
-	android_property_print("ro.product.manufacturer");
-	android_property_print("ro.product.model");
-	android_property_print("ro.product.name");
+        Msg("GetTotalMemory() = %.2f \n", GetTotalMemory());
 
-	SetLauncherArgs();
+        android_property_print("ro.build.version.sdk");
+        android_property_print("ro.product.device");
+        android_property_print("ro.product.manufacturer");
+        android_property_print("ro.product.model");
+        android_property_print("ro.product.name");
 
-	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
-	DeclareCurrentThreadIsMainThread(); // Init thread propertly on Android
+        SetLauncherArgs();
 
-	return LauncherMain(iLastArgs, LauncherArgv);
+        SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+        DeclareCurrentThreadIsMainThread(); // Init thread propertly on Android
+
+        return LauncherMain(iLastArgs, LauncherArgv);
 }
