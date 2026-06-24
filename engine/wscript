@@ -39,6 +39,7 @@ def build(bld):
 		'OcclusionSystem.cpp',
 		'tmessage.cpp',
 		'baseclient.cpp',
+		'cl_identification.cpp',
 		'baseclientstate.cpp',
 		'cbenchmark.cpp',
 		'console.cpp',

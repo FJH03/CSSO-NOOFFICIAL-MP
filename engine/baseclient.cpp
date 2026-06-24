@@ -13,6 +13,7 @@
 #include "host.h"
 #include "networkstringtable.h"
 #include "framesnapshot.h"
+#include "cl_identification.h"
 #include "GameEventManager.h"
 #include "LocalNetworkBackdoor.h"
 #include "dt_send_eng.h"
@@ -1646,11 +1647,11 @@ const char *GetUserIDString( const USERID_t& id )
 
 			if ( Steam3Server().BLanOnly() && nullID == id.steamid ) 
 			{
-				V_strcpy_safe( idstr, "STEAM_ID_LAN" );
+				V_strcpy_safe( idstr, ID_GetUniqueIDString() );
 			}
 			else if ( nullID == id.steamid )
 			{
-				V_strcpy_safe( idstr, "STEAM_ID_PENDING" );
+				V_strcpy_safe( idstr, ID_GetUniqueIDString() );
 			}
 			else
 			{
