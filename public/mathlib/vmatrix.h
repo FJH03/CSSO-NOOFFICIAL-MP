@@ -1807,39 +1807,26 @@ inline void MatrixBuildScale( VMatrix &dst, const Vector& scale )
 	MatrixBuildScale( dst, scale.x, scale.y, scale.z );
 }
 
-// nillerusr: optimize this bruh later
-inline void MatrixBuildPerspective( VMatrix &dst, float fovX, float fovY, float zNear, float zFar )
+inline void MatrixBuildPerspective(VMatrix &dst, float fovX, float fovY, float zNear, float zFar)
 {
-	// FIXME: collapse all of this into one matrix after we figure out what all should be in here.
-	float width = 2 * zNear * tan( fovX * ( M_PI/180.0f ) * 0.5f );
-	float height = 2 * zNear * tan( fovY * ( M_PI/180.0f ) * 0.5f );
+    const float temp = 0.00872664626f; // (M_PI/180.0f)*0.5f
+	const float width = 2.0f * zNear * tan( fovX * temp );
+	const float height = 2.0f * zNear * tan( fovY * temp );
+	const float invWidth = ( width != 0.0f ) ? ( 1.0f / width ) : 0.0f;
+	const float invHeight = ( height != 0.0f ) ? ( 1.0f / height ) : 0.0f;
 
-	dst.	Init(
-		2.0f * zNear / width, 0.f, 0.f, 0.f,
-		0.f, 2.0f * zNear / height, 0.f, 0.f,
-		0.f, 0.f, -zFar / ( zNear - zFar ), zNear * zFar / ( zNear - zFar ),
-		0.f, 0.f, 1.f, 0.f
-		);
 
-	// negate X and Y so that X points right, and Y points up.
-	VMatrix negateXY;
-	negateXY.Identity();
-	negateXY[0][0] = -1.0f;
-	negateXY[1][1] = -1.0f;
-	MatrixMultiply( negateXY, dst, dst );
-
-	VMatrix addW;
-	addW.Identity();
-	addW[0][3] = 1.0f;
-	addW[1][3] = 1.0f;
-	addW[2][3] = 0.0f;
-	MatrixMultiply( addW, dst, dst );
-	
-	VMatrix scaleHalf;
-	scaleHalf.Identity();
-	scaleHalf[0][0] = 0.5f;
-	scaleHalf[1][1] = 0.5f;
-	MatrixMultiply( scaleHalf, dst, dst );
+	// Final matrix matches the previous result of multiply chain:
+	// [ -zn/width, 0, 0.5, 0 ]
+	// [ 0, -zn/height, 0.5, 0 ]
+	// [ 0, 0, zFactor, zOffset ]
+	// [ 0, 0, 1, 0 ]
+	dst.Init(
+		-zNear * invWidth, 0.0f, 0.5f, 0.0f,
+		0.0f, -zNear * invHeight, 0.5f, 0.0f,
+		0.0f, 0.0f, -zFar / ( zNear - zFar ), ( zNear * zFar ) / ( zNear - zFar ),
+		0.0f, 0.0f, 1.0f, 0.0f
+	);
 }
 
 static inline void CalculateAABBForNormalizedFrustum_Helper( float x, float y, float z, const VMatrix &volumeToWorld, Vector &mins, Vector &maxs )
