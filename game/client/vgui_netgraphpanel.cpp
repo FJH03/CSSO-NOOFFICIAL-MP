@@ -941,7 +941,7 @@ void CNetGraphPanel::DrawTextFields( int graphvalue, int x, int y, int w, netban
 
 	DrawServerType( x + w, y + textTall );
 
-	Q_snprintf( sz, sizeof( sz ), "loss: %3i%%  choke: %2i%%", (int)(m_AvgPacketLoss*100.0f), (int)(m_AvgPacketChoke*100.0f) );
+	Q_snprintf( sz, sizeof( sz ), "loss: %3i%%  choke: %2i%%  ver: %s", (int)(m_AvgPacketLoss*100.0f), (int)(m_AvgPacketChoke*100.0f), ConVarRef( "mod_version" ).GetString() );
 
 	textWidth = TextWidth(font, sz);
 
