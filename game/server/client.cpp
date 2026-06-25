@@ -1244,9 +1244,6 @@ void CC_God_f (void)
 	   if ( gpGlobals->deathmatch )
 		   return;
    }
-#else
-	if ( gpGlobals->deathmatch )
-		return;
 #endif
 
 	pPlayer->ToggleFlag( FL_GODMODE );
