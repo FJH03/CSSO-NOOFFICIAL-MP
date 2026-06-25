@@ -3568,7 +3568,7 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	if ( !pInflictor )
 		return 0;
 
-	if ( GetMoveType() == MOVETYPE_NOCLIP || GetMoveType() == MOVETYPE_OBSERVER )
+	if ( GetMoveType() == MOVETYPE_OBSERVER )
 		return 0;
 
 	//if this is C4 bomb damage, make sure it didn't pass through any bomb blockers to reach this player.
