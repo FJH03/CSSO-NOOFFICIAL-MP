@@ -634,17 +634,18 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	deathMsg.bRevenge = event->GetInt( "revenge" ) > 0;
 	deathMsg.bAssisted = iAssister > 0;
 
+	SVGImage *pngIcon = NULL;
 	UtlSymId_t sym = m_IconCache.Find( killedwith );
 	if ( sym == m_IconCache.InvalidIndex() )
 	{
-		sym = m_IconCache.AddString( killedwith );
-		m_IconCache[sym] = new SVGImage;
-		m_IconCache[sym]->SetSize( m_iIconWide, m_iIconTall );
-		if ( !m_IconCache[sym]->SetTexture( fullkilledwith ) )
+		pngIcon = new SVGImage;
+		pngIcon->SetSize( m_iIconWide, m_iIconTall );
+		if ( !pngIcon->SetTexture( fullkilledwith ) )
 		{
 			// Can't find it, so use the default skull & crossbones icon
-			*m_IconCache[sym] = *m_iconD_skull;
+			*pngIcon = *m_iconD_skull;
 		}
+		sym = m_IconCache.Insert( killedwith, pngIcon );
 	}
 	
 	deathMsg.iconDeath = m_IconCache[sym];
