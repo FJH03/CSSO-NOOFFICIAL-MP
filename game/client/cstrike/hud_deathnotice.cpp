@@ -17,6 +17,7 @@
 #include "c_baseplayer.h"
 #include "c_team.h"
 #include "vgui_controls/SVGImage.h"
+#include "VGuiMatSurface/IMatSystemSurface.h"
 
 #include "cs_shareddefs.h"
 #include "clientmode_csnormal.h"
@@ -122,6 +123,8 @@ private:
 
 	CUtlVector<DeathNoticeItem> m_DeathNotices;
 	CUtlStringMap<SVGImage*> m_IconCache;
+
+	void DrawScaledIcon( SVGImage *pIcon, int iconW, int iconH, int yIcon, int &xPos );
 };
 
 using namespace vgui;
@@ -244,6 +247,32 @@ bool CHudDeathNotice::ShouldDraw( void )
 	}
 
 	return ( CHudElement::ShouldDraw() && ( m_DeathNotices.Count() ) );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Draw an icon scaled down to prevent overlapping text
+//-----------------------------------------------------------------------------
+void CHudDeathNotice::DrawScaledIcon( SVGImage *pIcon, int iconW, int iconH, int yIcon, int &xPos )
+{
+	const float flScale = 0.85f;
+	int drawW = (int)(iconW * flScale);
+	int drawH = (int)(iconH * flScale);
+	int drawX = xPos + (iconW - drawW) / 2;
+	int drawY = yIcon + (m_iLineHeight - drawH) / 2;
+
+	int texW, texH;
+	surface()->DrawGetTextureSize( pIcon->GetID(), texW, texH );
+	float texR = texW > 0 ? (float)iconW / (float)texW : 1.0f;
+	float texB = texH > 0 ? (float)iconH / (float)texH : 1.0f;
+
+	surface()->DrawSetTexture( pIcon->GetID() );
+	surface()->DrawSetColor( m_clrIcons );
+	g_pMatSystemSurface->DisableClipping( true );
+	surface()->DrawTexturedSubRect( drawX, drawY, drawX + drawW, drawY + drawH,
+		0.0f, 0.0f, texR, texB );
+	g_pMatSystemSurface->DisableClipping( false );
+
+	xPos += iconW + m_iIconMargin;
 }
 
 //-----------------------------------------------------------------------------
@@ -380,17 +409,11 @@ void CHudDeathNotice::Paint()
 
 		if (m_DeathNotices[i].bDomination)
 		{
-			m_iconD_dominated->SetPos( x, yIcon + ((m_iLineHeight - iconDominationTall) / 2) );
-			m_iconD_dominated->SetColor( m_clrIcons );
-			m_iconD_dominated->Paint();
-			x += iconDominationWide + m_iIconMargin;
+			DrawScaledIcon( m_iconD_dominated, iconDominationWide, iconDominationTall, yIcon, x );
 		}
 		if (m_DeathNotices[i].bRevenge)
 		{
-			m_iconD_revenge->SetPos( x, yIcon + ((m_iLineHeight - iconRevengeTall) / 2) );
-			m_iconD_revenge->SetColor( m_clrIcons );
-			m_iconD_revenge->Paint();
-			x += iconRevengeWide + m_iIconMargin;
+			DrawScaledIcon( m_iconD_revenge, iconRevengeWide, iconRevengeTall, yIcon, x );
 		}
 		
 		// Only draw killers name if it wasn't a suicide
@@ -398,10 +421,7 @@ void CHudDeathNotice::Paint()
 		{
 			if ( m_DeathNotices[i].bBlind )
 			{
-				m_iconD_blind->SetPos( x, yIcon + ((m_iLineHeight - iconBlindTall) / 2) );
-				m_iconD_blind->SetColor( m_clrIcons );
-				m_iconD_blind->Paint();
-				x += iconBlindWide + m_iIconMargin;
+				DrawScaledIcon( m_iconD_blind, iconBlindWide, iconBlindTall, yIcon, x );
 			}
 
 			// Draw killer's name
@@ -430,44 +450,28 @@ void CHudDeathNotice::Paint()
 			surface()->DrawGetTextPos( x, yText );
 		}
 
-		// Draw death weapon
-		//If we're using a font char, this will ignore iconTall and iconWide
+		// Draw death weapon (scaled)
 		x += m_iIconMargin;
-		icon->SetPos( x, yIcon + ((m_iLineHeight - iconTall) / 2) );
-		icon->SetColor( m_clrIcons );
-		icon->Paint();
-		x += iconWide + m_iIconMargin;
+		DrawScaledIcon( icon, iconWide, iconTall, yIcon, x );
 
 		if( m_DeathNotices[i].bNoScope )
 		{
-			m_iconD_noscope->SetPos( x, yIcon + ((m_iLineHeight - iconNoScopeTall) / 2) );
-			m_iconD_noscope->SetColor( m_clrIcons );
-			m_iconD_noscope->Paint();
-			x += iconNoScopeWide + m_iIconMargin;
+			DrawScaledIcon( m_iconD_noscope, iconNoScopeWide, iconNoScopeTall, yIcon, x );
 		}
 
 		if( m_DeathNotices[i].bThruSmoke )
 		{
-			m_iconD_thrusmoke->SetPos( x, yIcon + ((m_iLineHeight - iconThruSmokeTall) / 2) );
-			m_iconD_thrusmoke->SetColor( m_clrIcons );
-			m_iconD_thrusmoke->Paint();
-			x += iconThruSmokeWide + m_iIconMargin;
+			DrawScaledIcon( m_iconD_thrusmoke, iconThruSmokeWide, iconThruSmokeTall, yIcon, x );
 		}
 
 		if( m_DeathNotices[i].bPenetrated )
 		{
-			m_iconD_penetrated->SetPos( x, yIcon + ((m_iLineHeight - iconPenetrateTall) / 2) );
-			m_iconD_penetrated->SetColor( m_clrIcons );
-			m_iconD_penetrated->Paint();
-			x += iconPenetrateWide + m_iIconMargin;
+			DrawScaledIcon( m_iconD_penetrated, iconPenetrateWide, iconPenetrateTall, yIcon, x );
 		}
 
 		if( m_DeathNotices[i].bHeadshot )
 		{
-			m_iconD_headshot->SetPos( x, yIcon + ((m_iLineHeight - iconHeadshotTall) / 2) );
-			m_iconD_headshot->SetColor( m_clrIcons );
-			m_iconD_headshot->Paint();
-			x += iconHeadshotWide + m_iIconMargin;
+			DrawScaledIcon( m_iconD_headshot, iconHeadshotWide, iconHeadshotTall, yIcon, x );
 		}
 
 		// Draw victims name
