@@ -2912,6 +2912,11 @@ void C_CSPlayer::SetModelPointer( const model_t *pModel )
 	{
 		// lets just check if a unique bone is existing...
 		m_bUseNewAnimstate = (LookupBone( "spine_0" ) != -1);
+
+		// Reset CS:GO animstate on model change so layers are re-initialized for the new model
+		if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+			m_PlayerAnimStateCSGO->Reset();
+
 		m_bAddonModelsAreOutOfDate = true; // next time we update addon models, do a complete refresh
 		m_szPlayerDefaultGloves = GetPlayerViewmodelArmConfigForPlayerModel(modelinfo->GetModelName(pModel))->szAssociatedGloveModel; // get a new default gloves model
 
@@ -3355,6 +3360,17 @@ void C_CSPlayer::HandleTaserAnimation()
 
 void C_CSPlayer::UpdateClientSideAnimation()
 {
+	// Re-evaluate animstate choice in case model wasn't fully loaded
+	// when SetModelPointer first ran (e.g. custom model set via SM plugin)
+	if ( !m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+	{
+		if ( LookupBone( "spine_0" ) != -1 )
+		{
+			m_bUseNewAnimstate = true;
+			m_PlayerAnimStateCSGO->Reset();
+		}
+	}
+
 	if ( m_bUseNewAnimstate )
 	{
 		m_PlayerAnimStateCSGO->Update( EyeAngles()[YAW], EyeAngles()[PITCH] );

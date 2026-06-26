@@ -1551,7 +1551,7 @@ const char* CCSPlayerAnimState::GetWeaponSuffix()
 	// Figure out the weapon suffix.
 	CWeaponCSBase *pWeapon = m_pHelpers->CSAnim_GetActiveWeapon();
 	if ( !pWeapon )
-		return NULL;
+		return "knife";
 
 	const char *pSuffix = pWeapon->GetCSWpnData().m_szAnimExtension;
 
