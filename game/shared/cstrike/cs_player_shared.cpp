@@ -1857,10 +1857,9 @@ void CCSPlayer::OnLand( float fVelocity )
 	if ( pActiveWeapon != NULL )
 		pActiveWeapon->OnLand(fVelocity);
 
-	if ( fVelocity > 270 )
+	if ( fVelocity > 270.0f )
 	{
 		CRecipientFilter filter;
-
 #if defined( CLIENT_DLL )
 		filter.AddRecipient( this );
 
@@ -1874,32 +1873,44 @@ void CCSPlayer::OnLand( float fVelocity )
 		// the client plays it's own sound
 		filter.RemoveRecipient( this );
 #endif
-		
+
+		if (!m_pSurfaceData)
+		{
 			EmitSound(filter, entindex(), "Default.Land");
+			return;
+		}
 
-			if (!m_pSurfaceData)
-				return;
+		unsigned short stepSoundName = m_pSurfaceData->sounds.stepleft;
+		if (!stepSoundName)
+		{
+			EmitSound(filter, entindex(), "Default.Land");
+			return;
+		}
 
-			unsigned short stepSoundName = m_pSurfaceData->sounds.stepleft;
-			if (!stepSoundName)
-				return;
+		IPhysicsSurfaceProps *physprops = MoveHelper()->GetSurfaceProps();
 
-			IPhysicsSurfaceProps *physprops = MoveHelper()->GetSurfaceProps();
+		const char *pRawSoundName = physprops->GetString(stepSoundName);
 
-			const char *pRawSoundName = physprops->GetString(stepSoundName);
+		char szLand[512];
+		Q_snprintf(szLand, sizeof(szLand), "land_%s", pRawSoundName);
 
-			char szStep[512];
-
-			if (GetTeamNumber() == TEAM_TERRORIST)
-			{
-				Q_snprintf(szStep, sizeof(szStep), "t_%s", pRawSoundName);
-			}
-			else
-			{
-				Q_snprintf(szStep, sizeof(szStep), "ct_%s", pRawSoundName);
-			}
-					
-			EmitSound(filter, entindex(), szStep);			
+		CSoundParameters params;
+		if (!CBaseEntity::GetParametersForSound(szLand, params, NULL))
+		{
+			EmitSound(filter, entindex(), "Default.Land");
+			return;
+		}
+		
+		EmitSound_t LandSound;
+		LandSound.m_nChannel = params.channel;
+		LandSound.m_pSoundName = params.soundname;
+		LandSound.m_flVolume = params.volume;
+		LandSound.m_SoundLevel = params.soundlevel;
+		LandSound.m_nFlags = 0;
+		LandSound.m_nPitch = params.pitch;
+		LandSound.m_pOrigin = &this->GetAbsOrigin();
+		
+		EmitSound(filter, entindex(), LandSound);
 	}
 }
 
