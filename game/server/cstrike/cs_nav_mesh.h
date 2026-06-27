@@ -73,6 +73,11 @@ private:
 	CountdownTimer m_refreshDMSpawnTimer;
 	CUtlVector< CHandle< CBaseEntity > > m_DMSpawnVector;
 
+	void MaintainChickenPopulation( void );
+	int m_desiredChickenCount;
+	CountdownTimer m_refreshChickenTimer;
+	CUtlVector< CHandle< CBaseEntity > > m_chickenVector;
+
 	bool IsSpawnBlockedByTrigger( Vector pos );
 
 	int AllEdictsAlongRay( CBaseEntity **pList, int listMax, const Ray_t &ray, int flagMask );

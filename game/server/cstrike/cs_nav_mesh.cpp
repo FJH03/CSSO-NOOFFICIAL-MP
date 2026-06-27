@@ -56,6 +56,7 @@ extern ConVar mp_randomspawn;
 //--------------------------------------------------------------------------------------------------------------
 CSNavMesh::CSNavMesh( void )
 {
+	m_desiredChickenCount = 0;
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -125,6 +126,7 @@ void CSNavMesh::LoadCustomData( CUtlBuffer &fileBuffer, unsigned int subVersion 
 void CSNavMesh::Reset( void )
 {
 	m_refreshDMSpawnTimer.Start( 1.0f );
+	m_refreshChickenTimer.Start( 5.0f );
 
 	CNavMesh::Reset();
 }
@@ -145,6 +147,7 @@ void CSNavMesh::ClearPlayerCounts( void )
 
 void CSNavMesh::Update( void )
 {
+	MaintainChickenPopulation();
 	MaintainDMSpawnPopulation();
 
 	CNavMesh::Update();
@@ -162,6 +165,12 @@ bool CSNavMesh::Save( void ) const
 
 NavErrorType CSNavMesh::PostLoad( unsigned int version )
 {
+	if ( CSGameRules()->IsPlayingGunGameDeathmatch() )
+		m_desiredChickenCount = 10;
+	else
+		m_desiredChickenCount = 0;
+	m_chickenVector.RemoveAll();
+
 	ResetDMSpawns();
 
 	return CNavMesh::PostLoad(version);
@@ -185,6 +194,86 @@ void CSNavMesh::ResetDMSpawns( void )
 	m_consecutiveFailedAttempts = 0;
 	m_DMSpawnVector.RemoveAll();
 	MaintainDMSpawnPopulation();
+}
+
+//--------------------------------------------------------------------------------------------------------------
+// Keep desired number of chickens alive in map
+void CSNavMesh::MaintainChickenPopulation( void )
+{
+	if ( m_desiredChickenCount > 0 && m_refreshChickenTimer.IsElapsed() )
+	{
+		m_refreshChickenTimer.Start( RandomFloat( 10.0f, 20.0f ) );
+
+		int actualCount = 0;
+		for( int i=0; i<m_chickenVector.Count(); ++i )
+		{
+			if ( m_chickenVector[i] != NULL )
+			{
+				++actualCount;
+			}
+		}
+
+		if ( actualCount < m_desiredChickenCount )
+		{
+			int need = m_desiredChickenCount - actualCount;
+
+			for( int k=0; k<need; ++k )
+			{
+				// find a good spot to spawn a chicken
+				CBaseEntity *chicken = NULL;
+
+				for( int attempts=0; attempts<10; ++attempts )
+				{
+					int which = RandomInt( 0, TheNavAreas.Count()-1 );
+
+					CNavArea *testArea = TheNavAreas[ which ];
+
+					const float tooSmall = 50.0f;
+
+					if ( testArea && testArea->GetSizeX() > tooSmall && testArea->GetSizeY() > tooSmall )
+					{
+						if ( !UTIL_IsVisibleToTeam( testArea->GetCenter(), TEAM_CT ) &&
+							 !UTIL_IsVisibleToTeam( testArea->GetCenter(), TEAM_TERRORIST ) )
+						{
+							// don't spawn a chicken on top of another chicken
+							int n;
+							for( n=0; n<m_chickenVector.Count(); ++n )
+							{
+								if ( m_chickenVector[n] == NULL )
+									continue;
+
+								const float tooClose = 50.0f;
+								Vector between = m_chickenVector[n]->GetAbsOrigin() - testArea->GetCenter();
+								if ( between.IsLengthLessThan( tooClose ) )
+									break;
+							}
+
+							if ( n >= m_chickenVector.Count() )
+							{
+								// found a good spot - spawn a chicken here
+								chicken = CreateEntityByName( "chicken" );
+								if ( chicken )
+								{
+									chicken->SetAbsOrigin( testArea->GetCenter() );
+
+									DispatchSpawn( chicken );
+									m_chickenVector.AddToTail( chicken );
+								}
+
+								break;
+							}
+						}
+					}
+				}
+
+				if ( !chicken )
+				{
+					// couldn't spawn a chicken - try again later
+					return;
+				}
+			}
+		}
+	}
 }
 
 void CSNavMesh::MaintainDMSpawnPopulation( void )
