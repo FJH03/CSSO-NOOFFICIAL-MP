@@ -471,14 +471,6 @@ void CrossProduct (const float* v1, const float* v2, float* cross)
 	cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
 }
 
-int Q_log2(int val)
-{
-	int answer=0;
-	while (val>>=1)
-		answer++;
-	return answer;
-}
-
 // Matrix is right-handed x=forward, y=left, z=up.  We a left-handed convention for vectors in the game code (forward, right, up)
 void MatrixVectors( const matrix3x4_t &matrix, Vector* pForward, Vector *pRight, Vector *pUp )
 {
@@ -1302,13 +1294,13 @@ bool SolveQuadratic( float a, float b, float c, float &root1, float &root2 )
 	return true;
 }
 
+constexpr float epsilon = 1e-6f;
 // solves for "a, b, c" where "a x^2 + b x + c = y", return true if solution exists
 bool SolveInverseQuadratic( float x1, float y1, float x2, float y2, float x3, float y3, float &a, float &b, float &c )
 {
 	float det = (x1 - x2)*(x1 - x3)*(x2 - x3);
 
-	// FIXME: check with some sort of epsilon
-	if (det == 0.0)
+	if (fabs(det) < epsilon)
 		return false;
 
 	a = (x3*(-y1 + y2) + x2*(y1 - y3) + x1*(-y2 + y3)) / det;
@@ -1376,8 +1368,7 @@ bool SolveInverseReciprocalQuadratic( float x1, float y1, float x2, float y2, fl
 {
 	float det = (x1 - x2)*(x1 - x3)*(x2 - x3)*y1*y2*y3;
 
-	// FIXME: check with some sort of epsilon
-	if (det == 0.0)
+	if (fabs(det) < epsilon)
 		return false;
 
 	a = (x1*y1*(y2 - y3) + x3*(y1 - y2)*y3 + x2*y2*(-y1 + y3)) / det;
@@ -1886,24 +1877,21 @@ void QuaternionAngles( const Quaternion &q, QAngle &angles )
 	VPROF_BUDGET( "QuaternionAngles", "Mathlib" );
 #endif
 
-#if 1
+#if 0
 	// FIXME: doing it this way calculates too much data, needs to do an optimized version...
 	matrix3x4_t matrix;
 	QuaternionMatrix( q, matrix );
 	MatrixAngles( matrix, angles );
 #else
-	float m11, m12, m13, m23, m33;
+	float m11 = ( 2.0f * q.w * q.w ) + ( 2.0f * q.x * q.x ) - 1.0f;
+	float m12 = ( 2.0f * q.x * q.y ) + ( 2.0f * q.w * q.z );
+	float m13 = ( 2.0f * q.x * q.z ) - ( 2.0f * q.w * q.y );
+	float m23 = ( 2.0f * q.y * q.z ) + ( 2.0f * q.w * q.x );
+	float m33 = ( 2.0f * q.w * q.w ) + ( 2.0f * q.z * q.z ) - 1.0f;
 
-	m11 = ( 2.0f * q.w * q.w ) + ( 2.0f * q.x * q.x ) - 1.0f;
-	m12 = ( 2.0f * q.x * q.y ) + ( 2.0f * q.w * q.z );
-	m13 = ( 2.0f * q.x * q.z ) - ( 2.0f * q.w * q.y );
-	m23 = ( 2.0f * q.y * q.z ) + ( 2.0f * q.w * q.x );
-	m33 = ( 2.0f * q.w * q.w ) + ( 2.0f * q.z * q.z ) - 1.0f;
-
-	// FIXME: this code has a singularity near PITCH +-90
-	angles[YAW] = RAD2DEG( atan2(m12, m11) );
-	angles[PITCH] = RAD2DEG( asin(-m13) );
-	angles[ROLL] = RAD2DEG( atan2(m23, m33) );
+	angles[YAW] = RAD2DEG( atan2f(m12, m11) );
+	angles[PITCH] = RAD2DEG( asinf(clamp(-m13, -1.0f, 1.0f)) );
+	angles[ROLL] = RAD2DEG( atan2f(m23, m33) );
 #endif
 
 	Assert( angles.IsValid() );
@@ -2127,10 +2115,22 @@ void QuaternionAngles( const Quaternion &q, RadianEuler &angles )
 	Assert( s_bMathlibInitialized );
 	Assert( q.IsValid() );
 
+#if 0
 	// FIXME: doing it this way calculates too much data, needs to do an optimized version...
 	matrix3x4_t matrix;
 	QuaternionMatrix( q, matrix );
 	MatrixAngles( matrix, angles );
+#else
+	angles.x = atan2f(2.0f * (q.w * q.x + q.y * q.z), 
+						1.0f - 2.0f * (q.x * q.x + q.y * q.y));
+	float sinp = 2.0f * (q.w * q.y - q.z * q.x);
+	if (fabs(sinp) >= 1.0f)
+		angles.y = copysignf(M_PI / 2.0f, sinp);
+	else
+		angles.y = asinf(sinp);
+	angles.z = atan2f(2.0f * (q.w * q.z + q.x * q.y), 
+						1.0f - 2.0f * (q.y * q.y + q.z * q.z));
+#endif
 
 	Assert( angles.IsValid() );
 }
@@ -3814,27 +3814,6 @@ int ClipPolyToPlane_Precise( double *inVerts, int vertCount, double *outVerts, c
 
 	return outCount;
 }
-
-int CeilPow2( int in )
-{
-	int retval;
-	
-	retval = 1;
-	while( retval < in )
-		retval <<= 1;
-	return retval;
-}
-
-int FloorPow2( int in )
-{
-	int retval;
-	
-	retval = 1;
-	while( retval < in )
-		retval <<= 1;
-	return retval >> 1;
-}
-
 
 //-----------------------------------------------------------------------------
 // Computes Y fov from an X fov and a screen aspect ratio
