@@ -272,7 +272,7 @@ static ConVar	violence_agibs( "violence_agibs","1", 0, "Show alien gib entities"
 
 // Marked as FCVAR_USERINFO so that the server can cull CC messages before networking them down to us!!!
 ConVar closecaption( "closecaption", "0", FCVAR_ARCHIVE | FCVAR_ARCHIVE_XBOX | FCVAR_USERINFO, "Enable close captioning." );
-ConVar mod_version( "mod_version", "1.24.5-alpha", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
+ConVar mod_version( "mod_version", "1.25", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
 extern ConVar sv_unlockedchapters;
 
 void Snd_Restart_f()
