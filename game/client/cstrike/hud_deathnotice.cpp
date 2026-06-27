@@ -666,11 +666,11 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	// Record the death notice in the console
 	if ( deathMsg.bSuicide )
 	{
-		if ( !strcmp( fullkilledwith, "d_planted_c4" ) )
+		if ( !V_strcmp( killedwith, "planted_c4" ) )
 		{
 			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s was a bit too close to the c4.\n", szVictimName );
 		}
-		else if ( !strcmp( fullkilledwith, "d_worldspawn" ) )
+		else if ( !V_strcmp( killedwith, "worldspawn" ) )
 		{
 			Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s died.\n", szVictimName );
 		}
@@ -683,9 +683,9 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	{
 		Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s killed %s", szKillerName, szVictimName );
 
-		if ( fullkilledwith && *fullkilledwith && (*fullkilledwith > 13 ) )
+		if ( killedwith && *killedwith )
 		{
-			Q_strncat( sDeathMsg, VarArgs( " with %s.\n", fullkilledwith + 2 ), sizeof( sDeathMsg ), COPY_ALL_CHARACTERS );
+			Q_strncat( sDeathMsg, VarArgs( " with %s.\n", killedwith ), sizeof( sDeathMsg ), COPY_ALL_CHARACTERS );
 		}
 	}
 
