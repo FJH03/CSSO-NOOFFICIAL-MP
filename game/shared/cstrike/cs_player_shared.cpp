@@ -19,6 +19,8 @@
 	#include "c_plantedc4.h"
 	#include "prediction.h"
 
+	extern void StartParticleEffect( const CEffectData &data );
+
 	#define CRecipientFilter C_RecipientFilter
 	#define CCSPlayerResource C_CS_PlayerResource
 #else
@@ -1333,12 +1335,14 @@ void CCSPlayer::FireBullet(
 			
 			if ( bWallBangHeavyVersion )
 			{
-				DispatchEffect( "impact_wallbang_heavy", data );
+				data.m_nHitBox = GetParticleSystemIndex( "impact_wallbang_heavy" );
 			}
 			else
 			{
-				DispatchEffect( "impact_wallbang_heavy", data );
+				data.m_nHitBox = GetParticleSystemIndex( "impact_wallbang_light" );
 			}
+
+			StartParticleEffect( data );
 
 			//debugoverlay->AddLineOverlay( vecWallBangHitStart, vecWallBangHitEnd, 0, 255, 0, false, 3 );
 		}

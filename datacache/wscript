@@ -18,6 +18,7 @@ def build(bld):
 	source = [
 		'datacache.cpp',
 		'mdlcache.cpp',
+		'precachesystem.cpp',
 		'../public/studio.cpp',
 		'../public/studio_virtualmodel.cpp',
 		'../common/studiobyteswap.cpp',
