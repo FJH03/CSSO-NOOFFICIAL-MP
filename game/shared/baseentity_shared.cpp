@@ -2264,13 +2264,6 @@ void CBaseEntity::MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int
 	case TRACER_LINE_AND_WHIZ:
 		UTIL_Tracer( vNewSrc, tr.endpos, entindex(), iAttachment, 0.0f, true, pszTracerName );
 		break;
-
-	case TRACER_BEAM:
-		// Taser arc: use particle tracer with weapon script's TracerEffect name.
-		// Only AMMO_TYPE_TASERCHARGE uses TRACER_BEAM, so this is safe.
-		UTIL_ParticleTracer( "weapon_tracers_taser",
-			vNewSrc, tr.endpos, entindex(), iAttachment, true );
-		break;
 	}
 }
 

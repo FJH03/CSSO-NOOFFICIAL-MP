@@ -8,7 +8,6 @@
 #include "c_te_effect_dispatch.h"
 #include "basecombatweapon_shared.h"
 #include "baseviewmodel_shared.h"
-#include "particles_new.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -144,66 +143,34 @@ void ParticleTracerCallback( const CEffectData &data )
 	C_BaseEntity *pEntity = data.GetEntity();
 	C_BaseViewModel *pViewModel = dynamic_cast< C_BaseViewModel * >( pEntity );
 
+	// Honor first-person tracer toggle
 	if ( !r_drawtracers_firstperson.GetBool() && pViewModel )
 		return;
 
-	// Resolve the owning player
+	// --- 找到 tracer 所属的玩家 ---
+	// entity 可能是: v模 / 武器w模 / C_CSPlayer
 	C_BasePlayer *pOwner = NULL;
 	if ( pViewModel )
+	{
 		pOwner = ToBasePlayer( pViewModel->GetOwner() );
+	}
 	else
 	{
-		pOwner = ToBasePlayer( pEntity );
+		pOwner = ToBasePlayer( pEntity );                    // 玩家自身
 		if ( !pOwner )
 		{
 			C_BaseCombatWeapon *pWpn = dynamic_cast< C_BaseCombatWeapon * >( pEntity );
 			if ( pWpn )
-				pOwner = ToBasePlayer( pWpn->GetOwner() );
+				pOwner = ToBasePlayer( pWpn->GetOwner() );   // 武器的持有者
 		}
 	}
 
+	// --- 本地玩家 / 第一人称观战的 tracer → 1P 弹道 ---
 	bool bFirstPerson = ( pOwner == pLocalPlayer ) ||
 		( pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE &&
 		  pLocalPlayer->GetObserverTarget() == pOwner &&
 		  pLocalPlayer->GetObserverInterpState() != C_BasePlayer::OBSERVER_INTERP_TRAVELING );
 
-	// --- Taser arc: dispatch the particle system ---
-	static int s_nTaserParticleIndex = GetParticleSystemIndex( "weapon_tracers_taser" );
-	if ( data.m_nHitBox == s_nTaserParticleIndex && s_nTaserParticleIndex > 0 )
-	{
-		Vector vecStart = data.m_vStart;
-		Vector vecEnd   = data.m_vOrigin;
-
-		if ( bFirstPerson && pOwner )
-		{
-			C_BaseViewModel *pVM = pOwner->GetViewModel( 0 );
-			if ( pVM )
-			{
-				int iAttach = pVM->LookupAttachment( "muzzle_flash" );
-				if ( iAttach <= 0 )
-					iAttach = pVM->LookupAttachment( "1" );
-				QAngle angDummy;
-				if ( iAttach > 0 && pVM->GetAttachment( iAttach, vecStart, angDummy ) )
-					FormatViewModelAttachment( vecStart, true );
-			}
-		}
-		else
-		{
-			vecStart = GetTracerOrigin( data );
-		}
-
-		QAngle vecAngles;
-		Vector vecToEnd = vecEnd - vecStart;
-		VectorNormalize( vecToEnd );
-		VectorAngles( vecToEnd, vecAngles );
-		DispatchParticleEffect( s_nTaserParticleIndex, vecStart, vecEnd, vecAngles, pEntity );
-
-		if ( data.m_fFlags & TRACER_FLAG_WHIZ )
-			FX_TracerSound( vecStart, vecEnd, TRACER_TYPE_DEFAULT );
-		return;
-	}
-
-	// --- HL2DM-style line tracer for everything else ---
 	if ( bFirstPerson && pOwner )
 	{
 		C_BaseViewModel *pVM = pOwner->GetViewModel( 0 );
@@ -213,6 +180,7 @@ void ParticleTracerCallback( const CEffectData &data )
 			int iAttach = pVM->LookupAttachment( "muzzle_flash" );
 			if ( iAttach <= 0 )
 				iAttach = pVM->LookupAttachment( "1" );
+
 			QAngle angDummy;
 			if ( iAttach > 0 && pVM->GetAttachment( iAttach, vecMuzzle, angDummy ) )
 			{
@@ -223,13 +191,16 @@ void ParticleTracerCallback( const CEffectData &data )
 		}
 	}
 
-	// Third-person
+	// --- Third-person (other players / NPCs) ---
 	Vector vecStart = GetTracerOrigin( data );
 	Vector vecEnd   = data.m_vOrigin;
+
 	float flVelocity = data.m_flScale;
 	if ( !flVelocity )
 		flVelocity = TRACER_SPEED;
+
 	bool bWhiz = ( data.m_fFlags & TRACER_FLAG_WHIZ ) != 0;
+
 	FX_Tracer( (Vector &)vecStart, (Vector &)vecEnd, flVelocity, bWhiz );
 }
 
