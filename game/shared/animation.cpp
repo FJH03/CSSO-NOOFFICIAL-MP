@@ -523,13 +523,14 @@ int LookupSequence( CStudioHdr *pstudiohdr, const char *label )
 	//
 	// Look up by sequence name.
 	//
-	for (int i = 0; i < pstudiohdr->GetNumSeq(); i++)
-	{
-		mstudioseqdesc_t	&seqdesc = pstudiohdr->pSeqdesc( i );
-		if (stricmp( seqdesc.pszLabel(), label ) == 0)
-			return i;
-	}
+	int iSequence = pstudiohdr->LookupSequence( label );
+	if ( iSequence != -1 )
+		return iSequence;
 
+	// PiMoN: who the fuck would search an activity using LookupSequenece?
+	// and there's no way a sequence and an activity would share a name!
+	// this does nothing but wastes performance for no reason
+#if 0
 	//
 	// Not found, look up by activity name.
 	//
@@ -538,6 +539,7 @@ int LookupSequence( CStudioHdr *pstudiohdr, const char *label )
 	{
 		return SelectWeightedSequence( pstudiohdr, nActivity );
 	}
+#endif
 
 	return ACT_INVALID;
 }
