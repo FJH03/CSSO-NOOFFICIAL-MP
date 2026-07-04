@@ -631,6 +631,21 @@ public:
 		BaseClass::GetBackBufferDimensions( nWidth, nHeight );
 	}
 
+	// Get the dimensions of the current render target
+	virtual void GetCurrentRenderTargetDimensions( int& nWidth, int& nHeight ) const
+	{
+		ITexture *pTexture = ShaderAPI()->GetRenderTargetEx( 0 );
+		if ( pTexture == NULL )
+		{
+			ShaderAPI()->GetBackBufferDimensions( nWidth, nHeight );
+		}
+		else
+		{
+			nWidth  = pTexture->GetActualWidth();
+			nHeight = pTexture->GetActualHeight();
+		}
+	}
+
 	// Get the current viewport
 	virtual void GetCurrentViewport( int& nX, int& nY, int& nWidth, int& nHeight ) const
 	{

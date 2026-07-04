@@ -5,7 +5,7 @@ rem ================================
 rem ==== MOD PATH CONFIGURATIONS ===
 
 rem == Set the absolute path to your mod's game directory here ==
-set GAMEDIR="O:\SteamLibrary\steamapps\common\csso_release_1.0\csso"
+set GAMEDIR="E:\csso-1.25\csso"
 
 rem == Set the relative or absolute path to Source SDK Base 2013 Singleplayer\bin ==
 set SDKBINDIR="O:\SteamLibrary\steamapps\common\Counter-Strike Source\bin\x64"

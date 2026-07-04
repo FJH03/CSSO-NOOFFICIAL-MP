@@ -14,6 +14,8 @@
 //weapondecal_vs20.fxc
 //customweapon_vs20.fxc
 //customweapon_ps20b.fxc
+Engine_Post_ps2x.fxc
+engine_post_vs20.fxc
 
 //cloak_vs20.fxc
 //cloak_ps2x.fxc

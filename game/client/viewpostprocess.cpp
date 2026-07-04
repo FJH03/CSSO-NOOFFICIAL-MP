@@ -21,6 +21,7 @@
 #include "viewpostprocess.h"
 #include "clienteffectprecachesystem.h"
 #include "imaterialproxydict.h"
+#include "renderparm.h"
 
 #ifdef CSTRIKE_DLL
 #include "c_cs_player.h"
@@ -87,7 +88,7 @@ ConVar mat_force_bloom("mat_force_bloom","0", FCVAR_CHEAT);
 
 ConVar mat_disable_bloom("mat_disable_bloom","0");
 ConVar mat_debug_bloom("mat_debug_bloom","0", FCVAR_CHEAT);
-ConVar mat_colorcorrection( "mat_colorcorrection", "0" );
+ConVar mat_colorcorrection( "mat_colorcorrection", "1" );
 
 ConVar mat_accelerate_adjust_exposure_down( "mat_accelerate_adjust_exposure_down", "40.0", FCVAR_CHEAT );
 
@@ -115,6 +116,10 @@ ConVar mat_force_tonemap_percent_bright_pixels( "mat_force_tonemap_percent_brigh
 ConVar mat_force_tonemap_min_avglum( "mat_force_tonemap_min_avglum", "-1", FCVAR_CHEAT, "Override. Old default was 3.0" );
 ConVar mat_force_tonemap_scale( "mat_force_tonemap_scale", "0.0", FCVAR_CHEAT );
 ConVar mat_fullbright( "mat_fullbright", "0", FCVAR_CHEAT );
+
+ConVar mat_grain_enable( "mat_grain_enable", "1" );
+//ConVar mat_vignette_enable( "mat_vignette_enable", "1", FCVAR_REPLICATED );
+ConVar mat_local_contrast_enable( "mat_local_contrast_enable", "1", FCVAR_DEVELOPMENTONLY );
 
 ConVar mat_blur_r( "mat_blur_r", "0.5", FCVAR_ARCHIVE );
 ConVar mat_blur_g( "mat_blur_g", "0.5", FCVAR_ARCHIVE );
@@ -1240,6 +1245,13 @@ void CTonemapSystem::SetTargetTonemappingScale( float flTonemapScale )
 	}
 }
 
+// Local contrast setting
+PostProcessParameters_t s_LocalPostProcessParameters;
+
+// view fade param settings
+static Vector4D s_viewFadeColor = { 0.0f, 0.0f, 0.0f, 0.0f };
+static bool  s_bViewFadeModulate = false;
+
 void ResetToneMapping( float flTonemappingScale )
 {
 	GetCurrentTonemappingSystem()->ResetTonemappingScale( flTonemappingScale );
@@ -1365,6 +1377,12 @@ void SetOverrideTonemapScale( bool bEnableOverride, float flTonemapScale )
 	GetCurrentTonemappingSystem()->SetOverrideTonemapScale( bEnableOverride, flTonemapScale );
 }
 
+void SetViewFadeParams( byte r, byte g, byte b, byte a, bool bModulate )
+{
+	s_viewFadeColor.Init( float(r)/255.0f, float(g)/255.0f, float(b)/255.0f, float(a)/255.0f );
+	s_bViewFadeModulate = bModulate;
+}
+
 //=====================================================================================================================
 // BloomAdd material proxy ============================================================================================
 //=====================================================================================================================
@@ -1452,10 +1470,26 @@ private:
 	IMaterialVar *m_pMaterialParam_ColCorrectNumLookups;
 	IMaterialVar *m_pMaterialParam_ColCorrectDefaultWeight;
 	IMaterialVar *m_pMaterialParam_ColCorrectLookupWeights;
+	IMaterialVar *m_pMaterialParam_LocalContrastStrength;
+	IMaterialVar *m_pMaterialParam_LocalContrastEdgeStrength;
+	IMaterialVar *m_pMaterialParam_VignetteStart;
+	IMaterialVar *m_pMaterialParam_VignetteEnd;
+	IMaterialVar *m_pMaterialParam_VignetteBlurEnable;
+	IMaterialVar *m_pMaterialParam_VignetteBlurStrength;
+	IMaterialVar *m_pMaterialParam_FadeToBlackStrength;
+	IMaterialVar *m_pMaterialParam_DepthBlurFocalDistance;
+	IMaterialVar *m_pMaterialParam_DepthBlurStrength;
+	IMaterialVar *m_pMaterialParam_ScreenBlurStrength;
+	IMaterialVar *m_pMaterialParam_FilmGrainStrength;
+	IMaterialVar *m_pMaterialParam_VomitEnable;
+	IMaterialVar *m_pMaterialParam_VomitColor1;
+	IMaterialVar *m_pMaterialParam_VomitColor2;
+	IMaterialVar *m_pMaterialParam_FadeColor;
+	IMaterialVar *m_pMaterialParam_FadeType;
 
 public:
 	static void SetupEnginePostMaterial( const Vector4D & fullViewportBloomUVs, const Vector4D & fullViewportFBUVs, const Vector2D & destTexSize,
-												bool bPerformSoftwareAA, bool bPerformBloom, bool bPerformColCorrect, float flAAStrength, float flBloomAmount );
+										 bool bPerformSoftwareAA, bool bPerformBloom, bool bPerformColCorrect, float flAAStrength, float flBloomAmount );
 	static void SetupEnginePostMaterialAA( bool bPerformSoftwareAA, float flAAStrength );
 	static void SetupEnginePostMaterialTextureTransform( const Vector4D & fullViewportBloomUVs, const Vector4D & fullViewportFBUVs, Vector2D destTexSize );
 
@@ -1484,6 +1518,17 @@ CEnginePostMaterialProxy::CEnginePostMaterialProxy()
 	m_pMaterialParam_ColCorrectNumLookups		= NULL;
 	m_pMaterialParam_ColCorrectDefaultWeight	= NULL;
 	m_pMaterialParam_ColCorrectLookupWeights	= NULL;
+	m_pMaterialParam_LocalContrastStrength		= NULL;
+	m_pMaterialParam_LocalContrastEdgeStrength	= NULL;
+	m_pMaterialParam_VignetteStart				= NULL;
+	m_pMaterialParam_VignetteEnd				= NULL;
+	m_pMaterialParam_VignetteBlurEnable			= NULL;
+	m_pMaterialParam_VignetteBlurStrength		= NULL;
+	m_pMaterialParam_FadeToBlackStrength		= NULL;
+	m_pMaterialParam_DepthBlurFocalDistance		= NULL;
+	m_pMaterialParam_DepthBlurStrength			= NULL;
+	m_pMaterialParam_ScreenBlurStrength			= NULL;
+	m_pMaterialParam_FilmGrainStrength			= NULL;
 }
 
 CEnginePostMaterialProxy::~CEnginePostMaterialProxy()
@@ -1504,6 +1549,22 @@ bool CEnginePostMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues
 	m_pMaterialParam_ColCorrectNumLookups = pMaterial->FindVar( "$colCorrect_NumLookups", &bFoundVar, false );
 	m_pMaterialParam_ColCorrectDefaultWeight = pMaterial->FindVar( "$colCorrect_DefaultWeight", &bFoundVar, false );
 	m_pMaterialParam_ColCorrectLookupWeights = pMaterial->FindVar( "$colCorrect_LookupWeights", &bFoundVar, false );
+	m_pMaterialParam_LocalContrastStrength = pMaterial->FindVar( "$localContrastScale", &bFoundVar, false );
+	m_pMaterialParam_LocalContrastEdgeStrength = pMaterial->FindVar( "$localContrastEdgeScale", &bFoundVar, false );
+	m_pMaterialParam_VignetteStart = pMaterial->FindVar( "$localContrastVignetteStart", &bFoundVar, false );
+	m_pMaterialParam_VignetteEnd = pMaterial->FindVar( "$localContrastVignetteEnd", &bFoundVar, false );
+	m_pMaterialParam_VignetteBlurEnable = pMaterial->FindVar( "$blurredVignetteEnable", &bFoundVar, false );
+	m_pMaterialParam_VignetteBlurStrength = pMaterial->FindVar( "$blurredVignetteScale", &bFoundVar, false );
+	m_pMaterialParam_FadeToBlackStrength = pMaterial->FindVar( "$fadeToBlackScale", &bFoundVar, false );
+	m_pMaterialParam_DepthBlurFocalDistance = pMaterial->FindVar( "$depthBlurFocalDistance", &bFoundVar, false );
+	m_pMaterialParam_DepthBlurStrength = pMaterial->FindVar( "$depthBlurStrength", &bFoundVar, false );
+	m_pMaterialParam_ScreenBlurStrength = pMaterial->FindVar( "$screenBlurStrength", &bFoundVar, false );
+	m_pMaterialParam_FilmGrainStrength = pMaterial->FindVar( "$noiseScale", &bFoundVar, false );
+	m_pMaterialParam_VomitEnable = pMaterial->FindVar( "$vomitEnable", &bFoundVar, false );
+	m_pMaterialParam_VomitColor1 = pMaterial->FindVar( "$vomitColor1", &bFoundVar, false );
+	m_pMaterialParam_VomitColor2 = pMaterial->FindVar( "$vomitColor2", &bFoundVar, false );
+	m_pMaterialParam_FadeColor = pMaterial->FindVar( "$fadeColor", &bFoundVar, false );
+	m_pMaterialParam_FadeType = pMaterial->FindVar( "$fade", &bFoundVar, false );
 
 	return true;
 }
@@ -1524,6 +1585,51 @@ void CEnginePostMaterialProxy::OnBind( C_BaseEntity *pEnt )
 
 	if ( m_pMaterialParam_BloomAmount )
 		m_pMaterialParam_BloomAmount->SetFloatValue( s_PostBloomAmount );
+
+	if ( m_pMaterialParam_LocalContrastStrength )
+		m_pMaterialParam_LocalContrastStrength->SetFloatValue( s_LocalPostProcessParameters.m_flParameters[ PPPN_LOCAL_CONTRAST_STRENGTH ] );
+
+	if ( m_pMaterialParam_LocalContrastEdgeStrength )
+		m_pMaterialParam_LocalContrastEdgeStrength->SetFloatValue( s_LocalPostProcessParameters.m_flParameters[ PPPN_LOCAL_CONTRAST_EDGE_STRENGTH ] );
+
+	if ( m_pMaterialParam_VignetteStart )
+		m_pMaterialParam_VignetteStart->SetFloatValue( s_LocalPostProcessParameters.m_flParameters[ PPPN_VIGNETTE_START ] );
+
+	if ( m_pMaterialParam_VignetteEnd )
+		m_pMaterialParam_VignetteEnd->SetFloatValue( s_LocalPostProcessParameters.m_flParameters[ PPPN_VIGNETTE_END ] );
+
+	if ( m_pMaterialParam_VignetteBlurEnable )
+		m_pMaterialParam_VignetteBlurEnable->SetIntValue( s_LocalPostProcessParameters.m_flParameters[ PPPN_VIGNETTE_BLUR_STRENGTH ] > 0.0f ? 1 : 0 );
+
+	if ( m_pMaterialParam_VignetteBlurStrength )
+		m_pMaterialParam_VignetteBlurStrength->SetFloatValue( s_LocalPostProcessParameters.m_flParameters[ PPPN_VIGNETTE_BLUR_STRENGTH ] );
+
+	if ( m_pMaterialParam_FadeToBlackStrength )
+		m_pMaterialParam_FadeToBlackStrength->SetFloatValue( s_LocalPostProcessParameters.m_flParameters[ PPPN_FADE_TO_BLACK_STRENGTH ] );
+
+	if ( m_pMaterialParam_DepthBlurFocalDistance )
+		m_pMaterialParam_DepthBlurFocalDistance->SetFloatValue( s_LocalPostProcessParameters.m_flParameters[ PPPN_DEPTH_BLUR_FOCAL_DISTANCE ] );
+
+	if ( m_pMaterialParam_DepthBlurStrength )
+		m_pMaterialParam_DepthBlurStrength->SetFloatValue( s_LocalPostProcessParameters.m_flParameters[ PPPN_DEPTH_BLUR_STRENGTH ] );
+
+	if ( m_pMaterialParam_ScreenBlurStrength )
+		m_pMaterialParam_ScreenBlurStrength->SetFloatValue( s_LocalPostProcessParameters.m_flParameters[ PPPN_SCREEN_BLUR_STRENGTH ] );
+
+	if ( m_pMaterialParam_FilmGrainStrength )
+		m_pMaterialParam_FilmGrainStrength->SetFloatValue( s_LocalPostProcessParameters.m_flParameters[ PPPN_FILM_GRAIN_STRENGTH ] );
+
+	if ( m_pMaterialParam_FadeType )
+	{
+		int nFadeType = ( s_bViewFadeModulate ) ? 2 : 1;
+		nFadeType = ( s_viewFadeColor[3] > 0.0f ) ? nFadeType : 0;
+		m_pMaterialParam_FadeType->SetIntValue( nFadeType );
+	}
+
+	if ( m_pMaterialParam_FadeColor )
+	{
+		m_pMaterialParam_FadeColor->SetVecValue( s_viewFadeColor.Base(), 4 );
+	}
 }
 
 IMaterial *CEnginePostMaterialProxy::GetMaterial()
@@ -1539,6 +1645,7 @@ void CEnginePostMaterialProxy::SetupEnginePostMaterialAA( bool bPerformSoftwareA
 	if ( bPerformSoftwareAA )
 	{
 		// Pass ConVars to the material by proxy
+
 		//  - the strength of the AA effect (from 0 to 1)
 		//  - how much to allow 1-pixel lines to be blurred (from 0 to 1)
 		//  - pick one of the two quality modes (5-tap or 9-tap filter)
@@ -1596,11 +1703,8 @@ void CEnginePostMaterialProxy::SetupEnginePostMaterialTextureTransform( const Ve
 }
 
 void CEnginePostMaterialProxy::SetupEnginePostMaterial(	const Vector4D & fullViewportBloomUVs, const Vector4D & fullViewportFBUVs, const Vector2D & destTexSize,
-																bool bPerformSoftwareAA, bool bPerformBloom, bool bPerformColCorrect, float flAAStrength, float flBloomAmount )
+														bool bPerformSoftwareAA, bool bPerformBloom, bool bPerformColCorrect, float flAAStrength, float flBloomAmount )
 {
-	// Shouldn't get here if none of the effects are enabled
-	Assert( bPerformSoftwareAA || bPerformBloom || bPerformColCorrect );
-
 	s_PostBloomEnable = bPerformBloom ? 1 : 0;
 	s_PostBloomAmount = flBloomAmount;
 
@@ -2549,6 +2653,7 @@ static ConVar r_queued_post_processing( "r_queued_post_processing", "0" );
 // This has really marginal effects, but 4x1 does seem vaguely better for post-processing
 static ConVar mat_postprocess_x( "mat_postprocess_x", "4" );
 static ConVar mat_postprocess_y( "mat_postprocess_y", "1" );
+static ConVar mat_postprocess_enable( "mat_postprocess_enable", "1", FCVAR_CHEAT );
 
 void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, bool bPostVGui )
 {
@@ -2605,6 +2710,17 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 	s_bScreenEffectTextureIsUpdated = false; // Force an update in tone mapping code
 	DoTonemapping( pRenderContext, x, y, w, h, flAutoExposureMin, flAutoExposureMax );
 
+	if ( mat_postprocess_enable.GetInt() == 0 )
+	{
+		GetCurrentTonemappingSystem()->DisplayHistogram();
+
+		#if defined( _X360 )
+			pRenderContext->PopVertexShaderGPRAllocation();
+		#endif
+
+		return;
+	}
+
 	ConVarRef mat_software_aa_strength( "mat_software_aa_strength" );
 
 	// Set software-AA on by default for 360
@@ -2659,9 +2775,11 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 
 	// Bloom, software-AA and color-correction (applied in 1 pass, after generation of the bloom texture)
 	float flBloomScale = GetBloomAmount();
-	bool  bPerformSoftwareAA	= ( flAAStrength != 0.0f );
-	bool  bPerformBloom			= !bPostVGui && ( flBloomScale > 0.0f );
+	bool  bPerformSoftwareAA	= IsX360() && ( engine->GetDXSupportLevel() >= 90 ) && ( flAAStrength != 0.0f );
+	bool  bPerformBloom			= !bPostVGui && ( flBloomScale > 0.0f ) && ( engine->GetDXSupportLevel() >= 90 );
 	bool  bPerformColCorrect	= !bPostVGui && 
+								  ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 90) &&
+								  ( g_pMaterialSystemHardwareConfig->GetHDRType() != HDR_TYPE_FLOAT ) &&
 								  g_pColorCorrectionMgr->HasNonZeroColorCorrectionWeights() &&
 								  mat_colorcorrection.GetInt();
 
@@ -2669,6 +2787,16 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 
 	bool bPerformLocalContrastEnhancement = false;
 	IMaterial* pPostMat = materials->FindMaterial( "dev/engine_post", TEXTURE_GROUP_OTHER, true );
+
+	if ( pPostMat )
+	{
+		IMaterialVar* pMatVar = pPostMat->FindVar( "$localcontrastenable", NULL, false );
+
+		if ( pMatVar )
+		{
+			bPerformLocalContrastEnhancement = pMatVar->GetIntValue() && mat_local_contrast_enable.GetBool();
+		}
+	}
 
 	if ( true )
 	{
@@ -2741,6 +2869,14 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 		static bool bFirstFrame = !IsGameConsole();
 		if ( !bFirstFrame || !bPerformColCorrect )
 		{
+			HDRType_t hdrType = g_pMaterialSystemHardwareConfig->GetHDRType();
+			if ( hdrType == HDR_TYPE_FLOAT )
+			{
+				// reset to render the final combine passes to the "real" display backbuffer
+				pRenderContext->SetIntRenderingParameter( INT_RENDERPARM_BACK_BUFFER_INDEX, BACK_BUFFER_INDEX_DEFAULT );
+				pRenderContext->SetRenderTarget( NULL );
+			}
+
 			Vector4D v4dFullViewportPostDestRect( fullViewportPostDestRect.x, fullViewportPostDestRect.y,
 												  fullViewportPostDestRect.x + fullViewportPostDestRect.width - 1,
 												  fullViewportPostDestRect.y + fullViewportPostDestRect.height - 1 );

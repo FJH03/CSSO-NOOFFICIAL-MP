@@ -1,5 +1,5 @@
 #include "shaderlib/cshader.h"
-class engine_post_ps20b_Static_Index
+class engine_post_ps30_Static_Index
 {
 private:
 	int m_nTOOL_MODE;
@@ -86,7 +86,7 @@ public:
 #endif
 	}
 public:
-	engine_post_ps20b_Static_Index( )
+	engine_post_ps30_Static_Index( )
 	{
 #ifdef _DEBUG
 		m_bTOOL_MODE = false;
@@ -113,11 +113,11 @@ public:
 		bool bAllStaticVarsDefined = m_bTOOL_MODE && m_bDEPTH_BLUR_ENABLE && m_bLINEAR_INPUT && m_bLINEAR_OUTPUT;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 3072 * m_nTOOL_MODE ) + ( 6144 * m_nDEPTH_BLUR_ENABLE ) + ( 12288 * m_nLINEAR_INPUT ) + ( 24576 * m_nLINEAR_OUTPUT ) + 0;
+		return ( 6144 * m_nTOOL_MODE ) + ( 12288 * m_nDEPTH_BLUR_ENABLE ) + ( 24576 * m_nLINEAR_INPUT ) + ( 49152 * m_nLINEAR_OUTPUT ) + 0;
 	}
 };
-#define shaderStaticTest_engine_post_ps20b psh_forgot_to_set_static_TOOL_MODE + psh_forgot_to_set_static_DEPTH_BLUR_ENABLE + psh_forgot_to_set_static_LINEAR_INPUT + psh_forgot_to_set_static_LINEAR_OUTPUT + 0
-class engine_post_ps20b_Dynamic_Index
+#define shaderStaticTest_engine_post_ps30 psh_forgot_to_set_static_TOOL_MODE + psh_forgot_to_set_static_DEPTH_BLUR_ENABLE + psh_forgot_to_set_static_LINEAR_INPUT + psh_forgot_to_set_static_LINEAR_OUTPUT + 0
+class engine_post_ps30_Dynamic_Index
 {
 private:
 	int m_nAA_ENABLE;
@@ -127,7 +127,7 @@ private:
 public:
 	void SetAA_ENABLE( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		Assert( i >= 0 && i <= 1 );
 		m_nAA_ENABLE = i;
 #ifdef _DEBUG
 		m_bAA_ENABLE = true;
@@ -393,7 +393,7 @@ public:
 #endif
 	}
 public:
-	engine_post_ps20b_Dynamic_Index()
+	engine_post_ps30_Dynamic_Index()
 	{
 #ifdef _DEBUG
 		m_bAA_ENABLE = false;
@@ -456,7 +456,7 @@ public:
 		bool bAllDynamicVarsDefined = m_bAA_ENABLE && m_bCOL_CORRECT_NUM_LOOKUPS && m_bCONVERT_FROM_LINEAR && m_bCONVERT_TO_LINEAR && m_bFADE_TO_BLACK && m_bFADE_TYPE && m_bNOISE_ENABLE && m_bVIGNETTE_ENABLE && m_bLOCAL_CONTRAST_ENABLE && m_bBLURRED_VIGNETTE_ENABLE && m_bVOMIT_ENABLE && m_bTV_GAMMA && m_bDESATURATEENABLE;
 		Assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
-		return ( 1 * m_nAA_ENABLE ) + ( 1 * m_nCOL_CORRECT_NUM_LOOKUPS ) + ( 4 * m_nCONVERT_FROM_LINEAR ) + ( 8 * m_nCONVERT_TO_LINEAR ) + ( 16 * m_nFADE_TO_BLACK ) + ( 32 * m_nFADE_TYPE ) + ( 96 * m_nNOISE_ENABLE ) + ( 96 * m_nVIGNETTE_ENABLE ) + ( 192 * m_nLOCAL_CONTRAST_ENABLE ) + ( 384 * m_nBLURRED_VIGNETTE_ENABLE ) + ( 768 * m_nVOMIT_ENABLE ) + ( 768 * m_nTV_GAMMA ) + ( 1536 * m_nDESATURATEENABLE ) + 0;
+		return ( 1 * m_nAA_ENABLE ) + ( 2 * m_nCOL_CORRECT_NUM_LOOKUPS ) + ( 8 * m_nCONVERT_FROM_LINEAR ) + ( 16 * m_nCONVERT_TO_LINEAR ) + ( 32 * m_nFADE_TO_BLACK ) + ( 64 * m_nFADE_TYPE ) + ( 192 * m_nNOISE_ENABLE ) + ( 192 * m_nVIGNETTE_ENABLE ) + ( 384 * m_nLOCAL_CONTRAST_ENABLE ) + ( 768 * m_nBLURRED_VIGNETTE_ENABLE ) + ( 1536 * m_nVOMIT_ENABLE ) + ( 1536 * m_nTV_GAMMA ) + ( 3072 * m_nDESATURATEENABLE ) + 0;
 	}
 };
-#define shaderDynamicTest_engine_post_ps20b psh_forgot_to_set_dynamic_AA_ENABLE + psh_forgot_to_set_dynamic_COL_CORRECT_NUM_LOOKUPS + psh_forgot_to_set_dynamic_CONVERT_FROM_LINEAR + psh_forgot_to_set_dynamic_CONVERT_TO_LINEAR + psh_forgot_to_set_dynamic_FADE_TO_BLACK + psh_forgot_to_set_dynamic_FADE_TYPE + psh_forgot_to_set_dynamic_NOISE_ENABLE + psh_forgot_to_set_dynamic_VIGNETTE_ENABLE + psh_forgot_to_set_dynamic_LOCAL_CONTRAST_ENABLE + psh_forgot_to_set_dynamic_BLURRED_VIGNETTE_ENABLE + psh_forgot_to_set_dynamic_VOMIT_ENABLE + psh_forgot_to_set_dynamic_TV_GAMMA + psh_forgot_to_set_dynamic_DESATURATEENABLE + 0
+#define shaderDynamicTest_engine_post_ps30 psh_forgot_to_set_dynamic_AA_ENABLE + psh_forgot_to_set_dynamic_COL_CORRECT_NUM_LOOKUPS + psh_forgot_to_set_dynamic_CONVERT_FROM_LINEAR + psh_forgot_to_set_dynamic_CONVERT_TO_LINEAR + psh_forgot_to_set_dynamic_FADE_TO_BLACK + psh_forgot_to_set_dynamic_FADE_TYPE + psh_forgot_to_set_dynamic_NOISE_ENABLE + psh_forgot_to_set_dynamic_VIGNETTE_ENABLE + psh_forgot_to_set_dynamic_LOCAL_CONTRAST_ENABLE + psh_forgot_to_set_dynamic_BLURRED_VIGNETTE_ENABLE + psh_forgot_to_set_dynamic_VOMIT_ENABLE + psh_forgot_to_set_dynamic_TV_GAMMA + psh_forgot_to_set_dynamic_DESATURATEENABLE + 0

@@ -541,6 +541,7 @@ $Project
 		$File	"pointteleport.cpp"
 		$File	"$SRCDIR\public\mathlib\polyhedron.h"
 		$File	"$SRCDIR\game\shared\positionwatcher.h"
+		$File	"$SRCDIR\game\shared\postprocess_shared.h"
 		$File	"$SRCDIR\game\shared\precache_register.cpp"
 		$File	"$SRCDIR\game\shared\precache_register.h"
 		$File	"$SRCDIR\game\shared\predictableid.cpp"

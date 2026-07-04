@@ -2057,6 +2057,9 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 		bool blend;
 		vieweffects->GetFadeParams( &color[0], &color[1], &color[2], &color[3], &blend );
 
+		// Store off color fade params to be applied in fullscreen postprocess pass
+		SetViewFadeParams( color[0], color[1], color[2], color[3], blend );
+
 #ifndef CSTRIKE_DLL
 		// Draw an overlay to make it even harder to see inside smoke particle systems.
 		DrawSmokeFogOverlay();
