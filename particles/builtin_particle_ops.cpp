@@ -111,7 +111,7 @@ void C_OP_BasicMovement::Operate( CParticleCollection *pParticles, float flStren
 	C4VAttributeWriteIterator xyz( PARTICLE_ATTRIBUTE_XYZ, pParticles );
 
 	// fltx4 adj_dt = ReplicateX4( (1.0-m_fDrag) * ( pParticles->m_flDt / pParticles->m_flPreviousDt ) );
-	fltx4 adj_dt = ReplicateX4( ( pParticles->m_flDt / pParticles->m_flPreviousDt ) * ExponentialDecay( ( 1.0f - fpmax(0.0, m_fDrag)), (1.0f / 30.0f), pParticles->m_flDt ) );
+	fltx4 adj_dt = ReplicateX4( ( pParticles->m_flDt / pParticles->m_flPreviousDt ) * ExponentialDecay( ( 1.0f - fpmax(0.0f, m_fDrag)), (1.0f / 30.0f), pParticles->m_flDt ) );
 
 	size_t nForceStride=0;
 	Vector acc = m_Gravity;
