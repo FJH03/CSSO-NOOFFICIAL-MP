@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2008, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2008, Valve Corporation, All rights reserved. ======//
 
 #include "BaseVSShader.h"
 #include "convar.h"
@@ -178,35 +178,6 @@ BEGIN_VS_SHADER( SplineRope, "Help for SplineRope" )
 			}
 		}
 		Draw( );
-	}
-
-	void ExecuteFastPath( int *dynVSIdx, int *dynPSIdx,  IMaterialVar** params, IShaderDynamicAPI * pShaderAPI, 
-		VertexCompressionType_t vertexCompression, CBasePerMaterialContextData **pContextDataPtr,BOOL bCSMEnabled )
-	{
-		// This is only to be used for shadow map gen!!!
-
-		s_pShaderAPI = pShaderAPI;
-
-		LoadModelViewMatrixIntoVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0 );
-		LoadProjectionMatrixIntoVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_3 );
-
-		// Get viewport and render target dimensions and set shader constant to do a 2D mad
-		int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
-		pShaderAPI->GetCurrentViewport( nViewportX, nViewportY, nViewportWidth, nViewportHeight );
-
-		float c7[4]={ 0.0f, 0.0f, 0.0f, 0.0f };
-		if ( !g_pHardwareConfig->IsAAEnabled() )
-		{
-			float flMinPixelDiameter = rope_min_pixel_diameter.GetFloat() / ( float )nViewportWidth;
-			c7[0]= c7[1] = c7[2] = c7[3] = flMinPixelDiameter;
-		}
-		pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_7, c7, 1 );
-
-		pShaderAPI->SetVertexShaderViewProj();
-		pShaderAPI->SetVertexShaderCameraPos();
-
-		*dynVSIdx = 0;
-		*dynPSIdx = 0;
 	}
 
 END_SHADER
