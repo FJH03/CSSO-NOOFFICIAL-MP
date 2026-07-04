@@ -28,8 +28,6 @@ CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectsTest )
 CLIENTEFFECT_MATERIAL( "effects/spark" )
 CLIENTEFFECT_MATERIAL( "effects/gunshiptracer" )
 CLIENTEFFECT_MATERIAL( "effects/bluespark" )
-CLIENTEFFECT_MATERIAL( "effects/tracer_middle" )
-CLIENTEFFECT_MATERIAL( "effects/tracer_middle2" )
 CLIENTEFFECT_REGISTER_END()
 
 //-----------------------------------------------------------------------------
@@ -159,23 +157,18 @@ void FX_PlayerTracer( Vector& start, Vector& end )
 	VectorMA( start, TRACER_BASE_OFFSET + random->RandomFloat( -24.0f, 64.0f ), shotDir, dStart );
 	VectorMA( dStart, ( length * random->RandomFloat( 0.1f, 0.6f ) ), shotDir, dEnd );
 
-	// --- 增强曳光弹效果: 3 根重叠线 + 更粗 + 更持久 + middle/middle2 交替 ---
-	const char *materialName = ( random->RandomInt( 0, 1 ) ) ? "effects/tracer_middle" : "effects/tracer_middle2";
+	//Create the line
+	CFXStaticLine	*t;
+	const char		*materialName;
 
-	for ( int i = 0; i < 3; i++ )
-	{
-		float flScale = random->RandomFloat( 2.0f, 3.5f );        // 原来 0.5~0.75，加大 4-5 倍
-		float flLife  = random->RandomFloat( 0.06f, 0.12f );       // 原来 0.01，加长 6-12 倍
-		float flJitter = random->RandomFloat( -1.5f, 1.5f );       // 轻微抖动让线条更有"能量感"
+	//materialName = ( random->RandomInt( 0, 1 ) ) ? "effects/tracer_middle" : "effects/tracer_middle2";
+	materialName = "effects/spark";
 
-		Vector jitteredStart = dStart + shotDir * flJitter;
-		Vector jitteredEnd   = dEnd   + shotDir * flJitter;
+	t = new CFXStaticLine( "Tracer", dStart, dEnd, random->RandomFloat( 0.5f, 0.75f ), 0.01f, materialName, 0 );
+	assert( t );
 
-		CFXStaticLine *t = new CFXStaticLine( "Tracer", jitteredStart, jitteredEnd,
-			flScale, flLife, materialName, 0 );
-		assert( t );
-		clienteffects->AddEffect( t );
-	}
+	//Throw it into the list
+	clienteffects->AddEffect( t );
 }
 
 /*
@@ -312,13 +305,8 @@ void FX_Tracer( Vector& start, Vector& end, int velocity, bool makeWhiz )
 		float length = random->RandomFloat( 64.0f, 128.0f );
 		float life = ( dist + length ) / velocity;	//NOTENOTE: We want the tail to finish its run as well
 		
-		// 增强: 更粗 + 叠加 2 根线 + middle/middle2 交替
-		for ( int i = 0; i < 2; i++ )
-		{
-			const char *matName = ( random->RandomInt( 0, 1 ) ) ? "effects/tracer_middle" : "effects/tracer_middle2";
-			float flScale = random->RandomFloat( 1.5f, 2.5f );   // 原来 0.75~0.9，加大约 2-3 倍
-			FX_AddDiscreetLine( start, dir, velocity, length, dist, flScale, life, matName );
-		}
+		//Add it
+		FX_AddDiscreetLine( start, dir, velocity, length, dist, random->RandomFloat( 0.75f, 0.9f ), life, "effects/spark" );
 	}
 
 	if( makeWhiz )
