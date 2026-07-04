@@ -407,6 +407,7 @@ $Project
 		$File	"$SRCDIR\game\shared\point_bonusmaps_accessor.cpp"
 		$File	"$SRCDIR\game\shared\point_bonusmaps_accessor.h"
 		$File	"$SRCDIR\game\shared\point_posecontroller.cpp"
+		$File	"$SRCDIR\game\shared\postprocess_shared.h"
 		$File	"$SRCDIR\game\shared\precache_register.cpp"
 		$File	"$SRCDIR\game\shared\predictableid.cpp"
 		$File	"prediction.cpp"

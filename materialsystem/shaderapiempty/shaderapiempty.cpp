@@ -390,6 +390,11 @@ public:
 	{
 		s_ShaderDeviceEmpty.GetBackBufferDimensions( width, height );
 	}
+	// Get the dimensions of the current render target
+	virtual void GetCurrentRenderTargetDimensions( int& nWidth, int& nHeight ) const
+	{
+		s_ShaderDeviceEmpty.GetBackBufferDimensions( nWidth, nHeight );
+	}
 	// Get the current viewport
 	virtual void GetCurrentViewport( int& nX, int& nY, int& nWidth, int& nHeight ) const
 	{
