@@ -1691,7 +1691,10 @@ void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 		C_BaseViewModel *pViewModel = GetViewModel(0);
 
 		CBaseWeaponWorldModel *pWeaponWorldModel = NULL;
-		if ( pActiveWeapon && ( !pViewModel || this->ShouldDraw() ) )
+		// Only use world weapon model for tracer origin when the player is actually
+		// being rendered in third-person (i.e. other players, not ourselves in meathook/legs mode).
+		// In first-person (including meathook mode), prefer the view model's muzzle position.
+		if ( pActiveWeapon && ( !pViewModel || ( this->ShouldDraw() && !this->InFirstPersonView() ) ) )
 			pWeaponWorldModel = pActiveWeapon->GetWeaponWorldModel();
 
 		if ( pWeaponWorldModel && pWeaponWorldModel->HasDormantOwner() )
