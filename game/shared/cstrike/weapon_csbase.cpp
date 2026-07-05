@@ -1904,7 +1904,7 @@ extern ConVar view_recoil_tracking;
 			if ( pszEffect && Q_strlen( pszEffect ) > 0 && iAttachmentIndex >= 0 )
 			{
 				C_BasePlayer* pLocalPlayer = C_BasePlayer::GetLocalPlayer();
-				bool bLocalThirdPerson = ((pPlayer == pLocalPlayer) && pPlayer->ShouldDraw());
+				bool bLocalThirdPerson = ((pPlayer == pLocalPlayer) && pPlayer->ShouldDraw() && !pPlayer->InFirstPersonView());
 
 				// The view model fixes up the split screen visibility of any effects spawned off of it.
 				if ( !bLocalThirdPerson )
