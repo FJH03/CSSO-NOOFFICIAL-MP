@@ -44,6 +44,7 @@ def build(bld):
 		'DecalBaseTimesLightmapAlphaBlendSelfIllum_dx9.cpp',
 		'DecalModulate_dx9.cpp',
 		'depthwrite.cpp',
+		'DepthOfField_dx9.cpp',
 		'Downsample.cpp',
 		'downsample_nohdr.cpp',
 		'Engine_Post_dx9.cpp',
