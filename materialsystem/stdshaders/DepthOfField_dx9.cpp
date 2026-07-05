@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: Depth of field material
 //
@@ -12,8 +12,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-ConVar mat_dof_max_blur_radius( "mat_dof_max_blur_radius", "10" );
-ConVar mat_dof_quality( "mat_dof_quality", "0" );
+ConVar mat_dof_max_blur_radius( "mat_dof_max_blur_radius", "15" );
+ConVar mat_dof_quality( "mat_dof_quality", "2" );
 
 // 8 samples
 static const float s_flPoissonConstsQuality0[16] = {
@@ -114,7 +114,7 @@ BEGIN_VS_SHADER_FLAGS( DepthOfField_dx9, "Depth of Field", SHADER_NOT_EDITABLE )
 
 	SHADER_FALLBACK
 	{
-		if ( g_pHardwareConfig->GetDXSupportLevel() < 92 )
+		if ( g_pHardwareConfig->GetDXSupportLevel() < 90 )
 		{
 			return "Wireframe";
 		}

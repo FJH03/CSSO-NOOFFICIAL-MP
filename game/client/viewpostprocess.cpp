@@ -3218,7 +3218,7 @@ ConVar mat_dof_far_focus_depth( "mat_dof_far_focus_depth", "250.0" );
 ConVar mat_dof_far_blur_depth( "mat_dof_far_blur_depth", "1000.0" );
 ConVar mat_dof_near_blur_radius( "mat_dof_near_blur_radius", "10.0" );
 ConVar mat_dof_far_blur_radius( "mat_dof_far_blur_radius", "5.0" );
-ConVar mat_dof_quality( "mat_dof_quality", "0" );
+ConVar mat_dof_quality( "mat_dof_quality", "2" );
 
 static float GetNearBlurDepth()
 {
@@ -3256,11 +3256,13 @@ bool IsDepthOfFieldEnabled()
 	if ( !pViewSetup )
 		return false;
 
+#ifdef false
 	// We need high-precision depth, which we currently only get in float HDR mode
 	if ( g_pMaterialSystemHardwareConfig->GetHDRType() != HDR_TYPE_FLOAT )
 		return false;
+#endif
 
-	if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 92 )
+	if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 90 )
 		return false;
 
 	if ( !mat_dof_enabled.GetBool() )
@@ -3330,6 +3332,7 @@ void DoDepthOfField( const CViewSetup &view )
 	int nSrcWidth = pSrc->GetActualWidth();
 	int nSrcHeight = pSrc->GetActualHeight();
 
+#ifdef false
 	if ( mat_dof_quality.GetInt() < 2 )
 	{
 		/////////////////////////////////////
@@ -3376,6 +3379,7 @@ void DoDepthOfField( const CViewSetup &view )
 
 		pRenderContext->PopRenderTargetAndViewport();
 	}
+#endif
 
 	// Render depth-of-field quad 
 
@@ -3388,6 +3392,8 @@ void DoDepthOfField( const CViewSetup &view )
 
 	if ( pMatDOF == NULL )
 		return;
+
+	pMatDOF->IncrementReferenceCount();
 
 	SetMaterialVarFloat( pMatDOF, "$nearPlane", view.zNear );
 	SetMaterialVarFloat( pMatDOF, "$farPlane", view.zFar );
@@ -3405,4 +3411,6 @@ void DoDepthOfField( const CViewSetup &view )
 		0, 0, nViewportWidth, nViewportHeight,
 		0, 0, nSrcWidth-1, nSrcHeight-1,
 		nSrcWidth, nSrcHeight, GetClientWorldEntity()->GetClientRenderable() );
+
+	pMatDOF->DecrementReferenceCount();
 }

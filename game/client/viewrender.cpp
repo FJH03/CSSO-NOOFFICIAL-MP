@@ -1412,6 +1412,8 @@ void CViewRender::ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxV
 		IMaterial *pMat = materials->FindMaterial( "dev/clearalpha", TEXTURE_GROUP_OTHER, true );
 		if ( pMat != NULL )
 		{
+			pMat->IncrementReferenceCount();
+
 			int nWidth = 0;
 			int nHeight = 0;
 			int nDummy = 0;
@@ -1423,6 +1425,8 @@ void CViewRender::ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxV
 				0, 0, nWidth, nHeight,
 				0, 0, nWidth-1, nHeight-1,
 				nWidth, nHeight, NULL /*GetClientWorldEntity()->GetClientRenderable()*/ );
+
+			pMat->DecrementReferenceCount();
 		}
 	}
 
@@ -2398,9 +2402,13 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 	//
 	if ( IMaterial *pMaterialClearAlpha = materials->FindMaterial( "dev/clearalpha", TEXTURE_GROUP_OTHER, true ) )
 	{
+		pMaterialClearAlpha->IncrementReferenceCount();
+
 		pRenderContext = materials->GetRenderContext();
 		pRenderContext->DrawScreenSpaceQuad( pMaterialClearAlpha );
 		pRenderContext.SafeRelease();
+
+		pMaterialClearAlpha->DecrementReferenceCount();
 	}
 
 	render->PopView( GetFrustum() );
