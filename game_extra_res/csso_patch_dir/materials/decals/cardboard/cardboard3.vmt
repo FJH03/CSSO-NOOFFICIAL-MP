@@ -1,0 +1,7 @@
+DecalModulate
+{
+$baseTexture "decals\cardboard\cardboard3"
+$decal 1
+$decalscale "0.16"
+$decalScaleVariation "0.14"
+}
