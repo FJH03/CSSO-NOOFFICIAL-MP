@@ -31,6 +31,7 @@
 static ConVar hud_deathnotice_time( "hud_deathnotice_time", "6", 0 );
 static ConVar hud_deathnotice_fade_time( "hud_deathnotice_fade_time", "0.5", 0 );
 static ConVar hud_deathnotice_scroll_time( "hud_deathnotice_scroll_time", "0.1", 0 );
+static ConVar hud_deathnotice_icon_scale( "hud_deathnotice_icon_scale", "0.78", FCVAR_ARCHIVE, "Scale factor for death notice icons." );
 ConVar cl_show_clan_in_death_notice( "cl_show_clan_in_death_notice", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Is set, the clan name will show next to player names in the death notices." );
 extern ConVar mp_display_kill_assists;
 
@@ -254,7 +255,7 @@ bool CHudDeathNotice::ShouldDraw( void )
 //-----------------------------------------------------------------------------
 void CHudDeathNotice::DrawScaledIcon( SVGImage *pIcon, int iconW, int iconH, int yIcon, int &xPos )
 {
-	const float flScale = 0.85f;
+	const float flScale = hud_deathnotice_icon_scale.GetFloat();
 	int drawW = (int)(iconW * flScale);
 	int drawH = (int)(iconH * flScale);
 	int drawX = xPos + (iconW - drawW) / 2;
