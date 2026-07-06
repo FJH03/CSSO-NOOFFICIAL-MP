@@ -1,0 +1,6 @@
+DecalModulate
+{
+$baseTexture "decals\metal\metal01"
+$decalscale "0.135"
+$decalScaleVariation "0.09"
+}

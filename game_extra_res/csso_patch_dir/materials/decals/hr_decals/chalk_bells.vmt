@@ -1,0 +1,17 @@
+"Lightmappedgeneric"
+{
+	"$basetexture" "decals\hr_decals\chalk_bells"
+
+	"$translucent" 1
+	"$decal" 1
+	"$vertexcolor" "1"
+	"$vertexalpha" "1"	
+	
+	    "$detail"              "detail\noise_detail_01"
+	    "$detailscale"         "[ 8 8 ]"
+	    "$detailblendfactor"   ".1"
+
+
+	$color "{300 300 300}"	
+
+}
