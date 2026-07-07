@@ -186,28 +186,22 @@ bool LineGoesThroughSmoke( Vector from, Vector to, bool grenadeBloat )
 {
 	float totalSmokedLength = 0.0f;	// distance along line of sight covered by smoke
 
-	// compute unit vector and length of line of sight segment
-	//Vector sightDir = to - from;
-	//float sightLength = sightDir.NormalizeInPlace();
-
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 
 	if ( !pPlayer )
 		return false;
 
 	const float smokeRadiusSq = SmokeGrenadeRadius * SmokeGrenadeRadius * grenadeBloat * grenadeBloat;
-	C_BaseParticleEntity *ent;
-	for ( int i=0; i < pPlayer->m_SmokeGrenades.Count(); i++ )
+
+	if ( CSGameRules() )
 	{
-		float flLengthAdd = 0;
-		if ( CSGameRules() )
+		for ( int i=0; i < g_SmokeGrenadeHandles.Count(); i++ )
 		{
-			ent = pPlayer->m_SmokeGrenades[i];
-			if ( !ent || ent->IsEFlagSet(EFL_DORMANT) ) // PiMoN: is EFL_DORMANT check actually needed?
+			C_BaseEntity *pGrenade = g_SmokeGrenadeHandles[i].Get();
+			if ( !pGrenade || pGrenade->IsEFlagSet(EFL_DORMANT) )
 				continue;
 
-			flLengthAdd = CSGameRules()->CheckTotalSmokedLength( smokeRadiusSq, ent->GetAbsOrigin(), from, to );
-			// get the totalSmokedLength and check to see if the line starts or stops in smoke.  If it does this will return -1 and we should just bail early
+			float flLengthAdd = CSGameRules()->CheckTotalSmokedLength( smokeRadiusSq, pGrenade->GetAbsOrigin(), from, to );
 			if ( flLengthAdd == -1 )
 				return true;
 
