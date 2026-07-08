@@ -497,7 +497,7 @@ void DrawCustomWeapon(  CBaseVSShader *pShader, IMaterialVar** params, IShaderDy
 		///////////////////////////
 		int numBones = pShaderAPI->GetCurrentNumBones();
 
-		LightState_t lightState = { 0, false, false };
+		LightState_t lightState = LightState_t();
 		pShaderAPI->GetDX9LightState( &lightState );
 
 		// VERTEX SHADER SETUP
