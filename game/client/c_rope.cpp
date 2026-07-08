@@ -22,6 +22,8 @@
 #include "tier1/callqueue.h"
 #include "tier1/memstack.h"
 
+extern void StartParticleEffect( const CEffectData &data );
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -1756,7 +1758,9 @@ void C_RopeKeyframe::UpdateHolidayLights( void )
 		AUTO_LOCK( g_RopeDelayedEffects.m_mtx );
 		FOR_EACH_VEC( g_RopeDelayedEffects.m_arrEffects, iEffect )
 		{
-			DispatchEffect( "CS_HolidayLight", g_RopeDelayedEffects.m_arrEffects[iEffect] );
+			CEffectData data = g_RopeDelayedEffects.m_arrEffects[iEffect];
+			data.m_nHitBox = GetParticleSystemIndex( "CS_HolidayLight" );
+			StartParticleEffect( data );
 		}
 		g_RopeDelayedEffects.m_arrEffects.RemoveAll();
 	}
