@@ -948,7 +948,7 @@ BEGIN_VS_SHADER( Character, "Help for Character Shader" )
 			}
 
 			int numBones = pShaderAPI->GetCurrentNumBones();
-			LightState_t lightState = { 0, false, false };
+			LightState_t lightState = LightState_t();
 			pShaderAPI->GetDX9LightState( &lightState );
 
 			MaterialFogMode_t fogType = pShaderAPI->GetSceneFogMode();
