@@ -60,6 +60,7 @@ struct DeathNoticeItem
 	bool		bBlind;
 	bool		bPenetrated;
 	bool		bThruSmoke;
+	bool		bInAir;
 	bool		bDomination;
 	bool		bRevenge;
 	bool		bAssisted;
@@ -116,7 +117,7 @@ private:
 	SVGImage		*m_iconD_blind;
 	SVGImage		*m_iconD_penetrated;
 	SVGImage		*m_iconD_thrusmoke;
-	SVGImage		*m_iconD_inferno;
+	SVGImage		*m_iconD_inair;
 
 	Color			m_teamColors[TEAM_MAXCOUNT];
 
@@ -145,7 +146,7 @@ CHudDeathNotice::CHudDeathNotice( const char *pElementName ) :
 	m_iconD_blind = new SVGImage;
 	m_iconD_penetrated = new SVGImage;
 	m_iconD_thrusmoke = new SVGImage;
-	m_iconD_inferno = new SVGImage;
+	m_iconD_inair = new SVGImage;
 
 	SetHiddenBits( HIDEHUD_MISCSTATUS );
 }
@@ -168,8 +169,8 @@ CHudDeathNotice::~CHudDeathNotice()
 	m_iconD_penetrated = NULL;
 	delete m_iconD_thrusmoke;
 	m_iconD_thrusmoke = NULL;
-	delete m_iconD_inferno;
-	m_iconD_inferno = NULL;
+	delete m_iconD_inair;
+	m_iconD_inair = NULL;
 
 	m_IconCache.PurgeAndDeleteElements();
 }
@@ -218,8 +219,8 @@ void CHudDeathNotice::VidInit( void )
 	m_iconD_penetrated->SetTexture( "materials/vgui/hud/svg/penetrate.svg" );
 	m_iconD_thrusmoke->SetSize( m_iIconWide, m_iIconTall );
 	m_iconD_thrusmoke->SetTexture( "materials/vgui/hud/svg/smoke_kill.svg" );
-	m_iconD_inferno->SetSize( m_iIconWide, m_iIconTall );
-	m_iconD_inferno->SetTexture( "materials/vgui/hud/svg/inferno.svg" );
+	m_iconD_inair->SetSize( m_iIconWide, m_iIconTall );
+	m_iconD_inair->SetTexture( "materials/vgui/hud/svg/inair.svg" );
 	m_DeathNotices.Purge();
 }
 
@@ -253,7 +254,7 @@ void CHudDeathNotice::Paint()
 {
 	if ( !m_iconD_headshot || !m_iconD_skull || !m_iconD_dominated ||
 		 !m_iconD_revenge || !m_iconD_noscope || !m_iconD_blind ||
-		 !m_iconD_penetrated || !m_iconD_thrusmoke || !m_iconD_inferno )
+		 !m_iconD_penetrated || !m_iconD_thrusmoke || !m_iconD_inair )
 		return;
 
 	int yStart = m_iTopMargin;
@@ -281,6 +282,9 @@ void CHudDeathNotice::Paint()
 
 	int iconThruSmokeWide, iconThruSmokeTall;
 	m_iconD_thrusmoke->GetContentSize( iconThruSmokeWide, iconThruSmokeTall );
+
+	int iconInAirWide, iconInAirTall;
+	m_iconD_inair->GetContentSize( iconInAirWide, iconInAirTall );
 
 	int iCount = m_DeathNotices.Count();
 	for ( int i = 0; i < iCount; i++ )
@@ -349,6 +353,9 @@ void CHudDeathNotice::Paint()
 			x -= UTIL_ComputeStringWidth( m_hTextFont, assistplussign );
 			x -= UTIL_ComputeStringWidth( m_hTextFont, assister );
 		}
+
+		if ( m_DeathNotices[i].bInAir )
+			x -= iconInAirWide + m_iIconMargin;
 			
 		//if ( !m_DeathNotices[i].bSuicide )
 		{
@@ -433,6 +440,13 @@ void CHudDeathNotice::Paint()
 		// Draw death weapon
 		//If we're using a font char, this will ignore iconTall and iconWide
 		x += m_iIconMargin;
+		if( m_DeathNotices[i].bInAir )
+		{
+			m_iconD_inair->SetPos( x, yIcon - iconInAirTall / 3 + ((m_iLineHeight - iconInAirTall) / 2) );
+			m_iconD_inair->SetColor( m_clrIcons );
+			m_iconD_inair->Paint();
+			x += iconInAirWide + m_iIconMargin;
+		}
 		icon->SetPos( x, yIcon + ((m_iLineHeight - iconTall) / 2) );
 		icon->SetColor( m_clrIcons );
 		icon->Paint();
@@ -527,6 +541,7 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	bool noscope = event->GetInt( "noscope" ) > 0;
 	bool blind = event->GetInt( "blind" ) > 0;
 	bool penetrated = event->GetInt( "penetrated" ) > 0;
+	bool inair = event->GetInt( "inair" ) > 0;
 
 	C_CSPlayer* pKiller = ToCSPlayer( ClientEntityList().GetBaseEntity( iKiller ) );
 	C_CSPlayer* pVictim = ToCSPlayer( ClientEntityList().GetBaseEntity( iVictim ) );
@@ -630,6 +645,7 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	deathMsg.bBlind = blind;
 	deathMsg.bPenetrated = penetrated;
 	deathMsg.bThruSmoke = thrusmoke;
+	deathMsg.bInAir = inair;
 	deathMsg.bDomination = event->GetInt( "dominated" ) > 0 || (pKiller != NULL && pKiller->IsPlayerDominated( iVictim ));
 	deathMsg.bRevenge = event->GetInt( "revenge" ) > 0;
 	deathMsg.bAssisted = iAssister > 0;
