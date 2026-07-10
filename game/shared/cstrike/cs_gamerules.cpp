@@ -2572,6 +2572,7 @@ ConVar cl_autohelp(
 		bool bHeadshot = false;
 		bool bNoScope = false;
 		bool bBlindKill = false;
+		bool bInAir = false;
 
 		if ( pScorer )	// Is the killer a client?
 		{
@@ -2602,6 +2603,11 @@ ConVar cl_autohelp(
 						{
 							// we are flashed - draw a blind kill icon
 							bBlindKill = true;
+						}
+
+						if ( !(pCSScorer->GetFlags() & FL_ONGROUND) )
+						{
+							bInAir = true;
 						}
 					}
 				}
@@ -2683,6 +2689,7 @@ ConVar cl_autohelp(
 			event->SetInt( "noscope", bNoScope ? 1 : 0 );
 			event->SetInt( "blind", bBlindKill ? 1 : 0 );
 			event->SetInt( "penetrated", info.GetObjectsPenetrated() );
+			event->SetInt( "inair", bInAir ? 1 : 0 );
 			event->SetInt( "priority", bHeadshot ? 8 : 7 );	// HLTV event priority, not transmitted
 			if ( pCSVictim->GetDeathFlags() & CS_DEATH_DOMINATION )
 			{
