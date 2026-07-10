@@ -679,7 +679,7 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	{
 		Q_snprintf( sDeathMsg, sizeof( sDeathMsg ), "%s killed %s", szKillerName, szVictimName );
 
-		if ( killedwith && *killedwith )
+		if ( killedwith && *killedwith && (*killedwith > 13 ) )
 		{
 			Q_strncat( sDeathMsg, VarArgs( " with %s.\n", killedwith ), sizeof( sDeathMsg ), COPY_ALL_CHARACTERS );
 		}
