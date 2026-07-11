@@ -1,4 +1,4 @@
-//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -54,12 +54,10 @@
 #define CHAR_TEX_PUDDLE			10	// L4D addition
 #define CHAR_TEX_MUD			11	// L4D addition
 
-#define CHAR_TEX_METALBARREL	12	// CSGO addition (no penetration) - metal barrel
-#define CHAR_TEX_WOODBARREL		13	// CSGO addition - wood barrel
-#define CHAR_TEX_METALSHIELD	14	// CSGO addition - metal shield- sand filled barrel
+#define CHAR_TEX_SANDBARREL		12	// CSGO addition (no penetration) - sand filled barrel
 
 #define FIRST_L4D_CHAR_TEX		CHAR_TEX_CLAY
-#define LAST_L4D_CHAR_TEX		CHAR_TEX_METALSHIELD
+#define LAST_L4D_CHAR_TEX		CHAR_TEX_SANDBARREL
 
 abstract_class IDecalEmitterSystem
 {
