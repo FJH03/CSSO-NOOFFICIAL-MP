@@ -215,34 +215,56 @@ struct ImpactEffect_t
 	const char *m_pNameNoFlecks;
 };
 
-static ImpactEffect_t s_pImpactEffect[26] = 
+static ImpactEffect_t s_pImpactEffect[LAST_CHAR_TEX-FIRST_CHAR_TEX+1] = 
 {
-	{ "impact_antlion",		NULL },							// CHAR_TEX_ANTLION
-	{ NULL,					NULL },							// CHAR_TEX_BLOODYFLESH	
-	{ "impact_concrete",	"impact_concrete_noflecks" },	// CHAR_TEX_CONCRETE		
-	{ "impact_dirt",		NULL },							// CHAR_TEX_DIRT			
-	{ NULL,					NULL },							// CHAR_TEX_EGGSHELL		
-	{ NULL,					NULL },							// CHAR_TEX_FLESH			
-	{ NULL,					NULL },							// CHAR_TEX_GRATE			
-	{ NULL,					NULL },							// CHAR_TEX_ALIENFLESH		
-	{ NULL,					NULL },							// CHAR_TEX_CLIP			
-	{ NULL,					NULL },							// CHAR_TEX_UNUSED		
-	{ NULL,					NULL },							// CHAR_TEX_UNUSED		
-	{ NULL,					NULL },							// CHAR_TEX_PLASTIC		
-	{ "impact_metal",		NULL },							// CHAR_TEX_METAL			
-	{ "impact_dirt",		NULL },							// CHAR_TEX_SAND			
-	{ NULL,					NULL },							// CHAR_TEX_FOLIAGE		
-	{ "impact_computer",	NULL },							// CHAR_TEX_COMPUTER		
-	{ NULL,					NULL },							// CHAR_TEX_UNUSED		
-	{ NULL,					NULL },							// CHAR_TEX_UNUSED		
-	{ NULL,					NULL },							// CHAR_TEX_SLOSH			
-	{ "impact_concrete",	"impact_concrete_noflecks" },	// CHAR_TEX_TILE			
-	{ NULL,					NULL },							// CHAR_TEX_UNUSED		
-	{ "impact_metal",		NULL },							// CHAR_TEX_VENT			
-	{ "impact_wood",		"impact_wood_noflecks" },		// CHAR_TEX_WOOD			
-	{ NULL,					NULL },							// CHAR_TEX_UNUSED		
-	{ "impact_glass",		NULL },							// CHAR_TEX_GLASS			
-	{ "warp_shield_impact", NULL },							// CHAR_TEX_WARPSHIELD		
+#ifndef DOTA_DLL
+	{ NULL,					NULL },					// CHAR_TEX_ANTLION
+	{ NULL,					NULL },					// CHAR_TEX_BLOODYFLESH
+	{ "impact_concrete",	"impact_concrete" },	// CHAR_TEX_CONCRETE
+	{ "impact_dirt",		"impact_dirt" },		// CHAR_TEX_DIRT
+	{ NULL,					NULL },					// CHAR_TEX_EGGSHELL
+	{ NULL,					NULL },					// CHAR_TEX_FLESH
+	{ "impact_metal",		"impact_metal" },		// CHAR_TEX_GRATE
+	{ NULL,					NULL },					// CHAR_TEX_ALIENFLESH
+	{ NULL,					NULL },					// CHAR_TEX_CLIP
+	{ "impact_grass",		"impact_grass" },		// CHAR_TEX_GRASS
+	{ "impact_snow",		"impact_snow" },		// CHAR_TEX_SNOW
+	{ "impact_plastic",		"impact_plastic" },		// CHAR_TEX_PLASTIC
+	{ "impact_metal",		"impact_metal" },		// CHAR_TEX_METAL
+	{ "impact_sand",		"impact_sand" },		// CHAR_TEX_SAND
+	{ "impact_leaves",		"impact_leaves" },		// CHAR_TEX_FOLIAGE
+	{ "impact_computer",	"impact_computer" },	// CHAR_TEX_COMPUTER
+	{ "impact_asphalt",		"impact_asphalt" },		// CHAR_TEX_ASPHALT
+	{ "impact_brick",		"impact_brick" },		// CHAR_TEX_BRICK
+	{ "impact_wet",			"impact_wet" },			// CHAR_TEX_SLOSH
+	{ "impact_tile",		"impact_tile" },		// CHAR_TEX_TILE
+	{ "impact_cardboard",	"impact_cardboard" },	// CHAR_TEX_CARDBOARD
+	{ "impact_metal",		"impact_metal" },		// CHAR_TEX_VENT
+	{ "impact_wood",		"impact_wood" },		// CHAR_TEX_WOOD
+	{ NULL,					NULL },					// CHAR_TEX_FAKE
+	{ "impact_glass",		"impact_glass" },		// CHAR_TEX_GLASS
+	{ NULL,					NULL },					// CHAR_TEX_WARPSHIELD	
+#endif
+};
+
+static ImpactEffect_t s_pImpactEffect2[LAST_L4D_CHAR_TEX] = 
+{
+#ifndef DOTA_DLL
+	{ "impact_clay",		"impact_clay" },		// CHAR_TEX_CLAY
+	{ "impact_plaster",		"impact_plaster" },		// CHAR_TEX_PLASTER
+	{ "impact_rock",		"impact_rock" },		// CHAR_TEX_ROCK
+	{ "impact_rubber",		"impact_rubber" },		// CHAR_TEX_RUBBER
+	{ "impact_sheetrock",	"impact_sheetrock" },	// CHAR_TEX_SHEETROCK
+	{ "impact_cloth",		"impact_cloth" },		// CHAR_TEX_CLOTH
+	{ "impact_carpet",		"impact_carpet" },		// CHAR_TEX_CARPET
+	{ "impact_paper",		"impact_paper" },		// CHAR_TEX_PAPER
+	{ "impact_upholstery",	"impact_upholstery" },	// CHAR_TEX_UPHOLSTERY
+	{ "impact_puddle",		"impact_puddle" },		// CHAR_TEX_PUDDLE
+	{ "impact_mud",			"impact_mud" },			// CHAR_TEX_MUD
+	{ "impact_sandbarrel",	"impact_sandbarrel" },	// CHAR_TEX_METALBARREL
+	{ "impact_wood",		"impact_wood" },		// CHAR_TEX_WOODBARREL
+	{ "impact_metal",		"impact_metal" },		// CHAR_TEX_METALSHIELD
+#endif
 };
 
 static void SetImpactControlPoint( CNewParticleEffect *pEffect, int nPoint, const Vector &vecImpactPoint, const Vector &vecForward, C_BaseEntity *pEntity )
