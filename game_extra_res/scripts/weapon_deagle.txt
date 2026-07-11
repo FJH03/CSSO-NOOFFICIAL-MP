@@ -91,6 +91,41 @@ WeaponData
 		"nearlyempty"		"Default.NearlyEmpty"
 	}
 
+	// Weapon Sprite data is loaded by the Client DLL.
+	TextureData
+	{
+		"weapon"
+		{
+				"font"		"CSweaponsSmall"
+				"character"	"f"
+		}
+		"weapon_s"
+		{	
+				"font"		"CSweapons"
+				"character"	"f"
+		}
+		"ammo"
+		{
+				"font"		"CSTypeDeath"
+				"character"		"U"
+		}
+		"crosshair"
+		{
+				"file"		"sprites/crosshairs"
+				"x"			"0"
+				"y"			"48"
+				"width"		"24"
+				"height"	"24"
+		}
+		"autoaim"
+		{
+				"file"		"sprites/crosshairs"
+				"x"			"0"
+				"y"			"48"
+				"width"		"24"
+				"height"	"24"
+		}
+	}
 	ModelBounds
 	{
 		Viewmodel
