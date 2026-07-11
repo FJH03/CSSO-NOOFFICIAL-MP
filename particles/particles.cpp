@@ -1087,6 +1087,12 @@ void CParticleCollection::Init( CParticleSystemDefinition *pDef, float flDelay, 
 	m_Sheet.Set( g_pParticleSystemMgr->FindOrLoadSheet( pDef ) );
 	m_bTriedLoadingSheet = false;
 
+	// Ensure render operators are precached (Precache during DLL init runs before renderers are parsed)
+	for ( int i = 0; i < pDef->m_Renderers.Count(); i++ )
+	{
+		pDef->m_Renderers[i]->Precache();
+	}
+
 	// FIXME: This seed needs to be recorded per instance!
 	m_bIsScrubbable = ( nRandomSeed != 0 );
 	if ( m_bIsScrubbable )
