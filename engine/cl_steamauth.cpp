@@ -14,6 +14,7 @@
 
 #include <utlbuffer.h>
 #include "cl_steamauth.h"
+#include "cl_identification.h"
 #include "interface.h"
 #include "filesystem_engine.h"
 #include "tier0/icommandline.h"
@@ -26,6 +27,40 @@
 #endif
 
 #pragma warning( disable: 4355 ) // disables ' 'this' : used in base member initializer list'
+
+//-----------------------------------------------------------------------------
+// Purpose: Build a minimal auth ticket
+//-----------------------------------------------------------------------------
+static void BuildSyntheticTicket( void *pTicket, int cbMaxTicket, uint32 *pcbTicket )
+{
+	static const uint32 kBodyPad = 8u;
+	const uint32 kNeeded = (uint32)sizeof( uint64 ) + kBodyPad;
+
+	*pcbTicket = 0;
+	if ( cbMaxTicket < (int)kNeeded )
+		return;
+
+	// Parse the 64-bit bloom-filter value
+	const char *hwStr = ID_GetUniqueIDString();
+	uint64 hwID = 0;
+	if ( hwStr && Q_strncmp( hwStr, "STEAM_ID_", 9 ) == 0 )
+		sscanf( hwStr + 9, "%016llX", (unsigned long long *)&hwID );
+
+	// XOR-fold to 32 bits; ensure non-zero
+	uint32 accountID = (uint32)( hwID ^ ( hwID >> 32 ) );
+	if ( accountID == 0 )
+		accountID = 1u;
+
+	// Pack a valid individual-account SteamID
+	uint64 steamIDVal = ( (uint64)1 << 56 ) |
+	                    ( (uint64)1 << 52 ) |
+	                    ( (uint64)1 << 32 ) |
+	                    (uint64)accountID;
+
+	*(uint64 *)pTicket = steamIDVal;
+	memset( (uint8 *)pTicket + sizeof( uint64 ), 0, kBodyPad );
+	*pcbTicket = kNeeded;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: singleton accessor
@@ -108,18 +143,20 @@ void CSteam3Client::Activate()
 //-----------------------------------------------------------------------------
 void CSteam3Client::GetAuthSessionTicket( void *pTicket, int cbMaxTicket, uint32 *pcbTicket, uint32 unIP, uint16 usPort, uint64 unGSSteamID,  bool bSecure )
 {
+	// Always zero the output first so callers never see garbage on early return.
+	*pcbTicket = 0;
+	
 #ifdef NO_STEAM
 	m_bGSSecure = bSecure;
+	BuildSyntheticTicket( pTicket, cbMaxTicket, pcbTicket );
 #else
 	CSteamID steamIDGS( unGSSteamID );
-
-	// Assume failure
-	*pcbTicket = 0;
 
 	// We must have interface pointers
 	if ( !SteamUser() )
 	{
-		Warning( "No SteamUser interface.  Cannot perform steam authentication\n" );
+		Warning( "No SteamUser interface.  Falling back to hardware-based ID for LAN/insecure servers.\n" );
+		BuildSyntheticTicket( pTicket, cbMaxTicket, pcbTicket );
 		return;
 	}
 
@@ -127,7 +164,8 @@ void CSteam3Client::GetAuthSessionTicket( void *pTicket, int cbMaxTicket, uint32
 	CSteamID steamID = SteamUser()->GetSteamID();
 	if ( !steamID.IsValid() )
 	{
-		Warning( "Our steam ID %s is not valid.  Steam must be running and you must be logged in\n", steamID.Render() );
+		Warning( "Our steam ID %s is not valid.  Falling back to hardware-based ID for LAN/insecure servers.\n", steamID.Render() );
+		BuildSyntheticTicket( pTicket, cbMaxTicket, pcbTicket );
 		return;
 	}
 
