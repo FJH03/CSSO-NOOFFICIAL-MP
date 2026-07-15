@@ -704,8 +704,18 @@ CBaseClient *CSteam3Server::ClientFindFromSteamID( CSteamID & steamIDFind )
 bool CSteam3Server::NotifyClientConnect( CBaseClient *client, uint32 unUserID, netadr_t & adr, const void *pvCookie, uint32 ucbCookie )
 {
 	if ( !BIsActive() ) 
+	{
+		if ( client && pvCookie && ucbCookie > (uint32)sizeof( uint64 ) )
+		{
+			CUtlBuffer buf( pvCookie, ucbCookie, CUtlBuffer::READ_ONLY );
+			uint64 ulSteamID = buf.GetInt64();
+			CSteamID steamID( ulSteamID );
+			if ( steamID.IsValid() )
+				client->SetSteamID( steamID );
+		}
 		return true;
-
+	}
+	
 	if ( !client || client->IsFakeClient() )
 		return false;
 
