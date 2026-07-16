@@ -445,7 +445,7 @@ void CHudDeathNotice::Paint()
 			m_iconD_inair->SetPos( x, yIcon - iconInAirTall / 3 + ((m_iLineHeight - iconInAirTall) / 2) );
 			m_iconD_inair->SetColor( m_clrIcons );
 			m_iconD_inair->Paint();
-			x += iconInAirWide + m_iIconMargin;
+			x += iconInAirWide;
 		}
 		icon->SetPos( x, yIcon + ((m_iLineHeight - iconTall) / 2) );
 		icon->SetColor( m_clrIcons );
