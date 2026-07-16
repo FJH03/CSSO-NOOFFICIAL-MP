@@ -13,6 +13,7 @@
 #include "cs_loadout.h"
 #include <vgui/ILocalize.h>
 #include <vgui_controls/AnimationController.h>
+#include "weapon_csbase.h"
 
 ConVar cl_showloadout( "cl_showloadout", "1", FCVAR_ARCHIVE, "Toggles display of current loadout." );
 extern ConVar cl_hud_color;
@@ -147,18 +148,63 @@ void CCSHudWeaponSelection::AddWeapon( C_BaseCombatWeapon *pWeapon, bool bSelect
 	}
 	m_weaponPanels[nWepSlot][nWepPos].pSVGPanel->SetRenderSize( weapon_icon_wide, weapon_icon_tall );
 	m_weaponPanels[nWepSlot][nWepPos].pSVGPanel->SetTexture( UTIL_VarArgs( "materials/vgui/weapons/svg/%s.svg", pCSWeapon->GetClassname() + 7 ) );
-
+	
+	wchar_t wszWeaponName[256] = L"";
+	
 	if ( pCSWeapon->HasStatTrak() )
 	{
-		wchar_t wszLocalized[256];
-		g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_StatTrak" ), 1, g_pVGuiLocalize->Find( pCSWeapon->GetPrintName() ) );
-		m_weaponPanels[nWepSlot][nWepPos].pNameLabel->SetText( wszLocalized );
+		g_pVGuiLocalize->ConstructString( wszWeaponName, sizeof( wszWeaponName ),
+		g_pVGuiLocalize->Find( "#Cstrike_WPNHUD_StatTrak" ), 1,
+		g_pVGuiLocalize->Find( pCSWeapon->GetPrintName() ) );
 	}
 	else
 	{
-		m_weaponPanels[nWepSlot][nWepPos].pNameLabel->SetText( pCSWeapon->GetPrintName() );
+		const wchar_t *pFound = g_pVGuiLocalize->Find( pCSWeapon->GetPrintName() );
+		if ( pFound )
+		{
+			wcsncpy( wszWeaponName, pFound, ARRAYSIZE( wszWeaponName ) - 1 );
+			wszWeaponName[ ARRAYSIZE( wszWeaponName ) - 1 ] = L'\0';
+		}
+		else
+		{
+			g_pVGuiLocalize->ConvertANSIToUnicode( pCSWeapon->GetPrintName(), wszWeaponName, sizeof( wszWeaponName ) );
+		}
+	}
+	
+	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+	C_CSPlayer *pPrevOwner   = pCSWeapon->GetPreviousOwner();
+	
+	if ( m_weaponPanels[nWepSlot][nWepPos].hCachedOwnerWeapon.Get() != pWeapon )
+	{
+		m_weaponPanels[nWepSlot][nWepPos].wszCachedOwnerName[0] = L'\0';
+	}
+	
+	const wchar_t *pOwnerName = NULL;
+
+	if ( pPrevOwner && pPrevOwner != pLocalPlayer )
+	{
+		g_pVGuiLocalize->ConvertANSIToUnicode( pPrevOwner->GetPlayerName(),
+		m_weaponPanels[nWepSlot][nWepPos].wszCachedOwnerName,
+		sizeof( m_weaponPanels[nWepSlot][nWepPos].wszCachedOwnerName ) );
+		m_weaponPanels[nWepSlot][nWepPos].hCachedOwnerWeapon = pWeapon;
+		pOwnerName = m_weaponPanels[nWepSlot][nWepPos].wszCachedOwnerName;
+	}
+	else if ( m_weaponPanels[nWepSlot][nWepPos].wszCachedOwnerName[0] != L'\0' )
+	{
+		pOwnerName = m_weaponPanels[nWepSlot][nWepPos].wszCachedOwnerName;
 	}
 
+	if ( pOwnerName )
+	{
+		wchar_t wszOwnerLabel[256];
+		V_snwprintf( wszOwnerLabel, ARRAYSIZE( wszOwnerLabel ), L"%ls's %ls", pOwnerName, wszWeaponName );
+		m_weaponPanels[nWepSlot][nWepPos].pNameLabel->SetText( wszOwnerLabel );
+	}
+	else
+	{
+		m_weaponPanels[nWepSlot][nWepPos].pNameLabel->SetText( wszWeaponName );
+	}
+	
 	m_weaponPanels[nWepSlot][nWepPos].pNameLabel->SizeToContents();
 	UpdateCountLabels();
 	UpdateSlotLabels();
