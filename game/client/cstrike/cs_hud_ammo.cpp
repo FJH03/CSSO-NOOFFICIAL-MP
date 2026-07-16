@@ -54,6 +54,7 @@ private:
 	Label				*m_pStatTrakCounter;
 	Label				*m_pKillCounter;
 	ImagePanel			*m_pKillCounterImage;
+	ImagePanel			*m_pKillCounterImages[5];
 	VectorImagePanel	*m_pBulletIcon;
 	VectorImagePanel	*m_pExhaustibleWeaponIcon;
 	VectorImagePanel	*m_pBurstIcon;
@@ -100,6 +101,12 @@ CHudAmmo::CHudAmmo( const char *pElementName ): CHudElement( pElementName ), Edi
 	m_pStatTrakCounter = new Label( this, "StatTrakCounter", L"0" );
 	m_pKillCounter = new Label( this, "KillCounter", L"x0" );
 	m_pKillCounterImage = new ImagePanel( this, "KillCounterImage" );
+	
+	for ( int i = 0; i < 5; i++ )
+	{
+		m_pKillCounterImages[i] = new ImagePanel( this, UTIL_VarArgs( "KillCounterImage%d", i + 1 ) );
+	}
+	
 	m_pBulletIcon = new VectorImagePanel( this, "BulletIcon" );
 	m_pExhaustibleWeaponIcon = new VectorImagePanel( this, "ExhaustibleWeaponIcon" );
 	m_pBurstIcon = new VectorImagePanel( this, "BurstIcon" );
@@ -297,17 +304,34 @@ void CHudAmmo::OnThink()
 	}
 
 	int iNumKills = pPlayer->GetNumKillsThisSpawn();
-	if ( iNumKills > 0 )
+	if ( iNumKills >= 6 )
 	{
 		V_snwprintf( wszString, sizeof( wszString ), L"x%d", iNumKills );
 		m_pKillCounter->SetText( wszString );
 		m_pKillCounter->SetVisible( true );
 		m_pKillCounterImage->SetVisible( true );
+		
+		for ( int i = 0; i < 5; i++ )
+		{
+			m_pKillCounterImages[i]->SetVisible( false );
+		}
+	}
+	else if ( iNumKills > 0 )
+	{
+		m_pKillCounter->SetVisible( false );
+		m_pKillCounterImage->SetVisible( false );
+		for ( int i = 0; i < 5; i++ )
+		m_pKillCounterImages[i]->SetVisible( i < iNumKills );
 	}
 	else
 	{
 		m_pKillCounter->SetVisible( false );
 		m_pKillCounterImage->SetVisible( false );
+		
+		for ( int i = 0; i < 5; i++ )
+		{
+			m_pKillCounterImages[i]->SetVisible( false );
+		}
 	}
 }
 
