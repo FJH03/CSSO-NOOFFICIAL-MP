@@ -35,6 +35,8 @@ struct WeaponSelectPanel
 		hWeapon = NULL;
 		bInitialized = false;
 		bSelected = false;
+		hCachedOwnerWeapon = NULL;
+		wszCachedOwnerName[0] = L'\0';
 	}
 
 	VectorImagePanel *pSVGPanel;
@@ -44,6 +46,8 @@ struct WeaponSelectPanel
 	EHANDLE hWeapon;
 	bool bInitialized;
 	bool bSelected;
+	EHANDLE hCachedOwnerWeapon;
+	wchar_t wszCachedOwnerName[64];
 };
 
 
