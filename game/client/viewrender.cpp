@@ -4198,10 +4198,11 @@ void CRendering3dView::DrawOpaqueRenderables( ERenderDepthMode DepthMode )
 	//
 	// Ropes and particles
 	//
+	bool bShadowDepth = (DepthMode == DEPTH_MODE_SHADOW);
 	CMatRenderContextPtr pRenderContext( materials );
-	RopeManager()->DrawRenderCache( pRenderContext, DepthMode );
+	RopeManager()->DrawRenderCache( pRenderContext, bShadowDepth );
 
-	g_pParticleSystemMgr->DrawRenderCache( pRenderContext, (DepthMode == DEPTH_MODE_SHADOW) ? true : false );
+	g_pParticleSystemMgr->DrawRenderCache( pRenderContext, bShadowDepth );
 }
 
 
