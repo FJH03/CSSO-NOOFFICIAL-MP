@@ -15,7 +15,7 @@
 
 ConVar r_drawtracers( "r_drawtracers", "1", FCVAR_ARCHIVE, "Toggle visibility of weapon tracers" );
 ConVar r_drawtracers_firstperson( "r_drawtracers_firstperson", "1", FCVAR_ARCHIVE, "Toggle visibility of first person weapon tracers" );
-ConVar r_drawtracers_movetonotintersect( "r_drawtracers_movetonotintersect", "1", FCVAR_CHEAT, "" );
+ConVar r_drawtracers_movetonotintersect( "r_drawtracers_movetonotintersect", "0", FCVAR_CHEAT, "" );
 extern ConVar cl_righthand;
 void FormatViewModelAttachment( Vector &vOrigin, bool bInverse );
 
