@@ -9418,11 +9418,16 @@ void CMapDoc::AddToAutoVisGroup( CMapClass *pObject )
 						AddChildGroupToAutoVisGroup( pObject, "Control", "Clips" );
 						continue;
 					}
+					else if ( strstr( buf, "grenadeclip" ) )
+					{
+						AddChildGroupToAutoVisGroup( pObject, "Grenade", "Clips" );
+						continue;
+					}
 					else if ( strstr( buf, "clip" ) )
 					{
 						AddChildGroupToAutoVisGroup( pObject, "Clip", "Clips" );
 						continue;
-					}					 
+					}		 
 				}	
 				if ( strstr( buf, "occluder" ) )
 				{
