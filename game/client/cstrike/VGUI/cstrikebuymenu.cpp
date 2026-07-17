@@ -363,8 +363,16 @@ void CCSBuyMenuItemButton::SetDescription( const char* pszDescription )
 
 void CCSBuyMenuItemButton::SetPrice( int iPrice )
 {
-	m_iPrice = iPrice;
-	V_snwprintf( m_wszPrice, sizeof( m_wszPrice ), L"$%d", iPrice );
+	if ( mp_maxmoney.GetInt() <= 0 )
+	{
+		m_iPrice = 0;
+		m_wszPrice[0] = '\0';
+	}
+	else
+	{
+		m_iPrice = iPrice;
+		V_snwprintf( m_wszPrice, sizeof( m_wszPrice ), L"$%d", iPrice );
+	}
 }
 
 void CCSBuyMenuItemButton::SetWeaponID( CSWeaponID nWeaponID )
@@ -876,14 +884,17 @@ void CCSBuyMenuLoadoutPanel::Paint()
 	if ( !m_pPlayer )
 		return;
 
-	wchar_t wszMoney[8];
-	V_snwprintf( wszMoney, ARRAYSIZE( wszMoney ), L"$%d", m_pPlayer->GetAccount() );
+	if ( mp_maxmoney.GetInt() > 0 )
+	{
+		wchar_t wszMoney[8];
+		V_snwprintf( wszMoney, ARRAYSIZE( wszMoney ), L"$%d", pPlayer->GetAccount() );
 
-	int iWide = UTIL_ComputeStringWidth( m_hMoneyFont, wszMoney );
-	surface()->DrawSetTextFont( m_hMoneyFont );
-	surface()->DrawSetTextPos( m_pPlayerAvatarImage->GetXPos() - money_xpos - iWide, money_ypos );
-	surface()->DrawSetTextColor( m_clrMoney );
-	surface()->DrawPrintText( wszMoney, wcslen( wszMoney ) );
+		int iWide = UTIL_ComputeStringWidth( m_hMoneyFont, wszMoney );
+		surface()->DrawSetTextFont( m_hMoneyFont );
+		surface()->DrawSetTextPos( m_pPlayerAvatarImage->GetXPos() - money_xpos - iWide, money_ypos );
+		surface()->DrawSetTextColor( m_clrMoney );
+		surface()->DrawPrintText( wszMoney, wcslen( wszMoney ) );
+	}
 
 	int iXPos = GetWide() - icons_xpos;
 	for ( int i = 0; i < TotalIconTypes; i++ )
@@ -1167,12 +1178,20 @@ void CCSBuyMenu::Update()
 		return;
 	}
 
-	if ( m_iAccount != pPlayer->GetAccount() )
+	if ( mp_maxmoney.GetInt() > 0 )
 	{
-		m_iAccount = pPlayer->GetAccount();
-		wchar_t wszUnicode[8];
-		V_snwprintf( wszUnicode, ARRAYSIZE( wszUnicode ), L"$%d", m_iAccount );
-		m_pMoneyLabel->SetText( wszUnicode );
+		m_pMoneyLabel->SetVisible( true );
+		if ( m_iAccount != pPlayer->GetAccount() )
+		{
+			m_iAccount = pPlayer->GetAccount();
+			wchar_t wszUnicode[8];
+			V_snwprintf( wszUnicode, ARRAYSIZE( wszUnicode ), L"$%d", m_iAccount );
+			m_pMoneyLabel->SetText( wszUnicode );
+		}
+	}
+	else
+	{
+		m_pMoneyLabel->SetVisible( false );
 	}
 
 	int iBuyTimeLeft = (int) (CSGameRules()->GetBuyTimeLength() - CSGameRules()->GetRoundElapsedTime());
