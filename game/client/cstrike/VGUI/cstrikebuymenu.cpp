@@ -887,7 +887,7 @@ void CCSBuyMenuLoadoutPanel::Paint()
 	if ( mp_maxmoney.GetInt() > 0 )
 	{
 		wchar_t wszMoney[8];
-		V_snwprintf( wszMoney, ARRAYSIZE( wszMoney ), L"$%d", pPlayer->GetAccount() );
+		V_snwprintf( wszMoney, ARRAYSIZE( wszMoney ), L"$%d", m_pPlayer->GetAccount() );
 
 		int iWide = UTIL_ComputeStringWidth( m_hMoneyFont, wszMoney );
 		surface()->DrawSetTextFont( m_hMoneyFont );
