@@ -93,7 +93,10 @@ void TE_FireBullets(
 {
 	// Just always send gunshots to clients.
 	CBroadcastRecipientFilter filter;
+
+#ifdef false
 	filter.UsePredictionRules();
+#endif
 
 	g_TEFireBullets.m_iPlayer = iPlayerIndex-1;
 	g_TEFireBullets.m_vecOrigin = vOrigin;

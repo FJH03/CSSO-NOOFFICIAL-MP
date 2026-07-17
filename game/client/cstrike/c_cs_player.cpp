@@ -3442,6 +3442,9 @@ void C_CSPlayer::ProcessMuzzleFlashEvent()
 	if ( !pWeaponWorldModel )
 		return;
 
+	if ( prediction->InPrediction() )
+		return;
+
 	int iAttachmentIndex = pWeapon->GetMuzzleAttachmentIndex( pWeaponWorldModel, true );
 	const char* pszEffect = pWeapon->GetMuzzleFlashEffectName( true );
 
