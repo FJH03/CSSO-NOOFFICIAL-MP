@@ -568,7 +568,7 @@ bool C_BaseViewModel::UsesPowerOfTwoFrameBufferTexture( void )
 //-----------------------------------------------------------------------------
 void C_BaseViewModel::UpdateAnimationParity( void )
 {
-	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	C_BasePlayer *pPlayer = ToBasePlayer( GetOwner() );
 	
 	// If we're predicting, then we don't use animation parity because we change the animations on the clientside
 	// while predicting. When not predicting, only the server changes the animations, so a parity mismatch
