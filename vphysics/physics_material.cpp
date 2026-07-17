@@ -477,6 +477,14 @@ int CPhysicsSurfaceProps::ParseSurfaceData( const char *pFileName, const char *p
 				{
 					prop.data.game.climbable = atoi(value);
 				}
+				else if ( !strcmpi( key, "penetrationmodifier" ) )
+				{
+					prop.data.game.penetrationModifier = atof(value);
+				}
+				else if ( !strcmpi( key, "damagemodifier" ) )
+				{
+					prop.data.game.damageModifier = atof(value);
+				}
 				// audio parameters
 				else if ( !strcmpi( key, "audioReflectivity" ) )
 				{

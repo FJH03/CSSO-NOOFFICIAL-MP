@@ -1120,7 +1120,8 @@ void CCSPlayer::FireBullet(
 		surfacedata_t *pSurfaceData = physprops->GetSurfaceData( tr.surface.surfaceProps );
 		int iEnterMaterial = pSurfaceData->game.material;
 
-		GetMaterialParameters( iEnterMaterial, flPenetrationModifier, flDamageModifier );
+		flPenetrationModifier = pSurfaceData->game.penetrationModifier;
+		flDamageModifier = pSurfaceData->game.damageModifier;
 
 		bool hitGrate = ( tr.contents & CONTENTS_GRATE ) != 0;
 
@@ -1461,9 +1462,8 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 		else
 		{
 			// check the exit material and average the exit and entrace values
-			float flExitPenetrationModifier = 0.0f;
-			float flExitDamageModifier = 0.0f;
-			GetMaterialParameters( iExitMaterial, flPenetrationModifier, flDamageModifier );
+			float flExitPenetrationModifier = pExitSurfaceData->game.penetrationModifier;
+			float flExitDamageModifier = pExitSurfaceData->game.damageModifier;
 			flPenetrationModifier = (flPenetrationModifier + flExitPenetrationModifier)/2;
 			flDamageModifier = (flDamageModifier + flExitDamageModifier)/2;
 		}
@@ -1541,9 +1541,8 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 		else
 		{
 			// Check the exit material to see if it is has less penetration than the entrance material.
-			float flExitPenetrationModifier = 0.0f;
-			float flExitDamageModifier = 0.0f;
-			GetMaterialParameters( iExitMaterial, flPenetrationModifier, flDamageModifier );
+			float flExitPenetrationModifier = pExitSurfaceData->game.penetrationModifier;
+			float flExitDamageModifier = pExitSurfaceData->game.damageModifier;
 			if ( flExitPenetrationModifier < flPenetrationModifier )
 			{
 				flPenetrationModifier = flExitPenetrationModifier;
