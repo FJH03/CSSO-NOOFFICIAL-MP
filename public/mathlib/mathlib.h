@@ -297,8 +297,8 @@ struct matrix3x4_t
 #define	SIDE_ON		2
 #define SIDE_CROSS  -2      // necessary for polylib.c
 
-#define ON_VIS_EPSILON  0.01    // necessary for vvis (flow.c) -- again look into moving later!
-#define	EQUAL_EPSILON	0.001   // necessary for vbsp (faces.c) -- should look into moving it there?
+#define ON_VIS_EPSILON  0.01f    // necessary for vvis (flow.c) -- again look into moving later!
+#define	EQUAL_EPSILON	0.001f   // necessary for vbsp (faces.c) -- should look into moving it there?
 
 extern bool s_bMathlibInitialized;
 

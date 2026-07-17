@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -203,8 +203,8 @@ enum Sides
 	OR_SIDE_ON		=	4,
 };
 
-#define ON_VIS_EPSILON  0.01    // necessary for vvis (flow.c) -- again look into moving later!
-#define	EQUAL_EPSILON	0.001   // necessary for vbsp (faces.c) -- should look into moving it there?
+#define ON_VIS_EPSILON  0.01f    // necessary for vvis (flow.c) -- again look into moving later!
+#define	EQUAL_EPSILON	0.001f   // necessary for vbsp (faces.c) -- should look into moving it there?
 
 extern bool s_bMathlibInitialized;
 
@@ -2359,7 +2359,7 @@ inline bool CloseEnough( const Vector &a, const Vector &b, float epsilon = EQUAL
 // Fast compare
 // maxUlps is the maximum error in terms of Units in the Last Place. This 
 // specifies how big an error we are willing to accept in terms of the value
-// of the least significant digit of the floating point number’s 
+// of the least significant digit of the floating point numberï¿½s 
 // representation. maxUlps can also be interpreted in terms of how many 
 // representable floats we are willing to accept between A and B. 
 // This function will allow maxUlps-1 floats between A and B.
