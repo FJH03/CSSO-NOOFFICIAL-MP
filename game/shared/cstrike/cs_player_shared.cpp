@@ -1231,7 +1231,10 @@ void CCSPlayer::FireBullet(
 
 #ifdef CLIENT_DLL
 		// create the tracer
-		CreateWeaponTracer( vecSrc, tr.endpos );
+		if ( !prediction->InPrediction() )
+		{
+			CreateWeaponTracer( vecSrc, tr.endpos );
+		}
 #endif
 
 		// add damage to entity that we hit

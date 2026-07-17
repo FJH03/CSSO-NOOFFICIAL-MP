@@ -24,6 +24,7 @@ ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 
 #include "fx_impact.h"
 #include "c_rumble.h"
 #include "inputsystem/iinputsystem.h"
+#include "prediction.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -184,13 +185,16 @@ void FX_FireBullets(
 	CWeaponCSBase* pClientWeapon = pPlayer ? pPlayer->GetActiveCSWeapon() : NULL;
 	if ( pClientWeapon )
 	{
-		if ( gpGlobals->curtime - pClientWeapon->m_flLastClientFireBulletTime > 0.02f ) // this should be enough even for the negev, at ~1000 rof
+		if ( !prediction->InPrediction() )
 		{
-			pClientWeapon->m_flLastClientFireBulletTime = gpGlobals->curtime;
-		}
-		else
-		{
-			return; // we already traced this shot on the client!
+			if ( gpGlobals->curtime - pClientWeapon->m_flLastClientFireBulletTime > 0.02f ) // this should be enough even for the negev, at ~1000 rof
+			{
+				pClientWeapon->m_flLastClientFireBulletTime = gpGlobals->curtime;
+			}
+			else
+			{
+				return; // we already traced this shot on the client!
+			}
 		}
 	}
 #endif
@@ -325,16 +329,27 @@ void FX_FireBullets(
 
 	if ( bDoEffects)
 	{
-		static const float MaxPitchShiftInaccuracy = 0.05f;
-		float flPitchShift = pWeaponInfo->m_fInaccuracyPitchShift * (fInaccuracy < MaxPitchShiftInaccuracy ? fInaccuracy : MaxPitchShiftInaccuracy);
-
-		if ( sound_type == SINGLE && pWeaponInfo->m_fInaccuracyAltSoundThreshold > 0.0f && fInaccuracy < pWeaponInfo->m_fInaccuracyAltSoundThreshold )
+#ifdef CLIENT_DLL
+		// For the local player, the weapon fire sound already played during prediction.
+		// Skip it here (TE path) to avoid double-play / echo.
+		if ( pPlayer && pPlayer->IsLocalPlayer() && !prediction->InPrediction() )
 		{
-			sound_type = SINGLE_ACCURATE;
-			flPitchShift = 0.0f;
+			// skip weapon sound for local player on TE path
 		}
+		else
+#endif
+		{
+			static const float MaxPitchShiftInaccuracy = 0.05f;
+			float flPitchShift = pWeaponInfo->m_fInaccuracyPitchShift * (fInaccuracy < MaxPitchShiftInaccuracy ? fInaccuracy : MaxPitchShiftInaccuracy);
 
-		FX_WeaponSound( iPlayerIndex, sound_type, vOrigin, pWeaponInfo, flSoundTime, PITCH_NORM + int(flPitchShift) );
+			if ( sound_type == SINGLE && pWeaponInfo->m_fInaccuracyAltSoundThreshold > 0.0f && fInaccuracy < pWeaponInfo->m_fInaccuracyAltSoundThreshold )
+			{
+				sound_type = SINGLE_ACCURATE;
+				flPitchShift = 0.0f;
+			}
+
+			FX_WeaponSound( iPlayerIndex, sound_type, vOrigin, pWeaponInfo, flSoundTime, PITCH_NORM + int(flPitchShift) );
+		}
 
 		// If the gun's nearly empty, also play a subtle "nearly-empty" sound, since the weapon 
 		// is lighter and acoustically different when weighed down by fewer bullets.
