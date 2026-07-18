@@ -19,7 +19,6 @@
 #include "bitbuf.h"
 #include "checksum_md5.h"
 #include "touch.h"
-#include "gyroscope.h"
 #include "hltvcamera.h"
 #if defined( REPLAY_ENABLED )
 #include "replay/replaycamera.h"
@@ -785,18 +784,6 @@ void CInput::AdjustAngles ( float frametime )
 
 	// Adjust PITCH if keyboard looking
 	AdjustPitch( speed, viewangles );
-	
-	// Apply gyroscope input (Android only)
-#ifdef __ANDROID__
-	if ( Gyro_IsEnabled() )
-	{
-		float gyroYaw = 0.0f, gyroPitch = 0.0f;
-		Gyro_Update( &gyroYaw, &gyroPitch );
-		
-		viewangles[YAW]   -= gyroYaw;
-		viewangles[PITCH] += gyroPitch;
-	}
-#endif
 
 	// Make sure values are legitimate
 	ClampAngles( viewangles );
@@ -1684,11 +1671,6 @@ void CInput::Init_All (void)
 		Init_Mouse ();
 		Init_Keyboard();
 	}
-	
-	// Initialize gyroscope (Android only)
-#ifdef __ANDROID__
-	Gyro_Init();
-#endif
 
 	// Initialize third person camera controls.
 	Init_Camera();
@@ -1720,11 +1702,6 @@ void CInput::LevelInit( void )
 #if defined( HL2_CLIENT_DLL )
 	// Remove any IK information
 	m_EntityGroundContact.RemoveAll();
-#endif
-
-#ifdef __ANDROID__
-	// Reset gyroscope accumulators
-	Gyro_Reset();
 #endif
 }
 
