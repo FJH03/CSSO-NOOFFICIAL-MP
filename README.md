@@ -50,7 +50,6 @@ This project is using waf buildsystem. If you have waf-related questions look ht
 - Re-Worked on scoreboard (Avatars display and clantag)
 - Fixed custom avatar not displayed on voice icon
 - small optimizations lol
-- CS2 Animation (Grenades Only) (Broken & Removed
 - Skip HTML Panel to Choose Team Directly
 - Agent Show Blind Animation
 - Spam Inspection Animation
