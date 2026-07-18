@@ -395,7 +395,16 @@
 		"wide"	 "640"
 		"tall"	 "480"
 	}
-
+	
+	HudHeadName
+	{
+		"fieldName" "HudHeadName"
+		"visible" "1"
+		"enabled" "1"
+		"wide"	 "2256"
+		"tall"	 "1080"
+	}
+	
 	HudDeathNotice
 	{
 		"fieldName" "HudDeathNotice"
