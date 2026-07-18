@@ -1142,7 +1142,8 @@ void CInput::CreateMove ( int sequence_number, float input_sample_frametime, boo
 		ControllerMove( input_sample_frametime, cmd );
 		
 		// Allow Gyrscope Input
-		Gyro_ApplyMove( input_sample_freetime )
+		Gyro_ApplyMove( input_sample_frametime );
+		
 #ifdef SIXENSE
 		g_pSixenseInput->SixenseFrame( input_sample_frametime, cmd ); 
 		
@@ -1692,10 +1693,6 @@ void CInput::Shutdown_All(void)
 {
 	DeactivateMouse();
 	Shutdown_Keyboard();
-
-	#ifdef __ANDROID__
-	Gyro_Shutdown();
-#endif
 
 	delete[] m_pCommands;
 	m_pCommands = NULL;
