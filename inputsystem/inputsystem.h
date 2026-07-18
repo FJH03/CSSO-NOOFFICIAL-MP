@@ -106,7 +106,10 @@ public:
 	virtual bool GetTouchAccumulators( int fingerId, float &dx, float &dy );
 
 	virtual void SetConsoleTextMode( bool bConsoleTextMode );
-
+	
+	virtual bool GetGyroAccumulators( float &pitch_dps, float &yaw_dps );
+	virtual bool IsGyroAvailable() const { return m_bGyroInitialized; }
+	
 	// Windows proc
 	LRESULT WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
@@ -251,6 +254,10 @@ public:
 	// Shut down touch	
 	void ShutdownTouch( void );
 	
+	// Shutdown Gyroscope
+	void InitializeGyro( void );
+	void ShutdownGyro( void );
+	void SetGyroAngularVelocity( float pitch_dps, float yaw_dps );
 
 #if defined( WIN32 ) && !defined ( _X360 )
 	// NVNT attaches window to novint devices
@@ -461,7 +468,13 @@ public:
 	int	 m_mouseRawAccumX, m_mouseRawAccumY;
 
 	float m_touchAccumX[TOUCH_FINGER_MAX_COUNT], m_touchAccumY[TOUCH_FINGER_MAX_COUNT];
-
+	
+	// Gyroscope State
+	void  *m_pGyroSensor;
+	bool   m_bGyroInitialized;
+	float  m_flGyroAngVelPitch;
+	float  m_flGyroAngVelYaw;
+	
 	// For the 'SleepUntilInput' feature
 	HANDLE m_hEvent;
 

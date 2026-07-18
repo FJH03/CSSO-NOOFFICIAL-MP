@@ -502,6 +502,7 @@ $Project
 		$File	"$SRCDIR\public\haptics\haptic_utils.cpp"	[$WIN32&&!$X360]
 
 		$File	"$SRCDIR\game\client\touch.cpp"
+		$File	"$SRCDIR\game\client\in_gyro.cpp"
 
 		$Folder	"Sixense"
 		{

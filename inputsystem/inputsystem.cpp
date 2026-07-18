@@ -91,7 +91,13 @@ CInputSystem::CInputSystem()
 
 	m_bConsoleTextMode = false;
 	m_bSkipControllerInitialization = false;
-
+	
+	// InitializeGyro called in Init
+	m_pGyroSensor       = NULL;
+	m_bGyroInitialized  = false;
+	m_flGyroAngVelPitch = 0.0f;
+	m_flGyroAngVelYaw   = 0.0f;
+	
 	if ( CommandLine()->CheckParm( "-nosteamcontroller" ) )
 	{
 		m_bSkipControllerInitialization = true;
@@ -169,6 +175,8 @@ InitReturnVal_t CInputSystem::Init()
 	
 	if( !m_bConsoleTextMode )
 		InitializeTouch();
+	
+	InitializeGyro();
 	
 	if ( IsPC() && !m_bConsoleTextMode )
 	{
@@ -248,6 +256,8 @@ void CInputSystem::Shutdown()
 		m_hEvent = NULL;
 	}
 #endif
+	
+	ShutdownGyro();
 	
 	if ( IsPC() )
 	{

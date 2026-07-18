@@ -20,6 +20,7 @@ def build(bld):
 		'inputsystem.cpp',
 		'joystick_sdl.cpp',
 		'touch_sdl.cpp',
+		'gyro_sdl.cpp',
 		'key_translation.cpp',
 		'steamcontroller.cpp',
 		'../public/tier0/memoverride.cpp'
