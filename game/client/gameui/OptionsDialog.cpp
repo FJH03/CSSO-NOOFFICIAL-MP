@@ -26,6 +26,7 @@
 #include "OptionsSubAudio.h"
 #include "OptionsSubVideo.h"
 #include "OptionsSubVoice.h"
+#include "OptionsSubGyro.h"
 #include "OptionsSubMultiplayer.h"
 #include "OptionsSubDifficulty.h"
 #include "OptionsSubPortal.h"
@@ -89,6 +90,7 @@ COptionsDialog::COptionsDialog(vgui::Panel *parent) : PropertyDialog(parent, "Op
 #endif
 #ifdef ANDROID
 	AddPage(new COptionsSubTouch(this), "Touch");
+   AddPage(new ClientModGyroMenu(this), "#GameUI_Gyro");
 #endif
 
 	m_pOptionsSubAudio = new COptionsSubAudio(this);
