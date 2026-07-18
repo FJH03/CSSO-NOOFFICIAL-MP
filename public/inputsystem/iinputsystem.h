@@ -120,7 +120,11 @@ public:
 	// read and clear accumulated raw input values
 	virtual bool GetRawMouseAccumulators( int& accumX, int& accumY ) = 0;
 	virtual bool GetTouchAccumulators( int fingerId, float &dx, float &dy ) = 0;
-
+	
+	// Gyroscope: read and clear accumulated angular velocity (degrees/second).
+	virtual bool GetGyroAccumulators( float &pitch_dps, float &yaw_dps ) = 0;
+	virtual bool IsGyroAvailable() const = 0;
+	
 	// tell the input system that we're not a game, we're console text mode.
 	// this is used for dedicated servers to not initialize joystick system.
 	// this needs to be called before CInputSystem::Init (e.g. in PreInit of
