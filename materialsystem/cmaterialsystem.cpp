@@ -3514,7 +3514,7 @@ static const char *GetMatString( enum MaterialThreadMode_t ThreadMode )
 }
 #endif
 
-ConVar mat_queue_mode( "mat_queue_mode", "-1", FCVAR_ARCHIVE, "The queue/thread mode the material system should use: -1=default, 0=synchronous single thread"
+ConVar mat_queue_mode( "mat_queue_mode", "0", FCVAR_ARCHIVE, "The queue/thread mode the material system should use: -1=default, 0=synchronous single thread"
 #ifdef MAT_QUEUE_MODE_PROFILE
 	", 1=queued single thread"
 #endif
