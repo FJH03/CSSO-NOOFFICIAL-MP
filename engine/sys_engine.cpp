@@ -92,6 +92,7 @@ static void mat_powersavingsmode_callback( IConVar *var, const char *pOldValue, 
 	s_bFPSMaxDrivenByPowerSavings = false;
 }
 static ConVar mat_powersavingsmode( "mat_powersavingsmode", "0", FCVAR_ARCHIVE, "Power Savings Mode", mat_powersavingsmode_callback );
+static ConVar sleep_when_meeting_framerate( "sleep_when_meeting_framerate", "1", FCVAR_ARCHIVE, "Use nanosleep when meeting framerate to save power (non-PC/dedicated path)" );
 
 #ifndef _RETAIL
 static ConVar async_serialize( "async_serialize", "0", 0, "Force async reads to serialize for profiling" );
@@ -377,6 +378,7 @@ void CEngine::Frame( void )
 			TM_ZONE( TELEMETRY_LEVEL0, TMZF_NONE, "Engine Nano Sleep" );
 			ThreadSleep( nSleepNS );
 		}
+	}
 	}
 
 	if ( ShouldSerializeAsync() )
