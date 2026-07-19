@@ -11,6 +11,7 @@
 #pragma once
 #endif
 
+#include "viewpostprocess.h"
 #include "vgui_controls/Frame.h"
 #include "vgui_controls/SectionedListPanel.h"
 #include "game/client/iviewport.h"
@@ -35,10 +36,13 @@ public:
 	virtual bool IsVisible() { return BaseClass::IsVisible(); }
 	virtual void SetParent( vgui::VPANEL parent ) { BaseClass::SetParent( parent ); }
 	virtual void ShowPanel( bool bShow );
+	
+	virtual void PaintBackground();
+	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
 
 	void LoadRadioCommands();
-	void PlayRadioCommand();
-	MESSAGE_FUNC_PARAMS( OnItemDoubleLeftClick, "ItemDoubleLeftClick", pKV );
+	void PlayRadioCommand();	
+	MESSAGE_FUNC_PARAMS( OnItemClicked, "ItemSelected", pKV );
 
 private:
 	SectionedListPanel* m_pRadioList;
