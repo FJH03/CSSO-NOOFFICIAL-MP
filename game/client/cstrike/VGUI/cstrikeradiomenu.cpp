@@ -25,21 +25,22 @@ CCSRadioMenu::CCSRadioMenu( IViewPort* pViewPort ): Frame( NULL, GetName() )
 	// initialize dialog
 	SetTitle( "", true );
 
-	// load the new scheme early!!
-	SetScheme( "ClientScheme" );
 	SetMoveable( false );
 	SetSizeable( false );
 	SetProportional( false );
-
+	
 	MakePopup();
-	SetKeyBoardInputEnabled( false );
+	SetMouseInputEnabled( true );
 
 	// initialize elements
 	m_pRadioList = new SectionedListPanel( this, "RadioList" );
+	m_pRadioList->SetClickable( true );
+    m_pRadioList->AddActionSignalTarget( this );
 
 	LoadControlSettings( "Resource/UI/RadioMenu.res" );
 
 	LoadRadioCommands();
+    InvalidateLayout();
 }
 
 void CCSRadioMenu::ShowPanel( bool bShow )
@@ -55,10 +56,8 @@ void CCSRadioMenu::ShowPanel( bool bShow )
 	else
 	{
 		Close();
-
 		PlayRadioCommand();
 	}
-
 	m_pViewPort->ShowBackGround( bShow );
 }
 
@@ -93,7 +92,7 @@ void CCSRadioMenu::LoadRadioCommands()
 
 void CCSRadioMenu::PlayRadioCommand()
 {
-	KeyValues* pKVData = m_pRadioList->GetItemData( m_pRadioList->GetSelectedItem() );
+/*	KeyValues* pKVData = m_pRadioList->GetItemData( m_pRadioList->GetSelectedItem() );
 	if ( pKVData )
 	{
 		char szCommand[128];
@@ -102,11 +101,55 @@ void CCSRadioMenu::PlayRadioCommand()
 
 		m_pRadioList->ClearSelection();
 		m_pRadioList->GetScrollBar()->SetValue( 0 );
-	}
+	}*/
 }
 
-void CCSRadioMenu::OnItemDoubleLeftClick( KeyValues* pKV )
+void CCSRadioMenu::OnItemClicked( KeyValues* pKV )
 {
-	PlayRadioCommand();
-	engine->ClientCmd( "-radiomenu" ); // hide the menu
+    int iItemID = pKV ? pKV->GetInt("index", -1) : -1;
+    if ( iItemID == -1 )
+    {
+        iItemID = m_pRadioList->GetSelectedItem();
+    }
+    if ( iItemID != -1 )
+    {
+        KeyValues* pKVData = m_pRadioList->GetItemData( iItemID );
+        if ( pKVData )
+        {
+            const char* pszCommand = pKVData->GetString( "command" );
+            const char* pszText = pKVData->GetString( "text" );
+
+            if ( pszCommand && pszText )
+            {
+                char szCommand[128];
+                V_snprintf( szCommand, sizeof( szCommand ), "playerradio %s %s", pszCommand, pszText );
+                engine->ClientCmd( szCommand );               
+            }
+        }
+    }
+    engine->ClientCmd( "-radiomenu" ); 
+}
+
+
+extern ConVar mat_blur_strength;
+extern ConVar mat_blur_desaturate;
+void CCSRadioMenu::PaintBackground()
+{
+        if ( engine->GetDXSupportLevel() < 90 )
+                BaseClass::PaintBackground();
+        else
+        {
+                int x, y, w, h;
+                GetBounds( x, y, w, h );
+                DoBlurFade( mat_blur_strength.GetFloat(), mat_blur_desaturate.GetFloat(), x, y, w, h );
+        }
+}
+
+void CCSRadioMenu::ApplySchemeSettings( vgui::IScheme *pScheme )
+{
+	BaseClass::ApplySchemeSettings( pScheme );	
+	SetPaintBackgroundType( 2 );
+	SetPaintBorderEnabled( true );
+	SetPaintBackgroundEnabled( true );
+	LoadControlSettings( "Resource/UI/RadioMenu.res" );
 }
