@@ -1043,7 +1043,13 @@ void COptionsSubMultiplayer::OnApplyChanges()
 	m_pAvatarList->ApplyChanges();
     m_pAvatarList->GetText(m_AvatarName, sizeof(m_AvatarName));
 	m_pHighQualityModelCheckBox->ApplyChanges();
-
+	
+	// Apply player name and clan tag changes
+	if ( m_pPlayerNameText )
+		m_pPlayerNameText->ApplyChanges();
+	if ( m_pClanTagText )
+		m_pClanTagText->ApplyChanges();
+		
 	for ( int i=0; i<m_cvarToggleCheckButtons.GetCount(); ++i )
 	{
 		CCvarToggleCheckButton *toggleButton = m_cvarToggleCheckButtons[i];
