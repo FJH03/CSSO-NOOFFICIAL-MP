@@ -1272,7 +1272,7 @@ Scheme
 		{
 			"1"
 			{
-				"name"		"StratumNo2"
+				"name"		"Stratum2 Bold"
 				"tall"		"13"
 				"weight"	"0"
 				"antialias"	"1"
@@ -2871,6 +2871,12 @@ Scheme
 		"9"		"resource/stratum2regular_monodigit.ttf"
 		"10"	  "resource/notosans-regular.ttf"
 		"11"      "resource/fonts/StratumNo2.ttf"
+		"12"
+		{
+			"font"		"resource/stratum2-bold.ttf"
+			"name"		"Stratum2 Bold"
+			"range"		"0x0000 0x04FF"
+		}
 	}
 
 }
