@@ -370,12 +370,6 @@ void CEngine::Frame( void )
 #else
 			ThreadSleep( (nSleepMicrosecs + 999) / 1000 );
 #endif
-		double fSleepNS = ( m_flMinFrameTime - m_flFrameTime ) * 1000000000.0;
-		unsigned nSleepNS = (unsigned)floor( fSleepNS );
-		if ( nSleepNS && sleep_when_meeting_framerate.GetInt() )
-		{
-			TM_ZONE( TELEMETRY_LEVEL0, TMZF_NONE, "Engine Nano Sleep" );
-			ThreadSleep( nSleepNS );
 		}
 	}
 
