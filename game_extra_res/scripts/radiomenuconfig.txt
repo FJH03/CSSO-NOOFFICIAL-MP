@@ -1,0 +1,75 @@
+"RadiomenuConfig"
+{
+	"#CStrike_Radiomenu_section_prepare"
+	{
+		"CW.EcoRound"				"#CStrike_Radiomenu_requestecoround"
+		"CW.SpendRound"				"#CStrike_Radiomenu_requestspend"
+		"CW.NeedDrop"				"#CStrike_Radiomenu_requestweapon"
+		"CW.NeedPlan"				"#CStrike_Radiomenu_requestplan"
+	}
+
+	"#CStrike_Radiomenu_section_move"
+	{
+		"CW.GoGoGo"					"#CStrike_Radiomenu_gogogo"
+		"CW.OMW"					"#CStrike_Radiomenu_onmyway"
+		"CW.FollowMe"				"#CStrike_Radiomenu_followme"
+		"CW.FollowingYou"			"#CStrike_Radiomenu_followingyou"
+		"CW.GoA"					"#CStrike_Radiomenu_aplan"
+		"CW.GoB"					"#CStrike_Radiomenu_bplan"
+		"CW.GoToLocMid"				"#CStrike_Radiomenu_midplan"
+	}
+
+	"#CStrike_Radiomenu_section_command"
+	{
+		"CW.Regroup"				"#CStrike_Radiomenu_rotatetome"
+		"CW.StickTogether"			"#CStrike_Radiomenu_sticktogether"
+		"CW.SpreadOut"				"#CStrike_Radiomenu_spreadout"
+		"CW.TeamFallBack"			"#CStrike_Radiomenu_fallback"
+		"CW.HoldPosition"			"#CStrike_Radiomenu_holdposition"
+		"CW.CheckHostage"			"#CStrike_Radiomenu_gethostage"
+	}
+
+	"#CStrike_Radiomenu_section_report"
+	{
+		"CW.HeardNoise"				"#CStrike_Radiomenu_heardnoise"
+		"CW.SeesEnemy"				"#CStrike_Radiomenu_enemyspotted"
+		"CW.SeesSingleEnemy"		"#CStrike_Radiomenu_oneenemyhere"
+		"CW.SeesEnemiesMultiple"	"#CStrike_Radiomenu_multipleenemieshere"
+		"CW.NeedBackup"				"#CStrike_Radiomenu_needbackup"
+		"CW.SniperWarning"			"#CStrike_Radiomenu_sniperspotted"
+		"CW.BombCarrierHere"		"#CStrike_Radiomenu_bombcarrierspotted"
+		"CW.InPosition"				"#CStrike_Radiomenu_inposition"
+		"CW.CoveringYou"			"#CStrike_Radiomenu_coveringyou"
+		"CW.SectorClear"			"#CStrike_Radiomenu_sectorclear"
+	}
+
+	"#CStrike_Radiomenu_section_bomb"
+	{
+		"CW.IFixBomb"				"#CStrike_Radiomenu_ifixbomb"
+		"CW.YouFixBomb"				"#CStrike_Radiomenu_youfixbomb"
+		"CW.DroppedBomb"			"#CStrike_Radiomenu_droppedbomb"
+		"CW.GuardingDroppedBomb"	"#CStrike_Radiomenu_guardingbomb"
+		"CW.BombAt"					"#CStrike_Radiomenu_bombat"
+		"CW.WeHaveTheBomb"			"#CStrike_Radiomenu_ihavethebomb"
+	}
+
+	"#CStrike_Radiomenu_section_responses"
+	{
+		"CW.Agree"					"#CStrike_Radiomenu_affirmative"
+		"CW.Disagree"				"#CStrike_Radiomenu_negative"
+		"CW.Compliment"				"#CStrike_Radiomenu_compliment"
+		"CW.Thanks"					"#CStrike_Radiomenu_thanks"
+		"CW.Cheer"					"#CStrike_Radiomenu_cheer"
+		"CW.PepTalk"				"#CStrike_Radiomenu_peptalk"
+		"CW.Sorry"					"#CStrike_Radiomenu_sorry"
+	}
+
+	"#CStrike_Radiomenu_section_grenades"
+	{
+		"CW.NeedDecoy"				"#CStrike_Radiomenu_decoy"
+		"CW.NeedSmoke"				"#CStrike_Radiomenu_smoke"
+		"CW.NeedGrenade"			"#CStrike_Radiomenu_grenade"
+		"CW.NeedFire"				"#CStrike_Radiomenu_fire"
+		"CW.NeedFlash"				"#CStrike_Radiomenu_flashbang"
+	}
+}
