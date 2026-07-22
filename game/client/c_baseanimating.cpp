@@ -771,8 +771,6 @@ C_BaseAnimating::C_BaseAnimating() :
 
 	m_bUseParentLightingOrigin = false;
 
-	m_pJiggleBones = NULL;
-
 	for ( int i=0; i<MAXSTUDIOBONES; i++ )
 	{
 		m_pos_cached[i].Init();
@@ -1620,7 +1618,8 @@ void C_BaseAnimating::BuildTransformations( CStudioHdr *hdr, Vector *pos, Quater
 				}
 
 				// do jiggle physics
-				m_pJiggleBones->BuildJiggleTransformations( i, gpGlobals->curtime, jiggleInfo, goalMX, GetBoneForWrite( i ), IsViewModelOrAttachment() );
+				m_pJiggleBones->BuildJiggleTransformations( i, gpGlobals->curtime, jiggleInfo, goalMX, GetBoneForWrite( i ) );
+
 			}
 			else if (hdr->boneParent(i) == -1) 
 			{
@@ -2815,7 +2814,6 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 	
 	// some bones are tagged to always setup, they get OR'd in now
 	boneMask |= BONE_ALWAYS_SETUP;
-	boneMask |= BONE_ALWAYS_PROCEDURAL;
 
 	if ( GetSequence() == -1 )
 		 return false;
