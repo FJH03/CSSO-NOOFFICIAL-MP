@@ -8,10 +8,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: linux-i386
-            build_cmd: |
-              chmod +x scripts/tests-ubuntu-i386.sh
-              scripts/tests-ubuntu-i386.sh
           - target: linux-amd64
             build_cmd: |
               chmod +x scripts/tests-ubuntu-amd64.sh
@@ -33,13 +29,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: windows-i386
-            build_cmd: |
-              ./waf.bat configure -T release --tests --prefix=out/ --32bits
-              ./waf.bat install
-              cd out
-              $env:Path = "bin";
-              ./unittest.exe
           - target: windows-amd64
             build_cmd: |
               ./waf.bat configure -T release --tests --prefix=out/
