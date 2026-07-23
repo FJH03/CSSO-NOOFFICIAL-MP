@@ -40,6 +40,13 @@ jobs:
               cd out
               $env:Path = "bin";
               ./unittest.exe
+          - target: windows-amd64
+            build_cmd: |
+              ./waf.bat configure -T release --tests --prefix=out/
+              ./waf.bat install
+              cd out
+              $env:Path = "bin";
+              ./unittest.exe
     name: Test ${{matrix.target}}
     runs-on: windows-latest
 
