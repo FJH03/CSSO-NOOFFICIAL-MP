@@ -8,10 +8,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: linux-i386-dedicated
-            build_cmd: |
-              chmod +x scripts/build-ubuntu-i386.sh
-              scripts/build-ubuntu-i386.sh -d
           - target: linux-amd64-dedicated
             build_cmd: |
               chmod +x scripts/build-ubuntu-amd64.sh
@@ -41,17 +37,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: windows-i386-dedicated
-            build_cmd: |
-              ./waf.bat configure -T release --build-games=csso -4 -d --disable-warns --prefix="./output"
-              ./waf.bat install
           - target: windows-amd64-dedicated
             build_cmd: |
               ./waf.bat configure -T release --build-games=csso -d --disable-warns --prefix="./output"
-              ./waf.bat install
-          - target: windows-i386
-            build_cmd: |
-              ./waf.bat configure -T release --build-games=csso -4 --enable-opus --disable-warns --prefix="./output"
               ./waf.bat install
           - target: windows-amd64
             build_cmd: |
