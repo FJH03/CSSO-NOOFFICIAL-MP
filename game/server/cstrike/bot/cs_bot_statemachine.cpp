@@ -78,10 +78,18 @@ void CCSBot::EscapeFromFlames( void )
 	SetState( &m_escapeFromFlamesState );
 }
 
+#ifndef SMGD_EXPORT_ALIAS
+#if defined(_MSC_VER) && defined(_WIN32)
+#define SMGD_EXPORT_ALIAS(alias) __pragma(comment(linker, "/export:" alias "=" __FUNCDNAME__))
+#else
+#define SMGD_EXPORT_ALIAS(alias)
+#endif
+#endif
 
 //--------------------------------------------------------------------------------------------------------------
 void CCSBot::Follow( CCSPlayer *player )
 {
+	SMGD_EXPORT_ALIAS("SMGD_Follow");
 	if (player == NULL)
 		return;
 
@@ -104,6 +112,7 @@ void CCSBot::Follow( CCSPlayer *player )
  */
 void CCSBot::ContinueFollowing( void )
 {
+	SMGD_EXPORT_ALIAS("SMGD_ContinueFollowing");
 	SetTask( FOLLOW );
 
 	m_followState.SetLeader( m_leader );
@@ -118,6 +127,7 @@ void CCSBot::ContinueFollowing( void )
  */
 void CCSBot::StopFollowing( void )
 {
+	SMGD_EXPORT_ALIAS("SMGD_StopFollowing");
 	m_isFollowing = false;
 	m_leader = NULL;
 	m_allowAutoFollowTime = gpGlobals->curtime + 10.0f;

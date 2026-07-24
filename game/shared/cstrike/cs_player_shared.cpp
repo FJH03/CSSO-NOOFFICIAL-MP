@@ -294,8 +294,19 @@ bool CCSPlayer::IsOtherSameTeam( int nTeam )
 	return GetTeamNumber() == nTeam;
 }
 
+#ifndef SMGD_EXPORT_ALIAS
+#if defined(_MSC_VER) && defined(_WIN32)
+#define SMGD_EXPORT_ALIAS(alias) __pragma(comment(linker, "/export:" alias "=" __FUNCDNAME__))
+#else
+#define SMGD_EXPORT_ALIAS(alias)
+#endif
+#endif
+
 bool CCSPlayer::IsOtherEnemy( int nEntIndex )
 {
+#ifndef CLIENT_DLL
+	SMGD_EXPORT_ALIAS("SMGD_IsOtherEnemyByIndex");
+#endif
 	CCSPlayer *pPlayer = (CCSPlayer*)UTIL_PlayerByIndex( nEntIndex );
 	if ( !pPlayer )
 	{
@@ -386,6 +397,10 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 
 bool CCSPlayer::IsOtherEnemy( CCSPlayer *pPlayer )
 {
+#ifndef CLIENT_DLL
+	SMGD_EXPORT_ALIAS("SMGD_IsOtherEnemyByPlayer");
+#endif
+
 	if ( !pPlayer )
 		return false;
 
