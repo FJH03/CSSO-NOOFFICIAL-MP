@@ -338,10 +338,20 @@ int CGlobalEntityList::ResetDeleteList( void )
 	return result;
 }
 
+#ifndef SMGD_EXPORT_ALIAS
+#if defined(_MSC_VER) && defined(_WIN32)
+#define SMGD_EXPORT_ALIAS(alias) __pragma(comment(linker, "/export:" alias "=" __FUNCDNAME__))
+#else
+#define SMGD_EXPORT_ALIAS(alias)
+#endif
+#endif
+
 
 	// add a class that gets notified of entity events
 void CGlobalEntityList::AddListenerEntity( IEntityListener *pListener )
 {
+	SMGD_EXPORT_ALIAS("SMGD_AddListenerEntity");
+
 	if ( m_entityListeners.Find( pListener ) >= 0 )
 	{
 		AssertMsg( 0, "Can't add listeners multiple times\n" );
@@ -352,6 +362,7 @@ void CGlobalEntityList::AddListenerEntity( IEntityListener *pListener )
 
 void CGlobalEntityList::RemoveListenerEntity( IEntityListener *pListener )
 {
+	SMGD_EXPORT_ALIAS("SMGD_RemoveListenerEntity");
 	m_entityListeners.FindAndRemove( pListener );
 }
 
