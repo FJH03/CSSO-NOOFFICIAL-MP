@@ -3,8 +3,10 @@ Credits:
 Ported by ndke, den4iklovelinux, cherrybtw
 Mod author: PimonFeeD
 Source engine port author: nillerusr
+
 1.2 Updates: PowerSiderS
-1.3 Updates: FJH03, PowerSiderS, xiaodo1337
+
+1.3 Updates: FJH03, PowerSiderS, xiaodo1337(cherry-pick from legacy csmos project)，zzh(radio menu code)
 
 > master branch only win64 support(version: 1.3), 1.3 Update branch support Android too(main diff is CSGO precache and particle system not transplant to arm arch).
 
